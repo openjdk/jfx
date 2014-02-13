@@ -2896,4 +2896,32 @@ public class GridPaneTest {
         assertEquals(250, child2.getWidth(), 1e-100);
         
     }
+    
+    @Test
+    public void testAddRowWithMultiRowNodes() {
+        MockNode spanNode = new MockNode();
+        MockNode node2 = new MockNode();
+        MockNode node3 = new MockNode();
+        
+        GridPane.setRowSpan(spanNode, 2);
+        gridpane.addRow(0, spanNode, node2);
+        gridpane.addRow(1, node3);
+        
+        assertEquals(1, GridPane.getRowIndex(node3), 1e-100);
+        assertEquals(1, GridPane.getColumnIndex(node3), 1e-100);
+    }
+    
+    @Test
+    public void testAddColumnWithMultiColumnNodes() {
+        MockNode spanNode = new MockNode();
+        MockNode node2 = new MockNode();
+        MockNode node3 = new MockNode();
+        
+        GridPane.setColumnSpan(spanNode, 2);
+        gridpane.addColumn(0, spanNode, node2);
+        gridpane.addColumn(1, node3);
+        
+        assertEquals(1, GridPane.getColumnIndex(node3), 1e-100);
+        assertEquals(1, GridPane.getRowIndex(node3), 1e-100);
+    }
 }

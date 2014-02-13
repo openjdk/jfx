@@ -25,93 +25,9 @@
 
 package javafx.scene;
 
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
-import com.sun.javafx.tk.TKClipboard;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
-import javafx.application.Application;
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
-import javafx.beans.DefaultProperty;
-import javafx.beans.InvalidationListener;
-import javafx.beans.NamedArg;
-import javafx.beans.Observable;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectPropertyBase;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
-import javafx.css.CssMetaData;
-import javafx.css.StyleableObjectProperty;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
-import javafx.event.EventDispatcher;
-import javafx.event.EventHandler;
-import javafx.event.EventTarget;
-import javafx.event.EventType;
-import javafx.geometry.Bounds;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Orientation;
-import javafx.geometry.Point2D;
-import javafx.geometry.Point3D;
-import javafx.scene.image.WritableImage;
-import javafx.scene.input.ContextMenuEvent;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.GestureEvent;
-import javafx.scene.input.InputMethodEvent;
-import javafx.scene.input.InputMethodRequests;
-import javafx.scene.input.InputMethodTextRun;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.Mnemonic;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseDragEvent;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.PickResult;
-import javafx.scene.input.RotateEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.SwipeEvent;
-import javafx.scene.input.TouchEvent;
-import javafx.scene.input.TouchPoint;
-import javafx.scene.input.TransferMode;
-import javafx.scene.input.ZoomEvent;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
-import javafx.stage.PopupWindow;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-import javafx.stage.Window;
-import javafx.util.Callback;
-import javafx.util.Duration;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.cursor.CursorFrame;
@@ -123,30 +39,53 @@ import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.scene.CssFlags;
+import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.SceneEventDispatcher;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.input.DragboardHelper;
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.input.InputEventUtils;
-import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
-import com.sun.javafx.tk.TKDragGestureListener;
-import com.sun.javafx.tk.TKDragSourceListener;
-import com.sun.javafx.tk.TKDropTargetListener;
-import com.sun.javafx.tk.TKPulseListener;
-import com.sun.javafx.tk.TKScene;
-import com.sun.javafx.tk.TKSceneListener;
-import com.sun.javafx.tk.TKScenePaintListener;
-import com.sun.javafx.tk.TKStage;
-import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.scene.LayoutFlags;
+import com.sun.javafx.tk.*;
 import com.sun.prism.impl.PrismSettings;
-
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
+import javafx.beans.NamedArg;
+import javafx.beans.Observable;
+import javafx.beans.property.*;
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableObjectProperty;
+import javafx.event.*;
+import javafx.geometry.*;
+import javafx.scene.image.WritableImage;
+import javafx.scene.input.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.stage.PopupWindow;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.Window;
+import javafx.util.Callback;
+import javafx.util.Duration;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
+
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.*;
+
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
@@ -1987,7 +1926,7 @@ public class Scene implements EventTarget {
     /**
      * Traverses focus from the given node in the given direction.
      */
-    void traverse(Node node, Direction dir) {
+    boolean traverse(Node node, Direction dir) {
         /*
         ** if the registry is null then there are no
         ** registered traversable nodes in this scene
@@ -1997,8 +1936,9 @@ public class Scene implements EventTarget {
             if (te == null) {
                 te = lookupTraversalEngine(node);
             }
-            te.trav(node, dir);
+            return te.trav(node, dir);
         }
+        return false;
     }
 
     /**
@@ -2333,6 +2273,10 @@ public class Scene implements EventTarget {
             if (isDirty(DirtyBits.CAMERA_DIRTY)) {
                 cam.impl_updatePeer();
                 impl_peer.setCamera((NGCamera) cam.impl_getPeer());
+            }
+            
+            if (isDirty(DirtyBits.CURSOR_DIRTY)) {
+                mouseHandler.updateCursor(getCursor());
             }
 
             clearDirty();
@@ -3727,10 +3671,7 @@ public class Scene implements EventTarget {
             // enter/exit handling
             handleEnterExit(e, tmpTargetWrapper);
 
-            Cursor cursor = target.getCursor();
-
             //deliver event to the target node
-
             if (Scene.this.dndGesture != null) {
                 Scene.this.dndGesture.processDragDetection(e);
             }
@@ -3754,9 +3695,9 @@ public class Scene implements EventTarget {
             if (!onPulse) {
                 clickGenerator.postProcess(e, target, tmpTargetWrapper);
             }
-
+            
             // handle drag and drop
-
+            
             if (!PLATFORM_DRAG_GESTURE_INITIATION && !onPulse) {
                 if (Scene.this.dndGesture != null) {
                     if (!Scene.this.dndGesture.process(e, target.getEventTarget())) {
@@ -3764,14 +3705,16 @@ public class Scene implements EventTarget {
                     }
                 }
             }
+            
+            Cursor cursor = target.getCursor();
+            if (e.getEventType() != MouseEvent.MOUSE_EXITED) {
+                if (cursor == null && hover) {
+                    cursor = Scene.this.getCursor();
+                }
 
-
-            if (cursor == null && hover) {
-                cursor = Scene.this.getCursor();
+                updateCursor(cursor);
+                updateCursorFrame();
             }
-
-            updateCursor(cursor);
-            updateCursorFrame();
 
             if (gestureStarted) {
                 pdrInProgress = true;
@@ -3865,7 +3808,7 @@ public class Scene implements EventTarget {
                 currCursor = newCursor;
             }
         }
-
+        
         public void updateCursorFrame() {
             final CursorFrame newCursorFrame =
                     (currCursor != null)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,20 +82,31 @@ import javafx.util.Callback;
 
 /**
  * The TreeTableView control is designed to visualize an unlimited number of rows
- * of data, broken out into columns. A TreeTableView is therefore very similar to the
- * {@link ListView} and {@link TableView} controls. For an
- * example on how to create a TreeTableView, refer to the 'Creating a TreeTableView'
- * control section below.
+ * of data, broken out into columns. The TreeTableView control is conceptually
+ * very similar to the {@link TreeView} and {@link TableView} controls,
+ * and as you read on you'll come to see the APIs are largely the same.
+ * However, to give a high-level overview, you'll note that the TreeTableView
+ * uses the same {@link TreeItem} API as {@link TreeView},
+ * and that you therefore are required to simply set the
+ * {@link #rootProperty() root node} in the TreeTableView. Similarly, the
+ * TreeTableView control makes use of the same TableColumn-based approach that
+ * the {@link TableView} control uses, except instead of using the
+ * TableView-specific {@link TableColumn} class, you should instead use the
+ * TreeTableView-specific {@link TreeTableColumn} class instead. For an
+ * example on how to create a TreeTableView instance, refer to the 'Creating a
+ * TreeTableView' control section below.
  *
- * <p>The TreeTableView control has a number of features, including:
+ * <p>As with the {@link TableView} control, the TreeTableView control has a
+ * number of features, including:
  * <ul>
  * <li>Powerful {@link TreeTableColumn} API:
  *   <ul>
  *   <li>Support for {@link TreeTableColumn#cellFactoryProperty() cell factories} to
  *      easily customize {@link Cell cell} contents in both rendering and editing
  *      states.
- *   <li>Specification of {@link #minWidthProperty() minWidth}/
- *      {@link #prefWidthProperty() prefWidth}/{@link #maxWidthProperty() maxWidth},
+ *   <li>Specification of {@link TreeTableColumn#minWidthProperty() minWidth}/
+ *      {@link TreeTableColumn#prefWidthProperty() prefWidth}/
+ *      {@link TreeTableColumn#maxWidthProperty() maxWidth},
  *      and also {@link TreeTableColumn#resizableProperty() fixed width columns}.
  *   <li>Width resizing by the user at runtime.
  *   <li>Column reordering by the user at runtime.
@@ -109,22 +120,14 @@ import javafx.util.Callback;
  * </ul>
  * </p>
  *
- * <p>Note that TreeTableView is intended to be used to visualize data - it is not
- * intended to be used for laying out your user interface. If you want to lay
- * your user interface out in a grid-like fashion, consider the 
- * {@link GridPane} layout.</p>
- *
  * <h2>Creating a TreeTableView</h2>
  * 
- * TODO update to a relevant example
- *
  * <p>Creating a TreeTableView is a multi-step process, and also depends on the
  * underlying data model needing to be represented. For this example we'll use
  * the TreeTableView to visualise a file system, and will therefore make use
  * of an imaginary (and vastly simplified) File class as defined below:
  * 
- * <pre>
- * {@code
+ * <pre>{@code
  * public class File {
  *     private StringProperty name;
  *     public void setName(String value) { nameProperty().set(value); }
@@ -134,28 +137,26 @@ import javafx.util.Callback;
  *         return name; 
  *     }
  * 
- *     private DoubleProperty lastModified;
- *     public void setLastModified(Double value) { lastModifiedProperty().set(value); }
- *     public DoubleProperty getLastModified() { return lastModifiedProperty().get(); }
- *     public DoubleProperty lastModifiedProperty() { 
- *         if (lastModified == null) lastModified = new SimpleDoubleProperty(this, "lastModified");
+ *     private LongProperty lastModified;
+ *     public void setLastModified(long value) { lastModifiedProperty().set(value); }
+ *     public long getLastModified() { return lastModifiedProperty().get(); }
+ *     public LongProperty lastModifiedProperty() {
+ *         if (lastModified == null) lastModified = new SimpleLongProperty(this, "lastModified");
  *         return lastModified; 
  *     } 
  * }}</pre>
  * 
  * <p>Firstly, a TreeTableView instance needs to be defined, as such:
  * 
- * <pre>
- * {@code
- * TreeTableView<File> treeTable = new TreeTableView<File>();}</pre>
+ * <pre>{@code
+ * TreeTableView<File> treeTable = new TreeTableView<>();}</pre>
  *
- * <p>With the basic tree table defined, we next focus on the data model. As mentioned,
- * for this example, we'll be representing a file system using File instances. To
- * do this, we need to define the root node of the tree table, as such:
+ * <p>With the basic TreeTableView instantiated, we next focus on the data model.
+ * As mentioned, for this example, we'll be representing a file system using File
+ * instances. To do this, we need to define the root node of the tree table, as such:
  *
- * <pre>
- * {@code
- * TreeItem<File> root = new TreeItem<File>(new File("/"));
+ * <pre>{@code
+ * TreeItem<File> root = new TreeItem<>(new File("/"));
  * treeTable.setRoot(root);}</pre>
  * 
  * <p>With the root set as such, the TreeTableView will automatically update whenever
@@ -168,44 +169,48 @@ import javafx.util.Callback;
  * create a two-column TreeTableView to show the file name and last modified 
  * properties, we extend the code shown above as follows:
  * 
- * <pre>
- * {@code
- * TreeItem<File> root = new TreeItem<File>(new File("/"));
- * treeTable.setRoot(root);
+ * <pre>{@code
+ * TreeTableColumns<File,String> fileNameCol = new TreeTableColumn<>("Filename");
+ * TreeTableColumns<File,Long> lastModifiedCol = new TreeTableColumn<>("Size");
+ *
+ * table.getColumns().setAll(fileNameCol, lastModifiedCol);}</pre>
  * 
- * // TODO this is not valid TreeTableView code
- * TreeTableColumns<Person,String> firstNameCol = new TreeTableColumns<Person,String>("First Name");
- * firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
- * TreeTableColumns<Person,String> lastNameCol = new TreeTableColumns<Person,String>("Last Name");
- * lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
- * 
- * table.getColumns().setAll(firstNameCol, lastNameCol);}</pre>
- * 
- * <p>With the code shown above we have fully defined the minimum properties
- * required to create a TreeTableView instance. Running this code (assuming the
- * file system structure is probably built up in memory) will result in a TreeTableView being
- * shown with two columns for name and lastModified. Any other properties of the
- * File class will not be shown, as no TreeTableColumns are defined for them.
+ * <p>With the code shown above we have nearly fully defined the minimum properties
+ * required to create a TreeTableView instance. The only thing missing is the
+ * {@link javafx.scene.control.TreeTableColumn#cellValueFactoryProperty() cell value factories}
+ * for the two columns - it is these that are responsible for determining the value
+ * of a cell in a given row. Commonly these can be specified using the
+ * {@link javafx.scene.control.cell.TreeItemPropertyValueFactory} class, but
+ * failing that you can also create an anonymous inner class and do whatever is
+ * necessary. For example, using {@link javafx.scene.control.cell.TreeItemPropertyValueFactory}
+ * you would do the following:
+ *
+ * <pre>{@code
+ * fileNameCol.setCellValueFactory(new TreeItemPropertyValueFactory("name"));
+ * lastModifiedCol.setCellValueFactory(new TreeItemPropertyValueFactory("lastModified"));}</pre>
+ *
+ * Running this code (assuming the file system structure is probably built up in
+ * memory) will result in a TreeTableView being shown with two columns for name
+ * and lastModified. Any other properties of the File class will not be shown, as
+ * no TreeTableColumns are defined for them.
  * 
  * <h3>TreeTableView support for classes that don't contain properties</h3>
  *
- * // TODO update - this is not correct for TreeTableView
- * 
  * <p>The code shown above is the shortest possible code for creating a TreeTableView
  * when the domain objects are designed with JavaFX properties in mind 
- * (additionally, {@link javafx.scene.control.cell.PropertyValueFactory} supports
+ * (additionally, {@link javafx.scene.control.cell.TreeItemPropertyValueFactory} supports
  * normal JavaBean properties too, although there is a caveat to this, so refer 
  * to the class documentation for more information). When this is not the case, 
  * it is necessary to provide a custom cell value factory. More information
  * about cell value factories can be found in the {@link TreeTableColumn} API
  * documentation, but briefly, here is how a TreeTableColumns could be specified:
  * 
- * <pre>
- * {@code
+ * <pre>{@code
  * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
- *         // p.getValue() returns the Person instance for a particular TreeTableView row
- *         return p.getValue().firstNameProperty();
+ *         // p.getValue() returns the TreeItem<Person> instance for a particular TreeTableView row,
+ *         // p.getValue().getValue() returns the Person instance inside the TreeItem<Person>
+ *         return p.getValue().getValue().firstNameProperty();
  *     }
  *  });
  * }}</pre>
@@ -215,7 +220,7 @@ import javafx.util.Callback;
  * {@link SelectionModel} and {@link FocusModel} classes. A TreeTableView has at most
  * one instance of each of these classes, available from 
  * {@link #selectionModelProperty() selectionModel} and 
- * {@link #focusModelProperty() focusModel} properties respectively.
+ * {@link #focusModelProperty() focusModel} properties, respectively.
  * Whilst it is possible to use this API to set a new selection model, in
  * most circumstances this is not necessary - the default selection and focus
  * models should work in most circumstances.
@@ -458,18 +463,29 @@ public class TreeTableView<S> extends Control {
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
             new EventType(editAnyEvent(), "EDIT_COMMIT");
-    
+
     /**
      * Returns the number of levels of 'indentation' of the given TreeItem, 
-     * based on how many times getParent() can be recursively called. If the 
-     * given TreeItem is the root node, or if the TreeItem does not have any 
-     * parent set, the returned value will be zero. For each time getParent() is 
-     * recursively called, the returned value is incremented by one.
-     * 
+     * based on how many times {@link javafx.scene.control.TreeItem#getParent()}
+     * can be recursively called. If the TreeItem does not have any parent set,
+     * the returned value will be zero. For each time getParent() is recursively
+     * called, the returned value is incremented by one.
+     *
+     * <p><strong>Important note: </strong>This method is deprecated as it does
+     * not consider the root node. This means that this method will iterate
+     * past the root node of the TreeTableView control, if the root node has a parent.
+     * If this is important, call {@link TreeTableView#getTreeItemLevel(TreeItem)}
+     * instead.
+     *
      * @param node The TreeItem for which the level is needed.
      * @return An integer representing the number of parents above the given node,
      *         or -1 if the given TreeItem is null.
+     * @deprecated This method does not correctly calculate the distance from the
+     *          given TreeItem to the root of the TreeTableView. As of JavaFX 8.0_20,
+     *          the proper way to do this is via
+     *          {@link TreeTableView#getTreeItemLevel(TreeItem)}
      */
+    @Deprecated
     public static int getNodeLevel(TreeItem<?> node) {
         return TreeView.getNodeLevel(node);
     }
@@ -765,8 +781,11 @@ public class TreeTableView<S> extends Control {
             if (root != null) {
                 weakRootEventListener = new WeakEventHandler<>(rootEvent);
                 getRoot().addEventHandler(TreeItem.<S>treeNotificationEvent(), weakRootEventListener);
-                weakOldItem = new WeakReference<TreeItem<S>>(root);
+                weakOldItem = new WeakReference<>(root);
             }
+
+            // Fix for RT-35763
+            getSortOrder().clear();
 
             expandedItemCountDirty = true;
             updateRootExpanded();
@@ -1475,17 +1494,54 @@ public class TreeTableView<S> extends Control {
         // normalize the requested row based on whether showRoot is set
         final int _row = isShowRoot() ? row : (row + 1);
 
-        if (treeItemCacheMap.containsKey(_row)) {
-            SoftReference<TreeItem<S>> treeItemRef = treeItemCacheMap.get(_row);
-            TreeItem<S> treeItem = treeItemRef.get();
-            if (treeItem != null) {
-                return treeItem;
+        if (expandedItemCountDirty) {
+            updateExpandedItemCount(getRoot());
+        } else {
+            if (treeItemCacheMap.containsKey(_row)) {
+                SoftReference<TreeItem<S>> treeItemRef = treeItemCacheMap.get(_row);
+                TreeItem<S> treeItem = treeItemRef.get();
+                if (treeItem != null) {
+                    return treeItem;
+                }
             }
         }
 
         TreeItem<S> treeItem = TreeUtil.getItem(getRoot(), _row, expandedItemCountDirty);
         treeItemCacheMap.put(_row, new SoftReference<>(treeItem));
         return treeItem;
+    }
+
+    /**
+     * Returns the number of levels of 'indentation' of the given TreeItem,
+     * based on how many times getParent() can be recursively called. If the
+     * given TreeItem is the root node of this TreeTableView, or if the TreeItem
+     * does not have any parent set, the returned value will be zero. For each
+     * time getParent() is recursively called, the returned value is incremented
+     * by one.
+     *
+     * @param node The TreeItem for which the level is needed.
+     * @return An integer representing the number of parents above the given node,
+     *         or -1 if the given TreeItem is null.
+     */
+    public int getTreeItemLevel(TreeItem<?> node) {
+        final TreeItem<?> root = getRoot();
+
+        if (node == null) return -1;
+        if (node == root) return 0;
+
+        int level = 0;
+        TreeItem<?> parent = node.getParent();
+        while (parent != null) {
+            level++;
+
+            if (parent == root) {
+                break;
+            }
+
+            parent = parent.getParent();
+        }
+
+        return level;
     }
     
     /**
@@ -2202,6 +2258,13 @@ public class TreeTableView<S> extends Control {
 
                     shift = - count + 1;
                     startRow++;
+                } else if (e.wasPermutated()) {
+                    // This handles the sorting case where nothing was added or
+                    // removed, but the location of the selected index / item
+                    // has likely changed. This was added to fix RT-30156 and
+                    // unit tests exist to prevent it from regressing.
+                    quietClearSelection();
+                    select(oldSelectedItem);
                 } else if (e.wasAdded()) {
                     // shuffle selection by the number of added items
                     shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
@@ -2210,9 +2273,9 @@ public class TreeTableView<S> extends Control {
                     // in which the children were added, rather than from the
                     // actual position of the new child. This led to selection
                     // being moved off the parent TreeItem by mistake.
-                    if (e.getAddedSize() == 1) {
-                        startRow = treeTableView.getRow(e.getAddedChildren().get(0));
-                    }
+                    // The 'if (e.getAddedSize() == 1)' condition here was
+                    // subsequently commented out due to RT-33894.
+                    startRow = treeTableView.getRow(e.getAddedChildren().get(0));
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
                     shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
@@ -2248,13 +2311,6 @@ public class TreeTableView<S> extends Control {
                             }
                         }
                     }
-                } else if (e.wasPermutated()) {
-                    // This handles the sorting case where nothing was added or
-                    // removed, but the location of the selected index / item
-                    // has likely changed. This was added to fix RT-30156 and
-                    // unit tests exist to prevent it from regressing.
-                    quietClearSelection();
-                    select(oldSelectedItem);
                 }
                 
                 shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
@@ -2333,6 +2389,8 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void clearAndSelect(int row, TableColumnBase<TreeItem<S>,?> column) {
+            if (row < 0 || row >= getItemCount()) return;
+
             // RT-33558 if this method has been called with a given row/column
             // intersection, and that row/column intersection is the only
             // selection currently, then this method becomes a no-op.
@@ -2367,7 +2425,7 @@ public class TreeTableView<S> extends Control {
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
             int changeIndex = selectedCellsSeq.indexOf(new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column));
-            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(
+            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<TreeTablePosition<S,?>>(
                     changeIndex, changeIndex+1, previousSelection, selectedCellsSeq);
             handleSelectedCellsListChangeEvent(change);
         }
@@ -2533,8 +2591,11 @@ public class TreeTableView<S> extends Control {
                 
                 int focusedIndex = getFocusedIndex();
                 if (focusedIndex == -1) {
-                    select(getItemCount() - 1);
-                    focus(indices.get(indices.size() - 1));
+                    final int itemCount = getItemCount();
+                    if (itemCount > 0) {
+                        select(itemCount - 1);
+                        focus(indices.get(indices.size() - 1));
+                    }
                 } else {
                     select(focusedIndex);
                     focus(focusedIndex);
@@ -3018,11 +3079,13 @@ public class TreeTableView<S> extends Control {
                 
                 if(shift != 0) {
                     final int newFocus = getFocusedIndex() + shift;
-                    Platform.runLater(new Runnable() {
-                        @Override public void run() {
-                            focus(newFocus);
-                        }
-                    });
+                    if (newFocus >= 0) {
+                        Platform.runLater(new Runnable() {
+                            @Override public void run() {
+                                focus(newFocus);
+                            }
+                        });
+                    }
                 } 
             }
         };

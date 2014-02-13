@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,24 +33,21 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-/**
- *
- * @author lubermud
- */
 public class ContextMenuTest {
-    private MenuItem menuItem1, menuItem2, menuItem3;
+    private MenuItem menuItem0, menuItem1, menuItem2, menuItem3;
 
     private ContextMenu contextMenu;
     private ContextMenu contextMenuWithOneItem;
     private ContextMenu contextMenuWithManyItems;
 
     @Before public void setup() {
+        menuItem0 = new MenuItem();
         menuItem1 = new MenuItem(); 
         menuItem2 = new MenuItem(); 
         menuItem3 = new MenuItem();
 
         contextMenu = new ContextMenu();
-        contextMenuWithOneItem = new ContextMenu(menuItem1);
+        contextMenuWithOneItem = new ContextMenu(menuItem0);
         contextMenuWithManyItems = new ContextMenu(menuItem1, menuItem2, menuItem3);
     }
 
@@ -122,6 +119,31 @@ public class ContextMenuTest {
         MenuItem addedMenuItem = new MenuItem();
         contextMenuWithManyItems.getItems().add(addedMenuItem);
         assertEquals(contextMenuWithManyItems, addedMenuItem.getParentPopup());
+    }
+
+    @Test public void test_rt_34106_menus_should_not_be_reused() {
+        // This test ensures the new behavior of ContextMenu's whereby it is only
+        // allowed for a Menu/MenuItem to be in one parentPopup at a time.
+        // Previously we allowed multiple ContextMenus to refer to the same
+        // Menu/MenuItem, but this didn't work as there was no way to discern
+        // when to show
+        //
+        MenuItem item1 = new MenuItem("MenuItem 1");
+        Menu menu = new Menu("Menu");
+        menu.getItems().addAll(item1);
+
+        ContextMenu cm1 = new ContextMenu(menu);
+        assertEquals(1, cm1.getItems().size());
+        assertEquals(menu, cm1.getItems().get(0));
+        assertEquals(cm1, menu.getParentPopup());
+        assertEquals(cm1, item1.getParentPopup());
+
+        ContextMenu cm2 = new ContextMenu(menu);
+        assertEquals(0, cm1.getItems().size());
+        assertEquals(1, cm2.getItems().size());
+        assertEquals(menu, cm2.getItems().get(0));
+        assertEquals(cm2, menu.getParentPopup());
+        assertEquals(cm2, item1.getParentPopup());
     }
 
     public static final class EventHandlerStub implements EventHandler<ActionEvent> {

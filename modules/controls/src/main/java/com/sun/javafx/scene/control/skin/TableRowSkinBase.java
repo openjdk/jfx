@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableObjectProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -355,9 +357,15 @@ public abstract class TableRowSkinBase<T,
                 // alignment has not been manually changed, but for now this will
                 // do.
                 final boolean centreContent = h <= 24.0;
-                if (! centreContent && tableCell.getAlignment() == Pos.CENTER_LEFT) {
+
+                // if the style origin is null then the property has not been
+                // set (or it has been reset to its default), which means that
+                // we can set it without overwriting someone elses settings.
+                final StyleOrigin origin = ((StyleableObjectProperty) tableCell.alignmentProperty()).getStyleOrigin();
+                if (! centreContent && origin == null) {
                     tableCell.setAlignment(Pos.TOP_LEFT);
                 }
+                // --- end of RT-32700 fix
 
                 ///////////////////////////////////////////
                 // further indentation code starts here
@@ -494,12 +502,6 @@ public abstract class TableRowSkinBase<T,
             updateCell(cell, skinnable);
             cell.updateIndex(skinnableIndex);
             cells.add(cell);
-            if (resetChildren) {
-                // RT-31084:When resetting children, we are already in the layout pass (with expection of one call during the init)
-                // Since we are manipulating with cells here and cannot wait for the next pulse to process CSS for the new situation,
-                // the CSS must be processed here
-                cell.impl_processCSS(false);
-            }
         }
 
         // update children of each row

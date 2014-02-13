@@ -34,7 +34,9 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import javafx.beans.property.ObjectProperty;
@@ -781,5 +783,28 @@ public class ListViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+    }
+
+    @Test public void test_rt35039() {
+        final List<String> data = new ArrayList<>();
+        data.add("aabbaa");
+        data.add("bbc");
+
+        final ListView<String> listView = new ListView<>();
+        listView.setItems(FXCollections.observableArrayList(data));
+
+        new StageLoader(listView);
+
+        // everything should be null to start with
+        assertNull(listView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        listView.getSelectionModel().select(1);
+        assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        listView.setItems(FXCollections.observableArrayList(data));
+        assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
     }
 }

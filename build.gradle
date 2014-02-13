@@ -309,6 +309,10 @@ ext.IS_COMPILE_MEDIA = Boolean.parseBoolean(COMPILE_MEDIA)
 defineProperty("COMPILE_PANGO", "${IS_LINUX}")
 ext.IS_COMPILE_PANGO = Boolean.parseBoolean(COMPILE_PANGO)
 
+// COMPILE_HARFBUZZ specifies whether to use Harfbuzz.
+defineProperty("COMPILE_HARFBUZZ", "false")
+ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
+
 // COMPILE_PARFAIT specifies whether to build parfait
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
@@ -337,6 +341,10 @@ ext.IS_FULL_TEST = Boolean.parseBoolean(FULL_TEST);
 // Specifies whether to run robot-based visual tests (only used when FULL_TEST is also enabled)
 defineProperty("USE_ROBOT", "true")
 ext.IS_USE_ROBOT = Boolean.parseBoolean(USE_ROBOT);
+
+// Specified whether to run tests in headless mode
+defineProperty("HEADLESS_TEST", "false")
+ext.IS_HEADLESS_TEST = Boolean.parseBoolean(HEADLESS_TEST);
 
 // Specifies whether to run system tests that depend on AWT (only used when FULL_TEST is also enabled)
 defineProperty("AWT_TEST", "true")
@@ -793,6 +801,7 @@ void addNative(Project project, String name, List<String> includeTargets) {
             }
             output = headerDir
             include(properties.javahInclude)
+            cleanTask.delete headerDir
         }
 
         def variants = properties.containsKey("variants") ? properties.variants : [""];
@@ -1038,6 +1047,11 @@ allprojects {
             addJCov(project, test)
         }
         classpath = files("$jfxrtJar") + classpath
+        if (IS_HEADLESS_TEST) {
+            systemProperty 'glass.platform', 'Monocle'
+            systemProperty 'monocle.platform', 'Headless'
+            systemProperty 'prism.order', 'sw'
+        }
     }
 
     compileTestJava {
@@ -1103,7 +1117,11 @@ project(":base") {
 
     // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
-    sourceSets.main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/version-info"]
+    if (System.getProperty("jfx.build.jdk.defenders", "true").equals("true")) { 
+        sourceSets.main.java.srcDirs = ["src/main/java", "src/main/java8", "$buildDir/generated-src/version-info"] 
+    } else { 
+        sourceSets.main.java.srcDirs = ["src/main/java", "src/main/java7", "$buildDir/generated-src/version-info"] 
+    } 
     compileJava.dependsOn processVersionInfo
 }
 
@@ -1593,8 +1611,6 @@ project(":fxpackager") {
         eachFile { FileCopyDetails details ->
             if (details.path.startsWith("com/javafx/main")) {
                 details.path = "resources/classes/$details.path"
-            } else if (details.path.startsWith("web-files")) {
-                details.path = "resources/$details.path"
             }
         }
     }
@@ -1764,6 +1780,27 @@ project(":fxpackager") {
                 includeEmptyDirs = false
             }
         }
+    }
+
+    task packagerFakeJar(type: Jar) {
+        dependsOn compileTestJava
+        from compileTestJava.destinationDir
+        include "hello/**"
+
+        destinationDir project.file("build/tmp/tests/appResources")
+        archiveName "mainApp.jar"
+        
+        manifest {
+            attributes(
+                    "Main-Class": "hello.TestPackager",
+                    "Custom-Attribute": " Is it stripped?"
+            )
+        }
+    }
+    
+    test {
+        dependsOn packagerFakeJar
+        systemProperty "tmpBase", project.file("build/tmp/tests").canonicalPath
     }
 }
 

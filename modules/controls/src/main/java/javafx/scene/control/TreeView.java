@@ -254,15 +254,26 @@ public class TreeView<T> extends Control {
     
     /**
      * Returns the number of levels of 'indentation' of the given TreeItem, 
-     * based on how many times getParent() can be recursively called. If the 
-     * given TreeItem is the root node, or if the TreeItem does not have any 
-     * parent set, the returned value will be zero. For each time getParent() is 
-     * recursively called, the returned value is incremented by one.
+     * based on how many times {@link javafx.scene.control.TreeItem#getParent()}
+     * can be recursively called. If the TreeItem does not have any parent set,
+     * the returned value will be zero. For each time getParent() is recursively
+     * called, the returned value is incremented by one.
+     *
+     * <p><strong>Important note: </strong>This method is deprecated as it does
+     * not consider the root node. This means that this method will iterate
+     * past the root node of the TreeView control, if the root node has a parent.
+     * If this is important, call {@link TreeView#getTreeItemLevel(TreeItem)}
+     * instead.
      * 
      * @param node The TreeItem for which the level is needed.
      * @return An integer representing the number of parents above the given node,
-     *         or -1 if the given TreeItem is null.
+     *          or -1 if the given TreeItem is null.
+     * @deprecated This method does not correctly calculate the distance from the
+     *          given TreeItem to the root of the TreeView. As of JavaFX 8.0_20,
+     *          the proper way to do this is via
+     *          {@link TreeView#getTreeItemLevel(TreeItem)}
      */
+    @Deprecated
     public static int getNodeLevel(TreeItem<?> node) {
         if (node == null) return -1;
 
@@ -276,7 +287,7 @@ public class TreeView<T> extends Control {
         return level;
     }
 
-    
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -702,7 +713,7 @@ public class TreeView<T> extends Control {
 
     /**
      * <p>A property used to represent the TreeItem currently being edited
-     * in the TreeView, if editing is taking place, or -1 if no item is being edited.
+     * in the TreeView, if editing is taking place, or null if no item is being edited.
      * 
      * <p>It is not possible to set the editing item, instead it is required that
      * you call {@link #edit(javafx.scene.control.TreeItem)}.
@@ -934,17 +945,53 @@ public class TreeView<T> extends Control {
         // normalize the requested row based on whether showRoot is set
         final int _row = isShowRoot() ? row : (row + 1);
 
-        if (treeItemCacheMap.containsKey(_row)) {
-            SoftReference<TreeItem<T>> treeItemRef = treeItemCacheMap.get(_row);
-            TreeItem<T> treeItem = treeItemRef.get();
-            if (treeItem != null) {
-                return treeItem;
+        if (expandedItemCountDirty) {
+            updateExpandedItemCount(getRoot());
+        } else {
+            if (treeItemCacheMap.containsKey(_row)) {
+                SoftReference<TreeItem<T>> treeItemRef = treeItemCacheMap.get(_row);
+                TreeItem<T> treeItem = treeItemRef.get();
+                if (treeItem != null) {
+                    return treeItem;
+                }
             }
         }
 
         TreeItem<T> treeItem = TreeUtil.getItem(getRoot(), _row, expandedItemCountDirty);
         treeItemCacheMap.put(_row, new SoftReference<>(treeItem));
         return treeItem;
+    }
+
+    /**
+     * Returns the number of levels of 'indentation' of the given TreeItem,
+     * based on how many times getParent() can be recursively called. If the
+     * given TreeItem is the root node of this TreeView, or if the TreeItem does
+     * not have any parent set, the returned value will be zero. For each time
+     * getParent() is recursively called, the returned value is incremented by one.
+     *
+     * @param node The TreeItem for which the level is needed.
+     * @return An integer representing the number of parents above the given node,
+     *         or -1 if the given TreeItem is null.
+     */
+    public int getTreeItemLevel(TreeItem<?> node) {
+        final TreeItem<?> root = getRoot();
+
+        if (node == null) return -1;
+        if (node == root) return 0;
+
+        int level = 0;
+        TreeItem<?> parent = node.getParent();
+        while (parent != null) {
+            level++;
+
+            if (parent == root) {
+                break;
+            }
+
+            parent = parent.getParent();
+        }
+
+        return level;
     }
 
     /** {@inheritDoc} */
@@ -1210,6 +1257,8 @@ public class TreeView<T> extends Control {
 
                     shift = - count + 1;
                     startRow++;
+                } else if (e.wasPermutated()) {
+                    // no-op
                 } else if (e.wasAdded()) {
                     // shuffle selection by the number of added items
                     shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
@@ -1218,9 +1267,9 @@ public class TreeView<T> extends Control {
                     // in which the children were added, rather than from the
                     // actual position of the new child. This led to selection
                     // being moved off the parent TreeItem by mistake.
-                    if (e.getAddedSize() == 1) {
-                        startRow = treeView.getRow(e.getAddedChildren().get(0));
-                    }
+                    // The 'if (e.getAddedSize() == 1)' condition here was
+                    // subsequently commented out due to RT-33894.
+                    startRow = treeView.getRow(e.getAddedChildren().get(0));
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
                     shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
@@ -1443,11 +1492,13 @@ public class TreeView<T> extends Control {
                 
                 if(shift != 0) {
                     final int newFocus = getFocusedIndex() + shift;
-                    Platform.runLater(new Runnable() {
-                        @Override public void run() {
-                            focus(newFocus);
-                        }
-                    });
+                    if (newFocus >= 0) {
+                        Platform.runLater(new Runnable() {
+                            @Override public void run() {
+                                focus(newFocus);
+                            }
+                        });
+                    }
                 } 
             }
         };

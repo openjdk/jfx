@@ -1161,8 +1161,8 @@ public abstract class BaseShaderGraphics
         float ov0 = 0.5f * hscale;
         float ouc = ((w * 0.5f + pad) * dxdist + 1.0f) * wscale;
         float ovc = ((h * 0.5f + pad) * dydist + 1.0f) * hscale;
-        float offsetx = lw * wscale;
-        float offsety = lw * hscale;
+        float offsetx = lw * dxdist * wscale;
+        float offsety = lw * dydist * hscale;
         VertexBuffer vb = context.getVertexBuffer();
         if (xform.isTranslateOrIdentity()) {
             x0 += mxt;

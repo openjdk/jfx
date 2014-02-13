@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -179,6 +179,12 @@ public class ContextMenu extends PopupControl {
                     item.setParentPopup(null);
                 }
                 for (MenuItem item : c.getAddedSubList()) {
+                    if (item.getParentPopup() != null) {
+                        // we need to remove this item from its current parentPopup
+                        // as a MenuItem should not exist in multiple parentPopup
+                        // instances
+                        item.getParentPopup().getItems().remove(item);
+                    }
                     item.setParentPopup(ContextMenu.this);
                 }
             }
@@ -246,8 +252,9 @@ public class ContextMenu extends PopupControl {
         // This leads to incorrect translation of anchor to screen coordinates.
         // A call to show initializes the content. Skin is null only the very first time.
         if(getSkin() == null) {
-            hide();
-            super.show(anchor, dx, dy);
+            // This check is also done in PopupControl#show,
+            // but happens too late for the purposes of calculating perfWidth/perfHeight
+            bridge.applyCss();
         }
         // FIXME because Side is not yet in javafx.geometry, we have to convert
         // to the old HPos/VPos API here, as Utils can not refer to Side in the

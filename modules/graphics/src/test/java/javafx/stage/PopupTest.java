@@ -25,34 +25,33 @@
 
 package javafx.stage;
 
+import com.sun.javafx.pgstub.StubPopupStage;
+import com.sun.javafx.pgstub.StubStage;
+import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.test.MouseEventGenerator;
+import com.sun.javafx.tk.Toolkit;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
-import javafx.geometry.Point2D;
+import javafx.geometry.Bounds;
+import javafx.scene.Cursor;
+import javafx.scene.Group;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.scene.Group;
-import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
-
+import junit.framework.Assert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.sun.javafx.pgstub.StubPopupStage;
-import com.sun.javafx.pgstub.StubStage;
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
-import javafx.geometry.Bounds;
-import javafx.scene.Parent;
-import junit.framework.Assert;
-import static org.junit.Assert.assertEquals;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import static org.junit.Assert.*;
 
 public class PopupTest {
 
@@ -535,6 +534,23 @@ public class PopupTest {
     }
 
     @Test
+    public void testKeyEventTranslation() {
+        Popup popup = new Popup();
+        AtomicBoolean res = new AtomicBoolean(false);
+        Rectangle rectangle = new Rectangle(0, 0, 300, 200);
+        popup.getScene().setRoot(new Group(rectangle));
+        popup.show(stage);
+        rectangle.requestFocus();
+        rectangle.setOnKeyPressed((KeyEvent e) -> {
+            assertEquals(rectangle, e.getTarget());
+            res.set(true);
+        });
+
+        Event.fireEvent(stage, new KeyEvent(null, stage, KeyEvent.KEY_PRESSED, "c", "c", KeyCode.C, false, false, false, false));
+        assertTrue(res.get());
+    }
+
+    @Test
     public void testConsumeAutoHidingEventsProperty() {
         final EventCounter mouseEventCounter = new EventCounter();
         final EventCounter keyEventCounter = new EventCounter();
@@ -667,6 +683,17 @@ public class PopupTest {
         Assert.assertFalse(oldRoot.getStyleClass().contains("popup"));
 
         System.out.println(javafx.scene.shape.Sphere.class.getResource("Sphere.class"));
+    }
+    
+    @Test
+    public void testCursorInheritance() {
+        stage.getScene().setCursor(Cursor.CLOSED_HAND);
+        
+        final Popup popup = new Popup();
+
+        popup.show(stage);
+        assertEquals(Cursor.CLOSED_HAND, popup.getScene().getCursor());
+
     }
 
     private static final class EventCounter implements EventHandler<Event> {

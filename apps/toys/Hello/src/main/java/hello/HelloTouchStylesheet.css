@@ -1,0 +1,24 @@
+#custom-green-button {
+    -fx-background-color: #009F00;
+}
+
+#custom-red-button {
+    -fx-background-color: #FF3322;
+}
+
+#red-radio-button .radio {
+    -fx-background-color: red;
+}
+
+#green-radio-button .radio {
+    -fx-background-color: green;
+}
+
+#red-check-button .box {
+    -fx-background-color: red;
+}
+
+#green-check-button .box {
+    -fx-background-color: green;
+}
+

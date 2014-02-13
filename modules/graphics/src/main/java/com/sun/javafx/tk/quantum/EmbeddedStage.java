@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -130,6 +130,13 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     public void setMaximized(boolean maximized) {
         if (QuantumToolkit.verbose) {
             System.err.println("EmbeddedScene.setMaximized " + maximized);
+        }
+    }
+
+    @Override
+    public void setAlwaysOnTop(boolean alwaysOnTop) {
+        if (QuantumToolkit.verbose) {
+            System.err.println("EmbeddedScene.setAlwaysOnTop " + alwaysOnTop);
         }
     }
 

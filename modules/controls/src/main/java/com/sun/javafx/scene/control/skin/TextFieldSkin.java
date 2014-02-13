@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -646,13 +646,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         updateCaretOff();
     }
 
-    public HitInfo getIndex(MouseEvent e) {
+    public HitInfo getIndex(double x, double y) {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
         Point2D p;
 
-        p = new Point2D(e.getX() - textTranslateX.get() - snappedLeftInset(),
-                        e.getY() - snappedTopInset());
+        p = new Point2D(x - textTranslateX.get() - snappedLeftInset(),
+                        y - snappedTopInset());
         return textNode.impl_hitTestChar(translateCaretPosition(p));
     }
 

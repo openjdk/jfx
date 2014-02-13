@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="Ensemble8/src/app/java"/>
+	<classpathentry kind="src" path="Ensemble8/src/app/resources"/>
+	<classpathentry kind="src" path="Ensemble8/src/samples/java"/>
+	<classpathentry kind="src" path="Ensemble8/src/samples/resources"/>
+	<classpathentry kind="src" path="Ensemble8/src/compiletime/java"/>
+	<classpathentry kind="src" path="Ensemble8/src/generated/java"/>
+    <classpathentry kind="src" path="Ensemble8/src/generated/resources"/>
+	<classpathentry kind="lib" path="Ensemble8/lib/lucene-core-3.2.0.jar"/>
+	<classpathentry kind="lib" path="Ensemble8/lib/lucene-grouping-3.2.0.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/rt">
+	<attributes>
+		<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

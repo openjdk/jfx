@@ -109,6 +109,14 @@ You can do the following for each sample on desktop platforms only:
 
 Ensemble8 also runs with JavaFX for ARM.
 
+-------------
+MandelbrotSet
+
+A sample application that demonstrates advantages of parallel execution done 
+using Java Parallel API. The application renders an image using Mandelbrot set 
+algorithm and provides intuitive navigation within the range of input parameters. 
+More information is available in index.html file inside the MandelbrotSet folder.
+
 ------
 Modena
 

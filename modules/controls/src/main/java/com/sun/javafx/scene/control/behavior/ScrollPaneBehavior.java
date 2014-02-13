@@ -25,13 +25,10 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.Control;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
@@ -102,12 +99,14 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
         ((ScrollPaneSkin)getControl().getSkin()).vsbPageDecrement();
     }
     void verticalHome() {
-        ((ScrollPane)getControl()).setHvalue(((ScrollPane)getControl()).getHmin());
-        ((ScrollPane)getControl()).setVvalue(((ScrollPane)getControl()).getVmin());
+        ScrollPane sp = getControl();
+        sp.setHvalue(sp.getHmin());
+        sp.setVvalue(sp.getVmin());
     }
     void verticalEnd() {
-        ((ScrollPane)getControl()).setHvalue(((ScrollPane)getControl()).getHmax());
-        ((ScrollPane)getControl()).setVvalue(((ScrollPane)getControl()).getVmax());
+        ScrollPane sp = getControl();
+        sp.setHvalue(sp.getHmax());
+        sp.setVvalue(sp.getVmax());
     }
 
 
