@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -119,8 +119,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
-            Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
+    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, AccessControlContext acc) {
 
         return new StubStage();
     }

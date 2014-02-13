@@ -225,6 +225,11 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     const JavaMethod* jMethod = static_cast<const JavaMethod*>(method);
     LOG(LiveConnect, "JavaInstance::invokeMethod call %s %s on %p", String(jMethod->name().impl()).utf8().data(), jMethod->signature(), m_instance->instance());
 
+    if (jMethod->numParameters() != count) {
+        LOG(LiveConnect, "JavaInstance::invokeMethod unable to find an appropriate method with specified signature");
+        return jsUndefined();
+    }
+	
     Vector<jobject> jArgs(count);
 
     for (int i = 0; i < count; i++) {
