@@ -834,6 +834,9 @@ static void lens_input_deviceNotify(JNIEnv *env,
     }
     if (device->isTouch) {
         flags |= 1 << com_sun_glass_ui_lens_LensApplication_DEVICE_TOUCH;
+        if (device->touchProtocolType > TOUCH_PROTOCOL_ST) {
+            flags|= 1 << com_sun_glass_ui_lens_LensApplication_DEVICE_MULTITOUCH;
+        }
     } else if (device->isPointer) {
         flags |= 1 << com_sun_glass_ui_lens_LensApplication_DEVICE_POINTER;
     }
