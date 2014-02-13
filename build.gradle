@@ -1611,8 +1611,6 @@ project(":fxpackager") {
         eachFile { FileCopyDetails details ->
             if (details.path.startsWith("com/javafx/main")) {
                 details.path = "resources/classes/$details.path"
-            } else if (details.path.startsWith("web-files")) {
-                details.path = "resources/$details.path"
             }
         }
     }

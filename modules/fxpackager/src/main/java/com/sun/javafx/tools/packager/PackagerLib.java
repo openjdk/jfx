@@ -431,8 +431,8 @@ public class PackagerLib {
             File odir = deployParams.outdir;
             odir.mkdirs();
 
-            if (deployParams.includeDT) {
-                extractWebFiles();
+            if (deployParams.includeDT && !extractWebFiles()) {
+                throw new PackagerException("ERR_NoEmbeddedDT");
             }
 
             ByteArrayOutputStream jnlp_bos_webstart = new ByteArrayOutputStream();
@@ -1670,11 +1670,11 @@ public class PackagerLib {
 
     private static String prefixWebFiles = "/resources/web-files/";
 
-    private void extractWebFiles() throws PackagerException {
-        doExtractWebFiles(webFiles);
+    private boolean extractWebFiles() throws PackagerException {
+        return doExtractWebFiles(webFiles);
     }
 
-    private void doExtractWebFiles(String lst[]) throws PackagerException {
+    private boolean doExtractWebFiles(String lst[]) throws PackagerException {
         File f = new File(deployParams.outdir, webfilesDir);
         f.mkdirs();
 
@@ -1684,10 +1684,12 @@ public class PackagerLib {
             if (is == null) {
                 System.err.println("Internal error. Missing resources [" +
                         (prefixWebFiles+s) + "]");
+                return false;
             } else {
                 copyFileToOutDir(is, new File(f, s));
             }
         }
+        return true;
     }
 
     private static boolean deleteDirectory(File dir) {
