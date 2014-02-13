@@ -166,7 +166,6 @@ public class TouchLagTest {
      */
     @Test
     public void testMultitouchLag() throws Exception {
-        Assume.assumeTrue(TestApplication.hasMultitouch());
         TestLog.reset();
         ui.processLine("EV_ABS ABS_X 300");
         ui.processLine("EV_ABS ABS_Y 300");

@@ -994,7 +994,6 @@ public class MultipleSelectionModelImplTest {
         tableSM.clearAndSelect(1);
     }
 
-    @Ignore
     @Test public void test_rt35624_selectedIndices_downwards() {
         model.select(2);
 
@@ -1037,7 +1036,6 @@ public class MultipleSelectionModelImplTest {
         model.selectIndices(4, 3, 2);
     }
 
-    @Ignore
     @Test public void test_rt35624_selectedItems_downwards() {
         model.select(2);
 
@@ -1084,7 +1082,6 @@ public class MultipleSelectionModelImplTest {
         model.selectIndices(2, 3, 4);
     }
 
-    @Ignore
     @Test public void test_rt35624_selectedItems_upwards() {
         model.select(4);
 

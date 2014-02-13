@@ -252,8 +252,9 @@ public class ContextMenu extends PopupControl {
         // This leads to incorrect translation of anchor to screen coordinates.
         // A call to show initializes the content. Skin is null only the very first time.
         if(getSkin() == null) {
-            hide();
-            super.show(anchor, dx, dy);
+            // This check is also done in PopupControl#show,
+            // but happens too late for the purposes of calculating perfWidth/perfHeight
+            bridge.applyCss();
         }
         // FIXME because Side is not yet in javafx.geometry, we have to convert
         // to the old HPos/VPos API here, as Utils can not refer to Side in the

@@ -1611,8 +1611,6 @@ project(":fxpackager") {
         eachFile { FileCopyDetails details ->
             if (details.path.startsWith("com/javafx/main")) {
                 details.path = "resources/classes/$details.path"
-            } else if (details.path.startsWith("web-files")) {
-                details.path = "resources/$details.path"
             }
         }
     }
@@ -1782,6 +1780,27 @@ project(":fxpackager") {
                 includeEmptyDirs = false
             }
         }
+    }
+
+    task packagerFakeJar(type: Jar) {
+        dependsOn compileTestJava
+        from compileTestJava.destinationDir
+        include "hello/**"
+
+        destinationDir project.file("build/tmp/tests/appResources")
+        archiveName "mainApp.jar"
+        
+        manifest {
+            attributes(
+                    "Main-Class": "hello.TestPackager",
+                    "Custom-Attribute": " Is it stripped?"
+            )
+        }
+    }
+    
+    test {
+        dependsOn packagerFakeJar
+        systemProperty "tmpBase", project.file("build/tmp/tests").canonicalPath
     }
 }
 

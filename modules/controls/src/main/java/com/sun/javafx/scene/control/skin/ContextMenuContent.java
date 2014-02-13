@@ -161,10 +161,6 @@ public class ContextMenuContent extends Region {
         if (itemsDirty) {
             updateVisualItems();
             itemsDirty = false;
-
-            if (getScene() != null) {
-                impl_processCSS(true);
-            }
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,7 @@ public class IOUtils {
         return ret && path.delete();
     }
 
-    static void copyFromURL(URL location, File file) throws IOException {
+    public static void copyFromURL(URL location, File file) throws IOException {
         if (location == null) {
             throw new IOException("Missing input resource!");
         }
@@ -66,7 +66,7 @@ public class IOUtils {
         file.setReadable(true, false);
     }
 
-    static void copyFile(File sourceFile, File destFile)
+    public static void copyFile(File sourceFile, File destFile)
             throws IOException {
         destFile.getParentFile().mkdirs();
 

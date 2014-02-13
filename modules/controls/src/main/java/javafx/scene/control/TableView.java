@@ -719,22 +719,28 @@ public class TableView<S> extends Control {
             // equal) empty items list
             
             @Override protected void invalidated() {
-                ObservableList<S> oldItems = oldItemsRef == null ? null : oldItemsRef.get();
+                final ObservableList<S> oldItems = oldItemsRef == null ? null : oldItemsRef.get();
+                final ObservableList<S> newItems = getItems();
+
+                // Fix for RT-35763
+                if (! (newItems instanceof SortedList)) {
+                    getSortOrder().clear();
+                }
 
                 // FIXME temporary fix for RT-15793. This will need to be
                 // properly fixed when time permits
                 if (getSelectionModel() instanceof TableViewArrayListSelectionModel) {
-                    ((TableViewArrayListSelectionModel<S>)getSelectionModel()).updateItemsObserver(oldItems, getItems());
+                    ((TableViewArrayListSelectionModel<S>)getSelectionModel()).updateItemsObserver(oldItems, newItems);
                 }
                 if (getFocusModel() != null) {
-                    getFocusModel().updateItemsObserver(oldItems, getItems());
+                    getFocusModel().updateItemsObserver(oldItems, newItems);
                 }
                 if (getSkin() instanceof TableViewSkin) {
                     TableViewSkin<S> skin = (TableViewSkin<S>) getSkin();
-                    skin.updateTableItems(oldItems, getItems());
+                    skin.updateTableItems(oldItems, newItems);
                 }
 
-                oldItemsRef = new WeakReference<ObservableList<S>>(getItems());
+                oldItemsRef = new WeakReference<>(newItems);
             }
         };
     public final void setItems(ObservableList<S> value) { itemsProperty().set(value); }

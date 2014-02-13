@@ -62,7 +62,6 @@ public class InputDevicePropertyTest  extends ParameterizedTestBase {
 
     @Test
     public void testMultiTouch() throws Exception {
-        Assume.assumeTrue(TestApplication.isMonocle());
         TestRunnable.invokeAndWait(() -> {
             Assert.assertEquals(device.getPointCount() > 1,
                                 Platform.isSupported(

@@ -595,17 +595,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                         event.consume();
                     }
                 }
-                else {
-                    /*
-                    ** we didn't scroll in the Virtual plane, lets see
-                    ** if we scrolled on the other plane.
-                    */
-                    ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
-                    if (nonVirtualBar.isVisible()) {                        
 
-                        double nonVirtualDelta = isVertical() ? event.getDeltaX() : event.getDeltaY();
+                ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
+                if (needBreadthBar) {
+                    double nonVirtualDelta = isVertical() ? event.getDeltaX() : event.getDeltaY();
+                    if (nonVirtualDelta != 0.0) {
                         double newValue = nonVirtualBar.getValue() - nonVirtualDelta;
-
                         if (newValue < nonVirtualBar.getMin()) {
                             nonVirtualBar.setValue(nonVirtualBar.getMin());
                         } else if (newValue > nonVirtualBar.getMax()) {
@@ -2123,7 +2118,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         final boolean isVertical = isVertical();
         if (((isVertical && (tempVisibility ? !needLengthBar : !vbar.isVisible())) ||
-                (! isVertical && (tempVisibility ? !needBreadthBar : !hbar.isVisible())))) return 0;
+                (! isVertical && (tempVisibility ? !needLengthBar : !hbar.isVisible())))) return 0;
         
         double pos = getPosition();
         if (pos == 0.0f && delta < 0) return 0;

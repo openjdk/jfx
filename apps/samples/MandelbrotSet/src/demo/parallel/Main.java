@@ -964,7 +964,7 @@ public class Main extends Application {
         @Override
         protected String computeValue() {
             long time = timeValue.get();
-            return String.format(Locale.US, "%01d:%05.2f sec", time / 1000 / 60, (time % 60_0000) / 1000d);
+            return String.format(Locale.US, "%01d:%05.2f", time / 1000 / 60, (time % 60_000) / 1000d);
         }
     }
 

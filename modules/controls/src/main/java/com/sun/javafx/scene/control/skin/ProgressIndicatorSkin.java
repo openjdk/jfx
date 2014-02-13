@@ -28,12 +28,14 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javafx.application.Platform;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
+import javafx.beans.binding.BooleanExpression;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
@@ -91,7 +93,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
     private IndeterminateSpinner spinner;
     private DeterminateIndicator determinateIndicator;
-    private boolean timelineNulled = false;
 
     /***************************************************************************
      *                                                                         *
@@ -102,72 +103,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     public ProgressIndicatorSkin(ProgressIndicator control) {
         super(control, new ProgressIndicatorBehavior<ProgressIndicator>(control));
 
-        InvalidationListener indeterminateListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                initialize();
-            }
-        };
         control.indeterminateProperty().addListener(indeterminateListener);
 
-        InvalidationListener visibilityListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                if (getSkinnable().isIndeterminate() && timelineNulled && spinner == null) {
-                    timelineNulled = false;
-                    spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this, spinEnabled.get(), progressColor.get());
-                    getChildren().add(spinner);
-                }
-
-                if (spinner != null) {
-                    if (getSkinnable().impl_isTreeVisible() && getSkinnable().getScene() != null) {
-                        if (spinner.indeterminateTimeline != null) {
-                            spinner.indeterminateTimeline.play();
-                        }
-                    }
-                    else {
-                        if (spinner.indeterminateTimeline != null) {
-                            spinner.indeterminateTimeline.pause();
-                        }
-                        getChildren().remove(spinner);
-                        spinner = null;
-                        timelineNulled = true;
-                    }
-                }
-            }
-        };
-        control.visibleProperty().addListener(visibilityListener);
-        control.parentProperty().addListener(visibilityListener);
-
-        InvalidationListener sceneListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                if (spinner != null) {
-                    if (getSkinnable().getScene() == null) {
-                        if (spinner.indeterminateTimeline != null) {
-                            spinner.indeterminateTimeline.pause();
-                        }
-                        getChildren().remove(spinner);
-                        spinner = null;
-                        timelineNulled = true;
-                    }
-                }
-                else {
-                    if (getSkinnable().getScene() != null && getSkinnable().isIndeterminate()) {
-                        timelineNulled = false;
-                        spinner = new IndeterminateSpinner(getSkinnable(), ProgressIndicatorSkin.this, spinEnabled.get(), progressColor.get());
-                        getChildren().add(spinner);
-                        if (getSkinnable().impl_isTreeVisible()) {
-                            if (spinner.indeterminateTimeline != null) {
-                                spinner.indeterminateTimeline.play();
-                            }
-                        }
-                        getSkinnable().requestLayout();
-                    }
-                }
-            }
-        };
-        control.sceneProperty().addListener(sceneListener);
-
         initialize();
-        getSkinnable().requestLayout();
     }
 
     private void initialize() {
@@ -177,7 +115,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             // clean up determinateIndicator
             determinateIndicator = null;
             // create spinner
-            spinner = new IndeterminateSpinner(control, this, spinEnabled.get(), progressColor.get());
+            spinner = new IndeterminateSpinner(spinEnabled.get(), progressColor.get());
             getChildren().clear();
             getChildren().add(spinner);
             if (getSkinnable().impl_isTreeVisible()) {
@@ -223,11 +161,24 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
     /***************************************************************************
      *                                                                         *
+     * Listeners                                                    *
+     *                                                                         *
+     **************************************************************************/
+
+    // Listen to ProgressIndicator indeterminateProperty
+    private final InvalidationListener indeterminateListener = new WeakInvalidationListener(new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            initialize();
+        }
+    });
+
+    /***************************************************************************
+     *                                                                         *
      * DeterminateIndicator                                                    *
      *                                                                         *
      **************************************************************************/
 
-    static class DeterminateIndicator extends Region {
+    private class DeterminateIndicator extends Region {
         private double textGap = 2.0F;
 
         // only update progress text on whole percentages
@@ -235,7 +186,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
         // only update pie arc to nearest degree
         private int degProgress;
-        private ProgressIndicator control;
         private Text text;
         private StackPane indicator;
         private StackPane progress;
@@ -244,7 +194,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         private Circle indicatorCircle;
 
         public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s, Paint fillOverride) {
-            this.control = control;
 
             getStyleClass().add("determinate-indicator");
 
@@ -311,15 +260,19 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         private void updateProgress() {
-            intProgress = (int) Math.round(control.getProgress() * 100.0) ;
-            text.setText((control.getProgress() >= 1) ? (DONE) : ("" + intProgress + "%"));
+            final ProgressIndicator control = getSkinnable();
+            final double progress = control.getProgress();
+            intProgress = (int) Math.round(progress * 100.0) ;
+            text.setText((progress >= 1) ? (DONE) : ("" + intProgress + "%"));
 
-            degProgress = (int) (360 * control.getProgress());
+            degProgress = (int) (360 * progress);
             arcShape.setLength(-degProgress);
             requestLayout();
         }
 
         @Override protected void layoutChildren() {
+            final ProgressIndicator control = getSkinnable();
+
             // Position and size the circular background
             double doneTextHeight = doneText.getLayoutBounds().getHeight();
             final double left = control.snappedLeftInset();
@@ -387,6 +340,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected double computePrefWidth(double height) {
+            final ProgressIndicator control = getSkinnable();
             final double left = control.snappedLeftInset();
             final double right = control.snappedRightInset();
             final double iLeft = indicator.snappedLeftInset();
@@ -406,6 +360,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected double computePrefHeight(double width) {
+            final ProgressIndicator control = getSkinnable();
             final double top = control.snappedTopInset();
             final double bottom = control.snappedBottomInset();
             final double iLeft = indicator.snappedLeftInset();
@@ -439,30 +394,53 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      *                                                                         *
      **************************************************************************/
 
-    static class IndeterminateSpinner extends Region {
-        private ProgressIndicator control;
-        private ProgressIndicatorSkin skin;
+    static final private Duration CLIPPED_DELAY = new Duration(300);
+    static final private Duration UNCLIPPED_DELAY = new Duration(0);
+
+    private final class IndeterminateSpinner extends Region {
         private IndicatorPaths pathsG;
         private Timeline indeterminateTimeline;
-        private final List<Double> opacities = new ArrayList<Double>();
+        private final List<Double> opacities = new ArrayList<>();
         private boolean spinEnabled = false;
         private Paint fillOverride = null;
 
-        public IndeterminateSpinner(ProgressIndicator control, ProgressIndicatorSkin s, boolean spinEnabled, Paint fillOverride) {
-            this.control = control;
-            this.skin = s;
+        private IndeterminateSpinner(boolean spinEnabled, Paint fillOverride) {
+
+            // does not need to be a weak listener since it only listens to its own property
+            impl_treeVisibleProperty().addListener(new InvalidationListener() {
+                @Override
+                public void invalidated(Observable observable) {
+
+                    final boolean isVisible = ((BooleanExpression)observable).getValue();
+                    if (indeterminateTimeline != null) {
+                        if (isVisible) {
+                            indeterminateTimeline.play();
+                        }
+                        else {
+                            indeterminateTimeline.pause();
+                        }
+                    }
+                    else if (isVisible) {
+                        indeterminateTimeline = new Timeline();
+                        indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
+                        indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                        rebuildTimeline();
+                    }
+                }
+            });
             this.spinEnabled = spinEnabled;
             this.fillOverride = fillOverride;
 
             setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
             getStyleClass().setAll("spinner");
 
-            pathsG = new IndicatorPaths(this);
+            pathsG = new IndicatorPaths();
             getChildren().add(pathsG);
 
             indeterminateTimeline = new Timeline();
             indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
             indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+
             rebuildTimeline();
 
             rebuild();
@@ -479,23 +457,28 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
     private boolean isVisibleInClip() {
-        Parent p1 = control;
 
-        Bounds ourBounds1 = p1.localToScene(control.getLayoutBounds());
-        while (p1 != null) {
-            Node clip = p1.getClip();
+        final ProgressIndicator progressIndicator = getSkinnable();
+        final Bounds ourBounds = progressIndicator.localToScene(progressIndicator.getLayoutBounds());
+        Parent parent = progressIndicator;
+        while (parent != null) {
+            final Node clip = parent.getClip();
             if (clip != null) {
-                Bounds clipBounds1 = p1.localToScene(clip.getLayoutBounds());
-                if (!ourBounds1.intersects(clipBounds1)) {
-                    return false;
+                final Bounds clipBounds = parent.localToScene(clip.getLayoutBounds());
+                if (ourBounds.intersects(clipBounds)) {
+                    return true;
                 }
             }
-            p1 = p1.getParent();
+            parent = parent.getParent();
         }
-        return true;
+        return false;
     }
 
-    private boolean isInvisibleOrDisconnected() {
+    private boolean isDisconnected() {
+        ProgressIndicator control = getSkinnable();
+        if (control == null) {
+            return true;
+        }
         Scene s = control.getScene();
         if (s == null) {
             return true;
@@ -507,25 +490,17 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         if (w.impl_getPeer() == null) {
             return true;
         }
-        if (!control.impl_isTreeVisible()) {
-            return true;
-        }
-
         return false;
     }
 
-    private boolean stopIfInvisibleOrDisconnected() {
-        if (isInvisibleOrDisconnected()) {
+    private boolean stopIfDisconnected() {
+        if (indeterminateTimeline != null && isDisconnected()) {
             indeterminateTimeline.stop();
             indeterminateTimeline = null;
             return true;
         }
         return false;
     }
-
-
-        static final private Duration CLIPPED_DELAY = new Duration(300);
-        static final private Duration UNCLIPPED_DELAY = new Duration(0);
 
         private void rebuildTimeline() {
             if (indeterminateTimeline != null) {
@@ -541,31 +516,18 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                            * region (e.g. not visible in a ScrollPane)
                            */
                           if (indeterminateTimeline != null) {
-                              stopIfInvisibleOrDisconnected();
+                              if (stopIfDisconnected()) {
+                                  return;
+                              }
                               if (!isVisibleInClip()) {
-                                  Platform.runLater(new Runnable() {
-                                    @Override public void run() {
-                                        if (indeterminateTimeline != null) {
-                                            if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
-                                                indeterminateTimeline.setDelay(CLIPPED_DELAY);
-                                            }
-                                            indeterminateTimeline.stop();
-                                            indeterminateTimeline.jumpTo(Duration.ZERO);
-                                            indeterminateTimeline.play();
-                                        }
-                                    }
-                                  });
+                                  if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
+                                      indeterminateTimeline.setDelay(CLIPPED_DELAY);
+                                  }
                               }
                               else {
-                                  Platform.runLater(new Runnable() {
-                                    @Override public void run() {
-                                        if (indeterminateTimeline != null) {
-                                            if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
-                                                indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
-                                            }
-                                        }
-                                    }
-                                  });
+                                  if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
+                                      indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                                  }
                               }
                           }
                       }
@@ -584,40 +546,13 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                                 }
                             }));
                 }
-                indeterminateTimeline.stop();
+
                 indeterminateTimeline.getKeyFrames().setAll(keyFrames);
                 indeterminateTimeline.playFromStart();
             }
         }
 
-        private void pauseIndicator(boolean pause) {
-            if (indeterminateTimeline != null) {
-                if (pause) {
-                    indeterminateTimeline.pause();
-                }
-                else {
-                    indeterminateTimeline.play();
-                }
-            }
-        }
-
         private class IndicatorPaths extends Pane {
-            IndeterminateSpinner piSkin;
-            IndicatorPaths(IndeterminateSpinner pi) {
-                super();
-                piSkin = pi;
-                InvalidationListener treeVisibilityListener = new InvalidationListener() {
-                    @Override public void invalidated(Observable valueModel) {
-                        if (piSkin.skin.getSkinnable().impl_isTreeVisible()) {
-                            piSkin.pauseIndicator(false);
-                        }
-                        else {
-                            piSkin.pauseIndicator(true);
-                        }
-                    }
-                };
-                impl_treeVisibleProperty().addListener(treeVisibilityListener);
-            }
 
             @Override protected double computePrefWidth(double height) {
                 double w = 0;
@@ -670,6 +605,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected void layoutChildren() {
+            ProgressIndicator control = getSkinnable();
+            if (control == null) return;
             final double w = control.getWidth() - control.snappedLeftInset() - control.snappedRightInset();
             final double h = control.getHeight() - control.snappedTopInset() - control.snappedBottomInset();
             final double prefW = pathsG.prefWidth(-1);
@@ -686,7 +623,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
         private void rebuild() {
             // update indeterminate indicator
-            final int segments = skin.indeterminateSegmentCount.get();
+            final int segments = indeterminateSegmentCount.get();
             opacities.clear();
             pathsG.getChildren().clear();
             final double step = 0.8/(segments-1);
@@ -708,7 +645,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
         private void shiftColors() {
             if (opacities.size() <= 0) return;
-            final int segments = skin.indeterminateSegmentCount.get();
+            final int segments = indeterminateSegmentCount.get();
             Collections.rotate(opacities, -1);
             for (int i = 0; i < segments; i++) {
                 pathsG.getChildren().get(i).setOpacity(opacities.get(i));
@@ -748,7 +685,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 }
 
                 @Override public CssMetaData<ProgressIndicator,Paint> getCssMetaData() {
-                    return StyleableProperties.PROGRESS_COLOR;
+                    return PROGRESS_COLOR;
                 }
             };
 
@@ -771,7 +708,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 }
 
                 @Override public CssMetaData<ProgressIndicator,Number> getCssMetaData() {
-                    return StyleableProperties.INDETERMINATE_SEGMENT_COUNT;
+                    return INDETERMINATE_SEGMENT_COUNT;
                 }
             };
 
@@ -784,7 +721,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override public CssMetaData<ProgressIndicator,Boolean> getCssMetaData() {
-            return StyleableProperties.SPIN_ENABLED;
+            return SPIN_ENABLED;
         }
 
         @Override public Object getBean() {
@@ -798,11 +735,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
     // *********** Stylesheet Handling *****************************************
 
-    /**
-     * Super-lazy instantiation pattern from Bill Pugh.
-     * @treatAsPrivate implementation detail
-     */
-    private static class StyleableProperties {
         private static final CssMetaData<ProgressIndicator,Paint> PROGRESS_COLOR =
                 new CssMetaData<ProgressIndicator,Paint>("-fx-progress-color",
                                                          PaintConverter.getInstance(), null) {
@@ -859,14 +791,13 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             styleables.add(SPIN_ENABLED);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
-    }
 
     /**
      * @return The CssMetaData associated with this class, which may include the
      * CssMetaData of its super classes.
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
-        return StyleableProperties.STYLEABLES;
+        return STYLEABLES;
     }
 
     /**

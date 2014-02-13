@@ -86,7 +86,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.setId("virtual-flow");
         flow.setPannable(IS_PANNABLE);
         flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);
-        flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         flow.setCreateCell(new Callback<VirtualFlow, ListCell<T>>() {
             @Override public ListCell<T> call(VirtualFlow flow) {
                 return ListViewSkin.this.createCell();
@@ -148,7 +147,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         registerChangeListener(listView.orientationProperty(), "ORIENTATION");
         registerChangeListener(listView.cellFactoryProperty(), "CELL_FACTORY");
         registerChangeListener(listView.parentProperty(), "PARENT");
-        registerChangeListener(listView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(listView.placeholderProperty(), "PLACEHOLDER");
         registerChangeListener(listView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
     }
@@ -165,8 +163,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             if (getSkinnable().getParent() != null && getSkinnable().isVisible()) {
                 getSkinnable().requestLayout();
             }
-        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
-            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         } else if ("PLACEHOLDER".equals(p)) {
             updatePlaceholderRegionVisibility();
         } else if ("FIXED_CELL_SIZE".equals(p)) {

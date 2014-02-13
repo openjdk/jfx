@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,87 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
+import com.oracle.bundlers.AbstractBundler;
+import com.oracle.bundlers.BundlerParamInfo;
+import com.oracle.bundlers.StandardBundlerParam;
+import com.oracle.bundlers.windows.WindowsBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.resource.windows.WinResources;
+
 import java.io.*;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class WinExeBundler extends Bundler {
-    WinAppBundler appBundler = new WinAppBundler();
-    BundleParams params;
-    private File configRoot = null;
-    File imageDir = null;
-    private boolean menuShortcut = false;
-    private boolean desktopShortcut = false;
+import static com.oracle.bundlers.windows.WindowsBundlerParam.*;
+
+public class WinExeBundler extends AbstractBundler {
+
+    private static final ResourceBundle I18N =
+            ResourceBundle.getBundle("com.oracle.bundlers.windows.WinExeBundler");
+    
+    public static final BundlerParamInfo<WinAppBundler> APP_BUNDLER = new WindowsBundlerParam<>(
+            I18N.getString("param.app-bundler.name"),
+            I18N.getString("param.app-bundler.description"),
+            "winAppBundler", //KEY
+            WinAppBundler.class, null, params -> new WinAppBundler(), false, null);
+
+    public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
+            I18N.getString("param.config-root.name"),
+            I18N.getString("param.config-root.description"),
+            "configRoot", //KEY
+            File.class, null,params -> {
+                File imagesRoot = new File(StandardBundlerParam.BUILD_ROOT.fetchFrom(params), "windows");
+                imagesRoot.mkdirs();
+                return imagesRoot;
+            }, false, s -> null);
+
+    //default for .exe is user level installation
+    // only do system wide if explicitly requested
+    public static final StandardBundlerParam<Boolean> EXE_SYSTEM_WIDE  =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.system-wide.name"),
+                    I18N.getString("param.system-wide.description"),
+                    "winexe" + BundleParams.PARAM_SYSTEM_WIDE, //KEY
+                    Boolean.class,
+                    new String[] {BundleParams.PARAM_SYSTEM_WIDE},
+                    params -> false, // EXEs default to user local install
+                    false,
+                    s -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s) // valueOf(null) is false, and we actually do want null
+            );
+
+    public static final BundlerParamInfo<File> IMAGE_DIR = new WindowsBundlerParam<>(
+            I18N.getString("param.image-dir.name"),
+            I18N.getString("param.image-dir.description"),
+            "imageDir", //KEY
+            File.class, null, params -> {
+                File imagesRoot = IMAGES_ROOT.fetchFrom(params);
+                return new File(imagesRoot, "win-app.image");
+            }, false, s -> null);
+
+    public static final BundlerParamInfo<File> OUT_DIR = new WindowsBundlerParam<>(
+            I18N.getString("param.out-dir.name"),
+            I18N.getString("param.out-dir.description"),
+            "outDir", //KEY
+            File.class, null, params -> null, false, s -> null);
 
     private final static String DEFAULT_EXE_PROJECT_TEMPLATE = "template.iss";
     private static final String TOOL_INNO_SETUP_COMPILER = "iscc.exe";
+
+    public static final BundlerParamInfo<String> TOOL_INNO_SETUP_COMPILER_EXECUTABLE = new WindowsBundlerParam<>(
+            I18N.getString("param.iscc-path.name"),
+            I18N.getString("param.iscc-path.description"),
+            "win.iscc.exe", //KEY
+            String.class, null, params -> {
+                for (String dirString : (System.getenv("PATH") + ";C:\\Program Files (x86)\\Inno Setup 5;C:\\Program Files\\Inno Setup 5").split(";")) {
+                    File f = new File(dirString.replace("\"", ""), TOOL_INNO_SETUP_COMPILER);
+                    if (f.isFile()) {
+                        return f.toString();
+                    }
+                }
+                return null;
+            }, false, null);
 
     public WinExeBundler() {
         super();
@@ -49,17 +113,57 @@ public class WinExeBundler extends Bundler {
     }
 
     @Override
-    protected void setBuildRoot(File dir) {
-        super.setBuildRoot(dir);
-        configRoot = new File(dir, "windows");
-        configRoot.mkdirs();
-        appBundler.setBuildRoot(dir);
+    public String getName() {
+        return I18N.getString("bundler.name");
     }
 
     @Override
-    public void setVerbose(boolean m) {
-        super.setVerbose(m);
-        appBundler.setVerbose(m);
+    public String getDescription() {
+        return I18N.getString("bundler.description");
+    }
+
+    @Override
+    public String getID() {
+        return "exe"; //KEY
+    }
+
+    @Override
+    public BundleType getBundleType() {
+        return BundleType.INSTALLER;
+    }
+
+    @Override
+    public Collection<BundlerParamInfo<?>> getBundleParameters() {
+        Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();
+        results.addAll(WinAppBundler.getAppBundleParameters());
+        results.addAll(getExeBundleParameters());
+        return results;
+    }
+
+    public static Collection<BundlerParamInfo<?>> getExeBundleParameters() {
+        return Arrays.asList(
+                APP_BUNDLER,
+                APP_RESOURCES,
+                BUILD_ROOT,
+                //CONFIG_ROOT, // duplicate from getAppBundleParameters
+                COPYRIGHT,
+                EXE_SYSTEM_WIDE,
+                IDENTIFIER,
+                IMAGE_DIR,
+                IMAGES_ROOT,
+                LICENSE_FILES,
+                MENU_GROUP,
+                MENU_HINT,
+                SHORTCUT_HINT,
+                TITLE,
+                VENDOR,
+                VERSION
+        );
+    }
+
+    @Override
+    public File execute(Map<String, ? super Object> params, File outputParentDir) {
+        return bundle(params, outputParentDir);
     }
 
     static class VersionExtractor extends PrintStream {
@@ -83,15 +187,17 @@ public class WinExeBundler extends Bundler {
         }
     }
 
-    private static double findTool(String toolName) {
+    private static double findToolVersion(String toolName) {
         try {
+            if (toolName == null || "".equals(toolName)) return 0f;
+
             ProcessBuilder pb = new ProcessBuilder(
-                toolName,
-                "/?");
+                    toolName,
+                    "/?");
             VersionExtractor ve = new VersionExtractor();
             IOUtils.exec(pb, Log.isDebug(), true, ve); //not interested in the output
             double version = ve.getVersion();
-            Log.verbose("  Detected ["+toolName+"] version [" + version + "]");
+            Log.verbose(MessageFormat.format(I18N.getString("message.tool-version"), toolName, version));
             return version;
         } catch (Exception e) {
             if (Log.isDebug()) {
@@ -102,112 +208,111 @@ public class WinExeBundler extends Bundler {
     }
 
     @Override
-    boolean validate(BundleParams p) throws Bundler.UnsupportedPlatformException, Bundler.ConfigException {
-        if (!(p.type == Bundler.BundleType.ALL || p.type == Bundler.BundleType.INSTALLER)
-                 || !(p.bundleFormat == null || "exe".equals(p.bundleFormat))) {
-            return false;
-        }
+    public boolean validate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
+        if (p == null) throw new ConfigException(I18N.getString("error.parameters-null"), I18N.getString("error.parameters-null.advice"));
+
         //run basic validation to ensure requirements are met
         //we are not interested in return code, only possible exception
-        appBundler.doValidate(p);
+        APP_BUNDLER.fetchFrom(p).validate(p);
 
-        double innoVersion = findTool(TOOL_INNO_SETUP_COMPILER);
+        double innoVersion = findToolVersion(TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(p));
 
         //Inno Setup 5+ is required
         double minVersion = 5.0f;
 
         if (innoVersion < minVersion) {
-            Log.info("Detected ["+TOOL_INNO_SETUP_COMPILER+"] version "+innoVersion +
-                        " but version "+minVersion+" is required.");
-            throw new Bundler.ConfigException(
-                    "Can not find Inno Setup Compiler (iscc.exe).",
-                    "  Download Inno Setup 5 or later from http://www.jrsoftware.org and add it to the PATH.");
+            Log.info(MessageFormat.format(I18N.getString("message.tool-wrong-version"), TOOL_INNO_SETUP_COMPILER, innoVersion, minVersion));
+            throw new ConfigException(
+                    I18N.getString("error.iscc-not-found"),
+                    I18N.getString("error.iscc-not-found.advice"));
         }
 
         return true;
     }
 
-    private boolean prepareProto() throws IOException {
-        if (!appBundler.doBundle(params, imageDir, true)) {
+    private boolean prepareProto(Map<String, ? super Object> params) throws IOException {
+        File imageDir = IMAGE_DIR.fetchFrom(params);
+        File appOutputDir = APP_BUNDLER.fetchFrom(params).doBundle(params, imageDir, true);
+        if (appOutputDir == null) {
             return false;
         }
-        if (!params.licenseFile.isEmpty()) {
+        List<String> licenseFiles = LICENSE_FILES.fetchFrom(params);
+        if (licenseFiles != null) {
+            RelativeFileSet appRoot = APP_RESOURCES.fetchFrom(params);
             //need to copy license file to the root of win-app.image
-            File lfile = new File(params.appResources.getBaseDirectory(),
-                    params.licenseFile.get(0));
-            IOUtils.copyFile(lfile, new File(imageDir, lfile.getName()));
+            for (String s : licenseFiles) {
+                File lfile = new File(appRoot.getBaseDirectory(), s);
+                IOUtils.copyFile(lfile, new File(imageDir, lfile.getName()));
+            }
         }
         return true;
     }
 
-    @Override
-    public boolean bundle(BundleParams p, File outdir) {
-        imageDir = new File(imagesRoot, "win-app.image");
+    public File bundle(Map<String, ? super Object> p, File outputDirectory) {
+        File imageDir = IMAGE_DIR.fetchFrom(p);
         try {
-            params = p;
 
             imageDir.mkdirs();
 
-            menuShortcut = params.needMenu;
-            desktopShortcut = params.needShortcut;
+            boolean menuShortcut = MENU_HINT.fetchFrom(p);
+            boolean desktopShortcut = SHORTCUT_HINT.fetchFrom(p);
             if (!menuShortcut && !desktopShortcut) {
-               //both can not be false - user will not find the app
-               Log.verbose("At least one type of shortcut is required. Enabling menu shortcut.");
-               menuShortcut = true;
+                //both can not be false - user will not find the app
+                Log.verbose(I18N.getString("message.one-shortcut-required"));
+                p.put(MENU_HINT.getID(), true);
             }
 
-            if (prepareProto() && prepareProjectConfig()) {
-                File configScript = getConfig_Script();
+            if (prepareProto(p) && prepareProjectConfig(p)) {
+                File configScript = getConfig_Script(p);
                 if (configScript.exists()) {
-                    Log.info("Running WSH script on application image [" +
-                            configScript.getAbsolutePath() + "]");
+                    Log.info(MessageFormat.format(I18N.getString("message.running-wsh-script"), configScript.getAbsolutePath()));
                     IOUtils.run("wscript", configScript, verbose);
                 }
-                return buildEXE(outdir);
+                return buildEXE(p, outputDirectory);
             }
-            return false;
+            return null;
         } catch (IOException ex) {
             ex.printStackTrace();
-            return false;
+            return null;
         } finally {
             try {
                 if (verbose) {
-                    saveConfigFiles();
+                    saveConfigFiles(p);
                 }
                 if (imageDir != null && !Log.isDebug()) {
                     IOUtils.deleteRecursive(imageDir);
                 } else if (imageDir != null) {
-                    Log.info("Kept working directory for debug: "
-                            + imageDir.getAbsolutePath());
+                    Log.info(MessageFormat.format(I18N.getString("message.debug-working-directory"), imageDir.getAbsolutePath()));
                 }
-             } catch (FileNotFoundException ex) {
-                return false;
+            } catch (FileNotFoundException ex) {
+                //noinspection ReturnInsideFinallyBlock
+                return null;
             }
         }
     }
 
     //name of post-image script
-    private File getConfig_Script() {
-        return new File(imageDir, WinAppBundler.getAppName(params) + "-post-image.wsf");
+    private File getConfig_Script(Map<String, ? super Object> params) {
+        return new File(IMAGE_DIR.fetchFrom(params), WinAppBundler.getAppName(params) + "-post-image.wsf");
     }
 
-    protected void saveConfigFiles() {
+    protected void saveConfigFiles(Map<String, ? super Object> params) {
         try {
-            if (getConfig_ExeProjectFile().exists()) {
-                IOUtils.copyFile(getConfig_ExeProjectFile(),
-                        new File(configRoot, getConfig_ExeProjectFile().getName()));
+            File configRoot = CONFIG_ROOT.fetchFrom(params);
+            File imagesRoot = IMAGES_ROOT.fetchFrom(params);
+            if (getConfig_ExeProjectFile(params).exists()) {
+                IOUtils.copyFile(getConfig_ExeProjectFile(params),
+                        new File(configRoot, getConfig_ExeProjectFile(params).getName()));
             }
-            if (getConfig_Script().exists()) {
-                IOUtils.copyFile(getConfig_Script(),
-                        new File(configRoot, getConfig_Script().getName()));
+            if (getConfig_Script(params).exists()) {
+                IOUtils.copyFile(getConfig_Script(params),
+                        new File(configRoot, getConfig_Script(params).getName()));
             }
-            if (getConfig_SmallInnoSetupIcon().exists()) {
-                IOUtils.copyFile(getConfig_SmallInnoSetupIcon(),
-                        new File(configRoot, getConfig_SmallInnoSetupIcon().getName()));
+            if (getConfig_SmallInnoSetupIcon(params).exists()) {
+                IOUtils.copyFile(getConfig_SmallInnoSetupIcon(params),
+                        new File(configRoot, getConfig_SmallInnoSetupIcon(params).getName()));
             }
-            Log.info("  Config files are saved to "
-                    + configRoot.getAbsolutePath()
-                    + ". Use them to customize package.");
+            Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), configRoot.getAbsolutePath()));
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
@@ -218,13 +323,8 @@ public class WinExeBundler extends Bundler {
         return "Exe Bundler (based on Inno Setup)";
     }
 
-    private String getAppIdentifier() {
-        String nm  = null;
-        if (params.identifier != null) {
-            nm = params.identifier;
-        } else {
-            nm = params.getMainClassName();
-        }
+    private String getAppIdentifier(Map<String, ? super Object> params) {
+        String nm = IDENTIFIER.fetchFrom(params);
 
         //limitation of innosetup
         if (nm.length() > 126)
@@ -233,59 +333,35 @@ public class WinExeBundler extends Bundler {
         return nm;
     }
 
-    private String getGroup() {
-        if (params.applicationCategory != null) {
-            return params.applicationCategory;
-        } else {
-            if (params.vendor != null) {
-                return params.vendor;
-            } else {
-                return "Unknown";
-            }
-        }
-    }
 
-    private String getLicenseFile() {
-        if (params.licenseFile.isEmpty()) {
+    private String getLicenseFile(Map<String, ? super Object> params) {
+        List<String> licenseFiles = LICENSE_FILES.fetchFrom(params);
+        if (licenseFiles == null || licenseFiles.isEmpty()) {
             return "";
+        } else {
+            return licenseFiles.get(0);
         }
-        return params.licenseFile.get(0);
     }
 
-    private String getDescription() {
-        if (params.description != null) {
-            //strip quotes if any
-            return params.description.replaceAll("\"", "'");
-        }
-        return "none";
-    }
 
-    boolean prepareMainProjectFile(File imageDir) throws IOException {
-        Map<String, String> data = new HashMap<String, String>();
-        data.put("PRODUCT_APP_IDENTIFIER", getAppIdentifier());
+    boolean prepareMainProjectFile(Map<String, ? super Object> params) throws IOException {
+        Map<String, String> data = new HashMap<>();
+        data.put("PRODUCT_APP_IDENTIFIER", getAppIdentifier(params));
 
         data.put("APPLICATION_NAME", WinAppBundler.getAppName(params));
-        data.put("APPLICATION_VENDOR",
-                params.vendor != null ? params.vendor : "Unknown");
-        data.put("APPLICATION_VERSION",
-                params.appVersion != null ? params.appVersion : "1.0");
+        data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
+        data.put("APPLICATION_VERSION", VERSION.fetchFrom(params)); // TODO make our own version paraminfo?
         data.put("APPLICATION_LAUNCHER_FILENAME",
-                appBundler.getLauncher(imageDir, params).getName());
-        data.put("APPLICATION_DESKTOP_SHORTCUT",
-                desktopShortcut ? "returnTrue" : "returnFalse");
-        data.put("APPLICATION_MENU_SHORTCUT",
-                menuShortcut ? "returnTrue" : "returnFalse");
-        data.put("APPLICATION_GROUP", getGroup());
-        data.put("APPLICATION_COMMENTS",
-                params.title != null ? params.title : "");
-        data.put("APPLICATION_COPYRIGHT",
-                params.copyright != null ? params.copyright : "");
+                WinAppBundler.getLauncher(IMAGE_DIR.fetchFrom(params), params).getName());
+        data.put("APPLICATION_DESKTOP_SHORTCUT", SHORTCUT_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
+        data.put("APPLICATION_MENU_SHORTCUT", MENU_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
+        data.put("APPLICATION_GROUP", MENU_GROUP.fetchFrom(params));
+        data.put("APPLICATION_COMMENTS", TITLE.fetchFrom(params)); // TODO this seems strange, at least in name
+        data.put("APPLICATION_COPYRIGHT", COPYRIGHT.fetchFrom(params));
 
-        data.put("APPLICATION_LICENSE_FILE", getLicenseFile());
+        data.put("APPLICATION_LICENSE_FILE", getLicenseFile(params));
 
-        //default for .exe is user level installation
-        // only do system wide if explicitly requested
-        if (params.systemWide != null && params.systemWide) {
+        if (EXE_SYSTEM_WIDE.fetchFrom(params)) {
             data.put("APPLICATION_INSTALL_ROOT", "{pf}");
             data.put("APPLICATION_INSTALL_PRIVILEGE", "admin");
         } else {
@@ -293,10 +369,18 @@ public class WinExeBundler extends Bundler {
             data.put("APPLICATION_INSTALL_PRIVILEGE", "lowest");
         }
 
-        Writer w = new BufferedWriter(new FileWriter(getConfig_ExeProjectFile()));
+        if (BIT_ARCH_64.fetchFrom(params)) {
+            data.put("ARCHITECTURE_BIT_MODE", "x64");
+        } else {
+            data.put("ARCHITECTURE_BIT_MODE", "");
+        }
+
+
+
+        Writer w = new BufferedWriter(new FileWriter(getConfig_ExeProjectFile(params)));
         String content = preprocessTextResource(
-                WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_ExeProjectFile().getName(),
-                "Inno Setup project file", DEFAULT_EXE_PROJECT_TEMPLATE, data);
+                WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_ExeProjectFile(params).getName(),
+                I18N.getString("resource.inno-setup-project-file"), DEFAULT_EXE_PROJECT_TEMPLATE, data);
         w.write(content);
         w.close();
         return true;
@@ -304,49 +388,50 @@ public class WinExeBundler extends Bundler {
 
     private final static String DEFAULT_INNO_SETUP_ICON = "icon_inno_setup.bmp";
 
-    private boolean prepareProjectConfig() throws IOException {
-        prepareMainProjectFile(imageDir);
+    private boolean prepareProjectConfig(Map<String, ? super Object> params) throws IOException {
+        prepareMainProjectFile(params);
 
         //prepare installer icon
-        File iconTarget = getConfig_SmallInnoSetupIcon();
+        File iconTarget = getConfig_SmallInnoSetupIcon(params);
         fetchResource(WinAppBundler.WIN_BUNDLER_PREFIX + iconTarget.getName(),
-                "setup dialog icon",
+                I18N.getString("resource.setup-icon"),
                 DEFAULT_INNO_SETUP_ICON,
                 iconTarget);
 
-        fetchResource(WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_Script().getName(),
-                "script to run after application image is populated",
+        fetchResource(WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_Script(params).getName(),
+                I18N.getString("resource.post-install-script"),
                 (String) null,
-                getConfig_Script());
+                getConfig_Script(params));
         return true;
     }
 
-    private File getConfig_SmallInnoSetupIcon() {
-        return new File(imageDir,
+    private File getConfig_SmallInnoSetupIcon(Map<String, ? super Object> params) {
+        return new File(IMAGE_DIR.fetchFrom(params),
                 WinAppBundler.getAppName(params) + "-setup-icon.bmp");
     }
 
-    private File getConfig_ExeProjectFile() {
-        return new File(imageDir,
+    private File getConfig_ExeProjectFile(Map<String, ? super Object> params) {
+        return new File(IMAGE_DIR.fetchFrom(params),
                 WinAppBundler.getAppName(params) + ".iss");
     }
 
 
-    private boolean buildEXE(File outdir) throws IOException {
-        Log.verbose("Generating EXE for installer to: " + outdir.getAbsolutePath());
+    private File buildEXE(Map<String, ? super Object> params, File outdir) throws IOException {
+        Log.verbose(MessageFormat.format(I18N.getString("message.outputting-to-location"), outdir.getAbsolutePath()));
 
         outdir.mkdirs();
 
         //run candle
         ProcessBuilder pb = new ProcessBuilder(
-                TOOL_INNO_SETUP_COMPILER,
+                TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(params),
                 "/o"+outdir.getAbsolutePath(),
-                getConfig_ExeProjectFile().getAbsolutePath());
-        pb = pb.directory(imageDir);
+                getConfig_ExeProjectFile(params).getAbsolutePath());
+        pb = pb.directory(IMAGE_DIR.fetchFrom(params));
         IOUtils.exec(pb, verbose);
 
-        Log.info("Installer (.exe) saved to: " + outdir.getAbsolutePath());
+        Log.info(MessageFormat.format(I18N.getString("message.output-location"), outdir.getAbsolutePath()));
 
-        return true;
+        return outdir;
     }
 }
+ 

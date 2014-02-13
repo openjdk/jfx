@@ -55,7 +55,7 @@ public class NGTestBase {
     /** Transforms the given node by the specified transform. */
     protected static <N extends NGNode> void transform(N node, BaseTransform tx) {
         // Concatenate this transform with the one already on the node
-        tx = node.getTransform().deriveWithConcatenation(tx);
+        tx = node.getTransform().copy().deriveWithConcatenation(tx);
         // Compute & set the new transformed bounds for the node
         node.setTransformedBounds(node.getEffectBounds(new RectBounds(), tx), false);
         // Set the transform matrix

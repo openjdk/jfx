@@ -32,6 +32,8 @@ import static org.junit.Assert.*;
 
 import java.util.*;
 
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -42,7 +44,9 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -2536,5 +2540,141 @@ public class TableViewTest {
         // that "bbc" remains selected as it is still in the list
         tableView.setItems(FXCollections.observableArrayList(data));
         assertEquals("bbc", tableView.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void test_rt35763_observableList() {
+        TableView<Person> table = new TableView();
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        table.getColumns().add(firstNameCol);
+
+        Person jacob, isabella, ethan, emma, michael;
+        table.setItems(FXCollections.observableArrayList(
+                jacob = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                isabella = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                ethan = new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                emma = new Person("Emma", "Jones", "emma.jones@example.com"),
+                michael = new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        assertEquals(jacob, table.getItems().get(0));
+        assertEquals(isabella, table.getItems().get(1));
+        assertEquals(ethan, table.getItems().get(2));
+        assertEquals(emma, table.getItems().get(3));
+        assertEquals(michael, table.getItems().get(4));
+
+        // change sort order - expect items to be sorted
+        table.getSortOrder().setAll(firstNameCol);
+
+        assertEquals(jacob, table.getItems().get(3));
+        assertEquals(isabella, table.getItems().get(2));
+        assertEquals(ethan, table.getItems().get(1));
+        assertEquals(emma, table.getItems().get(0));
+        assertEquals(michael, table.getItems().get(4));
+
+        // set new items into items list - expect sortOrder list to be reset
+        // and the items list to remain unsorted
+        table.setItems(FXCollections.observableArrayList(
+                jacob = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                isabella = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                ethan = new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                emma = new Person("Emma", "Jones", "emma.jones@example.com"),
+                michael = new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        assertEquals(jacob, table.getItems().get(0));
+        assertEquals(isabella, table.getItems().get(1));
+        assertEquals(ethan, table.getItems().get(2));
+        assertEquals(emma, table.getItems().get(3));
+        assertEquals(michael, table.getItems().get(4));
+
+        assertTrue(table.getSortOrder().isEmpty());
+    }
+
+    @Test public void test_rt35763_sortedList() {
+        TableView<Person> table = new TableView();
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        table.getColumns().add(firstNameCol);
+
+        Person jacob, isabella, ethan, emma, michael;
+        SortedList<Person> sortedList = new SortedList<>(FXCollections.observableArrayList(
+                jacob = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                isabella = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                ethan = new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                emma = new Person("Emma", "Jones", "emma.jones@example.com"),
+                michael = new Person("Michael", "Brown", "michael.brown@example.com")));
+        sortedList.comparatorProperty().bind(table.comparatorProperty());
+        table.setItems(sortedList);
+
+        assertEquals(jacob, table.getItems().get(0));
+        assertEquals(isabella, table.getItems().get(1));
+        assertEquals(ethan, table.getItems().get(2));
+        assertEquals(emma, table.getItems().get(3));
+        assertEquals(michael, table.getItems().get(4));
+
+        // change sort order - expect items to be sorted
+        table.getSortOrder().setAll(firstNameCol);
+
+        assertEquals(jacob, table.getItems().get(3));
+        assertEquals(isabella, table.getItems().get(2));
+        assertEquals(ethan, table.getItems().get(1));
+        assertEquals(emma, table.getItems().get(0));
+        assertEquals(michael, table.getItems().get(4));
+
+        // set new items into items list - expect sortOrder list to be retained
+        // as we're inserting a SortedList
+        SortedList<Person> sortedList2 = new SortedList<>(FXCollections.observableArrayList(
+                jacob = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                isabella = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                ethan = new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                emma = new Person("Emma", "Jones", "emma.jones@example.com"),
+                michael = new Person("Michael", "Brown", "michael.brown@example.com")));
+        sortedList2.comparatorProperty().bind(table.comparatorProperty());
+        table.setItems(sortedList2);
+
+        assertEquals(jacob, table.getItems().get(3));
+        assertEquals(isabella, table.getItems().get(2));
+        assertEquals(ethan, table.getItems().get(1));
+        assertEquals(emma, table.getItems().get(0));
+        assertEquals(michael, table.getItems().get(4));
+
+        assertEquals(1, table.getSortOrder().size());
+        assertEquals(firstNameCol, table.getSortOrder().get(0));
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void test_rt35768_negativeFrom() {
+        readOnlyUnbackedObservableListSubListTest(-1, 0);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void test_rt35768_bigTo() {
+        readOnlyUnbackedObservableListSubListTest(0, 10);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void test_rt35768_fromEqualsTo() {
+        readOnlyUnbackedObservableListSubListTest(1, 1);
+    }
+
+    private void readOnlyUnbackedObservableListSubListTest(int from, int to) {
+        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<>(new ListChangeListener<TablePosition>() {
+            @Override public void onChanged(javafx.collections.ListChangeListener.Change<? extends TablePosition> c) {
+                // Do nothing
+            }
+        });
+        ReadOnlyUnbackedObservableList<TablePosition<Object, ?>> selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<Object, ?>>() {
+            @Override public TablePosition<Object, ?> get(int i) {
+                return selectedCellsMap.get(i);
+            }
+
+            @Override public int size() {
+                return selectedCellsMap.size();
+            }
+        };
+
+        // This should result in an IOOBE, but didn't until this bug was fixed
+        selectedCellsSeq.subList(from, to);
     }
 }

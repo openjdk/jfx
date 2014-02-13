@@ -47,11 +47,6 @@ public class MultiTouch3Test extends ParameterizedTestBase {
         return TestTouchDevices.getTouchDeviceParameters(3);
     }
 
-    @Before
-    public void checkMultitouch() {
-        Assume.assumeTrue(TestApplication.hasMultitouch());
-    }
-
     @Test
 //    @Ignore("RT-35546")
     /** This test follows the sequence described in touch event documentation:
