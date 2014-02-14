@@ -447,7 +447,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
         outFile.getParentFile().mkdirs();
 
-        //run rpmbuild
+        //run dpkg
         ProcessBuilder pb = new ProcessBuilder(
                 "fakeroot", TOOL_DPKG, "-b",  FULL_PACKAGE_NAME.fetchFrom(params),
                 outFile.getAbsolutePath());

@@ -34,6 +34,8 @@ import com.sun.javafx.tools.resource.linux.LinuxResources;
 import java.io.*;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.oracle.bundlers.StandardBundlerParam.*;
 
@@ -81,25 +83,37 @@ public class LinuxRPMBundler extends AbstractBundler {
     private final static String DEFAULT_SPEC_TEMPLATE = "template.spec";
     private final static String DEFAULT_DESKTOP_FILE_TEMPLATE = "template.desktop";
 
-    private final static String TOOL_RPMBUILD = "rpmbuild";
+    public final static String TOOL_RPMBUILD = "rpmbuild";
+    public final static double TOOL_RPMBUILD_MIN_VERSION = 4.0d;
 
     public LinuxRPMBundler() {
         super();
         baseResourceLoader = LinuxResources.class;
     }
 
-    private boolean testTool(String toolName, String minVersion) {
-        try {
+    public static boolean testTool(String toolName, double minVersion) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
             ProcessBuilder pb = new ProcessBuilder(
                     toolName,
                     "--version");
-            IOUtils.exec(pb, Log.isDebug(), true); //not interested in the output
+
+            IOUtils.exec(pb, Log.isDebug(), false, ps); //not interested in the output
+
             //TODO: Version is ignored; need to extract version string and compare!
+            String content = new String(baos.toByteArray());
+            Pattern pattern = Pattern.compile("RPM version (\\d+\\.\\d+)");
+            Matcher matcher = pattern.matcher(content);
+            if (matcher.find()) {
+                String v = matcher.group(1);
+                double version = new Double(v);
+                return minVersion <= version;
+            } else {
+               return false;
+            }
         } catch (Exception e) {
             Log.verbose(MessageFormat.format(I18N.getString("message.test-for-tool"), toolName, e.getMessage()));
             return false;
         }
-        return true;
     }
 
     @Override
@@ -113,10 +127,10 @@ public class LinuxRPMBundler extends AbstractBundler {
         APP_BUNDLER.fetchFrom(p).doValidate(p);
 
         //TODO: validate presense of required tools?
-        if (!testTool(TOOL_RPMBUILD, "4")){
+        if (!testTool(TOOL_RPMBUILD, TOOL_RPMBUILD_MIN_VERSION)){
             throw new ConfigException(
-                    I18N.getString("error.cannot-find-rpmbuild"),
-                    I18N.getString("error.cannot-find-rpmbuild.advice"));
+                    I18N.getString(MessageFormat.format("error.cannot-find-rpmbuild", TOOL_RPMBUILD_MIN_VERSION)),
+                    I18N.getString(MessageFormat.format("error.cannot-find-rpmbuild.advice", TOOL_RPMBUILD_MIN_VERSION)));
         }
 
         return true;

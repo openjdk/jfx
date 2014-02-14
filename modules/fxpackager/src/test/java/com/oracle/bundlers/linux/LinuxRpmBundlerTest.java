@@ -65,7 +65,8 @@ public class LinuxRpmBundlerTest {
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
         appResources = new HashSet<>(Arrays.asList(fakeMainJar));
-        
+
+        Assume.assumeTrue(LinuxRPMBundler.testTool(LinuxRPMBundler.TOOL_RPMBUILD, LinuxRPMBundler.TOOL_RPMBUILD_MIN_VERSION));
     }
     
     /**
@@ -92,6 +93,7 @@ public class LinuxRpmBundlerTest {
         bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
+        bundler.validate(bundleParams);
         bundler.execute(bundleParams, new File(workDir, "smoke"));
         
         try {
@@ -124,6 +126,7 @@ public class LinuxRpmBundlerTest {
 
         bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
+        bundler.validate(bundleParams);
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
         System.out.println(output);
         Assume.assumeTrue(output.isFile());
