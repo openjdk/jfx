@@ -37,6 +37,7 @@ import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.BooleanExpression;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
@@ -93,6 +94,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
     private IndeterminateSpinner spinner;
     private DeterminateIndicator determinateIndicator;
+    private ProgressIndicator control;
 
     /***************************************************************************
      *                                                                         *
@@ -103,22 +105,22 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     public ProgressIndicatorSkin(ProgressIndicator control) {
         super(control, new ProgressIndicatorBehavior<ProgressIndicator>(control));
 
-        control.indeterminateProperty().addListener(indeterminateListener);
+        this.control = control;
+        this.control.indeterminateProperty().addListener(indeterminateListener);
+        this.control.progressProperty().addListener(progressListener);
 
         initialize();
     }
 
     private void initialize() {
-        ProgressIndicator control = getSkinnable();
         boolean isIndeterminate = control.isIndeterminate();
         if (isIndeterminate) {
             // clean up determinateIndicator
             determinateIndicator = null;
             // create spinner
             spinner = new IndeterminateSpinner(spinEnabled.get(), progressColor.get());
-            getChildren().clear();
-            getChildren().add(spinner);
-            if (getSkinnable().impl_isTreeVisible()) {
+            getChildren().setAll(spinner);
+            if (control.impl_isTreeVisible()) {
                 if (spinner.indeterminateTimeline != null) {
                     spinner.indeterminateTimeline.play();
                 }
@@ -132,9 +134,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 spinner = null;
             }
             // create determinateIndicator
-            determinateIndicator = new com.sun.javafx.scene.control.skin.ProgressIndicatorSkin.DeterminateIndicator(control, this, progressColor.get());
-            getChildren().clear();
-            getChildren().add(determinateIndicator);
+            determinateIndicator = new DeterminateIndicator(control, this, progressColor.get());
+            getChildren().setAll(determinateIndicator);
         }
     }
 
@@ -146,11 +147,14 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             }
             spinner = null;
         }
+        control.indeterminateProperty().removeListener(indeterminateListener);
+        control.progressProperty().removeListener(progressListener);
+        control = null;
     }
 
     @Override protected void layoutChildren(final double x, final double y,
                                             final double w, final double h) {
-        if (spinner != null && getSkinnable().isIndeterminate()) {
+        if (spinner != null && control.isIndeterminate()) {
             spinner.layoutChildren();
             spinner.resizeRelocate(0, 0, w, h);
         } else if (determinateIndicator != null) {
@@ -166,11 +170,19 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      **************************************************************************/
 
     // Listen to ProgressIndicator indeterminateProperty
-    private final InvalidationListener indeterminateListener = new WeakInvalidationListener(new InvalidationListener() {
+    private final InvalidationListener indeterminateListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
             initialize();
         }
-    });
+    };
+
+    private final InvalidationListener progressListener = new InvalidationListener() {
+        @Override public void invalidated(Observable valueModel) {
+            if (determinateIndicator != null) {
+                determinateIndicator.updateProgress(((DoubleProperty)valueModel).doubleValue());
+            }
+        }
+    };
 
     /***************************************************************************
      *                                                                         *
@@ -199,13 +211,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
             intProgress = (int) Math.round(control.getProgress() * 100.0) ;
             degProgress = (int) (360 * control.getProgress());
-
-            InvalidationListener progressListener = new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    updateProgress();
-                }
-            };
-            control.progressProperty().addListener(progressListener);
 
             getChildren().clear();
 
@@ -240,7 +245,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             tick.getStyleClass().setAll("tick");
 
             getChildren().setAll(indicator, progress, text, tick);
-            updateProgress();
+            updateProgress(control.getProgress());
         }
 
         private void setFillOverride(Paint fillOverride) {
@@ -259,9 +264,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
             return false;
         }
 
-        private void updateProgress() {
-            final ProgressIndicator control = getSkinnable();
-            final double progress = control.getProgress();
+        private void updateProgress(double progress) {
             intProgress = (int) Math.round(progress * 100.0) ;
             text.setText((progress >= 1) ? (DONE) : ("" + intProgress + "%"));
 
@@ -271,8 +274,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected void layoutChildren() {
-            final ProgressIndicator control = getSkinnable();
-
             // Position and size the circular background
             double doneTextHeight = doneText.getLayoutBounds().getHeight();
             final double left = control.snappedLeftInset();
@@ -340,7 +341,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected double computePrefWidth(double height) {
-            final ProgressIndicator control = getSkinnable();
             final double left = control.snappedLeftInset();
             final double right = control.snappedRightInset();
             final double iLeft = indicator.snappedLeftInset();
@@ -360,7 +360,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected double computePrefHeight(double width) {
-            final ProgressIndicator control = getSkinnable();
             final double top = control.snappedTopInset();
             final double bottom = control.snappedBottomInset();
             final double iLeft = indicator.snappedLeftInset();
@@ -458,9 +457,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
     private boolean isVisibleInClip() {
 
-        final ProgressIndicator progressIndicator = getSkinnable();
-        final Bounds ourBounds = progressIndicator.localToScene(progressIndicator.getLayoutBounds());
-        Parent parent = progressIndicator;
+        final Bounds ourBounds = control.localToScene(control.getLayoutBounds());
+        Parent parent = control;
         while (parent != null) {
             final Node clip = parent.getClip();
             if (clip != null) {
@@ -475,7 +473,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     }
 
     private boolean isDisconnected() {
-        ProgressIndicator control = getSkinnable();
         if (control == null) {
             return true;
         }
@@ -605,8 +602,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         }
 
         @Override protected void layoutChildren() {
-            ProgressIndicator control = getSkinnable();
-            if (control == null) return;
             final double w = control.getWidth() - control.snappedLeftInset() - control.snappedRightInset();
             final double h = control.getHeight() - control.snappedTopInset() - control.snappedBottomInset();
             final double prefW = pathsG.prefWidth(-1);
