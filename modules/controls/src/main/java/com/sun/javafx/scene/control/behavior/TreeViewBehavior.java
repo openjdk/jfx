@@ -396,17 +396,17 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-//        final int focusIndex = fm.getFocusedIndex();
-        
         if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() - 1;
             int anchor = getAnchor();
             
             if (! hasAnchor()) {
                 setAnchor(fm.getFocusedIndex());
-            } 
-            
-            clearSelectionOutsideRange(anchor, newRow);
+            }
+
+            if (sm.getSelectedIndices().size() > 1) {
+                clearSelectionOutsideRange(anchor, newRow);
+            }
 
             if (anchor > newRow) {
                 sm.selectRange(anchor, newRow - 1);
@@ -434,8 +434,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             if (! hasAnchor()) {
                 setAnchor(fm.getFocusedIndex());
             } 
-            
-            clearSelectionOutsideRange(anchor, newRow);
+
+            if (sm.getSelectedIndices().size() > 1) {
+                clearSelectionOutsideRange(anchor, newRow);
+            }
 
             if (anchor > newRow) {
                 sm.selectRange(anchor, newRow - 1);

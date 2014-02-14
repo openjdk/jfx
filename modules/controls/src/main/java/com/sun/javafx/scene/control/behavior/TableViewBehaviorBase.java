@@ -617,7 +617,12 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     protected void alsoSelectPrevious() {
         TableSelectionModel sm = getSelectionModel();
-        if (sm == null || sm.getSelectionMode() == SelectionMode.SINGLE) return;
+        if (sm == null) return;
+
+        if (sm.getSelectionMode() == SelectionMode.SINGLE) {
+            selectPreviousRow();
+            return;
+        }
         
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
@@ -640,7 +645,12 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     
     protected void alsoSelectNext() {
         TableSelectionModel sm = getSelectionModel();
-        if (sm == null || sm.getSelectionMode() == SelectionMode.SINGLE) return;
+        if (sm == null) return;
+
+        if (sm.getSelectionMode() == SelectionMode.SINGLE) {
+            selectNextRow();
+            return;
+        }
         
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
@@ -695,7 +705,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             setAnchor(getFocusedCell());
         } 
 
-        clearSelectionOutsideRange(anchor.getRow(), newRow, null);
+        if (sm.getSelectedIndices().size() > 1) {
+            clearSelectionOutsideRange(anchor.getRow(), newRow, null);
+        }
 
         if (anchor.getRow() > newRow) {
             sm.selectRange(anchor.getRow(), newRow - 1);
@@ -742,9 +754,14 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             int start = Math.min(getAnchor().getRow(), newRow);
             int end = Math.max(getAnchor().getRow(), newRow);
 
-            clearSelectionOutsideRange(start, end, focusedCell.getTableColumn());
+            if (sm.getSelectedIndices().size() > 1) {
+                clearSelectionOutsideRange(start, end, focusedCell.getTableColumn());
+            }
 
             for (int _row = start; _row <= end; _row++) {
+                if (sm.isSelected(_row, focusedCell.getTableColumn())) {
+                    continue;
+                }
                 sm.select(_row, focusedCell.getTableColumn());
             }
             fm.focus(newRow, focusedCell.getTableColumn());

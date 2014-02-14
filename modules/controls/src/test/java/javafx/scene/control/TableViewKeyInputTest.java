@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3311,5 +3311,289 @@ public class TableViewKeyInputTest {
 
         // no need for an assert here - we're testing for an AIOOBE
         keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+    }
+
+    @Test public void test_rt35853_multipleSelection_rowSelection_shiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        new StageLoader(tableView);
+        final FocusModel fm = tableView.getFocusModel();
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertTrue(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_multipleSelection_rowSelection_noShiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        new StageLoader(tableView);
+        final FocusModel fm = tableView.getFocusModel();
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_singleSelection_rowSelection_shiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        new StageLoader(tableView);
+        final FocusModel fm = tableView.getFocusModel();
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_singleSelection_rowSelection_noShiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        new StageLoader(tableView);
+        final FocusModel fm = tableView.getFocusModel();
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_multipleSelection_cellSelection_shiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue());
+            }
+        });
+        tableView.getColumns().setAll(col);
+
+        new StageLoader(tableView);
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        sm.clearAndSelect(5, col);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5, col));
+        assertTrue(sm.isSelected(5, col));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(4, col));
+        assertTrue(sm.isSelected(4, col));
+        assertTrue(sm.isSelected(5, col));
+    }
+
+    @Test public void test_rt35853_multipleSelection_cellSelection_noShiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue());
+            }
+        });
+        tableView.getColumns().setAll(col);
+
+        new StageLoader(tableView);
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        sm.clearAndSelect(5, col);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5, col));
+        assertTrue(sm.isSelected(5, col));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4, col));
+        assertTrue(sm.isSelected(4, col));
+        assertFalse(sm.isSelected(5, col));
+    }
+
+    @Test public void test_rt35853_singleSelection_cellSelection_shiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue());
+            }
+        });
+        tableView.getColumns().setAll(col);
+
+        new StageLoader(tableView);
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(true);
+
+        sm.clearAndSelect(5, col);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5, col));
+        assertTrue(sm.isSelected(5, col));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4, col));
+        assertTrue(sm.isSelected(4, col));
+        assertFalse(sm.isSelected(5, col));
+    }
+
+    @Test public void test_rt35853_singleSelection_cellSelection_noShiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
+            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
+                return new ReadOnlyStringWrapper(param.getValue());
+            }
+        });
+        tableView.getColumns().setAll(col);
+
+        new StageLoader(tableView);
+        final TableFocusModel fm = tableView.getFocusModel();
+        final TableSelectionModel sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(true);
+
+        sm.clearAndSelect(5, col);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5, col));
+        assertTrue(sm.isSelected(5, col));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4, col));
+        assertTrue(sm.isSelected(4, col));
+        assertFalse(sm.isSelected(5, col));
     }
 }

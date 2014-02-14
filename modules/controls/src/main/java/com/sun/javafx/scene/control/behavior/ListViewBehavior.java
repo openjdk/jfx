@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -474,9 +474,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             
             if (! hasAnchor()) {
                 setAnchor(fm.getFocusedIndex());
-            } 
-            
-            clearSelectionOutsideRange(anchor, newRow);
+            }
+
+            if (sm.getSelectedIndices().size() > 1) {
+                clearSelectionOutsideRange(anchor, newRow);
+            }
 
             if (anchor > newRow) {
                 sm.selectRange(anchor, newRow - 1);
@@ -505,7 +507,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
                 setAnchor(fm.getFocusedIndex());
             } 
 
-            clearSelectionOutsideRange(anchor, newRow);
+            if (sm.getSelectedIndices().size() > 1) {
+                clearSelectionOutsideRange(anchor, newRow);
+            }
 
             if (anchor > newRow) {
                 sm.selectRange(anchor, newRow - 1);
@@ -526,7 +530,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         int min = Math.min(start, end);
         int max = Math.max(start, end);
         
-        List<Integer> indices = new ArrayList<Integer>(sm.getSelectedIndices());
+        List<Integer> indices = new ArrayList<>(sm.getSelectedIndices());
         
         selectionChanging = true;
         for (int i = 0; i < indices.size(); i++) {
