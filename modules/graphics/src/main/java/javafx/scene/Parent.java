@@ -95,7 +95,7 @@ public abstract class Parent extends Node {
      * Do not populate list of removed children when its number exceeds threshold,
      * but mark whole parent dirty.
      */
-    private boolean removedChildrenExceedsThreshold = false;
+    private boolean removedChildrenOptimizationDisabled = false;
 
     /**
      * @treatAsPrivate implementation detail
@@ -123,9 +123,9 @@ public abstract class Parent extends Node {
             for (int idx = startIdx; idx < children.size(); idx++) {
                 peer.add(idx, children.get(idx).impl_getPeer());
             }
-            if (removedChildrenExceedsThreshold) {
+            if (removedChildrenOptimizationDisabled) {
                 peer.markDirty();
-                removedChildrenExceedsThreshold = false;
+                removedChildrenOptimizationDisabled = false;
             } else {
                 if (removed != null && !removed.isEmpty()) {
                     for(int i = 0; i < removed.size(); i++) {
@@ -194,14 +194,6 @@ public abstract class Parent extends Node {
         }
         System.out.println(str);
     }
-
-    /**
-     * Variable used to avoid executing the body of the on replace trigger on
-     * children. This is specifically used when we know that changes to the
-     * children is going to be valid so as to avoid all the scenegraph surgery
-     * validation routines in the trigger.
-     */
-    private boolean ignoreChildrenTrigger = false;
 
     // Variable used to indicate that the change to the children ObservableList is
     // a simple permutation as the result of a toFront or toBack operation.
@@ -364,9 +356,6 @@ public abstract class Parent extends Node {
     }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int[] toBeRemoved) {
-            if (ignoreChildrenTrigger) {
-                return;
-            }
             if (Parent.this.getScene() != null) {
                 // NOTE: this will throw IllegalStateException if we are on the wrong thread
                 Toolkit.getToolkit().checkFxUserThread();
@@ -479,9 +468,9 @@ public abstract class Parent extends Node {
             if (removed == null) {
                 removed = new ArrayList<Node>();
             }
-            if (removed.size() + removedLength > REMOVED_CHILDREN_THRESHOLD) {
+            if (removed.size() + removedLength > REMOVED_CHILDREN_THRESHOLD || !impl_isTreeVisible()) {
                 //do not populate too many children in removed list
-                removedChildrenExceedsThreshold = true;
+                removedChildrenOptimizationDisabled = true;
             }
             for (int i = 0; i < toBeRemoved.length; i += 2) {
                 for (int j = toBeRemoved[i]; j < toBeRemoved[i + 1]; j++) {
@@ -501,7 +490,7 @@ public abstract class Parent extends Node {
                         old.setParent(null);
                         old.setScenes(null, null);
                     }
-                    if (!removedChildrenExceedsThreshold) {
+                    if (!removedChildrenOptimizationDisabled) {
                         removed.add(old);
                     }
                 }
