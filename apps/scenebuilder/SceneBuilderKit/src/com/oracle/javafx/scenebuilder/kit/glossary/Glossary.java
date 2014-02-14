@@ -66,7 +66,7 @@ public abstract class Glossary {
      * @return a list of fxids (possibly empty but never null).
      */
     public abstract List<String> queryFxIds(URL fxmlLocation, String controllerClass, Class<?> targetType);
-    
+
     /**
      * Returns the candidate event handlers tracked by this glossary.
      * If fxmlLocation and/or controllerClass are not null, this glossary

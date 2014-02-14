@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.selection;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.Picker;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyPath;
@@ -171,6 +172,28 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
                 assert commonPath != null; // Else it would mean root is selected twice
                 result = commonPath.getLeaf();
                 break;
+        }
+        
+        return result;
+    }
+
+    @Override
+    public boolean isValid(FXOMDocument fxomDocument) {
+        assert fxomDocument != null;
+        
+        boolean result;
+        final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
+        if (fxomRoot == null) {
+            result = false;
+        } else {
+            result = true;
+            for (FXOMObject i : items) {
+                final boolean ok = (i == fxomRoot) || i.isDescendantOf(fxomRoot);
+                if (ok == false) {
+                    result = false;
+                    break;
+                }
+            }
         }
         
         return result;

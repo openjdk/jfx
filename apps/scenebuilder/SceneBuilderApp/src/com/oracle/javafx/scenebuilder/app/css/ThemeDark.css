@@ -38,19 +38,19 @@
 
 .theme-presets {
     -sb-base: rgb(147, 147, 147);
-    -sb-dark: derive(-sb-base, -25%);
-    -sb-content-text: derive(-sb-base, -50%); 
-    -sb-content-text-dimmed: derive(-sb-base, -20%);
-    -sb-header-text: derive(-sb-base, -80%);
+    -sb-dark: derive(-sb-base, -60%);
+    -sb-content-text: derive(-sb-base, 70%);
+    -sb-content-text-dimmed: derive(-sb-base, 20%);
+    -sb-header-text: derive(-sb-base, -70%);
     -sb-header-text-dimmed: derive(-sb-base, -30%);
     -sb-header-height: 32;
-    -sb-grad-hi: derive(-sb-base, 110%);
-    -sb-sharp-edge-hi: derive(-sb-base, 90%);
-    -sb-flat: derive(-sb-base, 60%);
-    -sb-sharp-edge-lo: derive(-sb-base, 20%);
-    -sb-panel-background: derive(-sb-base, 98%);
-    -sb-control-inner: -fx-control-inner-background;
-    -sb-scrollbar-thumb: derive(-sb-base, 60%);
+    -sb-grad-hi: derive(-sb-base, 70%);
+    -sb-sharp-edge-hi: derive(-sb-base, 20%);
+    -sb-flat: -sb-base;
+    -sb-sharp-edge-lo: derive(-sb-base, -40%);
+    -sb-panel-background: derive(-sb-base, -32%);
+    -sb-control-inner: derive(-sb-base, -40%);
+    -sb-scrollbar-thumb: derive(-sb-base, -48%);
     -sb-selected-bar-color: rgb(75, 155, 210);
     -sb-selected-bar-unfocused-color: derive(-sb-panel-background, -15%);
     -sb-line-art: derive(-sb-base, 40%);

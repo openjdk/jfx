@@ -33,10 +33,12 @@
 .label {
     -fx-font-size: 0.875em;
     -fx-text-fill: -sb-header-text-dimmed;
+    -fx-padding: 1 0 0 0;
 }
 
 .hyperlink, .hyperlink:visited {
     -fx-font-size: 0.875em;
     -fx-text-fill: -sb-header-text;
+    -fx-padding: 1 0 0 0;
 }
 

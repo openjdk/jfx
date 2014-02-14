@@ -36,17 +36,18 @@
 }
 
 .message-bar .button, .message-bar .label {
+    -fx-font-size: 0.875em;
     -fx-background-color: transparent;
     -fx-background-radius: 0;
-    -fx-label-padding: 0 5 0 5;
-    -fx-border-color: transparent;
-    -fx-border-width: 0 0 0 0;
+    -fx-label-padding: 1 5 0 5;
+    -fx-background-insets: 0;
 }
 
 .message-bar .message-warning {
-    -fx-background-color: linear-gradient( to bottom, #efecb8 0%, #d9d59d 100% );
+    -fx-background-color: 
+        linear-gradient( to bottom, derive(-sb-warning-panel, 20%) 0%, -sb-warning-panel 100% );
 }
 
 .message-bar .message-info {
-    -fx-background-color: linear-gradient( to bottom, #cfe3ef 0%, #badcef 100% );
+    -fx-background-color: linear-gradient( to bottom, derive(-sb-message-panel, 20%), -sb-message-panel );
 }

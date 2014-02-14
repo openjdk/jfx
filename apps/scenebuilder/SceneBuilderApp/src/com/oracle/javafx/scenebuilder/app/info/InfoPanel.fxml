@@ -31,43 +31,54 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
-<?import java.net.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox id="StackPane" spacing="7.0" styleClass="theme-presets, property-sheet" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+
+<ScrollPane fitToHeight="true" fitToWidth="true" prefHeight="300.0" prefWidth="270.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<content><VBox id="StackPane" spacing="7.0">
   <children>
     <VBox fx:id="controllerClassVBox" alignment="CENTER" spacing="0.0">
       <children>
         <HBox fx:id="controllerAndCogHBox" maxWidth="1.7976931348623157E308" prefHeight="-1.0" prefWidth="-1.0" />
       </children>
+<VBox.margin>
+<Insets top="8.0" />
+</VBox.margin>
     </VBox>
     <CheckBox fx:id="fxrootCheckBox" mnemonicParsing="false" text="%info.label.use.fx.root" />
     <VBox id="VBox" alignment="CENTER" spacing="5.0">
       <children>
         <Label maxWidth="1.7976931348623157E308" text="%info.label.assigned" />
-        <TableView maxHeight="1.7976931348623157E308" VBox.vgrow="ALWAYS">
+        <TableView minHeight="100.0" VBox.vgrow="ALWAYS">
           <columnResizePolicy>
             <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
           </columnResizePolicy>
           <columns>
-            <TableColumn maxWidth="1.7976931348623157E308" minWidth="30.0" prefWidth="-1.0" resizable="true" sortable="true" text="fx:id" fx:id="leftTableColumn" />
-            <TableColumn maxWidth="1.7976931348623157E308" minWidth="100.0" prefWidth="-1.0" sortable="true" text="%info.label.component" fx:id="rightTableColumn" />
+            <TableColumn fx:id="leftTableColumn" maxWidth="1.7976931348623157E308" minWidth="30.0" prefWidth="-1.0" resizable="true" sortable="true" text="fx:id" />
+            <TableColumn fx:id="rightTableColumn" maxWidth="1.7976931348623157E308" minWidth="100.0" prefWidth="-1.0" sortable="true" text="%info.label.component" />
           </columns>
           <sortOrder>
             <fx:reference source="leftTableColumn" />
           </sortOrder>
         </TableView>
-        <Label fx:id="bottomLabel" alignment="CENTER" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" styleClass="label, dimmed-label" text="Label" textAlignment="LEFT" VBox.vgrow="NEVER" />
+        <Label fx:id="bottomLabel" alignment="CENTER" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" styleClass="small-label" text="Label" textAlignment="LEFT" VBox.vgrow="NEVER" />
       </children>
       <VBox.margin>
-        <Insets top="10.0" />
+        <Insets right="10.0" top="10.0" />
       </VBox.margin>
     </VBox>
   </children>
-  <stylesheets>
-    <URL value="@../css/InfoPanel.css" />
-  </stylesheets>
+<padding>
+<Insets left="10.0" />
+</padding>
 </VBox>
+</content>
+<styleClass>
+<String fx:value="theme-presets" />
+<String fx:value="property-sheet" />
+</styleClass>
+</ScrollPane>

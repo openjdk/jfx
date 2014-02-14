@@ -34,8 +34,9 @@ package com.oracle.javafx.scenebuilder.kit.metadata.property.value.list;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.StringPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
+import javafx.fxml.FXMLLoader;
 
 /**
  *
@@ -58,17 +59,44 @@ public class StringListPropertyMetadata extends ListValuePropertyMetadata<String
     
     @Override
     protected boolean canMakeStringFromValue(List<String> value) {
-        return value.size() == 1;
+        boolean result = true;
+        
+        // Returns false if one the string item contains a comma
+        for (String s : value) {
+            if (s.indexOf(FXMLLoader.ARRAY_COMPONENT_DELIMITER) != -1) {
+                result = false;
+                break;
+            }
+        }
+        
+        return result;
     }
     
     @Override
     protected String makeStringFromValue(List<String> value) {
         assert canMakeStringFromValue(value);
-        return value.get(0);
+        
+        final StringBuilder result = new StringBuilder();
+        for (String s : value) {
+            assert value.indexOf(FXMLLoader.ARRAY_COMPONENT_DELIMITER) == -1;
+            if (result.length() >= 1) {
+                result.append(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
+            }
+            result.append(s);
+        }
+        
+        return result.toString();
     }
     
     @Override
     protected List<String> makeValueFromString(String string) {
-        return Collections.singletonList(string);
+        final List<String> result = new ArrayList<>();
+        
+        final String[] values = string.split(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
+        for (int i = 0, count = values.length; i < count; i++) {
+            result.add(values[i]);
+        }
+        
+        return result;
     }
 }

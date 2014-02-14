@@ -38,10 +38,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.BeanPropertyState;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.CssPropertyState;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.CssPropertyState.CssStyle;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.NodeCssState;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.NodeCssState.CssProperty;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.PropertyState;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssValuePresenterFactory.CssValuePresenter;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.css.NodeCssState.CssProperty;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.SelectionPath.Item;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
@@ -644,16 +643,16 @@ public class CssPanelController extends AbstractFxmlPanelController {
         // the TableView is rendered empty first, then with the new content.
         // This is an ugly (and temporary) workaround, since one can see the TableView flashing on model update.
         //
-        if (selectedObject != null) { // Update content.
-            Platform.runLater(new Runnable() {
+        Platform.runLater(new Runnable() {
 
-                @Override
-                public void run() {
+            @Override
+            public void run() {
+                if (selectedObject != null) { // Update content.
                     fillSelectionContent();
                     collectCss();
                 }
-            });
-        }
+            }
+        });
     }
 
     private boolean isMultipleSelection() {
@@ -836,15 +835,15 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     private void initializeRulesTextPanes(NodeCssState state) {
         rulesBox.getChildren().clear();
-        List<CssContentMaker.NodeCssState.MatchingRule> rulesList = state.getMatchingRules();
+        List<NodeCssState.MatchingRule> rulesList = state.getMatchingRules();
         HtmlStyler htmlStyler = new HtmlStyler();
         rulesTree = new TreeView<>();
         CopyHandler.attachContextMenu(rulesTree);
         rulesTree.setShowRoot(false);
         TreeItem<Node> ruleRoot = new TreeItem<>(new Text(""));//NOI18N
         rulesTree.setRoot(ruleRoot);
-        for (CssContentMaker.NodeCssState.MatchingRule rule : rulesList) {
-            List<CssContentMaker.NodeCssState.MatchingDeclaration> lst = rule.getDeclarations();
+        for (NodeCssState.MatchingRule rule : rulesList) {
+            List<NodeCssState.MatchingDeclaration> lst = rule.getDeclarations();
 
             String selector = rule.getSelector();
 
@@ -855,7 +854,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
             ruleRoot.getChildren().add(start);
             htmlStyler.cssRuleStart(selector, source);
 
-            for (CssContentMaker.NodeCssState.MatchingDeclaration p : lst) {
+            for (NodeCssState.MatchingDeclaration p : lst) {
                 CssPropertyState prop = p.getProp();
                 attachStyleProperty(ruleRoot, prop, p.getStyle(), p.isApplied(), p.isLookup());
                 CssStyle style = p.getStyle();
@@ -1060,7 +1059,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
         @Override
         public void updateItem(CssProperty item, boolean empty) {
             super.updateItem(item, empty);
-//            System.out.println("CssValueTableCell.updateItem() called !");
+//            System.out.println("CssValueTableCell.updateItem() called for property: " + item.getStyleable().getProperty() );
             values.clear();
             setGraphic(null);
             if (!empty) {
@@ -1526,7 +1525,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
         }
         if (selection.getGroup() instanceof ObjectSelectionGroup) {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-            assert osg.getItems().size() == 1;
             for (FXOMObject item : osg.getItems()) {
                 if (item instanceof FXOMInstance) {
                     fxomInstance = (FXOMInstance) item;
@@ -1675,9 +1673,11 @@ public class CssPanelController extends AbstractFxmlPanelController {
         TreeItem<Node> srcItem = null;
         if (source != null) {
             HBox hbox = new HBox(5);
-            if (cssStyle.getOrigin() == StyleOrigin.INLINE) {
-            } else {
-                hbox.getChildren().add(new Label(cssStyle.getSelector()));
+            if (cssStyle.getOrigin() != StyleOrigin.INLINE) {
+                Label selector = new Label(cssStyle.getSelector());
+                // Workaround RT layout bug
+                selector.setMinWidth(30);
+                hbox.getChildren().add(selector);
                 hbox.getChildren().add(new Label("{"));//NOI18N
             }
             hbox.getChildren().add(createLabel(cssStyle.getCssProperty() + ": ", applied));//NOI18N
@@ -1692,7 +1692,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 hbox.getChildren().add(new Label("}"));//NOI18N
             }
             Label label = new Label(source);
-            label.setTooltip(new Tooltip(source));
             hbox.getChildren().add(label);
             srcItem = newTreeItem(hbox, css);
             parent.getChildren().add(srcItem);
@@ -2127,7 +2126,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
         popupContentMi.setContent(popupContent);
         TreeView<Node> lookupTv = new TreeView<>();
         lookupTv.setPrefSize(400, 100);
-//                tv.getStylesheets().add(CssUtils.CSS_VIEWER_CSS);
         Object val = null;
         if (ps instanceof CssPropertyState) {
             val = ((CssPropertyState) ps).getFxValue();

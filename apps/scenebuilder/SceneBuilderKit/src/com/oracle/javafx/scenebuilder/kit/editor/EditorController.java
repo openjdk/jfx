@@ -107,6 +107,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleListProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableListValue;
 import javafx.beans.value.ObservableValue;
@@ -256,8 +257,13 @@ public class EditorController {
             = new SimpleBooleanProperty(false);
     private final BooleanProperty sampleDataEnabledProperty
             = new SimpleBooleanProperty(false);
+    private final SimpleStringProperty toolStylesheetProperty
+            = new SimpleStringProperty(getBuiltinToolStylesheet());
     
     private Callback<Void, Boolean> requestTextEditingSessionEnd;
+    
+    private static String builtinToolStylesheet;
+    
     
     /**
      * Creates an empty editor controller (ie it has no associated fxom document).
@@ -652,6 +658,51 @@ public class EditorController {
      */
     public FXOMDocument getFxomDocument() {
         return fxomDocumentProperty.getValue();
+    }
+    
+    /**
+     * Returns the tool stylesheet associated to this editor controller.
+     * Its default value equals to getBuiltinToolStylesheet().
+     * 
+     * @return the tool stylesheet associated to this editor controller (never null)
+     */
+    public String getToolStylesheet() {
+        return toolStylesheetProperty.getValue();
+    }
+    
+    /**
+     * Sets the tool stylesheet associated to this editor controller.
+     * Each panel connected to this editor controller will install this style
+     * sheet in its root object.
+     * 
+     * @param stylesheet the tool stylesheet associated to this editor controller (never null)
+     */
+    public void setToolStylesheet(String stylesheet) {
+        assert stylesheet != null;
+        toolStylesheetProperty.setValue(stylesheet);
+    }
+    
+    /**
+     * The property holding tool stylesheet associated to this editor controller.
+     * @return the property holding tool stylesheet associated to this editor controller.
+     */
+    public ObservableValue<String> toolStylesheetProperty() {
+        return toolStylesheetProperty;
+    }
+    
+    /**
+     * Returns the builtin tool stylesheet.
+     * This is the default value for EditorController#toolStylesheet property.
+     * 
+     * @return the builtin tool stylesheet.
+     */
+    public static synchronized String getBuiltinToolStylesheet() {
+        if (builtinToolStylesheet == null) {
+            final URL url = EditorController.class.getResource("css/Theme.css"); //NOI18N
+            assert url != null;
+            builtinToolStylesheet = url.toExternalForm();
+        }
+        return builtinToolStylesheet;
     }
     
     /**

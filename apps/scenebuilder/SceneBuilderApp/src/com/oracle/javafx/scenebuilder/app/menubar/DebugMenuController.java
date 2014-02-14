@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.app.menubar;
 
 import com.oracle.javafx.scenebuilder.app.AppPlatform;
 import com.oracle.javafx.scenebuilder.app.DocumentWindowController;
+import com.oracle.javafx.scenebuilder.app.SceneBuilderApp;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
@@ -94,9 +95,34 @@ class DebugMenuController {
             }
         });
                 
+        /*
+         * Tool theme
+         */
+        final MenuItem useDefaultThemeMenuItem = new MenuItem();
+        useDefaultThemeMenuItem.setText("Use Default Theme"); //NOI18N
+        useDefaultThemeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DEFAULT_THEME, 
+                        DebugMenuController.this.documentWindowController);
+            }
+        });
+        final MenuItem useDarkThemeMenuItem = new MenuItem();
+        useDarkThemeMenuItem.setText("Use Dark Theme"); //NOI18N
+        useDarkThemeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent t) {
+                SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DARK_THEME, 
+                        DebugMenuController.this.documentWindowController);
+            }
+        });
+                
         menu.getItems().add(libraryFolderMenu);
         menu.getItems().add(new SeparatorMenuItem());
         menu.getItems().add(layoutMenuItem);
+        menu.getItems().add(new SeparatorMenuItem());
+        menu.getItems().add(useDefaultThemeMenuItem);
+        menu.getItems().add(useDarkThemeMenuItem);
         menu.getItems().add(new SeparatorMenuItem());
     }
     

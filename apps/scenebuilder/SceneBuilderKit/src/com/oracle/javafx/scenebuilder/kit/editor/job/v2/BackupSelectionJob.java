@@ -79,6 +79,7 @@ public class BackupSelectionJob extends Job {
     public void undo() {
         final Selection selection = getEditorController().getSelection();
         selection.select(oldSelectionGroup);
+        assert selection.isValid(getEditorController().getFxomDocument());
     }
 
     @Override

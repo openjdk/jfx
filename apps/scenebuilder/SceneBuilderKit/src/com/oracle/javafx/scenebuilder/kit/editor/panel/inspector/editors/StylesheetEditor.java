@@ -37,10 +37,10 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue.Type;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -236,7 +236,10 @@ public class StylesheetEditor extends InlineListEditor {
             return;
         }
         try {
-            File file = new File((new URI(urlStr)).toURL().getFile());
+            File file = URLUtils.getFile(urlStr);
+            if (file == null) { // urlStr is not a file URL
+                return;
+            }
             EditorPlatform.revealInFileBrowser(file);
         } catch (URISyntaxException | IOException ex) {
             System.err.println(I18N.getString("inspector.stylesheet.cannotreveal", urlStr + " : " + ex)); // should go to message panel
@@ -257,10 +260,10 @@ public class StylesheetEditor extends InlineListEditor {
 
         String[] extensions = {"*.css"}; //NOI18N
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle(I18N.getString("inspector.select.css"));
+        fileChooser.setTitle(I18N.getString("inspector.select.css.title"));
         fileChooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter(
-                        I18N.getString("inspector.select.css"),
+                        I18N.getString("inspector.select.css.filter"),
                         Arrays.asList(extensions)));
         File file = fileChooser.showOpenDialog(root.getScene().getWindow());
         if ((file == null)) {
@@ -438,7 +441,7 @@ public class StylesheetEditor extends InlineListEditor {
                         return;
                     }
                     if (stylesheetTf.getText().isEmpty()) {
-                        return;
+                        remove(null);
                     }
 //                        System.out.println("StyleEditorItem : COMMIT");
                     editor.commit(StylesheetItem.this);

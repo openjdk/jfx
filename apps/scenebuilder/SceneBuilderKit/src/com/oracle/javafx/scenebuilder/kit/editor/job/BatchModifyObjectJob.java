@@ -32,95 +32,67 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.BackupSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  *
  */
-public class BatchModifyObjectJob extends Job {
+public class BatchModifyObjectJob extends CompositeJob {
 
+    private final FXOMInstance fxomInstance;
+    private final Map<ValuePropertyMetadata, Object> valueMap;
     private final String description;
-    private final List<ModifyObjectJob> subJobs = new ArrayList<>();
 
     public BatchModifyObjectJob(FXOMInstance fxomInstance,
             String description,
             Map<ValuePropertyMetadata, Object> valueMap,
             EditorController editorController) {
         super(editorController);
-        buildSubJobs(fxomInstance, valueMap);
-        this.description = description;
-    }
-    
-    
-
-    /*
-     * Job
-     */
-    
-    @Override
-    public boolean isExecutable() {
-        return subJobs.isEmpty() == false;
-    }
-
-    @Override
-    public void execute() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (ModifyObjectJob subJob : subJobs) {
-            subJob.execute();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (int i = subJobs.size()-1; i >= 0; i--) {
-            subJobs.get(i).undo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        
-        fxomDocument.beginUpdate();
-        for (ModifyObjectJob subJob : subJobs) {
-            subJob.redo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        return description;
-    }
-    
-    
-    /*
-     * Private
-     */
-    
-    private void buildSubJobs(FXOMInstance fxomInstance, 
-            Map<ValuePropertyMetadata, Object> valueMap) {
         
         assert fxomInstance != null;
         assert valueMap != null;
+        assert description != null;
+        
+        this.fxomInstance = fxomInstance;
+        this.valueMap = new HashMap<>(valueMap);
+        this.description = description;
+    }
+
+    /*
+     * CompositeJob
+     */
+    
+    @Override
+    protected List<Job> makeSubJobs() {
+        final List<Job> result = new ArrayList<>();
         
         for (Map.Entry<ValuePropertyMetadata,Object> e : valueMap.entrySet()) {
             final ModifyObjectJob j = new ModifyObjectJob(fxomInstance, 
                     e.getKey(), e.getValue(), getEditorController());
             if (j.isExecutable()) {
-                subJobs.add(j);
+                result.add(j);
             }
         }
+        
+        if (result.isEmpty() == false) {
+            result.add(0, new BackupSelectionJob(getEditorController()));
+            result.add(new UpdateSelectionJob(fxomInstance, getEditorController()));
+        }
+        
+        return result;
+    }
+
+    @Override
+    protected String makeDescription() {
+        return description;
     }
     
 }

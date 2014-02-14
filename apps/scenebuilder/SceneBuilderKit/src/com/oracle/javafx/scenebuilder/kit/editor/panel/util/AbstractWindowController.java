@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.util;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import java.util.List;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
@@ -55,6 +56,7 @@ public abstract class AbstractWindowController {
     private Stage stage;
     private final double CLAMP_FACTOR = 0.9;
     private final boolean sizeToScene; // true by default
+    private String toolStylesheet = EditorController.getBuiltinToolStylesheet();
 
     private final EventHandler<WindowEvent> closeRequestHandler = new EventHandler<WindowEvent>() {
         @Override
@@ -88,6 +90,7 @@ public abstract class AbstractWindowController {
         if (root == null) {
             makeRoot();
             assert root != null;
+            toolStylesheetDidChange(null);
         }
         
         return root;
@@ -156,6 +159,28 @@ public abstract class AbstractWindowController {
         assert Platform.isFxApplicationThread();
         getStage().close();
     }
+
+    /**
+     * Returns the tool stylesheet used by this window controller.
+     * 
+     * @return the tool stylesheet used by this window controller.
+     */
+    public String getToolStylesheet() {
+        return toolStylesheet;
+    }
+
+    /**
+     * Sets the tool stylesheet used by this window controller.
+     * 
+     * @param toolStylesheet the tool stylesheet to be used by this window controller.
+     */
+    public void setToolStylesheet(String toolStylesheet) {
+        final String oldStylesheet = this.toolStylesheet;
+        this.toolStylesheet = toolStylesheet;
+        if (this.root != null) {
+            toolStylesheetDidChange(oldStylesheet);
+        }
+    }
     
     
     /*
@@ -196,6 +221,15 @@ public abstract class AbstractWindowController {
     protected  final void setRoot(Parent root) {
         assert root != null;
         this.root = root;
+    }
+
+    
+    protected void toolStylesheetDidChange(String oldStylesheet) {
+        final List<String> stylesheets = root.getStylesheets();
+        if (oldStylesheet != null) {
+            stylesheets.remove(oldStylesheet);
+        }
+        stylesheets.add(toolStylesheet);
     }
     
     

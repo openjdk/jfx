@@ -41,6 +41,7 @@ import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesWindowController;
 import com.oracle.javafx.scenebuilder.app.template.FxmlTemplates;
 import com.oracle.javafx.scenebuilder.app.template.TemplateDialogController;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AlertDialog;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
@@ -84,11 +85,20 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         NEW_COMPLEX_APPLICATION_I18N,
         OPEN_FILE,
         CLOSE_FRONT_WINDOW,
+        USE_DEFAULT_THEME,
+        USE_DARK_THEME,
         SHOW_PREFERENCES,
         EXIT
     }
+    
+    public enum ToolTheme {
+        DEFAULT,
+        DARK
+    }
 
     private static SceneBuilderApp singleton;
+    private static String darkToolStylesheet;
+    
     private final List<DocumentWindowController> windowList = new ArrayList<>();
     private final PreferencesWindowController preferencesWindowController
             = new PreferencesWindowController();
@@ -97,6 +107,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     private UserLibrary userLibrary;
     private MenuBarController defaultSystemMenuBarController; // Mac only
     private File nextInitialDirectory;
+    private ToolTheme toolTheme = ToolTheme.DEFAULT;
 
 
     /*
@@ -140,6 +151,14 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             case CLOSE_FRONT_WINDOW:
                 performCloseFrontWindow();
                 break;
+                
+            case USE_DEFAULT_THEME:
+                performUseToolTheme(ToolTheme.DEFAULT);
+                break;
+
+            case USE_DARK_THEME:
+                performUseToolTheme(ToolTheme.DARK);
+                break;
 
             case SHOW_PREFERENCES:
                 preferencesWindowController.openWindow();
@@ -150,7 +169,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 break;
         }
     }
-
+    
 
     public boolean canPerformControlAction(ApplicationControlAction a, DocumentWindowController source) {
         final boolean result;
@@ -176,6 +195,14 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
                 result = windowList.isEmpty() == false;
                 break;
                 
+            case USE_DEFAULT_THEME:
+                result = toolTheme != ToolTheme.DEFAULT;
+                break;
+
+            case USE_DARK_THEME:
+                result = toolTheme != ToolTheme.DARK;
+                break;
+
             default:
                 result = false;
                 assert false;
@@ -268,6 +295,15 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
     public File getNextInitialDirectory() {
         return nextInitialDirectory;
+    }
+    
+    public static synchronized String getDarkToolStylesheet() {
+        if (darkToolStylesheet == null) {
+            final URL url = SceneBuilderApp.class.getResource("css/ThemeDark.css"); //NOI18N
+            assert url != null;
+            darkToolStylesheet = url.toExternalForm();
+        }
+        return darkToolStylesheet;
     }
 
     /*
@@ -451,6 +487,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
     private void performNewTemplateWithResources(ApplicationControlAction action) {
         final TemplateDialogController tdc = new TemplateDialogController(action);
+        tdc.setToolStylesheet(getToolStylesheet());
         tdc.openWindow();
     }
 
@@ -639,5 +676,37 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             // Print the details of the exception in SceneBuilder log file
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, "An exception was thrown:", e); //NOI18N
         }
+    }
+    
+    
+    private void performUseToolTheme(ToolTheme toolTheme) {
+        this.toolTheme = toolTheme;
+        
+        final String toolStylesheet = getToolStylesheet();
+        
+        for (DocumentWindowController dwc : windowList) {
+            dwc.setToolStylesheet(toolStylesheet);
+        }
+        preferencesWindowController.setToolStylesheet(toolStylesheet);
+        aboutWindowController.setToolStylesheet(toolStylesheet);
+    }
+    
+    
+    private String getToolStylesheet() {
+        final String result;
+        
+        switch(this.toolTheme) {
+            
+            default:
+            case DEFAULT:
+                result = EditorController.getBuiltinToolStylesheet();
+                break;
+                
+            case DARK:
+                result = getDarkToolStylesheet();
+                break;
+        }
+        
+        return result;
     }
 }

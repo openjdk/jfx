@@ -403,7 +403,9 @@ public class ContentPanelController extends AbstractFxmlPanelController
     public FXOMObject pick(double sceneX, double sceneY, Set<FXOMObject> excludes) {
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
         final FXOMObject result;
-        if ((fxomDocument == null) || (fxomDocument.getFxomRoot() == null)) {
+        if ((fxomDocument == null) 
+                || (fxomDocument.getFxomRoot() == null)
+                || excludes.contains(fxomDocument.getFxomRoot())) {
             result = null;
         } else {
             result = pick(fxomDocument.getFxomRoot(), sceneX, sceneY, excludes);

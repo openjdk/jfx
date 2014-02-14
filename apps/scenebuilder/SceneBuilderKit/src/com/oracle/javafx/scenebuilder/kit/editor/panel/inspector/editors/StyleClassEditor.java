@@ -230,7 +230,7 @@ public class StyleClassEditor extends InlineListEditor {
                         return;
                     }
                     if (styleClassTf.getText().isEmpty()) {
-                        return;
+                        remove(null);
                     }
 //                        System.out.println("StyleEditorItem : COMMIT");
                     editor.commit(StyleClassItem.this);

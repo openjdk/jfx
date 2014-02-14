@@ -40,7 +40,8 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.FileWatcher;
-import java.net.MalformedURLException;
+import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
+import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.FileSystemNotFoundException;
@@ -155,9 +156,13 @@ class WatchingController implements FileWatcher.Delegate {
         final PrefixedValue pv = new PrefixedValue(p.getValue());
         if (pv.isPlainString()) {
             try {
-                final URL url = new URL(pv.getSuffix());
-                result = Paths.get(url.toURI());
-            } catch(MalformedURLException|URISyntaxException x) {
+                final File file = URLUtils.getFile(pv.getSuffix());
+                if (file == null) { // Not a file URL
+                    result = null;
+                } else {
+                    result = file.toPath();
+                }
+            } catch(URISyntaxException x) {
                 result = null;
             }
         } else if (pv.isDocumentRelativePath()) {
@@ -186,7 +191,12 @@ class WatchingController implements FileWatcher.Delegate {
                     result = null;
                 } else {
                     try {
-                        result = Paths.get(url.toURI());
+                        final File file = URLUtils.getFile(url);
+                        if (file == null) { // Not a file URL
+                            result = null;
+                        } else {
+                            result = file.toPath();
+                        }
                     } catch(URISyntaxException x) {
                         result = null;
                     }

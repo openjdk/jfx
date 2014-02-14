@@ -57,11 +57,8 @@ public class LineHandles extends AbstractCurveHandles<Line> {
             FXOMInstance fxomInstance) {
         super(contentPanelController, fxomInstance, Line.class);
         
-        startHandle.getStyleClass().add(SELECTION_HANDLES);
-        endHandle.getStyleClass().add(SELECTION_HANDLES);
-        
-        startHandle.setCursor(Cursor.CROSSHAIR);
-        endHandle.setCursor(Cursor.CROSSHAIR);
+        setupHandleState(startHandle);
+        setupHandleState(endHandle);
         
         setupHandles(startHandle);
         setupHandles(endHandle);
@@ -130,11 +127,25 @@ public class LineHandles extends AbstractCurveHandles<Line> {
         
         return result;
     }
-    
+
+    @Override
+    public void enabledDidChange() {
+        setupHandleState(startHandle);
+        setupHandleState(endHandle);
+    }
     
     /*
      * Private
      */
+    
+    private void setupHandleState(Circle handleCircle) {
+        
+        final String styleClass = isEnabled() ? SELECTION_HANDLES : SELECTION_HANDLES_DIM;
+        final Cursor cursor = isEnabled() ? Cursor.CROSSHAIR : Cursor.DEFAULT;
+        
+        handleCircle.getStyleClass().add(styleClass);
+        handleCircle.setCursor(cursor);
+    }
     
     
     /* 

@@ -32,15 +32,9 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.AbstractDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DiscardGesture;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.ResizeGesture;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.CardinalPoint;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
-import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.transform.Transform;
 
@@ -50,23 +44,9 @@ import javafx.scene.transform.Transform;
  */
 public abstract class AbstractNodeHandles<T extends Node> extends AbstractGenericHandles<T> {
     
-    private final boolean resizable;
-    private final DiscardGesture discardGesture;
-    
     public AbstractNodeHandles(ContentPanelController contentPanelController,
             FXOMInstance fxomInstance, Class<T> sceneGraphObjectClass) {
         super(contentPanelController, fxomInstance, sceneGraphObjectClass);
-        
-        final AbstractDriver driver = contentPanelController.lookupDriver(fxomInstance);
-        this.resizable = (driver.makeResizer(fxomInstance) != null);
-        this.discardGesture = new DiscardGesture(contentPanelController);
-        
-        if (this.resizable == false) {
-            handleNW.setCursor(Cursor.DEFAULT);
-            handleNE.setCursor(Cursor.DEFAULT);
-            handleSE.setCursor(Cursor.DEFAULT);
-            handleSW.setCursor(Cursor.DEFAULT);
-        }
     }
     
     public FXOMInstance getFxomInstance() {
@@ -106,42 +86,5 @@ public abstract class AbstractNodeHandles<T extends Node> extends AbstractGeneri
     protected void stopListeningToSceneGraphObject() {
         stopListeningToLayoutBounds(getSceneGraphObject());
         stopListeningToLocalToSceneTransform(getSceneGraphObject());
-    }
-
-    @Override
-    public AbstractGesture findGesture(Node node) {
-        final AbstractGesture result;
-        
-        if (resizable == false) {
-            result = discardGesture;
-        } else if (node == handleNW) {
-            result = new ResizeGesture(getContentPanelController(), 
-                    getFxomInstance(), CardinalPoint.NW);
-        } else if (node == handleNE) {
-            result = new ResizeGesture(getContentPanelController(), 
-                    getFxomInstance(), CardinalPoint.NE);
-        } else if (node == handleSE) {
-            result = new ResizeGesture(getContentPanelController(), 
-                    getFxomInstance(), CardinalPoint.SE);
-        } else if (node == handleSW) {
-            result = new ResizeGesture(getContentPanelController(), 
-                    getFxomInstance(), CardinalPoint.SW);
-        }  else if (node == handleNN) {
-            result = new ResizeGesture(getContentPanelController(), 
-                    getFxomInstance(), CardinalPoint.N);
-        } else if (node == handleEE) {
-            result = new ResizeGesture(getContentPanelController(), 
-                    getFxomInstance(), CardinalPoint.E);
-        } else if (node == handleSS) {
-            result = new ResizeGesture(getContentPanelController(), 
-                    getFxomInstance(), CardinalPoint.S);
-        } else if (node == handleWW) {
-            result = new ResizeGesture(getContentPanelController(), 
-                    getFxomInstance(), CardinalPoint.W);
-        } else {
-            result = null;
-        }
-        
-        return result;
     }
 }

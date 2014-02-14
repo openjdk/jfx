@@ -29,23 +29,45 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.selection;
+package com.oracle.javafx.scenebuilder.kit.metadata.property.value.effect;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ComplexPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.IntegerPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import javafx.scene.effect.FloatMap;
 
 /**
  *
- * 
  */
-public abstract class AbstractSelectionGroup implements Cloneable {
+public class FloatMapPropertyMetadata extends ComplexPropertyMetadata<FloatMap> {
     
-    public abstract FXOMObject getAncestor();
-    public abstract boolean isValid(FXOMDocument fxomDocument);
+    private final IntegerPropertyMetadata widthMetadata
+            = new IntegerPropertyMetadata(new PropertyName("width"), //NOI18N
+            true, 1, InspectorPath.UNUSED);
+    private final IntegerPropertyMetadata heightMetadata
+            = new IntegerPropertyMetadata(new PropertyName("height"), //NOI18N
+            true, 1, InspectorPath.UNUSED);
+    
+    public FloatMapPropertyMetadata(PropertyName name, boolean readWrite, 
+            FloatMap defaultValue, InspectorPath inspectorPath) {
+        super(name, FloatMap.class, readWrite, defaultValue, inspectorPath);
+    }
+
+    /*
+     * ComplexPropertyMetadata
+     */
     
     @Override
-    public AbstractSelectionGroup clone() throws CloneNotSupportedException
-    {
-        return (AbstractSelectionGroup) super.clone();
+    public FXOMInstance makeFxomInstanceFromValue(FloatMap value, FXOMDocument fxomDocument) {
+        final FXOMInstance result = new FXOMInstance(fxomDocument, getValueClass());
+        
+        widthMetadata.setValue(result, value.getWidth());
+        heightMetadata.setValue(result, value.getHeight());
+
+        return result;
     }
+    
 }

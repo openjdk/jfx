@@ -31,9 +31,16 @@
  */
 
 .message-panel {
-    -fx-background-color: linear-gradient( to bottom, #efecb8 0%, #d9d59d 100% );
+    -fx-background-color: -sb-dark, -sb-warning-panel;
+    -fx-background-insets: 0, 1 0 0 0;
+}
+.message-panel-shadow {
+    -fx-background-color: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent);
 }
 
+.message-panel > .scroll-pane {
+    -fx-padding: 0;
+}
 /* Used for dismiss buttons we put into the grid of messages */
 .message-panel .button {
     -fx-background-color: transparent;
@@ -41,30 +48,29 @@
     -fx-padding: 3 9 3 9;
 }
 
-/* Used for the 3 buttons at the bottom, for taking clearing actions */
+.message-panel-clear {
+    -fx-background-color: -sb-dark, -sb-warning-panel;
+    -fx-background-insets: 0, 1 0 0 0;
+}
 .message-panel-clear .button {
-    -fx-text-fill: -fx-text-background-color;
-    -fx-border-width: 0 0 0 1;
-    -fx-border-color: derive(grey, -60%);
-    -fx-background-color: transparent;
+    -fx-background-color: -sb-dark, -sb-warning-panel;
+    -fx-background-insets: 0, 1 0 0 1;
+    -fx-background-radius: 0, 0;
+    -fx-text-fill: -sb-content-text;
 }
-
 .message-panel-clear .button:hover {
-    -fx-background-color: linear-gradient( to bottom, #efecb8 0%, #d9d59d 50% );
-}
-
-.message-panel-clear .button:pressed {
-    -fx-background-color: linear-gradient( to bottom, #efecb8 0%, #d9d59d 10% );
+    -fx-background-color: -sb-dark, derive(-sb-warning-panel, 20%);
 }
 
 .message-panel .label {
-    -fx-label-padding: 3 9 3 9;
+    -fx-font-size: 0.875em;
+    -fx-text-fill: -sb-content-text;
+    -fx-padding: 0 8 3 8;
 }
-
-.timestamp {
-    -fx-label-padding: 3 9 3 0;
+.message-panel .label.timestamp {
     -fx-font-size: 0.7em;
-    -fx-text-fill: lightslategray;
+    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-padding: 6 8 3 8;
 }
 
 .message-info {

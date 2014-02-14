@@ -95,12 +95,14 @@ public class UpdateSelectionJob extends Job {
     public void undo() {
         final Selection selection = getEditorController().getSelection();
         selection.select(oldSelectionGroup);
+        assert selection.isValid(getEditorController().getFxomDocument());
     }
 
     @Override
     public void redo() {
         final Selection selection = getEditorController().getSelection();
         selection.select(newSelectedObjects);
+        assert selection.isValid(getEditorController().getFxomDocument());
     }
 
     @Override

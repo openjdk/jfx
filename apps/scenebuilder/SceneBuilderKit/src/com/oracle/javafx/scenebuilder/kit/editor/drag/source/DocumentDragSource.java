@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import static com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource.INTERNAL_DATA_FORMAT;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ClipboardEncoder;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
@@ -47,7 +48,9 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ClipboardContent;
@@ -63,6 +66,9 @@ public class DocumentDragSource extends AbstractDragSource {
     private final double hitX;
     private final double hitY;
     private final boolean nodeOnly;
+    private final boolean singleImageViewOnly;
+    private final boolean singleTooltipOnly;
+    private final boolean singleContextMenuOnly;
 
     public DocumentDragSource(
             List<FXOMObject> draggedObjects, 
@@ -81,6 +87,24 @@ public class DocumentDragSource extends AbstractDragSource {
         this.hitX = hitX;
         this.hitY = hitY;
         this.nodeOnly = checkForNodeOnly();
+        
+        if (draggedObjects.size() != 1) {
+            this.singleImageViewOnly = false;
+            this.singleTooltipOnly = false;
+            this.singleContextMenuOnly = false;
+        } else {
+            final FXOMObject draggedObject = draggedObjects.get(0);
+            if (draggedObject instanceof FXOMInstance) {
+                final Object sceneGraphObject = draggedObject.getSceneGraphObject();
+                this.singleImageViewOnly = sceneGraphObject instanceof ImageView;
+                this.singleTooltipOnly = sceneGraphObject instanceof Tooltip;
+                this.singleContextMenuOnly = sceneGraphObject instanceof ContextMenu;
+            } else {
+                this.singleImageViewOnly = false;
+                this.singleTooltipOnly = false;
+                this.singleContextMenuOnly = false;
+            }
+        }
     }
 
     public DocumentDragSource(
@@ -100,6 +124,24 @@ public class DocumentDragSource extends AbstractDragSource {
         this.hitX = hitPoint.getX();
         this.hitY = hitPoint.getY();
         this.nodeOnly = checkForNodeOnly();
+        
+        if (draggedObjects.size() != 1) {
+            this.singleImageViewOnly = false;
+            this.singleTooltipOnly = false;
+            this.singleContextMenuOnly = false;
+        } else {
+            final FXOMObject draggedObject = draggedObjects.get(0);
+            if (draggedObject instanceof FXOMInstance) {
+                final Object sceneGraphObject = draggedObject.getSceneGraphObject();
+                this.singleImageViewOnly = sceneGraphObject instanceof ImageView;
+                this.singleTooltipOnly = sceneGraphObject instanceof Tooltip;
+                this.singleContextMenuOnly = sceneGraphObject instanceof ContextMenu;
+            } else {
+                this.singleImageViewOnly = false;
+                this.singleTooltipOnly = false;
+                this.singleContextMenuOnly = false;
+            }
+        }
     }
     
     private static Point2D computeDefaultHit(FXOMObject fxomObject) {
@@ -252,6 +294,21 @@ public class DocumentDragSource extends AbstractDragSource {
     @Override
     public boolean isNodeOnly() {
         return nodeOnly;
+    }
+
+    @Override
+    public boolean isSingleImageViewOnly() {
+        return singleImageViewOnly;
+    }
+
+    @Override
+    public boolean isSingleTooltipOnly() {
+        return singleTooltipOnly;
+    }
+
+    @Override
+    public boolean isSingleContextMenuOnly() {
+        return singleContextMenuOnly;
     }
     
     /*

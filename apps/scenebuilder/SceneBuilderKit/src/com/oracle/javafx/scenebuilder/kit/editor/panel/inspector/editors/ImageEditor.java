@@ -73,7 +73,7 @@ public class ImageEditor extends PropertyEditor {
     private final MenuItem absoluteMenuItem
             = new MenuItem(I18N.getString("inspector.resource.absolute"));
 
-    private PrefixedValue.Type type;
+    private PrefixedValue.Type type = PrefixedValue.Type.PLAIN_STRING;
     private URL fxmlFileLocation;
 
     @SuppressWarnings("LeakingThisInConstructor")

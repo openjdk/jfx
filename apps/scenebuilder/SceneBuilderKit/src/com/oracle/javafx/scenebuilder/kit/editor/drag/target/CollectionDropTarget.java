@@ -80,6 +80,11 @@ public class CollectionDropTarget extends AbstractDropTarget {
         throw new UnsupportedOperationException("To be implemented"); //NOI18N
     }
     
+    @Override
+    public boolean isSelectRequiredAfterDrop() {
+        return true;
+    }
+    
     /*
      * Object
      */

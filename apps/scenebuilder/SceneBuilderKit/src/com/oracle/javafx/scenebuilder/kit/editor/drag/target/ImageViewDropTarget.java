@@ -34,70 +34,89 @@ package com.oracle.javafx.scenebuilder.kit.editor.drag.target;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
-import com.oracle.javafx.scenebuilder.kit.editor.drag.source.LibraryDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.UsePredefinedSizeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.BackupSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ImagePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import javafx.scene.image.ImageView;
 
 /**
  *
  */
-public class RootDropTarget extends AbstractDropTarget {
+public class ImageViewDropTarget extends AbstractDropTarget {
+    
+    private final FXOMInstance targetImageView;
 
+    public ImageViewDropTarget(FXOMObject targetImageView) {
+        assert targetImageView instanceof FXOMInstance;
+        assert targetImageView.getSceneGraphObject() instanceof ImageView;
+        
+        this.targetImageView = (FXOMInstance) targetImageView;
+    }
+    
+    
     /*
-     * AbstractDropTarget
+     * ImageViewDropTarget
      */
     
     @Override
     public FXOMObject getTargetObject() {
-        return null;
+        return targetImageView;
     }
 
     @Override
     public boolean acceptDragSource(AbstractDragSource dragSource) {
         assert dragSource != null;
-        return dragSource.getDraggedObjects().size() == 1;
+        return dragSource.isSingleImageViewOnly();
     }
 
     @Override
     public Job makeDropJob(AbstractDragSource dragSource, EditorController editorController) {
+        
         assert dragSource != null;
-        assert dragSource.getDraggedObjects().size() == 1;
+        assert dragSource.isSingleImageViewOnly(); // (1)
         
-        final FXOMObject newRoot = dragSource.getDraggedObjects().get(0);
+        final FXOMObject draggedObject 
+                = dragSource.getDraggedObjects().get(0);
+        assert draggedObject instanceof FXOMInstance; // because (1)
+        final FXOMInstance draggedInstance 
+                = (FXOMInstance) draggedObject;
+        final PropertyName imageName 
+                = new PropertyName("image"); //NOI18N
+        final ValuePropertyMetadata vpm 
+                = Metadata.getMetadata().queryValueProperty(draggedInstance, imageName);
+        assert vpm instanceof ImagePropertyMetadata;
+        final ImagePropertyMetadata imageVPM
+                = (ImagePropertyMetadata) vpm;
+        final DesignImage image
+                = imageVPM.getValue(draggedInstance);
         
-        /*
-         * Containers coming from the library are automatically resized.
-         */
-        final UsePredefinedSizeJob resizeJob;
-        if (dragSource instanceof LibraryDragSource) {
-            final DesignHierarchyMask mask = new DesignHierarchyMask(newRoot);
-            if (mask.needResizeWhenTopElement()) {
-                resizeJob = new UsePredefinedSizeJob(editorController, 
-                        EditorController.Size.SIZE_DEFAULT, newRoot);
-            } else {
-                resizeJob = null;
-            }
-        } else {
-            resizeJob = null;
-        }
+        final BatchJob result = new BatchJob(editorController);
+        result.addSubJob(new BackupSelectionJob(editorController));
+        result.addSubJob(new ModifyObjectJob(targetImageView, imageVPM, image, editorController));
+        result.addSubJob(new UpdateSelectionJob(targetImageView, editorController));
         
-        final BatchJob result = new BatchJob(editorController, true, dragSource.makeDropJobDescription());
-        result.addSubJob(new SetDocumentRootJob(newRoot, editorController));
-        if ((resizeJob != null) && resizeJob.isExecutable()) {
-            result.addSubJob(resizeJob);
-        }
-        
-        return result ;
+        return result;
     }
     
     @Override
     public boolean isSelectRequiredAfterDrop() {
-        return true;
+        /*
+         * Unlike for other drop targets, AbstractDragSource.draggedObjects
+         * should not be selected after drop operation.
+         * It's targetImageView that must be selected.
+         * AbstractDragSource.draggedObjects() are not inserted in the scene
+         * graph.
+         */
+        return false;
     }
     
 }

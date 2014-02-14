@@ -86,7 +86,6 @@ public class TreeTableColumnDriver extends AbstractDriver {
 
     @Override
     public AbstractResizer<?> makeResizer(FXOMObject fxomObject) {
-        assert false;
         return null;
     }
     

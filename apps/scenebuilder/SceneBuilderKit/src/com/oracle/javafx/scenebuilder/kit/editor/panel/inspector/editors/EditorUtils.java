@@ -43,6 +43,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -507,6 +508,7 @@ public class EditorUtils {
     }
     
     // Get the URL corresponding to a PrefixedValue string
+    @SuppressWarnings("UseSpecificCatch")
     public static URL getUrl(String prefixedString, URL fxmlFileLocation) {
         PrefixedValue prefixedValue = new PrefixedValue(prefixedString);
         URL url = null;
@@ -514,8 +516,9 @@ public class EditorUtils {
             url = prefixedValue.resolveDocumentRelativePath(fxmlFileLocation);
         } else if (prefixedValue.getType() == PrefixedValue.Type.PLAIN_STRING) {
             try {
-                url = new URL(prefixedValue.getSuffix());
-            } catch (MalformedURLException ex) {
+                url = new URI(prefixedValue.getSuffix()).toURL();
+            } catch (Throwable ex) {
+                // Catching *all* the exception is done on purpose.
                 // May happen. nothing to do.
             }
         }

@@ -195,6 +195,11 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
         return result;
     }
     
+    @Override
+    public boolean isSelectRequiredAfterDrop() {
+        return true;
+    }
+    
     /*
      * Objects
      */

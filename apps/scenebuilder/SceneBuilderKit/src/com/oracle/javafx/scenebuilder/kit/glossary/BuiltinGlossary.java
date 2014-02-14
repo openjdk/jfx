@@ -98,7 +98,7 @@ public class BuiltinGlossary extends Glossary {
             }
         }
     }
-
+    
     @Override
     public List<String> queryEventHandlers(URL fxmlLocation, String controllerClass) {
         assert controllerClass != null;

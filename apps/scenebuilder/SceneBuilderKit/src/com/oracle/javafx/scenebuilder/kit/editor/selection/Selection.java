@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.selection;
 
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup.Type;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.Collection;
@@ -491,6 +492,26 @@ public class Selection {
         return result;
     }
 
+    /**
+     * Returns true if the selected objects are all connected to the 
+     * specified documents.
+     * 
+     * @param fxomDocument an fxom document (not null)
+     * @return true if the selected objects are all connected to the 
+     * specified documents.
+     */
+    public boolean isValid(FXOMDocument fxomDocument) {
+        assert fxomDocument != null;
+        
+        final boolean result;
+        if (group == null) {
+            result = true;
+        } else {
+            result = group.isValid(fxomDocument);
+        }
+        
+        return result;
+    }
     
     /*
      * Private

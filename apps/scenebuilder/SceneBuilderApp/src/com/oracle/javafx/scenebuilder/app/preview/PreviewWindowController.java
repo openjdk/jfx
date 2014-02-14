@@ -213,6 +213,12 @@ public final class PreviewWindowController extends AbstractWindowController {
         super.closeWindow();
         isDirty = true;
     }
+
+    @Override
+    protected void toolStylesheetDidChange(String oldStylesheet) {
+        // Preview window ignores the tool style sheet.
+        // Unlike other windows, its styling is driven by the user design.
+    }
     
     /*
      * Private

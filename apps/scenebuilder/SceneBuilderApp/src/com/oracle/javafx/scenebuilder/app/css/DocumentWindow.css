@@ -65,14 +65,14 @@
  ******************************************************************************/
 
 .panel-header {
-    -fx-min-height: 32;
+    -fx-min-height: -sb-header-height;
     -fx-background-color: 
         derive(-sb-grad-hi, 25%), 
         linear-gradient(to bottom, -sb-grad-hi, -sb-flat);
     -fx-background-insets: 0, 1 0 0 0;
 }
 .panel-header > .label {
-    -fx-padding: 0 32 0 8;
+    -fx-padding: 1 32 0 8;
     -fx-text-fill: -sb-header-text;
 }
 .panel-header > .menu-button {
@@ -159,7 +159,7 @@
    subtle differences: a darker bottom edge and a shadow effect that bleeds 
    over onto the content panel */
 .selection-bar-container {
-    -fx-min-height: 32;
+    -fx-min-height: -sb-header-height;
     -fx-background-color: -sb-dark, linear-gradient(to bottom, -sb-grad-hi, -sb-flat);
     -fx-background-insets: 0 0 -1 0, 0;
     -fx-effect: dropshadow(three-pass-box , rgb(0, 0, 0, 0.3), 5, 0.0 , 0, 2);

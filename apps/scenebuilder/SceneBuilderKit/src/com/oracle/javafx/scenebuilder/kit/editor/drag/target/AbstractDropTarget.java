@@ -44,4 +44,5 @@ public abstract class AbstractDropTarget {
     public abstract FXOMObject getTargetObject();
     public abstract boolean acceptDragSource(AbstractDragSource dragSource);
     public abstract Job makeDropJob(AbstractDragSource dragSource, EditorController editorController);
+    public abstract boolean isSelectRequiredAfterDrop();
 }

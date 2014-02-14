@@ -102,15 +102,6 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
                 });
         
         treeTableViewOrVisibilityDidChange();
-        
-        handleNN.setCursor(Cursor.DEFAULT);
-        handleEE.setCursor(Cursor.DEFAULT);
-        handleSS.setCursor(Cursor.DEFAULT);
-        handleWW.setCursor(Cursor.DEFAULT);
-        handleNW.setCursor(Cursor.DEFAULT);
-        handleNE.setCursor(Cursor.DEFAULT);
-        handleSE.setCursor(Cursor.DEFAULT);
-        handleSW.setCursor(Cursor.DEFAULT);
     }
     
     public FXOMInstance getFxomInstance() {
@@ -201,7 +192,7 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
             result = new ResizeTreeTableColumnGesture(getContentPanelController(), 
                     (FXOMInstance)columnObject);
         } else {
-            result = new DiscardGesture(getContentPanelController());
+            result = super.findGesture(node);
         }
         
         return result;

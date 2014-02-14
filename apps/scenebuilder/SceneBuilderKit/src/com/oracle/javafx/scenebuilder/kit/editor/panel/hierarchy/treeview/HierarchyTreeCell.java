@@ -55,6 +55,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReportEntry;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.glossary.Glossary;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
@@ -108,6 +109,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
 
     private final AbstractHierarchyPanelController panelController;
 
+    static final String HIERARCHY_FIRST_CELL = "hierarchy-first-cell";
     // Style class used for lookup
     static final String HIERARCHY_TREE_CELL = "hierarchy-tree-cell";
 
@@ -519,7 +521,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         final Border b = new Border(bs);
         placeHolderLabel.setBorder(b);
     }
-    
+
     private void filterKeyEvent(final KeyEvent ke) {
         // empty
     }
@@ -538,7 +540,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                     final HierarchyItem item = getItem();
                     assert item != null; // Because of (1)
                     final DisplayOption option = panelController.getDisplayOption();
-                    if (item.hasDisplayInfo(option) 
+                    if (item.hasDisplayInfo(option)
                             && item.isResourceKey(option) == false // Do not allow inline editing of the I18N value
                             && displayInfoLabel.isHover()) {
                         startEditingDisplayInfo();
@@ -696,6 +698,25 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                     = new ModifyFxIdJob(fxomObject, fxId, editorController);
                             if (job.isExecutable()) {
                                 editorController.getJobManager().push(job);
+
+                                // If a controller class has been defined, 
+                                // check if the fx id is an injectable field
+                                final String controllerClass
+                                        = editorController.getFxomDocument().getFxomRoot().getFxController();
+                                if (controllerClass != null && fxId != null) {
+                                    final URL location = editorController.getFxmlLocation();
+                                    final Class<?> clazz = fxomObject.getSceneGraphObject() == null ? null
+                                            : fxomObject.getSceneGraphObject().getClass();
+                                    final Glossary glossary = editorController.getGlossary();
+                                    final List<String> fxIds = glossary.queryFxIds(location, controllerClass, clazz);
+                                    if (fxIds.contains(fxId) == false) {
+                                        editorController.getMessageLog().logWarningMessage(
+                                                "log.warning.no.injectable.fxid", fxId);
+                                    }
+                                }
+                            } else if (fxId != null) {
+                                editorController.getMessageLog().logWarningMessage(
+                                        "log.warning.invalid.fxid", fxId);
                             }
                             break;
                         default:
@@ -706,13 +727,18 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                 return true;
             }
         };
-
-        inlineEditController.startEditingSession(editor, displayInfoLabel, requestCommit);
+        inlineEditController.startEditingSession(editor, displayInfoLabel, requestCommit, null);
     }
 
     private void updateLayout(HierarchyItem item) {
         assert item != null;
         final FXOMObject fxomObject = item.getFxomObject();
+
+        // Update styling
+        this.getStyleClass().removeAll(HIERARCHY_FIRST_CELL);
+        if (fxomObject != null && fxomObject.getParentObject() == null) {
+            this.getStyleClass().add(HIERARCHY_FIRST_CELL);
+        }
 
         // Update ImageViews
         final Image placeHolderImage = item.getPlaceHolderImage();

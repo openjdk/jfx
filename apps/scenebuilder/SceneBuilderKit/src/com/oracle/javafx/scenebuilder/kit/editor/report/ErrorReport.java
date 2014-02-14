@@ -41,8 +41,10 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
+import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
 import java.io.File;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -188,13 +190,18 @@ public class ErrorReport {
                 if (location == null) {
                     ok = false;
                 } else {
-                    final String path = location.getPath();
-                    if (path == null) {
-                        ok = false;
-                    } else {
-                        final File file = new File(path);
-                        ok = file.canRead();
+                    boolean canRead = false;
+                    try {
+                        final File file = URLUtils.getFile(location);
+                        if (file != null) {
+                            canRead = file.canRead();
+                        } else {
+                            canRead = false;
+                        }
+                    } catch (URISyntaxException ex) {
+                        canRead = false;
                     }
+                    ok = canRead;
                 }
                 if (ok == false) {
                     final ErrorReportEntry newEntry 
@@ -228,15 +235,13 @@ public class ErrorReport {
                 
                 boolean ok;
                 try {
-                    final URL url = new URL(source.getSuffix());
-                    final String path = url.getPath();
-                    if (path == null) {
-                        ok = false;
-                    } else {
-                        final File file = new File(path);
+                    final File file = URLUtils.getFile(source.getSuffix());
+                    if (file != null) {
                         ok = file.canRead();
+                    } else {
+                        ok = false;
                     }
-                } catch(MalformedURLException x) {
+                } catch(URISyntaxException x) {
                     ok = false;
                 }
                 if (ok == false) {
@@ -273,13 +278,18 @@ public class ErrorReport {
             if (location == null) {
                 ok = false;
             } else {
-                final String path = location.getPath();
-                if (path == null) {
-                    ok = false;
-                } else {
-                    final File file = new File(path);
-                    ok = file.canRead();
+                boolean canRead;
+                try {
+                    final File file = URLUtils.getFile(location);
+                    if (file != null) {
+                        canRead = file.canRead();
+                    } else {
+                        canRead = false;
+                    }
+                } catch (URISyntaxException ex) {
+                    canRead = false;
                 }
+                ok = canRead;
             }
             if (ok == false) {
                 final ErrorReportEntry newEntry 

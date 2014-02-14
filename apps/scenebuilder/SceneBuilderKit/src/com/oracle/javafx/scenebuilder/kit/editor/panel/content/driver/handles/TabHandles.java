@@ -156,11 +156,6 @@ public class TabHandles extends AbstractResilientHandles<Tab> {
         stopListeningToLocalToSceneTransform(tabPane);
         stopListeningToBoundsInParent(tabNode);
     }
-
-    @Override
-    public AbstractGesture findGesture(Node node) {
-        return new DebugMouseGesture(getContentPanelController(), "Resize gesture for Tab");
-    }
     
     
     /*

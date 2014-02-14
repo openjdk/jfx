@@ -54,10 +54,13 @@ import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.media.MediaView;
 import javafx.stage.Window;
 
 /**
@@ -70,6 +73,9 @@ public class ExternalDragSource extends AbstractDragSource {
     private List<FXOMObject> draggedObjects; // Initialized lazily
     private List<File> inputFiles; // Initialized lazily
     private boolean nodeOnly; // Iniitalized lazily
+    private boolean singleImageViewOnly; // Initiated lazily
+    private boolean singleTooltipOnly; // Initiated lazily
+    private boolean singleContextMenuOnly; // Initiated lazily
     private int errorCount;
     private Exception lastException;
 
@@ -136,6 +142,25 @@ public class ExternalDragSource extends AbstractDragSource {
             scene.getClass(); // used to dummy thing to silence FindBugs
             group.applyCss();
             group.layout();
+            
+            // Initialize singleImageView
+            if (draggedObjects.size() != 1) {
+                singleImageViewOnly = false;
+                singleTooltipOnly = false;
+                singleContextMenuOnly = false;
+            } else {
+                final FXOMObject draggedObject = getDraggedObjects().get(0);
+                if (draggedObject instanceof FXOMInstance) {
+                    final Object sceneGraphObject = draggedObject.getSceneGraphObject();
+                    singleImageViewOnly = sceneGraphObject instanceof ImageView;
+                    singleTooltipOnly = sceneGraphObject instanceof Tooltip;
+                    singleContextMenuOnly = sceneGraphObject instanceof ContextMenu;
+                } else {
+                    singleImageViewOnly = false;
+                    singleTooltipOnly = false;
+                    singleContextMenuOnly = false;
+                }
+            }
         }
         
         return draggedObjects;
@@ -255,6 +280,27 @@ public class ExternalDragSource extends AbstractDragSource {
         }
         
         return nodeOnly;
+    }
+    
+    @Override
+    public boolean isSingleImageViewOnly() {
+        // singleImageViewOnly is initialized lazily by getDraggedObjects()
+        getDraggedObjects();
+        return singleImageViewOnly;
+    }
+
+    @Override
+    public boolean isSingleTooltipOnly() {
+        // singleTooltipOnly is initialized lazily by getDraggedObjects()
+        getDraggedObjects();
+        return singleTooltipOnly;
+    }
+
+    @Override
+    public boolean isSingleContextMenuOnly() {
+        // singleContextMenuOnly is initialized lazily by getDraggedObjects()
+        getDraggedObjects();
+        return singleContextMenuOnly;
     }
     
     /*

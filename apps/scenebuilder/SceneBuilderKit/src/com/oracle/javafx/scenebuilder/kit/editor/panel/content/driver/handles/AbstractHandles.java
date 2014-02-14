@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractDecoration;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DiscardGesture;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.net.URL;
 import javafx.scene.Node;
@@ -48,17 +49,44 @@ public abstract class AbstractHandles<T> extends AbstractDecoration<T> {
     public static final String SELECTION_RECT = "selection-rect"; //NOI18N
     public static final String SELECTION_WIRE = "selection-wire"; //NOI18N
     public static final String SELECTION_HANDLES = "selection-handles"; //NOI18N
+    public static final String SELECTION_HANDLES_DIM = "selection-handles-dim"; //NOI18N
     public static final double SELECTION_HANDLES_SIZE = 10.0; // pixels
     
     private static Image squareHandleImage = null;
     private static Image sideHandleImage = null;
+    private static Image squareHandleDimImage = null;
+    private static Image sideHandleDimImage = null;
+    
+    private boolean enabled = true;
     
     public AbstractHandles(ContentPanelController contentPanelController,
             FXOMObject fxomObject, Class<T> sceneGraphClass) {
         super(contentPanelController, fxomObject, sceneGraphClass);
     }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+        enabledDidChange();
+    }
+   
+    public AbstractGesture findEnabledGesture(Node node) {
+        final AbstractGesture result;
+        
+        if (enabled) {
+            result = findGesture(node);
+        } else {
+            result = new DiscardGesture(getContentPanelController());
+        }
+        
+        return result;
+    }
     
     public abstract AbstractGesture findGesture(Node node);
+    public abstract void enabledDidChange();
     
     private static final String HANDLES = "HANDLES";
     
@@ -104,6 +132,22 @@ public abstract class AbstractHandles<T> extends AbstractDecoration<T> {
             sideHandleImage = new Image(url.toString());
         }
         return sideHandleImage;
+    }
+    
+    public synchronized static Image getCornerHandleDimImage() {
+        if (squareHandleDimImage == null) {
+            final URL url = AbstractHandles.class.getResource("corner-handle-dim.png");
+            squareHandleDimImage = new Image(url.toString());
+        }
+        return squareHandleDimImage;
+    }
+    
+    public synchronized static Image getSideHandleDimImage() {
+        if (sideHandleDimImage == null) {
+            final URL url = AbstractHandles.class.getResource("side-handle-dim.png");
+            sideHandleDimImage = new Image(url.toString());
+        }
+        return sideHandleDimImage;
     }
     
 }

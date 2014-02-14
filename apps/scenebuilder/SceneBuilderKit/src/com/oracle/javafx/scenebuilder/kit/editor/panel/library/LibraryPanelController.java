@@ -37,18 +37,28 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.source.DocumentDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AbstractModalDialog.ButtonID;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AlertDialog;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMArchive;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
+import com.oracle.javafx.scenebuilder.kit.library.BuiltinLibrary;
 import com.oracle.javafx.scenebuilder.kit.library.Library;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItem;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItemNameComparator;
 import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMArchive;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.library.BuiltinLibrary;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -102,6 +112,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     String sectionNameToKeepOpened = null;
     boolean initiateImportDialog = false;
     final List<File> jarAndFxmlFiles = new ArrayList<>();
+    private String userLibraryPathString = null;
 
     @FXML
     private Accordion libAccordion;
@@ -225,6 +236,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         startListeningToDrop();
         setDisplayMode(DISPLAY_MODE.SECTIONS);
         populateLibraryPanel();
+        setUserLibraryPathString();
     }
 
     /*
@@ -669,31 +681,46 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     // would not yet be properly finalized on disk.
     private void processInternalImport(List<FXOMObject> objects) {
         sectionNameToKeepOpened = getExpandedSectionName();
-        String userLibraryPathString = ((UserLibrary) getEditorController().getLibrary()).getPath();
+        setUserLibraryPathString();
         Path libPath = Paths.get(userLibraryPathString);
-        ((UserLibrary) getEditorController().getLibrary()).stopWatching();
-        
-        try {
-            // The selection can be multiple, in which case each asset is processed
-            // separately. The handling of dependencies will be addressed later on.
-            for (FXOMObject asset : objects) {
-                // Create an FXML layout as a String
-                ArrayList<FXOMObject> selection = new ArrayList<>();
-                selection.add(asset);
-                final FXOMArchive fxomArchive = new FXOMArchive(selection);
-                final FXOMArchive.Entry entry0 = fxomArchive.getEntries().get(0);
-                String fxmlText = entry0.getFxmlText();
-
-                // Write the FXML layout into a dedicated file stored in the Library dir
-                // We use the class name of the top element and append a number:
-                // if Library dir already contains SplitPane_1.fxml and top element is
-                // of class SplitPane then we will create SplitPane_2.fxml and so on.
-                String prefix = asset.getSceneGraphObject().getClass().getSimpleName();
-                File fxmlFile = getUniqueFxmlFileName(prefix, userLibraryPathString);
-                writeFxmlFile(fxmlFile, fxmlText, libPath);
+        boolean hasDependencies = false;
+        // Selection can be multiple: as soon as one has dependencies
+        // we won't import anything.
+        // Copy of the dependencies remains something to do (DTL-5879).
+        for (FXOMObject asset : objects) {
+            if (hasDependencies(asset)) {
+                hasDependencies = true;
+                break;
             }
-        } finally {
-            ((UserLibrary) getEditorController().getLibrary()).startWatching();
+        }
+        
+        if (hasDependencies) {
+            userLibraryUpdateRejected();
+        } else {
+            ((UserLibrary) getEditorController().getLibrary()).stopWatching();
+
+            try {
+                // The selection can be multiple, in which case each asset is
+                // processed separately.
+                for (FXOMObject asset : objects) {
+                    // Create an FXML layout as a String
+                    ArrayList<FXOMObject> selection = new ArrayList<>();
+                    selection.add(asset);
+                    final FXOMArchive fxomArchive = new FXOMArchive(selection);
+                    final FXOMArchive.Entry entry0 = fxomArchive.getEntries().get(0);
+                    String fxmlText = entry0.getFxmlText();
+
+                    // Write the FXML layout into a dedicated file stored in the Library dir
+                    // We use the class name of the top element and append a number:
+                    // if Library dir already contains SplitPane_1.fxml and top element is
+                    // of class SplitPane then we will create SplitPane_2.fxml and so on.
+                    String prefix = asset.getSceneGraphObject().getClass().getSimpleName();
+                    File fxmlFile = getUniqueFxmlFileName(prefix, userLibraryPathString);
+                    writeFxmlFile(fxmlFile, fxmlText, libPath);
+                }
+            } finally {
+                ((UserLibrary) getEditorController().getLibrary()).startWatching();
+            }
         }
     }
 
@@ -741,7 +768,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             if (createUserLibraryDir(libPath)) {
                 final List<File> fxmlFiles = getSubsetOfFiles(".fxml", importedFiles); //NOI18N
 
-                if (!fxmlFiles.isEmpty() && enoughFreeSpaceOnDisk(fxmlFiles)) {
+                if (!fxmlFiles.isEmpty() && enoughFreeSpaceOnDisk(fxmlFiles) && ! hasDependencies(fxmlFiles)) {
                     copyFilesToUserLibraryDir(fxmlFiles);
                 }
 
@@ -760,6 +787,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 
                     final ImportWindowController iwc
                             = new ImportWindowController(this, jarFiles, window);
+                    iwc.setToolStylesheet(getEditorController().getToolStylesheet());
                     // See comment in OnDragDropped handle set in method startListeningToDrop.
                     ButtonID userChoice = iwc.showAndWait();
 
@@ -830,7 +858,8 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         IOException savedIOE = null;
         String savedFileName = ""; //NOI18N
         Path tempTargetPath = null;
-        String userLibraryPath = ((UserLibrary) getEditorController().getLibrary()).getPath();
+        setUserLibraryPathString();
+        
         // Here we deactivate the UserLib so that it unlocks the files contained
         // in the lib dir in the file system meaning (especially on Windows).
         ((UserLibrary) getEditorController().getLibrary()).stopWatching();
@@ -838,8 +867,8 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         try {
             for (File file : files) {
                 savedFileName = file.getName();
-                tempTargetPath = Paths.get(userLibraryPath, file.getName() + TEMP_FILE_EXTENSION);
-                Path ultimateTargetPath = Paths.get(userLibraryPath, file.getName());
+                tempTargetPath = Paths.get(userLibraryPathString, file.getName() + TEMP_FILE_EXTENSION);
+                Path ultimateTargetPath = Paths.get(userLibraryPathString, file.getName());
                 Files.deleteIfExists(tempTargetPath);
                 Files.copy(file.toPath(), tempTargetPath, StandardCopyOption.REPLACE_EXISTING);
                 Files.move(tempTargetPath, ultimateTargetPath, StandardCopyOption.ATOMIC_MOVE);
@@ -864,10 +893,10 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             final ErrorDialog errorDialog = new ErrorDialog(null);
             errorDialog.setTitle(I18N.getString("error.copy.title"));
             if (errorCount == 1) {
-                errorDialog.setMessage(I18N.getString("error.copy.message.single", savedFileName, userLibraryPath));
+                errorDialog.setMessage(I18N.getString("error.copy.message.single", savedFileName, userLibraryPathString));
                 errorDialog.setDebugInfoWithThrowable(savedIOE);
             } else {
-                errorDialog.setMessage(I18N.getString("error.copy.message.multiple", errorCount, userLibraryPath));
+                errorDialog.setMessage(I18N.getString("error.copy.message.multiple", errorCount, userLibraryPathString));
             }
             errorDialog.setDetails(I18N.getString("error.write.details"));
             errorDialog.showAndWait();
@@ -883,5 +912,158 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18N.getString("lib.filechooser.filter.msg"),
                 "*.fxml", "*.jar")); //NOI18N
         return fileChooser.showOpenMultipleDialog(null);
+    }
+
+    private void userLibraryUpdateRejected() {
+        final AlertDialog dialog = new AlertDialog(null);
+        dialog.setTitle(I18N.getString("alert.import.reject.dependencies.title"));
+        dialog.setMessage(I18N.getString("alert.import.reject.dependencies.message"));
+        dialog.setDetails(I18N.getString("alert.import.reject.dependencies.details"));
+        dialog.setActionButtonDisable(true);
+        dialog.setActionButtonVisible(false);
+        dialog.setOKButtonDisable(true);
+        dialog.setOKButtonVisible(false);
+        dialog.setCancelButtonTitle(I18N.getString("label.close"));
+        dialog.showAndWait();
+    }
+
+    private static final PropertyName valueName = new PropertyName("value"); //NOI18N
+    
+    private boolean hasDependencies(List<File> fxmlFiles) {
+        boolean hasDependencies = false;
+        boolean scanWentWell = true;
+
+        for (File fxmlFile : fxmlFiles) {
+            try {
+                if (hasDependencies(fxmlFile)) {
+                    hasDependencies = true;
+                    break;
+                }
+            } catch (IOException ioe) {
+                scanWentWell = false;
+                hasDependencies = true; // not sure but better take no risk
+                final ErrorDialog errorDialog = new ErrorDialog(null);
+                errorDialog.setTitle(I18N.getString("error.import.reject.dependencies.scan.title"));
+                errorDialog.setMessage(I18N.getString("error.import.reject.dependencies.scan.message"));
+                errorDialog.setDetails(I18N.getString("error.import.reject.dependencies.scan.details"));
+                errorDialog.setDebugInfoWithThrowable(ioe);
+                errorDialog.showAndWait();
+            }
+        }
+
+        if (hasDependencies && scanWentWell) {
+            userLibraryUpdateRejected();
+        }
+
+        return hasDependencies;
+    }
+
+    private boolean hasDependencies(File fxmlFile) throws IOException {
+        boolean res = false;
+        URL location;
+        
+        location = fxmlFile.toURI().toURL();
+        FXOMDocument fxomDocument =
+                new FXOMDocument(FXOMDocument.readContentFromURL(location), location,
+                        getEditorController().getFxomDocument().getClassLoader(),
+                        getEditorController().getFxomDocument().getResources());
+        res = hasDependencies(fxomDocument.getFxomRoot());
+        
+        return res;
+    }
+    
+    private boolean hasDependencies(FXOMObject rootFxomObject) {
+        final List<Path> targetPaths = getDependenciesPaths(rootFxomObject);
+        return targetPaths.size() > 0;
+    }
+    
+    private List<Path> getDependenciesPaths(FXOMObject rootFxomObject) {
+
+        final List<Path> targetPaths = new ArrayList<>();
+
+        for (FXOMPropertyT p : rootFxomObject.collectPropertiesT()) {
+            final Path path = extractPath(p);
+            if (path != null) {
+                targetPaths.add(path);
+            }
+        }
+        
+        for (FXOMObject fxomObject : rootFxomObject.collectObjectWithSceneGraphObjectClass(URL.class)) {
+            if (fxomObject instanceof FXOMInstance) {
+                final FXOMInstance urlInstance = (FXOMInstance) fxomObject;
+                final FXOMProperty valueProperty = urlInstance.getProperties().get(valueName);
+                if (valueProperty instanceof FXOMPropertyT) {
+                    FXOMPropertyT valuePropertyT = (FXOMPropertyT) valueProperty;
+                    final Path path = extractPath(valuePropertyT);
+                    if (path != null) {
+                        targetPaths.add(path);
+                    }
+                } else {
+                    assert false : "valueProperty.getName() = " + valueProperty.getName();
+                }
+            }
+        }
+
+        return targetPaths;
+    }
+    
+    
+    private Path extractPath(FXOMPropertyT p) {
+        Path result;
+        
+        final PrefixedValue pv = new PrefixedValue(p.getValue());
+        if (pv.isPlainString()) {
+            try {
+                final URL url = new URL(pv.getSuffix());
+                result = Paths.get(url.toURI());
+            } catch(MalformedURLException|URISyntaxException x) {
+                result = null;
+            }
+        } else if (pv.isDocumentRelativePath()) {
+            final URL documentLocation = p.getFxomDocument().getLocation();
+            if (documentLocation == null) {
+                result = null;
+            } else {
+                final URL url = pv.resolveDocumentRelativePath(documentLocation);
+                if (url == null) {
+                    result = null;
+                } else {
+                    try {
+                        result = Paths.get(url.toURI());
+                    } catch(FileSystemNotFoundException|URISyntaxException x) {
+                        result = null;
+                    }
+                }
+            }
+        } else if (pv.isClassLoaderRelativePath()) {
+            final ClassLoader classLoader = p.getFxomDocument().getClassLoader();
+            if (classLoader == null) {
+                result = null;
+            } else {
+                final URL url = pv.resolveClassLoaderRelativePath(classLoader);
+                if (url == null) {
+                    result = null;
+                } else {
+                    try {
+                        result = Paths.get(url.toURI());
+                    } catch(URISyntaxException x) {
+                        result = null;
+                    }
+                }
+                
+            }
+        } else {
+            result = null;
+        }
+        
+        return result;
+    }
+    
+    private void setUserLibraryPathString() {
+        if (getEditorController().getLibrary() instanceof UserLibrary
+                && userLibraryPathString == null) {
+            userLibraryPathString = ((UserLibrary) getEditorController().getLibrary()).getPath();
+            assert userLibraryPathString != null;
+        }
     }
 }

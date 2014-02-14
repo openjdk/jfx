@@ -42,6 +42,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.editor.util.ContextMenuController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
@@ -1044,6 +1045,12 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
                 for (TreeItem<HierarchyItem> selectedTreeItem : selectedTreeItems) {
                     final HierarchyItem item = selectedTreeItem.getValue();
                     if (item.isEmpty()) {
+                        return;
+                    }
+                }
+                // Abort dragging FXML include
+                for (FXOMObject fxomObject : osg.getItems()) {
+                    if (fxomObject instanceof FXOMIntrinsic) {
                         return;
                     }
                 }

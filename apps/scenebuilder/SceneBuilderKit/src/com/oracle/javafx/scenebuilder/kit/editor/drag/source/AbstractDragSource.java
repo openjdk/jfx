@@ -65,5 +65,8 @@ public abstract class AbstractDragSource {
     public abstract Node makeShadow();
     public abstract String makeDropJobDescription();
     public abstract boolean isNodeOnly();
+    public abstract boolean isSingleImageViewOnly();
+    public abstract boolean isSingleTooltipOnly();
+    public abstract boolean isSingleContextMenuOnly();
     
 }

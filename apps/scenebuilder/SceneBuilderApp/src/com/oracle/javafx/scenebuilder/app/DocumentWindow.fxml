@@ -44,9 +44,9 @@
       <items>
         <SplitPane fx:id="leftRightSplitPane" dividerPositions="0.11812297734627832, 0.889967637540453" focusTraversable="true" prefHeight="-1.0" prefWidth="-1.0">
           <items>
-            <SplitPane fx:id="libraryDocumentSplitPane" dividerPositions="0.4990328820116054" focusTraversable="true" maxWidth="450.0" minWidth="280.0" orientation="VERTICAL">
+            <SplitPane fx:id="libraryDocumentSplitPane" dividerPositions="0.4990328820116054" focusTraversable="true" maxWidth="450.0" minWidth="280.0" orientation="VERTICAL" SplitPane.resizableWithParent="false">
               <items>
-                <VBox id="leftPanelHost" minHeight="50.0" prefHeight="200.0" prefWidth="100.0">
+                <VBox id="leftPanelHost" minHeight="50.0" prefHeight="200.0" prefWidth="100.0" SplitPane.resizableWithParent="false">
                   <children>
                     <HBox id="HBox" alignment="CENTER" spacing="0.0" styleClass="panel-header">
                       <children>
@@ -115,7 +115,7 @@
                         </TitledPane>
                         <TitledPane fx:id="Info" animated="true" text="%controller">
                           <content>
-                            <StackPane fx:id="infoPanelHost" maxHeight="-1.0" />
+                            <StackPane fx:id="infoPanelHost" maxHeight="-1.0" style="-fx-padding: 0;" />
                           </content>
                         </TitledPane>
                       </panes>
@@ -134,7 +134,7 @@
                 </StackPane>
               </children>
             </StackPane>
-            <VBox id="rightPanelHost" maxWidth="450.0" minWidth="280.0">
+            <VBox id="rightPanelHost" maxWidth="450.0" minWidth="280.0" SplitPane.resizableWithParent="false">
               <children>
                 <HBox id="HBox" alignment="CENTER" spacing="0.0" styleClass="panel-header" VBox.vgrow="NEVER">
                   <children>
@@ -168,7 +168,7 @@
             </VBox>
           </items>
         </SplitPane>
-        <VBox maxWidth="-1.0" minHeight="200.0" prefHeight="-1.0" prefWidth="-1.0">
+        <VBox maxWidth="-1.0" minHeight="200.0" prefHeight="-1.0" prefWidth="-1.0" SplitPane.resizableWithParent="false">
           <children>
             <HBox id="HBox" alignment="CENTER" styleClass="panel-header">
               <children>

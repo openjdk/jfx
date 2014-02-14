@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.util.Objects;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
@@ -137,7 +138,7 @@ public class PickModeController extends AbstractModeController {
         final Selection selection 
                 = contentPanelController.getEditorController().getSelection();
         final FXOMObject hitObject 
-                = contentPanelController.pick(e.getSceneX(), e.getSceneY());
+                = pick(e.getSceneX(), e.getSceneY());
         
         if (hitObject == null) {
             selection.clear();
@@ -228,5 +229,33 @@ public class PickModeController extends AbstractModeController {
             rudderLayer.getChildren().remove(hitNodeChrome.getRootNode());
             hitNodeChrome = null;
         }
+    }
+    
+    
+    private FXOMObject pick(double sceneX, double sceneY) {
+        final FXOMObject result;
+        
+        final FXOMDocument fxomDocument
+                = contentPanelController.getEditorController().getFxomDocument();
+        
+        if ((fxomDocument == null) || (fxomDocument.getFxomRoot() == null)) {
+            result = null;
+        } else {
+            final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
+            final Object sceneGraphRoot = fxomRoot.getSceneGraphObject();
+            if (sceneGraphRoot instanceof Node) {
+                Node hitNode = Deprecation.pick((Node)sceneGraphRoot, sceneX, sceneY);
+                FXOMObject fxomObject = null;
+                while ((fxomObject == null) && (hitNode != null)) {
+                    fxomObject = fxomRoot.searchWithSceneGraphObject(hitNode);
+                    hitNode = hitNode.getParent();
+                }
+                result = fxomObject;
+            } else {
+                result = null;
+            }
+        }
+        
+        return result;
     }
 }

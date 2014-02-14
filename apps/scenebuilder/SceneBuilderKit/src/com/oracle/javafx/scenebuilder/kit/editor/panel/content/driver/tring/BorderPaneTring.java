@@ -95,6 +95,13 @@ public class BorderPaneTring extends AbstractNodeTring<BorderPane> {
         centerLabel.getStyleClass().add(TARGET_RING_CLASS);
         centerLabel.getStyleClass().add(BorderPane.class.getSimpleName());
         
+        final DesignHierarchyMask m = new DesignHierarchyMask(fxomInstance);
+        topLabel.setVisible(m.getAccessory(DesignHierarchyMask.Accessory.TOP) == null);
+        bottomLabel.setVisible(m.getAccessory(DesignHierarchyMask.Accessory.BOTTOM) == null);
+        leftLabel.setVisible(m.getAccessory(DesignHierarchyMask.Accessory.LEFT) == null);
+        rightLabel.setVisible(m.getAccessory(DesignHierarchyMask.Accessory.RIGHT) == null);
+        centerLabel.setVisible(m.getAccessory(DesignHierarchyMask.Accessory.CENTER) == null);
+        
         borderPane.setTop(topLabel);
         borderPane.setBottom(bottomLabel);
         borderPane.setLeft(leftLabel);
@@ -250,7 +257,7 @@ public class BorderPaneTring extends AbstractNodeTring<BorderPane> {
                 targetLabel = centerLabel;
                 break;
         }
-        
+                
         setupSelectedStyleClass(topLabel, topLabel == targetLabel);
         setupSelectedStyleClass(bottomLabel, bottomLabel == targetLabel);
         setupSelectedStyleClass(leftLabel, leftLabel == targetLabel);
@@ -272,10 +279,10 @@ public class BorderPaneTring extends AbstractNodeTring<BorderPane> {
     private static final String SELECTED = "selected"; //NOI18N
     
     private static void setupSelectedStyleClass(Label label, boolean selected) {
-        final List<String> styleClass = label.getStyleClass();
+            final List<String> styleClass = label.getStyleClass();
         if (selected) {
             if (styleClass.contains(SELECTED) == false) {
-                styleClass.add(SELECTED);
+                    styleClass.add(SELECTED);
             }
         } else {
             if (styleClass.contains(SELECTED)) {

@@ -37,6 +37,7 @@ import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import com.sun.javafx.css.Declaration;
 import com.sun.javafx.css.Rule;
+import com.sun.javafx.css.Size;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.PaintConverter.LinearGradientConverter;
 import com.sun.javafx.css.parser.DeriveColorConverter;
@@ -53,9 +54,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Side;
 import javafx.scene.effect.Effect;
 import javafx.scene.image.Image;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BackgroundImage;
 import javafx.scene.layout.BackgroundSize;
+import javafx.scene.layout.Border;
 import javafx.scene.layout.BorderImage;
 import javafx.scene.layout.BorderStroke;
 import javafx.scene.layout.BorderWidths;
@@ -68,21 +71,21 @@ import javafx.scene.text.Font;
  *
  */
 public class CssValueConverter {
-    
+
     private static final List<String> STRING_VALUE = new ArrayList<>();
     private static final List<String> SINGLE_WHEN_EQUALITY = new ArrayList<>();
 
     private CssValueConverter() {
         assert false;
     }
-    
+
     @SuppressWarnings("rawtypes")
-    public static Object convert(ParsedValue pv){
+    public static Object convert(ParsedValue pv) {
         Object value = null;
-        if(pv == null){
+        if (pv == null) {
             return null;
         }
-        
+
         if (pv.getConverter() != null) {
             try {
                 @SuppressWarnings("unchecked")
@@ -99,7 +102,7 @@ public class CssValueConverter {
         }
         return value;
     }
-    
+
     // Retrieve a CSS String from a value set thanks to CSS
     public static String toCssString(String property, Rule rule, Object fxValue) {
         try {
@@ -116,7 +119,7 @@ public class CssValueConverter {
     public static String toCssString(Object fxValue) {
         return getValue(null, null, fxValue);
     }
-    
+
     // Retrieve the value for a sub property.
     public static Object getSubPropertyValue(String property, Object value) {
         if (value instanceof Collection) {
@@ -126,37 +129,51 @@ public class CssValueConverter {
                 subValues.add(getSubPropertyValue(property, bf));
             }
             return subValues;
-        } else {
-            if (value != null && value.getClass().isArray()) {
-                Object newArray = Array.newInstance(value.getClass().getComponentType(), Array.getLength(value));
-                for (int i = 0; i < Array.getLength(value); i++) {
-                    Array.set(newArray, i, getSubPropertyValue(property, Array.get(value, i)));
-                }
-                return newArray;
-            } else {
-                if (value instanceof BackgroundFill) {
-                    return subBackgroundFill(property, (BackgroundFill) value);
-                } else {
-                    if (value instanceof BackgroundImage) {
-                        return subBackgroundImage(property, (BackgroundImage) value);
-                    } else {
-                        if (value instanceof BorderImage) {
-                            return subBorderImage(property, (BorderImage) value);
-                        } else if (value instanceof BorderStroke) {
-                            return subBorderStroke(property, (BorderStroke) value);
-                        } else {
-                            if (value instanceof Font) {
-                                return subFont(property, (Font) value);
-                            } else {
-                                return getValue(property, null, value);
-                            }
-                        }
-                    }
-                }
+        } else if (value != null && value.getClass().isArray()) {
+            Object newArray = Array.newInstance(value.getClass().getComponentType(), Array.getLength(value));
+            for (int i = 0; i < Array.getLength(value); i++) {
+                Array.set(newArray, i, getSubPropertyValue(property, Array.get(value, i)));
             }
-        }
-    }
+            return newArray;
 
+            //
+            // Background
+            //
+        } else if (value instanceof Background) {
+            Background background = (Background) value;
+            if (background.getFills() != null) {
+                return getSubPropertyValue(property, background.getFills());
+            } else if (background.getImages() != null) {
+                return getSubPropertyValue(property, background.getImages());
+            }
+        } else if (value instanceof BackgroundFill) {
+            return subBackgroundFill(property, (BackgroundFill) value);
+        } else if (value instanceof BackgroundImage) {
+            return subBackgroundImage(property, (BackgroundImage) value);
+
+            //
+            // Border
+            //
+        } else if (value instanceof Border) {
+            Border border = (Border) value;
+            if (border.getStrokes() != null) {
+                return getSubPropertyValue(property, border.getStrokes());
+            } else if (border.getImages() != null) {
+                return getSubPropertyValue(property, border.getImages());
+            }
+        } else if (value instanceof BorderStroke) {
+            return subBorderStroke(property, (BorderStroke) value);
+        } else if (value instanceof BorderImage) {
+            return subBorderImage(property, (BorderImage) value);
+
+            //
+            // Font
+            //
+        } else if (value instanceof Font) {
+            return subFont(property, (Font) value);
+        }
+        return getValue(property, null, value);
+    }
 
     static {
         STRING_VALUE.add("-fx-skin");//NOI18N
@@ -170,6 +187,7 @@ public class CssValueConverter {
             return value;
         }
     }
+
     // FX to String value transformation entry point.
     private static String getValue(String property, Rule r, Object eventValue) throws IllegalArgumentException {
         if (r == null) {
@@ -178,7 +196,11 @@ public class CssValueConverter {
 
         for (Declaration d : r.getDeclarations()) {
             if (d.getProperty().equals(property)) {
-                return format(property, getCssString(property, d.getParsedValue()));
+                if (property.equals("-fx-background-radius") || property.equals("-fx-border-radius")) { //NOI18N
+                    return format(property, getRadiusCssString(property, d.getParsedValue()));
+                } else {
+                    return format(property, getCssString(property, d.getParsedValue()));
+                }
             }
         }
         throw new IllegalArgumentException("Can't compute a value");//NOI18N
@@ -194,28 +216,31 @@ public class CssValueConverter {
         SINGLE_WHEN_EQUALITY.add("-fx-border-image-insets"); //NOI18N
         SINGLE_WHEN_EQUALITY.add("-fx-border-image-slice"); //NOI18N
         SINGLE_WHEN_EQUALITY.add("-fx-border-image-width"); //NOI18N
-        
+
     }
-    
-    private static boolean singleForEquality(String prop){
+
+    private static boolean singleForEquality(String prop) {
         return SINGLE_WHEN_EQUALITY.contains(prop);
     }
-    
+
     // The difference between retrieveValue and getCssStringValue
     // is that the ParsedValue is converted in the retrieveValue case, and is not converted in the 
     // getCssStringValue
-    // When converting, we loose the CSS textual format present in the CSS source.
+    // When converting, we loose the CSS textual format present in the CSS source,
+    // for instance the lookup information, or 'em' unit.
     @SuppressWarnings("rawtypes")
     private static String getCssString(String property, ParsedValue value) {
+
+        // TODO : this method should be rewritten in a cleaner way...
         if (value == null) {
             return "null"; //NOI18N
         }
-        
+
         // I don't like that but this is needed to only have a conversion for gradient.
         // The gradient.toString is much better than the ParsedValue.toString.
         if (value.getConverter() instanceof LinearGradientConverter
                 || value.getConverter() instanceof PaintConverter.RadialGradientConverter) {
-                         
+
             try {
                 @SuppressWarnings("unchecked")//NOI18N
                 Object converted = value.getConverter().convert(value, null);
@@ -224,7 +249,7 @@ public class CssValueConverter {
             } catch (RuntimeException ex) {
             }
         }
-        
+
         Object obj = value.getValue();
         if (obj instanceof ParsedValue) {
             return getCssString(property, (ParsedValue) obj);
@@ -284,7 +309,7 @@ public class CssValueConverter {
                     String val = getCssString(property, v);
                     val = removeDotZeroPxPercent(val);
                     b.append(val);
-                    if ((i < array.length - 1) && val.length() > 0){
+                    if ((i < array.length - 1) && val.length() > 0) {
                         b.append(", "); //NOI18N
                     }
                 }
@@ -297,7 +322,7 @@ public class CssValueConverter {
                 for (int i = 0; i < arr.length; i++) {
                     String val = retrieveValue(property, arr[i]);
                     builder.append(val);
-                    if ((i < arr.length - 1)&& val.length() > 0) {
+                    if ((i < arr.length - 1) && val.length() > 0) {
                         builder.append(", "); //NOI18N
                     }
                 }
@@ -309,10 +334,71 @@ public class CssValueConverter {
             builder.append(")"); //NOI18N
         }
         return builder.toString();
-
     }
 
-    
+    @SuppressWarnings("rawtypes")
+    private static String getRadiusCssString(String property, ParsedValue value) {
+        // TODO : Ideally should be included in the generic getCssString() method
+        
+        // See  http://www.w3.org/TR/css3-background/#the-border-radius 
+        
+        assert property.equals("-fx-background-radius") || property.equals("-fx-border-radius"); //NOI18N
+        StringBuilder sbAll = new StringBuilder();
+        Object obj = value.getValue();
+        if (!(obj instanceof ParsedValue[])) {
+            return null;
+        }
+        ParsedValue[] pvArray = (ParsedValue[]) obj;
+        int index = 0;
+        for (ParsedValue pvItem : pvArray) {
+            // We have a CornerRadii representation here:
+            // double dimension array:
+            // 1- horizontal/vertical radii
+            // 2- value per corner
+            // If all the values are identical, only a single value is used.
+            obj = pvItem.getValue();
+            if (!(obj instanceof ParsedValue[][])) {
+                return null;
+            }
+            ParsedValue[][] pvArray2 = (ParsedValue[][]) obj;
+            StringBuilder sbCornerRadii = new StringBuilder();
+            Size initSize = null;
+            boolean areEquals = true;
+            int index2 = 0;
+            for (ParsedValue[] pvArray1 : pvArray2) {
+                // horizontal or vertical list 
+                for (ParsedValue pvItem2 : pvArray1) {
+                    obj = pvItem2.getValue();
+                    if (!(obj instanceof Size)) {
+                        return null;
+                    }
+                    Size size = (Size) obj;
+                    sbCornerRadii.append(size).append(" "); //NOI18N
+                    if (initSize == null) {
+                        initSize = size;
+                    } else if (!initSize.equals(size)) {
+                        areEquals = false;
+                    }
+                }
+                if (index2 != pvArray2.length - 1) {
+                    // Separator between the horizontal / vertical lists
+                    sbCornerRadii.append(" / "); //NOI18N
+                }
+                index2++;
+            }
+            if (areEquals) {
+                sbAll.append(initSize);
+            } else {
+                sbAll.append(sbCornerRadii.toString().trim());
+            }
+            if (index != pvArray.length - 1) {
+                sbAll.append(", "); //NOI18N
+            }
+            index++;
+        }
+        return removeDotZeroPxPercent(sbAll.toString());
+    }
+
     private static String retrieveValue(String property, Object eventValue) {
         if (eventValue instanceof ParsedValue) {
             eventValue = convert((ParsedValue) eventValue);
@@ -332,56 +418,58 @@ public class CssValueConverter {
                     builder.append(", "); //NOI18N
                 }
             }
-        } else {
-            if (eventValue.getClass().isArray()) {
-                int length = Array.getLength(eventValue);
-                for (int i = 0; i < length; i++) {
-                    String val = retrieveValue(property, Array.get(eventValue, i));
-                    builder.append(val);
-                    if ((i < length - 1) && val.length() > 0) {
-                        builder.append(", "); //NOI18N
-                    }
-                }
-            } else {
-                if (eventValue instanceof BackgroundFill) {
-                    builder.append(backgroundFillToString(property, (BackgroundFill) eventValue));
-                } else {
-                    if (eventValue instanceof BackgroundImage) {
-                        builder.append(backgroundImageToString(property, (BackgroundImage) eventValue));
-                    } else {
-                        if (eventValue instanceof BorderImage) {
-                            builder.append(borderImageToString(property, (BorderImage) eventValue));
-                        } else {
-                            if (eventValue instanceof Font) {
-                                builder.append(fontToString(property, (Font) eventValue));
-                            } else {
-                                if (eventValue instanceof Paint) {
-                                    builder.append(paintToString((Paint) eventValue).toLowerCase(Locale.ROOT));
-                                } else {
-                                    if (eventValue instanceof Insets) {
-                                        builder.append(insetsValue((Insets) eventValue));
-                                    } else {
-                                        if (eventValue instanceof Effect) {
-                                            builder.append(effectValue((Effect) eventValue));
-                                        } else {
-                                            String str = EditorUtils.valAsStr(eventValue);
-                                            if (str == null) {
-                                                str = "null"; //NOI18N
-                                            } else {
-                                                str = str.replaceAll("\n", " ");//NOI18N
-                                                // Remove memory address if any
-                                                str = str.split("@")[0]; //NOI18N
-                                                str = removeDotZeroPxPercent(str);
-                                            }
-                                            builder.append(str);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+        } else if (eventValue.getClass().isArray()) {
+            int length = Array.getLength(eventValue);
+            for (int i = 0; i < length; i++) {
+                String val = retrieveValue(property, Array.get(eventValue, i));
+                builder.append(val);
+                if ((i < length - 1) && val.length() > 0) {
+                    builder.append(", "); //NOI18N
                 }
             }
+        } else if (eventValue instanceof Background) {
+            Background background = (Background) eventValue;
+            if (background.getFills() != null) {
+                return retrieveValue(property, background.getFills());
+            } else if (background.getImages() != null) {
+                return retrieveValue(property, background.getImages());
+            }
+        } else if (eventValue instanceof Border) {
+            Border border = (Border) eventValue;
+            if (border.getStrokes() != null) {
+                return retrieveValue(property, border.getStrokes());
+            } else if (border.getImages() != null) {
+                return retrieveValue(property, border.getImages());
+            }
+        } else if (eventValue instanceof BackgroundFill) {
+            builder.append(backgroundFillToString(property, (BackgroundFill) eventValue));
+        } else if (eventValue instanceof CornerRadii) {
+            builder.append(cornerRadiiToString(property, (CornerRadii) eventValue));
+        } else if (eventValue instanceof BackgroundImage) {
+            builder.append(backgroundImageToString(property, (BackgroundImage) eventValue));
+        } else if (eventValue instanceof BorderStroke) {
+            builder.append(borderStrokeToString(property, (BorderStroke) eventValue));
+        } else if (eventValue instanceof BorderImage) {
+            builder.append(borderImageToString(property, (BorderImage) eventValue));
+        } else if (eventValue instanceof Font) {
+            builder.append(fontToString(property, (Font) eventValue));
+        } else if (eventValue instanceof Paint) {
+            builder.append(paintToString((Paint) eventValue).toLowerCase(Locale.ROOT));
+        } else if (eventValue instanceof Insets) {
+            builder.append(insetsValue((Insets) eventValue));
+        } else if (eventValue instanceof Effect) {
+            builder.append(effectValue((Effect) eventValue));
+        } else {
+            String str = EditorUtils.valAsStr(eventValue);
+            if (str == null) {
+                str = "null"; //NOI18N
+            } else {
+                str = str.replaceAll("\n", " ");//NOI18N
+                // Remove memory address if any
+                str = str.split("@")[0]; //NOI18N
+                str = removeDotZeroPxPercent(str);
+            }
+            builder.append(str);
         }
         return builder.toString();
     }
@@ -392,9 +480,9 @@ public class CssValueConverter {
         int blue = (int) Math.round(c.getBlue() * 255.0);
         int alpha = (int) Math.round(c.getOpacity() * 255.0);
         if (alpha == 255) {
-            return String.format((Locale) null, "#%02x%02x%02x", red, green, blue); //NOI18N
+            return String.format("#%02x%02x%02x", red, green, blue); //NOI18N
         } else {
-            return String.format((Locale) null, "#%02x%02x%02x%02x", red, green, blue, alpha); //NOI18N
+            return String.format("#%02x%02x%02x%02x", red, green, blue, alpha); //NOI18N
         }
     }
 
@@ -414,7 +502,6 @@ public class CssValueConverter {
     private static String getStandardColorAsString(Color c) {
         return standardColors.get(c);
     }
-
 
     private static String backgroundFillToString(String property, BackgroundFill bf) {
         if (property == null) {
@@ -436,7 +523,16 @@ public class CssValueConverter {
         }
         return builder.toString();
     }
-    
+
+    private static String cornerRadiiToString(String property, CornerRadii cr) {
+        if (property == null) {
+            return cr.toString();
+        }
+        StringBuilder builder = new StringBuilder();
+        handleCornerRadii(cr, builder);
+        return builder.toString();
+    }
+
     private static String backgroundImageToString(String property, BackgroundImage bi) {
         if (property == null) {
             return bi.toString();
@@ -447,7 +543,7 @@ public class CssValueConverter {
             builder.append(Deprecation.getUrl(p));
         } else {
             if (property.equals("-fx-background-position")) {             //NOI18N
-                double left=0, right=0, top=0, bottom=0;
+                double left = 0, right = 0, top = 0, bottom = 0;
                 if (bi.getPosition().getHorizontalSide() == Side.LEFT) {
                     left = bi.getPosition().getHorizontalPosition();
                 } else {
@@ -468,14 +564,14 @@ public class CssValueConverter {
                 builder.append(EditorUtils.valAsStr(bottom));
             } else {
                 if (property.equals("-fx-background-repeat")) {          //NOI18N
-                    if(bi.getRepeatX() != null){
+                    if (bi.getRepeatX() != null) {
                         builder.append(bi.getRepeatX().toString());
                     } else {
-                       if(bi.getRepeatY() != null){ 
-                           builder.append(bi.getRepeatY().toString());
-                       } else {
-                           builder.append("unknown repeat"); //NOI18N
-                       }
+                        if (bi.getRepeatY() != null) {
+                            builder.append(bi.getRepeatY().toString());
+                        } else {
+                            builder.append("unknown repeat"); //NOI18N
+                        }
                     }
                 } else {
                     if (property.equals("-fx-background-size")) { //NOI18N
@@ -504,7 +600,7 @@ public class CssValueConverter {
         }
         return builder.toString();
     }
-    
+
     private static String borderImageToString(String property, BorderImage bi) {
         if (property == null) {
             return bi.toString();
@@ -515,17 +611,17 @@ public class CssValueConverter {
             builder.append(Deprecation.getUrl(p));
         } else {
             if (property.equals("-fx-background-position")) {             //NOI18N
-                
+
             } else {
                 if (property.equals("-fx-border-image-repeat")) {          //NOI18N
-                    if(bi.getRepeatX() != null){
+                    if (bi.getRepeatX() != null) {
                         builder.append(bi.getRepeatX().toString());
                     } else {
-                       if(bi.getRepeatY() != null){ 
-                           builder.append(bi.getRepeatY().toString());
-                       } else {
-                           builder.append("unknown repeat"); //NOI18N
-                       }
+                        if (bi.getRepeatY() != null) {
+                            builder.append(bi.getRepeatY().toString());
+                        } else {
+                            builder.append("unknown repeat"); //NOI18N
+                        }
                     }
                 } else {
                     if (property.equals("-fx-border-image-insets")) { //NOI18N
@@ -562,7 +658,7 @@ public class CssValueConverter {
         }
         return builder.toString();
     }
-    
+
     private static String borderStrokeToString(String property, BorderStroke bs) {
         if (property == null) {
             return bs.toString();
@@ -594,18 +690,18 @@ public class CssValueConverter {
                         builder.append(bs.getBottomStyle().toString()).append(", "); //NOI18N
                         builder.append(bs.getLeftStyle().toString());
                     } else {
-                        // -fx-border-width
-                        assert property.equals("-fx-border-width"); //NOI18N
-                        BorderWidths bw = bs.getWidths();
-                        if (MathUtils.equals(bw.getTop(), bw.getBottom())
-                                && MathUtils.equals(bw.getRight(), bw.getBottom())
-                                && MathUtils.equals(bw.getLeft(), bw.getBottom())) {
-                            builder.append(EditorUtils.valAsStr(bw.getBottom()));
-                        } else {
-                            builder.append(EditorUtils.valAsStr(bw.getTop())).append(" "). //NOI18N
-                                    append(EditorUtils.valAsStr(bw.getRight())).append(" "). //NOI18N
-                                    append(EditorUtils.valAsStr(bw.getBottom())).append(" "). //NOI18N
-                                    append(EditorUtils.valAsStr(bw.getLeft()));
+                        if (property.equals("-fx-border-width")) { //NOI18N
+                            BorderWidths bw = bs.getWidths();
+                            if (MathUtils.equals(bw.getTop(), bw.getBottom())
+                                    && MathUtils.equals(bw.getRight(), bw.getBottom())
+                                    && MathUtils.equals(bw.getLeft(), bw.getBottom())) {
+                                builder.append(EditorUtils.valAsStr(bw.getBottom()));
+                            } else {
+                                builder.append(EditorUtils.valAsStr(bw.getTop())).append(" "). //NOI18N
+                                        append(EditorUtils.valAsStr(bw.getRight())).append(" "). //NOI18N
+                                        append(EditorUtils.valAsStr(bw.getBottom())).append(" "). //NOI18N
+                                        append(EditorUtils.valAsStr(bw.getLeft()));
+                            }
                         }
                     }
                 }
@@ -625,7 +721,7 @@ public class CssValueConverter {
             return gradient;
         }
     }
-    
+
     private static String fontToString(String property, Font font) {
         if (property == null) {
             return removeAllDotZero(font.toString());
@@ -667,11 +763,11 @@ public class CssValueConverter {
                 && MathUtils.equals(insets.getTop(), insets.getLeft())) {
             return EditorUtils.valAsStr(insets.getLeft());
         } else {
-            return EditorUtils.valAsStr(insets.getTop()) + " " + EditorUtils.valAsStr(insets.getRight())  //NOI18N
+            return EditorUtils.valAsStr(insets.getTop()) + " " + EditorUtils.valAsStr(insets.getRight()) //NOI18N
                     + " " + EditorUtils.valAsStr(insets.getBottom()) + " " + EditorUtils.valAsStr(insets.getLeft()); //NOI18N
         }
     }
-    
+
     private static String effectValue(Effect effect) {
         StringBuilder strBuild = new StringBuilder();
         Effect adding = effect;
@@ -684,7 +780,7 @@ public class CssValueConverter {
         }
         return strBuild.toString();
     }
-    
+
     private static Object subBackgroundFill(String property, BackgroundFill bf) {
         if (property == null) {
             return bf;
@@ -699,7 +795,7 @@ public class CssValueConverter {
             }
         }
     }
-    
+
     private static Object subBackgroundImage(String property, BackgroundImage bi) {
         if (property == null) {
             return bi;
@@ -710,7 +806,7 @@ public class CssValueConverter {
             return backgroundImageToString(property, bi);
         }
     }
-    
+
     private static Object subBorderImage(String property, BorderImage bi) {
         if (property == null) {
             return bi;
@@ -721,34 +817,34 @@ public class CssValueConverter {
             return borderImageToString(property, bi);
         }
     }
-    
-    private static Object subBorderStroke(String property, BorderStroke sb) {
+
+    private static Object subBorderStroke(String property, BorderStroke bs) {
         if (property == null) {
-            return sb;
+            return bs;
         }
         //top, right, bottom, and left 
         if (property.equals("-fx-border-color")) { //NOI18N
-            if (sb.getTopStroke().equals(sb.getBottomStroke())
-                    && sb.getRightStroke().equals(sb.getBottomStroke())
-                    && sb.getLeftStroke().equals(sb.getBottomStroke())) {
-                return sb.getBottomStroke();
+            if (bs.getTopStroke().equals(bs.getBottomStroke())
+                    && bs.getRightStroke().equals(bs.getBottomStroke())
+                    && bs.getLeftStroke().equals(bs.getBottomStroke())) {
+                return bs.getBottomStroke();
             } else {
                 Paint[] p = new Paint[4];
-                p[0] = sb.getTopStroke();
-                p[1] = sb.getRightStroke();
-                p[2] = sb.getBottomStroke();
-                p[3] = sb.getLeftStroke();
+                p[0] = bs.getTopStroke();
+                p[1] = bs.getRightStroke();
+                p[2] = bs.getBottomStroke();
+                p[3] = bs.getLeftStroke();
                 return p;
             }
         } else {
             if (property.equals("-fx-border-insets")) { //NOI18N
-                return sb.getInsets();
+                return bs.getInsets();
             } else {
-                return borderStrokeToString(property, sb);
+                return borderStrokeToString(property, bs);
             }
         }
     }
-    
+
     private static Object subFont(String property, Font font) {
         if (property == null) {
             return font;
@@ -772,47 +868,75 @@ public class CssValueConverter {
             }
         }
     }
-    
+
     private static String removeDotZeroPxPercent(String str) {
         // Remove ".0" in strings, for "px" and "%" notations
         str = str.replaceAll("\\.0px", "px"); //NOI18N
+        str = str.replaceAll("\\.0em", "em"); //NOI18N
         str = str.replaceAll("\\.0\\%", "%"); //NOI18N
         return str;
     }
-    
+
     private static String removeAllDotZero(String str) {
         // Remove all ".0" in string
         str = str.replaceAll("\\.0", ""); //NOI18N
         return str;
     }
-    
+
     private static void handleCornerRadii(CornerRadii cr, StringBuilder builder) {
-        if (MathUtils.equals(cr.getTopRightHorizontalRadius(), cr.getBottomRightHorizontalRadius())
-                && MathUtils.equals(cr.getBottomLeftHorizontalRadius(), cr.getBottomRightHorizontalRadius())
-                && MathUtils.equals(cr.getTopLeftHorizontalRadius(), cr.getBottomRightHorizontalRadius())
-                && MathUtils.equals(cr.getTopRightVerticalRadius(), cr.getBottomRightVerticalRadius())
-                && MathUtils.equals(cr.getBottomLeftVerticalRadius(), cr.getBottomRightVerticalRadius())
-                && MathUtils.equals(cr.getTopLeftVerticalRadius(), cr.getBottomRightVerticalRadius())) {
-            builder.append(EditorUtils.valAsStr(cr.getBottomRightVerticalRadius()));
+        // Each radius has a vertical and horizontal radius
+        // See  http://www.w3.org/TR/css3-background/#the-border-radius 
+
+        double topLeftH = cr.getTopLeftHorizontalRadius();
+        double topLeftV = cr.getTopLeftVerticalRadius();
+        double topRightH = cr.getTopRightHorizontalRadius();
+        double topRightV = cr.getTopRightVerticalRadius();
+        double bottomLeftH = cr.getBottomLeftHorizontalRadius();
+        double bottomLeftV = cr.getBottomLeftVerticalRadius();
+        double bottomRightH = cr.getBottomRightHorizontalRadius();
+        double bottomRightV = cr.getBottomRightVerticalRadius();
+
+        if (MathUtils.equals(topLeftH, topLeftV) && MathUtils.equals(topRightH, topRightV)
+                && MathUtils.equals(bottomLeftH, bottomLeftV) && MathUtils.equals(bottomRightH, bottomRightV)) {
+            if (MathUtils.equals(topLeftH, topRightH) && MathUtils.equals(topRightH, bottomLeftH)
+                    && MathUtils.equals(bottomLeftH, bottomRightH)) {
+                // Same radius for all => single value
+                builder.append(EditorUtils.valAsStr(topLeftH));
+            } else {
+                // Same value for vertical and horizontal radii 
+                // => 4 values for topLeft, topRight, bottomLeft, bottomRight
+                builder.append(EditorUtils.valAsStr(topLeftH)).append(" "). //NOI18N
+                        append(EditorUtils.valAsStr(topRightH)).append(" "). //NOI18N
+                        append(EditorUtils.valAsStr(bottomRightH)).append(" "). //NOI18N
+                        append(EditorUtils.valAsStr(bottomLeftH));
+            }
         } else {
-            // TODO : ask David : how to represent horizontal/vertical radii ? CSS doc is not updated on this
-            // Only horizontal for now
-            builder.append(EditorUtils.valAsStr(cr.getTopRightHorizontalRadius())).append(" "). //NOI18N
-                    append(EditorUtils.valAsStr(cr.getBottomRightHorizontalRadius())).append(" "). //NOI18N
-                    append(EditorUtils.valAsStr(cr.getBottomLeftHorizontalRadius())).append(" "). //NOI18N
-                    append(EditorUtils.valAsStr(cr.getTopLeftHorizontalRadius()));
+            // Separate value for each.
+            // Syntax: "horizontal values / vertical values"
+            builder.append(EditorUtils.valAsStr(topLeftH)).append(" "). //NOI18N
+                    append(EditorUtils.valAsStr(topRightH)).append(" "). //NOI18N
+                    append(EditorUtils.valAsStr(bottomRightH)).append(" "). //NOI18N
+                    append(EditorUtils.valAsStr(bottomLeftH)).
+                    append(" / ").//NOI18N
+                    append(EditorUtils.valAsStr(topLeftV)).append(" "). //NOI18N
+                    append(EditorUtils.valAsStr(topRightV)).append(" "). //NOI18N
+                    append(EditorUtils.valAsStr(bottomRightV)).append(" "). //NOI18N
+                    append(EditorUtils.valAsStr(bottomLeftV));
         }
     }
 
+    @SuppressWarnings({"BroadCatchBlock", "TooBroadCatch"}) //NOI18N
     private static Effect getEffectInput(Effect effect) {
         Effect found = null;
         try {
             found = (Effect) effect.getClass().getMethod("getInput").invoke(effect); //NOI18N
         } catch (Throwable e) {
+            // DO NOT use multi-catch syntax here, this generates a FindBugs Warning (because of SecurityException catching)
 //                e.printStackTrace();
             try {
                 found = (Effect) effect.getClass().getMethod("getContentInput").invoke(effect); //NOI18N
             } catch (Throwable ee) {
+                // DO NOT use multi-catch syntax here, this generates a FindBugs Warning (because of SecurityException catching)
 //                    ee.printStackTrace();
             }
         }

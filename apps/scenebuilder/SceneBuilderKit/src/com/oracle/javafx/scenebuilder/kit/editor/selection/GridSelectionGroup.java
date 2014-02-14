@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.selection;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
@@ -135,6 +136,21 @@ public class GridSelectionGroup extends AbstractSelectionGroup {
     @Override
     public FXOMObject getAncestor() {
         return parentObject;
+    }
+
+    @Override
+    public boolean isValid(FXOMDocument fxomDocument) {
+        assert fxomDocument != null;
+        
+        final boolean result;
+        final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
+        if (fxomRoot == null) {
+            result = false;
+        } else {
+            result = (parentObject == fxomRoot) || parentObject.isDescendantOf(fxomRoot);
+        }
+        
+        return result;
     }
     
     

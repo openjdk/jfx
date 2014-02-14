@@ -34,6 +34,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.util;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractPopupController;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
@@ -151,11 +153,14 @@ public class InlineEditController {
      * @param editor
      * @param anchor
      * @param requestCommit
+     * @param requestRevert
      */
     public void startEditingSession(final TextInputControl editor, final Node anchor,
-            final Callback<String, Boolean> requestCommit) {
+            final Callback<String, Boolean> requestCommit,
+            final Callback<Void, Boolean> requestRevert) {
 
         assert editor != null && anchor != null && requestCommit != null;
+        assert getEditorController().isTextEditingSessionOnGoing() == false;
 
         popupController = new InlineEditPopupController(editor, requestCommit);
 
@@ -172,12 +177,7 @@ public class InlineEditController {
                         // - if editor is a TextField
                         // - if META/CTL is down (both TextField and TextArea)
                         if ((editor instanceof TextField) || isModifierDown(event)) {
-                            boolean commitSucceeded = requestCommit.call(editor.getText());
-                            // If the commit succeeded, stop the editing session,
-                            // otherwise keeps the editing session on-going
-                            if (commitSucceeded) {
-                                popupController.closeWindow();
-                            }
+                            requestCommitAndClose(requestCommit, editor.getText());
                             // Consume the event so it is not received by the underlyting panel controller
                             event.consume();
                         }
@@ -185,18 +185,15 @@ public class InlineEditController {
                     // COMMIT the new value on TAB key pressed
                     case TAB:
                         // Commit inline editing on TAB key
-                        boolean commitSucceeded = requestCommit.call(editor.getText());
-                        // If the commit succeeded, stop the editing session,
-                        // otherwise keeps the editing session on-going
-                        if (commitSucceeded) {
-                            popupController.closeWindow();
-                        }
+                        requestCommitAndClose(requestCommit, editor.getText());
                         // Consume the event so it is not received by the underlyting panel controller
                         event.consume();
                         break;
                     // STOP inline editing session without COMMIT on ESCAPE key pressed
                     case ESCAPE:
-                        popupController.closeWindow();
+                        requestRevertAndClose(requestRevert);
+                        // Consume the event so it is not received by the underlyting panel controller
+                        event.consume();
                         break;
                     default:
                         break;
@@ -208,7 +205,46 @@ public class InlineEditController {
         // an editing session has started.
         popupController.openWindow(anchor);
         editorController.textEditingSessionDidBegin(
-                new EditingSessionDidBeginCallback(popupController));
+                new EditingSessionDidBeginCallback(this));
+    }
+
+    public EditorController getEditorController() {
+        return editorController;
+    }
+
+    InlineEditPopupController getPopupController() {
+        return popupController;
+    }
+
+    private boolean requestCommitAndClose(
+            final Callback<String, Boolean> requestCommit,
+            final String newValue) {
+
+        boolean commitSucceeded = requestCommit.call(newValue);
+        // If the commit succeeded, stop the editing session,
+        // otherwise keeps the editing session on-going
+        if (commitSucceeded) {
+            // First inform the editor controller that the editing session has ended
+            getEditorController().textEditingSessionDidEnd();
+            // Then close the window
+            popupController.closeWindow();
+        }
+        return commitSucceeded;
+    }
+
+    private boolean requestRevertAndClose(
+            final Callback<Void, Boolean> requestRevert) {
+
+        boolean revertSucceeded = requestRevert == null ? true : requestRevert.call(null);
+        // If the revert succeeded, stop the editing session,
+        // otherwise keeps the editing session on-going
+        if (revertSucceeded) {
+            // First inform the editor controller that the editing session has ended
+            getEditorController().textEditingSessionDidEnd();
+            // Then close the window
+            popupController.closeWindow();
+        }
+        return revertSucceeded;
     }
 
     private boolean isModifierDown(KeyEvent ke) {
@@ -283,6 +319,19 @@ public class InlineEditController {
             this.editor = editor;
             this.requestCommit = requestCommit;
             this.initialValue = editor.getText();
+
+            this.editor.focusedProperty().addListener(new ChangeListener<Boolean>() {
+
+                @Override
+                public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+                    // The inline editing popup auto hide when loosing focus :
+                    // need to commit inline editing on focus change
+                    if (getEditorController().isTextEditingSessionOnGoing() // Editing session has not been ended by ENTER key
+                            && newValue == false) {
+                        requestCommitAndClose(requestCommit, editor.getText());
+                    }
+                }
+            });
         }
 
         TextInputControl getEditor() {
@@ -296,13 +345,6 @@ public class InlineEditController {
 
         @Override
         protected void onHidden(WindowEvent event) {
-            // The inline editing popup auto hide when loosing focus :
-            // need to commit inline editing
-            if (initialValue.equals(editor.getText()) == false) {
-                requestCommit.call(editor.getText());
-            }
-            // Inform the editor controller that the editing session has ended
-            InlineEditController.this.editorController.textEditingSessionDidEnd();
         }
 
         @Override
@@ -311,15 +353,25 @@ public class InlineEditController {
 
         @Override
         protected void anchorTransformDidChange() {
-            // Called when scrolling the hierarchy for instance
-            closeWindow();
+            // When scrolling the hierarchy, the inline editor remains focused :
+            // need to commit inline editing on transform change
+
+            // The code below makes inline editing in content panel fail
+            // (due to the received events ordering ??)
+//            if (editorController.isTextEditingSessionOnGoing() // Editing session has not been ended by ENTER key
+//                    && initialValue.equals(editor.getText()) == false) {
+//                requestCommitAndClose(requestCommit, editor.getText());
+//            }
         }
 
         @Override
         protected void anchorXYDidChange() {
-            // This callback should not be needed for auto hiding popups
-            // See RT-31292 : Popup does not auto hide when resizing the window
-            closeWindow();
+            // When resizing the window, the inline editor remains focused :
+            // need to commit inline editing on X/Y change
+            if (getEditorController().isTextEditingSessionOnGoing() // Editing session has not been ended by ENTER key
+                    && initialValue.equals(editor.getText()) == false) {
+                requestCommitAndClose(requestCommit, editor.getText());
+            }
         }
 
         @Override
@@ -361,24 +413,20 @@ public class InlineEditController {
      */
     private static class EditingSessionDidBeginCallback implements Callback<Void, Boolean> {
 
-        private final InlineEditPopupController popupController;
+        private final InlineEditController inlineEditController;
 
-        EditingSessionDidBeginCallback(final InlineEditPopupController popupController) {
+        EditingSessionDidBeginCallback(final InlineEditController inlineEditController) {
             super();
-            this.popupController = popupController;
+            this.inlineEditController = inlineEditController;
         }
 
         @Override
         public Boolean call(Void p) {
-            boolean commitSucceeded
-                    = popupController.requestCommit.call(popupController.editor.getText());
-            if (commitSucceeded) {
-                popupController.closeWindow();
-                return true;
-            } else {
-                return false;
-            }
+            final InlineEditPopupController popupController
+                    = inlineEditController.getPopupController();
+            return inlineEditController.requestCommitAndClose(
+                    popupController.requestCommit,
+                    popupController.editor.getText());
         }
-
     }
 }

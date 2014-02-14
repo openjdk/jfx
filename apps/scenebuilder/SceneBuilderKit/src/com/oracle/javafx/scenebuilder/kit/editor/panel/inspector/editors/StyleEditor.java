@@ -265,6 +265,10 @@ public class StyleEditor extends InlineListEditor {
                             ((TextField) event.getSource()).selectAll();
                         }
                     }
+                    if (propertyTf.getText().isEmpty() && valueTf.getText().isEmpty()) {
+                        remove(null);
+                    }
+                    
                     updateButtons();
                     currentValue = getValue();
                 }

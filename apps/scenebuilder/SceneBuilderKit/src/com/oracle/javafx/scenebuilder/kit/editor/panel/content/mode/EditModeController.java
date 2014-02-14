@@ -69,6 +69,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -147,6 +148,10 @@ implements AbstractGesture.Observer {
         activeGesture = null;
         startListeningToInputEvents();
         contentPanelController.endInteraction();
+        
+        // Object below the mouse may have changed : current glass gesture
+        // must be searched again.
+        this.glassGesture = null;
     }
     
     /*
@@ -384,6 +389,11 @@ implements AbstractGesture.Observer {
                     : "Implement updateHandles() for " + selection.getGroup();
             // Selection is empty : removes all handles
             removeAllHandles();
+        }
+        
+        final boolean enabled = handles.size() == 1;
+        for (AbstractHandles<?> h : handles) {
+            h.setEnabled(enabled);
         }
     }
     
@@ -656,43 +666,32 @@ implements AbstractGesture.Observer {
          *   2) hitObject != null
          *
          *      2.1) hitObject == root object
-         *                  => mouse is over the root object (possibly selected)
-         *                  => mouse press+drag should "select with marquee"
          * 
-         *      2.2) hitObject != root object
-         * 
-         *          2.2.1) hitObject is the selectionAncestor
+         *          2.1) hitObject is the selectionAncestor
          *                  => mouse is over the "parent ring object"
          *                  => mouse press+drag should "select with marquee"
          *
-         *          2.2.2) hitObject is not the selectionAncestor
+         *          2.2) hitObject is not the selectionAncestor
          *                  => mouse is over an object
          *                  => this object is inside or outside of the parent ring
          *                  => mouse press+drag should "select and move"
+         * 
          */
         
         final FXOMObject hitObject 
                 = contentPanelController.pick(e.getSceneX(), e.getSceneY());
         final FXOMObject selectionAncestor
                 = contentPanelController.getEditorController().getSelection().getAncestor();
-        final FXOMDocument fxomDocument
-                = contentPanelController.getEditorController().getFxomDocument();
-        final FXOMObject fxomRoot
-                = (fxomDocument == null) ? null : fxomDocument.getFxomRoot();
         if (hitObject == null) {
             // Case #1
             selectWithMarqueeGesture.setup(null, selectionAncestor);
             glassGesture = selectWithMarqueeGesture;
-        } else if (hitObject == fxomRoot) {
-            // Case #2.1
-            selectWithMarqueeGesture.setup(fxomRoot, fxomRoot);
-            glassGesture = selectWithMarqueeGesture;
         } else if (hitObject == selectionAncestor) {
-            // Case #2.2.1
+            // Case #2.1
             selectWithMarqueeGesture.setup(selectionAncestor, selectionAncestor);
             glassGesture = selectWithMarqueeGesture;
         } else { 
-            // Case #2.2.2
+            // Case #2.2
             selectAndMoveGesture.setHitObject(hitObject);
             selectAndMoveGesture.setHitSceneX(e.getSceneX());
             selectAndMoveGesture.setHitSceneY(e.getSceneY());
@@ -780,14 +779,15 @@ implements AbstractGesture.Observer {
 
         assert hitObject != null;
         assert inlineEditedObject == null;
-        inlineEditedObject = hitObject;
         
         final AbstractDriver driver
-                = contentPanelController.lookupDriver(inlineEditedObject);
-
-        final Node inlineEditingBounds
-                = driver.getInlineEditorBounds(inlineEditedObject);
+                = contentPanelController.lookupDriver(hitObject);
+        final Node inlineEditingBounds 
+                = driver.getInlineEditorBounds(hitObject);
+        
         if (inlineEditingBounds != null) {
+            inlineEditedObject = hitObject;
+            
             final InlineEditController inlineEditController = 
                     contentPanelController.getEditorController().getInlineEditController();
             final DesignHierarchyMask m
@@ -803,6 +803,11 @@ implements AbstractGesture.Observer {
             final TextInputControl inlineEditor
                     = inlineEditController.createTextInputControl(
                             type, inlineEditingBounds, text);
+            // CSS
+            final ObservableList<String> styleSheets
+                    = getContentPanelController().getPanelRoot().getStylesheets();
+            inlineEditor.getStylesheets().addAll(styleSheets);
+            inlineEditor.getStyleClass().add(InlineEditController.INLINE_EDITOR);
             final Callback<String, Boolean> requestCommit
                     = new Callback<String, Boolean>() {
                         @Override
@@ -810,11 +815,22 @@ implements AbstractGesture.Observer {
                             return inlineEditingDidRequestCommit(value);
                         }
                     };
+            final Callback<Void, Boolean> requestRevert
+                    = new Callback<Void, Boolean>() {
+                        @Override
+                        public Boolean call(Void value) {
+                            inlineEditingDidRequestRevert();
+                            return true;
+                        }
+                    };
             inlineEditController.startEditingSession(inlineEditor,
-                    inlineEditingBounds, requestCommit);
+                    inlineEditingBounds, requestCommit, requestRevert);
         } else {
             System.out.println("Beep");
         }
+        
+        assert contentPanelController.getEditorController().isTextEditingSessionOnGoing() 
+                || (inlineEditedObject == null);
     }
     
     
@@ -840,6 +856,12 @@ implements AbstractGesture.Observer {
         inlineEditedObject = null;
         
         return true;
+    }
+    
+    
+    private void inlineEditingDidRequestRevert() {
+        assert inlineEditedObject != null;
+        inlineEditedObject = null;
     }
     
     private void keyPressedOnGlassLayer(KeyEvent e) {
@@ -884,7 +906,7 @@ implements AbstractGesture.Observer {
         }
         
         if (hitHandles != null) {
-            activateGesture(hitHandles.findGesture(hitNode), e);
+            activateGesture(hitHandles.findEnabledGesture(hitNode), e);
         } else {
             // Emergency code
             assert false : "event target has no HANDLES property :" + target;

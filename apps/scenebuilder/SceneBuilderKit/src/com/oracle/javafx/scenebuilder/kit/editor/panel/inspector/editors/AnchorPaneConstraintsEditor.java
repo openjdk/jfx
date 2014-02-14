@@ -54,8 +54,8 @@ import javafx.scene.layout.Region;
  */
 public class AnchorPaneConstraintsEditor extends PropertiesEditor {
 
-    private static final String ANCHOR_ENABLED_COLOR = "red";
-    private static final String ANCHOR_DISABLED_COLOR = "#cccccc";
+    private static final String ANCHOR_ENABLED_COLOR = "-sb-line-art-accent";
+    private static final String ANCHOR_DISABLED_COLOR = "-sb-line-art";
 
     @FXML
     private ToggleButton bottomTb;

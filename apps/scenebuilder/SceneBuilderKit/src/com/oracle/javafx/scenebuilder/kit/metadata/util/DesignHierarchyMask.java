@@ -267,7 +267,7 @@ public class DesignHierarchyMask {
             final ValuePropertyMetadata vpm
                     = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
             final Object description = vpm.getValueInSceneGraphObject(fxomInstance); // resolved value
-            return description.toString();
+            return description == null ? null : description.toString();
         }
         return null;
     }

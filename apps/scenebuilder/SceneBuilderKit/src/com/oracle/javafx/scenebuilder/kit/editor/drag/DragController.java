@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.DocumentDragSource;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ImageViewDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
@@ -114,9 +115,13 @@ public class DragController {
                     = new UpdateSelectionJob(getDragSource().getDraggedObjects(), editorController);
             final BatchJob batchJob 
                     = new BatchJob(editorController, dropJob.getDescription());
-            batchJob.addSubJob(backupSelectionJob);
+            if (committedDropTarget.isSelectRequiredAfterDrop()) {
+                batchJob.addSubJob(backupSelectionJob);
+            }
             batchJob.addSubJob(dropJob);
-            batchJob.addSubJob(selectJob);
+            if (committedDropTarget.isSelectRequiredAfterDrop()) {
+                batchJob.addSubJob(selectJob);
+            }
             editorController.getJobManager().push(batchJob);
         }
         

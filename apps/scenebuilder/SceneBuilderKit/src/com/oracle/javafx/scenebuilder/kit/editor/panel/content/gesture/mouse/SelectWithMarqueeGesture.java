@@ -207,8 +207,7 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
         for (FXOMObject candidate : candidates) {
             final AbstractDriver driver
                     = contentPanelController.lookupDriver(candidate);
-            assert driver != null;
-            if (driver.intersectsBounds(candidate, marqueeBounds)) {
+            if ((driver != null) && driver.intersectsBounds(candidate, marqueeBounds)) {
                 winners.add(candidate);
             }
         }

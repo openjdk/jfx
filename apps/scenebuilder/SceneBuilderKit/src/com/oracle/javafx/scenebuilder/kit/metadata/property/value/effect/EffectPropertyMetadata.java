@@ -96,9 +96,9 @@ public class EffectPropertyMetadata extends ComplexPropertyMetadata<Effect> {
                     = new ColorInputPropertyMetadata(getName(), isReadWrite(), null, getInspectorPath());
             result = subclassMetadata.makeFxomInstanceFromValue((ColorInput) value, fxomDocument);
         } else if (value instanceof DisplacementMap) {
-            // DisplacementMap cannot be encoded in FXML
-            assert false;
-            result = null;
+            final DisplacementMapPropertyMetadata subclassMetadata 
+                    = new DisplacementMapPropertyMetadata(getName(), isReadWrite(), null, getInspectorPath());
+            result = subclassMetadata.makeFxomInstanceFromValue((DisplacementMap) value, fxomDocument);
         } else if (value instanceof DropShadow) {
             final DropShadowPropertyMetadata subclassMetadata 
                     = new DropShadowPropertyMetadata(getName(), isReadWrite(), null, getInspectorPath());

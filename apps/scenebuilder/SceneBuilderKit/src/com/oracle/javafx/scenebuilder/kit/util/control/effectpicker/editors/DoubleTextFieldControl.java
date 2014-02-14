@@ -47,6 +47,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 
 public class DoubleTextFieldControl extends GridPane {
 
@@ -71,6 +73,21 @@ public class DoubleTextFieldControl extends GridPane {
             double incDec) {
         this.effectPickerController = effectPickerController;
         initialize(labelString, min, max, initVal, incDec);
+
+        editor_textfield.focusedProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+                // Commit the value on focus lost
+                if (newValue == false) {
+                    double inputValue = Double.parseDouble(editor_textfield.getText());
+                    // First update the model
+                    setValue(inputValue);
+                    // Then notify the controller a change occured
+                    effectPickerController.incrementRevision();
+                }
+            }
+        });
     }
 
     public DoubleProperty valueProperty() {
@@ -96,7 +113,7 @@ public class DoubleTextFieldControl extends GridPane {
             effectPickerController.incrementRevision();
         }
         if (e.getCode() == KeyCode.ENTER) {
-            double inputValue = checkStringIsNumber(editor_textfield.getText());
+            double inputValue = Double.parseDouble(editor_textfield.getText());
             // First update the model
             setValue(inputValue);
             // Then notify the controller a change occured
@@ -121,14 +138,6 @@ public class DoubleTextFieldControl extends GridPane {
         double rounded = EditorUtils.round(val, roundingFactor);
         value.set(rounded);
         editor_textfield.setText(Double.toString(rounded));
-    }
-
-    private double checkStringIsNumber(String s) {
-        try {
-            return Double.parseDouble(s);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 
     private void initialize(String labelString,

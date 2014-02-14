@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController;
@@ -56,8 +57,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
-import javafx.stage.PopupWindow;
-import javafx.stage.Window;
 
 public class ImageControl extends GridPane {
 
@@ -76,6 +75,10 @@ public class ImageControl extends GridPane {
             String labelString, Image initVal) {
         this.effectPickerController = effectPickerController;
         initialize(labelString, initVal);
+        if (EditorPlatform.IS_MAC) {
+            editor_button.setManaged(false);
+            editor_button.setVisible(false);
+        }
     }
 
     public ObjectProperty<Image> valueProperty() {
@@ -123,33 +126,27 @@ public class ImageControl extends GridPane {
 
     @FXML
     void buttonOnAction(ActionEvent e) {
-        final Window window = editor_textfield.getScene().getWindow();
-        assert window instanceof PopupWindow;
-//        final PopupWindow popupWindow = (PopupWindow) window;
-//        try {
-//            // Disable auto-hide so we can open the file chooser
-//            popupWindow.setAutoHide(false);
-//            final String[] extensions = {"*.jpg", "*.jpeg", "*.png", "*.gif"}; //NOI18N
-//            final FileChooser fileChooser = new FileChooser();
-//            fileChooser.getExtensionFilters().add(
-//                    new FileChooser.ExtensionFilter(
-//                            I18N.getString("inspector.select.image"),
-//                            Arrays.asList(extensions)));
-//            final File file = fileChooser.showOpenDialog(getScene().getWindow());
-//            if ((file == null)) {
-//                return;
-//            }
-//            String url;
-//            url = file.toURI().toURL().toExternalForm();
-//            editor_textfield.setText(url);
-//            final Image image = new Image(url);
-//            setValue(image);
-//        } catch (MalformedURLException ex) {
-//            Logger.getLogger(ImageControl.class.getName()).log(Level.SEVERE, null, ex);
-//        } finally {
-//            // Enable auto-hide
-//            popupWindow.setAutoHide(true);
-//        }
+        try {
+            final String[] extensions = {"*.jpg", "*.jpeg", "*.png", "*.gif"}; //NOI18N
+            final FileChooser fileChooser = new FileChooser();
+            fileChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter(
+                            I18N.getString("inspector.select.image"),
+                            Arrays.asList(extensions)));
+            final File file = fileChooser.showOpenDialog(getScene().getWindow());
+            if ((file == null)) {
+                return;
+            }
+            String url;
+            url = file.toURI().toURL().toExternalForm();
+            final Image image = new Image(url);
+            // First update the model
+            setValue(image);
+            // Then notify the controller a change occured
+            effectPickerController.incrementRevision();
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(ImageControl.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     private void initialize(String labelString, Image initVal) {

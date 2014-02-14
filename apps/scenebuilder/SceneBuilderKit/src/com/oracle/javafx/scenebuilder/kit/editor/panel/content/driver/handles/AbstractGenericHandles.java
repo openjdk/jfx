@@ -32,7 +32,12 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.AbstractDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DiscardGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.ResizeGesture;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.CardinalPoint;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.util.List;
@@ -69,19 +74,19 @@ public abstract class AbstractGenericHandles<T> extends AbstractHandles<T> {
      * 
      */
     
-    protected final ImageView handleNW = new ImageView();
-    protected final ImageView handleNE = new ImageView();
-    protected final ImageView handleSE = new ImageView();
-    protected final ImageView handleSW = new ImageView();
-    protected final ImageView handleNN = new ImageView();
-    protected final ImageView handleEE = new ImageView();
-    protected final ImageView handleSS = new ImageView();
-    protected final ImageView handleWW = new ImageView();
+    private final ImageView handleNW = new ImageView();
+    private final ImageView handleNE = new ImageView();
+    private final ImageView handleSE = new ImageView();
+    private final ImageView handleSW = new ImageView();
+    private final ImageView handleNN = new ImageView();
+    private final ImageView handleEE = new ImageView();
+    private final ImageView handleSS = new ImageView();
+    private final ImageView handleWW = new ImageView();
     private final MoveTo moveTo0 = new MoveTo();
     private final LineTo lineTo1 = new LineTo();
     private final LineTo lineTo2 = new LineTo();
     private final LineTo lineTo3 = new LineTo();
-
+    
     public AbstractGenericHandles(ContentPanelController contentPanelController,
             FXOMObject fxomObject, Class<T> sceneGraphObjectClass) {
         super(contentPanelController, fxomObject, sceneGraphObjectClass);
@@ -95,35 +100,17 @@ public abstract class AbstractGenericHandles<T> extends AbstractHandles<T> {
         shadowElements.add(new ClosePath());
         shadow.getStyleClass().add("selection-rect");
         shadow.setMouseTransparent(true);
-        
-        final Image handleImage = getCornerHandleImage();
-        handleNW.setImage(handleImage);
-        handleNE.setImage(handleImage);
-        handleSE.setImage(handleImage);
-        handleSW.setImage(handleImage);
-        
-        final Image sideHandleImage = getSideHandleImage();
-        handleNN.setImage(sideHandleImage);
-        handleEE.setImage(sideHandleImage);
-        handleSS.setImage(sideHandleImage);
-        handleWW.setImage(sideHandleImage);
-        
-        handleNW.setCursor(Cursor.NW_RESIZE);
+             
+        setupHandleImages();
+                
         handleNW.setPickOnBounds(true);
-        handleNE.setCursor(Cursor.NE_RESIZE);
         handleNE.setPickOnBounds(true);
-        handleSE.setCursor(Cursor.SE_RESIZE);
         handleSE.setPickOnBounds(true);
-        handleSW.setCursor(Cursor.SW_RESIZE);
         handleSW.setPickOnBounds(true);
         
-        handleNN.setCursor(Cursor.N_RESIZE);
         handleNN.setPickOnBounds(true);
-        handleEE.setCursor(Cursor.E_RESIZE);
         handleEE.setPickOnBounds(true);
-        handleSS.setCursor(Cursor.S_RESIZE);
         handleSS.setPickOnBounds(true);
-        handleWW.setCursor(Cursor.W_RESIZE);
         handleWW.setPickOnBounds(true);
         
         attachHandles(handleNW);
@@ -285,6 +272,54 @@ public abstract class AbstractGenericHandles<T> extends AbstractHandles<T> {
     }
 
 
+    @Override
+    public AbstractGesture findGesture(Node node) {
+        final AbstractGesture result;
+        
+        if (isResizable() == false) {
+            result = new DiscardGesture(getContentPanelController());
+        } else {
+            assert getFxomObject() instanceof FXOMInstance;
+            
+            final FXOMInstance fxomInstance = (FXOMInstance) getFxomObject();
+            
+            if (node == handleNW) {
+                result = new ResizeGesture(getContentPanelController(), 
+                        fxomInstance, CardinalPoint.NW);
+            } else if (node == handleNE) {
+                result = new ResizeGesture(getContentPanelController(), 
+                        fxomInstance, CardinalPoint.NE);
+            } else if (node == handleSE) {
+                result = new ResizeGesture(getContentPanelController(), 
+                        fxomInstance, CardinalPoint.SE);
+            } else if (node == handleSW) {
+                result = new ResizeGesture(getContentPanelController(), 
+                        fxomInstance, CardinalPoint.SW);
+            }  else if (node == handleNN) {
+                result = new ResizeGesture(getContentPanelController(), 
+                        fxomInstance, CardinalPoint.N);
+            } else if (node == handleEE) {
+                result = new ResizeGesture(getContentPanelController(), 
+                        fxomInstance, CardinalPoint.E);
+            } else if (node == handleSS) {
+                result = new ResizeGesture(getContentPanelController(), 
+                        fxomInstance, CardinalPoint.S);
+            } else if (node == handleWW) {
+                result = new ResizeGesture(getContentPanelController(), 
+                        fxomInstance, CardinalPoint.W);
+            } else {
+                result = null;
+            }
+        }
+        
+        return result;
+    }
+    
+    @Override
+    public void enabledDidChange() {
+        setupHandleImages();
+    }
+
     /*
      * Private
      */
@@ -434,6 +469,59 @@ public abstract class AbstractGenericHandles<T> extends AbstractHandles<T> {
         final boolean handleVisible = sideHandleSize < d01;
         handle.setVisible(handleVisible);
         handle.setMouseTransparent(! handleVisible);
+    }
+
+    
+    private void setupHandleImages() {
+        final Image handleImage, sideHandleImage;
+        if (isEnabled() && isResizable()) {
+            
+            handleNW.setCursor(Cursor.NW_RESIZE);
+            handleNE.setCursor(Cursor.NE_RESIZE);
+            handleSE.setCursor(Cursor.SE_RESIZE);
+            handleSW.setCursor(Cursor.SW_RESIZE);
+
+            handleNN.setCursor(Cursor.N_RESIZE);
+            handleEE.setCursor(Cursor.E_RESIZE);
+            handleSS.setCursor(Cursor.S_RESIZE);
+            handleWW.setCursor(Cursor.W_RESIZE);
+            
+            handleImage = getCornerHandleImage();
+            sideHandleImage = getSideHandleImage();
+            
+        } else {
+            
+            handleNW.setCursor(Cursor.DEFAULT);
+            handleNE.setCursor(Cursor.DEFAULT);
+            handleSE.setCursor(Cursor.DEFAULT);
+            handleSW.setCursor(Cursor.DEFAULT);
+
+            handleNN.setCursor(Cursor.DEFAULT);
+            handleEE.setCursor(Cursor.DEFAULT);
+            handleSS.setCursor(Cursor.DEFAULT);
+            handleWW.setCursor(Cursor.DEFAULT);
+            
+            handleImage = getCornerHandleDimImage();
+            sideHandleImage = getSideHandleDimImage();
+        }
+        
+        handleNW.setImage(handleImage);
+        handleNE.setImage(handleImage);
+        handleSE.setImage(handleImage);
+        handleSW.setImage(handleImage);
+        
+        handleNN.setImage(sideHandleImage);
+        handleEE.setImage(sideHandleImage);
+        handleSS.setImage(sideHandleImage);
+        handleWW.setImage(sideHandleImage);
+        
+    }
+    
+    
+    private boolean isResizable() {
+        final AbstractDriver driver 
+                = getContentPanelController().lookupDriver(getFxomObject());
+        return driver.makeResizer(getFxomObject()) != null;
     }
     
     /* 

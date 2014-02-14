@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -30,18 +31,15 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
+<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?import java.lang.*?>
-<?import java.net.*?>
-<?import java.util.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
-<?import javafx.scene.text.*?>
-<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?scenebuilder-background-color 0xdfdfdfff?>
 
-<HBox alignment="CENTER" prefWidth="-1.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<HBox alignment="CENTER" prefWidth="-1.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
     <GridPane hgap="0.0" vgap="0.0">
       <children>
@@ -52,29 +50,37 @@
             <Insets bottom="4.0" />
           </GridPane.margin>
         </DoubleField>
-        <ToggleButton fx:id="topTb" mnemonicParsing="false" styleClass="ap-constraints-toggle-v" text="" GridPane.columnIndex="2" GridPane.rowIndex="1">
+        <ToggleButton fx:id="topTb" mnemonicParsing="false" styleClass="ap-constraints-toggle" text="" GridPane.columnIndex="2" GridPane.rowIndex="1">
           <GridPane.margin>
             <Insets fx:id="x1" />
           </GridPane.margin>
+<graphic><Region maxWidth="1.0" minWidth="1.0" prefHeight="20.0" prefWidth="1.0" styleClass="ap-constraints-shape" />
+</graphic>
         </ToggleButton>
         <DoubleField fx:id="rightTf" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="4" GridPane.rowIndex="2">
           <GridPane.margin>
             <Insets left="4.0" />
           </GridPane.margin>
         </DoubleField>
-        <ToggleButton fx:id="rightTb" mnemonicParsing="false" styleClass="ap-constraints-toggle-h" text="" GridPane.columnIndex="3" GridPane.margin="$x1" GridPane.rowIndex="2" />
+        <ToggleButton fx:id="rightTb" maxHeight="16.0" minHeight="16.0" mnemonicParsing="false" styleClass="ap-constraints-toggle" text="" GridPane.columnIndex="3" GridPane.margin="$x1" GridPane.rowIndex="2">
+<graphic><Region maxHeight="1.0" minWidth="1.0" prefHeight="1.0" prefWidth="20.0" styleClass="ap-constraints-shape" />
+</graphic></ToggleButton>
         <DoubleField fx:id="bottomTf" alignment="CENTER" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="2" GridPane.rowIndex="4">
           <GridPane.margin>
             <Insets top="4.0" />
           </GridPane.margin>
         </DoubleField>
-        <ToggleButton fx:id="bottomTb" mnemonicParsing="false" styleClass="ap-constraints-toggle-v" text="" GridPane.columnIndex="2" GridPane.margin="$x1" GridPane.rowIndex="3" />
+        <ToggleButton fx:id="bottomTb" mnemonicParsing="false" styleClass="ap-constraints-toggle" text="" GridPane.columnIndex="2" GridPane.margin="$x1" GridPane.rowIndex="3">
+<graphic><Region maxWidth="1.0" minWidth="1.0" prefHeight="20.0" prefWidth="1.0" styleClass="ap-constraints-shape" />
+</graphic></ToggleButton>
         <DoubleField fx:id="leftTf" alignment="CENTER_RIGHT" prefColumnCount="3" prefWidth="-1.0" GridPane.columnIndex="0" GridPane.rowIndex="2">
           <GridPane.margin>
             <Insets right="4.0" />
           </GridPane.margin>
         </DoubleField>
-        <ToggleButton fx:id="leftTb" mnemonicParsing="false" styleClass="ap-constraints-toggle-h" text="" GridPane.columnIndex="1" GridPane.margin="$x1" GridPane.rowIndex="2" />
+        <ToggleButton fx:id="leftTb" maxHeight="16.0" minHeight="16.0" mnemonicParsing="false" styleClass="ap-constraints-toggle" text="" GridPane.columnIndex="1" GridPane.margin="$x1" GridPane.rowIndex="2">
+<graphic><Region maxHeight="1.0" minWidth="1.0" prefHeight="1.0" prefWidth="20.0" styleClass="ap-constraints-shape" />
+</graphic></ToggleButton>
       </children>
       <columnConstraints>
         <ColumnConstraints hgrow="SOMETIMES" minWidth="-1.0" prefWidth="-1.0" />

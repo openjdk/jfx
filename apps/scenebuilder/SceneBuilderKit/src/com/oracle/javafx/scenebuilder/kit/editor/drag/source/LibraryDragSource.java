@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItem;
 import java.net.URL;
@@ -44,10 +45,13 @@ import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ClipboardContent;
+import javafx.scene.media.MediaView;
 import javafx.stage.Window;
 
 /**
@@ -220,6 +224,47 @@ public class LibraryDragSource extends AbstractDragSource {
     public boolean isNodeOnly() {
         return getLibraryItemObject().isNode();
     }
+
+    @Override
+    public boolean isSingleImageViewOnly() {
+        final boolean result;
+        
+        if (getLibraryItemObject() instanceof FXOMInstance) {
+            result = getLibraryItemObject().getSceneGraphObject() instanceof ImageView;
+        } else {
+            result = false;
+        }
+        
+        return result;
+    }
+
+    @Override
+    public boolean isSingleTooltipOnly() {
+        final boolean result;
+        
+        if (getLibraryItemObject() instanceof FXOMInstance) {
+            result = getLibraryItemObject().getSceneGraphObject() instanceof Tooltip;
+        } else {
+            result = false;
+        }
+        
+        return result;
+    }
+
+    @Override
+    public boolean isSingleContextMenuOnly() {
+        final boolean result;
+        
+        if (getLibraryItemObject() instanceof FXOMInstance) {
+            result = getLibraryItemObject().getSceneGraphObject() instanceof ContextMenu;
+        } else {
+            result = false;
+        }
+        
+        return result;
+    }
+    
+    
     
     /*
      * Object

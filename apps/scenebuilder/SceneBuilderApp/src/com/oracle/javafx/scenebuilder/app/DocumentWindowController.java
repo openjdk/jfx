@@ -75,6 +75,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -88,6 +89,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -473,8 +476,14 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         } else if (fxomDocument.getLocation() == null) {
             title = I18N.getString("label.untitled");
         } else {
-            final File toto = new File(fxomDocument.getLocation().getPath());
-            title = toto.getName();
+            String name = ""; //NOI18N
+            try {
+                final File toto = new File(fxomDocument.getLocation().toURI());
+                name = toto.getName();
+            } catch (URISyntaxException ex) {
+                throw new RuntimeException("Bug", ex); //NOI18N
+            }
+            title = name;
         }
         
         return title;
@@ -594,6 +603,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             case SHOW_PREVIEW_WINDOW:
                 if (previewWindowController == null) {
                     previewWindowController = new PreviewWindowController(editorController, getStage());
+                    previewWindowController.setToolStylesheet(getToolStylesheet());
                 }
                 previewWindowController.openWindow();
                 break;
@@ -671,15 +681,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case TOGGLE_CSS_PANEL:
-                assert cssPanelHost != null;
-                assert cssPanelSearchPanelHost != null;
-                if (cssPanelHost.getChildren().isEmpty()) {
-                    cssPanelHost.getChildren().add(cssPanelController.getPanelRoot());
-                }
-                if (cssPanelSearchPanelHost.getChildren().isEmpty()) {
-                    cssPanelSearchPanelHost.getChildren().add(cssPanelSearchController.getPanelRoot());
-                    addCssPanelSearchListener();
-                }
+                // CSS panel is built lazely : initialize the CSS panel first
+                initializeCssPanel();
 
                 bottomSplitController.toggleTarget();
                 if (bottomSplitController.isTargetVisible()) {
@@ -765,6 +768,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             case SHOW_SAMPLE_CONTROLLER:
                 if (skeletonWindowController == null) {
                     skeletonWindowController = new SkeletonWindowController(editorController, getStage());
+                    skeletonWindowController.setToolStylesheet(getToolStylesheet());
                 }
                 skeletonWindowController.openWindow();
                 break;
@@ -914,6 +918,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         
     }
     
+    public void initializeCssPanel() {
+        assert cssPanelHost != null;
+        assert cssPanelSearchPanelHost != null;
+        if (cssPanelHost.getChildren().isEmpty()) {
+            cssPanelHost.getChildren().add(cssPanelController.getPanelRoot());
+        }
+        if (cssPanelSearchPanelHost.getChildren().isEmpty()) {
+            cssPanelSearchPanelHost.getChildren().add(cssPanelSearchController.getPanelRoot());
+            addCssPanelSearchListener();
+        }
+    }
+
     /*
      * AbstractFxmlWindowController
      */
@@ -944,10 +960,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         assert libraryImportSelection != null;
         assert customLibraryMenu != null;
         
-        // CSS setup
-        final URL themeURL = EditorController.class.getResource("css/Theme.css"); //NOI18N
-        assert themeURL != null;
-        getRoot().getStylesheets().add(0, themeURL.toString());
         // Add a border to the Windows app, because of the specific window decoration on Windows.
         if (EditorPlatform.IS_WINDOWS) {
             getRoot().getStyleClass().add("windows-app-border");//NOI18N
@@ -959,12 +971,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         assert getRoot() instanceof VBox;
         final VBox rootVBox = (VBox) getRoot();
         rootVBox.getChildren().add(0, menuBarController.getMenuBar());
-        
-        // Additional split pane setup (SplitPane.resizableWithParent is no in SB)
-        SplitPane.setResizableWithParent(mainSplitPane.getItems().get(1), false);
-        SplitPane.setResizableWithParent(leftRightSplitPane.getItems().get(0), false);
-        SplitPane.setResizableWithParent(leftRightSplitPane.getItems().get(2), false);
-        SplitPane.setResizableWithParent(libraryDocumentSplitPane.getItems().get(0), false);
         
         libraryPanelHost.getChildren().add(libraryPanelController.getPanelRoot());
         librarySearchPanelHost.getChildren().add(librarySearchController.getPanelRoot());
@@ -1126,6 +1132,21 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         }
     }
 
+    
+    @Override
+    protected void toolStylesheetDidChange(String oldStylesheet) {
+        super.toolStylesheetDidChange(oldStylesheet);
+        editorController.setToolStylesheet(getToolStylesheet());
+        // previewWindowController should not be affected by tool style sheet
+        if (skeletonWindowController != null) {
+            skeletonWindowController.setToolStylesheet(getToolStylesheet());
+        }
+        if (jarAnalysisReportController != null) {
+            jarAnalysisReportController.setToolStylesheet(getToolStylesheet());
+        }
+    }
+    
+    
     //
     // Inspector menu
     //
@@ -1248,13 +1269,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     void onLibraryImportSelection(ActionEvent event) {
         AbstractSelectionGroup asg = getEditorController().getSelection().getGroup();
 
-        if (asg != null && asg instanceof ObjectSelectionGroup) {
+        if (asg instanceof ObjectSelectionGroup) {
             ObjectSelectionGroup osg = (ObjectSelectionGroup)asg;
-            
-            if (osg.getItems().size() >= 1) {
-                List<FXOMObject> selection = new ArrayList<>(osg.getItems());
-                libraryPanelController.performImportSelection(selection);
-            }
+            assert osg.getItems().isEmpty() == false;
+            List<FXOMObject> selection = new ArrayList<>(osg.getItems());
+            libraryPanelController.performImportSelection(selection);
         }
     }
     
@@ -1276,6 +1295,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     void onLibraryShowJarAnalysisReport(ActionEvent event) {
         if (jarAnalysisReportController == null) {
             jarAnalysisReportController = new JarAnalysisReportController(getEditorController(), getStage());
+            jarAnalysisReportController.setToolStylesheet(getToolStylesheet());
         }
         
         jarAnalysisReportController.openWindow();
@@ -1349,6 +1369,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         } else if (isTextInputControlEditing(focusOwner)) {
             final TextInputControl tic = getTextInputControl(focusOwner);
             result = tic.getSelectedText() != null && tic.getSelectedText().isEmpty() == false;
+        } else if (isCssRulesEditing(focusOwner) || isCssTextEditing(focusOwner)) {
+            result = true;
         } else {
             result = getEditorController().canPerformControlAction(ControlAction.COPY);
         }
@@ -1360,6 +1382,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         if (isTextInputControlEditing(focusOwner)) {
             final TextInputControl tic = getTextInputControl(focusOwner);
             tic.copy();
+        } else if (isCssRulesEditing(focusOwner)) {
+            cssPanelController.copyRules();
+        } else if (isCssTextEditing(focusOwner)) {
+            // CSS text pane is a WebView
+            // Let the WebView handle the copy action natively
         } else {
             this.getEditorController().performControlAction(ControlAction.COPY);
         }
@@ -1607,6 +1634,33 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 || editorController.getInlineEditController().isWindowOpened();
     }
     
+    private boolean isCssRulesEditing(Node node) {
+        final Node cssRules = cssPanelController.getRulesPane();
+        if (cssRules != null) {
+            return isDescendantOf(cssRules, node);
+        }
+        return false;
+    }
+
+    private boolean isCssTextEditing(Node node) {
+        final Node cssText = cssPanelController.getTextPane();
+        if (cssText != null) {
+            return isDescendantOf(cssText, node);
+        }
+        return false;
+    }
+
+    private boolean isDescendantOf(Node container, Node node) {
+        Node child = node;
+        while (child != null) {
+            if (child == container) {
+                return true;
+            }
+            child = child.getParent();
+        }
+        return false;
+    }
+
     private KeyCombination getAccelerator(final KeyEvent event) {
         KeyCombination result = null;
         for (KeyCombination kc : menuBarController.getAccelerators()) {
@@ -1648,6 +1702,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     private void performChooseBackgroundColor(Window owner) {
         final BackgroundColorDialogController bcdc 
                 = new BackgroundColorDialogController(owner);
+        bcdc.setToolStylesheet(getToolStylesheet());
         bcdc.openWindow();
     }
     
@@ -1770,12 +1825,50 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             File fxmlFile = fileChooser.showSaveDialog(getStage());
             if (fxmlFile == null) {
                 result = ActionStatus.CANCELLED;
-                
             } else {
-                // See DTL-5948: on Linux we anticipate an extension less path.
+                boolean forgetSave = false;
+                // It is only on Linux where you can get the case the path doesn't
+                // end with the extension, thanks the behavior of the FX 8 FileChooser
+                // on this specific OS (see RT-31956).
+                // Below we ask the user if the extension shall be added or not.
+                // See DTL-5948.
                 final String path = fxmlFile.getPath();
                 if (! path.endsWith(".fxml")) { //NOI18N
-                    fxmlFile = new File(path + ".fxml"); //NOI18N
+                    try {
+                        URL alternateURL = new URL(fxmlFile.toURI().toURL().toExternalForm() + ".fxml"); //NOI18N
+                        File alternateFxmlFile = new File(alternateURL.toURI());
+                        final AlertDialog d = new AlertDialog(getStage());
+                        d.setMessage(I18N.getString("alert.save.noextension.message", fxmlFile.getName()));
+                        String details = I18N.getString("alert.save.noextension.details");
+
+                        if (alternateFxmlFile.exists()) {
+                            details += "\n" //NOI18N
+                                    + I18N.getString("alert.save.noextension.details.overwrite", alternateFxmlFile.getName());
+                        }
+
+                        d.setDetails(details);
+                        d.setOKButtonVisible(true);
+                        d.setOKButtonTitle(I18N.getString("alert.save.noextension.savewith"));
+                        d.setDefaultButtonID(ButtonID.OK);
+                        d.setShowDefaultButton(true);
+                        d.setActionButtonDisable(false);
+                        d.setActionButtonVisible(true);
+                        d.setActionButtonTitle(I18N.getString("alert.save.noextension.savewithout"));
+
+                        switch (d.showAndWait()) {
+                            case ACTION:
+                                // Nothing to do, we save with the no extension name
+                                break;
+                            case CANCEL:
+                                forgetSave = true;
+                                break;
+                            case OK:
+                                fxmlFile = alternateFxmlFile;
+                                break;
+                        }
+                    } catch (MalformedURLException | URISyntaxException ex) {
+                        forgetSave = true;
+                    }
                 }
                 
                 // Transform File into URL
@@ -1790,13 +1883,15 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 // Checks if fxmlFile is the name of an already opened document
                 final DocumentWindowController dwc
                         = SceneBuilderApp.getSingleton().lookupDocumentWindowControllers(newLocation);
-                if (dwc != null) {
+                if (dwc != null && dwc != this) {
                     final Path fxmlPath = Paths.get(fxmlFile.toString());
                     final String fileName = fxmlPath.getFileName().toString();
                     final ErrorDialog d = new ErrorDialog(getStage());
                     d.setMessage(I18N.getString("alert.save.conflict.message", fileName));
                     d.setDetails(I18N.getString("alert.save.conflict.details"));
                     d.showAndWait();
+                    result = ActionStatus.CANCELLED;
+                } else if (forgetSave) {
                     result = ActionStatus.CANCELLED;
                 } else {
                     // Recalculates references if needed
@@ -1914,11 +2009,11 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         assert editorController.getFxomDocument().getLocation() != null;
         
         final URL location = editorController.getFxomDocument().getLocation();
-        final File fxmlFile = new File(location.getPath());
         
         try {
+            final File fxmlFile = new File(location.toURI());
             EditorPlatform.revealInFileBrowser(fxmlFile);
-        } catch(IOException x) {
+        } catch(IOException | URISyntaxException x) {
             final ErrorDialog errorDialog = new ErrorDialog(null);
             errorDialog.setMessage(I18N.getString("alert.reveal.failure.message", getStage().getTitle()));
             errorDialog.setDetails(I18N.getString("alert.reveal.failure.details"));

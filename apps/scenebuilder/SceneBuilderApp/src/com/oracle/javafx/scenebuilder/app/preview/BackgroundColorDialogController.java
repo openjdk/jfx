@@ -71,11 +71,7 @@ public class BackgroundColorDialogController extends AbstractModalDialog {
         assert getContentRoot() instanceof Pane;
         final Pane contentRoot = (Pane) getContentRoot();
 
-        final PaintPicker.Delegate delegate = new PaintPicker.Delegate() {
-            @Override
-            public void handleError(String warningKey, Object... arguments) {
-            }
-        };
+        final PaintPicker.Delegate delegate = new PaintPickerDelegate();
         final PaintPicker paintPicker = new PaintPicker(delegate);
         contentRoot.getChildren().add(paintPicker);
 
@@ -115,6 +111,14 @@ public class BackgroundColorDialogController extends AbstractModalDialog {
         public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
             // Missing update EditorController backgroundColor property
             System.err.println("Update Preview background color with " + newValue); //NOI18N
+        }
+    }
+    
+    private static class PaintPickerDelegate implements PaintPicker.Delegate {
+
+        @Override
+        public void handleError(String warningKey, Object... arguments) {
+            // Log a warning in message bar
         }
     }
 }

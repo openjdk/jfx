@@ -116,11 +116,6 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
         final PreferencesRecordGlobal recordGlobal
                 = preferencesController.getRecordGlobal();
 
-        // CSS setup
-        final URL themeURL = EditorController.class.getResource("css/Theme.css"); //NOI18N
-        assert themeURL != null;
-        getRoot().getStylesheets().add(0, themeURL.toString());
-
         // Root container size
         rootContainerHeight.setText(String.valueOf(recordGlobal.getRootContainerHeight()));
         rootContainerHeight.setOnAction(new EventHandler<ActionEvent>() {
@@ -156,11 +151,7 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
         backgroundImage.setValue(recordGlobal.getBackgroundImage());
         backgroundImage.getSelectionModel().selectedItemProperty().addListener(new BackgroundImageListener());
 
-        final PaintPicker.Delegate delegate = new PaintPicker.Delegate() {
-            @Override
-            public void handleError(String warningKey, Object... arguments) {
-            }
-        };
+        final PaintPicker.Delegate delegate = new PaintPickerDelegate();
 
         // Alignment guides color
         final Color alignmentColor = recordGlobal.getAlignmentGuidesColor();
@@ -354,6 +345,14 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
             // Update UI
             recordGlobal.refreshParentRingColor();
             graphic.setFill(newValue);
+        }
+    }
+    
+    private static class PaintPickerDelegate implements PaintPicker.Delegate {
+
+        @Override
+        public void handleError(String warningKey, Object... arguments) {
+            // Log a warning in message bar
         }
     }
 }

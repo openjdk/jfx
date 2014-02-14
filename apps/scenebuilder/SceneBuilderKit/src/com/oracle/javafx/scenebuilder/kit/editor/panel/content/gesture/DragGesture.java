@@ -32,17 +32,24 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture;
 
 import com.oracle.javafx.scenebuilder.kit.editor.drag.DragController;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.ExternalDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AccessoryDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ContainerXYDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ImageViewDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.AbstractDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.BorderPaneDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.guides.MovingGuideController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.BoundsUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
+import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
@@ -53,6 +60,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
@@ -215,59 +223,135 @@ public class DragGesture extends AbstractGesture {
     
     private void dragOverGlassLayerBis() {
         
+        // Let's set what is below the mouse
         final double hitX = lastDragEvent.getSceneX();
         final double hitY = lastDragEvent.getSceneY();
-        final FXOMObject hitObject =
-                contentPanelController.pick(hitX, hitY, pickExcludes);
+        FXOMObject hitObject = contentPanelController.pick(hitX, hitY, pickExcludes);
+        if (hitObject == null) {
+            final FXOMDocument fxomDocument
+                = contentPanelController.getEditorController().getFxomDocument();
+            hitObject = fxomDocument.getFxomRoot();
+        }
+        
+        if (hitObject == null) {
+            // FXOM document is empty
+            dragOverEmptyDocument();
+        } else {
+            dragOverHitObject(hitObject);
+        }
+    }
+    
+    private void dragOverEmptyDocument() {
+        dragController.setDropTarget(new RootDropTarget());
+        lastDragEvent.acceptTransferModes(dragController.getAcceptedTransferModes());
+    }
+    
+    private void dragOverHitObject(FXOMObject hitObject) {
+        assert hitObject != null;
+                
         final FXOMDocument fxomDocument
                 = contentPanelController.getEditorController().getFxomDocument();
-        assert fxomDocument != null;
+        final AbstractDragSource dragSource
+                = dragController.getDragSource();
+        final DesignHierarchyMask m 
+                = new DesignHierarchyMask(hitObject);
+        final double hitX 
+                = lastDragEvent.getSceneX();
+        final double hitY 
+                = lastDragEvent.getSceneY();
         
-        final FXOMInstance candidateParent;
-        if (hitObject == null) {
-            // Mouse is over workspace background:
-            // 1) If document is empty, we keep candidateParent == null
-            //    but drop will be enabled later
-            // 2) if document is not empty, we check if the root object
-            //    accepts parent positionning.
-            if (fxomDocument.getFxomRoot() == null) {
-                // Case #1: document is empty
-                candidateParent = null;
-            } else {
-                // Case #2: we check for "free child positioning"
-                assert fxomDocument.getFxomRoot() != null;
-                final DesignHierarchyMask m 
-                        = new DesignHierarchyMask(fxomDocument.getFxomRoot());
-                if (m.isFreeChildPositioning()) {
-                    assert fxomDocument.getFxomRoot() instanceof FXOMInstance;
-                    candidateParent = (FXOMInstance) fxomDocument.getFxomRoot();
-                } else {
-                    candidateParent = null;
-                }
-            }
-        } else {
-            final DesignHierarchyMask m = new DesignHierarchyMask(hitObject);
-            final boolean acceptSubComponent = m.isAcceptingSubComponent();
-            final boolean acceptContentAccessory = m.isAcceptingAccessory(DesignHierarchyMask.Accessory.CONTENT);
-            final boolean isBorderPane = hitObject.getSceneGraphObject() instanceof BorderPane;
-            if (acceptSubComponent || acceptContentAccessory || isBorderPane) {
+        assert fxomDocument != null;
+        assert dragSource != null;
+
+        AbstractDropTarget dropTarget = null;
+        FXOMObject newHitParent = null;
+        DesignHierarchyMask newHitParentMask = null;
+        
+        // dragSource is a single ImageView ?
+        final boolean hitImageView = hitObject.getSceneGraphObject() instanceof ImageView;
+        final boolean externalDragSource = dragSource instanceof ExternalDragSource;
+
+        if (dragSource.isSingleImageViewOnly() && hitImageView && externalDragSource) {
+            dropTarget = new ImageViewDropTarget(hitObject);
+            newHitParent = hitObject;
+            newHitParentMask = m;
+        }
+        
+        // dragSource is a single Tooltip ?
+        if (dropTarget == null) {
+            if (dragSource.isSingleTooltipOnly()) {
                 assert hitObject instanceof FXOMInstance;
-                candidateParent = (FXOMInstance) hitObject;
-            } else {
-                assert (hitObject.getParentObject() == null)
-                        || (hitObject.getParentObject() instanceof FXOMInstance);
-                candidateParent = (FXOMInstance) hitObject.getParentObject();
+                dropTarget = new AccessoryDropTarget((FXOMInstance)hitObject, Accessory.TOOLTIP);
+                newHitParent = hitObject;
+                newHitParentMask = m;
             }
         }
         
-        if (candidateParent != hitParent) {
-            hitParent = candidateParent;
+        // dragSource is a single ContextMenu ?
+        if (dropTarget == null) {
+            if (dragSource.isSingleContextMenuOnly()) {
+                assert hitObject instanceof FXOMInstance;
+                dropTarget = new AccessoryDropTarget((FXOMInstance)hitObject, Accessory.CONTEXT_MENU);
+                newHitParent = hitObject;
+                newHitParentMask = m;
+            }
+        }
+        
+        // hitObject is BorderPane ?
+        if (dropTarget == null) {
+            if (hitObject.getSceneGraphObject() instanceof BorderPane) {
+                final AbstractDriver driver = contentPanelController.lookupDriver(hitObject);
+                assert driver instanceof BorderPaneDriver;
+                dropTarget = driver.makeDropTarget(hitObject, hitX, hitY);
+                newHitParent = hitObject;
+                newHitParentMask = m;
+            }
+        }
+        
+        // hitObject has sub-components (ie it is a container)
+        if (dropTarget == null) {
+            if (m.isAcceptingSubComponent()) {
+                final AbstractDriver driver = contentPanelController.lookupDriver(hitObject);
+                dropTarget = driver.makeDropTarget(hitObject, hitX, hitY);
+                newHitParent = hitObject;
+                newHitParentMask = m;
+            }
+        }
+        
+        // hitObject accepts Accessory.CONTENT
+        if (dropTarget == null) {
+            if (m.isAcceptingAccessory(Accessory.CONTENT)) {
+                assert hitObject instanceof FXOMInstance;
+                dropTarget = new AccessoryDropTarget((FXOMInstance)hitObject, Accessory.CONTENT);
+                newHitParent = hitObject;
+                newHitParentMask = m;
+            }
+        }
+        
+        // hitObject parent is a container ?
+        if (dropTarget == null) {
+            final FXOMObject hitObjectParent = hitObject.getParentObject();
+            if (hitObjectParent != null) {
+                final DesignHierarchyMask mp = new DesignHierarchyMask(hitObjectParent);
+                if (mp.isAcceptingSubComponent()) {
+                    final AbstractDriver driver = contentPanelController.lookupDriver(hitObjectParent);
+                    dropTarget = driver.makeDropTarget(hitObjectParent, hitX, hitY);
+                    newHitParent = hitObjectParent;
+                    newHitParentMask = mp;
+                }
+            }
+        }
+                
+        // Update movingGuideController
+        if (newHitParent != hitParent) {
+            hitParent = newHitParent;
+            hitParentMask = newHitParentMask;
             if (hitParent == null) {
-                hitParentMask = null;
+                assert hitParentMask == null;
                 movingGuideController.clearSampleBounds();
             } else {
-                hitParentMask = new DesignHierarchyMask(hitParent);
-                if (hitParentMask.isFreeChildPositioning() && dragController.getDragSource().isNodeOnly()) {
+                assert hitParentMask != null;
+                if (hitParentMask.isFreeChildPositioning() && dragSource.isNodeOnly()) {
                     populateMovingGuideController();
                 } else {
                     movingGuideController.clearSampleBounds();
@@ -291,16 +375,12 @@ public class DragGesture extends AbstractGesture {
 
         updateShadow(guidedX, guidedY);
         
-        final AbstractDropTarget dropTarget;
-        if (hitParent == null) {
-            if (fxomDocument.getFxomRoot() == null) {
-                dropTarget = new RootDropTarget();
-            } else {
-                dropTarget = null;
-            }
-        } else {
-            final AbstractDriver driver = contentPanelController.lookupDriver(hitParent);
+        if (!MathUtils.equals(guidedX , hitX) || !MathUtils.equals(guidedY, hitY)) {
+            assert dropTarget != null;
+            assert dropTarget instanceof ContainerXYDropTarget;
+            final AbstractDriver driver = contentPanelController.lookupDriver(dropTarget.getTargetObject());
             dropTarget = driver.makeDropTarget(hitParent, guidedX, guidedY);
+            assert dropTarget instanceof ContainerXYDropTarget;
         }
         
         dragController.setDropTarget(dropTarget);

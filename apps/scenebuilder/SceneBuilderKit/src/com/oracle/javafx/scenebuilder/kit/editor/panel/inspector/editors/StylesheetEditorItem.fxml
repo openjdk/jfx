@@ -38,7 +38,7 @@
 <?import javafx.scene.layout.*?>
 
 <HBox xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-  <children><Label fx:id="prefixLb" alignment="CENTER" prefWidth="10.0">
+  <children><Label fx:id="prefixLb" alignment="CENTER" minWidth="10.0">
 <styleClass>
 <String fx:value="label" />
 <String fx:value="symbol-prefix" />

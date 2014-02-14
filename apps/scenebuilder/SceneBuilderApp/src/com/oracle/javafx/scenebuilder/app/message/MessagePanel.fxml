@@ -33,12 +33,12 @@
 -->
 
 <?import java.lang.*?>
-<?import java.net.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox alignment="CENTER_RIGHT" prefHeight="-1.0" prefWidth="-1.0" styleClass="message-panel" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
-  <children>
+<VBox alignment="CENTER_RIGHT" prefHeight="-1.0" prefWidth="-1.0" styleClass="theme-presets" stylesheets="@../css/MessagePanel.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+  <children><VBox styleClass="message-panel">
+<children>
     <ScrollPane fx:id="scrollPane" fitToHeight="false" fitToWidth="true" prefViewportHeight="120.0" prefViewportWidth="200.0">
       <content>
         <GridPane fx:id="gridPane" maxWidth="1.7976931348623157E308" styleClass="message-panel">
@@ -59,8 +59,6 @@
         <Button fx:id="clearButton" mnemonicParsing="false" onAction="#onClear" text="Button" />
       </children>
     </HBox>
+</children></VBox><Region minHeight="4.0" styleClass="message-panel-shadow" />
   </children>
-  <stylesheets>
-    <URL value="@MessagePanel.css" />
-  </stylesheets>
 </VBox>

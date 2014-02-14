@@ -102,7 +102,7 @@ public class SliderControl extends GridPane {
         } else if (e.getCode() == KeyCode.DOWN) {
             incOrDecValue(-incDecValue);
         } else if (e.getCode() == KeyCode.ENTER) {
-            double inputValue = checkStringIsNumber(editor_textfield.getText());
+            double inputValue = Double.parseDouble(editor_textfield.getText());
             setValue(inputValue);
             editor_slider.setValue(getValue());
             editor_textfield.selectAll();
@@ -132,14 +132,6 @@ public class SliderControl extends GridPane {
             editor_textfield.setText(Double.toString(rounded));
         }
         editor_slider.setValue(value.get());
-    }
-
-    private double checkStringIsNumber(String s) {
-        try {
-            return Double.parseDouble(s);
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 
     private void initialize(
@@ -177,6 +169,21 @@ public class SliderControl extends GridPane {
                 setValue(newVal);
                 // Then notify the controller a change occured
                 effectPickerController.incrementRevision();
+            }
+        });
+
+        editor_textfield.focusedProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+                // Commit the value on focus lost
+                if (newValue == false) {
+                    double inputValue = Double.parseDouble(editor_textfield.getText());
+                    // First update the model
+                    setValue(inputValue);
+                    // Then notify the controller a change occured
+                    effectPickerController.incrementRevision();
+                }
             }
         });
     }

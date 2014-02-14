@@ -33,6 +33,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.util;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Parent;
@@ -58,6 +61,8 @@ import javafx.scene.Parent;
  */
 public abstract class AbstractPanelController {
     
+    private static final Logger LOG = Logger.getLogger(AbstractPanelController.class.getName());
+    
     private final EditorController editorController;
     private Parent panelRoot;
     
@@ -81,7 +86,11 @@ public abstract class AbstractPanelController {
                     od.sceneGraphRevisionProperty().removeListener(fxomDocumentRevisionListener);
                     od.cssRevisionProperty().removeListener(cssRevisionListener);
                 }
-                fxomDocumentDidChange(od);
+                try {
+                    fxomDocumentDidChange(od);
+                } catch(RuntimeException x) {
+                    LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+                }
                 if (nd != null) {
                     nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
                     nd.cssRevisionProperty().addListener(cssRevisionListener);
@@ -92,6 +101,12 @@ public abstract class AbstractPanelController {
             editorController.getFxomDocument().sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
             editorController.getFxomDocument().cssRevisionProperty().addListener(cssRevisionListener);
         }
+        editorController.toolStylesheetProperty().addListener(new ChangeListener<String>() {
+            @Override
+            public void changed(ObservableValue<? extends String> ov, String od, String nd) {
+                toolStylesheetDidChange(od);
+            }
+        });
     }
     
     /**
@@ -114,6 +129,14 @@ public abstract class AbstractPanelController {
         if (panelRoot == null) {
             makePanel();
             assert panelRoot != null;
+            
+            // Installs the stylesheet from the editor controller
+            final List<String> stylesheets = panelRoot.getStylesheets();
+            if (stylesheets.contains(EditorController.getBuiltinToolStylesheet())) {
+                toolStylesheetDidChange(EditorController.getBuiltinToolStylesheet());
+            } else {
+                toolStylesheetDidChange(null);
+            }
         }
         
         return panelRoot;
@@ -186,7 +209,11 @@ public abstract class AbstractPanelController {
             = new ChangeListener<Number>() {
                 @Override
                 public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    sceneGraphRevisionDidChange();
+                    try {
+                        sceneGraphRevisionDidChange();
+                    } catch(RuntimeException x) {
+                        LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+                    }
                 }
             };
     
@@ -194,7 +221,11 @@ public abstract class AbstractPanelController {
             = new ChangeListener<Number>() {
                 @Override
                 public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    cssRevisionDidChange();
+                    try {
+                        cssRevisionDidChange();
+                    } catch(RuntimeException x) {
+                        LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+                    }
                 }
             };
     
@@ -202,7 +233,11 @@ public abstract class AbstractPanelController {
             = new ChangeListener<Number>() {
                 @Override
                 public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    jobManagerRevisionDidChange();
+                    try {
+                        jobManagerRevisionDidChange();
+                    } catch(RuntimeException x) {
+                        LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+                    }
                 }
             };
     
@@ -210,7 +245,12 @@ public abstract class AbstractPanelController {
         new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                editorSelectionDidChange();
+                try {
+                    assert editorController.getSelection().isValid(editorController.getFxomDocument());
+                    editorSelectionDidChange();
+                } catch(RuntimeException x) {
+                    LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+                }
             }
         };
     
@@ -261,4 +301,26 @@ public abstract class AbstractPanelController {
     protected final void stopListeningToJobManagerRevision() {
         editorController.getJobManager().revisionProperty().removeListener(jobManagerRevisionListener);
     }
+    
+    
+    /*
+     * Private
+     */
+    
+    private void toolStylesheetDidChange(String oldStylesheet) {
+        /*
+         * Tool style sheet has changed in editor controller.
+         * If the panel has been loaded, then we replace the old sheet
+         * by the new one in the stylesheets property of its root object.
+         */
+        if (panelRoot != null) {
+            final List<String> stylesheets = panelRoot.getStylesheets();
+            if (oldStylesheet != null) {
+                stylesheets.remove(oldStylesheet);
+            }
+            stylesheets.add(editorController.getToolStylesheet());
+        }
+    }
+    
+    
 }

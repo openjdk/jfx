@@ -162,8 +162,7 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
             selectedHitObject = selection.lookupSelectedAncestor(hitObject); // Case B.2
         }
         
-        final FXOMObject fxomRoot = hitObject.getFxomDocument().getFxomRoot();
-        if ((selectedHitObject != null) && (selectedHitObject != fxomRoot)) {
+        if (selectedHitObject != null) {
                 
             assert selection.getGroup() instanceof ObjectSelectionGroup;
             
