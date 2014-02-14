@@ -596,6 +596,14 @@ compileTargets { t ->
     if (project.ext[t.upper].compileSWT) COMPILE_SWT = true
     if (project.ext[t.upper].compileFXPackager) COMPILE_FXPACKAGER = true
     if (project.ext[t.upper].compileDesignTime) COMPILE_DESIGN_TIME = true
+
+    if (rootProject.defaultHostTarget.equals(t.name)) { 
+        // use a simple common default for the "host" build
+        project.ext[t.upper].sdkDirName="sdk"
+    } else {
+        // and a more complex one for cross builds
+        project.ext[t.upper].sdkDirName="${t.name}-sdk"
+    }
 }
 
 /******************************************************************************
@@ -1027,7 +1035,7 @@ allprojects {
     }
 
     // Compile and run tests against the jfxrt.jar in the built sdk of the host machine
-    def sdkDir = "${rootProject.buildDir}/${defaultHostTarget}-sdk"
+    def sdkDir = "${rootProject.buildDir}/sdk"
     def jfxrtJar = "$sdkDir/rt/lib/ext/jfxrt.jar"
 
     // At the moment the ASM library shipped with Gradle that is used to
@@ -2480,21 +2488,22 @@ task all() {
 
 compileTargets { t ->
     def targetProperties = project.ext[t.upper]
+    def sdkDirName = targetProperties.sdkDirName
     def library = targetProperties.library
     // The jfxrt task is responsible for creating the jfxrt.jar. A developer may
     // have multiple SDK's on their system at any one time, depending on which
     // cross compiles they have done. For example, I might have:
-    //      build/mac-sdk/rt/lib/ext/jfxrt.jar
     //      build/ios-sdk/rt/lib/ext/jfxrt.jar
-    //      build/win-sdk/rt/lib/ext/jfxrt.jar
     //      build/armhf-sdk/rt/lib/ext/jfxrt.jar
-    //
-    // and so forth. This arrangement allows for multiple independent SDKs to
+    // and so forth. The default host build will always install into 'sdk' 
+    // allowing for uses where a known sdk path is needed (like IDEs)
+    //      build/sdk/rt/lib/ext/jfxrt.jar
+    // This arrangement allows for multiple independent SDKs to
     // exist on a developer's system.
     def jfxrtTask = task("jfxrt$t.capital", type: Jar) {
         group = "Basic"
         description = "Creates the jfxrt.jar for the $t.name target"
-        archiveName = "build/${t.name}-sdk/rt/lib/ext/jfxrt.jar";
+        archiveName = "build/${sdkDirName}/rt/lib/ext/jfxrt.jar";
         includeEmptyDirs = false
         from("modules/base/build/classes/main",
              "modules/base/build/resources/main",
@@ -2555,7 +2564,7 @@ compileTargets { t ->
         enabled = COMPILE_SWT
         group = "Basic"
         description = "Creates the jfxswt.jar for the $t.name target"
-        archiveName = "build/${t.name}-sdk/rt/lib/jfxswt.jar";
+        archiveName = "build/${sdkDirName}/rt/lib/jfxswt.jar";
         includeEmptyDirs = false
         from("modules/swt/build/classes/main");
         from("modules/builders/build/classes/main");
@@ -2577,7 +2586,7 @@ compileTargets { t ->
     def jmxTask = task ("jmx${t.capital}", type: Jar) {
         group = "Basic"
         description = "Creates the javafx-mx.jar"
-        archiveName = "build/${t.name}-sdk/lib/javafx-mx.jar";
+        archiveName = "build/${sdkDirName}/lib/javafx-mx.jar";
         includeEmptyDirs = false
         from "modules/jmx/build/classes/main"
         from "modules/jmx/build/resources/main"
@@ -2637,11 +2646,11 @@ compileTargets { t ->
                 }
                 
                 def libDest = targetProperties.libDest
-                into ("build/${t.name}-sdk/rt/$libDest")
+                into ("build/${sdkDirName}/rt/$libDest")
             }
 
             // Create the javafx.properties file
-            final File javafxProperties = file("build/${t.name}-sdk/rt/lib/javafx.properties")
+            final File javafxProperties = file("build/${sdkDirName}/rt/lib/javafx.properties")
             javafxProperties.delete()
             javafxProperties << "javafx.runtime.version=$RAW_VERSION";
             // Include any properties that have been defined (most likely in
@@ -2653,7 +2662,7 @@ compileTargets { t ->
 
             // Embedded builds define this file as well
             if (targetProperties.containsKey("javafxPlatformProperties")) {
-                final File javafxPlatformProperties = file("build/${t.name}-sdk/rt/lib/javafx.platform.properties")
+                final File javafxPlatformProperties = file("build/${sdkDirName}/rt/lib/javafx.platform.properties")
                 javafxPlatformProperties.delete()
                 javafxPlatformProperties << targetProperties.javafxPlatformProperties
             }
@@ -2664,7 +2673,7 @@ compileTargets { t ->
             if (IS_BUILD_JAVADOC) {
                 copy {
                     from "build/javadoc"
-                    into "build/${t.name}-sdk/docs/api"
+                    into "build/${sdkDirName}/docs/api"
                 }
             }
 
@@ -2672,27 +2681,27 @@ compileTargets { t ->
             if (IS_BUILD_SRC_ZIP) {
                 copy {
                     from "build/javafx-src.zip"
-                    into "build/${t.name}-sdk"
+                    into "build/${sdkDirName}"
                 }
             }
 
             // Copy over the fxpackager and rename as ant-javafx.jar
             copy {
                 from "modules/fxpackager/build/libs"
-                into "build/${t.name}-sdk/lib"
+                into "build/${sdkDirName}/lib"
             }
 
             // Copy over the FXPackager man files
             copy {
                 from "modules/fxpackager/build/man"
-                into "build/${t.name}-sdk/man"
+                into "build/${sdkDirName}/man"
             }
 
             // Copy over the javafxpackager executable
             if (t.name == "win" || t.name == "linux" || t.name == "mac") {
                 copy {
                     from "modules/fxpackager/build/javafxpackager"
-                    into "build/${t.name}-sdk/bin"
+                    into "build/${sdkDirName}/bin"
                 }
             }
         }
@@ -2707,7 +2716,7 @@ compileTargets { t ->
     if (generateSymbols) {
         def exportedSymbolsTask = project.task("exportedSymbols${t.capital}", type: ExportedSymbolsTask, dependsOn: sdkTask, group: "Build") {
             description = "Generates exported symbols file for iOS build (from .a libraries)"
-            def libDirName = "build/${t.name}-sdk/rt/$targetProperties.libDest"
+            def libDirName = "build/${sdkDirName}/rt/$targetProperties.libDest"
             libDir = file("$libDirName")
             outputFile = file("$libDirName/exported.symbols")
             excludes = targetProperties.generateSymbolsExcludes
@@ -2757,7 +2766,8 @@ project(":apps") {
         // into our configuration.
 
         // override the apps build.xml with an explicit pointer to our jar.
-        def jfxrtJar = "${rootProject.buildDir}/${t.name}-sdk/rt/lib/ext/jfxrt.jar"
+        def sdkDirName = rootProject.ext[t.upper].sdkDirName
+        def jfxrtJar = "${rootProject.buildDir}/${sdkDirName}/rt/lib/ext/jfxrt.jar"
 
         def appsJar = project.task("appsJar${t.capital}") {
             doLast() {
