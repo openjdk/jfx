@@ -78,10 +78,11 @@ public class TestTouchDevices {
     }
 
     public static Collection<Object[]> getTouchDeviceParameters(int minPoints) {
-        return getTouchDevices().stream()
+        Collection c = getTouchDevices().stream()
                 .filter(d -> d.points.length >= minPoints)
                 .map(d -> new Object[] { d })
                 .collect(Collectors.toList());
+        return c;
     }
 
     private static void fetchScreenBounds() {
