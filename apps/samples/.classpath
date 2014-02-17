@@ -9,6 +9,7 @@
     <classpathentry kind="src" path="Ensemble8/src/generated/resources"/>
 	<classpathentry kind="lib" path="Ensemble8/lib/lucene-core-3.2.0.jar"/>
 	<classpathentry kind="lib" path="Ensemble8/lib/lucene-grouping-3.2.0.jar"/>
+    <classpathentry kind="src" path="MandelbrotSet/src"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/rt">
 	<attributes>
 		<attribute name="optional" value="true"/>
