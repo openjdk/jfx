@@ -682,13 +682,13 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)
     UInt32 index = arg2 & 0xFFFF;
     if (indexToLocFormat) {
         const UInt32 * loca = (const UInt32 *)CFDataGetBytePtr(tableData);
-        if (loca != NULL && length / 4 > arg2) {
+        if (loca != NULL && (index + 1) < (length / 4)) {
             offset1 = CFSwapInt32BigToHost(loca[index]);
             offset2 = CFSwapInt32BigToHost(loca[index + 1]);
         }
     } else {
         const UInt16 * loca = (const UInt16 *)CFDataGetBytePtr(tableData);
-        if (loca != NULL && length / 2 > arg2) {
+        if (loca != NULL && (index + 1) < (length / 2)) {
             offset1 = CFSwapInt16BigToHost(loca[index]) << 1;
             offset2 = CFSwapInt16BigToHost(loca[index + 1]) << 1;
         }
@@ -700,7 +700,7 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)
         if (tableData == NULL) return FALSE;
         length = CFDataGetLength(tableData);
         const UInt8 * ptr = CFDataGetBytePtr(tableData);
-        if (ptr != NULL && length > (offset1 + 10)) {
+        if (ptr != NULL && (offset1 + 10) < length) {
             const SInt16 * glyf = (const SInt16 *)(ptr + offset1);
             /*
              * CFSwapInt16BigToHost returns an unsigned short, need
