@@ -32,7 +32,9 @@ import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.LinuxAppBundler;
 import com.sun.javafx.tools.packager.bundlers.RelativeFileSet;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
+import org.junit.After;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -53,24 +55,58 @@ public class LinuxAppBundlerTest {
     static File appResourcesDir;
     static File fakeMainJar;
     static Set<File> appResources;
-    
+    static boolean retain = false;
+
     @BeforeClass
     public static void prepareApp() {
         // only run on linux
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().startsWith("linux"));
 
         Log.setLogger(new Log.Logger(true));
-        
-        tmpBase = new File(System.getProperty("tmpBase"));
-        tmpBase.mkdirs();
-        workDir = new File(tmpBase, "linuxapp");
-        appResourcesDir = new File(tmpBase, "appResources");
+
+        retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
+
+        workDir = new File("build/tmp/tests", "linuxapp");
+        appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
         appResources = new HashSet<>(Arrays.asList(fakeMainJar));
-        
     }
-    
+
+    @Before
+    public void createTmpDir() throws IOException {
+        if (retain) {
+            tmpBase = new File("build/tmp/tests/linuxapp");
+        } else {
+            tmpBase = Files.createTempDirectory("fxpackagertests").toFile();
+        }
+        tmpBase.mkdir();
+    }
+
+    @After
+    public void maybeCleanupTmpDir() {
+        if (!retain) {
+            attemptDelete(tmpBase);
+        }
+    }
+
+    private void attemptDelete(File tmpBase) {
+        if (tmpBase.isDirectory()) {
+            for (File f : tmpBase.listFiles()) {
+                attemptDelete(f);
+            }
+        }
+        boolean success;
+        try {
+            success = !tmpBase.exists() || tmpBase.delete();
+        } catch (SecurityException se) {
+            success = false;
+        }
+        if (!success) {
+            System.err.println("Could not clean up " + tmpBase.toString());
+        }
+    }
+
     /**
      * See if smoke comes out
      */
@@ -85,11 +121,8 @@ public class LinuxAppBundlerTest {
         //assertNotNull(bundler.getBundleParameters());
 
         Map<String, Object> bundleParams = new HashMap<>();
-        
-       
-        tmpBase.mkdirs();
-        // not part of the typical setup, for testing
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), Files.createTempDirectory(tmpBase.toPath(), "fxpackager").toFile());
+
+        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(StandardBundlerParam.NAME.getID(), "Smoke");
         bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.TestPackager");
@@ -97,14 +130,6 @@ public class LinuxAppBundlerTest {
         
         File output = bundler.execute(bundleParams, new File(workDir, "smoke"));
         validatePackageCfg(output);
-        
-        try {
-            System.getProperties().store(System.out, "Dump");
-            System.out.println(new File(".").getCanonicalPath());
-            System.out.println(new File(System.getProperty("tmpBase")).getCanonicalPath());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
@@ -123,8 +148,7 @@ public class LinuxAppBundlerTest {
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        // not part of the typical setup, for testing
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), Files.createTempDirectory(tmpBase.toPath(), "fxpackager").toFile());
+        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 

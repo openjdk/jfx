@@ -27,8 +27,12 @@ package com.oracle.bundlers;
 
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
+import org.junit.AfterClass;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -38,13 +42,44 @@ import static org.junit.Assume.assumeTrue;
 
 public class BundlersTest {
 
+    // walking the params creates the temp packaging directories,
+    // so we need to clean them up.
+    //@AfterClass
+    public static void cleanupTmpDir() throws IOException {
+        // paint a broad brush: delete all fxpackager junk in the temp dir
+        File tmpBase = Files.createTempDirectory("fxbundler").toFile().getParentFile();
+        for (File f : tmpBase.listFiles()) {
+            if (f.getName().startsWith("fxbundler")) {
+                attemptDelete(f);
+            }
+        }
+    }
+
+    private static void attemptDelete(File tmpBase) {
+        if (tmpBase.isDirectory()) {
+            for (File f : tmpBase.listFiles()) {
+                attemptDelete(f);
+            }
+        }
+        boolean success;
+        try {
+            success = !tmpBase.exists() || tmpBase.delete();
+        } catch (SecurityException se) {
+            success = false;
+        }
+        if (!success) {
+            System.err.println("Could not clean up " + tmpBase.toString());
+        }
+    }
+
+
     @Test
     public void testCommonBundlersDeclareParameters() {
         boolean hasNullParams = false;
         for (Bundler bundler : Bundlers.createBundlersInstance().getBundlers()) {
             Collection<BundlerParamInfo<?>> params = bundler.getBundleParameters();
             if (params == null) {
-                System.out.println("Bundler '" + bundler.getID() + "' has a null parameter set");
+                System.err.println("Bundler '" + bundler.getID() + "' has a null parameter set");
                 hasNullParams = true;
             }
         }
@@ -65,7 +100,7 @@ public class BundlersTest {
             
             for (Map.Entry<String, List<BundlerParamInfo<?>>> paramGroupEntry : paramsGroupMap.entrySet()) {
                 if (paramGroupEntry.getValue().size() > 1) {
-                    System.out.println("Duplicate param '" + paramGroupEntry.getKey() + "' for bundler '" + bundler.getID() + "'");
+                    System.err.println("Duplicate param '" + paramGroupEntry.getKey() + "' for bundler '" + bundler.getID() + "'");
                     duplicateFound = true;
                 }
             }
@@ -76,7 +111,7 @@ public class BundlersTest {
     
     boolean assertMetadata(Bundler bundler, BundlerParamInfo<?> bpi, String checkDescription, Function<BundlerParamInfo, Boolean> check) {
         if (!check.apply(bpi)) {
-            System.out.println("Bundler '" + bundler.getID() + "' parameter '" + bpi.getID() + "' failed metadata check: " + checkDescription);
+            System.err.println("Bundler '" + bundler.getID() + "' parameter '" + bpi.getID() + "' failed metadata check: " + checkDescription);
             return false;
         } else {
             return true;
@@ -91,7 +126,7 @@ public class BundlersTest {
             if (params == null) continue; // caught by another test
 
             for (BundlerParamInfo<?> bpi : params) {
-                System.out.println("Checking '" + bundler.getID() + "' param '" + bpi.getID() + "'");
+                System.err.println("Checking '" + bundler.getID() + "' param '" + bpi.getID() + "'");
                 metadataValid &= assertMetadata(bundler, bpi, "Name is not null", param -> param.getName() != null);
                 metadataValid &= assertMetadata(bundler, bpi, "ID is not null", param -> param.getID() != null);
                 metadataValid &= assertMetadata(bundler, bpi, "Description is not null", param -> param.getDescription() != null);
@@ -103,7 +138,7 @@ public class BundlersTest {
                             param.fetchFrom(new HashMap<>());
                             return true;
                         } catch (Exception e) {
-                            e.printStackTrace(System.out);
+                            e.printStackTrace(System.err);
                             return false;
                         }
                     });
@@ -113,7 +148,7 @@ public class BundlersTest {
                             param.fetchFrom(new HashMap<>());
                             return true;
                         } catch (Exception e) {
-                            e.printStackTrace(System.out);
+                            e.printStackTrace(System.err);
                             return false;
                         }
                     });
@@ -180,7 +215,7 @@ public class BundlersTest {
         boolean duplicateFound = false;
         for (Map.Entry<String, List<Bundler>> paramGroupEntry : paramsGroupMap.entrySet()) {
             if (paramGroupEntry.getValue().size() > 1) {
-                System.out.println("Duplicate bundler ID '" + paramGroupEntry.getKey() + "'.");
+                System.err.println("Duplicate bundler ID '" + paramGroupEntry.getKey() + "'.");
                 duplicateFound = true;
             }
         }

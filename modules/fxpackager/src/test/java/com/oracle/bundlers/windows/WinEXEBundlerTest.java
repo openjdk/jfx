@@ -32,7 +32,9 @@ import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.RelativeFileSet;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.WinExeBundler;
+import org.junit.After;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -44,13 +46,14 @@ import java.util.*;
 import static org.junit.Assert.assertNotNull;
 
 public class WinEXEBundlerTest {
-    
+
     static File tmpBase;
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
     static Set<File> appResources;
-    
+    static boolean retain = false;
+
     @BeforeClass
     public static void prepareApp() {
         // only run on windows
@@ -58,19 +61,52 @@ public class WinEXEBundlerTest {
 
         // only run if we have InnoSetup installed
         Assume.assumeNotNull(WinExeBundler.TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(new HashMap<>()));
-        
+
         Log.setLogger(new Log.Logger(true));
-        
-        tmpBase = new File(System.getProperty("tmpBase"));
-        tmpBase.mkdirs();
-        workDir = new File(tmpBase, "winexe");
-        appResourcesDir = new File(tmpBase, "appResources");
+
+        retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
+
+        workDir = new File("build/tmp/tests", "winexe");
+        appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
         appResources = new HashSet<>(Arrays.asList(fakeMainJar));
-        
     }
-    
+
+    @Before
+    public void createTmpDir() throws IOException {
+        if (retain) {
+            tmpBase = new File("build/tmp/tests/winexe");
+        } else {
+            tmpBase = Files.createTempDirectory("fxpackagertests").toFile();
+        }
+        tmpBase.mkdir();
+    }
+
+    @After
+    public void maybeCleanupTmpDir() {
+        if (!retain) {
+            attemptDelete(tmpBase);
+        }
+    }
+
+    private void attemptDelete(File tmpBase) {
+        if (tmpBase.isDirectory()) {
+            for (File f : tmpBase.listFiles()) {
+                attemptDelete(f);
+            }
+        }
+        boolean success;
+        try {
+            success = !tmpBase.exists() || tmpBase.delete();
+        } catch (SecurityException se) {
+            success = false;
+        }
+        if (!success) {
+            System.err.println("Could not clean up " + tmpBase.toString());
+        }
+    }
+
     /**
      * See if smoke comes out
      */
@@ -85,25 +121,14 @@ public class WinEXEBundlerTest {
         //assertNotNull(bundler.getBundleParameters());
 
         Map<String, Object> bundleParams = new HashMap<>();
-        
-       
-        tmpBase.mkdirs();
-        // not part of the typical setup, for testing
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), Files.createTempDirectory(tmpBase.toPath(), "fxpackager").toFile());
-        
+
+        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+
         bundleParams.put(StandardBundlerParam.NAME.getID(), "Smoke");
         bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         bundler.execute(bundleParams, new File(workDir, "smoke"));
-        
-        try {
-            System.getProperties().store(System.out, "Dump");
-            System.out.println(new File(".").getCanonicalPath());
-            System.out.println(new File(System.getProperty("tmpBase")).getCanonicalPath());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
@@ -122,13 +147,12 @@ public class WinEXEBundlerTest {
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        // not part of the typical setup, for testing
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), Files.createTempDirectory(tmpBase.toPath(), "fxpackager").toFile());
+        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
-        System.out.println(output);
+        System.err.println(output);
         //assertTrue(output.isFile());
         Assume.assumeTrue(output.isFile());
     }

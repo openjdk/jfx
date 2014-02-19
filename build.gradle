@@ -317,6 +317,10 @@ ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
 
+// RETAIN_PACKAGER_TESTS specifies whether the tests in fxpackager should
+// keep generated files instead of attempting to automatically delete them
+defineProperty("RETAIN_PACKAGER_TESTS", "false")
+ext.IS_RETAIN_PACKAGER_TESTS = Boolean.parseBoolean(RETAIN_PACKAGER_TESTS)
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
@@ -1808,7 +1812,7 @@ project(":fxpackager") {
     
     test {
         dependsOn packagerFakeJar
-        systemProperty "tmpBase", project.file("build/tmp/tests").canonicalPath
+        systemProperty "RETAIN_PACKAGER_TESTS", RETAIN_PACKAGER_TESTS
     }
 }
 
