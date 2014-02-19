@@ -33,6 +33,7 @@ public abstract class NativePlatform {
     protected final RunnableProcessor runnableProcessor;
     private NativeCursor cursor;
     private NativeScreen screen;
+    private AcceleratedScreen accScreen;
 
     protected NativePlatform() {
         runnableProcessor = new RunnableProcessor();
@@ -77,6 +78,13 @@ public abstract class NativePlatform {
             screen = createScreen();
         }
         return screen;
+    }
+
+    public synchronized AcceleratedScreen getAcceleratedScreen(int[] attributes) {
+        if (accScreen == null) {
+            accScreen = new AcceleratedScreen(attributes);
+        }
+        return accScreen;
     }
 
 }

@@ -131,9 +131,4 @@ public class HeadlessScreen implements NativeScreen {
     public IntBuffer getScreenCapture() {
         return fb.getBuffer().asIntBuffer();
     }
-
-    @Override
-    public AcceleratedScreen getAcceleratedScreen(int[] attributes) {
-        return null;
-    }
 }

@@ -210,9 +210,4 @@ public class FBDevScreen implements NativeScreen {
         getFramebuffer().getBuffer().clear();
         return getFramebuffer().getBuffer().asIntBuffer();
     }
-
-    @Override
-    public AcceleratedScreen getAcceleratedScreen(int[] attributes) {
-        return null;
-    }
 }

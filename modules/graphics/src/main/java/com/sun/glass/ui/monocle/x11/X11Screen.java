@@ -175,9 +175,4 @@ public class X11Screen implements NativeScreen {
     public IntBuffer getScreenCapture() {
         return null;
     }
-
-    @Override
-    public AcceleratedScreen getAcceleratedScreen(int[] attributes) {
-        return null;
-    }
 }

@@ -34,13 +34,20 @@ public class AcceleratedScreen {
     private static boolean initialized = false;
     long eglSurface, eglContext, eglDisplay;
 
-    public AcceleratedScreen(long nativeDisplay, long nativeWindow,
-                             int[] attributes) {
+    protected long platformGetNativeDisplay() {
+        return 0L;
+    }
+
+    protected long platformGetNativeWindow() {
+        return 0L;
+    }
+
+    public AcceleratedScreen(int[] attributes) {
         initPlatformLibraries();
 
         int major[] = {0}, minor[]={0};
         eglDisplay =
-                EGL.eglGetDisplay(nativeDisplay);
+                EGL.eglGetDisplay(platformGetNativeDisplay());
 
         EGL.eglInitialize(eglDisplay, major, minor);
 
@@ -53,11 +60,11 @@ public class AcceleratedScreen {
 
         eglSurface =
                 EGL.eglCreateWindowSurface(eglDisplay, eglConfigs[0],
-                                           nativeWindow, null);
+                        platformGetNativeWindow(), null);
 
         int emptyAttrArray [] = {};
         eglContext = EGL.eglCreateContext(eglDisplay, eglConfigs[0],
-                                          0, emptyAttrArray);
+                0, emptyAttrArray);
     }
 
     public void enableRendering(boolean flag) {
@@ -83,6 +90,8 @@ public class AcceleratedScreen {
     public long getGLHandle() {
         return glesLibraryHandle;
     }
+
+    public long getEGLHandle() { return eglLibraryHandle; }
 
     public boolean swapBuffers() {
         EGL.eglSwapBuffers(eglDisplay, eglSurface);
