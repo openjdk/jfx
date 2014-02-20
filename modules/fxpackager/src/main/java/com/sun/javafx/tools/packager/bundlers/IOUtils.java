@@ -39,8 +39,11 @@ public class IOUtils {
             return true;
         }
         if (path.isDirectory()) {
-            for (File f : path.listFiles()) {
-                ret = ret && deleteRecursive(f);
+            File[] children = path.listFiles();
+            if (children != null) {
+                for (File f : children) {
+                    ret = ret && deleteRecursive(f);
+                }
             }
         }
         return ret && path.delete();
@@ -101,11 +104,14 @@ public class IOUtils {
     public static long getFolderSize(File folder) {
         long foldersize = 0;
 
-        for (File f: folder.listFiles()) {
-            if (f.isDirectory()) {
-                foldersize += getFolderSize(f);
-            } else {
-                foldersize += f.length();
+        File[] children = folder.listFiles();
+        if (children != null) {
+            for (File f : children) {
+                if (f.isDirectory()) {
+                    foldersize += getFolderSize(f);
+                } else {
+                    foldersize += f.length();
+                }
             }
         }
 

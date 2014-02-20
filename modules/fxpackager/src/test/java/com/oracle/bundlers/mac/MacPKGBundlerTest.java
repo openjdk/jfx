@@ -87,8 +87,11 @@ public class MacPKGBundlerTest {
 
     private void attemptDelete(File tmpBase) {
         if (tmpBase.isDirectory()) {
-            for (File f : tmpBase.listFiles()) {
-                attemptDelete(f);
+            File[] children = tmpBase.listFiles();
+            if (children != null) {
+                for (File f : children) {
+                    attemptDelete(f);
+                }
             }
         }
         boolean success;

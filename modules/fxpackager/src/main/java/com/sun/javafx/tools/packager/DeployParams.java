@@ -325,8 +325,11 @@ public class DeployParams extends CommonParams {
         List<File> files = new LinkedList<>();
         if (IOUtils.isNotSymbolicLink(root)) {
            if (root.isDirectory()) {
-               for (File f: root.listFiles()) {
-                  files.addAll(expandFileset(f));
+               File[] children = root.listFiles();
+               if (children != null) {
+                   for (File f : children) {
+                       files.addAll(expandFileset(f));
+                   }
                }
            } else {
                files.add(root);

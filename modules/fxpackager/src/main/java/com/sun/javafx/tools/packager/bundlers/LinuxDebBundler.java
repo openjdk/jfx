@@ -316,12 +316,15 @@ public class LinuxDebBundler extends AbstractBundler {
 
     private long getInstalledSizeKB(File dir) {
         long count = 0;
-        for (File file : dir.listFiles()) {
-            if (file.isFile()) {
-                count += file.length();
-            }
-            else if (file.isDirectory()) {
-                count += getInstalledSizeKB(file);
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File file : children) {
+                if (file.isFile()) {
+                    count += file.length();
+                }
+                else if (file.isDirectory()) {
+                    count += getInstalledSizeKB(file);
+                }
             }
         }
         return count;

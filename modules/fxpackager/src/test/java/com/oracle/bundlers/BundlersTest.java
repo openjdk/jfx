@@ -48,17 +48,23 @@ public class BundlersTest {
     public static void cleanupTmpDir() throws IOException {
         // paint a broad brush: delete all fxpackager junk in the temp dir
         File tmpBase = Files.createTempDirectory("fxbundler").toFile().getParentFile();
-        for (File f : tmpBase.listFiles()) {
-            if (f.getName().startsWith("fxbundler")) {
-                attemptDelete(f);
+        File[] children = tmpBase.listFiles();
+        if (children != null) {
+            for (File f : children) {
+                if (f.getName().startsWith("fxbundler")) {
+                    attemptDelete(f);
+                }
             }
         }
     }
 
     private static void attemptDelete(File tmpBase) {
         if (tmpBase.isDirectory()) {
-            for (File f : tmpBase.listFiles()) {
-                attemptDelete(f);
+            File[] children = tmpBase.listFiles();
+            if (children != null) {
+                for (File f : children) {
+                    attemptDelete(f);
+                }
             }
         }
         boolean success;
