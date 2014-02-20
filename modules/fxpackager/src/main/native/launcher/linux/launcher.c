@@ -479,8 +479,11 @@ int addUserOptions(char* basedir, JavaVMOption* options, int cnt) {
     //Add property to command line for preferences id
     if (getConfigValue(basedir, CONFIG_APP_ID_KEY, appid, MAX_ARGUMENT_LEN)) {
         snprintf(argvalue, MAX_ARGUMENT_LEN, "-D%s=%s", CONFIG_APP_ID_KEY, appid);
-        options[cnt].optionString = strdup(argvalue);
-        cnt++;
+
+        if (cnt < MAX_OPTIONS) {
+            options[cnt].optionString = strdup(argvalue);
+            cnt++;
+        }
 
         JVMUserArgs_initializeDefaults(&jvmUserArgs, basedir);
         if (getUserPrefFile(userPref, appid)) {
@@ -512,7 +515,7 @@ int addUserOptions(char* basedir, JavaVMOption* options, int cnt) {
         int i;
         for (i = 0; i < jvmUserArgs.currentSize; i++) {
             char* jvmOption = JVMUserArg_toString(basedir, args[i], TRUE);
-            if (jvmOption != NULL) {
+            if (jvmOption != NULL && cnt < MAX_OPTIONS) {
                 options[cnt].optionString = jvmOption;
                 cnt++;
             }
@@ -538,8 +541,8 @@ int startJVM(char* basedir, char *appFolder, char* jar, int argc, const char**ar
     char argname[20];
     char argvalue[MAX_ARGUMENT_LEN];
     char mainclass[MAX_PATH];
-    
-    memset(&options, 0, sizeof(JavaVMOption)*(MAX_OPTIONS + 1));
+
+    memset(&options, 0, sizeof(JavaVMOption)*MAX_OPTIONS);
     memset(&jvmArgs, 0, sizeof(JavaVMInitArgs));
 
     makeFullFileName(basedir, "/runtime", tmpPath, sizeof(tmpPath));

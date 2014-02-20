@@ -576,8 +576,10 @@ int addUserOptions(TCHAR* basedir, JavaVMOption* options, int cnt) {
         char* result = convertToDupedChar(argvalue);
         if (result != NULL) {
             //optionString is malloced
-            options[cnt].optionString = result;
-            cnt++;
+            if (cnt < MAX_OPTIONS) {
+                options[cnt].optionString = result;
+                cnt++;
+            }
         }
 
         JVMUserArgs_initializeDefaults(&jvmUserArgs, basedir);
@@ -588,7 +590,7 @@ int addUserOptions(TCHAR* basedir, JavaVMOption* options, int cnt) {
 
             //optionString needs to be malloced - JVMUserArg_toString returns malloced string
             char* jvmOption = JVMUserArg_toString(basedir, args[i], TRUE);
-            if (jvmOption != NULL) {
+            if (jvmOption != NULL && cnt < MAX_OPTIONS) {
                 options[cnt].optionString = jvmOption;
                 cnt++;
             }
@@ -604,7 +606,7 @@ int addUserOptions(TCHAR* basedir, JavaVMOption* options, int cnt) {
 bool startJVM(TCHAR* basedir, TCHAR* appFolder, TCHAR* jar, int argCount, LPTSTR *szArgList) {
     TCHAR jvmPath[LAUNCHER_MAXPATH+1] = {0};
     JavaVMInitArgs jvmArgs;
-    JavaVMOption options[MAX_OPTIONS+1];
+    JavaVMOption options[MAX_OPTIONS];
     JVM_CREATE createProc;
     JNIEnv* env;
     JavaVM* jvm = NULL;
@@ -624,7 +626,7 @@ bool startJVM(TCHAR* basedir, TCHAR* appFolder, TCHAR* jar, int argCount, LPTSTR
     TCHAR tmpPath[LAUNCHER_MAXPATH] = {0};
     TCHAR appid[LAUNCHER_MAXPATH] = {0};
 
-    memset(&options, 0, sizeof(JavaVMOption)*(MAX_OPTIONS + 1));
+    memset(&options, 0, sizeof(JavaVMOption)*MAX_OPTIONS);
     memset(&jvmArgs, 0, sizeof(JavaVMInitArgs));
 
     makeFullFileName(basedir, _T("\\runtime"), tmpPath, sizeof(tmpPath)/sizeof(TCHAR));
