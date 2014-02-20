@@ -1035,12 +1035,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
             if (selection.getGroup() instanceof ObjectSelectionGroup) {
                 // A set of regular component (ie fxom objects) are selected
                 final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-                // Abort dragging root 
-                final FXOMObject rootObject = getEditorController().getFxomDocument().getFxomRoot();
-                assert rootObject != null; // Because of (1)
-                if (selection.isSelected(rootObject)) {
-                    return;
-                }
+                
                 // Abort dragging an empty place holder
                 for (TreeItem<HierarchyItem> selectedTreeItem : selectedTreeItems) {
                     final HierarchyItem item = selectedTreeItem.getValue();

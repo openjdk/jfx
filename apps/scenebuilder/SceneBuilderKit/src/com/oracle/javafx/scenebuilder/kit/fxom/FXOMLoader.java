@@ -117,8 +117,8 @@ class FXOMLoader implements LoadListener {
     @Override
     public void beginInstanceDeclarationElement(Class<?> declaredClass) {
         assert declaredClass != null;
-        assert glueCursor.getCurrentElement().getTagName().equals(declaredClass.getSimpleName()) ||
-                glueCursor.getCurrentElement().getTagName().equals(declaredClass.getCanonicalName());
+        assert glueCursor.getCurrentElement().getTagName().equals(PropertyName.makeClassFullName(declaredClass)) ||
+               glueCursor.getCurrentElement().getTagName().equals(declaredClass.getCanonicalName());
         
         final TransientObject transientInstance
                 = new TransientObject(currentTransientNode, 

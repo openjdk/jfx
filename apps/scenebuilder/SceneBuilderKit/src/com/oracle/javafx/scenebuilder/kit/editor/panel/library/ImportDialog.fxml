@@ -33,18 +33,13 @@
 -->
 
 <?import java.lang.*?>
-<?import java.net.*?>
-<?import java.util.*?>
 <?import javafx.collections.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
-<?import javafx.scene.shape.*?>
 
-<AnchorPane id="ImportDialog" maxHeight="-1.0" maxWidth="-1.0" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="640.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<AnchorPane id="ImportDialog" maxHeight="-1.0" maxWidth="-1.0" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="640.0" styleClass="theme-presets" stylesheets="@../../css/Theme.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
     <HBox id="HBox" alignment="CENTER" fillHeight="false" maxHeight="-1.0" maxWidth="-1.0" minHeight="-1.0" minWidth="-1.0" prefHeight="400.0" prefWidth="640.0" spacing="50.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
       <children>
@@ -60,12 +55,12 @@
             <Separator prefWidth="-1.0" VBox.vgrow="NEVER" />
             <GridPane id="GridPane" gridLinesVisible="false" hgap="20.0" VBox.vgrow="NEVER">
               <children>
-                <Label fx:id="numOfItemsLabel" alignment="CENTER_LEFT" contentDisplay="LEFT" disable="false" focusTraversable="false" maxWidth="-1.0" prefWidth="-1.0" styleClass="import-num-of-items-label" text="%import.items.processing" textAlignment="LEFT" wrapText="false" GridPane.columnIndex="0" GridPane.halignment="LEFT" GridPane.hgrow="SOMETIMES" GridPane.rowIndex="0" GridPane.valignment="TOP">
+                <Label fx:id="numOfItemsLabel" alignment="CENTER_LEFT" contentDisplay="LEFT" disable="false" focusTraversable="false" maxWidth="-1.0" prefWidth="-1.0" styleClass="jar-import-num-of-items-label" text="%import.items.processing" textAlignment="LEFT" wrapText="false" GridPane.columnIndex="0" GridPane.halignment="LEFT" GridPane.hgrow="SOMETIMES" GridPane.rowIndex="0" GridPane.valignment="TOP">
                   <GridPane.margin>
                     <Insets />
                   </GridPane.margin>
                 </Label>
-                <ToggleButton fx:id="checkAllUncheckAllToggle" disable="true" mnemonicParsing="false" styleClass="import-select-toggle" text="%import.toggle.uncheckall" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.rowIndex="0" GridPane.valignment="TOP" />
+                <ToggleButton fx:id="checkAllUncheckAllToggle" disable="true" mnemonicParsing="false" text="%import.toggle.uncheckall" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.rowIndex="0" GridPane.valignment="TOP" />
               </children>
               <columnConstraints>
                 <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="-Infinity" prefWidth="-1.0" />
@@ -87,11 +82,11 @@
           <children>
             <ScrollPane id="importScrollPane" fitToHeight="true" fitToWidth="true" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" visible="true" VBox.vgrow="ALWAYS">
               <content>
-                <StackPane id="importPreviewArea" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" styleClass="import-preview">
+                <StackPane id="importPreviewArea" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" styleClass="jar-import-preview">
                   <children>
                     <Group fx:id="previewGroup">
                       <children>
-                        <Label fx:id="previewHintLabel" layoutX="-41.0" layoutY="-8.0" styleClass="import-preview-label" text="%import.preview.select" />
+                        <Label fx:id="previewHintLabel" layoutX="-41.0" layoutY="-8.0" styleClass="jar-import-preview-label" text="%import.preview.select" />
                       </children>
                     </Group>
                   </children>
@@ -101,7 +96,7 @@
                 </StackPane>
               </content>
             </ScrollPane>
-            <Label fx:id="classNameLabel" alignment="CENTER" maxWidth="1.7976931348623157E308" styleClass="import-class-name-label" text="" textAlignment="LEFT" textOverrun="LEADING_ELLIPSIS" wrapText="false">
+            <Label fx:id="classNameLabel" alignment="CENTER" maxWidth="1.7976931348623157E308" styleClass="jar-import-class-name-label" text="" textAlignment="LEFT" textOverrun="LEADING_ELLIPSIS" wrapText="false">
               <VBox.margin>
                 <Insets left="5.0" right="5.0" />
               </VBox.margin>
@@ -138,7 +133,4 @@
       </items>
     </SplitPane>
   </children>
-  <stylesheets>
-    <URL value="@ImportDialog.css" />
-  </stylesheets>
 </AnchorPane>

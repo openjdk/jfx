@@ -73,6 +73,8 @@ public class MessageBarController extends AbstractFxmlPanelController {
     private StackPane selectionBarHost;
     @FXML
     private HBox messagePart;
+    @FXML
+    private HBox iconsHbox;
 
     private final ImageView fileDirtyImage;
     private Tooltip statusLabelTooltip = null;
@@ -269,8 +271,8 @@ public class MessageBarController extends AbstractFxmlPanelController {
         messageLabel.getStyleClass().removeAll("message-warning"); //NOI18N
         statusLabel.getStyleClass().removeAll("message-info"); //NOI18N
         statusLabel.getStyleClass().removeAll("message-warning"); //NOI18N
-        messageButton.getStyleClass().removeAll("message-info"); //NOI18N
-        messageButton.getStyleClass().removeAll("message-warning"); //NOI18N
+        iconsHbox.getStyleClass().removeAll("message-info"); //NOI18N
+        iconsHbox.getStyleClass().removeAll("message-warning"); //NOI18N
     }
     
     private void setStyle(MessageLogEntry.Type type) {
@@ -280,12 +282,12 @@ public class MessageBarController extends AbstractFxmlPanelController {
             case INFO:
                 messageLabel.getStyleClass().add("message-info"); //NOI18N
                 statusLabel.getStyleClass().add("message-info"); //NOI18N
-                messageButton.getStyleClass().add("message-info"); //NOI18N
+                iconsHbox.getStyleClass().add("message-info"); //NOI18N
                 break;
             case WARNING:
                 messageLabel.getStyleClass().add("message-warning"); //NOI18N
                 statusLabel.getStyleClass().add("message-warning"); //NOI18N
-                messageButton.getStyleClass().add("message-warning"); //NOI18N
+                iconsHbox.getStyleClass().add("message-warning"); //NOI18N
                 break;
             default:
                 break;

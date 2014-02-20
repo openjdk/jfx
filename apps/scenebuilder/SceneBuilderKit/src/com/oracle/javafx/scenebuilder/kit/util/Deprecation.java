@@ -99,14 +99,19 @@ public class Deprecation {
     // Retrieve the node of the Styleable.
     public static Node getNode(Styleable styleable) {
         // Nodes are styleable treated differently.
-        if (styleable instanceof MenuItem) {
-            return ((MenuItem) styleable).impl_styleableGetNode();
-        } else if (styleable instanceof PopupControl) {
-            return ((PopupControl) styleable).impl_styleableGetNode();
-        } else if (styleable instanceof TableColumn) {
-            return ((TableColumn) styleable).impl_styleableGetNode();
-        } else if (styleable instanceof TreeTableColumn) {
-            return ((TreeTableColumn) styleable).impl_styleableGetNode();
+        try {
+            if (styleable instanceof MenuItem) {
+                return ((MenuItem) styleable).impl_styleableGetNode();
+            } else if (styleable instanceof PopupControl) {
+                return ((PopupControl) styleable).impl_styleableGetNode();
+            } else if (styleable instanceof TableColumn) {
+                return ((TableColumn) styleable).impl_styleableGetNode();
+            } else if (styleable instanceof TreeTableColumn) {
+                return ((TreeTableColumn) styleable).impl_styleableGetNode();
+            }
+        } catch (Exception ex) {
+            // May happen, e.g if TableColumn as root
+            return null;
         }
         return null;
     }

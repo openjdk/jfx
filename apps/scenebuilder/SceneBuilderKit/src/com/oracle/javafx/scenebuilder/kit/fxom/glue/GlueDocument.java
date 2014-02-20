@@ -40,10 +40,10 @@ import java.util.List;
  * 
  */
 public class GlueDocument extends GlueNode {
-
+    
     private GlueElement rootElement;
     private final List<GlueAuxiliary> header = new ArrayList<>();
-
+    
     public GlueDocument() {
     }
     
@@ -52,6 +52,7 @@ public class GlueDocument extends GlueNode {
         if (isEmptyXmlText(xmlText) == false) {
             final GlueLoader loader = new GlueLoader(this);
             loader.load(xmlText);
+            adjustRootElementIndentation();
         }
     }
     
@@ -69,6 +70,13 @@ public class GlueDocument extends GlueNode {
     public List<GlueAuxiliary> getHeader() {
         return header;
     }
+    
+    public void updateIndent() {
+        if (rootElement != null) {
+            rootElement.updateIndent(0);
+        }
+    }
+    
     
     /*
      * Utilities
@@ -123,5 +131,35 @@ public class GlueDocument extends GlueNode {
             result = serializer.toString();
         }
         return result;
+    }
+    
+    
+    /*
+     * Private
+     */
+    
+    private void adjustRootElementIndentation() {
+        /*
+         * By default, if a root element is empty and expressed like this:
+         *     <AnchorPane />
+         * indentation logic would keep the upcoming children on the same line:
+         *     <AnchorPane> <children> <Button/> </children> </AnchorPane>.
+         * 
+         * With the adjustment below, indentation logic will produce:
+         *     <AnchorPane> 
+         *        <children>
+         *           <Button />
+         *        </children>
+         *     </AnchorPane>
+         */
+        
+        if ((rootElement != null) && rootElement.getChildren().isEmpty()) {
+            if (rootElement.getFront().isEmpty()) {
+                rootElement.getFront().add(new GlueCharacters(this, GlueCharacters.Type.TEXT, "\n")); //NOI18N
+            }
+            if (rootElement.getTail().isEmpty()) {
+                rootElement.getTail().add(new GlueCharacters(this, GlueCharacters.Type.TEXT, "\n")); //NOI18N
+            }
+        }
     }
 }

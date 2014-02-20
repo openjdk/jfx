@@ -245,6 +245,8 @@ public class ImportWindowController extends AbstractModalDialog {
     @Override
     public void controllerDidLoadContentFxml() {
         assert topSplitPane != null;
+        // The SplitPane should not be visible from the beginning: only the progressing bar is initially visible.
+        assert topSplitPane.isVisible() == false;
         assert processingLabel != null;
         assert processingProgressIndicator != null;
         assert sizeLabel != null;

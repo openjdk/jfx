@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import java.util.Set;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -87,7 +88,7 @@ public class I18nStringEditor extends PropertyEditor {
             @Override
             public void handle(ActionEvent e) {
                 if (!i18nMode) {
-                    setValue(PERCENT_STR + I18N.getString("inspector.i18n.dummykey"));
+                    setValue(new PrefixedValue(PrefixedValue.Type.RESOURCE_KEY, I18N.getString("inspector.i18n.dummykey")).toString());
                 } else {
                     setValue(""); //NOI18N
                 }
@@ -113,7 +114,9 @@ public class I18nStringEditor extends PropertyEditor {
     public Object getValue() {
         String val = textNode.getText();
         if (i18nMode) {
-            val = PERCENT_STR + val;
+            val = new PrefixedValue(PrefixedValue.Type.RESOURCE_KEY, val).toString();
+        } else {
+            val = EditorUtils.getPlainString(val);
         }
         return val;
     }
@@ -131,14 +134,15 @@ public class I18nStringEditor extends PropertyEditor {
         }
         assert value instanceof String;
         String val = (String) value;
+        PrefixedValue prefixedValue = new PrefixedValue(val);
+        String suffix = prefixedValue.getSuffix();
 
         // Handle i18n
-        if (val.startsWith(PERCENT_STR)) {
+        if (prefixedValue.isResourceKey()) {
             if (!i18nMode) {
                 wrapInHBox();
                 i18nMode = true;
             }
-            val = val.substring(1);
         } else if (i18nMode) {
             // no percent + i18nMode
             unwrapHBox();
@@ -146,7 +150,7 @@ public class I18nStringEditor extends PropertyEditor {
         }
 
         // Handle multi-line
-        if (containsLineFeed(val)) {
+        if (containsLineFeed(prefixedValue.toString())) {
             if (i18nMode) {
                 // multi-line + i18n ==> set as i18n only
                 multiLineMode = false;
@@ -165,7 +169,12 @@ public class I18nStringEditor extends PropertyEditor {
             }
         }
 
-        textNode.setText(val);
+        if (i18nMode) {
+            textNode.setText(suffix);
+        } else {
+            // We may have other special characters (@, $, ...) to display in the text field
+            textNode.setText(prefixedValue.toString());
+        }
         updateMenuItems();
     }
 
@@ -199,7 +208,7 @@ public class I18nStringEditor extends PropertyEditor {
         // Move the node from TextField to TextArea
         TextArea textArea = new TextArea(textNode.getText());
         setTextEditorBehavior(this, textArea, valueListener);
-        textArea.setPrefHeight(50);
+        textArea.setPrefRowCount(5);
         setLayoutFormat(LayoutFormat.SIMPLE_LINE_TOP);
         if (textNode.getParent() != null) {
             // textNode is already in scene graph

@@ -38,8 +38,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AccessoryDropTarget
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ContainerZDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxIdJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyFxIdJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyDNDController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyItem;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
@@ -52,6 +52,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.util.InlineEditController;
 import com.oracle.javafx.scenebuilder.kit.editor.util.InlineEditController.Type;
 import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReport;
 import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReportEntry;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
@@ -63,6 +64,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Acce
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.net.URL;
 import java.util.List;
+import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -335,14 +337,20 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                         } else {
                             final HierarchyItem item = treeItem.getValue();
                             assert item != null;
-                            final TreeItem<HierarchyItem> graphicTreeItem
-                                    = dndController.getEmptyGraphicTreeItemFor(treeItem);
 
                             if (item.isPlaceHolder()) {
                                 cell = HierarchyTreeCell.this;
-                            } else if (graphicTreeItem != null) {
-                                assert accessoryDropTarget.getAccessory() == Accessory.GRAPHIC;
-                                cell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), graphicTreeItem);
+                            } else if (accessoryDropTarget.getAccessory() == Accessory.GRAPHIC) {
+                                // Check if an empty graphic TreeItem has been added
+                                final TreeItem<HierarchyItem> graphicTreeItem
+                                        = dndController.getEmptyGraphicTreeItemFor(treeItem);
+                                if (graphicTreeItem != null) {
+                                    cell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), graphicTreeItem);
+                                } else {
+                                    final TreeItem<HierarchyItem> accessoryOwnerTreeItem
+                                            = panelController.lookupTreeItem(dropTargetObject);
+                                    cell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), accessoryOwnerTreeItem);
+                                }
                             } else {
                                 final TreeItem<HierarchyItem> accessoryOwnerTreeItem
                                         = panelController.lookupTreeItem(dropTargetObject);
@@ -390,7 +398,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                             final HierarchyItem item = treeItem.getValue();
                             assert item != null;
 
-                            if (item.isPlaceHolder()) {
+                            if (item.isPlaceHolder() || item.getFxomObject() == dropTargetObject) {
                                 // The place holder item is filled with a container
                                 // accepting sub components
                                 final Border border = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
@@ -665,7 +673,6 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
 
             @Override
             public Boolean call(String newValue) {
-                // TODO fix DTL-5881 : Inline editing must handle not valid input value
                 // 1) Check the input value is valid
                 // 2) If valid, commit the new value and return true
                 // 3) Otherwise, return false
@@ -684,8 +691,8 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                 assert propertyName != null;
                                 final ValuePropertyMetadata vpm
                                         = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
-                                final ModifyObjectJob job
-                                        = new ModifyObjectJob(fxomInstance, vpm, newValue, editorController);
+                                final BatchModifyObjectJob job
+                                        = new BatchModifyObjectJob(fxomInstance, vpm, newValue, editorController);
                                 if (job.isExecutable()) {
                                     editorController.getJobManager().push(job);
                                 }
@@ -694,10 +701,9 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                         case FXID:
                             assert newValue != null;
                             final String fxId = newValue.isEmpty() ? null : newValue;
-                            final ModifyFxIdJob job
-                                    = new ModifyFxIdJob(fxomObject, fxId, editorController);
+                            final BatchModifyFxIdJob job
+                                    = new BatchModifyFxIdJob(fxomObject, fxId, editorController);
                             if (job.isExecutable()) {
-                                editorController.getJobManager().push(job);
 
                                 // If a controller class has been defined, 
                                 // check if the fx id is an injectable field
@@ -714,6 +720,17 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                                 "log.warning.no.injectable.fxid", fxId);
                                     }
                                 }
+
+                                // Check duplicared fx ids
+                                final FXOMDocument fxomDocument = editorController.getFxomDocument();
+                                final Set<String> fxIds = fxomDocument.collectFxIds().keySet();
+                                if (fxIds.contains(fxId)) {
+                                    editorController.getMessageLog().logWarningMessage(
+                                            "log.warning.duplicate.fxid", fxId);
+                                }
+                                
+                                editorController.getJobManager().push(job);
+
                             } else if (fxId != null) {
                                 editorController.getMessageLog().logWarningMessage(
                                         "log.warning.invalid.fxid", fxId);

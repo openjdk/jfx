@@ -45,9 +45,11 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController.EditAction;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.Size;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
+import com.oracle.javafx.scenebuilder.kit.library.BuiltinLibrary;
 import com.oracle.javafx.scenebuilder.kit.library.BuiltinSectionComparator;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItem;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItemNameComparator;
+import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPicker;
 import java.io.File;
@@ -86,11 +88,15 @@ import javafx.scene.layout.StackPane;
  *
  */
 public class MenuBarController {
+    
+    private static MenuBarController systemMenuBarController; // For Mac only
 
-    private final DebugMenuController debugMenuController;
+    private Menu insertCustomMenu;
     private final DocumentWindowController documentWindowController;
     // This member is null when this MenuBarController is used for
     // managing the menu bar passed to MenuBarSkin.setDefaultSystemMenu().
+
+    private DebugMenuController debugMenuController; // Initialized lazily
 
     @FXML
     private MenuBar menuBar;
@@ -362,7 +368,6 @@ public class MenuBarController {
 
     public MenuBarController(DocumentWindowController documentWindowController) {
         this.documentWindowController = documentWindowController;
-        debugMenuController = new DebugMenuController(documentWindowController);
     }
 
     public MenuBar getMenuBar() {
@@ -390,6 +395,9 @@ public class MenuBarController {
     public void setDebugMenuVisible(boolean visible) {
         if (isDebugMenuVisible() != visible) {
             if (visible) {
+                if (debugMenuController == null) {
+                    debugMenuController = new DebugMenuController(documentWindowController);
+                }
                 menuBar.getMenus().add(debugMenuController.getMenu());
             } else {
                 menuBar.getMenus().remove(debugMenuController.getMenu());
@@ -398,9 +406,23 @@ public class MenuBarController {
     }
 
     public boolean isDebugMenuVisible() {
-        return menuBar.getMenus().contains(debugMenuController.getMenu());
+        final boolean result;
+        if (debugMenuController == null) {
+            result = false;
+        } else {
+            result = menuBar.getMenus().contains(debugMenuController.getMenu());
+        }
+        return result;
     }
-
+    
+    
+    public static synchronized MenuBarController getSystemMenuBarController() {
+        if (systemMenuBarController == null) {
+            systemMenuBarController = new MenuBarController(null);
+        }
+        return systemMenuBarController;
+    }
+    
     /*
      * Private
      */
@@ -778,7 +800,8 @@ public class MenuBarController {
         updateZoomMenu();
 
         /*
-         * Insert menu: it is setup after the other menus.
+         * Insert menu: it uses specific handlers, which means we initialize it
+         * later to avoid interfering with other menus.
          */
 
         /*
@@ -984,7 +1007,15 @@ public class MenuBarController {
             setupMenuItemHandlers(m);
         }
         
-        insertMenu.setOnMenuValidation(onInsertMenuValidationHandler);
+        /*
+         * Insert menu: we set what is statically known.
+         */
+        constructBuiltinPartOfInsertMenu();
+        constructCustomPartOfInsertMenu();
+        
+        // The handler for Insert menu deals only with Custom sub-menu.
+        insertMenu.setOnMenuValidation(onCustomPartOfInsertMenuValidationHandler);
+        
         windowMenu.setOnMenuValidation(onWindowMenuValidationHandler);
         
         /*
@@ -1203,43 +1234,78 @@ public class MenuBarController {
     /*
      * Private (insert menu)
      */
-    private final EventHandler<Event> onInsertMenuValidationHandler
+    private final EventHandler<Event> onCustomPartOfInsertMenuValidationHandler
             = new EventHandler<Event>() {
                 @Override
                 public void handle(Event t) {
                     assert t.getSource() == insertMenu;
-                    updateInsertMenu();
+                    updateCustomPartOfInsertMenu();
                 }
             };
     
-    private void updateInsertMenu() {
+    private void updateCustomPartOfInsertMenu() {
         assert insertMenu != null;
+        assert insertCustomMenu != null;        
 
-        insertMenu.getItems().clear();
-
-        if (documentWindowController == null) {
-            insertMenu.getItems().add(new MenuItem(I18N.getString("menubar.no.lib.item")));
-        } else {
+        if (documentWindowController != null) {
             final EditorController editorController = documentWindowController.getEditorController();
             assert editorController.getLibrary() != null;
 
-            final Map<String, Set<LibraryItem>> sectionMap
-                    = new TreeMap<>(new BuiltinSectionComparator());
+            Set<LibraryItem> sectionItems = new TreeSet<>(new LibraryItemNameComparator());
+            
+            // Collect custom items
             for (LibraryItem li : editorController.getLibrary().getItems()) {
-                Set<LibraryItem> sectionItems = sectionMap.get(li.getSection());
-                if (sectionItems == null) {
-                    sectionItems = new TreeSet<>(new LibraryItemNameComparator());
-                    sectionMap.put(li.getSection(), sectionItems);
+                if (li.getSection().equals(UserLibrary.TAG_USER_DEFINED)) {
+                    sectionItems.add(li);
                 }
-                sectionItems.add(li);
             }
 
-            for (Map.Entry<String, Set<LibraryItem>> e : sectionMap.entrySet()) {
-                final Menu sectionMenu = makeMenuForLibrarySection(e.getKey());
-                insertMenu.getItems().add(sectionMenu);
-                for (LibraryItem li : e.getValue()) {
-                    sectionMenu.getItems().add(makeMenuItemForLibraryItem(li));
+            // Make custom items visible and accessible via custom menu.
+            if (sectionItems.size() > 0) {
+                insertCustomMenu.getItems().clear();
+                
+                for (LibraryItem li : sectionItems) {
+                    insertCustomMenu.getItems().add(makeMenuItemForLibraryItem(li));
                 }
+                
+                insertCustomMenu.setVisible(true);
+            } else {
+                insertCustomMenu.setVisible(false);
+            }
+        }
+    }
+    
+    // At constructing time we dunno if we've custom items then we keep it hidden.
+    private void constructCustomPartOfInsertMenu() {
+        assert insertMenu != null;
+        insertCustomMenu = makeMenuForLibrarySection(UserLibrary.TAG_USER_DEFINED);
+        insertMenu.getItems().add(0, insertCustomMenu);
+        insertCustomMenu.setVisible(false);
+    }
+    
+    // We consider the content of built-in library is static: it cannot change
+    // unless its implementation is modified.
+    private void constructBuiltinPartOfInsertMenu() {
+        assert insertMenu != null;
+        insertMenu.getItems().clear();
+
+        final Map<String, Set<LibraryItem>> sectionMap
+                = new TreeMap<>(new BuiltinSectionComparator());
+
+        for (LibraryItem li : BuiltinLibrary.getLibrary().getItems()) {
+            Set<LibraryItem> sectionItems = sectionMap.get(li.getSection());
+            if (sectionItems == null) {
+                sectionItems = new TreeSet<>(new LibraryItemNameComparator());
+                sectionMap.put(li.getSection(), sectionItems);
+            }
+            sectionItems.add(li);
+        }
+
+        for (Map.Entry<String, Set<LibraryItem>> e : sectionMap.entrySet()) {
+            final Menu sectionMenu = makeMenuForLibrarySection(e.getKey());
+            insertMenu.getItems().add(sectionMenu);
+            for (LibraryItem li : e.getValue()) {
+                sectionMenu.getItems().add(makeMenuItemForLibraryItem(li));
             }
         }
     }

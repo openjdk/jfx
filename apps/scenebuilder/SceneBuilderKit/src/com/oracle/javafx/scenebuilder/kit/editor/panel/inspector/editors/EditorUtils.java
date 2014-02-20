@@ -525,4 +525,9 @@ public class EditorUtils {
         return url;
     }
 
+    public static String getPlainString(String str) {
+        // Using PrefixedValue PLAIN_STRING allow to consider special characters (such as @, %,...)
+        // as "standard" characters (i.e. to backslash them)
+        return new PrefixedValue(PrefixedValue.Type.PLAIN_STRING, str).toString();
+    }
 }

@@ -200,6 +200,7 @@ public class FXOMDocument {
         } else {
             assert glue.getRootElement() != null;
             // Note that sceneGraphRoot might be null if fxomRoot is unresolved
+            glue.updateIndent();
             final FXOMSaver saver = new FXOMSaver();
             result = saver.save(this);
         }

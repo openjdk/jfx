@@ -35,7 +35,6 @@
 <?import java.lang.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
 <StackPane minHeight="30.0" prefHeight="-1.0" prefWidth="458.0" stylesheets="@../css/MessageBar.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
@@ -46,16 +45,9 @@
         <HBox fx:id="messagePart" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
           <children>
             <Label fx:id="messageLabel" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" mouseTransparent="true" style="&#10;" text="Message" HBox.hgrow="ALWAYS" />
-            <HBox id="messageBox" alignment="CENTER_RIGHT" fillHeight="true" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="0.0" HBox.hgrow="NEVER">
+            <HBox fx:id="iconsHbox" alignment="CENTER_RIGHT" fillHeight="true" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" spacing="0.0" HBox.hgrow="NEVER">
              <children>
-                <Button fx:id="messageButton" alignment="CENTER" maxHeight="1.7976931348623157E308" minHeight="-1.0" minWidth="20.0" mnemonicParsing="false" onAction="#onOpenCloseAction" text="">
-                  <graphic>
-                    <ImageView id="warning" pickOnBounds="true" visible="true">
-                      <image>
-                        <Image preserveRatio="true" smooth="true" url="@warning.png" />
-                      </image>
-                    </ImageView>
-                  </graphic>
+                <Button fx:id="messageButton" alignment="CENTER" maxHeight="1.7976931348623157E308" minHeight="-1.0" minWidth="20.0" mnemonicParsing="false" onAction="#onOpenCloseAction" styleClass="warning-button" text="">
                   <tooltip>
                       <Tooltip text="%message.bar.details" />
                   </tooltip>

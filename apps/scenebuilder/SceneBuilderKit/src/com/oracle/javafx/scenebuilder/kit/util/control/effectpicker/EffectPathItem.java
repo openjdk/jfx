@@ -35,6 +35,8 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -62,6 +64,8 @@ public abstract class EffectPathItem extends HBox {
     protected ToggleButton toggle_button;
     @FXML
     protected Tooltip tool_tip;
+    @FXML
+    public MenuItem delete_menuitem;
     @FXML
     public MenuItem delete_input_menuitem;
     @FXML
@@ -194,6 +198,7 @@ public abstract class EffectPathItem extends HBox {
         assert menu_button != null;
         assert toggle_button != null;
         assert tool_tip != null;
+        assert delete_menuitem != null;
         assert delete_input_menuitem != null;
         assert replace_input_menu != null;
 
@@ -206,5 +211,34 @@ public abstract class EffectPathItem extends HBox {
         final URL url = EffectPathItem.class.getResource("images/" + effect.getClass().getSimpleName() + ".png"); //NOI18N
         final Image img = new Image(url.toExternalForm());
         image_view.setImage(img);
+
+        menu_button.showingProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+                if (newValue) {
+                    // Disable menu item for the Lighting bump input.
+                    // javadoc says :
+                    // The optional bump map input. If not specified, a bump map 
+                    // will be automatically generated from the default input. 
+                    // If set to null, or left unspecified, a graphical image of 
+                    // the Node to which the Effect is attached will be used to 
+                    // generate a default bump map.
+                    // Default value:a Shadow effect with a radius of 10
+                    //
+                    // SB 2.0 just allow to replace the bump input property
+                    if (EffectPathItem.this instanceof LightingPathItem) {
+                        delete_input_menuitem.setDisable(true);
+                    } else {
+                        delete_input_menuitem.setDisable(false);
+                    }
+                    if (parentPahItem instanceof LightingPathItem) {
+                        delete_menuitem.setDisable(true);
+                    } else {
+                        delete_menuitem.setDisable(false);
+                    }
+                }
+            }
+        });
     }
 }

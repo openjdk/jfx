@@ -37,7 +37,9 @@ import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintP
 import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.RADIAL;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.colorpicker.ColorPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPicker;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -72,6 +74,7 @@ public class PaintPickerController {
     private PaintPicker.Delegate delegate;
 
     private final ObjectProperty<Paint> paint = new SimpleObjectProperty<>();
+    private final BooleanProperty liveUpdate = new SimpleBooleanProperty();
 
     public final static Color DEFAULT_COLOR = Color.BLACK;
     public final static LinearGradient DEFAULT_LINEAR
@@ -91,10 +94,18 @@ public class PaintPickerController {
         paint.setValue(value);
     }
 
-    public VBox getRoot() {
-        return root_vbox;
+    public final BooleanProperty liveUpdateProperty() {
+        return liveUpdate;
     }
 
+    public boolean isLiveUpdate() {
+        return liveUpdate.get();
+    }
+    
+    public void setLiveUpdate(boolean value) {
+        liveUpdate.setValue(value);
+    }
+    
     public ColorPicker getColorPicker() {
         return colorPicker;
     }
@@ -107,6 +118,10 @@ public class PaintPickerController {
         return delegate;
     }
     
+    public VBox getRoot() {
+        return root_vbox;
+    }
+
     /**
      * Simple utility function which clamps the given value to be strictly
      * between the min and max values.

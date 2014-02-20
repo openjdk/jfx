@@ -171,6 +171,13 @@ public class SliderControl extends GridPane {
                 effectPickerController.incrementRevision();
             }
         });
+        editor_slider.pressedProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+                effectPickerController.setLiveUpdate(newValue);
+            }
+        });
 
         editor_textfield.focusedProperty().addListener(new ChangeListener<Boolean>() {
 

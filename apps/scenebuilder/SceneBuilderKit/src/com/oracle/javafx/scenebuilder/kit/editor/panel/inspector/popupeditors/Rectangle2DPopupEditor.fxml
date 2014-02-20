@@ -38,32 +38,32 @@
 <?import javafx.scene.layout.*?>
 <?scenebuilder-classpath-element ../../../../../../../../../../dist/SceneBuilderKit.jar?>
 
-<GridPane hgap="7.0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" vgap="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<GridPane hgap="5.0" vgap="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
     <children>
         <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" text="min" />
         <Label maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" text="size" GridPane.rowIndex="1" />
-        <VBox alignment="CENTER" GridPane.columnIndex="1" HBox.hgrow="ALWAYS">
+        <VBox alignment="CENTER_LEFT" GridPane.columnIndex="1" HBox.hgrow="ALWAYS">
             <children>
                 <Label styleClass="label, small-label" text="X" />
-                <DoubleField fx:id="minXDf" prefWidth="50.0"/>
+                <DoubleField fx:id="minXDf" prefWidth="50.0" />
             </children>
         </VBox>
-        <VBox alignment="CENTER" GridPane.columnIndex="2" HBox.hgrow="ALWAYS">
+        <VBox alignment="CENTER_LEFT" GridPane.columnIndex="2" HBox.hgrow="ALWAYS">
             <children>
                 <Label styleClass="label, small-label" text="Y" />
-                <DoubleField fx:id="minYDf"  prefWidth="50.0"/>
+                <DoubleField fx:id="minYDf" prefWidth="50.0" />
             </children>
         </VBox>
-        <VBox alignment="CENTER" GridPane.columnIndex="1" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
+        <VBox alignment="CENTER_LEFT" GridPane.columnIndex="1" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
             <children>
-                <Label styleClass="label, small-label" text="Width" />
-                <DoubleField fx:id="widthDf"  prefWidth="50.0"/>
+                <Label styleClass="label, small-label" text="WIDTH" />
+                <DoubleField fx:id="widthDf" prefWidth="50.0" />
             </children>
         </VBox>
-        <VBox alignment="CENTER" GridPane.columnIndex="2" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
+        <VBox alignment="CENTER_LEFT" GridPane.columnIndex="2" GridPane.rowIndex="1" HBox.hgrow="ALWAYS">
             <children>
-                <Label styleClass="label, small-label" text="Height" />
-                <DoubleField fx:id="heightDf"  prefWidth="50.0"/>
+                <Label styleClass="label, small-label" text="HEIGHT" />
+                <DoubleField fx:id="heightDf" prefWidth="50.0" />
             </children>
         </VBox>
     </children>
@@ -73,7 +73,7 @@
         <ColumnConstraints hgrow="ALWAYS" maxWidth="-Infinity" minWidth="-Infinity" />
     </columnConstraints>
     <rowConstraints>
-        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" valignment="BOTTOM"/>
-        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" valignment="BOTTOM"/>
+        <RowConstraints valignment="BOTTOM" vgrow="SOMETIMES" />
+        <RowConstraints valignment="BOTTOM" vgrow="SOMETIMES" />
     </rowConstraints>
 </GridPane>

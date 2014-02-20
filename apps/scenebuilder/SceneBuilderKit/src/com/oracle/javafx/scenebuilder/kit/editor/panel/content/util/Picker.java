@@ -89,7 +89,7 @@ public class Picker {
 
     private void performPick(Node startNode, double localX, double localY) {
 
-        if (excludes.contains(startNode) == false) {
+        if ((excludes.contains(startNode) == false) && startNode.isVisible()){
             if (startNode.getLayoutBounds().contains(localX, localY)) {
                 matches.add(0, startNode);
             }

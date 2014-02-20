@@ -192,7 +192,11 @@ public class SelectionPath extends HBox {
         private Button pathButton = new Button();
 
         private ChildButton(List<Item> children, final List<Item> childrenPath, final Item selectedChild) {
-            pathButton.setPrefSize(17.0, 17.0);
+            
+            Region pathButtonGraphic = new Region();
+            pathButtonGraphic.getStyleClass().add("styleable-path-button-shape");//NOI18N
+            pathButton.setGraphic(pathButtonGraphic);
+            
             getChildren().add(pathButton);
             final ContextMenu menu = new ContextMenu();
             for (final Item c : children) {

@@ -75,7 +75,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -89,8 +88,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -132,7 +129,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         SAVE_FILE,
         SAVE_AS_FILE,
         REVERT_FILE,
-        PRINT_FILE,
         CLOSE_FILE,
         REVEAL_FILE,
         GOTO_CONTENT,
@@ -505,7 +501,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 result = canPerformSelectNone();
                 break;
                 
-            case PRINT_FILE:
+            case SHOW_SAMPLE_CONTROLLER:
                 result = editorController.getFxomDocument() != null;
                 break;
                 
@@ -525,7 +521,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case SAVE_FILE:
-                result = isDocumentDirty();
+                result = isDocumentDirty()
+                        || editorController.getFxomDocument().getLocation() == null; // Save new empty document
                 break;
                 
             case SAVE_AS_FILE:
@@ -543,7 +540,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                         && (editorController.getFxomDocument().getLocation() != null);
                 break;
                 
-//            case PRINT_FILE:
             case GOTO_CONTENT:
             case GOTO_PROPERTIES:
             case GOTO_LAYOUT:
@@ -565,10 +561,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case HELP:
-                result = true;
-                break;
-                
-            case SHOW_SAMPLE_CONTROLLER:
                 result = true;
                 break;
                 
@@ -683,13 +675,17 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             case TOGGLE_CSS_PANEL:
                 // CSS panel is built lazely : initialize the CSS panel first
                 initializeCssPanel();
-
                 bottomSplitController.toggleTarget();
                 if (bottomSplitController.isTargetVisible()) {
                     // CSS panel is built lazely
                     // Need to update its table column ordering with preference value
                     final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
                     refreshCssTableColumnsOrderingReversed(recordGlobal.isCssTableColumnsOrderingReversed());
+                    // Enable pick mode
+                    editorController.setPickModeEnabled(true);
+                } else {
+                    // Disable pick mode
+                    editorController.setPickModeEnabled(false);
                 }
                 // Update preferences
                 recordDocument.setBottomVisible(bottomSplitController.isTargetVisible());
@@ -1775,7 +1771,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 if (saveConfirmed) {
                     try {
                         watchingController.removeDocumentTarget();
-                        final byte[] fxmlBytes = fxomDocument.getFxmlText().getBytes("UTF-8"); //NOI18N
+                        final byte[] fxmlBytes = editorController.getFxmlText().getBytes("UTF-8"); //NOI18N
                         Files.write(fxmlPath, fxmlBytes);
                         updateLoadFileTime();
                         watchingController.update();

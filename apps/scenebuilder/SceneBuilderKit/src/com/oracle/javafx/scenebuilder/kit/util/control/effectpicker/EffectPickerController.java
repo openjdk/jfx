@@ -35,18 +35,20 @@ import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors.Chec
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors.EnumControl;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors.ImageControl;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors.DoubleTextFieldControl;
+import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors.LightControl;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors.SliderControl;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
 import java.net.URL;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
-import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
@@ -97,6 +99,7 @@ public class EffectPickerController {
     private final ObjectProperty<Effect> rootEffect = new SimpleObjectProperty<>();
     // The revision property is used when a change occurs on the root effect inputs
     private final SimpleIntegerProperty revision = new SimpleIntegerProperty();
+    private final BooleanProperty liveUpdate = new SimpleBooleanProperty();
 
     public EffectPickerController() {
         // Initialize selection chevron image
@@ -121,6 +124,18 @@ public class EffectPickerController {
         return revision;
     }
 
+    public final BooleanProperty liveUpdateProperty() {
+        return liveUpdate;
+    }
+
+    public boolean isLiveUpdate() {
+        return liveUpdate.get();
+    }
+    
+    public void setLiveUpdate(boolean value) {
+        liveUpdate.setValue(value);
+    }
+    
     public EffectPicker.Delegate getEffectPickerDelegate() {
         return effectPickerDelegate;
     }
@@ -459,6 +474,7 @@ public class EffectPickerController {
         final PaintPicker colorPicker = new PaintPicker(paintPickerDelegate);
         colorPicker.setPaintProperty(colorInput.getPaint());
         colorPicker.paintProperty().addListener(new PaintChangeListener(this, colorInput));
+        colorPicker.liveUpdateProperty().addListener(new PaintPickerLiveUpdateListener(colorPicker, this));
         vBox.getChildren().add(colorPicker);
 
         props_vbox.getChildren().add(vBox);
@@ -541,6 +557,7 @@ public class EffectPickerController {
         final PaintPicker colorPicker = new PaintPicker(paintPickerDelegate, Mode.COLOR);
         colorPicker.setPaintProperty(dropShadow.getColor());
         colorPicker.paintProperty().addListener(new ColorChangeListener(this, dropShadow));
+        colorPicker.liveUpdateProperty().addListener(new PaintPickerLiveUpdateListener(colorPicker, this));
         vBox.getChildren().add(colorPicker);
 
         props_vbox.getChildren().add(vBox);
@@ -639,6 +656,7 @@ public class EffectPickerController {
         final PaintPicker colorPicker = new PaintPicker(paintPickerDelegate, Mode.COLOR);
         colorPicker.setPaintProperty(innerShadow.getColor());
         colorPicker.paintProperty().addListener(new ColorChangeListener(this, innerShadow));
+        colorPicker.liveUpdateProperty().addListener(new PaintPickerLiveUpdateListener(colorPicker, this));
         vBox.getChildren().add(colorPicker);
 
         props_vbox.getChildren().add(vBox);
@@ -669,8 +687,11 @@ public class EffectPickerController {
         lighting.surfaceScaleProperty().bind(surfaceScaleEditor.valueProperty());
         vBox.getChildren().add(surfaceScaleEditor);
 
-        // need editor for this
-        vBox.getChildren().add(new Label("Light Editor here")); //NOI18N
+        final LightControl lightControl = new LightControl(
+                this, "light", lighting.getLight()); //NOI18N
+        lighting.lightProperty().bind(lightControl.valueProperty());
+        lightControl.liveUpdateProperty().addListener(new LightControlLiveUpdateListener(lightControl, this));
+        vBox.getChildren().add(lightControl);
 
         props_vbox.getChildren().add(vBox);
     }
@@ -811,6 +832,7 @@ public class EffectPickerController {
         final PaintPicker colorPicker = new PaintPicker(paintPickerDelegate, Mode.COLOR);
         colorPicker.setPaintProperty(shadow.getColor());
         colorPicker.paintProperty().addListener(new ColorChangeListener(this, shadow));
+        colorPicker.liveUpdateProperty().addListener(new PaintPickerLiveUpdateListener(colorPicker, this));
         vBox.getChildren().add(colorPicker);
 
         props_vbox.getChildren().add(vBox);
@@ -821,6 +843,42 @@ public class EffectPickerController {
      * Static inner class
      * *************************************************************************
      */
+    private static class PaintPickerLiveUpdateListener implements ChangeListener<Boolean> {
+
+        private final PaintPicker paintPicker;
+        private final EffectPickerController effectPickerController;
+
+        public PaintPickerLiveUpdateListener(
+                PaintPicker paintPicker,
+                EffectPickerController effectPickerController) {
+            this.paintPicker = paintPicker;
+            this.effectPickerController = effectPickerController;
+        }
+
+        @Override
+        public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+            effectPickerController.setLiveUpdate(paintPicker.isLiveUpdate());
+        }
+    }
+    
+    private static class LightControlLiveUpdateListener implements ChangeListener<Boolean> {
+
+        private final LightControl lightControl;
+        private final EffectPickerController effectPickerController;
+
+        public LightControlLiveUpdateListener(
+                LightControl lightControl,
+                EffectPickerController effectPickerController) {
+            this.lightControl = lightControl;
+            this.effectPickerController = effectPickerController;
+        }
+
+        @Override
+        public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+            effectPickerController.setLiveUpdate(lightControl.isLiveUpdate());
+        }
+    }
+    
     private static class ColorChangeListener implements ChangeListener<Paint> {
 
         private final EffectPickerController effectPickerController;

@@ -103,7 +103,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
     protected void fxomDocumentDidChange(FXOMDocument oldDocument) {
         requestEntriesUpdate();
         updateAsPerRootNodeStatus();
-        updateController(null);
+        updateController();
         
         if (fxrootCheckBox != null) {
             fxrootCheckBox.selectedProperty().removeListener(checkBoxListener);
@@ -116,7 +116,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
     protected void sceneGraphRevisionDidChange() {
         requestEntriesUpdate();
         updateAsPerRootNodeStatus();
-        updateController(null);
+        updateController();
     }
 
     @Override
@@ -128,7 +128,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
     protected void jobManagerRevisionDidChange() {
         requestEntriesUpdate();
         updateAsPerRootNodeStatus();
-        updateController(null);
+        updateController();
         fxrootCheckBox.selectedProperty().removeListener(checkBoxListener);
         fxrootCheckBox.setSelected(isFxRoot());
         fxrootCheckBox.selectedProperty().addListener(checkBoxListener);
@@ -192,10 +192,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
 
             @Override
             public void changed(ObservableValue<? extends Object> ov, Object t, Object t1) {
-                if (t1 != null) {
-                    assert t1 instanceof String;
-                    updateController((String)t1);
-                }
+                updateController((String)t1);
             }
         });
         
@@ -222,20 +219,31 @@ public class InfoPanelController extends AbstractFxmlPanelController {
         controllerDidLoadFxmlOver = true; // Must be called before updateAsPerRootNodeStatus()
         requestEntriesUpdate();
         updateAsPerRootNodeStatus();
-        updateController(null);
+        updateController();
     }
     
 
     /*
      * Private
      */
+    private final static String IGNORED = "ignored"; //NOI18N
     
-    private void updateController(String className) {
+    private synchronized void updateController() {
+        updateController(IGNORED);
+    }
+    
+    private synchronized void updateController(String className) {
         if (getEditorController().getFxomDocument() != null) {
             FXOMObject root = getEditorController().getFxomDocument().getFxomRoot();
             if (root != null) {
-                if (className == null) {
+                if (className != null && className.equals(IGNORED)) {
                     className = root.getFxController();
+                }
+                
+                // When the user set an empty string we consider it means
+                // no controller value needs to be set.
+                if (className != null && className.isEmpty()) {
+                    className = null;
                 }
                 
                 final ModifyFxControllerJob job
@@ -246,11 +254,9 @@ public class InfoPanelController extends AbstractFxmlPanelController {
                 }
                 
                 if (controllerClassEditor != null) {
-                    String currentValue = (String)controllerClassEditor.getValue();
-                    if (currentValue != null
-                            && ! currentValue.equals(className)) {
-                        controllerClassEditor.setValue(className);
-                    }
+                    controllerClassEditor.setUpdateFromModel(true);
+                    controllerClassEditor.setValue(className);
+                    controllerClassEditor.setUpdateFromModel(false);
                 }
             }
         }
@@ -391,8 +397,9 @@ public class InfoPanelController extends AbstractFxmlPanelController {
             if (getEditorController().getFxomDocument().getFxomRoot() == null) {
                 fxrootCheckBox.setDisable(true);
                 controllerClassEditor.setDisable(true);
-                controllerClassEditor.setValue(""); //NOI18N
-
+                controllerClassEditor.setUpdateFromModel(true);
+                controllerClassEditor.setValue(null); //NOI18N
+                controllerClassEditor.setUpdateFromModel(false);
             } else {
                 fxrootCheckBox.setDisable(false);
                 String topClassName = getEditorController().getFxomDocument().getGlue().getRootElement().getTagName();
@@ -443,7 +450,9 @@ public class InfoPanelController extends AbstractFxmlPanelController {
 
                 @Override
                 public void run() {
+                    controllerClassEditor.setUpdateFromModel(true);
                     controllerClassEditor.reset(getSuggestedControllerClasses(location));
+                    controllerClassEditor.setUpdateFromModel(false);
                 }
             });
         }

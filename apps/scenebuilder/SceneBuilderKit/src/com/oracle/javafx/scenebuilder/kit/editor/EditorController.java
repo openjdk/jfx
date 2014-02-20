@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.DragController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifySelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BringForwardJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BringToFrontJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.CutSelectionJob;
@@ -44,7 +45,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.FitToParentSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsAccessoryJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsSubComponentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifySelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.PasteIntoJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.PasteJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.SendBackwardJob;
@@ -277,18 +277,38 @@ public class EditorController {
         });
     }
 
+    /**
+     * Get the width to use by default for the root container.
+     *
+     * @return default width for the root container.
+     */
     public double getDefaultRootContainerWidth() {
         return defaultRootContainerWidth;
     }
 
+    /**
+     * Set the width to use by default for the root container.
+     *
+     * @param defaultRootContainerWidth the new root container's default width.
+     */
     public void setDefaultRootContainerWidth(double defaultRootContainerWidth) {
         this.defaultRootContainerWidth = defaultRootContainerWidth;
     }
 
+    /**
+     * Get the height to use by default for the root container.
+     *
+     * @return default height for the root container.
+     */
     public double getDefaultRootContainerHeight() {
         return defaultRootContainerHeight;
     }
 
+    /**
+     * Set the height to use by default for the root container.
+     * 
+     * @param defaultRootContainerHeight the new root container's default height.
+     */
     public void setDefaultRootContainerHeight(double defaultRootContainerHeight) {
         this.defaultRootContainerHeight = defaultRootContainerHeight;
     }
@@ -312,10 +332,18 @@ public class EditorController {
     public String getFxmlText() {
         final String result;
         
-        if (getFxomDocument() == null) {
+        final FXOMDocument fxomDocument = getFxomDocument();
+        if (fxomDocument == null) {
             result = null;
         } else {
-            result = getFxomDocument().getFxmlText();
+            final boolean sampleDataEnabled = fxomDocument.isSampleDataEnabled();
+            if (sampleDataEnabled) {
+                fxomDocument.setSampleDataEnabled(false);
+            }
+            result = fxomDocument.getFxmlText();
+            if (sampleDataEnabled) {
+                fxomDocument.setSampleDataEnabled(true);
+            }
         }
         
         return result;
@@ -2141,7 +2169,7 @@ public class EditorController {
                 = Metadata.getMetadata().queryProperty(Node.class, pn);
         assert pm instanceof ValuePropertyMetadata;
         final ValuePropertyMetadata vpm = (ValuePropertyMetadata) pm;
-        final ModifySelectionJob job = new ModifySelectionJob(vpm, effect, this);
+        final BatchModifySelectionJob job = new BatchModifySelectionJob(vpm, effect, this);
         getJobManager().push(job);
     }
 

@@ -268,7 +268,7 @@ public class StyleEditor extends InlineListEditor {
                     if (propertyTf.getText().isEmpty() && valueTf.getText().isEmpty()) {
                         remove(null);
                     }
-                    
+
                     updateButtons();
                     currentValue = getValue();
                 }
@@ -341,9 +341,11 @@ public class StyleEditor extends InlineListEditor {
         public String getValue() {
             String value;
             if (propertyTf.getText().isEmpty() && valueTf.getText().isEmpty()) {
-                return "";
+                return ""; //NOI18N
             } else {
-                value = propertyTf.getText().trim() + ": " + valueTf.getText().trim() + ";"; //NOI18N
+                String propertyVal = EditorUtils.getPlainString(propertyTf.getText()).trim();
+                String valueVal = EditorUtils.getPlainString(valueTf.getText()).trim();
+                value = propertyVal + ": " + valueVal + ";"; //NOI18N
             }
 
             // Parse the style, and set the parsingError boolean if any error
@@ -366,14 +368,17 @@ public class StyleEditor extends InlineListEditor {
                 style = style.substring(0, style.length() - 1);
             }
             // split in property and value
-            String[] styleItem = style.split(":"); //NOI18N
-            propertyTf.setText(styleItem[0].trim());
-            // If invalid style, we may have more than 2 styleItem
-            StringBuilder valueStr = new StringBuilder();
-            for (int ii = 1; ii < styleItem.length; ii++) {
-                valueStr.append(styleItem[ii]);
+            int dotIndex = style.indexOf(":");
+            String propertyStr;
+            String valueStr = ""; //NOI18N
+            if (dotIndex != -1) {
+                propertyStr = style.substring(0, dotIndex);
+                valueStr = style.substring(dotIndex + 1);
+            } else {
+                propertyStr = style;
             }
-            valueTf.setText(valueStr.toString().trim());
+            propertyTf.setText(propertyStr);
+            valueTf.setText(valueStr);
             updateButtons();
             currentValue = getValue();
         }
@@ -385,7 +390,7 @@ public class StyleEditor extends InlineListEditor {
             propertyTf.setPromptText(null);
             valueTf.setPromptText(null);
         }
-        
+
         // Please findBugs
         @Override
         public void requestFocus() {

@@ -60,9 +60,27 @@ public class EffectPopupEditor extends PopupEditor {
             // Need to clone the root effect of the effect picker
             // in order to commit with a new value
             final Effect rootEffectClone = Utils.clone(rootEffect);
-            commitValue(rootEffectClone);
-            // Refresh MenuButton items if needed
-            updateMenuButton(rootEffectClone);
+            // If live update, do not commit the value
+            if (effectPicker.isLiveUpdate() == true) {
+                userUpdateTransientValueProperty(rootEffectClone);
+            } else {
+                commitValue(rootEffectClone);
+                updateMenuButton(rootEffectClone);
+            }
+        }
+    };
+
+    private final ChangeListener<Boolean> liveUpdateListener = new ChangeListener<Boolean>() {
+        @Override
+        public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+            if (effectPicker.isLiveUpdate() == false) {
+                final Effect rootEffect = effectPicker.getRootEffectProperty();
+                // Need to clone the root effect of the effect picker
+                // in order to commit with a new value
+                final Effect rootEffectClone = Utils.clone(rootEffect);
+                commitValue(rootEffectClone);
+                updateMenuButton(rootEffectClone);
+            }
         }
     };
 
@@ -76,6 +94,7 @@ public class EffectPopupEditor extends PopupEditor {
     public void setPopupContentValue(Object value) {
         assert value == null || value instanceof Effect;
         effectPicker.revisionProperty().removeListener(effectRevisionChangeListener);
+        effectPicker.liveUpdateProperty().removeListener(liveUpdateListener);
         // We first clone the root effect and initializePopupContent the effect picker with the clone value :
         // then the clone value will be updated and passed back to the model
         final Effect rootEffectClone = Utils.clone((Effect) value);
@@ -83,6 +102,7 @@ public class EffectPopupEditor extends PopupEditor {
         // Refresh MenuButton items if needed
         updateMenuButton(rootEffectClone);
         effectPicker.revisionProperty().addListener(effectRevisionChangeListener);
+        effectPicker.liveUpdateProperty().addListener(liveUpdateListener);
     }
 
     @Override

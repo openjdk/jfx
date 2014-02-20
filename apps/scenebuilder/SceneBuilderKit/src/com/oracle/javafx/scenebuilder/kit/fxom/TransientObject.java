@@ -32,8 +32,10 @@
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.beans.DefaultProperty;
 
 /**
  *
@@ -56,7 +58,7 @@ class TransientObject extends TransientNode {
         
         assert declaredClass != null;
         assert glueElement != null;
-        assert glueElement.getTagName().equals(declaredClass.getSimpleName()) ||
+        assert glueElement.getTagName().equals(PropertyName.makeClassFullName(declaredClass)) ||
                 glueElement.getTagName().equals(declaredClass.getCanonicalName());
         
         this.declaredClass = declaredClass;
@@ -124,40 +126,96 @@ class TransientObject extends TransientNode {
     public FXOMObject makeFxomObject(FXOMDocument fxomDocument) {
         final FXOMObject result;
         
-        if (collectedItems.isEmpty()) {
-            if (declaredClass != null) {
-                assert getSceneGraphObject() != null;
+        if (declaredClass != null) {
+            assert getSceneGraphObject() != null;
+            
+            if (List.class.isAssignableFrom(declaredClass)) {
+                assert getSceneGraphObject() instanceof List;
+                assert properties.isEmpty();
+                
+                result = new FXOMCollection(fxomDocument, glueElement,
+                                          declaredClass, getSceneGraphObject(), 
+                                          collectedItems);
+            } else {
                 assert fxRootType == null;
+                
+                final DefaultProperty annotation 
+                        = declaredClass.getAnnotation(DefaultProperty.class);
+                if ((annotation != null) && (collectedItems.size() >= 1)) {
+                    assert annotation.value() != null;
+                    final PropertyName defaultPropertyName 
+                            = new PropertyName(annotation.value());
+                    createDefaultProperty(defaultPropertyName, fxomDocument);
+                }
                 result = new FXOMInstance(fxomDocument, glueElement, 
                                           declaredClass, getSceneGraphObject(),
                                           properties);
-            } else if (unknownClassName != null) {
-                // This is an unresolved instance
-                assert glueElement.getTagName().equals(unknownClassName);
-                assert fxRootType == null;
-                result = new FXOMInstance(fxomDocument, glueElement, properties);
-            } else {
-                // This is an fx:root'ed instance
-                assert glueElement.getTagName().equals("fx:root");
-                assert fxRootType != null;
-                
-                final Class<?> rootClass = getSceneGraphObject().getClass();
-                assert fxRootType.equals(rootClass.getName())
-                        || fxRootType.equals(rootClass.getSimpleName());
-                result = new FXOMInstance(fxomDocument, glueElement, 
-                                          rootClass, getSceneGraphObject(),
-                                          properties);
             }
-        } else if (properties.isEmpty()) {
-            assert getSceneGraphObject() != null;
-            result = new FXOMCollection(fxomDocument, glueElement,
-                                      declaredClass, getSceneGraphObject(), 
-                                      collectedItems);
+        } else if (unknownClassName != null) {
+            // This is an unresolved instance
+            assert glueElement.getTagName().equals(unknownClassName);
+            assert fxRootType == null;
+            result = new FXOMInstance(fxomDocument, glueElement, properties);
         } else {
-            assert false;
-            throw new IllegalStateException();
+            // This is an fx:root'ed instance
+            assert glueElement.getTagName().equals("fx:root");
+            assert fxRootType != null;
+
+            final Class<?> rootClass = getSceneGraphObject().getClass();
+            assert fxRootType.equals(rootClass.getName())
+                    || fxRootType.equals(rootClass.getSimpleName());
+            result = new FXOMInstance(fxomDocument, glueElement, 
+                                      rootClass, getSceneGraphObject(),
+                                      properties);
         }
         
         return result;
+    }
+    
+    
+    /*
+     * Private
+     */
+    
+    private void createDefaultProperty(PropertyName defaultName, FXOMDocument fxomDocument) {
+        /*
+         * From :
+         * 
+         *  <Pane>                          this.glueElement
+         *      ...
+         *      <Button text="B1" />        this.collectedItems.get(0).glueElement   //NOI18N
+         *      <TextField />               this.collectedItems.get(1).glueElement
+         *      <Label text="Label" />      this.collectedItems.get(2).glueElement   //NOI18N
+         *      ...
+         *  </Pane>
+         * 
+         * go to:
+         * 
+         *  <Pane>                          this.glueElement
+         *      ...
+         *      <children>                  syntheticElement
+         *          <Button text="B1" />    this.collectedItems.get(0).glueElement   //NOI18N
+         *          <TextField />           this.collectedItems.get(1).glueElement
+         *          <Label text="Label" />  this.collectedItems.get(2).glueElement   //NOI18N
+         *      </children>
+         *      ...
+         *  </Pane>
+         *
+         */
+        
+        final GlueElement propertyElement
+                = new GlueElement(glueElement.getDocument(), 
+                        defaultName.toString(),  glueElement);
+        propertyElement.addBefore(collectedItems.get(0).getGlueElement());
+        
+        for (FXOMObject item : collectedItems) {
+            item.getGlueElement().addToParent(propertyElement);
+        }
+        
+        final TransientProperty transientProperty 
+                = new TransientProperty(this, defaultName, propertyElement);
+        transientProperty.getValues().addAll(collectedItems);
+        
+        properties.add(transientProperty.makeFxomProperty(fxomDocument));
     }
 }

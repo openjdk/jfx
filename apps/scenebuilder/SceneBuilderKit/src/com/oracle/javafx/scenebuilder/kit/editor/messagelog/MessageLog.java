@@ -51,7 +51,7 @@ public class MessageLog {
     private final SimpleIntegerProperty revision = new SimpleIntegerProperty();
     private final SimpleIntegerProperty numOfWarningMessages = new SimpleIntegerProperty();
     private final static String TIMESTAMP_PATTERN = "h:mm a EEEEEEEEE d MMM. yyyy"; //NOI18N
-    private final static SimpleDateFormat TIMESTAMP_DATE_FORMAT = new SimpleDateFormat(TIMESTAMP_PATTERN);
+    private static SimpleDateFormat TIMESTAMP_DATE_FORMAT;
     
     
     /*
@@ -129,6 +129,10 @@ public class MessageLog {
      */
     
     private synchronized String getTimeStamp() {
+        // We create TIMESTAMP_DATE_FORMAT lazily because it seems to be slow
+        if (TIMESTAMP_DATE_FORMAT == null) {
+            TIMESTAMP_DATE_FORMAT = new SimpleDateFormat(TIMESTAMP_PATTERN);
+        }
         return TIMESTAMP_DATE_FORMAT.format(new Date());
     }
     

@@ -93,7 +93,7 @@
           </items>
         </Menu>
         <SeparatorMenuItem mnemonicParsing="false" />
-        <MenuItem mnemonicParsing="false" onAction="#deleteEffect" text="Delete Effect" />
+        <MenuItem mnemonicParsing="false" onAction="#deleteEffect" text="Delete Effect"  fx:id="delete_menuitem" />
         <MenuItem mnemonicParsing="false" onAction="#deleteEffectInput" text="Delete Effect Input" fx:id="delete_input_menuitem" />
       </items>
     </MenuButton>

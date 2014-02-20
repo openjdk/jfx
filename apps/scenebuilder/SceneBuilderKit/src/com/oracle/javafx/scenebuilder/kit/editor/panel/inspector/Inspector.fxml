@@ -76,7 +76,7 @@
 <children>
     <Accordion fx:id="accordion" VBox.vgrow="ALWAYS">
       <panes>
-        <TitledPane fx:id="propertiesTitledPane" animated="true" contentDisplay="RIGHT" text="Properties">
+        <TitledPane fx:id="propertiesTitledPane" animated="true" contentDisplay="RIGHT" graphicTextGap="0.0" text="Properties">
           <content>
             <ScrollPane fx:id="propertiesScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="251.0">
               <content>
@@ -113,10 +113,10 @@
             </ScrollPane>
           </content>
           <graphic>
-            <Label text=": &lt;className&gt;" />
+            <Label styleClass="secondary-section-title" text=": &lt;className&gt;" />
           </graphic>
         </TitledPane>
-        <TitledPane fx:id="layoutTitledPane" animated="true" contentDisplay="RIGHT" text="Layout">
+        <TitledPane fx:id="layoutTitledPane" animated="true" contentDisplay="RIGHT" graphicTextGap="0.0" text="Layout">
           <content>
             <ScrollPane fx:id="layoutScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="254.0">
               <content>
@@ -150,10 +150,10 @@
             </ScrollPane>
           </content>
           <graphic>
-            <Label text=": &lt;className&gt;" />
+            <Label styleClass="secondary-section-title" text=": &lt;className&gt;" />
           </graphic>
         </TitledPane>
-        <TitledPane fx:id="codeTitledPane" animated="true" contentDisplay="RIGHT" expanded="false" text="Code">
+        <TitledPane fx:id="codeTitledPane" animated="true" contentDisplay="RIGHT" expanded="false" graphicTextGap="0.0" text="Code">
           <content>
             <ScrollPane fx:id="codeScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="257.0">
               <content>
@@ -187,10 +187,10 @@
             </ScrollPane>
           </content>
           <graphic>
-            <Label text=": &lt;className&gt;" />
+            <Label styleClass="secondary-section-title" text=": &lt;className&gt;" />
           </graphic>
         </TitledPane>
-        <TitledPane fx:id="allTitledPane" animated="true" contentDisplay="RIGHT" expanded="true" text="&lt;all&gt;">
+        <TitledPane fx:id="allTitledPane" animated="true" contentDisplay="RIGHT" expanded="true" graphicTextGap="0.0" text="&lt;all&gt;">
           <content>
             <ScrollPane fx:id="allScroll" fitToWidth="true" prefViewportHeight="320.0" prefViewportWidth="260.0">
               <content>
@@ -218,7 +218,7 @@
             </ScrollPane>
           </content>
           <graphic>
-            <Label text=": &lt;className&gt;" />
+            <Label styleClass="secondary-section-title" text=": &lt;className&gt;" />
           </graphic>
         </TitledPane>
       </panes>

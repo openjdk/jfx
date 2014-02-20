@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.AutoSuggestEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.BoundedDoubleEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
@@ -74,14 +75,16 @@ public class FontPopupEditor extends PopupEditor {
     private FamilyEditor familyEditor;
     private StyleEditor styleEditor;
     private BoundedDoubleEditor sizeEditor;
+    private EditorController editorController;
 
     @SuppressWarnings("LeakingThisInConstructor")
-    public FontPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public FontPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super(propMeta, selectedClasses);
+        this.editorController = editorController;
     }
 
     private void setStyle() {
-        styleEditor.reset("", "", new ArrayList<>(getStyles(familyEditor.getValue(), false)));//NOI18N
+        styleEditor.reset("", "", new ArrayList<>(getStyles(familyEditor.getValue(), false, editorController)));//NOI18N
         styleEditor.setUpdateFromModel(true);
         styleEditor.setValue(font.getStyle());
         styleEditor.setUpdateFromModel(false);
@@ -101,7 +104,7 @@ public class FontPopupEditor extends PopupEditor {
         Font oldFont = font;
         Object sizeObj = sizeEditor.getValue();
         assert sizeObj instanceof Double;
-        Font newFont = getFont(familyEditor.getValue(), styleEditor.getValue(), (Double) sizeObj);
+        Font newFont = getFont(familyEditor.getValue(), styleEditor.getValue(), (Double) sizeObj, editorController);
         if (newFont != null) {
             return newFont;
         } else {
@@ -114,6 +117,11 @@ public class FontPopupEditor extends PopupEditor {
         return font;
     }
 
+    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
+        super.reset(propMeta, selectedClasses);
+        this.editorController = editorController;
+    }
+
     //
     // Interface from PopupEditor
     // Methods called by PopupEditor.
@@ -122,9 +130,9 @@ public class FontPopupEditor extends PopupEditor {
     public void initializePopupContent() {
         root = EditorUtils.loadPopupFxml("FontPopupEditor.fxml", this); //NOI18N
         // Add the editors in the scene graph
-        familyEditor = new FamilyEditor("", "", getFamilies());//NOI18N
+        familyEditor = new FamilyEditor("", "", getFamilies(editorController), editorController);//NOI18N
         familySp.getChildren().add(familyEditor.getValueEditor());
-        styleEditor = new StyleEditor("", "", new ArrayList<>());//NOI18N
+        styleEditor = new StyleEditor("", "", new ArrayList<>(), editorController);//NOI18N
         styleSp.getChildren().add(styleEditor.getValueEditor());
         sizeEditor = new BoundedDoubleEditor("", "", getPredefinedFontSizes(), 1.0, 96.0, true);//NOI18N
         commitOnFocusLost(sizeEditor);
@@ -163,7 +171,7 @@ public class FontPopupEditor extends PopupEditor {
                 commit();
             }
         });
-        
+
         sizeEditor.transientValueProperty().addListener(new ChangeListener<Object>() {
             @Override
             public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
@@ -204,13 +212,13 @@ public class FontPopupEditor extends PopupEditor {
     public Node getPopupContentNode() {
         return root;
     }
-    
+
     private static class FamilyEditor extends AutoSuggestEditor {
 
         private List<String> families;
 
         @SuppressWarnings("LeakingThisInConstructor")
-        public FamilyEditor(String name, String defaultValue, List<String> families) {
+        public FamilyEditor(String name, String defaultValue, List<String> families, EditorController editorController) {
             super(name, defaultValue, families);
             this.families = families;
             EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
@@ -218,8 +226,8 @@ public class FontPopupEditor extends PopupEditor {
                 public void handle(ActionEvent event) {
                     String value = getTextField().getText();
                     if (value.isEmpty() || !FamilyEditor.this.families.contains(value)) {
-                        System.err.println("Invalid value for Family: " + value);//NOI18N
-//                        handleInvalidValue(value);
+                        editorController.getMessageLog().logWarningMessage(
+                                "inspector.font.invalidfamily", value); //NOI18N
                         return;
                     }
 //                    System.out.println("Setting family from '" + valueProperty().get() + "' to '" + value + "'");
@@ -244,14 +252,15 @@ public class FontPopupEditor extends PopupEditor {
     private static class StyleEditor extends AutoSuggestEditor {
 
         @SuppressWarnings("LeakingThisInConstructor")
-        public StyleEditor(String name, String defaultValue, List<String> suggestedList) {
+        public StyleEditor(String name, String defaultValue, List<String> suggestedList, EditorController editorController) {
             super(name, defaultValue, suggestedList);
             EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent event) {
                     String value = getTextField().getText();
                     if (value.isEmpty() || !getSuggestedList().contains(value)) {
-                        System.err.println("Invalid value for Style: " + value);//NOI18N
+                        editorController.getMessageLog().logWarningMessage(
+                                "inspector.font.invalidstyle", value); //NOI18N
                         return;
                     }
                     valueProperty().setValue(value);
@@ -322,13 +331,13 @@ public class FontPopupEditor extends PopupEditor {
         return allFonts;
     }
 
-    public static List<String> getFamilies() {
+    public static List<String> getFamilies(EditorController editorController) {
 //        System.out.println("Getting font families...");
-        return new ArrayList<>(getFontMap().keySet());
+        return new ArrayList<>(getFontMap(editorController).keySet());
     }
 
-    public static Set<String> getStyles(String family, boolean canBeUnknown) {
-        Map<String, Font> styles = getFontMap().get(family);
+    public static Set<String> getStyles(String family, boolean canBeUnknown, EditorController editorController) {
+        Map<String, Font> styles = getFontMap(editorController).get(family);
         if (styles == null) {
             assert !canBeUnknown;
             styles = Collections.emptyMap();
@@ -336,8 +345,8 @@ public class FontPopupEditor extends PopupEditor {
         return styles.keySet();
     }
 
-    public static Font getFont(String family, String style) {
-        Map<String, Font> styles = getFontMap().get(family);
+    public static Font getFont(String family, String style, EditorController editorController) {
+        Map<String, Font> styles = getFontMap(editorController).get(family);
         if (styles == null) {
             styles = Collections.emptyMap();
         }
@@ -350,8 +359,8 @@ public class FontPopupEditor extends PopupEditor {
         return styles.get(style);
     }
 
-    public static Font getFont(String family, String style, double size) {
-        final Font font = getFont(family, style);
+    public static Font getFont(String family, String style, double size, EditorController editorController) {
+        final Font font = getFont(family, style, editorController);
         if (font == null) {
             return null;
         }
@@ -420,16 +429,16 @@ public class FontPopupEditor extends PopupEditor {
         return font.getName();
     }
 
-    private static Map<String, Map<String, Font>> getFontMap() {
+    private static Map<String, Map<String, Font>> getFontMap(EditorController editorController) {
         Map<String, Map<String, Font>> fonts = fontCache.get();
         if (fonts == null) {
-            fonts = makeFontMap();
+            fonts = makeFontMap(editorController);
             fontCache = new WeakReference<>(fonts);
         }
         return fonts;
     }
 
-    private static Map<String, Map<String, Font>> makeFontMap() {
+    private static Map<String, Map<String, Font>> makeFontMap(EditorController editorController) {
         final Set<Font> fonts = getAllFonts();
         final Map<String, Map<String, Set<Font>>> fontTree = new TreeMap<>();
 
@@ -458,7 +467,8 @@ public class FontPopupEditor extends PopupEditor {
                 int size = fontSet.size();
                 assert 1 <= size;
                 if (1 < size) {
-                    System.out.println("Warning: several fonts have the same family and style: " + styleMap.get(style)); //NOI18N
+                    editorController.getMessageLog().logWarningMessage(
+                            "inspector.font.samefamilystyle", styleMap.get(style)); //NOI18N
                 }
                 resMap.put(style, styleMap.get(style).iterator().next());
             }

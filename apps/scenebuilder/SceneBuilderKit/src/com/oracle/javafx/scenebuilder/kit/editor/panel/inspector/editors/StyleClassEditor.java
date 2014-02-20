@@ -279,7 +279,6 @@ public class StyleClassEditor extends InlineListEditor {
             // since we do not use the AutoSuggestEditor menu button for this editor.
             if (!suggestedList.isEmpty()) {
                 actionMb.getItems().add(new SeparatorMenuItem());
-                actionMb.getItems().add(new SeparatorMenuItem());
             }
             for (String className : suggestedList) {
                 MenuItem menuItem = new MenuItem(className);
@@ -304,13 +303,7 @@ public class StyleClassEditor extends InlineListEditor {
 
         @Override
         public String getValue() {
-            String value;
-            if (styleClassTf.getText().isEmpty()) {
-                return "";
-            } else {
-                value = styleClassTf.getText().trim();
-            }
-            return value;
+            return EditorUtils.getPlainString(styleClassTf.getText()).trim();
         }
 
         @Override

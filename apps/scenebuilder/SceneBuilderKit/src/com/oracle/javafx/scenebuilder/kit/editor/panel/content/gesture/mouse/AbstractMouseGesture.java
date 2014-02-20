@@ -121,12 +121,18 @@ public abstract class AbstractMouseGesture extends AbstractGesture {
             @Override
             public void handle(MouseEvent e) {
                 lastMouseEvent = e;
-                if (mouseDidDrag) {
-                    mouseDragEnded();
-                    glassLayer.setOnMouseDragged(null);
+                try {
+                    if (mouseDidDrag) {
+                        try {
+                            mouseDragEnded();
+                        } finally {
+                            glassLayer.setOnMouseDragged(null);
+                        }
+                    }
+                    mouseReleased();
+                } finally {
+                    performTermination();
                 }
-                mouseReleased();
-                performTermination();
             }
         });
         glassLayer.setOnKeyPressed(new EventHandler<KeyEvent>() {
@@ -146,7 +152,13 @@ public abstract class AbstractMouseGesture extends AbstractGesture {
         this.mousePressedEvent = (MouseEvent)e;
         this.lastMouseEvent = mousePressedEvent;
         this.observer = observer;
-        mousePressed();
+        
+        try {
+            mousePressed();
+        } catch(RuntimeException x) {
+            performTermination();
+            throw x;
+        }
     }
     
     
@@ -179,11 +191,13 @@ public abstract class AbstractMouseGesture extends AbstractGesture {
         glassLayer.setOnKeyPressed(null);
         glassLayer.setOnKeyReleased(null);
         
-        observer.gestureDidTerminate(this);
-        observer = null;
-        
-        mousePressedEvent = null;
-        lastMouseEvent = null;
-        mouseDidDrag = false;
+        try {
+            observer.gestureDidTerminate(this);
+        } finally {
+            observer = null;
+            mousePressedEvent = null;
+            lastMouseEvent = null;
+            mouseDidDrag = false;
+        }
     }
 }

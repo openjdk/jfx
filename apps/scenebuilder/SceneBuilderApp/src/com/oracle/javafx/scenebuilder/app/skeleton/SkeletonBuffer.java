@@ -97,39 +97,39 @@ class SkeletonBuffer {
     }
 
     private void constructPackageLine() {
-        String controller = document.getFxomRoot().getFxController();
+            String controller = document.getFxomRoot().getFxController();
 
-        if (controller != null && !controller.isEmpty()
-                && controller.indexOf(".") != -1 && controller.indexOf("$") == -1) { //NOI18N
-            packageLine.append("package "); //NOI18N
-            packageLine.append(controller.substring(0, controller.indexOf("."))); //NOI18N
-            packageLine.append(";\n\n"); //NOI18N
+            if (controller != null && !controller.isEmpty()
+                    && controller.contains(".") && !controller.contains("$")) { //NOI18N
+                packageLine.append("package "); //NOI18N
+                packageLine.append(controller.substring(0, controller.indexOf("."))); //NOI18N
+                packageLine.append(";\n\n"); //NOI18N
+            }
         }
-    }
 
     private void constructClassLine() {
-        String controller = document.getFxomRoot().getFxController();
-        classLine.append("\npublic "); //NOI18N
+            String controller = document.getFxomRoot().getFxController();
+            classLine.append("\npublic "); //NOI18N
 
-        if (controller != null && controller.indexOf("$") != -1) { //NOI18N
-            classLine.append("static "); //NOI18N
-        }
-        
-        classLine.append("class "); //NOI18N
-
-        if (controller != null && !controller.isEmpty()) {
-            String simpleName = controller.replace("$", "."); //NOI18N
-            int dot = simpleName.lastIndexOf('.');
-            if (dot > -1) {
-                simpleName = simpleName.substring(dot+1);
+            if (controller != null && controller.contains("$")) { //NOI18N
+                classLine.append("static "); //NOI18N
             }
-            classLine.append(simpleName);
-        } else {
-            classLine.append("PleaseProvideControllerClassName"); //NOI18N
-        }
 
-        classLine.append(" {\n\n"); //NOI18N
-    }
+            classLine.append("class "); //NOI18N
+
+            if (controller != null && !controller.isEmpty()) {
+                String simpleName = controller.replace("$", "."); //NOI18N
+                int dot = simpleName.lastIndexOf('.');
+                if (dot > -1) {
+                    simpleName = simpleName.substring(dot+1);
+                }
+                classLine.append(simpleName);
+            } else {
+                classLine.append("PleaseProvideControllerClassName"); //NOI18N
+            }
+
+            classLine.append(" {\n\n"); //NOI18N
+        }
 
     private void constructInitialize() {
         if (textFormat == FORMAT_TYPE.FULL) {
@@ -204,12 +204,12 @@ class SkeletonBuffer {
         }
         
         // Event handlers
-        for (FXOMPropertyT property : document.getFxomRoot().collectEventHandlers()) {
-            handlers.append(INDENT).append("@FXML\n").append(INDENT).append("void "); //NOI18N
-            final String methodName = property.getValue().replace("#", ""); //NOI18N
-            handlers.append(methodName);
-            handlers.append("(ActionEvent event) {\n\n").append(INDENT).append("}\n\n"); //NOI18N
-        }
+            for (FXOMPropertyT property : document.getFxomRoot().collectEventHandlers()) {
+                handlers.append(INDENT).append("@FXML\n").append(INDENT).append("void "); //NOI18N
+                final String methodName = property.getValue().replace("#", ""); //NOI18N
+                handlers.append(methodName);
+                handlers.append("(ActionEvent event) {\n\n").append(INDENT).append("}\n\n"); //NOI18N
+            }
 
         // This method must be called once asserts has been populated.
         constructInitialize();
@@ -225,35 +225,39 @@ class SkeletonBuffer {
 
     @Override
     public String toString() {
-        construct();
+        if (document.getFxomRoot() == null) {
+            return I18N.getString("skeleton.empty");
+        } else {
+            construct();
 
-        StringBuilder code = new StringBuilder();
-        code.append(header);
-        code.append(packageLine);
+            StringBuilder code = new StringBuilder();
+            code.append(header);
+            code.append(packageLine);
 
-        for (String importStatement : imports) {
-            code.append(importStatement);
+            for (String importStatement : imports) {
+                code.append(importStatement);
+            }
+
+            code.append(classLine);
+
+            if (textType == TEXT_TYPE.WITH_COMMENTS && textFormat == FORMAT_TYPE.FULL) {
+                code.append(INDENT).append("@FXML // ResourceBundle that was given to the FXMLLoader\n") //NOI18N
+                        .append(INDENT).append("private ResourceBundle resources;\n\n") //NOI18N
+                        .append(INDENT).append("@FXML // URL location of the FXML file that was given to the FXMLLoader\n") //NOI18N
+                        .append(INDENT).append("private URL location;\n\n"); //NOI18N
+            } else if (textFormat == FORMAT_TYPE.FULL) {
+                code.append(INDENT).append("@FXML\n") //NOI18N
+                        .append(INDENT).append("private ResourceBundle resources;\n\n") //NOI18N
+                        .append(INDENT).append("@FXML\n") //NOI18N
+                        .append(INDENT).append("private URL location;\n\n"); //NOI18N
+            }
+
+            code.append(variables);
+            code.append(handlers);
+            code.append(initialize);
+            code.append("}\n"); //NOI18N
+
+            return code.toString();
         }
-
-        code.append(classLine);
-
-        if (textType == TEXT_TYPE.WITH_COMMENTS && textFormat == FORMAT_TYPE.FULL) {
-            code.append(INDENT).append("@FXML // ResourceBundle that was given to the FXMLLoader\n") //NOI18N
-                    .append(INDENT).append("private ResourceBundle resources;\n\n") //NOI18N
-                    .append(INDENT).append("@FXML // URL location of the FXML file that was given to the FXMLLoader\n") //NOI18N
-                    .append(INDENT).append("private URL location;\n\n"); //NOI18N
-        } else if (textFormat == FORMAT_TYPE.FULL) {
-            code.append(INDENT).append("@FXML\n") //NOI18N
-                    .append(INDENT).append("private ResourceBundle resources;\n\n") //NOI18N
-                    .append(INDENT).append("@FXML\n") //NOI18N
-                    .append(INDENT).append("private URL location;\n\n"); //NOI18N
-        }
-
-        code.append(variables);
-        code.append(handlers);
-        code.append(initialize);
-        code.append("}\n"); //NOI18N
-
-        return code.toString();
     }
 }

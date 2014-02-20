@@ -61,7 +61,7 @@ public class FitToParentObjectJob extends Job {
     private final FXOMInstance fxomInstance;
     private final FXOMPropertyC parentProperty;
     private final FXOMInstance parentInstance;
-    private final List<ModifyObjectJob> subJobs = new ArrayList<>();
+    private final List<BatchModifyObjectJob> subJobs = new ArrayList<>();
     private String description; // final but initialized lazily
 
     private enum Sizing {
@@ -98,7 +98,7 @@ public class FitToParentObjectJob extends Job {
         final FXOMDocument fxomDocument
                 = getEditorController().getFxomDocument();
         fxomDocument.beginUpdate();
-        for (ModifyObjectJob subJob : subJobs) {
+        for (BatchModifyObjectJob subJob : subJobs) {
             subJob.execute();
         }
         fxomDocument.endUpdate();
@@ -120,7 +120,7 @@ public class FitToParentObjectJob extends Job {
         final FXOMDocument fxomDocument
                 = getEditorController().getFxomDocument();
         fxomDocument.beginUpdate();
-        for (ModifyObjectJob subJob : subJobs) {
+        for (BatchModifyObjectJob subJob : subJobs) {
             subJob.redo();
         }
         fxomDocument.endUpdate();
@@ -190,53 +190,53 @@ public class FitToParentObjectJob extends Job {
 
         // Modify pref size jobs
         //----------------------------------------------------------------------
-        final ModifyObjectJob prefWidthJob = modifyJob("prefWidth", prefWidthValue);
+        final BatchModifyObjectJob prefWidthJob = modifyJob("prefWidth", prefWidthValue);
         if (prefWidthJob.isExecutable()) { // Update if new value differs from old one
             subJobs.add(prefWidthJob);
         }
-        final ModifyObjectJob prefHeightJob = modifyJob("prefHeight", prefHeightValue);
+        final BatchModifyObjectJob prefHeightJob = modifyJob("prefHeight", prefHeightValue);
         if (prefHeightJob.isExecutable()) { // Update if new value differs from old one
             subJobs.add(prefHeightJob);
         }
 
         // Modify Anchors Jobs
         //----------------------------------------------------------------------
-        final ModifyObjectJob leftAnchorJob = modifyAnchorJob(Anchor.LEFT, leftAnchorValue);
+        final BatchModifyObjectJob leftAnchorJob = modifyAnchorJob(Anchor.LEFT, leftAnchorValue);
         if (leftAnchorJob.isExecutable()) { // Update if new value differs from old one
             subJobs.add(leftAnchorJob);
         }
-        final ModifyObjectJob topAnchorJob = modifyAnchorJob(Anchor.TOP, topAnchorValue);
+        final BatchModifyObjectJob topAnchorJob = modifyAnchorJob(Anchor.TOP, topAnchorValue);
         if (topAnchorJob.isExecutable()) { // Update if new value differs from old one
             subJobs.add(topAnchorJob);
         }
         if (isResizableX) {
-            final ModifyObjectJob rightAnchorJob = modifyAnchorJob(Anchor.RIGHT, 0.0);
+            final BatchModifyObjectJob rightAnchorJob = modifyAnchorJob(Anchor.RIGHT, 0.0);
             if (rightAnchorJob.isExecutable()) { // Update if new value differs from old one
                 subJobs.add(rightAnchorJob);
             }
         }
         if (isResizableY) {
-            final ModifyObjectJob bottomAnchorJob = modifyAnchorJob(Anchor.BOTTOM, 0.0);
+            final BatchModifyObjectJob bottomAnchorJob = modifyAnchorJob(Anchor.BOTTOM, 0.0);
             if (bottomAnchorJob.isExecutable()) { // Update if new value differs from old one
                 subJobs.add(bottomAnchorJob);
             }
         }
     }
 
-    private ModifyObjectJob modifyJob(final Class<?> clazz, final String name, double value) {
+    private BatchModifyObjectJob modifyJob(final Class<?> clazz, final String name, double value) {
         final PropertyName pn = new PropertyName(name, clazz);
         final ValuePropertyMetadata vpm
                 = Metadata.getMetadata().queryValueProperty(fxomInstance, pn);
-        final ModifyObjectJob subJob = new ModifyObjectJob(
+        final BatchModifyObjectJob subJob = new BatchModifyObjectJob(
                 fxomInstance, vpm, value, getEditorController());
         return subJob;
     }
 
-    private ModifyObjectJob modifyJob(final String name, double value) {
+    private BatchModifyObjectJob modifyJob(final String name, double value) {
         return modifyJob(null, name, value);
     }
 
-    private ModifyObjectJob modifyAnchorJob(final Anchor anchor, double value) {
+    private BatchModifyObjectJob modifyAnchorJob(final Anchor anchor, double value) {
         final String name = anchor.name().toLowerCase(Locale.ROOT) + "Anchor";
         return modifyJob(AnchorPane.class, name, value);
     }

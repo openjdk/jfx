@@ -402,8 +402,10 @@ public class PreferencesRecordDocument {
 
     public void refreshBottomVisible() {
         final SplitController sc = documentWindowController.getBottomSplitController();
-        // CSS panel is built lazely : initialize the CSS panel first
-        documentWindowController.initializeCssPanel();
+        if (bottomVisible) {
+            // CSS panel is built lazely : initialize the CSS panel first
+            documentWindowController.initializeCssPanel();
+        }
         sc.setTargetVisible(bottomVisible);
     }
 

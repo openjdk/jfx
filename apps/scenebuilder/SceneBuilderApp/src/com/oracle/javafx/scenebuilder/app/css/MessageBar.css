@@ -35,12 +35,26 @@
     -fx-spacing: 0;
 }
 
-.message-bar .button, .message-bar .label {
+/*.message-bar .button, .message-bar .label {*/
+.message-bar .label {
     -fx-font-size: 0.875em;
     -fx-background-color: transparent;
     -fx-background-radius: 0;
     -fx-label-padding: 1 5 0 5;
     -fx-background-insets: 0;
+}
+
+.warning-button {
+    -fx-font-size: 0.667em;
+    -fx-shape: "M1.347,18C1,18,0.678,17.82,0.496,17.526c-0.182-0.295-0.199-0.663-0.044-0.973l8-16C8.622,0.214,8.968,0,9.347,0
+    s0.725,0.214,0.895,0.553l8,16c0.155,0.31,0.138,0.678-0.044,0.973C18.015,17.82,17.693,18,17.347,18H1.347z";
+    -fx-background-color: black, yellow;
+    -fx-background-insets: 0, 1 1 0.7 1;
+    -fx-padding: 6 2 2 2;
+    -fx-min-width: 20;
+    -fx-max-width: 20;
+    -fx-min-height: 19;
+    -fx-max-height: 19;
 }
 
 .message-bar .message-warning {

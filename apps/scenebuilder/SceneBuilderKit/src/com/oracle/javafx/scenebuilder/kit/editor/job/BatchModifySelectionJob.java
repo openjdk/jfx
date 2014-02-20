@@ -32,10 +32,13 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.BackupSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
@@ -48,74 +51,25 @@ import java.util.Set;
 /**
  *
  */
-public class ModifySelectionJob extends Job {
+public class BatchModifySelectionJob extends CompositeJob {
 
     private final ValuePropertyMetadata propertyMetadata;
     private final Object newValue;
-    private final List<ModifyObjectJob> subJobs = new ArrayList<>();
-    private String description; // Final but constructed lazily
 
-    public ModifySelectionJob(ValuePropertyMetadata propertyMetadata,
+    public BatchModifySelectionJob(ValuePropertyMetadata propertyMetadata,
             Object newValue, EditorController editorController) {
-        super(editorController);
+        super(editorController, true, false);
         this.propertyMetadata = propertyMetadata;
         this.newValue = newValue;
-        buildSubJobs();
     }
 
     /*
-     * Job
+     * CompositeJob
      */
     @Override
-    public boolean isExecutable() {
-        return subJobs.isEmpty() == false;
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void execute() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (ModifyObjectJob subJob : subJobs) {
-            subJob.execute();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (int i = subJobs.size() - 1; i >= 0; i--) {
-            subJobs.get(i).undo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-
-        fxomDocument.beginUpdate();
-        for (ModifyObjectJob subJob : subJobs) {
-            subJob.redo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        if (description == null) {
-            buildDescription();
-        }
-
-        return description;
-    }
-
-    /*
-     * Private
-     */
-    private void buildSubJobs() {
-
+        final List<Job> result = new ArrayList<>();
         final Set<FXOMInstance> candidates = new HashSet<>();
         final Selection selection = getEditorController().getSelection();
         if (selection.getGroup() instanceof ObjectSelectionGroup) {
@@ -148,38 +102,49 @@ public class ModifySelectionJob extends Job {
             assert selection.getGroup() == null : "Add implementation for " + selection.getGroup();
         }
 
+        final Set<FXOMObject> executableCandidates = new HashSet<>();
+
+        // First add ModifyObject jobs
         for (FXOMInstance fxomInstance : candidates) {
-            final ModifyObjectJob subJob
-                    = new ModifyObjectJob(fxomInstance, propertyMetadata, newValue, getEditorController());
+            final ModifyObjectJob subJob = new ModifyObjectJob(
+                    fxomInstance, propertyMetadata, newValue, getEditorController());
             if (subJob.isExecutable()) {
-                subJobs.add(subJob);
+                result.add(subJob);
+                executableCandidates.add(fxomInstance);
             }
         }
+
+        // If the list of ModifyObject jobs is not empty,
+        // then add selection specific jobs
+        if (result.isEmpty() == false) {
+            result.add(0, new BackupSelectionJob(getEditorController()));
+            result.add(new UpdateSelectionJob(executableCandidates, getEditorController()));
+        }
+
+        return result;
     }
 
-    private void buildDescription() {
-        switch (subJobs.size()) {
+    @Override
+    protected String makeDescription() {
+        final String result;
+        final List<Job> subJobs = getSubJobs();
+        final int subJobCount = subJobs.size();
+        assert (subJobCount == 0) || (subJobCount >= 3);
+
+        switch (subJobCount) {
             case 0:
-                description = "Unexecutable Set"; // NO18N
+                result = "Unexecutable Set"; //NOI18N
                 break;
-            case 1:
-                description = subJobs.get(0).getDescription();
+            case 3: // BackupSelection + 1 ModifyObject + UpdateSelection
+                result = subJobs.get(1).getDescription();
                 break;
             default:
-                description = makeMultipleSelectionDescription();
+                result = I18N.getString("label.action.edit.set.n",
+                        propertyMetadata.getName().toString(),
+                        subJobCount - 2); // Remove 2 selection jobs (BackupSelection + UpdateSelection) 
                 break;
         }
-    }
 
-    private String makeMultipleSelectionDescription() {
-        final StringBuilder result = new StringBuilder();
-
-        result.append("Set ");
-        result.append(propertyMetadata.getName().toString());
-        result.append(" on ");
-        result.append(subJobs.size());
-        result.append(" Objects");
-
-        return result.toString();
+        return result;
     }
 }

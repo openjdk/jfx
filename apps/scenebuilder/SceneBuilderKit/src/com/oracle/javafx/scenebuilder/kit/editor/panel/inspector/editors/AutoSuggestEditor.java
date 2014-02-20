@@ -166,7 +166,11 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
 
     @Override
     public Object getValue() {
-        return entryField.getText();
+        String value = entryField.getText();
+        if (value == null) {
+            return null;
+        }
+        return EditorUtils.getPlainString(value);
     }
 
     @Override

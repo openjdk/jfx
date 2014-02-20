@@ -32,57 +32,31 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.BackupSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  *
  */
-public class BatchModifyObjectJob extends CompositeJob {
+public class BatchModifyFxIdJob extends CompositeJob {
 
-    private final FXOMInstance fxomInstance;
-    private final Map<ValuePropertyMetadata, Object> valueMap;
-    private final String description;
+    private final FXOMObject fxomObject;
+    private final String newValue;
 
-    public BatchModifyObjectJob(FXOMInstance fxomInstance,
-            String description,
-            Map<ValuePropertyMetadata, Object> valueMap,
-            EditorController editorController) {
-        super(editorController);
-        
-        assert fxomInstance != null;
-        assert valueMap != null;
-        assert description != null;
-        
-        this.fxomInstance = fxomInstance;
-        this.valueMap = new HashMap<>(valueMap);
-        this.description = description;
-    }
-
-    public BatchModifyObjectJob(FXOMInstance fxomInstance,
-            ValuePropertyMetadata propertyMetadata,
-            Object newValue,
+    public BatchModifyFxIdJob(
+            FXOMObject fxomObject, 
+            String newValue,
             EditorController editorController) {
         super(editorController);
 
-        assert fxomInstance != null;
-        assert propertyMetadata != null;
-        assert newValue != null;
+        assert fxomObject != null;
 
-        this.fxomInstance = fxomInstance;
-        this.valueMap = new HashMap<>();
-        this.valueMap.put(propertyMetadata, newValue);
-        this.description = I18N.getString("label.action.edit.set.1",
-                propertyMetadata.getName().toString(),
-                fxomInstance.getSceneGraphObject().getClass().getSimpleName());
+        this.fxomObject = fxomObject;
+        this.newValue = newValue;
     }
 
     /*
@@ -93,17 +67,14 @@ public class BatchModifyObjectJob extends CompositeJob {
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
         
-        for (Map.Entry<ValuePropertyMetadata,Object> e : valueMap.entrySet()) {
-            final ModifyObjectJob j = new ModifyObjectJob(fxomInstance, 
-                    e.getKey(), e.getValue(), getEditorController());
-            if (j.isExecutable()) {
-                result.add(j);
-            }
+        final ModifyFxIdJob job = new ModifyFxIdJob(fxomObject, newValue, getEditorController());
+        if (job.isExecutable()) {
+            result.add(job);
         }
         
         if (result.isEmpty() == false) {
             result.add(0, new BackupSelectionJob(getEditorController()));
-            result.add(new UpdateSelectionJob(fxomInstance, getEditorController()));
+            result.add(new UpdateSelectionJob(fxomObject, getEditorController()));
         }
         
         return result;
@@ -111,6 +82,17 @@ public class BatchModifyObjectJob extends CompositeJob {
 
     @Override
     protected String makeDescription() {
-        return description;
+        final String result;
+        final List<Job> subJobs = getSubJobs();
+        final int subJobCount = subJobs.size();
+        assert (subJobCount == 0) || (subJobCount == 3);
+
+        if (subJobCount == 0) {
+            result = "Unexecutable Set"; //NOI18N
+        } else {
+            result = subJobs.get(1).getDescription(); // BackupSelection + 1 ModifyFxId + UpdateSelection
+        }
+
+        return result;
     }
 }

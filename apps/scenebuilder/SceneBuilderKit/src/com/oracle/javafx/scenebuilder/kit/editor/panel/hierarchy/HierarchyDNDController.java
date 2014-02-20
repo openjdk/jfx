@@ -50,7 +50,6 @@ import javafx.scene.input.DragEvent;
  * not depend on the TreeView or TreeTableView control and handles only
  * TreeItems.
  *
- * p
  * @treatAsPrivate
  */
 public class HierarchyDNDController {
@@ -61,6 +60,7 @@ public class HierarchyDNDController {
     /**
      * Defines the mouse location within the cell when the dropping gesture
      * occurs.
+     *
      * @treatAsPrivate
      */
     public enum DroppingMouseLocation {
@@ -320,10 +320,22 @@ public class HierarchyDNDController {
                             dropTargetObject = item.getFxomObject();
                             targetIndex = -1; // Insert at last position
                         } else {
+                            // If the parent accepts sub components,
+                            // this is a reordering gesture and the target is the parent
+                            final DragController dragController
+                                    = panelController.getEditorController().getDragController();
+                            final AbstractDragSource dragSource = dragController.getDragSource();
                             final TreeItem<HierarchyItem> parentTreeItem = treeItem.getParent();
                             assert parentTreeItem != null; // Because of (2)
-                            dropTargetObject = parentTreeItem.getValue().getFxomObject();
-                            targetIndex = item.getFxomObject().getIndexInParentProperty();
+                            final FXOMObject parentObject = parentTreeItem.getValue().getFxomObject();
+                            final DesignHierarchyMask parentMask = new DesignHierarchyMask(parentObject);
+                            if (parentMask.isAcceptingSubComponent(dragSource.getDraggedObjects())) {
+                                dropTargetObject = parentTreeItem.getValue().getFxomObject();
+                                targetIndex = item.getFxomObject().getIndexInParentProperty();
+                            } // Otherwise, attempt to set an accessory on the current TreeItem
+                            else {
+                                dropTargetObject = item.getFxomObject();
+                            }
                         }
                         break;
 
@@ -335,10 +347,22 @@ public class HierarchyDNDController {
                             targetIndex = 0; // Insert at first position
                         } else {
                             if (treeItem.isLeaf() || !treeItem.isExpanded()) {
+                                // If the parent accepts sub components,
+                                // this is a reordering gesture and the target is the parent
+                                final DragController dragController
+                                        = panelController.getEditorController().getDragController();
+                                final AbstractDragSource dragSource = dragController.getDragSource();
                                 final TreeItem<HierarchyItem> parentTreeItem = treeItem.getParent();
                                 assert parentTreeItem != null; // Because of (3)
-                                dropTargetObject = parentTreeItem.getValue().getFxomObject();
-                                targetIndex = item.getFxomObject().getIndexInParentProperty() + 1;
+                                final FXOMObject parentObject = parentTreeItem.getValue().getFxomObject();
+                                final DesignHierarchyMask parentMask = new DesignHierarchyMask(parentObject);
+                                if (parentMask.isAcceptingSubComponent(dragSource.getDraggedObjects())) {
+                                    dropTargetObject = parentTreeItem.getValue().getFxomObject();
+                                    targetIndex = item.getFxomObject().getIndexInParentProperty() + 1;
+                                } // Otherwise, attempt to set an accessory on the current TreeItem
+                                else {
+                                    dropTargetObject = item.getFxomObject();
+                                }
                             } else {
                                 dropTargetObject = item.getFxomObject();
                                 targetIndex = 0; // Insert at first position

@@ -60,6 +60,10 @@ public class FXOMIndex {
         return fxIds.get(fxId);
     }
     
+    public Map<String, FXOMObject> getFxIds() {
+        return fxIds;
+    }
+    
     public List<FXOMInstance> collectToggleGroups() {
         final List<FXOMInstance> result = new ArrayList<>();
         

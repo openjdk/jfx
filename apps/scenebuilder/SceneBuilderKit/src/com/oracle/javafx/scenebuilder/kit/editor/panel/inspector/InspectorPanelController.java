@@ -34,9 +34,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyFxIdJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifySelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxIdJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifySelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.ModifySelectionToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.AnchorPaneConstraintsEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.BooleanEditor;
@@ -1205,13 +1205,13 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private void setSelectedFXOMInstances(ValuePropertyMetadata propMeta, Object value) {
-        final ModifySelectionJob job = new ModifySelectionJob(propMeta, value, getEditorController());
+        final BatchModifySelectionJob job = new BatchModifySelectionJob(propMeta, value, getEditorController());
 //        System.out.println(job.getDescription());
         pushJob(job);
     }
 
     private void setSelectedFXOMInstanceFxId(FXOMObject fxomObject, String fxId) {
-        final ModifyFxIdJob job = new ModifyFxIdJob(fxomObject, fxId, getEditorController());
+        final BatchModifyFxIdJob job = new BatchModifyFxIdJob(fxomObject, fxId, getEditorController());
         pushJob(job);
     }
 
@@ -1268,7 +1268,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             String instanceFxId = getSelectedInstance().getFxId();
             fxIdEditor.setDisable(false);
             fxIdEditor.setUpdateFromModel(true);
-            fxIdEditor.reset(getSuggestedFxIds(getControllerClass()));
+            fxIdEditor.reset(getSuggestedFxIds(getControllerClass()), getEditorController());
             fxIdEditor.setValue(instanceFxId);
             fxIdEditor.setUpdateFromModel(false);
         }
@@ -1302,9 +1302,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 isIndeterminate = true;
             }
 
-            if (CssInternal.isCssRuled(instance.getSceneGraphObject(), propMeta)) {
+            cssInfo = CssInternal.getCssInfo(instance.getSceneGraphObject(), propMeta);
+            if (cssInfo != null) {
                 isRuledByCss = true;
-                cssInfo = CssInternal.getCssInfo(instance.getSceneGraphObject(), propMeta);
             }
         }
 
@@ -1713,9 +1713,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         } else if (editorClass == FxIdEditor.class) {
             String controllerClass = getControllerClass();
             if (propertyEditor != null) {
-                ((FxIdEditor) propertyEditor).reset(getSuggestedFxIds(controllerClass));
+                ((FxIdEditor) propertyEditor).reset(getSuggestedFxIds(controllerClass), getEditorController());
             } else {
-                propertyEditor = new FxIdEditor(getSuggestedFxIds(controllerClass));
+                propertyEditor = new FxIdEditor(getSuggestedFxIds(controllerClass), getEditorController());
             }
         } else if (editorClass == CursorEditor.class) {
             if (propertyEditor != null) {
@@ -1737,9 +1737,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             }
         } else if (editorClass == FontPopupEditor.class) {
             if (propertyEditor != null) {
-                ((FontPopupEditor) propertyEditor).reset(propMeta, selectedClasses);
+                ((FontPopupEditor) propertyEditor).reset(propMeta, selectedClasses, getEditorController());
             } else {
-                propertyEditor = new FontPopupEditor(propMeta, selectedClasses);
+                propertyEditor = new FontPopupEditor(propMeta, selectedClasses, getEditorController());
             }
         } else if (editorClass == PaintPopupEditor.class) {
             if (propertyEditor != null) {
@@ -1872,26 +1872,24 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private void updateClassNameInSectionTitles() {
-        StringBuilder classesBuilder = new StringBuilder();
-        for (Class<?> clazz : getSelectedClasses()) {
-            if (classesBuilder.length() > 0) {
-                classesBuilder.append(", "); //NOI18N
-            }
-            classesBuilder.append(clazz.getSimpleName());
+        String selClass = ""; //NOI18N
+        if (getSelectedClasses().size() > 1) {
+            selClass = I18N.getString("inspector.sectiontitle.multiple");
+        } else if (getSelectedClasses().size() == 1) {
+            selClass = getSelectedClass().getSimpleName();
         }
-        String classesStr = classesBuilder.toString();
+
         for (TitledPane titledPane : accordion.getPanes()) {
             Node graphic = titledPane.getGraphic();
             assert graphic instanceof Label;
             if (titledPane == allTitledPane) {
                 allTitledPane.setText(null);
-                ((Label) graphic).setText(classesStr);
             } else {
-                if (!classesStr.isEmpty() && !classesStr.startsWith(":")) { //NOI18N
-                    classesStr = ": " + classesStr; //NOI18N
+                if (!selClass.isEmpty() && !selClass.startsWith(" :")) { //NOI18N
+                    selClass = " : " + selClass; //NOI18N
                 }
-                ((Label) graphic).setText(classesStr); //NOI18N
             }
+            ((Label) graphic).setText(selClass);
         }
     }
 
@@ -1913,7 +1911,15 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         if (getEditorController().getFxomDocument() != null) {
             location = getEditorController().getFxomDocument().getLocation();
         }
-        return glossary.queryFxIds(location, controllerClass, getSelectedClass());
+        List<String> fxIds = glossary.queryFxIds(location, controllerClass, getSelectedClass());
+        // Remove the already used FxIds
+        fxIds.removeAll(getFxIdsInUse());
+        return fxIds;
+    }
+
+    private List<String> getFxIdsInUse() {
+        FXOMIndex fxomIndex = new FXOMIndex(getEditorController().getFxomDocument());
+        return new ArrayList<>(fxomIndex.getFxIds().keySet());
     }
 
     private List<String> getSuggestedEventHandlers(String controllerClass) {

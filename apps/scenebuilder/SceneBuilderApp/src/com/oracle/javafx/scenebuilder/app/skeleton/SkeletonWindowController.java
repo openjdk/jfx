@@ -44,7 +44,6 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.Clipboard;
@@ -166,6 +165,8 @@ public class SkeletonWindowController extends AbstractFxmlWindowController {
     }
 
     private void update() {
+        assert editorController.getFxomDocument() != null;
+        
         // No need to eat CPU if the skeleton window isn't opened
         if (getStage().isShowing()) {
             updateTitle();

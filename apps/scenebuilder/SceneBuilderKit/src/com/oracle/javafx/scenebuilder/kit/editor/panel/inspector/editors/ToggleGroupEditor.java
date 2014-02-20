@@ -65,7 +65,7 @@ public class ToggleGroupEditor extends AutoSuggestEditor {
                 if (value != null && !value.isEmpty()) {
 
                     if (!JavaLanguage.isIdentifier(value)) {
-                        System.err.println(I18N.getString("inspector.fxml.invalid.id", value));
+//                        System.err.println(I18N.getString("inspector.fxml.invalid.id", value));
                         handleInvalidValue(value);
                         return;
                     }

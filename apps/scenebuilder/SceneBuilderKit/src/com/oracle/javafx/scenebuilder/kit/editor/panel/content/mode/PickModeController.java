@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode;
 
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.AbstractDriver;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.pring.AbstractPring;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -217,7 +218,34 @@ public class PickModeController extends AbstractModeController {
         
         assert hitItem != null;
         
-        result = new HitNodeChrome(contentPanelController, hitItem, hitPoint);
+        /*
+         * In some cases, we cannot make a chrome for some hitItem
+         * 
+         *  MenuButton          <= OK
+         *      CustomMenuItem  <= KO because MenuItem are not displayable (case #1)
+         *          CheckBox    <= KO because this CheckBox is in a separate scene (Case #2)
+         */
+        
+        final AbstractDriver driver = contentPanelController.lookupDriver(hitItem);
+        if (driver == null) {
+            // Case #1 above
+            result = null;
+        } else {
+            final FXOMObject closestNodeObject = hitItem.getClosestNode();
+            if (closestNodeObject == null) {
+                // Document content is not displayable in content panel
+                result = null;
+            } else {
+                assert closestNodeObject.getSceneGraphObject() instanceof Node;
+                final Node closestNode = (Node)closestNodeObject.getSceneGraphObject();
+                if (closestNode.getScene() == contentPanelController.getPanelRoot().getScene()) {
+                    result = new HitNodeChrome(contentPanelController, hitItem, hitPoint);
+                } else {
+                    // Case #2 above
+                    result = null;
+                }
+            }
+        }
         
         return result;
     }

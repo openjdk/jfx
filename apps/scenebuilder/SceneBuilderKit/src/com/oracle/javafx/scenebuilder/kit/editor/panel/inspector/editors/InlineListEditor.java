@@ -62,7 +62,7 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
 
     @Override
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
-        reset(propMeta, selectedClasses, false);
+        reset(propMeta, selectedClasses, true);
     }
     
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, boolean removeAll) {

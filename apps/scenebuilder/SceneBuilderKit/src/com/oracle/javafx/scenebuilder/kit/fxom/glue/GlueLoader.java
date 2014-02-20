@@ -59,6 +59,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     
     private final GlueDocument document;
     private GlueElement currentElement;
+    private int currentElementDepth = -1;
     private final List<GlueAuxiliary> auxiliaries = new ArrayList<>();
     private final Map<String, String> prefixMappings = new HashMap<>();
 
@@ -78,6 +79,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     
     public void load(InputStream is) throws IOException {
         assert currentElement == null;
+        assert currentElementDepth == -1;
         assert auxiliaries.isEmpty();
         assert prefixMappings.isEmpty();
         
@@ -92,6 +94,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
         }
         
         assert currentElement == null;
+        assert currentElementDepth == -1;
         assert auxiliaries.isEmpty();
         assert prefixMappings.isEmpty();
     }
@@ -107,6 +110,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     @Override
     public void startDocument() throws SAXException {
         assert currentElement == null;
+        assert currentElementDepth == -1;
         assert auxiliaries.isEmpty();
     }
 
@@ -114,6 +118,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     public void endDocument() throws SAXException {
         assert document != null;
         assert currentElement == null;
+        assert currentElementDepth == -1;
         assert auxiliaries.isEmpty();
     }
 
@@ -135,7 +140,8 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
         // - puts prefixMappings content in GlueElement.attributes map
         // - puts this.auxiliaries content in GlueElement.front
         
-        final GlueElement newElement = new GlueElement(document, qName, false /* preset */);
+        currentElementDepth++;
+        final GlueElement newElement = new GlueElement(document, qName, currentElementDepth, false /* preset */);
         final Map<String, String> attributes = newElement.getAttributes();
         for (int i = 0, count = atts.getLength(); i < count; i++) {
             attributes.put(atts.getQName(i), atts.getValue(i));
@@ -151,6 +157,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
         
         if (currentElement == null) {
             // newElement is the root element
+            assert currentElementDepth == 0;
             document.setRootElement(newElement);
         } else {
             newElement.addToParent(currentElement);
@@ -165,6 +172,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     public void endElement(String uri, String localName, String qName) throws SAXException {
         assert currentElement != null;
         assert currentElement.getTagName().equals(qName);
+        assert currentElementDepth >= 0;
         
         if (currentElement.getChildren().isEmpty()) {
             currentElement.getContent().addAll(auxiliaries);
@@ -173,6 +181,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
         }
         
         currentElement = currentElement.getParent();
+        currentElementDepth--;
         auxiliaries.clear();
     }
 
@@ -196,6 +205,7 @@ class GlueLoader implements ContentHandler, ErrorHandler, LexicalHandler {
     @Override
     public void processingInstruction(String target, String data) throws SAXException {
         assert currentElement == null;
+        assert currentElementDepth == -1;
         document.getHeader().add(new GlueInstruction(document, target, data));
     }
 

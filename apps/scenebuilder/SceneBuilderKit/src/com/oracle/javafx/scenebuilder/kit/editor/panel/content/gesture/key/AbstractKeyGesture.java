@@ -89,8 +89,11 @@ public abstract class AbstractKeyGesture extends AbstractGesture {
             public void handle(KeyEvent e) {
                 if (e.getCode() == firstKeyPressedEvent.getCode()) {
                     lastKeyEvent = e;
-                    keyPressed();
-                    e.consume();
+                    try {
+                        keyPressed();
+                    } finally {
+                        e.consume();
+                    }
                 }
             }
         });
@@ -99,9 +102,12 @@ public abstract class AbstractKeyGesture extends AbstractGesture {
             public void handle(KeyEvent e) {
                 if (e.getCode() == firstKeyPressedEvent.getCode()) {
                     lastKeyEvent = e;
-                    keyReleased();
-                    performTermination();
-                    e.consume();
+                    try {
+                        keyReleased();
+                    } finally {
+                        performTermination();
+                        e.consume();
+                    }
                 }
             }
         });
@@ -110,7 +116,13 @@ public abstract class AbstractKeyGesture extends AbstractGesture {
         this.firstKeyPressedEvent = (KeyEvent)e;
         this.lastKeyEvent = this.firstKeyPressedEvent;
         this.observer = observer;
-        keyPressed();
+        
+        try {
+            keyPressed();
+        } catch(RuntimeException x) {
+            performTermination();
+            throw x;
+        }
     }
     
     
@@ -123,11 +135,13 @@ public abstract class AbstractKeyGesture extends AbstractGesture {
         glassLayer.setOnKeyPressed(null);
         glassLayer.setOnKeyReleased(null);
         
-        observer.gestureDidTerminate(this);
-        observer = null;
-        
-        firstKeyPressedEvent = null;
-        lastKeyEvent = null;
+        try {
+            observer.gestureDidTerminate(this);
+        } finally {
+            observer = null;
+            firstKeyPressedEvent = null;
+            lastKeyEvent = null;
+        }
     }
     
 }

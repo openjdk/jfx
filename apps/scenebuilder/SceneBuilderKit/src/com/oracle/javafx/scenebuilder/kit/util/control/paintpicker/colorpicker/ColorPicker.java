@@ -257,6 +257,16 @@ public class ColorPicker extends VBox {
                 setPaintProperty(color);
             }
         });
+
+        final ChangeListener<Boolean> liveUpdateListener = new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+                paintPickerController.setLiveUpdate(newValue);
+            }
+        };
+        picker_region.pressedProperty().addListener(liveUpdateListener);
+        hue_slider.pressedProperty().addListener(liveUpdateListener);
+        alpha_slider.pressedProperty().addListener(liveUpdateListener);
     }
 
     /**

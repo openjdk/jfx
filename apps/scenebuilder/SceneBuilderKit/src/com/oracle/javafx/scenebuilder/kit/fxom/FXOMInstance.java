@@ -63,7 +63,7 @@ public class FXOMInstance extends FXOMObject {
         
         assert declaredClass != null;
         assert glueElement.getTagName().equals("fx:root") 
-                || glueElement.getTagName().equals(declaredClass.getSimpleName())
+                || glueElement.getTagName().equals(PropertyName.makeClassFullName(declaredClass))
                 || glueElement.getTagName().equals(declaredClass.getCanonicalName());
         assert sceneGraphObject != null;
         assert properties != null;
@@ -91,7 +91,7 @@ public class FXOMInstance extends FXOMObject {
     }
     
     public FXOMInstance(FXOMDocument fxomDocument, Class<?> declaredClass) {
-        super(fxomDocument, declaredClass.getSimpleName());
+        super(fxomDocument, PropertyName.makeClassFullName(declaredClass));
         this.declaredClass = declaredClass;
     }
     

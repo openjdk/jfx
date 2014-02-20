@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
+import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import java.util.List;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -43,7 +44,7 @@ import javafx.event.EventHandler;
 public class ControllerClassEditor extends AutoSuggestEditor {
 
     private static final String PROPERTY_NAME = "Controller class";
-    private static final String DEFAULT_VALUE = "";
+    private static final String DEFAULT_VALUE = null;
 
     @SuppressWarnings("LeakingThisInConstructor")
     public ControllerClassEditor(List<String> suggestedClasses) {
@@ -54,7 +55,15 @@ public class ControllerClassEditor extends AutoSuggestEditor {
             @Override
             public void handle(ActionEvent event) {
                 String value = textField.getText();
-                userUpdateValueProperty(value);
+                
+                if (value != null && !value.isEmpty()) {
+                    if (!JavaLanguage.isIdentifier(value)) {
+                        handleInvalidValue(value);
+                        return;
+                    }
+                }
+                
+                userUpdateValueProperty((value == null || value.isEmpty()) ? null : value);
                 textField.selectAll();
             }
         };

@@ -68,7 +68,7 @@ public class StringEditor extends PropertyEditor {
 
     @Override
     public Object getValue() {
-        return textField.getText();
+        return EditorUtils.getPlainString(textField.getText());
     }
 
     @Override

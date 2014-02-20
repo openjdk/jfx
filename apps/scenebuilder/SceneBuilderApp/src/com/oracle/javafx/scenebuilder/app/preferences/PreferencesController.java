@@ -83,7 +83,7 @@ public class PreferencesController {
     static final String SCENE_STYLE_SHEETS = "sceneStyleSheets"; //NOI18N
     static final String I18N_RESOURCE = "I18NResource"; //NOI18N
 
-    private static final PreferencesController singleton = new PreferencesController();
+    private static PreferencesController singleton;
 
     private final Preferences applicationRootPreferences;
     private final Preferences documentsRootPreferences;
@@ -127,7 +127,11 @@ public class PreferencesController {
         }
     }
 
-    public static PreferencesController getSingleton() {
+    public static synchronized PreferencesController getSingleton() {
+        if (singleton == null) {
+            singleton = new PreferencesController();
+            singleton.getRecordGlobal().readFromJavaPreferences();
+        }
         return singleton;
     }
 

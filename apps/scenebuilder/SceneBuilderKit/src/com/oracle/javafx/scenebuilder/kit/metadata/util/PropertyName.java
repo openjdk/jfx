@@ -87,6 +87,22 @@ public class PropertyName implements Comparable<PropertyName> {
         }
     }
     
+    
+    public static String makeClassFullName(Class<?> aClass) {
+        assert aClass != null;
+        
+        final StringBuilder result = new StringBuilder();
+        result.append(aClass.getSimpleName());
+        Class<?> declaringClass = aClass.getDeclaringClass();
+        while (declaringClass != null) {
+            result.insert(0, '.');
+            result.insert(0, declaringClass.getSimpleName());
+            declaringClass = declaringClass.getDeclaringClass();
+        }
+        
+        return result.toString();
+    }
+    
     /*
      * Object
      */
@@ -133,7 +149,7 @@ public class PropertyName implements Comparable<PropertyName> {
         if (residenceClass == null) {
             result = name;
         } else {
-            result = residenceClass.getSimpleName() + "." + name; //NOI18N
+            result = makeClassFullName(residenceClass) + "." + name; //NOI18N
         }
         
         return result;

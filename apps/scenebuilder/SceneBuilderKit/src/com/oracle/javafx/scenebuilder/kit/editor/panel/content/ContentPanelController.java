@@ -926,9 +926,9 @@ public class ContentPanelController extends AbstractFxmlPanelController
     private void setupEventTracingFilter() {
         if (glassLayer != null) {
             if (tracingEvents) {
-                glassLayer.addEventFilter(InputEvent.ANY, eventTracingFiler);
+                glassLayer.addEventFilter(InputEvent.ANY, eventTracingFilter);
             } else {
-                glassLayer.removeEventFilter(InputEvent.ANY, eventTracingFiler);
+                glassLayer.removeEventFilter(InputEvent.ANY, eventTracingFilter);
             }
         }
     }
@@ -949,7 +949,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
         System.out.println(sb.toString());
     }
     
-    private final EventHandler<Event> eventTracingFiler
+    private final EventHandler<Event> eventTracingFilter
             = new EventHandler<Event>() {
         @Override
         public void handle(Event e) {

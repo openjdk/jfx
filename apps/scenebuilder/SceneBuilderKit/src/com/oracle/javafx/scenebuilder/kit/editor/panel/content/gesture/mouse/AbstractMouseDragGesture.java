@@ -36,7 +36,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractG
 import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.input.InputEvent;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 
 /**
@@ -81,26 +80,40 @@ public abstract class AbstractMouseDragGesture extends AbstractGesture {
         eventTarget.setOnDragDetected(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent e) {
-                mouseDragDetected(e);
-                performTermination();
+                try {
+                    mouseDragDetected(e);
+                } finally {
+                    performTermination();
+                }
             }
         });
         eventTarget.setOnMouseReleased(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent e) {
-                mouseReleased(e);
-                performTermination();
+                try {
+                    mouseReleased(e);
+                } finally {
+                    performTermination();
+                }
             }
         });
         eventTarget.setOnMouseExited(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent e) {
-                mouseExited(e);
-                performTermination();
+                try {
+                    mouseExited(e);
+                } finally {
+                    performTermination();
+                }
             }
         });
         
-        mousePressed((MouseEvent) e);
+        try {
+            mousePressed((MouseEvent) e);
+        } catch(RuntimeException x) {
+            performTermination();
+            throw x;
+        }
     }
     
     
@@ -113,9 +126,12 @@ public abstract class AbstractMouseDragGesture extends AbstractGesture {
         eventTarget.setOnMouseReleased(null);
         eventTarget.setOnMouseExited(null);
         
-        observer.gestureDidTerminate(this);
-        observer = null;
-        eventTarget = null;
+        try {
+            observer.gestureDidTerminate(this);
+        } finally {
+            observer = null;
+            eventTarget = null;
+        }
     }
     
 }

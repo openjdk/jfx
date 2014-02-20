@@ -61,6 +61,25 @@
 }
 
 /*******************************************************************************
+ * App SplitPane's                                                             *
+ ******************************************************************************/
+
+.split-pane {
+    -fx-background-color: -sb-dark;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+.split-pane > .split-pane-divider {
+    -fx-background-color: -sb-dark;
+    -fx-padding: 0 0.5 0 0;
+}
+.split-pane:horizontal .split-pane-divider .horizontal-grabber,
+.split-pane:vertical .split-pane-divider .vertical-grabber {
+    -fx-padding: 3;
+    -fx-shape: "";
+}
+
+/*******************************************************************************
  * Common UI Styling - Panel Headers (Background, search box and menu)         *
  ******************************************************************************/
 

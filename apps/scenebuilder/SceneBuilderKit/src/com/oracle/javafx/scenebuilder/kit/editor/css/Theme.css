@@ -41,7 +41,7 @@
     -sb-dark: derive(-sb-base, -25%);
     -sb-content-text: derive(-sb-base, -50%); 
     -sb-content-text-dimmed: derive(-sb-base, -20%);
-    -sb-header-text: derive(-sb-base, -80%);
+    -sb-header-text: derive(-sb-base, -70%);
     -sb-header-text-dimmed: derive(-sb-base, -30%);
     -sb-header-height: 32;
     -sb-grad-hi: derive(-sb-base, 110%);
@@ -70,8 +70,17 @@
  * Common UI Styling - Controls                                                *
  ******************************************************************************/
 
+.context-menu {
+    -fx-background-color: -sb-sharp-edge-lo, white;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 0;
+}
+.custom-menu-item {
+    -fx-padding: 4 8 4 8;
+}
 .custom-menu-item:focused {
-     -fx-background: white;
+    -fx-background: white;
+    -fx-background-color: -fx-background;
 }
 
 /*******************************************************************************
@@ -113,6 +122,9 @@
     -fx-alignment: center-right;
     -fx-effect: dropshadow( two-pass-box, rgba(0, 0, 0, 0.2), 5, 0.0, 0, 1 );
 }
+.accordion > .titled-pane > .title > .text {
+    -fx-fill: -sb-header-text;
+}
 .accordion > .first-titled-pane > .title {
     -fx-background-insets: 0 0 -1 0, 0, 1 0 1 0, 2 0 0 0;
 }
@@ -147,20 +159,6 @@
  * Common UI Styling - Split Panes                                             *
  ******************************************************************************/
 
-.split-pane {
-    -fx-background-color: -sb-dark;
-    -fx-background-insets: 0;
-    -fx-padding: 0;
-}
-.split-pane > .split-pane-divider {
-    -fx-background-color: -sb-dark;
-    -fx-padding: 0 0.5 0 0;
-}
-.split-pane:horizontal .split-pane-divider .horizontal-grabber,
-.split-pane:vertical .split-pane-divider .vertical-grabber {
-    -fx-padding: 3;
-    -fx-shape: "";
-}
 .SBKIT-inspector-panel.split-pane > .split-pane-divider {
     -fx-background-color: transparent;
     -fx-background-insets: -1 0 -3 0;
@@ -185,7 +183,7 @@
 }
 .scroll-bar:horizontal > .decrement-button,
 .scroll-bar:horizontal > .increment-button {
-    -fx-padding: 0.769em 0.077em 0.769em 0.077em;
+    -fx-padding: 0.692em 0.077em 0.692em 0.077em;
 }
 .scroll-bar .increment-arrow, 
 .scroll-bar .decrement-arrow {
@@ -193,7 +191,7 @@
 }
 .scroll-bar:vertical {
     -fx-background-color: -sb-sharp-edge-lo, -sb-panel-background;
-    -fx-background-insets: 1 0 0 0, 1 0 0 1;
+    -fx-background-insets: 0 0 0 0, 0 0 0 1;
 }
 .scroll-bar:horizontal {
     -fx-background-color: -sb-sharp-edge-lo, -sb-panel-background;
@@ -209,6 +207,21 @@
 .scroll-bar:horizontal .thumb {
     -fx-background-insets: 4 3 4 3, 5 4 5 4;
 }
+.scroll-pane .corner,
+.tree-view .virtual-flow .corner {
+    -fx-background-color: -sb-sharp-edge-lo, -sb-panel-background;
+    -fx-background-insets: 0 -1 -1 0, 1 -1 -1 1;
+}
+
+.text-area .scroll-pane .scroll-bar:horizontal {
+    -fx-background-insets: 0 1 1 1, 1 1 1 1;
+}
+.text-area .scroll-pane .scroll-bar:vertical {
+    -fx-background-insets: 1 1 1 0, 1 1 1 1;
+}
+.text-area .scroll-pane .corner {
+    -fx-background-insets: 0 1 1 0, 1 1 1 1;
+}
 
 /*******************************************************************************
  *                                                                             *
@@ -222,65 +235,81 @@
  *                                                                             *
  ******************************************************************************/
 
-.list-view {
+.SBKIT-library-panel .list-view {
     -fx-background-color: transparent;
 }
-
-.list-view .list-cell .text {
+.SBKIT-library-panel .list-view .list-cell .text {
     -fx-fill: -sb-content-text;
 }
-
-.list-view .list-cell {
+.SBKIT-library-panel .list-view .list-cell {
     -fx-background-color: transparent;
     -fx-cell-size: 1.7em;
     -fx-background-insets: 2 0 -2 0;
     -fx-padding: 2 0 0 4;
 }
-
-.list-view .list-cell:filled:hover {
+.SBKIT-library-panel .list-view .list-cell:filled:hover {
     -fx-background-color: null; /* no hover effect on list view */
 }
-
-.list-view:focused .list-cell:filled:selected {
+.SBKIT-library-panel .list-view:focused .list-cell:filled:selected {
     -fx-background-color: -sb-selected-bar-color;
 }
-
-.list-view .list-cell:filled:selected {
+.SBKIT-library-panel .list-view .list-cell:filled:selected {
     /* When the ListView is not focused there is no need to highlight
     the selected item */
     -fx-background-color: null;
 }
-
-.list-view .scroll-bar {    
+.SBKIT-library-panel .list-view .scroll-bar {    
     /* Cursor may dynamically change when working in library / hierarchy.
        Set back the cursor to its default. */
     -fx-cursor: default;
 }
 
 /* ListCell graphic is an HBox */
-.list-cell-graphic {
+.SBKIT-library-panel .list-cell-graphic {
     -fx-alignment: center-left;
     -fx-padding: 0 2 0 2;
     -fx-spacing: 4;
 }
 
-.library-no-results-label {
+.SBKIT-library-panel .library-no-results-label {
     -fx-text-fill: -sb-content-text-dimmed;
     -fx-font-size: 0.875em;
     -fx-padding: 6 0 0 10;
 }
 
-.library-classname-label {
+.SBKIT-library-panel .library-classname-label {
     -fx-text-fill: black;
 }
 
-.library-qualifier-label {
+.SBKIT-library-panel .library-qualifier-label {
     -fx-text-fill: lightslategray;
 }
 
-.library-section-label {
+.SBKIT-library-panel .library-section-label {
     -fx-text-fill: black;
     -fx-font-weight: bold;
+}
+
+/*******************************************************************************
+ * Library Panel - Jar import dialog                                           *
+ ******************************************************************************/
+
+.jar-import-preview-label {
+    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-font-size : 0.875em;
+}
+
+.jar-import-preview {
+    -fx-background-color: azure;
+}
+
+.jar-import-num-of-items-label {
+    -fx-font-size : 0.875em;
+}
+
+.jar-import-class-name-label {
+    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-font-size : 0.875em;
 }
 
 /*******************************************************************************
@@ -623,6 +652,17 @@
     -fx-fill: rgba(0,0,0,0.01);
 }
 
+
+/*******************************************************************************
+ *                                                                             *
+ * Inspector Panel                                                             *
+ *                                                                             *
+ ******************************************************************************/
+
+.SBKIT-inspector-panel .secondary-section-title {
+    -fx-text-fill: -sb-header-text-dimmed;
+}
+
 /*******************************************************************************
  *                                                                             *
  * Property Sheet Panels (Inspector, Controller)                               *
@@ -637,19 +677,13 @@
     -fx-font-size: 0.875em;
 }
 
-.property-sheet .small-label {
-    -fx-font-size: 0.750em; /* 9 */
-    -fx-text-fill: -sb-content-text-dimmed;
-    -fx-padding: 0;
+.property-sheet .label {
+    -fx-text-fill: -sb-content-text;
+    -fx-padding: 4 0 3 0;
 }
 
 .property-sheet .check-box .box {
     -fx-background-radius: 0;
-}
-
-.property-sheet .label {
-    -fx-text-fill: -sb-content-text;
-    -fx-padding: 4 0 3 0;
 }
 
 .property-sheet .hyperlink, .hyperlink:visited {
@@ -698,6 +732,33 @@
     -fx-padding: 0.154em 0.308em 0.154em 0.231em;  /* 2 4 2 3 */
 }
 
+.property-sheet .table-view .column-header .label {
+    -fx-text-fill: -sb-content-text;
+    -fx-font-size: 0.875em;
+    -fx-font-weight: normal;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 4 0 4;
+}
+.property-sheet .table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell {
+    -fx-padding: 4 5 2 5;
+}
+.property-sheet .table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
+.property-sheet .table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell:selected {
+    -fx-background: -sb-selected-bar-color;
+    -fx-table-cell-border-color: -sb-selected-bar-color;
+}
+
+.property-sheet .small-label {
+    -fx-font-size: 0.750em; /* 9 */
+    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-padding: 0;
+}
+
+.inspector-message .text {
+    /* Used for 'No Selection' and 'No Results' messages */
+    -fx-fill: -sb-content-text-dimmed;
+}
+
 .property-sheet .cog-menubutton {
     -fx-background-color: -sb-panel-background;
     -fx-background-radius: 0;
@@ -721,27 +782,6 @@
 .property-sheet .cog-menubutton > .arrow {
     -fx-shape: null;
     -fx-padding: 0;
-}
-
-.inspector-message .text {
-    /* Used for 'No Selection' and 'No Results' messages */
-    -fx-fill: -sb-content-text-dimmed;
-}
-
-.property-sheet .table-view .column-header .label {
-    -fx-text-fill: -sb-content-text;
-    -fx-font-size: 0.875em;
-    -fx-font-weight: normal;
-    -fx-alignment: CENTER_LEFT;
-    -fx-padding: 0 4 0 4;
-}
-.property-sheet .table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell {
-    -fx-padding: 4 5 2 5;
-}
-.property-sheet .table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected,
-.property-sheet .table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell:selected {
-    -fx-background: -sb-selected-bar-color;
-    -fx-table-cell-border-color: -sb-selected-bar-color;
 }
 
 /*******************************************************************************
@@ -893,9 +933,13 @@
  * Property Sheet Panels - Suggestive ListView                                 *
  ******************************************************************************/
 
-.suggested-list {
-    -fx-font-size: 0.875em;
- }
+.property-sheet .auto-suggest-popup {
+    -fx-padding: 0;
+}
+.property-sheet .auto-suggest-popup .custom-menu-item .list-view {
+    -fx-background-color: -sb-sharp-edge-lo, white;
+    -fx-background-insets: 0, 1;
+}
 
 /*******************************************************************************
  *                                                                             *
@@ -1026,17 +1070,25 @@
     -fx-padding: 0 0 0 0;
 }
 .styleable-path .button {
-    -fx-background-color: derive( -fx-base, 50% );
+    -fx-background-color: -sb-sharp-edge-lo, derive(-sb-sharp-edge-hi, 10%);
+    -fx-background-insets: 0, 1;
     -fx-background-radius: 100;
-    -fx-margin: 0 30 0 30;
-    -fx-padding: 1 5 1 6;
-    /*-fx-effect: dropshadow( one-pass-box , derive( -fx-base, -55% ), 3, 0.0 , 0 , 0 );*/
-    -fx-graphic: url("../cssimages/css-styleable-path-button.png");
+    -fx-min-width: 16;
+    -fx-max-width: 16;
+    -fx-min-height: 16;
+    -fx-max-height: 16;
 }
 .styleable-path .button:hover {
-    -fx-background-color: derive( -fx-base, 100% );
+    -fx-background-color: derive(-sb-sharp-edge-lo, -10%), derive(-sb-sharp-edge-hi, 40%);
 }
-
+.styleable-path-button-shape {
+    -fx-shape: "M 0 -3.5 v 7 l 4 -3.5 z";
+    -fx-background-color: -sb-content-text;
+    -fx-min-width: 5;
+    -fx-max-width: 5;
+    -fx-min-height: 6;
+    -fx-max-height: 6;
+}
 .styleable-path-optional-label .text {
     -fx-fill: -sb-header-text-dimmed;
 }

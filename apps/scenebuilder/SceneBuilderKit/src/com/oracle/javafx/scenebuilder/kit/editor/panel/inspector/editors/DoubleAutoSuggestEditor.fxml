@@ -43,11 +43,11 @@
 <children>
     <DoubleField fx:id="doubleField" onKeyReleased="#textFieldKeyReleased" onMouseClicked="#textFieldMouseClicked">
       <contextMenu>
-        <ContextMenu maxHeight="-1.0">
+        <ContextMenu maxHeight="-1.0" styleClass="auto-suggest-popup">
           <items>
             <CustomMenuItem mnemonicParsing="false">
               <content>
-                <ListView fx:id="suggestedLv" maxHeight="-1.0" minHeight="-1.0" onKeyPressed="#suggestedLvKeyPressed" onMousePressed="#suggestedLvMousePressed" prefHeight="82.0" prefWidth="150.0" style="" styleClass="suggested-list" />
+                <ListView fx:id="suggestedLv" maxHeight="-1.0" minHeight="-1.0" onKeyPressed="#suggestedLvKeyPressed" onMousePressed="#suggestedLvMousePressed" prefHeight="92.0" prefWidth="170.0" />
               </content>
             </CustomMenuItem>
           </items>

@@ -31,19 +31,17 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
+<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?import java.lang.*?>
-<?import java.net.*?>
-<?import java.util.*?>
 <?import javafx.collections.*?>
 <?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.paint.*?>
 <?import javafx.scene.shape.*?>
-<?import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.*?>
 <?scenebuilder-preview-i18n-resource ../i18n/SceneBuilderApp.properties?>
 
-<GridPane hgap="6.0" maxWidth="1.7976931348623157E308" vgap="10.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<GridPane hgap="6.0" maxWidth="1.7976931348623157E308" styleClass="theme-presets" vgap="10.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
     <Label text="%prefs.doc.width" GridPane.columnIndex="0" GridPane.rowIndex="0" />
     <DoubleField fx:id="rootContainerWidth" prefWidth="200.0" text="" GridPane.columnIndex="1" GridPane.rowIndex="0" />
@@ -57,7 +55,7 @@
         <Rectangle fx:id="alignmentGuidesGraphic" arcHeight="5.0" arcWidth="5.0" fill="DODGERBLUE" height="10.0" stroke="BLACK" strokeType="INSIDE" width="20.0" />
       </graphic>
       <items>
-        <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" fx:id="alignmentGuidesMenuItem" />
+        <CustomMenuItem fx:id="alignmentGuidesMenuItem" hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" />
       </items>
     </MenuButton>
     <Label text="%prefs.drop.ring" GridPane.columnIndex="0" GridPane.rowIndex="5" />
@@ -66,7 +64,7 @@
         <Rectangle fx:id="parentRingGraphic" arcHeight="5.0" arcWidth="5.0" fill="DODGERBLUE" height="10.0" stroke="BLACK" strokeType="INSIDE" width="20.0" />
       </graphic>
       <items>
-        <CustomMenuItem hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" fx:id="parentRingMenuItem" />
+        <CustomMenuItem fx:id="parentRingMenuItem" hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" />
       </items>
     </MenuButton>
     <Label text="%prefs.hierarchy.displayoption" GridPane.columnIndex="0" GridPane.rowIndex="8" />
@@ -120,7 +118,4 @@
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
   </rowConstraints>
-  <stylesheets>
-    <URL value="@Preferences.css" />
-  </stylesheets>
 </GridPane>

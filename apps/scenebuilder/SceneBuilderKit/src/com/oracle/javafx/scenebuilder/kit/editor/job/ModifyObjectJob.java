@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import java.util.Objects;
@@ -90,12 +91,10 @@ public class ModifyObjectJob extends Job {
 
     @Override
     public String getDescription() {
-        final StringBuilder result = new StringBuilder();
-        result.append("Set ");
-        result.append(propertyMetadata.getName().toString());
-        result.append(" on ");
-        result.append(fxomInstance.getSceneGraphObject().getClass().getSimpleName());
-        return result.toString();
+        final String description = I18N.getString("label.action.edit.set.1",
+                propertyMetadata.getName().toString(),
+                fxomInstance.getSceneGraphObject().getClass().getSimpleName());
+        return description;
     }
     
 }

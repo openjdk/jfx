@@ -38,6 +38,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -121,6 +122,14 @@ public class EffectPicker extends Pane {
 
     public ReadOnlyIntegerProperty revisionProperty() {
         return controller.revisionProperty();
+    }
+    
+    public final ReadOnlyBooleanProperty liveUpdateProperty() {
+        return controller.liveUpdateProperty();
+    }
+
+    public boolean isLiveUpdate() {
+        return controller.isLiveUpdate();
     }
     
     public String getEffectPath() {

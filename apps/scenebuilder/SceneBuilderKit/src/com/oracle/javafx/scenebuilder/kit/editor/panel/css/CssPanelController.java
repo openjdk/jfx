@@ -79,6 +79,7 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -315,6 +316,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
                     refresh();
                     // Switch to pick mode
                     editorController.setPickModeEnabled(true);
+//                    // Select the sub node
+//                            selection = editorController.getSelection();
+//                            selection.select(getFXOMInstance(selection), Point2D.ZERO);
                 }
             }
         };

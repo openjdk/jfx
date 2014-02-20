@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker;
 
 import java.io.IOException;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
@@ -89,6 +90,14 @@ public class PaintPicker extends Pane {
 
     public final Paint getPaintProperty() {
         return controller.getPaintProperty();
+    }
+    
+    public final ReadOnlyBooleanProperty liveUpdateProperty() {
+        return controller.liveUpdateProperty();
+    }
+
+    public boolean isLiveUpdate() {
+        return controller.isLiveUpdate();
     }
     
     public static interface Delegate {
