@@ -308,7 +308,8 @@
               <li><a href="#choicebox">ChoiceBox</a></li>
               <li><a href="#colorpicker">ColorPicker</a></li>
               <li><a href="#combobox">ComboBox</a></li>
-              <li><a href="#control">Control</a></li>
+                <li><a href="#contextmenu">ContextMenu</a></li>
+                <li><a href="#control">Control</a></li>
               <li><a href="#hyperlink">Hyperlink</a></li>
               <li><a href="#indexedcell">IndexedCell</a></li>
               <li><a href="#label">Label</a></li>
@@ -3547,23 +3548,57 @@
         </tr>
       </tbody>
     </table>
+    <h4><a name="contextmenu" id="contextmenu">ContextMenu</a></h4>
+    <p class="styleclass">Style class: context-menu</p>
+    <p>The ContextMenu class has all the properties of <a href="#poupucontrol">PopupControl</a>.</p>
+    The selector for a ContextMenu may be made more specific by using the selector for the control from which the ContextMenu was shown.
+    For example,</p><p class="example">.choice-box > .context-menu { ... }</p>
+    <h4>Substructure</h4>
+    <ul>
+        <li>context-menu &mdash a Region
+            <ul>
+                <li>scroll-arrow &mdash; a StackPane
+                    <ul>menu-up-arrow &mdash; a StackPane</ul>
+                </li>
+                <li>scroll-arrow &mdash; a StackPane
+                    <ul>menu-down-arrow &mdash; a StackPane</ul>
+                </li>
+                <li>* &mdash; a VBox
+                    <ul>
+                        <li>menu-item &mdash; a Region
+                            <ul>
+                                <li>label &mdash; a Label</li>
+                                <li>left-container &mdash; a StackPane (for radio buttons and check boxes)</li>
+                                <li>right-container &mdash; a StackPane (for pull-right menus)
+                                    <ul>
+                                        <li>arrow &mdash; a Region</li>
+                                    </ul>
+                                </li>
+                                <li>graphic-container &mdash; a StackPane (for MenuItem graphic)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ul>
     <h4><a name="control" id="control">Control</a></h4>
     <p>The Control class has all the properties of <a href="#region">Region</a></p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
+        <thead>
         <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
         </tr>
-      </thead>
-      <tbody>
+        </thead>
+        <tbody>
         <tr>
-          <td class="propertyname">-fx-skin</td>
-          <td class="value"><a href="#typestring" class="typelink">&lt;string&gt;</a></td>
-          <td>null</td>
-          <td>The class name of the Control's Skin.</td>
+            <td class="propertyname">-fx-skin</td>
+            <td class="value"><a href="#typestring" class="typelink">&lt;string&gt;</a></td>
+            <td>null</td>
+            <td>The class name of the Control's Skin.</td>
         </tr>
         <tr>
             <td class="propertyname">-fx-focus-traversable</td>
@@ -3573,7 +3608,7 @@
                 of the focusTraversable property for the following controls is false: Accordion, Cell, Label, MenuBar,
                 ProgressBar, ProgressIndicator, ScrollBar, ScrollPane, Separator, SplitPane, ToolBar.</td>
         </tr>
-      </tbody>
+        </tbody>
     </table>
     <h4><a name="hyperlink" id="hyperlink">Hyperlink</a></h4>
     <p class="styleclass">Style class: hyperlink</p>
