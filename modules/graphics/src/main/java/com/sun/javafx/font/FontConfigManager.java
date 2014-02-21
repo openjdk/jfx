@@ -39,6 +39,7 @@ import java.util.Properties;
 class FontConfigManager {
 
     static boolean debugFonts = false;
+    static boolean useFontConfig = true;
     static boolean fontConfigFailed = false;
     static boolean useEmbeddedFontSupport = false;
 
@@ -48,6 +49,8 @@ class FontConfigManager {
                 public Void run() {
                     String dbg = System.getProperty("prism.debugfonts", "");
                     debugFonts = "true".equals(dbg);
+                    String ufc = System.getProperty("prism.useFontConfig", "true");
+                    useFontConfig = "true".equals(ufc);
                     String emb = System.getProperty("prism.embeddedfonts", "");
                     useEmbeddedFontSupport = "true".equals(emb);
                     return null;
@@ -151,8 +154,18 @@ class FontConfigManager {
             fontArr[i].fcFamily = fontArr[i].fcName.substring(0, colonPos);
             fontArr[i].style = i % 4; // depends on array order.
         }
+
+        boolean foundFontConfig = false;
+        if (useFontConfig) {
+            foundFontConfig = getFontConfig(getFCLocaleStr(), fontArr, true);
+        } else {
+            if (debugFonts) {
+                System.err.println("Not using FontConfig");
+            }
+        }
+
         if (useEmbeddedFontSupport ||
-            !getFontConfig(getFCLocaleStr(), fontArr, true))
+            !foundFontConfig)
         {
             EmbeddedFontSupport.initLogicalFonts(fontArr);
         }
@@ -173,10 +186,9 @@ class FontConfigManager {
         }
 
         if (anyFont == null) {
-            if (debugFonts) {
-                System.err.println("Fontconfig returned no fonts at all.");
-            }
             fontConfigFailed = true;
+            System.err.println("Error: JavaFX detected no fonts! " +
+                "Please refer to release notes for proper font configuration");
             return;
         } else if (fontConfigFailed) {
             for (int i = 0; i< fontArr.length; i++) {
@@ -225,10 +237,16 @@ class FontConfigManager {
          HashMap<String,ArrayList<String>> familyToFontListMap,
          Locale locale) {
 
+        boolean pnm = false;
+        if (useFontConfig && !fontConfigFailed) {
+            pnm = populateMapsNative(fontToFileMap, fontToFamilyNameMap,
+                                familyToFontListMap, locale);
+
+        }
+
         if (fontConfigFailed ||
             useEmbeddedFontSupport ||
-            !populateMapsNative(fontToFileMap, fontToFamilyNameMap,
-                                familyToFontListMap, locale)) {
+            !pnm) {
             EmbeddedFontSupport.populateMaps(fontToFileMap,
                                              fontToFamilyNameMap,
                                              familyToFontListMap, locale);
@@ -328,6 +346,7 @@ class FontConfigManager {
 
         private static String fontDirProp = null;
         private static String fontDir;
+        private static boolean fontDirFromJRE = false;
 
         static {
             AccessController.doPrivileged(
@@ -365,8 +384,17 @@ class FontConfigManager {
                                            urlStr.lastIndexOf("\\"));
                         urlStr = urlStr.substring(0, lsi);
                     }
+
+                    if(urlStr.endsWith("lib/ext")) {
+                        // jfxrt.jar lives in lib/ext, and fonts in lib/fonts
+                        urlStr = urlStr.substring(0, urlStr.length()-3);
+                    }
+
                     File fontDirectory = new File(urlStr, "fonts");
                     fontDir = fontDirectory.getPath();
+                    if (fontDirectory.exists()) {
+                        fontDirFromJRE = true;
+                    }
                     if (debugFonts) {
                         System.err.println("Font Dir is " + fontDirectory +
                                            " exists = " +
@@ -387,7 +415,7 @@ class FontConfigManager {
                 case 1 : return "bold";
                 case 2 : return "italic";
                 case 3 : return "bolditalic";
-            default : return "regular";
+                default : return "regular";
             }
         }
 
@@ -401,6 +429,27 @@ class FontConfigManager {
                 }
             );
         }
+
+        // this mapping is used in the embedded world when
+        // fontconfig is not used and we find the jre fonts
+        static String[] jreFontsProperties = {
+            "sans.regular.0.font", "Lucida Sans Regular",
+            "sans.regular.0.file", "LucidaSansRegular.ttf",
+            "sans.bold.0.font", "Lucida Sans Bold",
+            "sans.bold.0.file", "LucidaSansDemiBold.ttf",
+            "monospace.regular.0.font", "Lucida Typewriter Regular",
+            "monospace.regular.0.file", "LucidaTypewriterRegular.ttf",
+            "monospace.bold.0.font", "Lucida Typewriter Bold",
+            "monospace.bold.0.file", "LucidaTypewriterBold.ttf",
+            "serif.regular.0.font", "Lucida Bright",
+            "serif.regular.0.file", "LucidaBrightRegular.ttf",
+            "serif.bold.0.font", "Lucida Bright Demibold",
+            "serif.bold.0.file", "LucidaBrightDemiBold.ttf",
+            "serif.italic.0.font", "Lucida Bright Italic",
+            "serif.italic.0.file", "LucidaBrightItalic.ttf",
+            "serif.bolditalic.0.font", "Lucida Bright Demibold Italic",
+            "serif.bolditalic.0.file", "LucidaBrightDemiItalic.ttf"
+        };
 
         /**
          * Logical Font Support for FX on embedded platforms
@@ -427,10 +476,19 @@ class FontConfigManager {
 
             Properties props = new Properties();
             try {
-                String lFile = fontDir+"/logicalfonts.properties";
-                FileInputStream fis = new FileInputStream(lFile);
-                props.load(fis);
-                fis.close();
+                File f = new File(fontDir,"logicalfonts.properties");
+                if (f.exists()) {
+                    FileInputStream fis = new FileInputStream(f);
+                    props.load(fis);
+                    fis.close();
+                } else if (fontDirFromJRE) {
+                    // Our fontDir is in the JRE (at least relative to our Jar)
+                    // we have no logicalfonts.properties, but we can see
+                    // if we can intuit one.... this is checked next.
+                    for(int i=0; i < jreFontsProperties.length; i += 2) {
+                        props.setProperty(jreFontsProperties[i],jreFontsProperties[i+1]);
+                    }
+                }
             } catch (IOException ioe) {
                 if (debugFonts) {
                     System.err.println(ioe);
@@ -453,6 +511,9 @@ class FontConfigManager {
                     }
                     File ff = new File(fontDir, file);
                     if (!exists(ff)) {
+                        if (debugFonts) {
+                            System.out.println("Failed to find logical font file "+ff);
+                        }
                         continue;
                     }
                     FontConfigFont fcFont = new FontConfigFont();

@@ -33,23 +33,4 @@ import com.sun.glass.ui.monocle.AcceleratedScreen;
 import java.io.IOException;
 
 public class OMAPScreen extends FBDevScreen {
-    private AcceleratedScreen acceleratedScreen = null;
-
-    private long platformGetNativeDisplay() {
-        return 0L;
-    }
-
-    private long platformGetNativeWindow() {
-        return 0L;
-    }
-
-    @Override
-    public AcceleratedScreen getAcceleratedScreen(int[] attributes) {
-        if (acceleratedScreen == null) {
-            acceleratedScreen = new AcceleratedScreen(platformGetNativeDisplay(),
-                                                      platformGetNativeWindow(),
-                                                      attributes);
-        }
-        return acceleratedScreen;
-    }
 }

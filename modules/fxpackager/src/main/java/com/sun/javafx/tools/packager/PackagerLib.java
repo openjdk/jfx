@@ -550,8 +550,11 @@ public class PackagerLib {
 
         if (resource.getFile().isDirectory()) {
             final File baseDir = resource.getBaseDir();
-            for (File file: resource.getFile().listFiles()) {
-                copyFiles(new DeployResource(baseDir, file), outdir);
+            File[] children = resource.getFile().listFiles();
+            if (children != null) {
+                for (File file : children) {
+                    copyFiles(new DeployResource(baseDir, file), outdir);
+                }
             }
         } else {
             final File srcFile = resource.getFile();
@@ -634,9 +637,12 @@ public class PackagerLib {
             PackagerResource pr, JarSignature signature, File outdir, boolean verbose)
                throws NoSuchAlgorithmException, IOException, SignatureException {
         if (pr.getFile().isDirectory()) {
-            for (File innerFile : pr.getFile().listFiles()) {
-                signFile(new PackagerResource(
-                        pr.getBaseDir(), innerFile), signature, outdir, verbose);
+            File[] children = pr.getFile().listFiles();
+            if (children != null) {
+                for (File innerFile : children) {
+                    signFile(new PackagerResource(
+                            pr.getBaseDir(), innerFile), signature, outdir, verbose);
+                }
             }
         } else {
             File jar = pr.getFile();
@@ -1466,8 +1472,11 @@ public class PackagerLib {
         }
 
         if (f.isDirectory()) {
-            for (File innerFile : f.listFiles()) {
-                jar(innerFile, jar, filter, cut);
+            File[] children = f.listFiles();
+            if (children != null) {
+                for (File innerFile : children) {
+                    jar(innerFile, jar, filter, cut);
+                }
             }
         } else if (filter == Filter.ALL
                 || (filter == Filter.CLASSES_ONLY && f.getName().endsWith(".class"))
@@ -1521,8 +1530,11 @@ public class PackagerLib {
     private void createBinaryCss(File f, File outdir, String relPath)
             throws PackagerException {
         if (f.isDirectory()) {
-            for (File innerFile : f.listFiles()) {
-                createBinaryCss(innerFile, outdir, relPath + '/' + innerFile.getName());
+            File[] children = f.listFiles();
+            if (children != null) {
+                for (File innerFile : children) {
+                    createBinaryCss(innerFile, outdir, relPath + '/' + innerFile.getName());
+                }
             }
         } else if (f.getName().endsWith(".css")) {
             String cssFileName = f.getAbsolutePath();

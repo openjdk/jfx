@@ -506,11 +506,14 @@ public class WinMsiBundler  extends AbstractBundler {
         }
 
         //sort to files and dirs
-        for (File f : root.listFiles()) {
-            if (f.isDirectory()) {
-                dirs.add(f);
-            } else {
-                files.add(f);
+        File[] children = root.listFiles();
+        if (children != null) {
+            for (File f : children) {
+                if (f.isDirectory()) {
+                    dirs.add(f);
+                } else {
+                    files.add(f);
+                }
             }
         }
 

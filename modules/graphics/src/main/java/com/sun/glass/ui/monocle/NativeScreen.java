@@ -37,7 +37,6 @@ public interface NativeScreen {
     public int getDPI();
     public long getNativeHandle();
     public void shutdown();
-    public AcceleratedScreen getAcceleratedScreen(int[] attributes);
     public void uploadPixels(Buffer b,
                              int x, int y, int width, int height, float alpha);
 
