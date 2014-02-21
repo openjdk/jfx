@@ -730,7 +730,7 @@
     <p class="grammar"><a href="#typenumber">&lt;number&gt;</a>[ deg | rad |
       grad | turn ]</p>
     <ul>
-      <li><strong>deg</strong>: angle in degrees - all other angle units are
+      <li><strong>deg</strong>: angle in degrees &mdash; all other angle units are
         converted to degrees.</li>
       <li><strong>rad</strong>: angle in radians</li>
       <li><strong>grad</strong>: angle in gradians</li>
@@ -1694,10 +1694,10 @@
       following examples all specify the same color:</p>
     <p class="example"></p>
     <ul style="list-style: none;">
-      <li>.label { -fx-text-fill: rgb(255,0,0) } /* integer range 0 - 255*/</li>
+      <li>.label { -fx-text-fill: rgb(255,0,0) } /* integer range 0 &mdash; 255*/</li>
       <li> .label { -fx-text-fill: rgba(255,0,0,1) /* the same, with explicit
         opacity of 1 */</li>
-      <li> .label { -fx-text-fill: rgb(100%,0%,0%) } /* float range 0.0% -
+      <li> .label { -fx-text-fill: rgb(100%,0%,0%) } /* float range 0.0% &mdash;
         100.0% */</li>
       <li> .label { -fx-text-fill: rgba(100%,0%,0%,1) } /* the same, with
         explicit opacity of 1 */</li>
@@ -3292,7 +3292,7 @@
     <p>The Accordion control has all the properties and pseudo&#8209;classes of <a href="#control">Control</a></p>
     <h4>Substructure</h4>
     <ul>
-      <li>first-titled-pane - the first TitledPane </li>
+      <li>first-titled-pane &mdash; the first TitledPane </li>
     </ul>
     <h4><a name="button" id="button">Button</a></h4>
     <p class="styleclass">Style class: button</p>
@@ -3394,7 +3394,7 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>text - a Labeled</li>
+      <li>text &mdash; a Labeled</li>
     </ul>
     <h4><a name="checkbox" id="checkbox">CheckBox</a></h4>
     <p class="styleclass">Style class: check-box</p>
@@ -3488,7 +3488,7 @@
     <h4>Substructure</h4>
     <ul>
 	  <li>color display node  &mdash; Label</li>
-      <li>arrow-button - StackPane
+      <li>arrow-button &mdash; StackPane
 	    <ul>
 		  <li>arrow &mdash; StackPane</li>
 	    </ul>
@@ -3499,16 +3499,16 @@
     <p>The ComboBox control has all the properties and pseudo&#8209;classes of <a href="#comboboxbase">ComboBoxBase</a></p>
     <h4>Substructure</h4>
     <ul>
-      <li>list-cell - a ListCell instance used to show the selection in the
+      <li>list-cell &mdash; a ListCell instance used to show the selection in the
         button area of a non-editable ComboBox</li>
       <li>text-input &mdash; a TextField instance used to show the selection and
         allow input in the button area of an editable ComboBox</li>
-      <li>combo-box-popup - a PopupControl that is displayed when the button is
+      <li>combo-box-popup &mdash; a PopupControl that is displayed when the button is
         pressed
         <ul>
-          <li>list-view - a ListView
+          <li>list-view &mdash; a ListView
           <ul>
-            <li>list-cell - a ListCell</li>
+            <li>list-cell &mdash; a ListCell</li>
           </ul>
           </li>
         </ul>
@@ -3919,19 +3919,19 @@
 	  <li>page &mdash; StackPane</li>
       <li>pagination-control &mdash; StackPane
         <ul>
-          <li>leftArrowButton - Button
+          <li>leftArrowButton &mdash; Button
 	        <ul>
 		      <li>leftArrow &mdash; StackPane</li>
 	        </ul>
           </li>
-	      <li>rightArrowButton - Button
+	      <li>rightArrowButton &mdash; Button
      	    <ul>
 	    	  <li>rightArrow &mdash; StackPane</li>
 	        </ul>
           </li>
-	      <li>bullet-button - ToggleButton</li>
-	      <li>number-button - ToogleButton</li>
-	      <li>page-information - Label</li>
+	      <li>bullet-button &mdash; ToggleButton</li>
+	      <li>number-button &mdash; ToogleButton</li>
+	      <li>page-information &mdash; Label</li>
 	  </ul>
       </li>
     </ul>
@@ -3977,13 +3977,36 @@
           <td>2.0</td>
           <td>&nbsp;</td>
         </tr>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#control">Control</a></td>
+        </tr>
       </tbody>
     </table>
-    <p>The ProgressBar control has all the properties of and pseudo&#8209;class state
-      of <a href="#progressindicator">ProgressIndicator</a></p>
+    <h4>Pseudo-classes</h4>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Pseudo-class</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">determinate</td>
+            <td>applies if the <strong>indeterminate</strong> variable is false</td>
+        </tr>
+        <tr>
+            <td class="propertyname">indetermindate</td>
+            <td>applies if the <strong>indeterminate</strong> variable is true</td>
+        </tr>
+        <tr>
+            <td colspan="2" class="parents">Also has all pseudo&#8209;classes of <a href="#control">Control</a></td>
+        </tr>
+        </tbody>
+    </table>
     <h4>Substructure</h4>
     <ul>
-      <li>track - StackPane
+      <li>track &mdash; StackPane
       <ul>
         <li>bar &mdash; Region</li>
       </ul>
@@ -4049,9 +4072,9 @@
     <h4>Substructure</h4>
     <ul>
       <li>indicator &mdash; StackPane</li>
-      <li>progress - StackPane</li>
-      <li>percentage - Text</li>
-      <li>tick - StackPane</li>
+      <li>progress &mdash; StackPane</li>
+      <li>percentage &mdash; Text</li>
+      <li>tick &mdash; StackPane</li>
     </ul>
     <h4><a name="radiobutton" id="radiobutton">RadioButton</a></h4>
     <p class="styleclass">Style class: radio-button</p>
@@ -4227,7 +4250,7 @@
     <ul>
       <li>scroll-bar:vertical &mdash; ScrollBar</li>
       <li>scroll-bar:horizontall &mdash; ScrollBar</li>
-      <li>corner - StackPane</li>
+      <li>corner &mdash; StackPane</li>
     </ul>
     <h4><a name="separator" id="separator">Separator</a></h4>
     <p class="styleclass">Style class: separator</p>
@@ -4542,21 +4565,21 @@
     <ul>
       <li>tab-header-area &mdash; StackPane
       <ul>
-        <li>headers-region - StackPane</li>
-        <li>tab-header-background - StackPane</li>
-        <li>control-buttons-tab - StackPane
+        <li>headers-region &mdash; StackPane</li>
+        <li>tab-header-background &mdash; StackPane</li>
+        <li>control-buttons-tab &mdash; StackPane
         <ul>
-          <li>tab-down-button - Pane
+          <li>tab-down-button &mdash; Pane
           <ul>
-            <li>arrow - StackPane</li>
+            <li>arrow &mdash; StackPane</li>
           </ul>
           </li>
         </ul>
         </li>
-        <li>tab - Tab
+        <li>tab &mdash; Tab
         <ul>
-          <li>tab-label - Label</li>
-          <li>tab-close-button - StackPane</li>
+          <li>tab-label &mdash; Label</li>
+          <li>tab-close-button &mdash; StackPane</li>
         </ul>
         </li>
       </ul>
@@ -4605,25 +4628,25 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-        <li>column-resize-line - Region</li>
-        <li>column-overlay - Region</li>
-        <li>placeholder - StackPane</li>
-        <li>column-header-background - StackPane
+        <li>column-resize-line &mdash; Region</li>
+        <li>column-overlay &mdash; Region</li>
+        <li>placeholder &mdash; StackPane</li>
+        <li>column-header-background &mdash; StackPane
         <ul>
             <li>nested-column-header
             <ul>
                 <li>column-header</li>
             </ul>
             </li>
-            <li>filler - Region</li>
-            <li>show-hide-columns-button - StackPane
+            <li>filler &mdash; Region</li>
+            <li>show-hide-columns-button &mdash; StackPane
             <ul>
-                <li>show-hide-column-image - StackPane</li>
+                <li>show-hide-column-image &mdash; StackPane</li>
             </ul>
             </li>
-            <li>column-drag-header - StackPane
+            <li>column-drag-header &mdash; StackPane
             <ul>
-                <li>label - Label</li>
+                <li>label &mdash; Label</li>
             </ul>
             </li>
         </ul>
@@ -4676,30 +4699,30 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>column-resize-line - Region</li>
-      <li>column-overlay - Region</li>
-      <li>placeholder - StackPane</li>
-      <li>column-header-background - StackPane
+      <li>column-resize-line &mdash; Region</li>
+      <li>column-overlay &mdash; Region</li>
+      <li>placeholder &mdash; StackPane</li>
+      <li>column-header-background &mdash; StackPane
       <ul>
         <li>nested-column-header
         <ul>
           <li>column-header</li>
         </ul>
         </li>
-        <li>filler - Region</li>
-        <li>show-hide-columns-button - StackPane
+        <li>filler &mdash; Region</li>
+        <li>show-hide-columns-button &mdash; StackPane
         <ul>
-          <li>show-hide-column-image - StackPane</li>
+          <li>show-hide-column-image &mdash; StackPane</li>
         </ul>
         </li>
-        <li>column-drag-header - StackPane
+        <li>column-drag-header &mdash; StackPane
         <ul>
-          <li>label - Label</li>
+          <li>label &mdash; Label</li>
         </ul>
         </li>
       </ul>
       </li>
-        <li>table-column - TableColumn</li>
+        <li>table-column &mdash; TableColumn</li>
     </ul>
     <h4><a name="textarea" id="textarea">TextArea</a></h4>
     <p class="styleclass">Style class: text-area</p>
@@ -4738,9 +4761,9 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>scroll-pane - ScrollPane
+      <li>scroll-pane &mdash; ScrollPane
       <ul>
-        <li>content - Region</li>
+        <li>content &mdash; Region</li>
       </ul>
       </li>
     </ul>
@@ -4980,9 +5003,9 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>tool-bar-overflow-button - StackPane
+      <li>tool-bar-overflow-button &mdash; StackPane
       <ul>
-        <li>arrow - StackPane</li>
+        <li>arrow &mdash; StackPane</li>
       </ul>
       </li>
     </ul>
@@ -5730,8 +5753,8 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>chart-legend-item - Label</li>
-      <li>chart-legend-item-symbol - Node</li>
+      <li>chart-legend-item &mdash; Label</li>
+      <li>chart-legend-item-symbol &mdash; Node</li>
     </ul>
     <h2><a name="references" id="references">References</a></h2>
     <p>[1] CSS 2.1: <a href="http://www.w3.org/TR/CSS21/" target="_blank">http://www.w3.org/TR/CSS21/</a>
