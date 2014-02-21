@@ -125,6 +125,11 @@
                 color:#090;
                 margin: 0px;
             }
+            span.example {
+                font-family:"Lucida Console", Monaco, monospace;
+                font-size: 14px;
+                color:#090;
+            }
             p.subtitle {
                 font-style: italic;
                 color:#999;
@@ -494,19 +499,6 @@
         inline styles, the style sheets of all its ancestors, and any style sheets
         from the Scene.
     </p>
-    <p>
-        A style sheet URL may be an absolute URL or a relative URL. If a relative
-        URL is given, it is resolved against the base URL of the ClassLoader of
-        the concrete Application class. If, for example, there is a main class <code>com.wicked.cool.ui.Main</code>
-        that extends Application, the relative URL
-        "/com/wicked/cool/resources/styles.css" would resolve correctly,
-        as would "com/wicked/cool/resources/styles.css". The
-        relative URL "../resources/styles.css" would not since the path ".."
-        relative to the root is not a valid path. It is often easier to use the
-        ClassLoader of some class to find the resource. For example, if the
-        "styles.css" file resides in the same package as Main, the following code
-        will give the correct URL: <code>com.wicked.cool.ui.Main.class.getResource("styles.css").toExternalForm()</code>.
-    </p>
     The implementation allows designers to style an application by using style
     sheets to override property values set from code. For example, a call to <code>rectangle.setFill(Color.YELLOW)</code>
     can be overridden by an inline&#8209;style or a style from an author stylesheet. This has implications for
@@ -773,12 +765,69 @@
       distributed evenly between 0% and 100%.</p>
     <h3><a name="typeurl" id="typeurl">&lt;uri&gt;</a></h3>
     <p class="grammar">url ( [\"\']? &lt;address&gt; [\"\']? )</p>
-    <p><span class="grammar">&lt;address&gt;</span> can be an absolute URI, for
-      example:</p>
-    <p class="example">url(http://example.com)<br>
-      url('http://example.com')<br>
-      url("http://example.com")</p>
-    <p>or it can be relative to the location of the CSS file. </p>
+    <p><span class="grammar">&lt;address&gt;</span> is a hierarchical URI of the form [scheme:][//authority][path] <a href="#references">(see [2])</a>.
+        For example:</p>
+    <p class="example">
+        url(http://example.com/images/Duke.png)<br>
+        url(/com/example/javafx/app/images/Duke.png)<br>
+    <p>If the <span class="grammar">&lt;address&gt;</span> does not have a [scheme:] component, the <span class="grammar">&lt;address&gt;</span>
+        is considered to be the [path] component only. Any leading '/' character of the [path] is ignored and the
+        [path] is treated as a relative path. If the style appears in a stylesheet, the path is relative to the base
+        URI of the stylesheet. If the style appears in an inline style, the path is relative to the root of the
+        classpath.
+    </p>
+    <table class="csspropertytable" cellspacing="3" cellpadding="4">
+            <caption>Examples of Resolving URLs in Stylesheets</caption>
+            <tr>
+                <th>Stylesheet URL</th><th>URL in Style</th><th>Resolves to</th>
+            </tr>
+            <tr>
+                <td>file:///some/path/build/classes/com/mycompany/myapp/mystyles.css</td>
+                <td>url(images/Duke.png)</td>
+                <td>file:///some/path/build/classes/com/mycompany/myapp/images/Duke.png</td>
+            </tr>
+            <tr>
+                <td>file:///some/path/build/classes/com/mycompany/myapp/mystyles.css</td>
+                <td>url(../images/Duke.png)</td>
+                <td>file:///some/path/build/classes/com/mycompany/images/Duke.png</td>
+            </tr>
+        <tr>
+            <td>jar:file:/some/path/build/myapp.jar!/com/mycompany/myapp/mystyles.css</td>
+            <td>url(images/Duke.png)</td>
+            <td>jar:file:/some/path/build/myapp.jar!/com/mycompany/myapp/images/Duke.png</td>
+        </tr>
+        </table>
+    <p></p>
+    <table class="csspropertytable" cellspacing="3" cellpadding="4">
+        <caption>Examples of Resolving URLs in Inline Styles</caption>
+        <tr>
+            <th>Classpath</th><th>URL in Style</th><th>Resolved URL</th>
+        </tr>
+        <tr>
+            <td>file:///some/path/build/classes</td>
+            <td>url(/com/mycompany/resources/images/Duke.png)</td>
+            <td>file:///some/path/build/classes/com/mycompany/resources/images/Duke.png</td>
+        </tr>
+        <tr>
+            <td>file:///some/path/build/myapp.jar</td>
+            <td>url(/com/mycompany/resources/images/Duke.png)</td>
+            <td>jar:file:/some/path/build/myapp.jar!/com/mycompany/resources/images/Duke.png</td>
+        </tr>
+    </table>
+    <p>Note that for inline styles, leading dot-segments (e.g. '..' or '.') do resolve since the path is always
+    anchored at the root of the classpath.</p>
+    <p>This snippet of code creates a scene filled with the "paste" image from HTMLEditor which is found in jfxrt.jar.</p>
+    <textarea rows="8" cols="132">
+
+    @Override public void start(Stage stage) {
+        StackPane root = new StackPane();
+        root.setStyle("-fx-background-image: url(/com/sun/javafx/scene/control/skin/modena/HTMLEditor-Paste.png);");
+        Scene scene = new Scene(root, 300, 250);
+        stage.setScene(scene);
+        stage.show();
+    }
+    </textarea>
+    <p>The same style would work equally as well from a stylesheet.</p>
     <h3><a name="typeeffect" id="typeeffect">&lt;effect&gt;</a></h3>
     <p>JavaFX CSS currently supports the DropShadow and InnerShadow effects from
       the JavaFX platform. See the class documentation in javafx.scene.effect
@@ -2867,7 +2916,7 @@
         </tr>
       </tbody>
     </table>
-    
+
     <table summary="property table" class="package" width="100%">
       <tbody>
         <tr>
@@ -2877,7 +2926,7 @@
     </table>
     <h4><a name="mediaview" id="mediaview">MediaView</a></h4>
 <p class="styleclass">Style class: media-view</p>
-    
+
     <table summary="property table" class="package" width="100%">
       <tbody>
         <tr>

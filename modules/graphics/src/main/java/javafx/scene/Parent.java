@@ -1156,9 +1156,10 @@ public abstract class Parent extends Node {
 
     /**
      * Gets an observable list of string URLs linking to the stylesheets to use
-     * with this Parent's contents. For additional information about using CSS
+     * with this Parent's contents. See {@link Scene#getStylesheets()} for details.
+     * <p>For additional information about using CSS
      * with the scene graph, see the <a href="doc-files/cssref.html">CSS Reference
-     * Guide</a>.
+     * Guide</a>.</p>
      *
      * @return the list of stylesheets to use with this Parent
      * @since JavaFX 2.1
