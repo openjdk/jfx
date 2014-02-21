@@ -309,10 +309,18 @@ ext.IS_COMPILE_MEDIA = Boolean.parseBoolean(COMPILE_MEDIA)
 defineProperty("COMPILE_PANGO", "${IS_LINUX}")
 ext.IS_COMPILE_PANGO = Boolean.parseBoolean(COMPILE_PANGO)
 
+// COMPILE_HARFBUZZ specifies whether to use Harfbuzz.
+defineProperty("COMPILE_HARFBUZZ", "false")
+ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
+
 // COMPILE_PARFAIT specifies whether to build parfait
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
 
+// RETAIN_PACKAGER_TESTS specifies whether the tests in fxpackager should
+// keep generated files instead of attempting to automatically delete them
+defineProperty("RETAIN_PACKAGER_TESTS", "false")
+ext.IS_RETAIN_PACKAGER_TESTS = Boolean.parseBoolean(RETAIN_PACKAGER_TESTS)
 
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
@@ -337,6 +345,10 @@ ext.IS_FULL_TEST = Boolean.parseBoolean(FULL_TEST);
 // Specifies whether to run robot-based visual tests (only used when FULL_TEST is also enabled)
 defineProperty("USE_ROBOT", "true")
 ext.IS_USE_ROBOT = Boolean.parseBoolean(USE_ROBOT);
+
+// Specified whether to run tests in headless mode
+defineProperty("HEADLESS_TEST", "false")
+ext.IS_HEADLESS_TEST = Boolean.parseBoolean(HEADLESS_TEST);
 
 // Specifies whether to run system tests that depend on AWT (only used when FULL_TEST is also enabled)
 defineProperty("AWT_TEST", "true")
@@ -588,6 +600,14 @@ compileTargets { t ->
     if (project.ext[t.upper].compileSWT) COMPILE_SWT = true
     if (project.ext[t.upper].compileFXPackager) COMPILE_FXPACKAGER = true
     if (project.ext[t.upper].compileDesignTime) COMPILE_DESIGN_TIME = true
+
+    if (rootProject.defaultHostTarget.equals(t.name)) { 
+        // use a simple common default for the "host" build
+        project.ext[t.upper].sdkDirName="sdk"
+    } else {
+        // and a more complex one for cross builds
+        project.ext[t.upper].sdkDirName="${t.name}-sdk"
+    }
 }
 
 /******************************************************************************
@@ -793,6 +813,7 @@ void addNative(Project project, String name, List<String> includeTargets) {
             }
             output = headerDir
             include(properties.javahInclude)
+            cleanTask.delete headerDir
         }
 
         def variants = properties.containsKey("variants") ? properties.variants : [""];
@@ -1018,7 +1039,7 @@ allprojects {
     }
 
     // Compile and run tests against the jfxrt.jar in the built sdk of the host machine
-    def sdkDir = "${rootProject.buildDir}/${defaultHostTarget}-sdk"
+    def sdkDir = "${rootProject.buildDir}/sdk"
     def jfxrtJar = "$sdkDir/rt/lib/ext/jfxrt.jar"
 
     // At the moment the ASM library shipped with Gradle that is used to
@@ -1038,6 +1059,11 @@ allprojects {
             addJCov(project, test)
         }
         classpath = files("$jfxrtJar") + classpath
+        if (IS_HEADLESS_TEST) {
+            systemProperty 'glass.platform', 'Monocle'
+            systemProperty 'monocle.platform', 'Headless'
+            systemProperty 'prism.order', 'sw'
+        }
     }
 
     compileTestJava {
@@ -1103,7 +1129,11 @@ project(":base") {
 
     // Make sure to include $buildDir/generated-src/version-info that we previously created.
     // We DO NOT want to include src/main/version-info
-    sourceSets.main.java.srcDirs = ["src/main/java", "$buildDir/generated-src/version-info"]
+    if (System.getProperty("jfx.build.jdk.defenders", "true").equals("true")) { 
+        sourceSets.main.java.srcDirs = ["src/main/java", "src/main/java8", "$buildDir/generated-src/version-info"] 
+    } else { 
+        sourceSets.main.java.srcDirs = ["src/main/java", "src/main/java7", "$buildDir/generated-src/version-info"] 
+    } 
     compileJava.dependsOn processVersionInfo
 }
 
@@ -1593,8 +1623,6 @@ project(":fxpackager") {
         eachFile { FileCopyDetails details ->
             if (details.path.startsWith("com/javafx/main")) {
                 details.path = "resources/classes/$details.path"
-            } else if (details.path.startsWith("web-files")) {
-                details.path = "resources/$details.path"
             }
         }
     }
@@ -1764,6 +1792,27 @@ project(":fxpackager") {
                 includeEmptyDirs = false
             }
         }
+    }
+
+    task packagerFakeJar(type: Jar) {
+        dependsOn compileTestJava
+        from compileTestJava.destinationDir
+        include "hello/**"
+
+        destinationDir project.file("build/tmp/tests/appResources")
+        archiveName "mainApp.jar"
+        
+        manifest {
+            attributes(
+                    "Main-Class": "hello.TestPackager",
+                    "Custom-Attribute": " Is it stripped?"
+            )
+        }
+    }
+    
+    test {
+        dependsOn packagerFakeJar
+        systemProperty "RETAIN_PACKAGER_TESTS", RETAIN_PACKAGER_TESTS
     }
 }
 
@@ -2443,21 +2492,22 @@ task all() {
 
 compileTargets { t ->
     def targetProperties = project.ext[t.upper]
+    def sdkDirName = targetProperties.sdkDirName
     def library = targetProperties.library
     // The jfxrt task is responsible for creating the jfxrt.jar. A developer may
     // have multiple SDK's on their system at any one time, depending on which
     // cross compiles they have done. For example, I might have:
-    //      build/mac-sdk/rt/lib/ext/jfxrt.jar
     //      build/ios-sdk/rt/lib/ext/jfxrt.jar
-    //      build/win-sdk/rt/lib/ext/jfxrt.jar
     //      build/armhf-sdk/rt/lib/ext/jfxrt.jar
-    //
-    // and so forth. This arrangement allows for multiple independent SDKs to
+    // and so forth. The default host build will always install into 'sdk' 
+    // allowing for uses where a known sdk path is needed (like IDEs)
+    //      build/sdk/rt/lib/ext/jfxrt.jar
+    // This arrangement allows for multiple independent SDKs to
     // exist on a developer's system.
     def jfxrtTask = task("jfxrt$t.capital", type: Jar) {
         group = "Basic"
         description = "Creates the jfxrt.jar for the $t.name target"
-        archiveName = "build/${t.name}-sdk/rt/lib/ext/jfxrt.jar";
+        archiveName = "build/${sdkDirName}/rt/lib/ext/jfxrt.jar";
         includeEmptyDirs = false
         from("modules/base/build/classes/main",
              "modules/base/build/resources/main",
@@ -2518,7 +2568,7 @@ compileTargets { t ->
         enabled = COMPILE_SWT
         group = "Basic"
         description = "Creates the jfxswt.jar for the $t.name target"
-        archiveName = "build/${t.name}-sdk/rt/lib/jfxswt.jar";
+        archiveName = "build/${sdkDirName}/rt/lib/jfxswt.jar";
         includeEmptyDirs = false
         from("modules/swt/build/classes/main");
         from("modules/builders/build/classes/main");
@@ -2540,7 +2590,7 @@ compileTargets { t ->
     def jmxTask = task ("jmx${t.capital}", type: Jar) {
         group = "Basic"
         description = "Creates the javafx-mx.jar"
-        archiveName = "build/${t.name}-sdk/lib/javafx-mx.jar";
+        archiveName = "build/${sdkDirName}/lib/javafx-mx.jar";
         includeEmptyDirs = false
         from "modules/jmx/build/classes/main"
         from "modules/jmx/build/resources/main"
@@ -2600,11 +2650,11 @@ compileTargets { t ->
                 }
                 
                 def libDest = targetProperties.libDest
-                into ("build/${t.name}-sdk/rt/$libDest")
+                into ("build/${sdkDirName}/rt/$libDest")
             }
 
             // Create the javafx.properties file
-            final File javafxProperties = file("build/${t.name}-sdk/rt/lib/javafx.properties")
+            final File javafxProperties = file("build/${sdkDirName}/rt/lib/javafx.properties")
             javafxProperties.delete()
             javafxProperties << "javafx.runtime.version=$RAW_VERSION";
             // Include any properties that have been defined (most likely in
@@ -2616,7 +2666,7 @@ compileTargets { t ->
 
             // Embedded builds define this file as well
             if (targetProperties.containsKey("javafxPlatformProperties")) {
-                final File javafxPlatformProperties = file("build/${t.name}-sdk/rt/lib/javafx.platform.properties")
+                final File javafxPlatformProperties = file("build/${sdkDirName}/rt/lib/javafx.platform.properties")
                 javafxPlatformProperties.delete()
                 javafxPlatformProperties << targetProperties.javafxPlatformProperties
             }
@@ -2627,7 +2677,7 @@ compileTargets { t ->
             if (IS_BUILD_JAVADOC) {
                 copy {
                     from "build/javadoc"
-                    into "build/${t.name}-sdk/docs/api"
+                    into "build/${sdkDirName}/docs/api"
                 }
             }
 
@@ -2635,27 +2685,27 @@ compileTargets { t ->
             if (IS_BUILD_SRC_ZIP) {
                 copy {
                     from "build/javafx-src.zip"
-                    into "build/${t.name}-sdk"
+                    into "build/${sdkDirName}"
                 }
             }
 
             // Copy over the fxpackager and rename as ant-javafx.jar
             copy {
                 from "modules/fxpackager/build/libs"
-                into "build/${t.name}-sdk/lib"
+                into "build/${sdkDirName}/lib"
             }
 
             // Copy over the FXPackager man files
             copy {
                 from "modules/fxpackager/build/man"
-                into "build/${t.name}-sdk/man"
+                into "build/${sdkDirName}/man"
             }
 
             // Copy over the javafxpackager executable
             if (t.name == "win" || t.name == "linux" || t.name == "mac") {
                 copy {
                     from "modules/fxpackager/build/javafxpackager"
-                    into "build/${t.name}-sdk/bin"
+                    into "build/${sdkDirName}/bin"
                 }
             }
         }
@@ -2670,7 +2720,7 @@ compileTargets { t ->
     if (generateSymbols) {
         def exportedSymbolsTask = project.task("exportedSymbols${t.capital}", type: ExportedSymbolsTask, dependsOn: sdkTask, group: "Build") {
             description = "Generates exported symbols file for iOS build (from .a libraries)"
-            def libDirName = "build/${t.name}-sdk/rt/$targetProperties.libDest"
+            def libDirName = "build/${sdkDirName}/rt/$targetProperties.libDest"
             libDir = file("$libDirName")
             outputFile = file("$libDirName/exported.symbols")
             excludes = targetProperties.generateSymbolsExcludes
@@ -2720,7 +2770,8 @@ project(":apps") {
         // into our configuration.
 
         // override the apps build.xml with an explicit pointer to our jar.
-        def jfxrtJar = "${rootProject.buildDir}/${t.name}-sdk/rt/lib/ext/jfxrt.jar"
+        def sdkDirName = rootProject.ext[t.upper].sdkDirName
+        def jfxrtJar = "${rootProject.buildDir}/${sdkDirName}/rt/lib/ext/jfxrt.jar"
 
         def appsJar = project.task("appsJar${t.capital}") {
             doLast() {

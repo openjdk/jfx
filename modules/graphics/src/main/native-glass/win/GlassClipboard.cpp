@@ -1618,7 +1618,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinDnDClipboard_push
         OLE_CATCH
         env->CallVoidMethod(obj, midActionPerformed,
             getACTION(SUCCEEDED(OLE_HR) ? performedDropEffect : DROPEFFECT_NONE));
-        OLE_HRT(checkJavaException(env));
+        CheckAndClearException(env);
         GlassDropSource::SetDragButton(0);
         STRACE(_T("}DoDragDrop effect:%08x result:%08x"), performedDropEffect, OLE_HR);
     }

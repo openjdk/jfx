@@ -86,7 +86,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.setId("virtual-flow");
         flow.setPannable(IS_PANNABLE);
         flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);
-        flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         flow.setCreateCell(new Callback<VirtualFlow, ListCell<T>>() {
             @Override public ListCell<T> call(VirtualFlow flow) {
                 return ListViewSkin.this.createCell();
@@ -130,11 +129,11 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         getBehavior().setOnMoveToLastCell(new Runnable() {
             @Override public void run() { onMoveToLastCell(); }
         });
-        getBehavior().setOnScrollPageDown(new Callback<Integer, Integer>() {
-            @Override public Integer call(Integer anchor) { return onScrollPageDown(anchor); }
+        getBehavior().setOnScrollPageDown(new Callback<Boolean, Integer>() {
+            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageDown(isFocusDriven); }
         });
-        getBehavior().setOnScrollPageUp(new Callback<Integer, Integer>() {
-            @Override public Integer call(Integer anchor) { return onScrollPageUp(anchor); }
+        getBehavior().setOnScrollPageUp(new Callback<Boolean, Integer>() {
+            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageUp(isFocusDriven); }
         });
         getBehavior().setOnSelectPreviousRow(new Runnable() {
             @Override public void run() { onSelectPreviousCell(); }
@@ -148,7 +147,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         registerChangeListener(listView.orientationProperty(), "ORIENTATION");
         registerChangeListener(listView.cellFactoryProperty(), "CELL_FACTORY");
         registerChangeListener(listView.parentProperty(), "PARENT");
-        registerChangeListener(listView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(listView.placeholderProperty(), "PLACEHOLDER");
         registerChangeListener(listView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
     }
@@ -165,8 +163,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             if (getSkinnable().getParent() != null && getSkinnable().isVisible()) {
                 getSkinnable().requestLayout();
             }
-        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
-            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         } else if ("PLACEHOLDER".equals(p)) {
             updatePlaceholderRegionVisibility();
         } else if ("FIXED_CELL_SIZE".equals(p)) {
@@ -416,7 +412,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
      * Function used to scroll the container down by one 'page', although
      * if this is a horizontal container, then the scrolling will be to the right.
      */
-    private int onScrollPageDown(int anchor) {
+    private int onScrollPageDown(boolean isFocusDriven) {
         ListCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
 
@@ -425,13 +421,28 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         if (sm == null || fm == null) return -1;
 
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
-        if (sm.isSelected(lastVisibleCellIndex) || fm.isFocused(lastVisibleCellIndex) || lastVisibleCellIndex == anchor) {
-            // if the last visible cell is selected, we want to shift that cell up
-            // to be the top-most cell, or at least as far to the top as we can go.
-            flow.showAsFirst(lastVisibleCell);
 
-            ListCell<T> newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
-            lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
+//        boolean isSelected = sm.isSelected(lastVisibleCellIndex) || fm.isFocused(lastVisibleCellIndex) || lastVisibleCellIndex == anchor;
+        // isSelected represents focus OR selection
+        boolean isSelected = false;
+        if (isFocusDriven) {
+            isSelected = lastVisibleCell.isFocused() || fm.isFocused(lastVisibleCellIndex);
+        } else {
+            isSelected = lastVisibleCell.isSelected() || sm.isSelected(lastVisibleCellIndex);
+        }
+
+        if (isSelected) {
+            boolean isLeadIndex = (isFocusDriven && fm.getFocusedIndex() == lastVisibleCellIndex)
+                               || (! isFocusDriven && sm.getSelectedIndex() == lastVisibleCellIndex);
+
+            if (isLeadIndex) {
+                // if the last visible cell is selected, we want to shift that cell up
+                // to be the top-most cell, or at least as far to the top as we can go.
+                flow.showAsFirst(lastVisibleCell);
+
+                ListCell<T> newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+                lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
+            }
         } else {
             // if the selection is not on the 'bottom' most cell, we firstly move
             // the selection down to that, without scrolling the contents, so
@@ -447,7 +458,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
      * Function used to scroll the container up by one 'page', although
      * if this is a horizontal container, then the scrolling will be to the left.
      */
-    private int onScrollPageUp(int anchor) {
+    private int onScrollPageUp(boolean isFocusDriven) {
         ListCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
 
@@ -456,13 +467,27 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         if (sm == null || fm == null) return -1;
 
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
-        if (sm.isSelected(firstVisibleCellIndex) || fm.isFocused(firstVisibleCellIndex) || firstVisibleCellIndex == anchor) {
-            // if the first visible cell is selected, we want to shift that cell down
-            // to be the bottom-most cell, or at least as far to the bottom as we can go.
-            flow.showAsLast(firstVisibleCell);
 
-            ListCell<T> newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
-            firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
+        // isSelected represents focus OR selection
+        boolean isSelected = false;
+        if (isFocusDriven) {
+            isSelected = firstVisibleCell.isFocused() || fm.isFocused(firstVisibleCellIndex);
+        } else {
+            isSelected = firstVisibleCell.isSelected() || sm.isSelected(firstVisibleCellIndex);
+        }
+
+        if (isSelected) {
+            boolean isLeadIndex = (isFocusDriven && fm.getFocusedIndex() == firstVisibleCellIndex)
+                               || (! isFocusDriven && sm.getSelectedIndex() == firstVisibleCellIndex);
+
+            if (isLeadIndex) {
+                // if the first visible cell is selected, we want to shift that cell down
+                // to be the bottom-most cell, or at least as far to the bottom as we can go.
+                flow.showAsLast(firstVisibleCell);
+
+                ListCell<T> newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+                firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
+            }
         } else {
             // if the selection is not on the 'top' most cell, we firstly move
             // the selection up to that, without scrolling the contents, so

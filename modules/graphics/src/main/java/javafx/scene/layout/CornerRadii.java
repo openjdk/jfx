@@ -35,7 +35,6 @@ import javafx.beans.NamedArg;
  * to the horizontal and vertical components of 4 quarter ellipses, which
  * in turn define the curvature of the corners of the BorderStroke.
  *
- * TODO insert picture
  * @since JavaFX 8.0
  */
 public class CornerRadii {

@@ -68,6 +68,11 @@
 
 #AWT_TEST = false
 
+# Specifies whether or not the results of the packager tests should be
+# retained.  If not they will be automatically deleted.
+
+#RETAIN_PACKAGER_TESTS = false
+
 # Specify the COMPILE_TARGETS when performing cross compiles. A Cross-Compile is
 # when you build for a platform other than the one you are building on. For example,
 # to build for Apple iOS, you would specify ios as one of the COMPILE_TARGETS.

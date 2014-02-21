@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,9 +89,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     private void positionAndShowPopup() {
         final PopupControl _popup = getPopup();
         final ComboBoxBase<T> comboBoxBase = getSkinnable();
-        if (_popup.getSkin() == null) {
-            comboBoxBase.getScene().getRoot().impl_processCSS(true);
-        }
         
         getPopupContent().autosize();
         Point2D p = getPrefPopupPosition();
@@ -112,7 +109,6 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     @Override public Node getNode() { return getPopupContent(); }
                     @Override public void dispose() { }
                 });
-                getScene().getRoot().impl_processCSS(true);
             }
         };
         popup.getStyleClass().add(COMBO_BOX_STYLE_CLASS);

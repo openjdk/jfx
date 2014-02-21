@@ -244,19 +244,21 @@ public final class QuantumToolkit extends Toolkit {
         renderer = QuantumRenderer.getInstance();
         collector = PaintCollector.createInstance(this);
         pipeline = GraphicsPipeline.getPipeline();
-        if (PrismSettings.shutdownHook) {
-            shutdownHook = new Thread("Glass/Prism Shutdown Hook") {
-                @Override public void run() {
-                    dispose();
-                }
-            };
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override public Void run() {
-                    Runtime.getRuntime().addShutdownHook(shutdownHook);
-                    return null;
-                }
-            });
-        }
+
+        /* shutdown the pipeline on System.exit, ^c
+         * needed with X11 and Windows, see RT-32501
+         */
+        shutdownHook = new Thread("Glass/Prism Shutdown Hook") {
+            @Override public void run() {
+                dispose();
+            }
+        };
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override public Void run() {
+                Runtime.getRuntime().addShutdownHook(shutdownHook);
+                return null;
+            }
+        });
         return true;
     }
 
@@ -679,7 +681,6 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public void exit() {
             notifyShutdownHooks();
-            pulseTimer.stop();
 
             ViewPainter.renderLock.lock();
             try {
@@ -698,14 +699,13 @@ public final class QuantumToolkit extends Toolkit {
 
     public void dispose() {
         if (toolkitRunning.compareAndSet(true, false)) {
+            pulseTimer.stop();
             renderer.stopRenderer();
 
-            if (PrismSettings.shutdownHook) {
-                try {
-                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
-                } catch (IllegalStateException ignore) {
-                    // throw when shutdown hook already removed
-                }
+            try {
+                Runtime.getRuntime().removeShutdownHook(shutdownHook);
+            } catch (IllegalStateException ignore) {
+                // throw when shutdown hook already removed
             }
         }
     }

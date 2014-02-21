@@ -95,6 +95,8 @@ public class MediaView extends Node {
      */
     private static final String VIDEO_FRAME_RATE_PROPERTY_NAME = "jfxmedia.decodedVideoFPS";
 
+    private static final String DEFAULT_STYLE_CLASS = "media-view";
+
     /**
      * Inner class used to convert a <code>MediaPlayer</code> error into a
      * <code>Bean</code> event.
@@ -291,6 +293,7 @@ public class MediaView extends Node {
      * {@link MediaPlayer}.
      */
     public MediaView() {
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
         setSmooth(Toolkit.getToolkit().getDefaultImageSmooth());
         decodedFrameRateListener = createVideoFrameRateListener();
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -268,7 +268,7 @@ public class Reflection extends CoreEffect {
         Effect di = getDefaultedInput(0, defaultInput);
         DirtyRegionContainer drc = di.getDirtyRegions(defaultInput, regionPool);
 
-        BaseBounds contentBounds = di.getBounds();
+        BaseBounds contentBounds = di.getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput);
         float cbMaxY = contentBounds.getMaxY();
         float reflectedMaxYBase = (2 * cbMaxY) + getTopOffset();
         float reflecteCbMaxY = cbMaxY + getTopOffset() + (fraction * contentBounds.getHeight());

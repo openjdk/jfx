@@ -5,6 +5,8 @@
     <content url="file://$MODULE_DIR$/modules/fxpackager">
       <sourceFolder url="file://$MODULE_DIR$/modules/fxpackager/src/main/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/fxpackager/src/main/resources" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/fxpackager/src/test/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/fxpackager/src/test/resources" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/modules/fxpackager/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />

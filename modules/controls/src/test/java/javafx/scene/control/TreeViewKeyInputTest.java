@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2021,5 +2021,224 @@ public class TreeViewKeyInputTest {
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(2, sm.getSelectedIndex());
         assertTrue(isSelected(1, 2));
+    }
+
+    @Test public void test_rt34407_down_down_up() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        treeView.setPrefHeight(130); // roughly room for four rows
+
+        new StageLoader(treeView);
+        final FocusModel fm = treeView.getFocusModel();
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0);
+        fm.focus(0);
+        assertEquals(0, getAnchor());
+        assertTrue(fm.isFocused(0));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+
+        // we expect the final Page-up to return us back to this selected index and with the same number of selected indices
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        final int leadSelectedIndex = sm.getSelectedIndex();
+        final int selectedIndicesCount = sm.getSelectedIndices().size();
+        assertEquals(6, leadSelectedIndex);
+        assertEquals(6, fm.getFocusedIndex());
+        assertEquals(7, selectedIndicesCount);
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex * 2, sm.getSelectedIndex());
+        assertEquals(leadSelectedIndex * 2, fm.getFocusedIndex());
+        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex, sm.getSelectedIndex());
+        assertEquals(leadSelectedIndex, fm.getFocusedIndex());
+        assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt34407_up_up_down() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        treeView.setPrefHeight(120); // roughly room for four rows
+
+        new StageLoader(treeView);
+        final FocusModel fm = treeView.getFocusModel();
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(99);
+        fm.focus(99);
+        treeView.scrollTo(99);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(99, getAnchor());
+        assertTrue(fm.isFocused(99));
+        assertTrue(sm.isSelected(99));
+        assertFalse(sm.isSelected(98));
+
+        // we expect the final Page-down to return us back to this selected index and with the same number of selected indices
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        final int leadSelectedIndex = sm.getSelectedIndex();
+        final int selectedIndicesCount = sm.getSelectedIndices().size();
+        final int diff = 4;//99 - leadSelectedIndex;
+        assertEquals(99 - diff, leadSelectedIndex);
+        assertEquals(99 - diff, fm.getFocusedIndex());
+        assertEquals(5, selectedIndicesCount);
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        assertEquals(99 - diff * 2 - 1, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount * 2, sm.getSelectedIndices().size());
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt34768() {
+        treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        TreeTableColumn<String, String> firstNameCol = new TreeTableColumn<>("First Name");
+        treeView.setRoot(null);
+
+        // no need for an assert here - we're testing for an AIOOBE
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+    }
+
+    @Test public void test_rt35853_multipleSelection_shiftDown() {
+        final int items = 10;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        new StageLoader(treeView);
+        final FocusModel fm = treeView.getFocusModel();
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertTrue(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_multipleSelection_noShiftDown() {
+        final int items = 10;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        new StageLoader(treeView);
+        final FocusModel fm = treeView.getFocusModel();
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_singleSelection_shiftDown() {
+        final int items = 10;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        new StageLoader(treeView);
+        final FocusModel fm = treeView.getFocusModel();
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(4, getAnchor());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_singleSelection_noShiftDown() {
+        final int items = 10;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        new StageLoader(treeView);
+        final FocusModel fm = treeView.getFocusModel();
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(new InvalidationListener() {
+            @Override public void invalidated(Observable observable) {
+                // we expect only one selected index change event, from 5 to 4
+                assertEquals(4, sm.getSelectedIndex());
+            }
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
     }
 }

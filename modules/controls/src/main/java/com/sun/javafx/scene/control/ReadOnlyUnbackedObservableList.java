@@ -132,7 +132,10 @@ public abstract class ReadOnlyUnbackedObservableList<E> implements ObservableLis
      * it simply returns a list containing the values in the given range.
      */
     @Override public List<E> subList(final int fromIndex, final int toIndex) {
-        if (fromIndex >= toIndex) return Collections.emptyList();
+        if (fromIndex < 0 || toIndex > size() || fromIndex > toIndex) {
+            throw new IndexOutOfBoundsException();
+        }
+
         final List<E> outer = this;
         return new ReadOnlyUnbackedObservableList<E>() {
             @Override public E get(int i) {

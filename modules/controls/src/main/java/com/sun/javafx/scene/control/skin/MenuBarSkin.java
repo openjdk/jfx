@@ -52,6 +52,9 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
+
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -83,7 +86,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     private TraversalEngine engine;
     private Direction direction;
 
-    private static WeakHashMap<Stage, MenuBarSkin> systemMenuMap;
+    private static WeakHashMap<Stage, Reference<MenuBarSkin>> systemMenuMap;
     private static List<MenuBase> wrappedDefaultMenus = new ArrayList<MenuBase>();
     private static Stage currentMenuBarStage;
     private List<MenuBase> wrappedMenus;
@@ -105,10 +108,16 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         }
     }
 
+    private static MenuBarSkin getMenuBarSkin(Stage stage) {
+        if (systemMenuMap == null) return null;
+        Reference<MenuBarSkin> skinRef = systemMenuMap.get(stage);
+        return skinRef == null ? null : skinRef.get();
+    }
+
     private static void setSystemMenu(Stage stage) {
         if (stage != null && stage.isFocused()) {
             while (stage != null && stage.getOwner() instanceof Stage) {
-                MenuBarSkin skin = systemMenuMap.get(stage);
+                MenuBarSkin skin = getMenuBarSkin(stage);
                 if (skin != null && skin.wrappedMenus != null) {
                     break;
                 } else {
@@ -126,7 +135,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         if (stage != currentMenuBarStage) {
             List<MenuBase> menuList = null;
             if (stage != null) {
-                MenuBarSkin skin = systemMenuMap.get(stage);
+                MenuBarSkin skin = getMenuBarSkin(stage);
                 if (skin != null) {
                     menuList = skin.wrappedMenus;
                 }
@@ -140,7 +149,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     }
 
     private static void initSystemMenuBar() {
-        systemMenuMap = new WeakHashMap<Stage, MenuBarSkin>();
+        systemMenuMap = new WeakHashMap<>();
 
         final InvalidationListener focusedStageListener = new InvalidationListener() {
             @Override public void invalidated(Observable ov) {
@@ -364,9 +373,9 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         }
         getSkinnable().getScene().getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
         engine = new TraversalEngine(getSkinnable(), false) {
-            @Override public void trav(Node node, Direction dir) {
+            @Override public boolean trav(Node node, Direction dir) {
                 direction = dir;
-                super.trav(node,dir);
+                return super.trav(node,dir);
             }
         };
         engine.addTraverseListener(this);
@@ -531,7 +540,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             Scene scene = getSkinnable().getScene();
             if (scene.getWindow() instanceof Stage) {
                 Stage stage = (Stage)scene.getWindow();
-                MenuBarSkin curMBSkin = (systemMenuMap != null) ? systemMenuMap.get(stage) : null;
+                MenuBarSkin curMBSkin = getMenuBarSkin(stage);
                 if (getSkinnable().isUseSystemMenuBar() && !menusContainCustomMenuItem()) {
                     if (curMBSkin != null &&
                         (curMBSkin.getSkinnable().getScene() == null || curMBSkin.getSkinnable().getScene().getWindow() == null)) {
@@ -547,8 +556,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                             initSystemMenuBar();
                         }
                         if (wrappedMenus == null) {
-                            wrappedMenus = new ArrayList<MenuBase>();
-                            systemMenuMap.put(stage, this);
+                            wrappedMenus = new ArrayList<>();
+                            systemMenuMap.put(stage, new WeakReference<>(this));
                         } else {
                             wrappedMenus.clear();
                         }

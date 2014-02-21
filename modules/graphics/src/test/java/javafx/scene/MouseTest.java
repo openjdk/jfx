@@ -539,6 +539,24 @@ public class MouseTest {
         assertSame(Cursor.DEFAULT.getCurrentFrame(),
                    scene.getCursorFrame());
     }
+    
+    @Test
+    public void platformCursorShouldBeUpdatedOnPulse() {
+        
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+        SimpleTestScene scene = new SimpleTestScene();
+        MouseEventGenerator generator = new MouseEventGenerator();
+
+        scene.processEvent(generator.generateMouseEvent(
+                MouseEvent.MOUSE_MOVED, 250, 250));
+
+        assertSame(Cursor.HAND.getCurrentFrame(), scene.getCursorFrame());
+
+        scene.scene.setCursor(Cursor.TEXT);
+        toolkit.firePulse();
+        assertSame(Cursor.TEXT.getCurrentFrame(), scene.getCursorFrame());
+        
+    }
 
     @Test
     public void testHover() {
@@ -1515,7 +1533,52 @@ public class MouseTest {
         assertFalse(s.groupTracker.wasReleased());
         assertTrue(s.rootTracker.wasReleased());
     }
+    
+    @Test
+    public void testMouseEventCanEditCursor() {
+        final SimpleTestScene s = new SimpleTestScene();
+        
+        s.smallSquare.setOnMousePressed(new EventHandler<MouseEvent>() {
 
+            @Override
+            public void handle(MouseEvent event) {
+                s.smallSquare.setCursor(Cursor.CROSSHAIR);
+            }
+        });
+        
+        s.smallSquare.setOnMouseReleased(new EventHandler<MouseEvent>() {
+
+            @Override
+            public void handle(MouseEvent event) {
+                s.smallSquare.setCursor(Cursor.WAIT);
+            }
+        });
+        
+        s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
+        assertSame(Cursor.HAND.getCurrentFrame(), s.getCursorFrame());
+        s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 250, 250));
+        assertSame(Cursor.CROSSHAIR.getCurrentFrame(), s.getCursorFrame());
+        s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 250, 250));
+        assertSame(Cursor.WAIT.getCurrentFrame(), s.getCursorFrame());
+        
+        s.smallSquare.setOnMouseClicked(new EventHandler<MouseEvent>() {
+
+            @Override
+            public void handle(MouseEvent event) {
+                s.smallSquare.setCursor(Cursor.TEXT);
+            }
+        });
+        
+        s.smallSquare.setCursor(Cursor.HAND);
+        
+        s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
+        assertSame(Cursor.HAND.getCurrentFrame(), s.getCursorFrame());
+        s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, 250, 250));
+        assertSame(Cursor.CROSSHAIR.getCurrentFrame(), s.getCursorFrame());
+        s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 250, 250));
+        assertSame(Cursor.TEXT.getCurrentFrame(), s.getCursorFrame());
+    }
+    
     private static class SimpleTestScene {
 
         MouseEventTracker sceneTracker;
@@ -1523,6 +1586,8 @@ public class MouseTest {
         MouseEventTracker groupTracker;
         MouseEventTracker bigSquareTracker;
         MouseEventTracker smallSquareTracker;
+        
+        Rectangle smallSquare;
         private boolean moused = false;
         private Scene scene;
 
@@ -1539,7 +1604,7 @@ public class MouseTest {
 
             Group group = new Group();
             Rectangle bigSquare = new Rectangle(100, 100, 200, 200);
-            Rectangle smallSquare = new Rectangle(200, 200, 100, 100);
+            smallSquare = new Rectangle(200, 200, 100, 100);
             bigSquare.setTranslateZ(-1);
 
             smallSquare.setCursor(Cursor.HAND);

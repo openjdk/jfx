@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ public abstract class Window {
     public static class EventHandler {
         public void handleWindowEvent(Window window, long time, int type) {
         }
-
+        
         /**
          * Notifies a listener that the screen object for this Window instance
          * has been updated.
@@ -63,6 +63,15 @@ public abstract class Window {
          * @see Window#getScreen
          */
         public void handleScreenChangedEvent(Window window, long time, Screen oldScreen, Screen newScreen) {
+        }
+
+        /**
+         * Notifies the listener that the window level has changed. The Level should be one of
+         * {@link com.sun.glass.ui.Window.Level#NORMAL}, {@link com.sun.glass.ui.Window.Level#FLOATING},
+         * {@link com.sun.glass.ui.Window.Level#TOPMOST}.
+         * @param level Level from {@link com.sun.glass.ui.Window.Level} class
+         */
+        public void handleLevelEvent(int level) {
         }
     }
 
@@ -240,7 +249,7 @@ public abstract class Window {
             default:
                 throw new RuntimeException("The functional type should be NORMAL, POPUP, or UTILITY, but not a combination of these");
         }
-
+        
         if (((styleMask & UNIFIED) != 0)
                 && !Application.GetApplication().supportsUnifiedWindows()) {
            styleMask &= ~UNIFIED;
@@ -816,10 +825,10 @@ public abstract class Window {
         if (level < Level._MIN || level > Level._MAX) {
             throw new IllegalArgumentException("Level should be in the range [" + Level._MIN + ".." + Level._MAX + "]");
         }
-
-        _setLevel(this.ptr, level);
-
-        this.level = level;
+        if (this.level != level) {
+            _setLevel(this.ptr, level);
+            this.level = level;
+        }
     }
 
     public int getLevel() {
@@ -1226,7 +1235,7 @@ public abstract class Window {
     protected void notifyInitAccessibility() {
         handleWindowEvent(System.nanoTime(), WindowEvent.INIT_ACCESSIBILITY);
     }
-
+    
     // *****************************************************
     // window event handlers
     // *****************************************************
@@ -1368,6 +1377,13 @@ public abstract class Window {
             return ((size > 0) &&
                     (x >= this.x) && (x < (this.x + this.width)) &&
                         (y >= this.y) && (y < (this.y + this.height)));
+        }
+    }
+    
+    protected void notifyLevelChanged(int level) {
+        this.level = level;
+        if (this.eventHandler != null) {
+            this.eventHandler.handleLevelEvent(level);
         }
     }
 

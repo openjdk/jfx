@@ -999,9 +999,7 @@ final public class StyleManager {
                     for(FontFace.FontFaceSrc src: fontFace.getSources()) {
                         if (src.getType() == FontFace.FontFaceSrcType.URL) {
                             Font loadedFont = Font.loadFont(src.getSrc(),10);
-                            if (loadedFont != null) {
-                                getLogger().info("Loaded @font-face font [" + loadedFont.getName() + "]");
-                            } else {
+                            if (loadedFont == null) {
                                 getLogger().info("Could not load @font-face font [" + src.getSrc() + "]");
                             }
                             continue faceLoop;

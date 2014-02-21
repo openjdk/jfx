@@ -104,7 +104,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                    ** if the tracklenght isn't greater than do nothing....
                    */
                    if (!thumb.isVisible() || trackLength > thumbLength) {
-                       getBehavior().incButtonPressed(me);
+                       getBehavior().incButtonPressed();
                    }
                    me.consume();
                }
@@ -115,7 +115,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                    ** if the tracklenght isn't greater than do nothing....
                    */
                    if (!thumb.isVisible() || trackLength > thumbLength) {
-                       getBehavior().incButtonReleased(me);
+                       getBehavior().incButtonReleased();
                    }
                    me.consume();
                }
@@ -128,7 +128,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                    ** if the tracklenght isn't greater than do nothing....
                    */
                    if (!thumb.isVisible() || trackLength > thumbLength) {
-                       getBehavior().decButtonPressed(me);
+                       getBehavior().decButtonPressed();
                    }
                    me.consume();
                }
@@ -139,7 +139,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                    ** if the tracklenght isn't greater than do nothing....
                    */
                    if (!thumb.isVisible() || trackLength > thumbLength) {
-                       getBehavior().decButtonReleased(me);
+                       getBehavior().decButtonReleased();
                    }
                    me.consume();
                }
@@ -152,12 +152,12 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                if (!thumb.isPressed() && me.getButton() == MouseButton.PRIMARY) {
                    if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
                        if (trackLength != 0) {
-                           getBehavior().trackPress(me, me.getY() / trackLength);
+                           getBehavior().trackPress(me.getY() / trackLength);
                            me.consume();
                        }
                    } else {
                        if (trackLength != 0) {
-                           getBehavior().trackPress(me, me.getX() / trackLength);
+                           getBehavior().trackPress(me.getX() / trackLength);
                            me.consume();
                        }
                    }
@@ -167,7 +167,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
 
         track.setOnMouseReleased( new EventHandler<javafx.scene.input.MouseEvent>() {
             @Override public void handle(javafx.scene.input.MouseEvent me) {
-                getBehavior().trackRelease(me, 0.0f);
+                getBehavior().trackRelease();
                 me.consume();
             }
         });
@@ -213,7 +213,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                             dragStart = thumb.localToParent(me.getX(), me.getY());
                         }
                         double dragPos = getSkinnable().getOrientation() == Orientation.VERTICAL ? cur.getY() - dragStart.getY(): cur.getX() - dragStart.getX();
-                        getBehavior().thumbDragged(me, preDragThumbPos + dragPos / (trackLength - thumbLength));
+                        getBehavior().thumbDragged(preDragThumbPos + dragPos / (trackLength - thumbLength));
                     }
 
                     me.consume();
@@ -254,7 +254,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                                 dragStart = thumb.localToParent(event.getX(), event.getY());
                             }
                             double dragPos = getSkinnable().getOrientation() == Orientation.VERTICAL ? cur.getY() - dragStart.getY(): cur.getX() - dragStart.getX();
-                            getBehavior().thumbDragged(null/*todo*/, preDragThumbPos + dragPos / (trackLength - thumbLength));
+                            getBehavior().thumbDragged(/*todo*/ preDragThumbPos + dragPos / (trackLength - thumbLength));
                         }
 
                         event.consume();
@@ -297,7 +297,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                     */
                     if (event.isDirect()) {
                         if (trackLength > thumbLength) {
-                            getBehavior().thumbDragged(null, (getSkinnable().getOrientation() == Orientation.VERTICAL ? event.getY(): event.getX()) / trackLength);
+                            getBehavior().thumbDragged((getSkinnable().getOrientation() == Orientation.VERTICAL ? event.getY(): event.getX()) / trackLength);
                             event.consume();
                         }
                     }

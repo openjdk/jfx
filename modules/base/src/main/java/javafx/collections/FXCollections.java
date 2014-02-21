@@ -160,7 +160,8 @@ public class FXCollections {
     }
 
     /**
-     * Constructs an ObservableSet that contains all the specified elements.
+     * Constructs an ObservableSet backed by a HashSet
+     * that contains all the specified elements.
      * @param elements elements that will be added into returned ObservableSet
      * @return a newly created ObservableSet
      * @since JavaFX 2.1

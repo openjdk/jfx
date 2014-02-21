@@ -406,6 +406,13 @@ public final class NumberAxis extends ValueAxis<Number> {
                 // nothing we can do so just have to use this
                 break;
             }
+
+            // fix for RT-35600 where a massive tick unit was being selected
+            // unnecessarily. There is probably a better solution, but this works
+            // well enough for now.
+            if (numOfTickMarks == 2 && reqLength > length) {
+                break;
+            }
         }
         // calculate new scale
         final double newScale = calculateNewScale(length, minRounded, maxRounded);

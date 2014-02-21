@@ -64,11 +64,13 @@ public class BidirectionalBindingTest<T> {
     private PropertyMock<T> op1;
     private PropertyMock<T> op2;
     private PropertyMock<T> op3;
+    private PropertyMock<T> op4;
     
     public BidirectionalBindingTest(Functions<T> func, T[] v) {
         this.op1 = func.create();
         this.op2 = func.create();
         this.op3 = func.create();
+        this.op4 = func.create();
         this.func = func;
         this.v = v;
     }
@@ -273,6 +275,28 @@ public class BidirectionalBindingTest<T> {
             } finally {
                 assertEquals(op3.getValue(), op1.getValue());
                 assertEquals(op2.getValue(), op1.getValue());
+            }
+        }
+        
+        @Test
+        public void testDoubleBrokenBind() {
+            func.bind(op1, op2);
+            op1.bind(op3);
+            op4.setValue(v[0]);
+            
+            thrown.expect(RuntimeException.class);
+            try {
+                op2.bind(op4);
+            } finally {
+                assertEquals(op4.getValue(), op2.getValue());
+                assertEquals(op3.getValue(), op1.getValue());
+                // Test that bidirectional binding was unbound in this case
+                op3.setValue(v[0]);
+                op4.setValue(v[1]);
+                assertEquals(op4.getValue(), op2.getValue());
+                assertEquals(op3.getValue(), op1.getValue());
+                assertEquals(v[0], op1.getValue());
+                assertEquals(v[1], op2.getValue());
             }
         }
         

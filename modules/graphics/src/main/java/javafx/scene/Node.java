@@ -7658,11 +7658,11 @@ public abstract class Node implements EventTarget, Styleable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final void impl_traverse(Direction dir) {
+    public final boolean impl_traverse(Direction dir) {
         if (getScene() == null) {
-            return;
+            return false;
         }
-        getScene().traverse(this, dir);
+        return getScene().traverse(this, dir);
     }
 
     ////////////////////////////
@@ -8047,8 +8047,9 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Sets the handler to use for this event type. There can only be one such handler
-     * specified at a time. This handler is guaranteed to be called first. This is
-     * used for registering the user-defined onFoo event handlers.
+     * specified at a time. This handler is guaranteed to be called as the last, after
+     * handlers added using {@link #addEventHandler(javafx.event.EventType, javafx.event.EventHandler)}.
+     * This is used for registering the user-defined onFoo event handlers.
      *
      * @param <T> the specific event class of the handler
      * @param eventType the event type to associate with the given eventHandler

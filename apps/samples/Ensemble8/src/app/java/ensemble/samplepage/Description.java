@@ -84,7 +84,7 @@ public class Description extends VBox {
                 samplePage.pageBrowser.goToPage(samplePage.getUrl().replaceFirst("sample://", "sample-src://"));
             }
         });
-        if (!PlatformFeatures.EMBEDDED) getChildren().add(sourceBtn);
+        if (PlatformFeatures.LINK_TO_SOURCE) getChildren().add(sourceBtn);
         if (Platform.isSupported(ConditionalFeature.WEB)) {
             // Setup Columns
             GridPane gridPane = new GridPane();
