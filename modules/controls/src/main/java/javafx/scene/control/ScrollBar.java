@@ -101,7 +101,7 @@ public class ScrollBar extends Control {
      **************************************************************************/
     /**
      * The minimum value represented by this {@code ScrollBar}. This should be a
-     * value less than or equal to {@link #maxProperty max}.
+     * value less than or equal to {@link #maxProperty max}. Default value is 0.
      */
     private DoubleProperty min;
     public final void setMin(double value) {
@@ -120,7 +120,7 @@ public class ScrollBar extends Control {
     }
     /**
      * The maximum value represented by this {@code ScrollBar}. This should be a
-     * value greater than or equal to {@link #minProperty min}.
+     * value greater than or equal to {@link #minProperty min}. Default value is 100.
      */
     private DoubleProperty max;
     public final void setMax(double value) {
