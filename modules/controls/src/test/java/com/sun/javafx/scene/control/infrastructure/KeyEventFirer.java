@@ -61,6 +61,10 @@ public class KeyEventFirer {
     public void doKeyPress(KeyCode keyCode, KeyModifier... modifiers) {
         fireEvents(createMirroredEvents(keyCode, modifiers));
     }
+
+    public void doKeyTyped(KeyCode keyCode, KeyModifier... modifiers) {
+        fireEvents(createEvent(keyCode, KeyEvent.KEY_TYPED, modifiers));
+    }
     
     private void fireEvents(KeyEvent... events) {
         for (KeyEvent evt : events) {
@@ -78,12 +82,12 @@ public class KeyEventFirer {
     private KeyEvent createEvent(KeyCode keyCode, EventType<KeyEvent> evtType, KeyModifier... modifiers) {
         List<KeyModifier> ml = Arrays.asList(modifiers);
 
-        return new KeyEvent( null,
-                target, // EventTarget
-                evtType,  // eventType
-                null,     // Character (unused unless KeyCode == KEY_TYPED
-                null,     // text
-                keyCode, // KeyCode
+        return new KeyEvent(null,
+                target,                            // EventTarget
+                evtType,                           // eventType
+                evtType == KeyEvent.KEY_TYPED ? keyCode.impl_getChar() : null,  // Character (unused unless evtType == KEY_TYPED)
+                keyCode.impl_getChar(),            // text
+                keyCode,                           // KeyCode
                 ml.contains(KeyModifier.SHIFT),    // shiftDown
                 ml.contains(KeyModifier.CTRL),     // ctrlDown
                 ml.contains(KeyModifier.ALT),      // altDown

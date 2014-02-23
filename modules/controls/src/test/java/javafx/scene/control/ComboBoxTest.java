@@ -1243,4 +1243,22 @@ public class ComboBoxTest {
         assertEquals("bbc", combo.getEditor().getText());
         assertEquals("bbc", combo.getSelectionModel().getSelectedItem());
     }
+
+    @Test public void test_rt35840() {
+        final ComboBox<String> cb = new ComboBox<String>();
+        cb.setEditable(true);
+        StageLoader sl = new StageLoader(cb);
+        cb.requestFocus();
+
+        KeyEventFirer keyboard = new KeyEventFirer(cb);
+        keyboard.doKeyTyped(KeyCode.T);
+        keyboard.doKeyTyped(KeyCode.E);
+        keyboard.doKeyTyped(KeyCode.S);
+        keyboard.doKeyTyped(KeyCode.T);
+        assertEquals("TEST", cb.getEditor().getText());
+
+        assertNull(cb.getValue());
+        keyboard.doKeyPress(KeyCode.ENTER);
+        assertEquals("TEST", cb.getValue());
+    }
 }
