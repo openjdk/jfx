@@ -53,6 +53,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
@@ -1647,5 +1648,39 @@ public class TreeViewTest {
         // that "bbc" remains selected as it is still in the list
         root.getChildren().setAll(aabbaa, bbc);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+    }
+
+    private int rt_35889_cancel_count = 0;
+    @Test public void test_rt35889() {
+        TreeItem a = new TreeItem("a");
+        TreeItem b = new TreeItem("b");
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().setAll(a, b);
+
+        final TreeView<String> textFieldTreeView = new TreeView<String>(root);
+        textFieldTreeView.setEditable(true);
+        textFieldTreeView.setCellFactory(TextFieldTreeCell.forTreeView());
+        textFieldTreeView.setOnEditCancel(new EventHandler<TreeView.EditEvent<String>>() {
+            @Override public void handle(TreeView.EditEvent<String> t) {
+                rt_35889_cancel_count++;
+                System.out.println("On Edit Cancel: " + t);
+            }
+        });
+
+        TreeCell cell0 = (TreeCell) VirtualFlowTestUtils.getCell(textFieldTreeView, 0);
+        assertNull(cell0.getGraphic());
+        assertEquals("Root", cell0.getText());
+
+        textFieldTreeView.edit(root);
+        TextField textField = (TextField) cell0.getGraphic();
+        assertNotNull(textField);
+
+        assertEquals(0, rt_35889_cancel_count);
+
+        textField.setText("Z");
+        textField.getOnAction().handle(new ActionEvent());
+
+        assertEquals(0, rt_35889_cancel_count);
     }
 }

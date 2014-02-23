@@ -46,6 +46,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.control.cell.CheckBoxListCell;
@@ -806,5 +807,34 @@ public class ListViewTest {
         // that "bbc" remains selected as it is still in the list
         listView.setItems(FXCollections.observableArrayList(data));
         assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
+    }
+
+    private int rt_35889_cancel_count = 0;
+    @Test public void test_rt35889() {
+        final ListView<String> textFieldListView = new ListView<String>();
+        textFieldListView.setItems(FXCollections.observableArrayList("A", "B", "C"));
+        textFieldListView.setEditable(true);
+        textFieldListView.setCellFactory(TextFieldListCell.forListView());
+        textFieldListView.setOnEditCancel(new EventHandler<ListView.EditEvent<String>>() {
+            @Override public void handle(ListView.EditEvent<String> t) {
+                rt_35889_cancel_count++;
+                System.out.println("On Edit Cancel: " + t);
+            }
+        });
+
+        ListCell cell0 = (ListCell) VirtualFlowTestUtils.getCell(textFieldListView, 0);
+        assertNull(cell0.getGraphic());
+        assertEquals("A", cell0.getText());
+
+        textFieldListView.edit(0);
+        TextField textField = (TextField) cell0.getGraphic();
+        assertNotNull(textField);
+
+        assertEquals(0, rt_35889_cancel_count);
+
+        textField.setText("Z");
+        textField.getOnAction().handle(new ActionEvent());
+
+        assertEquals(0, rt_35889_cancel_count);
     }
 }
