@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3302,5 +3302,27 @@ public class TreeTableViewTest {
         assertEquals(ccc,treeView.getTreeItem(2));
 
         assertTrue(treeView.getSortOrder().isEmpty());
+    }
+
+    @Test public void test_rt35857() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        TreeItem a = new TreeItem("A");
+        TreeItem b = new TreeItem("B");
+        TreeItem c = new TreeItem("C");
+        root.getChildren().setAll(a, b, c);
+
+        final TreeTableView<String> treeTableView = new TreeTableView<String>(root);
+
+        treeTableView.getSelectionModel().select(1);
+
+        ObservableList<TreeItem<String>> selectedItems = treeTableView.getSelectionModel().getSelectedItems();
+        assertEquals(1, selectedItems.size());
+        assertEquals("A", selectedItems.get(0).getValue());
+
+        root.getChildren().removeAll(selectedItems);
+        assertEquals(2, root.getChildren().size());
+        assertEquals("B", root.getChildren().get(0).getValue());
+        assertEquals("C", root.getChildren().get(1).getValue());
     }
 }

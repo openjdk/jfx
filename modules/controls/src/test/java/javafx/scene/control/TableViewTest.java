@@ -2677,4 +2677,20 @@ public class TableViewTest {
         // This should result in an IOOBE, but didn't until this bug was fixed
         selectedCellsSeq.subList(from, to);
     }
+
+    @Test public void test_rt35857() {
+        ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
+        final TableView<String> tableView = new TableView<String>(fxList);
+
+        tableView.getSelectionModel().select(0);
+
+        ObservableList<String> selectedItems = tableView.getSelectionModel().getSelectedItems();
+        assertEquals(1, selectedItems.size());
+        assertEquals("A", selectedItems.get(0));
+
+        tableView.getItems().removeAll(selectedItems);
+        assertEquals(2, fxList.size());
+        assertEquals("B", fxList.get(0));
+        assertEquals("C", fxList.get(1));
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -807,6 +807,22 @@ public class ListViewTest {
         // that "bbc" remains selected as it is still in the list
         listView.setItems(FXCollections.observableArrayList(data));
         assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void test_rt35857() {
+        ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
+        final ListView<String> listView = new ListView<String>(fxList);
+
+        listView.getSelectionModel().select(0);
+
+        ObservableList<String> selectedItems = listView.getSelectionModel().getSelectedItems();
+        assertEquals(1, selectedItems.size());
+        assertEquals("A", selectedItems.get(0));
+
+        listView.getItems().removeAll(selectedItems);
+        assertEquals(2, fxList.size());
+        assertEquals("B", fxList.get(0));
+        assertEquals("C", fxList.get(1));
     }
 
     private int rt_35889_cancel_count = 0;
