@@ -25,6 +25,7 @@
 
 package hello;
 
+import java.io.*;
 import java.nio.Buffer;
 import java.nio.IntBuffer;
 import java.text.SimpleDateFormat;
@@ -33,8 +34,6 @@ import javafx.animation.PathTransition;
 import javafx.animation.RotateTransition;
 import javafx.animation.TranslateTransition;
 import javafx.animation.Timeline;
-import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
@@ -54,7 +53,6 @@ import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.effect.GaussianBlur;
@@ -66,12 +64,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.SwipeEvent;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.CubicCurveTo;
 import javafx.scene.shape.Line;
@@ -1674,7 +1667,8 @@ public class TestBuilder {
 		}.start();
 	}
 
-    public void robotWheelTest(final ListView<String> lv, final TextField result, Stage currentStage){
+    public void robotWheelTest(final ListView<String> lv, final TextField result,
+                                                            Stage currentStage){
 
 		//Caclulation of ListView minimal coordinates
 		Bounds bounds = lv.localToScreen(new BoundingBox(0, 0, 
@@ -1683,7 +1677,8 @@ public class TestBuilder {
 		int x = 10 + (int) bounds.getMinX();
 		int y = 10 + (int) bounds.getMinY();
 
-		final Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
+		final Robot robot =
+                    com.sun.glass.ui.Application.GetApplication().createRobot();
         robot.mouseMove(x, y);
         robot.mousePress(Robot.MOUSE_LEFT_BTN);
         robot.mouseRelease(Robot.MOUSE_LEFT_BTN);
@@ -1707,10 +1702,12 @@ public class TestBuilder {
 						public void handle(long now) {
 							if (now > startTime + 3000000000l){ 
 								stop();
-								result.setText("Scoll Down Failed");
-							} else if (!lv.getSelectionModel().selectedItemProperty().getValue().equals("a")) { 
-								stop();
-								result.setText("Scoll Down Passed");
+								result.setText("Scroll Down Failed");
+							} else if (!lv.getSelectionModel().
+                                    selectedItemProperty().getValue().
+                                    equals("a")) {
+								        stop();
+								    result.setText("Scroll Down Passed");
 							}
 						}
 					}.start();
@@ -1730,11 +1727,12 @@ public class TestBuilder {
                      assertPixelEquals(x + 40, y, Color.BLUE) +
                      assertPixelEquals(x + 80, y, Color.YELLOW) +
                      assertPixelEquals(x + 120, y, Color.GREEN);
-        if (answer == 4) {
-            result.setText("Passed");
-        } else {
-            result.setText("Failed");
-        }
+    if (answer == 4) {
+        result.setText("Passed");
+    } else {
+        result.setText("Failed");
+    }
+
     }
 
     static int colorToRGB(Color c) {
@@ -1771,44 +1769,86 @@ public class TestBuilder {
 		int []intArr = null;
         boolean correct = true;
         Robot robot = com.sun.glass.ui.Application.GetApplication().createRobot();
-        Buffer buff = robot.getScreenCapture(x,y,160,1).getPixels();
+        int width = 160;
+        int height = 160;
+        final Buffer buff = robot.getScreenCapture(x, y, width, height).getPixels();
         if ((buff instanceof IntBuffer)&&(buff.hasArray())) {
             intArr =((IntBuffer) buff).array();
         }
 
-        for (int j = 1; j <= 39; j ++){
-            if (intArr[j] != colorToRGB(Color.RED)){
-                System.out.println("RED Failed, for j="+j+", the color is"+intArr[j]);
-                correct = false;
+        String filename= "scrCapture.bmp";
+        File file = new File(filename);
+        try {
+            if (!file.exists()) {
+                file.createNewFile();
             }
-         }
+            BMPOutputStream bmp = new BMPOutputStream(new FileOutputStream(filename), intArr, width, height);
+        } catch (Exception e) {}
 
-        for (int j = 41; j <= 79; j ++){
-            if (intArr[j] != colorToRGB(Color.BLUE)){
-                System.out.println("BLUE Failed, for j="+j+", the color is"+intArr[j]);
-                correct = false;
-            }
-         }
 
-        for (int j = 81; j <= 119; j ++){
-            if (intArr[j] != colorToRGB(Color.YELLOW)){
-                System.out.println("Yellow Failed, for j="+j+", the color is"+intArr[j]);
-                correct = false;
+        for (int i = width; i <= height*(height-1); i += width) {
+            for (int j = 1; j <= 38; j ++){
+                if (intArr[j+i] != colorToRGB(Color.RED)){
+                    correct = false;
+                }
+             }
+            for (int j = 41; j <= 78; j ++){
+                if (intArr[j+i] != colorToRGB(Color.BLUE)){
+                    correct = false;
+                }
+             }
+            for (int j = 81; j <= 118; j ++){
+                if (intArr[j+i] != colorToRGB(Color.YELLOW)){
+                    correct = false;
+                }
+             }
+            for (int j = 121; j <= 158; j ++){
+                if (intArr[j+i] != colorToRGB(Color.GREEN)){
+                    correct = false;
+                }
             }
-         }
-
-        for (int j = 121; j <= 159; j ++){
-            if (intArr[j] != colorToRGB(Color.GREEN)){
-                System.out.println("Green Failed, for j="+j+", the color is"+intArr[j]);
-                correct = false;
-            }
-         }
+        }
         robot.destroy();
         if (correct) {
             result.setText("Passed");
         } else {
             result.setText("Failed");
         }
+        showImage(stage, width, height, result);
+    }
+
+    private void showImage(Stage stage, int width, int height, TextField tf) {
+
+        int frame = 70;
+        Rectangle rec = new Rectangle(width + frame, height + frame);
+        FileInputStream os = null;
+        final File file = new File("scrCapture.bmp");
+        try {
+            os = new FileInputStream(file);
+        } catch (Exception e) {}
+
+        final Popup popup = new Popup();
+        ImageView iv = new ImageView(new Image(os));
+        iv.setLayoutX(frame/2);
+        iv.setLayoutY(frame/2);
+
+        rec.setFill(Color.WHITE);
+        rec.setStroke(Color.BLACK);
+        Button exit = new Button("x");
+        exit.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent e) {
+                if (file.exists()&&tf.getText().equals("Passed")) {
+                    file.deleteOnExit();
+                }
+                popup.hide();
+            }
+        });
+        exit.setLayoutX(width + frame/2);
+        Pane popupPane = new Pane(rec, iv, exit);
+        popup.setX(stage.getX() + 550);
+        popup.setY(stage.getY() + 430);
+        popup.getContent().addAll(popupPane);
+        popup.show(stage);
     }
 
     /**

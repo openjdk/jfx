@@ -26,18 +26,18 @@
 package hello;
 
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.Screen;
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
-import com.sun.glass.ui.Robot;
+import java.io.File;
 
 /**
  *  The application should be used by QA in order to test main
@@ -48,7 +48,6 @@ public class HelloSanity extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-    
     
     //@Override
     public void start(final Stage primaryStage) {
@@ -121,8 +120,8 @@ public class HelloSanity extends Application {
             }
         });
         
-        mainBox.getChildren().addAll(welcome, bControls, bTabs, bWins, bRobot,  bAnim,
-                                                                        bEffs, bswipe, bquit);
+        mainBox.getChildren().addAll(welcome, bControls, bTabs, bWins, bRobot,
+                                     bAnim, bEffs, bswipe, bquit);
         globalScene.setRoot(mainBox);
         globalScene.getStylesheets().add("hello/HelloSanityStyles.css");
         primaryStage.setScene(globalScene);
