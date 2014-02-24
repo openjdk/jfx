@@ -424,10 +424,8 @@ public class ContextMenuContent extends Region {
         int index = getLongestLabel();
         itemsContainer.getChildren().clear();
         if (!getItems().isEmpty()) {
-            // We need to strip mnemonic symbols to avoid mnemonic duplicates
-            String itemText = new TextBinding(getItems().get(index).getText()).getText().
-                    replaceAll("_", "__").replaceAll("@", "@@");
-            MenuItemContainer menuItemContainer = new MenuItemContainer(new MenuItem(itemText));
+            final MenuItem item = getItems().get(index);
+            MenuItemContainer menuItemContainer = new MenuItemContainer(item);
             itemsContainer.getChildren().add(menuItemContainer);
         }
     }
