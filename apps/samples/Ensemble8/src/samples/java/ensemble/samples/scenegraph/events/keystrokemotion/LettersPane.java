@@ -59,19 +59,13 @@ public class LettersPane extends Region {
         setId("LettersPane");
         setPrefSize(240, 240);
         setFocusTraversable(true);
-        setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                requestFocus();
-                me.consume();
-            }
+        setOnMousePressed((MouseEvent me) -> {
+            requestFocus();
+            me.consume();
         });
-        setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent ke) {
-                createLetter(ke.getText());
-                ke.consume();
-            }
+        setOnKeyPressed((KeyEvent ke) -> {
+            createLetter(ke.getText());
+            ke.consume();
         });
         // create press keys text
         pressText = new Text("Press Keys");
@@ -104,12 +98,8 @@ public class LettersPane extends Region {
         // over 3 seconds move letter to random position and fade it out
         final Timeline timeline = new Timeline();
         timeline.getKeyFrames().add(
-                new KeyFrame(Duration.seconds(3), new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                // we are done remove us from scene
-                getChildren().remove(letter);
-            }
+                new KeyFrame(Duration.seconds(3), (ActionEvent event) -> {
+                    getChildren().remove(letter);
         },
                 new KeyValue(letter.translateXProperty(), getRandom(0.0f, getWidth() - letter.getBoundsInLocal().getWidth()), INTERPOLATOR),
                 new KeyValue(letter.translateYProperty(), getRandom(0.0f, getHeight() - letter.getBoundsInLocal().getHeight()), INTERPOLATOR),

@@ -164,12 +164,8 @@ public class CandleStickChart extends XYChart<Number, Number> {
             // fade out old candle
             FadeTransition ft = new FadeTransition(Duration.millis(500), candle);
             ft.setToValue(0);
-            ft.setOnFinished(new EventHandler<ActionEvent>() {
-
-                @Override
-                public void handle(ActionEvent actionEvent) {
-                    getPlotChildren().remove(candle);
-                }
+            ft.setOnFinished((ActionEvent actionEvent) -> {
+                getPlotChildren().remove(candle);
             });
             ft.play();
         } else {
@@ -208,12 +204,8 @@ public class CandleStickChart extends XYChart<Number, Number> {
                 // fade out old candle
                 FadeTransition ft = new FadeTransition(Duration.millis(500), candle);
                 ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-
-                    @Override
-                    public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(candle);
-                    }
+                ft.setOnFinished((ActionEvent actionEvent) -> {
+                    getPlotChildren().remove(candle);
                 });
                 ft.play();
             } else {

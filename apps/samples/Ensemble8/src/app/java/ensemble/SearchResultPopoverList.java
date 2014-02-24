@@ -206,11 +206,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
             for (SearchResultListCell cell: allCells) {
                 if (cell.isVisible()) visibleCells.add(cell);
             }
-            Collections.sort(visibleCells, new Comparator<Node>() {
-                @Override public int compare(Node o1, Node o2) {
-                    return Double.compare(o1.getLayoutY(), o2.getLayoutY());
-                }
-            });
+            Collections.sort(visibleCells, (Node o1, Node o2) -> Double.compare(o1.getLayoutY(), o2.getLayoutY()));
             
             samplesIcon.setLayoutX(8);
             samplesIcon.resize(24, 24);
@@ -306,24 +302,20 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
             // many times for any change of cell layout in the list but that 
             // dosn't matter as they will all be batched up by layout machanisim
             // and iconPane.layoutChildren() will only be called once per frame.
-            final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<Bounds>() {
-                @Override public void changed(ObservableValue<? extends Bounds> ov, Bounds t, Bounds t1) {
-                    iconPane.requestLayout();
-                }
+            final ChangeListener<Bounds> boundsChangeListener = (ObservableValue<? extends Bounds> ov, Bounds t, Bounds t1) -> {
+                iconPane.requestLayout();
             };
-            parentProperty().addListener(new ChangeListener<Parent>() {
-                @Override public void changed(ObservableValue<? extends Parent> ov, Parent oldParent, Parent newParent) {
-                    if(oldParent != null) {
-                        oldParent.layoutBoundsProperty().removeListener(boundsChangeListener);
-                    }
-                    if (newParent != null && newParent.isVisible()) {
-                        iconPane.allCells.add(SearchResultListCell.this);
-                        newParent.layoutBoundsProperty().addListener(boundsChangeListener);
-                    } else {
-                        iconPane.allCells.remove(SearchResultListCell.this);
-                    }
-                    iconPane.requestLayout();
+            parentProperty().addListener((ObservableValue<? extends Parent> ov, Parent oldParent, Parent newParent) -> {
+                if(oldParent != null) {
+                    oldParent.layoutBoundsProperty().removeListener(boundsChangeListener);
                 }
+                if (newParent != null && newParent.isVisible()) {
+                    iconPane.allCells.add(SearchResultListCell.this);
+                    newParent.layoutBoundsProperty().addListener(boundsChangeListener);
+                } else {
+                    iconPane.allCells.remove(SearchResultListCell.this);
+                }
+                iconPane.requestLayout();
             });
         }
 

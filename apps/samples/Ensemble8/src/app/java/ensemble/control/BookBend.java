@@ -115,24 +115,16 @@ public class BookBend {
         this.clip = clip;
 
         node.setEffect(new DisplacementMap(map));
-        node.layoutBoundsProperty().addListener(new InvalidationListener() {
-
-            @Override
-            public void invalidated(Observable arg0) {
-                newWidth = (int) Math.round(node.getLayoutBounds().getWidth());
-                newHeight = (int) Math.round(node.getLayoutBounds().getHeight());
-                if (newWidth != map.getWidth() || newHeight != map.getHeight()) {
-                    setUpdateNeeded(true);
-                }
+        node.layoutBoundsProperty().addListener((Observable arg0) -> {
+            newWidth = (int) Math.round(node.getLayoutBounds().getWidth());
+            newHeight = (int) Math.round(node.getLayoutBounds().getHeight());
+            if (newWidth != map.getWidth() || newHeight != map.getHeight()) {
+                setUpdateNeeded(true);
             }
         });
-        node.sceneProperty().addListener(new ChangeListener<Scene>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Scene> ov, Scene oldValue, Scene newValue) {
-                if(newValue == null){
-                    stopAnimationTimer();
-                }
+        node.sceneProperty().addListener((ObservableValue<? extends Scene> ov, Scene oldValue, Scene newValue) -> {
+            if(newValue == null){
+                stopAnimationTimer();
             }
         });
         newWidth = (int) Math.round(node.getLayoutBounds().getWidth());

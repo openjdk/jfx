@@ -147,18 +147,15 @@ public class DatePickerApp extends Application {
         //Create the menubar to experiment with the DatePicker
         datePickerMenuBar = createMenuBar(dayCellFactory);
         // Listen for DatePicker actions
-        datePicker.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                LocalDate isoDate = datePicker.getValue();
-                if ((isoDate != null) && (!isoDate.equals(LocalDate.now()))) {
-                    for (Menu menu : datePickerMenuBar.getMenus()) {
-                        if (menu.getText().equals("Options for Locale")) {
-                            for (MenuItem menuItem : menu.getItems()) {
-                                if (menuItem.getText().equals("Set date to today")) {
-                                    if ((menuItem instanceof CheckMenuItem) && ((CheckMenuItem) menuItem).isSelected()) {
-                                        ((CheckMenuItem) menuItem).setSelected(false);
-                                    }
+        datePicker.setOnAction((ActionEvent t) -> {
+            LocalDate isoDate = datePicker.getValue();
+            if ((isoDate != null) && (!isoDate.equals(LocalDate.now()))) {
+                for (Menu menu : datePickerMenuBar.getMenus()) {
+                    if (menu.getText().equals("Options for Locale")) {
+                        for (MenuItem menuItem : menu.getItems()) {
+                            if (menuItem.getText().equals("Set date to today")) {
+                                if ((menuItem instanceof CheckMenuItem) && ((CheckMenuItem) menuItem).isSelected()) {
+                                    ((CheckMenuItem) menuItem).setSelected(false);
                                 }
                             }
                         }
@@ -188,48 +185,36 @@ public class DatePickerApp extends Application {
         //Style DatePicker with cell factory
         final CheckMenuItem cellFactoryMenuItem = new CheckMenuItem("Use cell factory to color past days and add tooltip to tomorrow");
         optionsMenu.getItems().add(cellFactoryMenuItem);
-        cellFactoryMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                if (cellFactoryMenuItem.isSelected()) {
-                    datePicker.setDayCellFactory(dayCellFac);
-                } else {
-                    datePicker.setDayCellFactory(null);
-                }
+        cellFactoryMenuItem.setOnAction((ActionEvent t) -> {
+            if (cellFactoryMenuItem.isSelected()) {
+                datePicker.setDayCellFactory(dayCellFac);
+            } else {
+                datePicker.setDayCellFactory(null);
             }
         });
                        
         //Set date to today
         final CheckMenuItem todayMenuItem = new CheckMenuItem("Set date to today");
         optionsMenu.getItems().add(todayMenuItem);
-        todayMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                if (todayMenuItem.isSelected()) {
-                    datePicker.setValue(today);
-                }
+        todayMenuItem.setOnAction((ActionEvent t) -> {
+            if (todayMenuItem.isSelected()) {
+                datePicker.setValue(today);
             }
         });
 
         //Set date to today
         final CheckMenuItem showWeekNumMenuItem = new CheckMenuItem("Show week numbers");
         optionsMenu.getItems().add(showWeekNumMenuItem);
-        showWeekNumMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                datePicker.setShowWeekNumbers(showWeekNumMenuItem.isSelected());
-            }
+        showWeekNumMenuItem.setOnAction((ActionEvent t) -> {
+            datePicker.setShowWeekNumbers(showWeekNumMenuItem.isSelected());
         });        
         
-        localeToggleGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-            @Override
-            public void changed(ObservableValue<? extends Toggle> ov, Toggle oldToggle, Toggle newToggle) {
-                if (localeToggleGroup.getSelectedToggle() != null) {
-                    String selectedLocale = ((RadioMenuItem) localeToggleGroup.getSelectedToggle()).getText();
-                    Locale locale = Locale.forLanguageTag(selectedLocale.replace('_', '-'));
-                    Locale.setDefault(locale);
-                    createDatePicker();
-                }
+        localeToggleGroup.selectedToggleProperty().addListener((ObservableValue<? extends Toggle> ov, Toggle oldToggle, Toggle newToggle) -> {
+            if (localeToggleGroup.getSelectedToggle() != null) {
+                String selectedLocale = ((RadioMenuItem) localeToggleGroup.getSelectedToggle()).getText();
+                Locale locale = Locale.forLanguageTag(selectedLocale.replace('_', '-'));
+                Locale.setDefault(locale);
+                createDatePicker();
             }
         });       
 

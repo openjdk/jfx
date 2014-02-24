@@ -55,13 +55,9 @@ class SamplePageContent extends Region {
         this.samplePage = samplePage;
         playground = new PlaygroundNode(samplePage);
         description = new Description(samplePage);
-        samplePage.registerSampleInfoUpdater(new Callback<SampleInfo, Void>() {
-
-            @Override
-            public Void call(SampleInfo sampleInfo) {
-                update(sampleInfo);
-                return null;
-            }
+        samplePage.registerSampleInfoUpdater((SampleInfo sampleInfo) -> {
+            update(sampleInfo);
+            return null;
         });
     }
 
