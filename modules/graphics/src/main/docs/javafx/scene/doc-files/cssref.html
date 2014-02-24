@@ -354,18 +354,18 @@
           <li> javafx.scene.chart
             <ul>
               <li><a href="#areachart">AreaChart</a> </li>
+              <li><a href="#axis">Axis</a> </li>
               <li><a href="#barchart">BarChart</a> </li>
               <li><a href="#bubblechart">BubbleChart</a> </li>
-              <li><a href="#chart">Chart</a> </li>
-              <li><a href="#linechart">LineChart</a> </li>
-              <li><a href="#scatterchart">ScatterChart</a> </li>
-              <li><a href="#piechart">PieChart</a> </li>
-              <li><a href="#xychart">XYChart</a> </li>
-              <li><a href="#axis">Axis</a> </li>
-              <li><a href="#valueaxis">ValueAxis</a> </li>
-              <li><a href="#numberaxis">NumberAxis</a> </li>
               <li><a href="#categoryaxis">CategoryAxis</a> </li>
+              <li><a href="#chart">Chart</a> </li>
               <li><a href="#legend">Legend</a> </li>
+              <li><a href="#linechart">LineChart</a> </li>
+              <li><a href="#numberaxis">NumberAxis</a> </li>
+              <li><a href="#piechart">PieChart</a> </li>
+              <li><a href="#scatterchart">ScatterChart</a> </li>
+              <li><a href="#valueaxis">ValueAxis</a> </li>
+              <li><a href="#xychart">XYChart</a> </li>
             </ul>
           </li>
         </ul>
@@ -5181,14 +5181,14 @@
           <td class="propertyname">"chart-series-area-line series&lt;i&gt;
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
-            series&rsquo; color index</td>
+            series&rsquo; color index.
           <td><a href="#node" class="typelink">Node</a> </td>
         </tr>
         <tr>
           <td class="propertyname">"chart-series-area-fill series&lt;i&gt;
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
-            series&rsquo; color index</td>
+            series&rsquo; color index.
           <td><a href="#path" class="typelink">Path</a> </td>
         </tr>
         <tr>
@@ -5224,6 +5224,70 @@
           </tr>
         </tbody>
       </table>
+    <h4><a name="axis" id="axis">Axis</a></h4>
+    <p class="styleclass">Style class: axis</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-side</td>
+            <td class="value">Side</td>
+            <td>null</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-length</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>8</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-label-font</td>
+            <td class="value"><a href="#typefont" class="typelink">&lt;font&gt;</a></td>
+            <td>8 system</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-label-fill</td>
+            <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
+            <td>black</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-label-gap</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>3</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-mark-visible</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-labels-visible</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>axis-label &mdash; Text</li>
+        <li>axis-tick-mark &mdash; Path</li>
+    </ul>
     <h4><a name="barchart" id="barchart">BarChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5244,8 +5308,9 @@
             default-color&lt;k&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series, &lt;j&gt; is the index
             of the data within the series, and &lt;k&gt; is the series&rsquo;
-            color index. If the data value is negative, the "negative" style
-            class is added.</td>
+            color index.
+            If the data value is negative, the "negative" style
+            class is added; e.g., <code>.negative.chart-bar</code>.</td>
           <td><a href="#node" class="typelink">Node</a> </td>
         </tr>
         <tr>
@@ -5328,45 +5393,103 @@
           </tr>
         </tbody>
       </table>
-    <h4><a name="chart" id="chart">Chart</a></h4>
-    <p class="styleclass">Style class: chart</p>
-      <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+    <h4><a name="categoyaxis" id="categoryaxis">CategoryAxis</a></h4>
+    <p class="styleclass">Style class: axis</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
-          <tr>
+        <tr>
             <th class="propertyname">CSS Property</th>
             <th class="value">Values</th>
             <th>Default</th>
             <th>Comments</th>
-          </tr>
+        </tr>
         </thead>
         <tbody>
-          <tr>
+        <tr>
+            <td class="propertyname">-fx-start-margin</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
+            <td>5</td>
+            <td>The margin between the axis start and the first tick-mark</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-end-margin</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
+            <td>5</td>
+            <td>The margin between the axis start and the first tick-mark</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-gap-start-and-end</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>If this is true then half the space between ticks is left at the
+                start and end</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#axis">Axis</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4><a name="chart" id="chart">Chart</a></h4>
+    <p class="styleclass">Style class: chart</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
             <td class="propertyname">-fx-legend-side</td>
             <td class="value">Side</td>
             <td>bottom</td>
             <td>&nbsp;</td>
-          </tr>
-          <tr>
+        </tr>
+        <tr>
             <td class="propertyname">-fx-legend-visible</td>
             <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
             <td>true</td>
             <td>&nbsp;</td>
-          </tr>
-          <tr>
+        </tr>
+        <tr>
             <td class="propertyname">-fx-title-side</td>
             <td class="value">Side</td>
             <td>top</td>
             <td>&nbsp;</td>
-          </tr>
-          <tr>
+        </tr>
+        <tr>
             <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
-          </tr>
+        </tr>
         </tbody>
-      </table>
+    </table>
     <h4>Substructure</h4>
     <ul>
-      <li>chart-title &mdash; Label</li>
-      <li>chart-content &mdash; Pane</li>
+        <li>chart-title &mdash; Label</li>
+        <li>chart-content &mdash; Pane</li>
+    </ul>
+    <h4><a name="legend" id="legend">Legend</a></h4>
+    <p class="styleclass">Style class: chart-legend</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>chart-legend-item &mdash; Label</li>
+        <li>chart-legend-item-symbol &mdash; Node (the Label's graphic)</li>
     </ul>
     <h4><a name="linechart" id="linechart">LineChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -5394,7 +5517,7 @@
           <td><a href="#node" class="typelink">Node</a> </td>
         </tr>
         <tr>
-          <td class="propertyname">"chart-line-symblol series&lt;i&gt;
+          <td class="propertyname">"chart-line-symbol series&lt;i&gt;
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
             series&rsquo; color index</td>
@@ -5424,48 +5547,29 @@
           </tr>
         </tbody>
       </table>
-    <h4><a name="scatterchart" id="scatterchart">ScatterChart</a></h4>
+    <h4><a name="numberaxis" id="numberaxis">NumberAxis</a></h4>
+    <p class="styleclass">Style class: axis</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">Style class</th>
-          <th>Comments</th>
-          <th>Properties</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">"chart-symbol series&lt;i&gt; data&lt;j&gt;
-            default-color&lt;k&gt;"</td>
-          <td>Where &lt;i&gt; is the index of the series, &lt;j&gt; is the index
-            of the data within the series, and &lt;k&gt; is the series&rsquo;
-            color index</td>
-          <td><a href="#node" class="typelink">Node</a> </td>
-        </tr>
-        <tr>
-          <td class="propertyname">&nbsp;</td>
-          <td>The LegendItem symbols are assigned the style&#8209;class of the first
-            symbol of the series.</td>
-          <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
-        </tr>
-      </tbody>
-    </table>
-    <p>
-      <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
-          <tr>
+        <tr>
             <th class="propertyname">CSS Property</th>
             <th class="value">Values</th>
             <th>Default</th>
             <th>Comments</th>
-          </tr>
+        </tr>
         </thead>
         <tbody>
-          <tr>
-            <td colspan="4" class="parents">Has all properties of <a href="#xychart">XYChart</a></td>
-          </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-unit</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
+            <td>5</td>
+            <td>The value between each major tick mark in data units.</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#valueaxis">ValueAxis</a></td>
+        </tr>
         </tbody>
-      </table>
+    </table>
     <h4><a name="piechart" id="piechart">PieChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5481,7 +5585,7 @@
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the data and &lt;j&gt; is the
             series&rsquo; color index. If the data value is negative, the
-            "negative" style&#8209;class is added.</td>
+            "negative" style&#8209;class is added; e.g., <code>.negative.chart-pie</code>.</td>
           <td><a href="#node" class="typelink">Node</a> </td>
         </tr>
         <tr>
@@ -5495,7 +5599,7 @@
           <td><a href="#path" class="typelink">Text</a> </td>
         </tr>
         <tr>
-          <td class="propertyname">"pie-legend-symbol &lt;<em>i<sup>th</sup></em>
+          <td class="propertyname">"pie-legend-symbol &lt;<em>i&ndash;th</em>
             data item&rsquo;s style&#8209;class&gt;"</td>
           <td>Each item in the legend has the style&#8209;class "pie-legend-symbol"
             plus the style&#8209;class of the corresponding data item</td>
@@ -5543,6 +5647,87 @@
           </tr>
         </tbody>
       </table>
+    <h4><a name="scatterchart" id="scatterchart">ScatterChart</a></h4>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">Style class</th>
+            <th>Comments</th>
+            <th>Properties</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">"chart-symbol series&lt;i&gt; data&lt;j&gt;
+                default-color&lt;k&gt;"</td>
+            <td>Where &lt;i&gt; is the index of the series, &lt;j&gt; is the index
+                of the data within the series, and &lt;k&gt; is the series&rsquo;
+                color index</td>
+            <td><a href="#node" class="typelink">Node</a> </td>
+        </tr>
+        <tr>
+            <td class="propertyname">&nbsp;</td>
+            <td>The LegendItem symbols are assigned the style&#8209;class of the first
+                symbol of the series.</td>
+            <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
+        </tr>
+        </tbody>
+    </table>
+    <p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#xychart">XYChart</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4><a name="valueaxis" id="valueaxis">ValueAxis</a></h4>
+    <p class="styleclass">Style class: axis</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-minor-tick-length</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>5</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-minor-tick-count</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>5</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-minor-tick-visible</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#axis">Axis</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>axis-minor-tick-mark &mdash; Path</li>
+    </ul>
     <h4><a name="xychart" id="xychart">XYChart</a></h4>
     <p class="styleclass">Style class: set by sub-type</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -5606,190 +5791,6 @@
         <li>chart-horizontal-grid-lines &mdash; Path</li>
         <li>chart-vertical-zero-line &mdash; Line</li>
         <li>chart-horizontal-zero-line &mdash; Line</li>
-    </ul>
-    <h4><a name="axis" id="axis">Axis</a></h4>
-    <p class="styleclass">Style class: axis</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">-fx-side</td>
-          <td class="value">Side</td>
-          <td>null</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-length</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>8</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-label-font</td>
-          <td class="value"><a href="#typefont" class="typelink">&lt;font&gt;</a></td>
-          <td>8 system</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-label-fill</td>
-          <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
-          <td>black</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-label-gap</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>3</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-mark-visible</td>
-          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
-          <td>true</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-labels-visible</td>
-          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
-          <td>true</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4>Substructure</h4>
-    <ul>
-      <li>axis-label &mdash; Text</li>
-      <li>axis-tick-mark &mdash; Path</li>
-    </ul>
-    <h4><a name="valueaxis" id="valueaxis">ValueAxis</a></h4>
-    <p class="styleclass">Style class: axis</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">-fx-minor-tick-length</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>5</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-minor-tick-count</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>5</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-minor-tick-visible</td>
-          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
-          <td>true</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#axis">Axis</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4>Substructure</h4>
-    <ul>
-      <li>axis-minor-tick-mark &mdash; Path</li>
-    </ul>
-    <h4><a name="numberaxis" id="numberaxis">NumberAxis</a></h4>
-    <p class="styleclass">Style class: axis</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">-fx-tick-unit</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
-          <td>5</td>
-          <td>The value between each major tick mark in data units.</td>
-        </tr>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#valueaxis">ValueAxis</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4><a name="categoyaxis" id="categoryaxis">CategoryAxis</a></h4>
-    <p class="styleclass">Style class: axis</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">-fx-start-margin</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
-          <td>5</td>
-          <td>The margin between the axis start and the first tick-mark</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-end-margin</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
-          <td>5</td>
-          <td>The margin between the axis start and the first tick-mark</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-gap-start-and-end</td>
-          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
-          <td>true</td>
-          <td>If this is true then half the space between ticks is left at the
-            start and end</td>
-        </tr>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#axis">Axis</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4><a name="legend" id="legend">Legend</a></h4>
-    <p class="styleclass">Style class: chart-legend</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4>Substructure</h4>
-    <ul>
-      <li>chart-legend-item &mdash; Label</li>
-      <li>chart-legend-item-symbol &mdash; Node</li>
     </ul>
     <h2><a name="references" id="references">References</a></h2>
     <p>[1] CSS 2.1: <a href="http://www.w3.org/TR/CSS21/" target="_blank">http://www.w3.org/TR/CSS21/</a>
