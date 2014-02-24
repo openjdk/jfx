@@ -310,6 +310,7 @@
               <li><a href="#combobox">ComboBox</a></li>
                 <li><a href="#contextmenu">ContextMenu</a></li>
                 <li><a href="#control">Control</a></li>
+              <li><a href="#htmleditor">HTMLEditor</a></li>
               <li><a href="#hyperlink">Hyperlink</a></li>
               <li><a href="#indexedcell">IndexedCell</a></li>
               <li><a href="#label">Label</a></li>
@@ -345,6 +346,7 @@
               <li><a href="#tooltip">Tooltip</a></li>
               <li><a href="#treecell">TreeCell</a></li>
               <li><a href="#treeview">TreeView</a></li>
+              <li><a href="#webview">WebView</a></li>
             </ul>
           </li>
         </ul>
@@ -3610,6 +3612,47 @@
         </tr>
         </tbody>
     </table>
+    <h4><a name="htmleditor" id="htmleditor">HTMLEditor</a></h4>
+    <p class="styleclass">Style class: html-editor</p>
+    <p>The Hyperlink control has all the properties of <a href="#control">Control</a>.</p>
+    <h4>Substructure</h4>
+    <ul>
+        <li>grid &mdash; GridPane (contains WebView)
+            <ul>
+                <li>top-toolbar &mdash; ToolBar
+                    <ul>
+                        <li>html-editor-cut &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-copy &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-paste &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-align-left &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-align-right &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-align-center &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-align-justify &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-outdent &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-indent &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-bullets &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-numbers &mdash <a href="#togglebutton">ToggleButton</a></li>
+                    </ul>
+                </li>
+                <li>web-view &mdash; <a href="#webview">WebView</a></li>
+                <li>bottom-toolbar &mdash; ToolBar
+                    <ul>
+                        <li>format-menu-button &mdash ComboBox</li>
+                        <li>font-family-menu-button &mdash <a href="#combobox">ComboBox</a></li>
+                        <li>font-size-menu-button &mdash <a href="#combobox">ComboBox</a></li>
+                        <li>html-editor-bold &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-italic &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-underline &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-strike &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-hr &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-foreground &mdash <a href="#colorpicker">ColorPicker</a></li>
+                        <li>html-editor-background &mdash <a href="#colorpicker">ColorPicker</a></li>
+
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ul>
     <h4><a name="hyperlink" id="hyperlink">Hyperlink</a></h4>
     <p class="styleclass">Style class: hyperlink</p>
     <p>The Hyperlink control has all the properties of <a href="#buttonbase">ButtonBase</a>.</p>
