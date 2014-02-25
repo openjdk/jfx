@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,7 +126,7 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.prism.impl.ManagedResource;
 
@@ -465,7 +465,7 @@ public final class QuantumToolkit extends Toolkit {
     void pulse(boolean collect) {
         try {
             if (PULSE_LOGGING_ENABLED) {
-                PULSE_LOGGER.pulseStart();
+                PulseLogger.pulseStart();
             }
 
             if (!toolkitRunning.get()) {
@@ -483,7 +483,7 @@ public final class QuantumToolkit extends Toolkit {
         } finally {
             endPulseRunning();
             if (PULSE_LOGGING_ENABLED) {
-                PULSE_LOGGER.pulseEnd();
+                PulseLogger.pulseEnd();
             }
         }
     }
