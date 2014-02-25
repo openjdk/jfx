@@ -249,7 +249,7 @@ public class NGGroup extends NGNode {
                     bot = top;
                 } else {
                     ImageData newbot =
-                        b.filterImageDatas(fctx, transform, rclip, bot, top);
+                        b.filterImageDatas(fctx, transform, rclip, null, bot, top);
                     bot.unref();
                     top.unref();
                     bot = newbot;

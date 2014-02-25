@@ -31,11 +31,12 @@ import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * An effect that returns a cropped version of the input.
  */
-public class Crop extends CoreEffect {
+public class Crop extends CoreEffect<RenderState> {
 
     // TODO: This class should go away once we fix RT-1347...
 
@@ -176,21 +177,26 @@ public class Crop extends CoreEffect {
         if (!id.validate(fctx)) {
             return new ImageData(fctx, null, null);
         }
-        ImageData ret = filterImageDatas(fctx, transform, cropRect, id);
+        RenderState rstate = getRenderState(fctx, transform, cropRect, renderHelper, defaultInput);
+        ImageData ret = filterImageDatas(fctx, transform, cropRect, rstate, id);
         id.unref();
         return ret;
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
         // RT-27564
         // TODO: Since we also crop to the "crop input" and since cropping
         // is a form of clipping, we could further restrict the bounds we
-        // ask from the content input here...
-        return outputClip;
+        // ask from the content input here, but for now we will use the stock
+        // RenderSpaceRenderState object which simply passes along the output
+        // clip to the inputs unmodified.
+        return RenderState.RenderSpaceRenderState;
     }
 
     @Override

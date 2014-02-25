@@ -217,4 +217,16 @@ public class ImageData {
         return image != null &&
                Renderer.getRenderer(fctx).isImageDataCompatible(this);
     }
+
+    @Override
+    public String toString() {
+        return "ImageData{" +
+                "sharedOwner=" + sharedOwner +
+                ", fctx=" + fctx +
+                ", refcount=" + refcount +
+                ", image=" + image +
+                ", bounds=" + bounds +
+                ", transform=" + transform +
+                ", reusable=" + reusable + '}';
+    }
 }
