@@ -28,7 +28,6 @@ package com.sun.javafx.collections;
 import com.sun.javafx.binding.ExpressionHelperBase;
 import javafx.beans.InvalidationListener;
 import javafx.collections.MapChangeListener;
-import sun.util.logging.PlatformLogger;
 
 import java.util.Arrays;
 
@@ -121,11 +120,7 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(MapChangeListener.Change<? extends K, ? extends V> change) {
-            try {
-                listener.invalidated(change.getMap());
-            } catch (Exception e) {
-                PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
-            }
+            listener.invalidated(change.getMap());
         }
     }
 
@@ -159,11 +154,7 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(MapChangeListener.Change<? extends K, ? extends V> change) {
-            try {
-                listener.onChanged(change);
-            } catch (Exception e) {
-                PlatformLogger.getLogger("collections").warning("Exception in MapChangeListener", e);
-            }
+            listener.onChanged(change);
         }
     }
 
@@ -316,18 +307,10 @@ public abstract class MapListenerHelper<K, V> extends ExpressionHelperBase {
             try {
                 locked = true;
                 for (int i = 0; i < curInvalidationSize; i++) {
-                    try {
-                        curInvalidationList[i].invalidated(change.getMap());
-                    } catch (Exception e) {
-                        PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
-                    }
+                    curInvalidationList[i].invalidated(change.getMap());
                 }
                 for (int i = 0; i < curChangeSize; i++) {
-                    try {
-                        curChangeList[i].onChanged(change);
-                    } catch (Exception e) {
-                        PlatformLogger.getLogger("collections").warning("Exception in MapChangeListener", e);
-                    }
+                    curChangeList[i].onChanged(change);
                 }
             } finally {
                 locked = false;

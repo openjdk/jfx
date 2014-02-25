@@ -28,7 +28,6 @@ package com.sun.javafx.collections;
 import com.sun.javafx.binding.ExpressionHelperBase;
 import javafx.beans.InvalidationListener;
 import javafx.collections.SetChangeListener;
-import sun.util.logging.PlatformLogger;
 
 import java.util.Arrays;
 
@@ -121,11 +120,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(SetChangeListener.Change<? extends E> change) {
-            try {
-                listener.invalidated(change.getSet());
-            } catch (Exception e) {
-                PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
-            }
+            listener.invalidated(change.getSet());
         }
     }
 
@@ -159,11 +154,7 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(SetChangeListener.Change<? extends E> change) {
-            try {
-                listener.onChanged(change);
-            } catch (Exception e) {
-                PlatformLogger.getLogger("collections").warning("Exception in SetChangeListener", e);
-            }
+            listener.onChanged(change);
         }
     }
 
@@ -316,18 +307,10 @@ public abstract class SetListenerHelper<E> extends ExpressionHelperBase {
             try {
                 locked = true;
                 for (int i = 0; i < curInvalidationSize; i++) {
-                    try {
-                        curInvalidationList[i].invalidated(change.getSet());
-                    } catch (Exception e) {
-                        PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
-                    }
+                    curInvalidationList[i].invalidated(change.getSet());
                 }
                 for (int i = 0; i < curChangeSize; i++) {
-                    try {
-                        curChangeList[i].onChanged(change);
-                    } catch (Exception e) {
-                        PlatformLogger.getLogger("collections").warning("Exception in SetChangeListener", e);
-                    }
+                    curChangeList[i].onChanged(change);
                 }
             } finally {
                 locked = false;

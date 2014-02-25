@@ -28,7 +28,6 @@ package com.sun.javafx.binding;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import sun.util.logging.PlatformLogger;
 
 import java.util.Arrays;
 
@@ -133,11 +132,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent() {
-            try {
-                listener.invalidated(observable);
-            } catch (Exception e) {
-                PlatformLogger.getLogger("beans").warning("Exception in InvalidationListener", e);
-            }
+            listener.invalidated(observable);
         }
     }
     
@@ -178,11 +173,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             currentValue = observable.getValue();
             final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
             if (changed) {
-                try {
-                    listener.changed(observable, oldValue, currentValue);
-                } catch (Exception e) {
-                    PlatformLogger.getLogger("beans").warning("Exception in ChangeListener", e);
-                }
+                listener.changed(observable, oldValue, currentValue);
             }
         }
     }
@@ -345,11 +336,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             try {
                 locked = true;
                 for (int i = 0; i < curInvalidationSize; i++) {
-                    try {
-                        curInvalidationList[i].invalidated(observable);
-                    } catch (Exception e) {
-                        PlatformLogger.getLogger("beans").warning("Exception in InvalidationListener", e);
-                    }
+                    curInvalidationList[i].invalidated(observable);
                 }
                 if (curChangeSize > 0) {
                     final T oldValue = currentValue;
@@ -357,11 +344,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                     final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
                     if (changed) {
                         for (int i = 0; i < curChangeSize; i++) {
-                            try {
-                                curChangeList[i].changed(observable, oldValue, currentValue);
-                            } catch (Exception e) {
-                                PlatformLogger.getLogger("beans").warning("Exception in ChangeListener", e);
-                            }
+                            curChangeList[i].changed(observable, oldValue, currentValue);
                         }
                     }
                 }
