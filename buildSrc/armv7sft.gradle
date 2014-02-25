@@ -1,0 +1,590 @@
+/*
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+ext.ARMV7SFT = [:]
+
+fetchExternalTools('ARMV7SFT', [ "armv6-vfp-04.tgz" ], 
+  rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
+
+// Define the location of the sdk and toolchain
+def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armv6-vfp-04")
+
+def compilerHome=file("/opt/arm-linaro-4.7")
+if (rootProject.hasProperty("ARMV7SFT_COMPILER")) {
+    logger.quiet "Using alternate ARMV7SFT_COMPILER $rootProject.ARMV7SF_COMPILER"
+    compilerHome=file(rootProject.ARMV7SFT_COMPILER);
+}
+def compilerPrefix="arm-linux-gnueabi-"
+if (rootProject.hasProperty("ARMV7SFT_COMPILER_PREFIX")) {
+    logger.quiet "Using alternate ARMV7SFT_COMPILER_PREFIX $rootProject.ARMV7SF_COMPILER_PREFIX"
+    compilerPrefix="${rootProject.ARMV7SFT_COMPILER_PREFIX}"
+}
+def jniPlatform
+if (IS_LINUX) {
+    jniPlatform="linux"
+} else if (IS_MAC) {
+    jniPlatform="darwin"
+} else {
+    println "ERROR: Cannot build on this platform"
+    return;
+}
+
+// Declare whether this particular target file applies to the current system
+ARMV7SFT.canBuild = (IS_LINUX || IS_MAC) && compilerHome.exists() && sdk.exists()
+if (!ARMV7SFT.canBuild) {
+    if (!compilerHome.exists()) println "ERROR: Mising compiler $compilerHome"
+    if (!sdk.exists()) println "ERROR: Mising sdk $sdk"
+    return;
+}
+
+// Lambda for naming the generated libs
+ARMV7SFT.library = { name -> return "lib${name}.so" as String }
+
+ARMV7SFT.compileSwing = false;
+ARMV7SFT.compileSWT = false;
+ARMV7SFT.compileFXPackager = false;
+ARMV7SFT.compileDesignTime = false;
+
+// Libraries end up in the sdk/rt/lib/arm directory for arm builds
+ARMV7SFT.libDest = "lib/arm"
+
+// TODO this is garbage. Each target file should define what it includes,
+// not what it excludes.
+ARMV7SFT.jfxrtJarExcludes = [
+    "**/*.hlsl",
+    "com/sun/glass/ui/win",
+    "com/sun/glass/ui/accessible/win",
+    "com/sun/prism/d3d",
+    "com/sun/prism/es2/gl/win",
+    //"com/sun/prism/null3d",
+    "com/sun/scenario/effect/impl/hw/d3d",
+    
+    "com/sun/glass/events/mac",
+    "com/sun/glass/ui/mac",
+    "com/sun/glass/ui/accessible/mac",
+    "com/sun/prism/es2/gl/mac",
+        
+    "com/sun/glass/ui/android",
+    
+    "com/sun/glass/ui/ios",
+    
+    "com/sun/glass/ui/swt", // SWT glass
+    
+    "javafx/embed/swing", // Swing Interop
+    
+    "javafx/embed/swt", // SWT Interop
+
+    "com/sun/prism/es2/MacGL*",
+    "com/sun/prism/es2/IOSGL*",
+    "com/sun/prism/es2/WinGL*",
+]
+
+def commonFlags = [
+        "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
+        "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
+// Specify the compilation parameters and link parameters
+def ccFlags = [
+        commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/$jniPlatform", "-c",
+        IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : "-O2"].flatten()
+//ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
+def linkFlags = ["-shared", commonFlags].flatten()
+
+// Specify the compilation parameters and link parameters
+def extraCFlags = [
+        "-I", "-L",
+        ccFlags,
+        "-mthumb", "-march=armv7-a", "-mfloat-abi=softfp", "-mfpu=vfp",
+        "-I$sdk/usr/include",
+        "-D_GNU_SOURCE", "-DOMAP3"].flatten();
+
+//See if we should build for imx6
+def imxHeader=file("$sdk/usr/include/linux/mxcfb.h")
+if (imxHeader.exists()) {
+        extraCFlags = [extraCFlags,"-DIMX6_PLATFORM"].flatten();
+}
+
+def extraLFlags = [
+        "-I", "-L",
+        linkFlags,
+        "-Wl,-rpath-link", "$sdk/usr/lib",
+        "-L$sdk/usr/lib"].flatten()
+
+def x11CFlags = [extraCFlags, "-DUSE_XSHM"].flatten()
+def x11LFlags = [extraLFlags, "-lX11", "-lXext"].flatten()
+def eglCFlags = [extraCFlags].flatten()
+def eglLFlags = [extraLFlags].flatten()
+def dfbCFlags = ["-I$sdk/usr/include/directfb"]
+def dfbLFlags = ["-ldl"]
+// TODO dfb.args=disable-module=ps2mouse,disable-module=keyboard
+
+def lensLFlags = [extraLFlags, "-lpthread", "-ludev", "-ldl", "-lm"].flatten()
+def monocleCFlags = [
+        extraCFlags,
+        "-Werror",
+        "-I", file("modules/graphics/src/main/native-glass/monocle/")].flatten();
+def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
+def glassCFlags = ["-ffast-math"]
+def glassLFlags = []
+
+def fontCFlags = [extraCFlags].flatten()
+def fontLFlags = [extraLFlags].flatten()
+
+def iioCFlags = [extraCFlags].flatten()
+def iioLFlags = [extraLFlags].flatten()
+
+def es2CFlags = [extraCFlags].flatten()
+def es2LFlags = [extraLFlags, eglLFlags].flatten()
+
+def es2EglfbCFlags = [extraCFlags, eglCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
+def es2EglfbLFlags = [extraLFlags, eglLFlags].flatten()
+def es2MonocleCFlags = [extraCFlags, eglCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
+def es2MonocleFlags = [extraLFlags, eglLFlags].flatten()
+
+def es2X11CFlags = [extraCFlags, eglCFlags, x11CFlags, "-DDEBUG", "-DIS_EGLX11", "-DLINUX"].flatten()
+def es2X11LFlags = [extraLFlags, x11LFlags, eglLFlags, "-lXdmcp", "-lXau"].flatten()
+
+def prismSWCFlags = [extraCFlags].flatten()
+def prismSWLFlags = [extraLFlags].flatten()
+
+def mediaCFlags = [extraCFlags,
+    "-I$sdk/usr/include/gstreamer-0.10",
+    "-I$sdk/usr/include/glib-2.0",
+    "-I$sdk/usr/lib/glib-2.0/include",
+    "-DENABLE_NATIVE_SOURCE=1", "-DENABLE_GST_FFMPEG=1"].flatten()
+def mediaLFlags = [extraLFlags, "-lgstreamer-0.10", "-lgstapp-0.10",
+    "-lgstbase-0.10", "-lglib-2.0", "-lgobject-2.0", "-lgmodule-2.0", "-lgthread-2.0"].flatten()
+
+def webCFlags = [extraCFlags].flatten()
+def webLFlags = [extraLFlags].flatten()
+
+// libraries to remove from the sdk
+//deploy.trim.public.library.filter= \
+//  fxavcodecplugin-52.so \
+//  fxavcodecplugin-53.so \
+//  fxplugins.so \
+//  libjfxwebkit.so \
+//  libgstplugins-lite.so \
+//  libgstreamer-lite.so \
+//  libprism-es2-eglx11.so \
+//  libglass-lens-fb.so \
+
+//defineProperty("CC", "gcc");
+//defineProperty("PRISM_CC", "cc");
+//defineProperty("PRISM_SW_CC", "cc");
+
+def gtkCFlags = [extraCFlags].flatten()
+def gtkLFlags = [extraLFlags].flatten()
+setupTools("ARMV7SFT_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine("$sdk/bin/pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst");
+            setStandardOutput(results);
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "$sdk/bin/pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        gtkCFlags.addAll(properties.getProperty("cflags").split(" "))
+        gtkLFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
+
+ARMV7SFT.javafxPlatformProperties = """javafx.platform=eglfb
+directfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+directfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+directfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
+directfb.glass.platform=Lens
+directfb.glass.lens=dfb
+directfb.prism.order=sw
+directfb.com.sun.javafx.isEmbedded=true
+directfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+eglfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+eglfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
+eglfb.maxTextureSize=2048
+eglfb.glass.platform=Lens
+eglfb.glass.lens=eglfb
+eglfb.prism.order=es2
+eglfb.prism.eglfb=true
+eglfb.prism.lcdtext=false
+eglfb.prism.maxvram=128m
+eglfb.prism.targetvram=112m
+eglfb.use.egl=true
+eglfb.doNativeComposite=true
+eglfb.use.gles2=true
+eglfb.embedded=eglfb
+eglfb.com.sun.javafx.isEmbedded=true
+eglfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglfb.prism.glDepthSize=0
+fb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+fb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+fb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
+fb.glass.platform=Lens
+fb.glass.lens=fb
+fb.prism.order=sw
+fb.com.sun.javafx.isEmbedded=true
+fb.glass.restrictWindowToScreen=true
+fb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+monocle.glass.platform=Monocle
+monocle.prism.order=es2,sw
+monocle.prism.eglfb=true
+monocle.prism.lcdtext=false
+monocle.prism.maxvram=128m
+monocle.prism.targetvram=112m
+monocle.use.egl=true
+monocle.use.gles2=true
+monocle.embedded=eglfb
+monocle.com.sun.javafx.isEmbedded=true
+monocle.doNativeComposite=true
+monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
+monocle.prism.glDepthSize=0
+eglx11.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+eglx11.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+eglx11.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
+eglx11.glass.platform=Lens
+eglx11.glass.lens=eglx11
+eglx11.prism.order=es2
+eglx11.prism.eglx11=true
+eglx11.prism.lcdtext=false
+eglx11.prism.maxvram=128m
+eglx11.prism.targetvram=112m
+eglx11.use.egl=true
+eglx11.use.gles2=true
+eglx11.embedded=eglx11
+eglx11.com.sun.javafx.isEmbedded=true
+eglx11.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglx11.prism.glDepthSize=0
+gtk.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
+gtk.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
+gtk.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
+gtk.glass.platform=gtk
+gtk.prism.order=sw
+gtk.com.sun.javafx.isEmbedded=true
+gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
+
+def pangoCCFlags = [extraCFlags, "-D_ENABLE_PANGO"];
+def pangoLinkFlags = [extraLFlags];
+setupTools("ARMV7SFT_pango_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine "$sdk/bin/pkg-config", "--cflags", "pangoft2"
+            standardOutput = results
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "$sdk/bin/pkg-config", "--libs", "pangoft2"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        pangoCCFlags.addAll(properties.getProperty("cflags").split(" "))
+        pangoLinkFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
+
+def freetypeCCFlags = [ext.IS_COMPILE_PANGO ? "-D_ENABLE_PANGO" :
+                       ext.IS_COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
+def freetypeLinkFlags = []
+setupTools("ARMV7SFT_freetype_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine "$sdk/bin/pkg-config", "--cflags", "freetype2"
+            standardOutput = results
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "$sdk/bin/pkg-config", "--libs", "freetype2"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        freetypeCCFlags.addAll(properties.getProperty("cflags").split(" "))
+        freetypeLinkFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
+
+def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/${compilerPrefix}g++").getAbsolutePath()
+
+ARMV7SFT.glass = [:]
+ARMV7SFT.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport", "monocle", "monocle_x11" ]
+ARMV7SFT.glass.javahInclude = [
+    "com/sun/glass/events/**",
+    "com/sun/glass/ui/*",
+    "com/sun/glass/ui/lens/*",
+    "com/sun/glass/ui/monocle/*",
+    "com/sun/glass/ui/monocle/linux/*",
+    "com/sun/glass/ui/monocle/util/*",
+    "com/sun/glass/ui/monocle/x11/*",
+    "com/sun/glass/ui/gtk/*",
+    "com/sun/glass/ui/accessible/gtk/*"]
+ARMV7SFT.glass.lib = "glass"
+
+ARMV7SFT.glass.lensport = [:]
+ARMV7SFT.glass.lensport.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens/lensport") ]
+ARMV7SFT.glass.lensport.compiler = compiler
+ARMV7SFT.glass.lensport.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB",
+    "-DLENSPORT", "-I", file("modules/graphics/src/main/native-glass/lens/")].flatten()
+ARMV7SFT.glass.lensport.linker = linker
+ARMV7SFT.glass.lensport.linkFlags = [lensLFlags].flatten()
+ARMV7SFT.glass.lensport.lib = "lens_porting"
+
+ARMV7SFT.glass.monocle = [:]
+ARMV7SFT.glass.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle"),
+        file("modules/graphics/src/main/native-glass/monocle/linux"),
+        file("modules/graphics/src/main/native-glass/monocle/util") ]
+ARMV7SFT.glass.monocle.compiler = compiler
+ARMV7SFT.glass.monocle.ccFlags = monocleCFlags
+ARMV7SFT.glass.monocle.linker = linker
+ARMV7SFT.glass.monocle.linkFlags = monocleLFlags
+ARMV7SFT.glass.monocle.lib = "glass_monocle"
+
+ARMV7SFT.glass.monocle_x11 = [:]
+ARMV7SFT.glass.monocle_x11.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle/util"),
+        file("modules/graphics/src/main/native-glass/monocle/x11") ]
+ARMV7SFT.glass.monocle_x11.compiler = compiler
+ARMV7SFT.glass.monocle_x11.ccFlags = monocleCFlags
+ARMV7SFT.glass.monocle_x11.linker = linker
+ARMV7SFT.glass.monocle_x11.linkFlags = [ monocleLFlags, "-lX11" ].flatten()
+ARMV7SFT.glass.monocle_x11.lib = "glass_monocle_x11"
+
+ARMV7SFT.glass.eglfb = [:]
+// TODO when building headless, use lens/cursor/nullcursor/
+// otherwise we use lens/cursor/fbCursor/ and lens/input/udev
+
+// TODO when USE_RFB is specified use lens/rfb
+
+// TODO use /eglfb/x11ContainerScreen when using eglfb and EGL_X11_FB_CONTAINER
+// TODO use /headless/headlessScreen when using headless
+ARMV7SFT.glass.eglfb.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
+    file("modules/graphics/src/main/native-glass/lens/input/udev"),
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c")]
+ARMV7SFT.glass.eglfb.compiler = compiler
+ARMV7SFT.glass.eglfb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEGLFB"].flatten()
+ARMV7SFT.glass.eglfb.linker = linker
+ARMV7SFT.glass.eglfb.linkFlags = [lensLFlags].flatten()
+ARMV7SFT.glass.eglfb.lib = "glass_lens_eglfb"
+
+ARMV7SFT.glass.directfb = [:]
+ARMV7SFT.glass.directfb.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
+    file("modules/graphics/src/main/native-glass/lens/input/udev"),
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c")]
+ARMV7SFT.glass.directfb.compiler = compiler
+ARMV7SFT.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I$sdk/usr/include/directfb", "-DLINUX"].flatten()
+ARMV7SFT.glass.directfb.linker = linker
+ARMV7SFT.glass.directfb.linkFlags = [lensLFlags].flatten()
+ARMV7SFT.glass.directfb.lib = "glass_lens_dfb"
+
+ARMV7SFT.glass.fb = [:]
+ARMV7SFT.glass.fb.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
+    file("modules/graphics/src/main/native-glass/lens/input/udev"),
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c") ]
+ARMV7SFT.glass.fb.compiler = compiler
+ARMV7SFT.glass.fb.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
+ARMV7SFT.glass.fb.linker = linker
+ARMV7SFT.glass.fb.linkFlags = [lensLFlags].flatten()
+ARMV7SFT.glass.fb.lib = "glass_lens_fb"
+ 
+ARMV7SFT.glass.eglx11 = [:]
+ARMV7SFT.glass.eglx11.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/fbCursor"),
+    file("modules/graphics/src/main/native-glass/lens/input/udev"),
+    file("modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c")]
+ARMV7SFT.glass.eglx11.compiler = compiler
+ARMV7SFT.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags].flatten()
+ARMV7SFT.glass.eglx11.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX"].flatten()
+ARMV7SFT.glass.eglx11.linker = linker
+ARMV7SFT.glass.eglx11.linkFlags = [lensLFlags].flatten()
+ARMV7SFT.glass.eglx11.lib = "glass_lens_eglx11"
+ 
+ARMV7SFT.glass.gtk = [:]
+ARMV7SFT.glass.gtk.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
+ARMV7SFT.glass.gtk.compiler = compiler
+ARMV7SFT.glass.gtk.ccFlags = ["-ffast-math", gtkCFlags, "-DLINUX"].flatten()
+ARMV7SFT.glass.gtk.linker = linker
+ARMV7SFT.glass.gtk.linkFlags = [gtkLFlags, "-lstdc++"].flatten()
+ARMV7SFT.glass.gtk.lib = "glass"
+
+ARMV7SFT.decora = [:]
+ARMV7SFT.decora.compiler = compiler
+ARMV7SFT.decora.ccFlags = extraCFlags
+ARMV7SFT.decora.linker = linker
+ARMV7SFT.decora.linkFlags = extraLFlags
+ARMV7SFT.decora.lib = "decora_sse"
+
+ARMV7SFT.prism = [:]
+ARMV7SFT.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+ARMV7SFT.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+ARMV7SFT.prism.compiler = compiler
+ARMV7SFT.prism.ccFlags = es2CFlags
+ARMV7SFT.prism.linker = linker
+ARMV7SFT.prism.linkFlags = es2LFlags 
+ARMV7SFT.prism.lib = "prism_common"
+
+ARMV7SFT.prismSW = [:]
+ARMV7SFT.prismSW.javahInclude = ["com/sun/pisces/**/*"]
+ARMV7SFT.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+ARMV7SFT.prismSW.compiler = compiler
+ARMV7SFT.prismSW.ccFlags = prismSWCFlags
+ARMV7SFT.prismSW.linker = linker
+ARMV7SFT.prismSW.linkFlags = prismSWLFlags
+ARMV7SFT.prismSW.lib = "prism_sw"
+
+ARMV7SFT.iio = [:]
+ARMV7SFT.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
+ARMV7SFT.iio.nativeSource = [
+    file("modules/graphics/src/main/native-iio"),
+    file("modules/graphics/src/main/native-iio/libjpeg7")]
+ARMV7SFT.iio.compiler = compiler
+ARMV7SFT.iio.ccFlags = iioCFlags
+ARMV7SFT.iio.linker = linker
+ARMV7SFT.iio.linkFlags = iioLFlags
+ARMV7SFT.iio.lib = "javafx_iio"
+
+ARMV7SFT.prismES2 = [:]
+ARMV7SFT.prismES2.variants = ["eglfb", "monocle"]
+ARMV7SFT.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+
+ARMV7SFT.prismES2.eglfb = [:]
+ARMV7SFT.prismES2.eglfb.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/eglfb")
+]
+ARMV7SFT.prismES2.eglfb.compiler = compiler
+ARMV7SFT.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", ARMV7SFT.glass.lensport.nativeSource ].flatten()
+ARMV7SFT.prismES2.eglfb.linker = linker
+ARMV7SFT.prismES2.eglfb.linkFlags = es2EglfbLFlags
+ARMV7SFT.prismES2.eglfb.lib = "prism_es2_eglfb"
+
+ARMV7SFT.prismES2.monocle= [:]
+ARMV7SFT.prismES2.monocle.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/monocle")
+]
+ARMV7SFT.prismES2.monocle.compiler = compiler
+ARMV7SFT.prismES2.monocle.ccFlags = [ es2EglfbCFlags, "-I", ARMV7SFT.glass.lensport.nativeSource ].flatten()
+ARMV7SFT.prismES2.monocle.linker = linker
+ARMV7SFT.prismES2.monocle.linkFlags = es2EglfbLFlags
+ARMV7SFT.prismES2.monocle.lib = "prism_es2_monocle"
+
+ARMV7SFT.prismES2.eglx11 = [:]
+ARMV7SFT.prismES2.eglx11.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/eglx11")
+]
+ARMV7SFT.prismES2.eglx11.compiler = compiler
+ARMV7SFT.prismES2.eglx11.ccFlags = es2X11CFlags
+ARMV7SFT.prismES2.eglx11.linker = linker
+ARMV7SFT.prismES2.eglx11.linkFlags = es2X11LFlags
+ARMV7SFT.prismES2.eglx11.lib = "prism_es2_eglx11"
+
+def closedDir = file("$projectDir/../rt-closed")
+ARMV7SFT.font = [:]
+ARMV7SFT.font.javahInclude = [
+    "com/sun/javafx/font/**/*",
+    "com/sun/javafx/text/**/*"]
+ARMV7SFT.font.nativeSource = [file("modules/graphics/src/main/native-font")]
+ARMV7SFT.font.compiler = compiler
+ARMV7SFT.font.ccFlags = fontCFlags
+ARMV7SFT.font.linker = linker
+ARMV7SFT.font.linkFlags = fontLFlags
+ARMV7SFT.font.lib = "javafx_font"
+
+ARMV7SFT.fontT2K = [:]
+ARMV7SFT.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
+ARMV7SFT.fontT2K.nativeSource = [
+        file("$closedDir/javafx-font-t2k-native/src"),
+        file("$closedDir/javafx-font-t2k-native/src/layout")]
+ARMV7SFT.fontT2K.compiler = compiler
+ARMV7SFT.fontT2K.ccFlags = [fontCFlags, "-DLE_STANDALONE"].flatten()
+ARMV7SFT.fontT2K.linker = linker
+ARMV7SFT.fontT2K.linkFlags = fontLFlags
+ARMV7SFT.fontT2K.lib = "javafx_font_t2k"
+
+ARMV7SFT.fontFreetype = [:]
+ARMV7SFT.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class"]
+ARMV7SFT.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
+ARMV7SFT.fontFreetype.compiler = compiler
+ARMV7SFT.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", ccFlags, fontCFlags, freetypeCCFlags].flatten()
+ARMV7SFT.fontFreetype.linker = linker
+ARMV7SFT.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags].flatten()
+ARMV7SFT.fontFreetype.lib = "javafx_font_freetype"
+
+ARMV7SFT.fontPango = [:]
+ARMV7SFT.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
+ARMV7SFT.fontPango.nativeSource = ["src/main/native-font/pango.c"]
+ARMV7SFT.fontPango.compiler = compiler
+ARMV7SFT.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
+ARMV7SFT.fontPango.linker = linker
+ARMV7SFT.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
+ARMV7SFT.fontPango.lib = "javafx_font_pango"
+
+ARMV7SFT.webkit = [:]
+ARMV7SFT.webkit.binDir   = "$compilerHome/bin"
+ARMV7SFT.webkit.compiler = compiler
+ARMV7SFT.webkit.linker   = linker
+ARMV7SFT.webkit.ar       = file("$compilerHome/bin/${compilerPrefix}ar").getAbsolutePath()
+ARMV7SFT.webkit.objcopy  = file("$compilerHome/bin/${compilerPrefix}objcopy").getAbsolutePath()
+ARMV7SFT.webkit.strip    = file("$compilerHome/bin/${compilerPrefix}strip").getAbsolutePath()
+ARMV7SFT.webkit.ccFlags  = extraCFlags.join(' ')
+ARMV7SFT.webkit.linkFlags = extraLFlags.join(' ')
+
+ARMV7SFT.media = [:]
+ARMV7SFT.media.compiler = compiler
+ARMV7SFT.media.linker = linker
+ARMV7SFT.media.extra_cflags = mediaCFlags.join(' ')
+ARMV7SFT.media.extra_ldflags = mediaLFlags.join(' ')
