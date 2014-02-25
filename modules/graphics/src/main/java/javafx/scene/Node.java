@@ -5358,6 +5358,9 @@ public abstract class Node implements EventTarget, Styleable {
                     n.localToSceneTransformProperty().removeListener(
                             getLocalToSceneInvalidationListener());
                 }
+                if (localToSceneTransform != null) {
+                    localToSceneTransform.validityUnknown();
+                }
             }
         }
 
@@ -8970,6 +8973,12 @@ public abstract class Node implements EventTarget, Styleable {
             transform = getInternalValue();
             canReuse = false;
             return transform;
+        }
+
+        public void validityUnknown() {
+            if (valid == VALID) {
+                valid = VALIDITY_UNKNOWN;
+            }
         }
 
         public void invalidate() {

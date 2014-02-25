@@ -247,6 +247,42 @@ public class Node_LocalToSceneTransform_Test {
     }
 
     @Test
+    public void shouldUnregisterListenersWhenNotNeededButStillUpdate() {
+        final Node n = new Rectangle(20, 20);
+        final Group p1 = new Group(n);
+        final Group p2 = new Group(p1);
+
+        InvalidationListener lstnr = new InvalidationListener() {
+            public void invalidated(Observable o) {
+                n.getLocalToSceneTransform();
+            }
+        };
+
+        n.localToSceneTransformProperty().addListener(lstnr);
+
+        // with listener on leave, parents update
+        p2.setTranslateX(30);
+        TransformHelper.assertMatrix(p1.getCurrentLocalToSceneTransformState(),
+                1, 0, 0, 30,
+                0, 1, 0,  0,
+                0, 0, 1,  0);
+
+        // without listener on leave, parents don't update immediately
+        n.localToSceneTransformProperty().removeListener(lstnr);
+        p2.setTranslateX(60);
+        TransformHelper.assertMatrix(p1.getCurrentLocalToSceneTransformState(),
+                1, 0, 0, 30,
+                0, 1, 0,  0,
+                0, 0, 1,  0);
+
+        // ... but must do it on request:
+        TransformHelper.assertMatrix(p1.getLocalToSceneTransform(),
+                1, 0, 0, 60,
+                0, 1, 0,  0,
+                0, 0, 1,  0);
+    }
+
+    @Test
     public void shouldUnregisterListenersWhenReparent() {
         final Node n = new Rectangle(20, 20);
         final Group p1 = new Group(n);
