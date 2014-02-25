@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -267,7 +267,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private Bidi getBidi() {
         if (bidi == null) {
-            bidi = new Bidi(textInputControl.getText(),
+            bidi = new Bidi(textInputControl.textProperty().getValueSafe(),
                             (textInputControl.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
                                     ? Bidi.DIRECTION_RIGHT_TO_LEFT
                                     : Bidi.DIRECTION_LEFT_TO_RIGHT);
