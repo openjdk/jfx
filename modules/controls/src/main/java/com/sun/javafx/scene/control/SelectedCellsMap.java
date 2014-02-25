@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
 import javafx.scene.control.TablePositionBase;
 
 import java.util.*;
@@ -54,7 +55,7 @@ public class SelectedCellsMap<T extends TablePositionBase> {
 
     public SelectedCellsMap(final ListChangeListener<T> listener) {
         selectedCells = FXCollections.<T>observableArrayList();
-        sortedSelectedCells = selectedCells.sorted(new Comparator<T>() {
+        sortedSelectedCells = new SortedList<>(selectedCells, new Comparator<T>() {
             @Override public int compare(T o1, T o2) {
                 return o1.getRow() - o2.getRow();
             }
