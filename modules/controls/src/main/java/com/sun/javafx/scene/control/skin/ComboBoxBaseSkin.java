@@ -135,6 +135,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
 
         if (displayNode != null && !children.contains(displayNode)) {
             children.add(displayNode);
+            displayNode.applyCss();
         }
     }
     
