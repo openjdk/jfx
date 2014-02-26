@@ -28,12 +28,14 @@ package com.sun.javafx.scene.control.skin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.application.Platform;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.binding.When;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -405,6 +407,12 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
         indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
 
+        if (!clipRegion.translateXProperty().isBound()) {
+            clipRegion.translateXProperty().bind(new When(bar.scaleXProperty().isEqualTo(-1.0, 1e-100)).
+                    then(bar.translateXProperty().subtract(w).add(getIndeterminateBarLength())).
+                    otherwise(bar.translateXProperty().negate()));
+        }
+
         if (getIndeterminateBarFlip()) {
             indeterminateTimeline.getKeyFrames().addAll(
                     new KeyFrame(
@@ -449,7 +457,6 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                                     }
                                 }
                             },
-                            new KeyValue(clipRegion.translateXProperty(), startX-(w - getIndeterminateBarLength())),
                             new KeyValue(bar.translateXProperty(), startX)
                     ),
                     new KeyFrame(
@@ -458,16 +465,13 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                                 @Override public void handle(ActionEvent event) {
                                     bar.setScaleX(1);                            }
                             },
-                            new KeyValue(clipRegion.translateXProperty(), endX-(w - getIndeterminateBarLength())),
                             new KeyValue(bar.translateXProperty(), endX)
                     ),
                     new KeyFrame(
-                            Duration.millis((getIndeterminateBarAnimationTime() * 1000)+1),
-                            new KeyValue(clipRegion.translateXProperty(), -endX)
+                            Duration.millis((getIndeterminateBarAnimationTime() * 1000)+1)
                     ),
                     new KeyFrame(
                             Duration.millis(getIndeterminateBarAnimationTime() * 2000),
-                            new KeyValue(clipRegion.translateXProperty(), -startX),
                             new KeyValue(bar.translateXProperty(), startX)
                     )
             );
@@ -477,6 +481,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                             Duration.millis(0),
                             new EventHandler<ActionEvent>() {
                                 @Override public void handle(ActionEvent event) {
+                                    bar.setScaleX(-1);
                                     /**
                                      * Stop the animation if the ProgressBar is removed
                                      * from a Scene, or is invisible.
@@ -514,12 +519,10 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                                 }
                             },
 
-                            new KeyValue(clipRegion.translateXProperty(), startX-(w - getIndeterminateBarLength())),
                             new KeyValue(bar.translateXProperty(), startX)
                     ),
                     new KeyFrame(
                             Duration.millis(getIndeterminateBarAnimationTime() * 1000*2),
-                            new KeyValue(clipRegion.translateXProperty(), endX-(w - getIndeterminateBarLength())),
                             new KeyValue(bar.translateXProperty(), endX)
                     )
             );
@@ -598,16 +601,13 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
                 indeterminateTimeline.play();
             }
             // apply clip
-            if (getIndeterminateBarFlip()) {
-                bar.setClip(clipRegion);
-            } else {
-                bar.setClip(null);
-            }
+            bar.setClip(clipRegion);
         } else if (indeterminateTimeline != null) {
             indeterminateTimeline.stop();
             indeterminateTimeline = null;
             // remove clip
             bar.setClip(null);
+            clipRegion.translateXProperty().unbind();
         }
     }
 
