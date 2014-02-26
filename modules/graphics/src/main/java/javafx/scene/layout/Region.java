@@ -644,6 +644,8 @@ public class
                     // We have determined that the outsets of these two different border
                     // objects is different, and therefore the bounds have changed.
                     impl_geomChanged();
+                }
+                if (old == null || b == null || !old.getInsets().equals(b.getInsets())) {
                     insets.fireValueChanged();
                 }
 
