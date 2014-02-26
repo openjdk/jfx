@@ -825,14 +825,8 @@ public class Tooltip extends PopupControl {
                 //Screen coordinates need to be actual for dynamic tooltip.
                 //See Tooltip.setText
 
-                // detect bogus mouse moved events, if it didn't really move then ignore it
-                double newMouseX = event.getScreenX();
-                double newMouseY = event.getScreenY();
-                if (newMouseX == lastMouseX && newMouseY == lastMouseY) {
-                    return;
-                }
-                lastMouseX = newMouseX;
-                lastMouseY = newMouseY;
+                lastMouseX = event.getScreenX();
+                lastMouseY = event.getScreenY();
 
                 // If the HIDE_TIMER is running, then we don't want this event
                 // handler to do anything, or change any state at all.
@@ -888,12 +882,6 @@ public class Tooltip extends PopupControl {
         private EventHandler<MouseEvent> LEAVING_HANDLER = new EventHandler<MouseEvent>() {
             @Override public void handle(MouseEvent event) {
                 // detect bogus mouse exit events, if it didn't really move then ignore it
-                double newMouseX = event.getScreenX();
-                double newMouseY = event.getScreenY();
-                if (newMouseX == lastMouseX && newMouseY == lastMouseY) {
-                    return;
-                } 
-                
                 if (activationTimer.getStatus() == Timeline.Status.RUNNING) {
                     activationTimer.stop();
                 } else if (hideTimer.getStatus() == Timeline.Status.RUNNING) {
