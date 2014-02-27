@@ -72,12 +72,9 @@ public abstract class VetoableListDecorator<E> implements ObservableList<E> {
 
     public VetoableListDecorator(ObservableList<E> decorated) {
         this.list = decorated;
-        this.list.addListener(new ListChangeListener<E>() {
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends E> c) {
-                ListListenerHelper.fireValueChangedEvent(helper, 
-                        new SourceAdapterChange<E>(VetoableListDecorator.this, c));
-            }
+        this.list.addListener((ListChangeListener.Change<? extends E> c) -> {
+            ListListenerHelper.fireValueChangedEvent(helper,
+                    new SourceAdapterChange<E>(VetoableListDecorator.this, c));
         });
     }
 

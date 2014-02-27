@@ -62,22 +62,13 @@ class PrintLogger extends Logger {
      * only the time of the pulse is logged.
      */
     private static long THRESHOLD = (long)
-            AccessController.doPrivileged(new PrivilegedAction<Integer>() {
-                @Override public Integer run() {
-                    return Integer.getInteger("javafx.pulseLogger.threshold", 17);
-                }
-            });
+            AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.pulseLogger.threshold", 17));
     
     /**
      * Optionally exit after a given number of pulses
      */
     private static final int EXIT_ON_PULSE =
-            AccessController.doPrivileged(new PrivilegedAction<Integer>() {
-                @Override
-                public Integer run() {
-                    return Integer.getInteger("javafx.pulseLogger.exitOnPulse", 0);
-                }
-            });
+            AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("javafx.pulseLogger.exitOnPulse", 0));
 
     /**
      * We have a simple counter that keeps track of the current pulse number.
@@ -160,11 +151,7 @@ class PrintLogger extends Logger {
 
     public static Logger getInstance() {
         if (printLogger == null) {
-            boolean enabled = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                    @Override public Boolean run() {
-                        return Boolean.getBoolean("javafx.pulseLogger");
-                    }
-                });
+            boolean enabled = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.pulseLogger"));
             if (enabled) {
                 printLogger = new PrintLogger();
             }
@@ -408,12 +395,7 @@ class PrintLogger extends Logger {
                 if (!counters.isEmpty()) {
                     System.err.println("Counters:");
                     List<Map.Entry<String,Counter>> entries = new ArrayList(counters.entrySet());
-                    Collections.sort(entries, new Comparator<Map.Entry<String,Counter>>() {
-                        @Override
-                        public int compare(Map.Entry<String,Counter> a, Map.Entry<String,Counter> b) {
-                            return a.getKey().compareTo(b.getKey());
-                        }
-                    });
+                    Collections.sort(entries, (a, b) -> a.getKey().compareTo(b.getKey()));
                     for (Map.Entry<String, Counter> entry : entries) {
                         System.err.println("\t" + entry.getKey() + ": " + entry.getValue().value);
                     }

@@ -153,11 +153,8 @@ public class SetListenerHelperTest {
     
     @Test
     public void testInvalidation_ChangeInPulse() {
-        final InvalidationListener listener = new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                helper = SetListenerHelper.addListener(helper, invalidationListenerMock[0]);
-            }
+        final InvalidationListener listener = observable -> {
+            helper = SetListenerHelper.addListener(helper, invalidationListenerMock[0]);
         };
         helper = SetListenerHelper.addListener(helper, listener);
         SetListenerHelper.fireValueChangedEvent(helper, change);
@@ -212,11 +209,8 @@ public class SetListenerHelperTest {
 
     @Test
     public void testChange_ChangeInPulse() {
-        final SetChangeListener<Object> listener = new SetChangeListener<Object>() {
-            @Override
-            public void onChanged(Change<? extends Object> change) {
-                helper = SetListenerHelper.addListener(helper, changeListenerMock[0]);
-            }
+        final SetChangeListener<Object> listener = change1 -> {
+            helper = SetListenerHelper.addListener(helper, changeListenerMock[0]);
         };
         helper = SetListenerHelper.addListener(helper, listener);
         SetListenerHelper.fireValueChangedEvent(helper, change);

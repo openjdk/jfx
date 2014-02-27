@@ -149,11 +149,8 @@ public class MapListenerHelperTest {
     
     @Test
     public void testInvalidation_ChangeInPulse() {
-        final InvalidationListener listener = new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                helper = MapListenerHelper.addListener(helper, invalidationListenerMock[0]);
-            }
+        final InvalidationListener listener = observable -> {
+            helper = MapListenerHelper.addListener(helper, invalidationListenerMock[0]);
         };
         helper = MapListenerHelper.addListener(helper, listener);
         MapListenerHelper.fireValueChangedEvent(helper, change);
@@ -208,11 +205,8 @@ public class MapListenerHelperTest {
 
     @Test
     public void testChange_ChangeInPulse() {
-        final MapChangeListener<Object, Object> listener = new MapChangeListener<Object, Object>() {
-            @Override
-            public void onChanged(Change<? extends Object, ? extends Object> change) {
-                helper = MapListenerHelper.addListener(helper, changeListenerMock[0]);
-            }
+        final MapChangeListener<Object, Object> listener = change1 -> {
+            helper = MapListenerHelper.addListener(helper, changeListenerMock[0]);
         };
         helper = MapListenerHelper.addListener(helper, listener);
         MapListenerHelper.fireValueChangedEvent(helper, change);

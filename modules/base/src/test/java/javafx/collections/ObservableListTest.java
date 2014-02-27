@@ -255,12 +255,8 @@ public class ObservableListTest  {
 
     @Test
     public void testObserverCanRemoveObservers() {
-        final ListChangeListener<String> listObserver = new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(Change<? extends String> change) {
-                change.getList().removeListener(mlo);
-            }
+        final ListChangeListener<String> listObserver = change -> {
+            change.getList().removeListener(mlo);
         };
         list.addListener(listObserver);
         list.add("x");

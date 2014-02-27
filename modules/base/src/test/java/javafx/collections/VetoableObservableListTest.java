@@ -495,11 +495,8 @@ public class VetoableObservableListTest {
     public void testSubListCreatedOnChangeValid() {
         final List<List<? extends String>> subLists = new ArrayList<>();
 
-        list.addListener(new ListChangeListener<String>() {
-            @Override
-            public void onChanged(Change<? extends String> c) {
-                subLists.add(c.getList().subList(0, 1));
-            }
+        list.addListener((ListChangeListener<String>) c -> {
+            subLists.add(c.getList().subList(0, 1));
         });
 
         list.add("abc");

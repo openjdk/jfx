@@ -77,11 +77,8 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
         this.descriptor = descriptor;
         this.listener = descriptor.new Listener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new Runnable() {
-            @Override
-            public void run() {
-                JavaBeanFloatProperty.this.descriptor.removeListener(listener);
-            }
+        Cleaner.create(this, () -> {
+            JavaBeanFloatProperty.this.descriptor.removeListener(listener);
         });
     }
 
@@ -94,16 +91,14 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
      */
     @Override
     public float get() {
-        return AccessController.doPrivileged(new PrivilegedAction<Float>() {
-            public Float run() {
-                try {
-                    return ((Number)MethodUtil.invoke(
-                        descriptor.getGetter(), getBean(), (Object[])null)).floatValue();
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
+        return AccessController.doPrivileged((PrivilegedAction<Float>) () -> {
+            try {
+                return ((Number)MethodUtil.invoke(
+                    descriptor.getGetter(), getBean(), (Object[])null)).floatValue();
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
         }, acc);
     }
@@ -120,18 +115,16 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
         if (isBound()) {
             throw new RuntimeException("A bound value cannot be set.");
         }
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                try {
-                    MethodUtil.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
-                    ExpressionHelper.fireValueChangedEvent(helper);
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            try {
+                MethodUtil.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
+                ExpressionHelper.fireValueChangedEvent(helper);
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
+            return null;
         }, acc);
     }
 
