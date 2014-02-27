@@ -2,10 +2,9 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$/tests/system">
-      <sourceFolder url="file://$MODULE_DIR$/tests/system/src/test/java" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/tests/system/src/test/resources" isTestSource="true" />
-      <excludeFolder url="file://$MODULE_DIR$/tests/system/build" />
+    <content url="file://$MODULE_DIR$/apps/toys/FXSlideShow">
+      <sourceFolder url="file://$MODULE_DIR$/apps/toys/FXSlideShow/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/toys/FXSlideShow/nbproject" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="rt" />
