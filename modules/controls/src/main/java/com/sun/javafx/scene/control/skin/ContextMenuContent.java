@@ -423,16 +423,18 @@ public class ContextMenuContent extends Region {
     private void computeInitialSize() {
         int index = getLongestLabel();
         itemsContainer.getChildren().clear();
-        if (!getItems().isEmpty()) {
-            final MenuItem item = getItems().get(index);
-            MenuItemContainer menuItemContainer = new MenuItemContainer(item);
+        if (index != -1) {
+            // We need to strip mnemonic symbols to avoid mnemonic duplicates
+            String itemText = new TextBinding(getItems().get(index).getText()).getText().
+                    replaceAll("_", "__").replaceAll("@", "@@");
+            MenuItemContainer menuItemContainer = new MenuItemContainer(new MenuItem(itemText));
             itemsContainer.getChildren().add(menuItemContainer);
         }
     }
-    
+
     private int getLongestLabel() {
         int len = 0;
-        int index = 0;
+        int index = -1;
         for (int row = 0; row < getItems().size(); row++) {
             final MenuItem item = getItems().get(row);
             if ((item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) ||
