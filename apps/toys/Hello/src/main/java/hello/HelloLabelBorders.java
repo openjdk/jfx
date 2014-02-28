@@ -34,7 +34,6 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Tooltip;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 
 
 /**
@@ -197,12 +196,7 @@ public class HelloLabelBorders  extends Application {
         listView.getStyleClass().add("hello-label-borders");
 
         // We want the ListCells in our ListView to be LabelListCells.
-        listView.setCellFactory(new Callback<ListView<Data>, ListCell<Data>>() {
-            @Override
-            public ListCell<Data> call(ListView param) {
-                return new LabelListCell();
-            }
-        });
+        listView.setCellFactory(param -> new LabelListCell());
 
         Scene scene = new Scene(listView);
         scene.getStylesheets().add("/hello/hello.css");

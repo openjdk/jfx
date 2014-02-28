@@ -27,12 +27,7 @@ package hello;
 
 import javafx.application.Application;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -69,11 +64,9 @@ public class HelloMenu extends Application {
         Scene scene = new Scene(new VBox(20), 400, 350);
         final MenuBar menuBar = new MenuBar();
         final String os = System.getProperty("os.name");
-        EventHandler actionHandler = new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent t) {
-                if (t.getTarget() instanceof MenuItem) {
-                    System.out.println(((MenuItem)t.getTarget()).getText() + " - action called");
-                }
+        EventHandler actionHandler = t -> {
+            if (t.getTarget() instanceof MenuItem) {
+                System.out.println(((MenuItem)t.getTarget()).getText() + " - action called");
             }
         };
 
@@ -89,20 +82,12 @@ public class HelloMenu extends Application {
         showMessagesItem = new CheckMenuItem("Enable onShowing/onHiding _messages", 
                                              new ImageView(new Image("hello/about_16.png")));
         MenuItem menu15 = new MenuItem("E_xit");
-        menu15.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent t) {
-                System.exit(0);
-            }
-        });
+        menu15.setOnAction(t -> System.exit(0));
         final String change[] = {"Change Text", "Change Back"};
         final MenuItem menu16 = new MenuItem(change[0]);
         final boolean toggle = false;
         menu16.setAccelerator(KeyCombination.keyCombination("Shortcut+C"));
-        menu16.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent t) {
-                menu16.setText((menu16.getText().equals(change[0])) ? change[1] : change[0]);
-            }
-        });
+        menu16.setOnAction(t -> menu16.setText((menu16.getText().equals(change[0])) ? change[1] : change[0]));
         menu1.getItems().addAll(menu11, menu12, menu13, showMessagesItem, new SeparatorMenuItem(), menu15, menu16);
 
 
@@ -113,11 +98,9 @@ public class HelloMenu extends Application {
         menu112.setOnAction(actionHandler);
         final CheckMenuItem menu113 = new CheckMenuItem("Show \"foo\" item");
         menu113.setSelected(true);
-        menu113.selectedProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                menu112.setVisible(menu113.isSelected());
-                System.err.println("MenuItem \"foo\" is now " + (menu112.isVisible() ? "" : "not") + " visible.");
-            }
+        menu113.selectedProperty().addListener(valueModel -> {
+            menu112.setVisible(menu113.isSelected());
+            System.err.println("MenuItem \"foo\" is now " + (menu112.isVisible() ? "" : "not") + " visible.");
         });
         menu11.getItems().addAll(menu111, menu112, menu113);
 
@@ -171,12 +154,10 @@ public class HelloMenu extends Application {
         radioMI1.setToggleGroup(group);
         radioMI2.setToggleGroup(group);
 
-        InvalidationListener selectedListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                MenuItem mi = (MenuItem)((BooleanProperty)valueModel).getBean();
-                boolean selected = ((BooleanProperty)valueModel).get();
-                System.err.println(mi.getText() + " - " + selected);
-            }
+        InvalidationListener selectedListener = valueModel -> {
+            MenuItem mi = (MenuItem)((BooleanProperty)valueModel).getBean();
+            boolean selected = ((BooleanProperty)valueModel).get();
+            System.err.println(mi.getText() + " - " + selected);
         };
 
         checkMI1.selectedProperty().addListener(selectedListener);
@@ -212,29 +193,22 @@ public class HelloMenu extends Application {
             hbox.getChildren().add(sysMenuLabel);
             ((VBox)scene.getRoot()).getChildren().add(hbox);
             sysMenuLabel.setVisible((menuBar.getHeight() == 0) ? true : false);
-            menuBar.heightProperty().addListener(new ChangeListener<Number>() {
-
-                public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                    sysMenuLabel.setVisible((menuBar.getHeight() == 0) ? true : false);
-                }
-            });
+            menuBar.heightProperty().addListener((ov, t, t1) -> sysMenuLabel.setVisible((menuBar.getHeight() == 0) ? true : false));
         }
         stage.setScene(scene);
         stage.show();
     }
 
-    private EventHandler showHideHandler = new EventHandler<Event>() {
-        public void handle(Event t) {
-            Menu menu = (Menu)t.getSource();
-            if (t.getEventType() == Menu.ON_SHOWING && 
-                    menu.getText().equals("_Submenu")) {
-                Date date = new Date();
-                String time = new SimpleDateFormat("HH:mm:ss").format(date);
-                menu.getItems().get(0).setText("The time is " + time);
-            }
-            if (showMessagesItem.isSelected()) {
-                System.out.println(((Menu)t.getSource()).getText() + " " + t.getEventType());
-            }
+    private EventHandler showHideHandler = t -> {
+        Menu menu = (Menu)t.getSource();
+        if (t.getEventType() == Menu.ON_SHOWING && 
+                menu.getText().equals("_Submenu")) {
+            Date date = new Date();
+            String time = new SimpleDateFormat("HH:mm:ss").format(date);
+            menu.getItems().get(0).setText("The time is " + time);
+        }
+        if (showMessagesItem.isSelected()) {
+            System.out.println(((Menu)t.getSource()).getText() + " " + t.getEventType());
         }
     };
 

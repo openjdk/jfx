@@ -51,20 +51,14 @@ public class HelloDeferSetVisible extends Application {
         root.getChildren().add(rect);
         stage.setScene(scene);
 
-        new Thread(new Runnable() {
-           public void run() {
+        new Thread(() -> {
                System.err.println("Waiting to make stage visible");
                try {
                    Thread.sleep(1000);
                } catch (InterruptedException ex) {}
                System.err.println("Now make stage visible!");
-               Platform.runLater(new Runnable() {
-                   public void run() {
-                        stage.show();
-                   }
-               });
-           }
-        }).start();
+               Platform.runLater(() -> stage.show());
+           }).start();
     }
 
     /**

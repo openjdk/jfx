@@ -26,8 +26,6 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceBox;
@@ -53,19 +51,11 @@ public class HelloChoiceBox extends Application {
         VBox vbox = new VBox(5);
         
         Button slt = new Button("Select item 2");
-        slt.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent t) {
-                choiceBox.getSelectionModel().select(2);
-            }
-        });
+        slt.setOnAction(t -> choiceBox.getSelectionModel().select(2));
         vbox.getChildren().add(slt);
         
         Button clearItems = new Button("Clear items sequence");
-        clearItems.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent t) {
-                choiceBox.getItems().clear();
-            }
-        });
+        clearItems.setOnAction(t -> choiceBox.getItems().clear());
         vbox.getChildren().add(clearItems);
         
         HBox hbox = new HBox(10);

@@ -26,20 +26,15 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
-import javafx.util.Callback;
-
 import javafx.scene.control.ComboBox;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -92,19 +87,17 @@ public class HelloComboBox extends Application {
         
         ComboBox fontComboBox = new ComboBox();
         fontComboBox.setItems(fonts);
-        fontComboBox.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-            @Override public ListCell<String> call(ListView<String> param) {
-                final ListCell<String> cell = new ListCell<String>() {
-                    @Override public void updateItem(String item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (item != null) {
-                            setText(item);
-                            setFont(new Font(item, 14));
-                        }
+        fontComboBox.setCellFactory(param -> {
+            final ListCell<String> cell = new ListCell<String>() {
+                @Override public void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (item != null) {
+                        setText(item);
+                        setFont(new Font(item, 14));
                     }
-                };
-                return cell;
-            }
+                }
+            };
+            return cell;
         });
         nonEditBox.getChildren().add(fontComboBox);
         
@@ -127,29 +120,23 @@ public class HelloComboBox extends Application {
         comboBox3.setItems(strings);
         comboBox3.setEditable(true);
         editBox.getChildren().add(comboBox3);
-        comboBox3.valueProperty().addListener(new ChangeListener<String>() {
-            @Override public void changed(ObservableValue ov, String t, String t1) {
-                System.out.println("new value: " + t1);
-            }
-        });
+        comboBox3.valueProperty().addListener((ov, t, t1) -> System.out.println("new value: " + t1));
         
         ComboBox editFontComboBox = new ComboBox();
         editFontComboBox.setId("third-editable");
         editFontComboBox.setItems(fonts);
         editFontComboBox.setEditable(true);
-        editFontComboBox.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-            @Override public ListCell<String> call(ListView<String> param) {
-                final ListCell<String> cell = new ListCell<String>() {
-                    @Override public void updateItem(String item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (item != null) {
-                            setText(item);
-                            setFont(new Font(item, 14));
-                        }
+        editFontComboBox.setCellFactory(param -> {
+            final ListCell<String> cell = new ListCell<String>() {
+                @Override public void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (item != null) {
+                        setText(item);
+                        setFont(new Font(item, 14));
                     }
-                };
-                return cell;
-            }
+                }
+            };
+            return cell;
         });
         editBox.getChildren().add(editFontComboBox);
         

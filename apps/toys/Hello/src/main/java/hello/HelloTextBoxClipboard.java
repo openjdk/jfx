@@ -28,8 +28,6 @@ package hello;
 import java.util.Set;
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -68,24 +66,20 @@ public class HelloTextBoxClipboard extends Application {
 
         final HBox btns = new HBox();
         final Button copy = new Button("Copy");
-		copy.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                ClipboardContent content = new ClipboardContent();
-                content.putString(copyFromText.getText());
-                Clipboard.getSystemClipboard().setContent(content);
-            }
-		});
+		copy.setOnAction(e -> {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(copyFromText.getText());
+            Clipboard.getSystemClipboard().setContent(content);
+        });
 
         final Button paste = new Button("Paste");
-		paste.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                Set<DataFormat> types = Clipboard.getSystemClipboard().getContentTypes();
-                for (DataFormat type: types) {
-                    System.out.println("TYPE: " + type);
-                }
-                copyToText.setText(Clipboard.getSystemClipboard().getString());
+		paste.setOnAction(e -> {
+            Set<DataFormat> types = Clipboard.getSystemClipboard().getContentTypes();
+            for (DataFormat type: types) {
+                System.out.println("TYPE: " + type);
             }
-		});
+            copyToText.setText(Clipboard.getSystemClipboard().getString());
+        });
 
         btns.getChildren().add(copy);
         btns.getChildren().add(paste);

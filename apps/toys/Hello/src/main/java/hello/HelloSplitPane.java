@@ -26,16 +26,12 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Slider;
 import javafx.scene.control.SplitPane;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -57,11 +53,7 @@ public class HelloSplitPane extends Application {
         horizSlider.setMax(1);
         horizSlider.setValue(0.5f);
         horizSlider.setPrefWidth(horizSplitPane.prefWidth(-1));
-        horizSlider.valueProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                horizSplitPane.setDividerPosition(0, horizSlider.getValue());
-            }
-        });
+        horizSlider.valueProperty().addListener(ov -> horizSplitPane.setDividerPosition(0, horizSlider.getValue()));
 
         horizSplitPane.setPrefSize(200, 200);
         final Button l = new Button("Left Button");
@@ -69,27 +61,15 @@ public class HelloSplitPane extends Application {
         horizSplitPane.getItems().addAll(
                 new VBox(l),
                 new VBox(r));
-        horizSplitPane.getDividers().get(0).positionProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                horizSlider.setValue(horizSplitPane.getDividers().get(0).getPosition());
-            }
-        });
-        horizSplitPane.widthProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                horizSlider.setPrefWidth(horizSplitPane.prefWidth(-1));
-            }
-        });
+        horizSplitPane.getDividers().get(0).positionProperty().addListener(ov -> horizSlider.setValue(horizSplitPane.getDividers().get(0).getPosition()));
+        horizSplitPane.widthProperty().addListener(ov -> horizSlider.setPrefWidth(horizSplitPane.prefWidth(-1)));
 
         vertSlider.setOrientation(Orientation.VERTICAL);
         vertSlider.setMin(0);
         vertSlider.setMax(1);
         vertSlider.setValue(0.5f);
         vertSlider.setPrefHeight(vertSplitPane.prefHeight(-1));
-        vertSlider.valueProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {                
-                vertSplitPane.setDividerPosition(0, 1 - vertSlider.getValue());
-            }
-        });
+        vertSlider.valueProperty().addListener(ov -> vertSplitPane.setDividerPosition(0, 1 - vertSlider.getValue()));
 
         vertSplitPane.setPrefSize(200, 200);
         vertSplitPane.setOrientation(Orientation.VERTICAL);
@@ -98,16 +78,8 @@ public class HelloSplitPane extends Application {
         vertSplitPane.getItems().addAll(
                 new VBox(t),
                 new VBox(b));
-        vertSplitPane.getDividers().get(0).positionProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {                
-                vertSlider.setValue(1 - vertSplitPane.getDividers().get(0).getPosition());
-            }
-        });
-        vertSplitPane.heightProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                vertSlider.setPrefHeight(vertSplitPane.prefHeight(-1));
-            }
-        });
+        vertSplitPane.getDividers().get(0).positionProperty().addListener(ov -> vertSlider.setValue(1 - vertSplitPane.getDividers().get(0).getPosition()));
+        vertSplitPane.heightProperty().addListener(ov -> vertSlider.setPrefHeight(vertSplitPane.prefHeight(-1)));
 
         setupMailClient();
         setupMailClient2();
@@ -201,43 +173,33 @@ public class HelloSplitPane extends Application {
         vbox2.setSpacing(2);
 
         Button b1 = new Button("0.0");
-        b1.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                horizSplitPane.setDividerPosition(0, 0);
-                vertSplitPane.setDividerPosition(0, 0);
-            }
+        b1.setOnMouseClicked(me -> {
+            horizSplitPane.setDividerPosition(0, 0);
+            vertSplitPane.setDividerPosition(0, 0);
         });
 
         Button b2 = new Button("0.25");
-        b2.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                horizSplitPane.setDividerPosition(0, 0.25f);
-                vertSplitPane.setDividerPosition(0, 0.25f);
-            }
+        b2.setOnMouseClicked(me -> {
+            horizSplitPane.setDividerPosition(0, 0.25f);
+            vertSplitPane.setDividerPosition(0, 0.25f);
         });
 
         Button b3 = new Button("0.50");
-        b3.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                horizSplitPane.setDividerPosition(0, 0.5f);
-                vertSplitPane.setDividerPosition(0, 0.5f);
-            }
+        b3.setOnMouseClicked(me -> {
+            horizSplitPane.setDividerPosition(0, 0.5f);
+            vertSplitPane.setDividerPosition(0, 0.5f);
         });
 
         Button b4 = new Button("0.75");
-        b4.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                horizSplitPane.setDividerPosition(0, 0.75f);
-                vertSplitPane.setDividerPosition(0, 0.75f);
-            }
+        b4.setOnMouseClicked(me -> {
+            horizSplitPane.setDividerPosition(0, 0.75f);
+            vertSplitPane.setDividerPosition(0, 0.75f);
         });
 
         Button b5 = new Button("1.0");
-        b5.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                horizSplitPane.setDividerPosition(0, 1.0f);
-                vertSplitPane.setDividerPosition(0, 1.0f);
-            }
+        b5.setOnMouseClicked(me -> {
+            horizSplitPane.setDividerPosition(0, 1.0f);
+            vertSplitPane.setDividerPosition(0, 1.0f);
         });
 
         vbox2.getChildren().clear();

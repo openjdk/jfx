@@ -26,10 +26,6 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -46,7 +42,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-
 import static javafx.geometry.NodeOrientation.*;
 
 
@@ -82,11 +77,7 @@ public class HelloMenuButton extends Application {
 
         Button button = new Button("Simple Button");
         button.setTooltip(new Tooltip("Tooltip for Simple Button"));
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("Simple Button");
-            }
-         });
+        button.setOnAction(e -> System.out.println("Simple Button"));
         vBox1.getChildren().add(button);
 
 
@@ -100,19 +91,11 @@ public class HelloMenuButton extends Application {
         mb.setTooltip(new Tooltip("Tooltip for MenuButton"));
 
         final MenuItem coke = new MenuItem("Coke");
-        coke.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println(coke.getText());
-            }
-         });
+        coke.setOnAction(e -> System.out.println(coke.getText()));
         mb.getItems().add(coke);
 
         final MenuItem pepsi = new MenuItem("Pepsi");
-        pepsi.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println(pepsi.getText());
-            }
-         });
+        pepsi.setOnAction(e -> System.out.println(pepsi.getText()));
         mb.getItems().add(pepsi);
         mb.getItems().addAll(new MenuItem("Foo"),
                              new MenuItem("Foo"),
@@ -140,26 +123,14 @@ public class HelloMenuButton extends Application {
         SplitMenuButton smb = new SplitMenuButton();
         smb.setText("SplitMenuButton1");
         smb.setTooltip(new Tooltip("Tooltip for SplitMenuButton1"));
-        smb.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("SplitMenuButton1");
-            }
-        });
+        smb.setOnAction(e -> System.out.println("SplitMenuButton1"));
 
         MenuItem mi = new MenuItem("Divide");
-        mi.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("Divide");
-            }
-         });
+        mi.setOnAction(e -> System.out.println("Divide"));
         smb.getItems().add(mi);
 
         mi = new MenuItem("Conquer");
-        mi.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("Conquer");
-            }
-         });
+        mi.setOnAction(e -> System.out.println("Conquer"));
         smb.getItems().add(mi);
 
         vBox1.getChildren().add(smb);
@@ -175,33 +146,25 @@ public class HelloMenuButton extends Application {
 
         final SplitMenuButton smb3 = new SplitMenuButton();
         smb3.setTooltip(new Tooltip("Tooltip for SplitMenuButton2"));
-        smb3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("SplitMenuButton2");
-            }
-        });
+        smb3.setOnAction(e -> System.out.println("SplitMenuButton2"));
 
         {
             final MenuItem menuItem = new MenuItem("Land");
-            menuItem.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent e) {
-                    System.out.println("Land");
-                    smb3.setText(menuItem.getText());
-                    smb3.setOnAction(menuItem.getOnAction());
-                }
-             });
+            menuItem.setOnAction(e -> {
+                System.out.println("Land");
+                smb3.setText(menuItem.getText());
+                smb3.setOnAction(menuItem.getOnAction());
+            });
             smb3.getItems().add(menuItem);
         }
 
         {
             final MenuItem menuItem = new MenuItem("Sea");
-            menuItem.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent e) {
-                    System.out.println("Sea");
-                    smb3.setText(menuItem.getText());
-                    smb3.setOnAction(menuItem.getOnAction());
-                }
-             });
+            menuItem.setOnAction(e -> {
+                System.out.println("Sea");
+                smb3.setText(menuItem.getText());
+                smb3.setOnAction(menuItem.getOnAction());
+            });
             smb3.getItems().add(menuItem);
         }
 
@@ -220,12 +183,10 @@ public class HelloMenuButton extends Application {
             ToggleGroup toggleGroup = new ToggleGroup();
             for (final Side side : Side.class.getEnumConstants()) {
                 final RadioButton rb = new RadioButton(side.toString());
-                rb.selectedProperty().addListener(new InvalidationListener() {
-                    @Override public void invalidated(Observable valueModel) {
-                        for (Node node : vBox1.getChildren()) {
-                            if (node instanceof MenuButton) {
-                                ((MenuButton)node).setPopupSide(side);
-                            }
+                rb.selectedProperty().addListener(valueModel -> {
+                    for (Node node : vBox1.getChildren()) {
+                        if (node instanceof MenuButton) {
+                            ((MenuButton)node).setPopupSide(side);
                         }
                     }
                 });
@@ -243,12 +204,10 @@ public class HelloMenuButton extends Application {
 
             {
                 final CheckBox cb = new CheckBox("Disable");
-                cb.selectedProperty().addListener(new InvalidationListener() {
-                    @Override public void invalidated(Observable valueModel) {
-                        boolean disabled = cb.isSelected();
-                        for (Node node : vBox1.getChildren()) {
-                            node.setDisable(disabled);
-                        }
+                cb.selectedProperty().addListener(valueModel -> {
+                    boolean disabled = cb.isSelected();
+                    for (Node node : vBox1.getChildren()) {
+                        node.setDisable(disabled);
                     }
                 });
                 hBox.getChildren().addAll(cb);
@@ -256,12 +215,10 @@ public class HelloMenuButton extends Application {
 
             {
                 final CheckBox cb = new CheckBox("RTL");
-                cb.selectedProperty().addListener(new InvalidationListener() {
-                    @Override public void invalidated(Observable valueModel) {
-                        boolean rtl = cb.isSelected();
-                        for (Node node : vBox1.getChildren()) {
-                            node.setNodeOrientation(rtl ? RIGHT_TO_LEFT : LEFT_TO_RIGHT);
-                        }
+                cb.selectedProperty().addListener(valueModel -> {
+                    boolean rtl = cb.isSelected();
+                    for (Node node : vBox1.getChildren()) {
+                        node.setNodeOrientation(rtl ? RIGHT_TO_LEFT : LEFT_TO_RIGHT);
                     }
                 });
                 cb.setSelected(scene.getEffectiveNodeOrientation() == RIGHT_TO_LEFT);

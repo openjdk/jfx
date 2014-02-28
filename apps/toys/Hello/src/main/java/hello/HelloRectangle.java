@@ -26,10 +26,8 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -49,12 +47,7 @@ public class HelloRectangle extends Application {
         rect.setWidth(100);
         rect.setHeight(50);
         rect.setFill(Color.RED);
-        rect.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                System.out.println("Mouse Pressed:" + e);
-            }
-        });
+        rect.setOnMousePressed(e -> System.out.println("Mouse Pressed:" + e));
 
         root.getChildren().add(rect);
         stage.setScene(scene);

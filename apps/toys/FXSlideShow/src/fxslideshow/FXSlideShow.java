@@ -29,20 +29,17 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Transition;
 import javafx.animation.TranslateTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Task;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
@@ -168,19 +165,16 @@ public class FXSlideShow extends Application {
     }
 
     static ExecutorService executor = Executors.newFixedThreadPool(1,
-            new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(r);
+            r -> {
+                Thread t = new Thread(r);
 
-            // Run at low priority to give User Event thread priority
-            t.setPriority(Thread.MIN_PRIORITY);
+                // Run at low priority to give User Event thread priority
+                t.setPriority(Thread.MIN_PRIORITY);
 
-            // Set this worker to daemon, so our app will exit on close.
-            t.setDaemon(true);
-            return t;
-        }
-    });
+                // Set this worker to daemon, so our app will exit on close.
+                t.setDaemon(true);
+                return t;
+            });
     static final ImageLoadingTask image[] = new ImageLoadingTask[3];
     static final int PREV = 2;
     static final int CURRENT = 0;
@@ -285,24 +279,16 @@ public class FXSlideShow extends Application {
         slideIn.setFromX(-shift);
         slideIn.setToX(0.0);
         transition[CURRENT] = slideIn;
-        slideIn.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                out.setTranslateX(0.0);
-            }
-        });
+        slideIn.setOnFinished(t -> out.setTranslateX(0.0));
         slideIn.play();
 
         final TranslateTransition slideOut = new TranslateTransition(Duration.millis(3000), out);
         slideOut.setFromX(0.0);
         slideOut.setToX(shift);
         transition[NEXT] = slideOut;
-        slideOut.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                out.setVisible(false);
-                out.setTranslateX(0.0);
-            }
+        slideOut.setOnFinished(t -> {
+            out.setVisible(false);
+            out.setTranslateX(0.0);
         });
         slideOut.play();
     }
@@ -327,12 +313,9 @@ public class FXSlideShow extends Application {
         slideOut.setFromY(0.0);
         slideOut.setToY(shift);
         transition[NEXT] = slideOut;
-        slideOut.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                out.setVisible(false);
-                out.setTranslateY(0.0);
-            }
+        slideOut.setOnFinished(t -> {
+            out.setVisible(false);
+            out.setTranslateY(0.0);
         });
         slideOut.play();
     }
@@ -343,12 +326,7 @@ public class FXSlideShow extends Application {
         ftIn.setToValue(1.0);
         ftIn.setCycleCount(0);
         transition[CURRENT] = ftIn;
-        ftIn.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                out.setOpacity(1.0);
-            }
-        });
+        ftIn.setOnFinished(t -> out.setOpacity(1.0));
         ftIn.play();
 
 
@@ -359,12 +337,9 @@ public class FXSlideShow extends Application {
             ftOut.setToValue(0.0);
             ftOut.setCycleCount(0);
             transition[NEXT] = ftOut;
-            ftOut.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent t) {
-                    out.setVisible(false);
-                    out.setOpacity(1.0);
-                }
+            ftOut.setOnFinished(t -> {
+                out.setVisible(false);
+                out.setOpacity(1.0);
             });
             ftOut.play();
         }
@@ -503,28 +478,25 @@ public class FXSlideShow extends Application {
         }
     }
     //-------------------------------------
-    final EventHandler<KeyEvent> keyEventHandler = new EventHandler<KeyEvent>() {
-        @Override
-        public void handle(final KeyEvent keyEvent) {
-            switch (keyEvent.getCode()) {
-                case SPACE:
-                case RIGHT:
-                    nextImage(true);
-                    break;
-                case LEFT:
-                    nextImage(false);
-                    break;
-                //Reload/scale the image
-                case R:
-                    if (image[CURRENT] != null) {
-                        image[CURRENT].load();
-                    }
-                    break;
-                case Q:
-                    Platform.exit();
-                default:
-                // do nothing
-            }
+    final EventHandler<KeyEvent> keyEventHandler = keyEvent -> {
+        switch (keyEvent.getCode()) {
+            case SPACE:
+            case RIGHT:
+                nextImage(true);
+                break;
+            case LEFT:
+                nextImage(false);
+                break;
+            //Reload/scale the image
+            case R:
+                if (image[CURRENT] != null) {
+                    image[CURRENT].load();
+                }
+                break;
+            case Q:
+                Platform.exit();
+            default:
+            // do nothing
         }
     };
 
@@ -547,32 +519,26 @@ public class FXSlideShow extends Application {
      */
     private void startAutoForward() {
         if (waitTimeMillis > 0) {
-            Thread ft = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    LOGGER.finer("Starting Autoforward thread");
-                    while (true) {
-                        long curr = System.currentTimeMillis();
-                        long push = lastImageTime + waitTimeMillis;
-                        long pause = push - curr;
-                        if (lastImageTime > 0) {
-                            if (pause < 0) {
-                                Platform.runLater(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        LOGGER.finer("auto forwarding");
-                                        nextImage(true);
-                                    }
-                                });
-                                pause = waitTimeMillis;
-                            }
-                        } else {
+            Thread ft = new Thread(() -> {
+                LOGGER.finer("Starting Autoforward thread");
+                while (true) {
+                    long curr = System.currentTimeMillis();
+                    long push = lastImageTime + waitTimeMillis;
+                    long pause = push - curr;
+                    if (lastImageTime > 0) {
+                        if (pause < 0) {
+                            Platform.runLater(() -> {
+                                LOGGER.finer("auto forwarding");
+                                nextImage(true);
+                            });
                             pause = waitTimeMillis;
                         }
-                        try {
-                            Thread.sleep(pause);
-                        } catch (Exception e) {
-                        }
+                    } else {
+                        pause = waitTimeMillis;
+                    }
+                    try {
+                        Thread.sleep(pause);
+                    } catch (Exception e) {
                     }
                 }
             });
@@ -642,18 +608,8 @@ public class FXSlideShow extends Application {
         backdrop.widthProperty().bind(scene.widthProperty());
         backdrop.heightProperty().bind(scene.heightProperty());
 
-        stage.widthProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number newval) {
-                sceneBoundsChanged(scene.getWidth(), scene.getHeight());
-            }
-        });
-        stage.heightProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number newval) {
-                sceneBoundsChanged(scene.getWidth(), scene.getHeight());
-            }
-        });
+        stage.widthProperty().addListener((ov, t, newval) -> sceneBoundsChanged(scene.getWidth(), scene.getHeight()));
+        stage.heightProperty().addListener((ov, t, newval) -> sceneBoundsChanged(scene.getWidth(), scene.getHeight()));
 
         stack.getChildren().addAll(
                 backdrop,

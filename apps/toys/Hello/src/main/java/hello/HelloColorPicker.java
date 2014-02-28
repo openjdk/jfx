@@ -46,12 +46,10 @@ public class HelloColorPicker extends Application {
     @Override public void start(Stage stage) {
         stage.setTitle("ColorPicker");
 
-        EventHandler<ActionEvent> actionEventHandler = new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent t) {
-                ColorPicker cp = (ColorPicker) t.getTarget();
-                Color c = cp.getValue();
-                System.out.println("New Color's RGB = "+c.getRed()+" "+c.getGreen()+" "+c.getBlue());
-            }
+        EventHandler<ActionEvent> actionEventHandler = t -> {
+            ColorPicker cp = (ColorPicker) t.getTarget();
+            Color c = cp.getValue();
+            System.out.println("New Color's RGB = "+c.getRed()+" "+c.getGreen()+" "+c.getBlue());
         };
 
         // default mode combobox

@@ -25,8 +25,6 @@
 
 package alertdialog;
 
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -94,29 +92,21 @@ public class AlertImpl {
         final Button yesButton    = new Button("Yes");
         final Button noButton     = new Button("No");
 
-        okButton.setOnAction(new EventHandler() {
-            public void handle(Event event) {
-                result = AlertResult.OK;
-                closeWindow();
-            }
+        okButton.setOnAction(event -> {
+            result = AlertResult.OK;
+            closeWindow();
         });
-        cancelButton.setOnAction(new EventHandler() {
-            public void handle(Event event) {
-                result = AlertResult.CANCEL;
-                closeWindow();
-            }
+        cancelButton.setOnAction(event -> {
+            result = AlertResult.CANCEL;
+            closeWindow();
         });
-        yesButton.setOnAction(new EventHandler() {
-            public void handle(Event event) {
-                result = AlertResult.YES;
-                closeWindow();
-            }
+        yesButton.setOnAction(event -> {
+            result = AlertResult.YES;
+            closeWindow();
         });
-        noButton.setOnAction(new EventHandler() {
-            public void handle(Event event) {
-                result = AlertResult.NO;
-                closeWindow();
-            }
+        noButton.setOnAction(event -> {
+            result = AlertResult.NO;
+            closeWindow();
         });
 
         Button[] buttons = null;

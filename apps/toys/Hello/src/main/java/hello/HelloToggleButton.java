@@ -27,8 +27,6 @@ package hello;
 
 import static javafx.scene.paint.Color.GHOSTWHITE;
 import javafx.application.Application;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -50,13 +48,9 @@ public class HelloToggleButton extends Application {
         Scene scene = newScene();
         
         final ToggleGroup group = new ToggleGroup();
-        group.selectedToggleProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                System.out.println("UserData for selected Toggle: " +
-                        (group.getSelectedToggle() == null ? "****** no selected toggle******" :
-                            group.getSelectedToggle().getUserData()));
-            }
-        });
+        group.selectedToggleProperty().addListener(ov -> System.out.println("UserData for selected Toggle: " +
+                (group.getSelectedToggle() == null ? "****** no selected toggle******" :
+                    group.getSelectedToggle().getUserData())));
         
         ToggleButton button1 = new ToggleButton("Luke, *I* am your father");
         button1.setUserData("Button 1");

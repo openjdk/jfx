@@ -30,7 +30,6 @@ import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
-import javafx.scene.SnapshotResult;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -38,7 +37,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Ellipse;
 import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 
 public class HelloSnapshot2 extends Application {
 
@@ -74,14 +72,12 @@ public class HelloSnapshot2 extends Application {
         container.getChildren().add(new ImageView(image1));
         container.getChildren().add(new ImageView(image2));
 
-        ellipse.snapshot(new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult r) {
-                System.err.println("callback: image = " + r.getImage()
-                        + "  source = " + r.getSource()
-                        + "  params = " + r.getSnapshotParameters());
-                container.getChildren().add(new ImageView(r.getImage()));
-                return null;
-            }
+        ellipse.snapshot(r -> {
+            System.err.println("callback: image = " + r.getImage()
+                    + "  source = " + r.getSource()
+                    + "  params = " + r.getSnapshotParameters());
+            container.getChildren().add(new ImageView(r.getImage()));
+            return null;
         }, params, null);
 
         params.setFill(Color.YELLOW);  // this should not affect the rendering

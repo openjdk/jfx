@@ -35,7 +35,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -103,18 +102,13 @@ public class HelloFonts extends Application {
         column2.setCellValueFactory(
                 new PropertyValueFactory<FontData,Font>("font")
         );
-        column2.setCellFactory(new Callback<TableColumn<FontData, Font>, TableCell<FontData,Font>>() {
+        column2.setCellFactory(param -> new TableCell<FontData, Font>() {
             @Override
-            public TableCell<FontData, Font> call(TableColumn<FontData, Font> param) {
-                return new TableCell<FontData, Font>() {
-                    @Override
-                    protected void updateItem(Font item, boolean empty) {
+            protected void updateItem(Font item, boolean empty) {
 //                        if (item == getItem()) return;
-                        if (item == null) System.err.println("**********NULL why is it null");
-                        setText(sampleText);
-                        if (item != null) setFont(item);
-                    }
-                };
+                if (item == null) System.err.println("**********NULL why is it null");
+                setText(sampleText);
+                if (item != null) setFont(item);
             }
         });
         table.setItems(FXCollections.observableList(data));
@@ -152,18 +146,13 @@ public class HelloFonts extends Application {
         column4.setCellValueFactory(
                 new PropertyValueFactory<FontData,Font>("font")
         );
-        column4.setCellFactory(new Callback<TableColumn<FontData, Font>, TableCell<FontData,Font>>() {
+        column4.setCellFactory(param -> new TableCell<FontData, Font>() {
             @Override
-            public TableCell<FontData, Font> call(TableColumn<FontData, Font> param) {
-                return new TableCell<FontData, Font>() {
-                    @Override
-                    protected void updateItem(Font item, boolean empty) {
+            protected void updateItem(Font item, boolean empty) {
 //                        if (item == getItem()) return;
-                        if (item == null) System.err.println("**********NULL why is it null");
-                        setText(sampleText);
-                        if (item != null) setFont(item);
-                    }
-                };
+                if (item == null) System.err.println("**********NULL why is it null");
+                setText(sampleText);
+                if (item != null) setFont(item);
             }
         });
 

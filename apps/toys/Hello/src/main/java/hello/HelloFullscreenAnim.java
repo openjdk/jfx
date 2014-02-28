@@ -31,8 +31,6 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -74,11 +72,7 @@ public class HelloFullscreenAnim extends Application {
         button.setText("Exit");
         button.setLayoutX(15);
         button.setLayoutY(100);
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                Platform.exit();
-            }
-        });
+        button.setOnAction(e -> Platform.exit());
         root.getChildren().add(button);
 
         stage.setScene(scene);

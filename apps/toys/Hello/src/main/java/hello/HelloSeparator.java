@@ -30,8 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.application.Application;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -71,12 +69,10 @@ public class HelloSeparator extends Application {
 
         ToggleButton toggle = new ToggleButton("Horizontal Slider");
         toggle.setSelected(true);
-        toggle.selectedProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                for (Separator s : separators) {
-                    s.setOrientation(s.getOrientation() == Orientation.VERTICAL ?
-                            Orientation.HORIZONTAL : Orientation.VERTICAL);
-                }
+        toggle.selectedProperty().addListener(ov -> {
+            for (Separator s : separators) {
+                s.setOrientation(s.getOrientation() == Orientation.VERTICAL ?
+                        Orientation.HORIZONTAL : Orientation.VERTICAL);
             }
         });
         ((Group)scene.getRoot()).getChildren().add(toggle);

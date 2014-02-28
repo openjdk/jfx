@@ -26,8 +26,6 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -35,7 +33,6 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 
 public class HelloPopupMenu extends Application {
 
@@ -53,52 +50,20 @@ public class HelloPopupMenu extends Application {
     private Scene createScene() {
         final Scene scene = new Scene(new Group());
         final ContextMenu popupMenu = new ContextMenu();
-        popupMenu.setOnShowing(new EventHandler<WindowEvent>() {
-            @Override public void handle(WindowEvent t) {
-                System.out.println("showing");
-            }
-        });
-        popupMenu.setOnShown(new EventHandler<WindowEvent>() {
-            @Override public void handle(WindowEvent t) {
-                System.out.println("shown");
-            }
-        });
-        popupMenu.setOnHiding(new EventHandler<WindowEvent>() {
-            @Override public void handle(WindowEvent t) {
-                System.out.println("hiding");
-            }
-        });
-        popupMenu.setOnHidden(new EventHandler<WindowEvent>() {
-            @Override public void handle(WindowEvent t) {
-                System.out.println("hidden");
-            }
-        });
-        popupMenu.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                System.out.println("on Action: " + t.getTarget());
-            }
-        });
+        popupMenu.setOnShowing(t -> System.out.println("showing"));
+        popupMenu.setOnShown(t -> System.out.println("shown"));
+        popupMenu.setOnHiding(t -> System.out.println("hiding"));
+        popupMenu.setOnHidden(t -> System.out.println("hidden"));
+        popupMenu.setOnAction(t -> System.out.println("on Action: " + t.getTarget()));
 
         MenuItem item1 = new MenuItem("About");
-        item1.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("About");
-            }
-        });
+        item1.setOnAction(e -> System.out.println("About"));
 
         MenuItem item2 = new MenuItem("Preferences");
-        item2.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("Preferences");
-            }
-        });
+        item2.setOnAction(e -> System.out.println("Preferences"));
 
         MenuItem item3 = new MenuItem("Templates");
-        item3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("Templates");
-            }
-        });
+        item3.setOnAction(e -> System.out.println("Templates"));
 
         popupMenu.getItems().add(item1);
         popupMenu.getItems().add(item2);

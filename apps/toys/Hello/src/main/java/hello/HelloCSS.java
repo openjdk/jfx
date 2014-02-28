@@ -26,8 +26,6 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -93,16 +91,13 @@ public class HelloCSS extends Application {
         r2.setStyle("-fx-base: yellow; -fx-border-color: yellow;");
 
         final Button swapButton = new Button("Move");
-        swapButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                if (swapButton.getParent() == r1) {
-                    r1.getChildren().remove(swapButton);
-                    r2.getChildren().add(swapButton);
-                } else if (swapButton.getParent() == r2) {
-                    r2.getChildren().remove(swapButton);
-                    r1.getChildren().add(swapButton);
-                }
+        swapButton.setOnAction(actionEvent -> {
+            if (swapButton.getParent() == r1) {
+                r1.getChildren().remove(swapButton);
+                r2.getChildren().add(swapButton);
+            } else if (swapButton.getParent() == r2) {
+                r2.getChildren().remove(swapButton);
+                r1.getChildren().add(swapButton);
             }
         });
         r1.getChildren().add(swapButton);

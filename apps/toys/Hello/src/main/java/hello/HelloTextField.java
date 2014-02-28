@@ -26,8 +26,6 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -51,53 +49,37 @@ public class HelloTextField extends Application {
         final PasswordField passwordField = new PasswordField();
 
         Button setIllegalCharsBtn = new Button("Set Illegal Characters");
-        setIllegalCharsBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                textField.setText("Illegal characters here -->" + '\05' + '\07' + '\0' + "<--");
-            }
-        });
+        setIllegalCharsBtn.setOnAction(event -> textField.setText("Illegal characters here -->" + '\05' + '\07' + '\0' + "<--"));
 
         Button increasePrefColumnCountBtn = new Button("Increase prefColumnCount");
-        increasePrefColumnCountBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                textField.setPrefColumnCount(textField.getPrefColumnCount() + 5);
-                passwordField.setPrefColumnCount(passwordField.getPrefColumnCount() + 5);
-            }
+        increasePrefColumnCountBtn.setOnAction(event -> {
+            textField.setPrefColumnCount(textField.getPrefColumnCount() + 5);
+            passwordField.setPrefColumnCount(passwordField.getPrefColumnCount() + 5);
         });
 
         Button decreasePrefColumnCountBtn = new Button("Decrease prefColumnCount");
-        decreasePrefColumnCountBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                textField.setPrefColumnCount(textField.getPrefColumnCount() - 5);
-                passwordField.setPrefColumnCount(passwordField.getPrefColumnCount() - 5);
-            }
+        decreasePrefColumnCountBtn.setOnAction(event -> {
+            textField.setPrefColumnCount(textField.getPrefColumnCount() - 5);
+            passwordField.setPrefColumnCount(passwordField.getPrefColumnCount() - 5);
         });
 
         Button increaseFontSizeBtn = new Button("Increase Font Size");
-        increaseFontSizeBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                fontSize += 1;
-                textField.setStyle("-fx-font-size: " + fontSize + "pt");
-                passwordField.setStyle("-fx-font-size: " + fontSize + "pt");
-            }
+        increaseFontSizeBtn.setOnAction(event -> {
+            fontSize += 1;
+            textField.setStyle("-fx-font-size: " + fontSize + "pt");
+            passwordField.setStyle("-fx-font-size: " + fontSize + "pt");
         });
 
         Button decreaseFontSizeBtn = new Button("Decrease Font Size");
-        decreaseFontSizeBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                fontSize -= 1;
-                textField.setStyle("-fx-font-size: " + fontSize + "pt");
-                passwordField.setStyle("-fx-font-size: " + fontSize + "pt");
-            }
+        decreaseFontSizeBtn.setOnAction(event -> {
+            fontSize -= 1;
+            textField.setStyle("-fx-font-size: " + fontSize + "pt");
+            passwordField.setStyle("-fx-font-size: " + fontSize + "pt");
         });
 
         Button defaultBtn = new Button("Default Action");
         defaultBtn.setDefaultButton(true);
-        defaultBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                System.out.println("Default Action");
-            }
-        });
+        defaultBtn.setOnAction(event -> System.out.println("Default Action"));
 
         VBox fieldBox = new VBox(5);
         fieldBox.setFillWidth(false);

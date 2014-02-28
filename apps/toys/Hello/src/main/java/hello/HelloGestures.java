@@ -26,13 +26,11 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.input.RotateEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.ZoomEvent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -101,79 +99,47 @@ public void start(Stage primaryStage) {
     path.getElements().add(LineTo6);
     path.getElements().add(LineTo7);
 
-    path.setOnRotate(new EventHandler <RotateEvent>() {
-        public void handle(RotateEvent event) {
-            path.setRotate(path.getRotate() + event.getAngle());
-        }
+    path.setOnRotate(event -> path.setRotate(path.getRotate() + event.getAngle()));
+
+    path.setOnScroll(event -> {
+        path.setTranslateX(path.getTranslateX() + event.getDeltaX());
+        path.setTranslateY(path.getTranslateY() + event.getDeltaY());
     });
 
-    path.setOnScroll(new EventHandler <ScrollEvent>() {
-        @Override public void handle(ScrollEvent event) {
-            path.setTranslateX(path.getTranslateX() + event.getDeltaX());
-            path.setTranslateY(path.getTranslateY() + event.getDeltaY());
-        }
-    });
-
-    path.setOnZoom(new EventHandler <ZoomEvent>() {
-        @Override public void handle(ZoomEvent event) {
-            path.setScaleX(path.getScaleX() * event.getZoomFactor());
-            path.setScaleY(path.getScaleY() * event.getZoomFactor());
-        }
+    path.setOnZoom(event -> {
+        path.setScaleX(path.getScaleX() * event.getZoomFactor());
+        path.setScaleY(path.getScaleY() * event.getZoomFactor());
     });
 
     Button btnRotateR = new Button("Send Rotate Right");
-    btnRotateR.setOnMousePressed(new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            path.fireEvent(new RotateEvent(RotateEvent.ROTATE, 350, 300, 350, 300,
-                    false, false, false, false, false, false, 30, 30, null));
-        }
-    });
+    btnRotateR.setOnMousePressed(event -> path.fireEvent(new RotateEvent(RotateEvent.ROTATE, 350, 300, 350, 300,
+            false, false, false, false, false, false, 30, 30, null)));
 
     Button btnRotateL = new Button("Send Rotate Left");
-    btnRotateL.setOnMousePressed(new EventHandler <MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            path.fireEvent(new RotateEvent(RotateEvent.ROTATE, 350, 300, 350, 300,
-                    false, false, false, false, false, false, -30, -30, null));
-        }
-    });
+    btnRotateL.setOnMousePressed(event -> path.fireEvent(new RotateEvent(RotateEvent.ROTATE, 350, 300, 350, 300,
+            false, false, false, false, false, false, -30, -30, null)));
 
     Button btnScrollU = new Button("Send Scroll Up");
-    btnScrollU.setOnMousePressed(new EventHandler <MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            path.fireEvent(new ScrollEvent(ScrollEvent.SCROLL,
-                    350, 300, 350, 300, false, false, false, false, false, false,
-                    0, -25, 0, -25,
-                    ScrollEvent.HorizontalTextScrollUnits.NONE, 1,
-                    ScrollEvent.VerticalTextScrollUnits.NONE, 1, 1, null));
-        }
-    });
+    btnScrollU.setOnMousePressed(event -> path.fireEvent(new ScrollEvent(ScrollEvent.SCROLL,
+            350, 300, 350, 300, false, false, false, false, false, false,
+            0, -25, 0, -25,
+            ScrollEvent.HorizontalTextScrollUnits.NONE, 1,
+            ScrollEvent.VerticalTextScrollUnits.NONE, 1, 1, null)));
 
     Button btnScrollD = new Button("Send Scroll Down");
-    btnScrollD.setOnMousePressed(new EventHandler <MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            path.fireEvent(new ScrollEvent(ScrollEvent.SCROLL,
-                    350, 300, 350, 300, false, false, false, false, false, false,
-                    0, 25, 0, 25,
-                    ScrollEvent.HorizontalTextScrollUnits.NONE, 1,
-                    ScrollEvent.VerticalTextScrollUnits.NONE, 1, 1, null));
-        }
-    });
+    btnScrollD.setOnMousePressed(event -> path.fireEvent(new ScrollEvent(ScrollEvent.SCROLL,
+            350, 300, 350, 300, false, false, false, false, false, false,
+            0, 25, 0, 25,
+            ScrollEvent.HorizontalTextScrollUnits.NONE, 1,
+            ScrollEvent.VerticalTextScrollUnits.NONE, 1, 1, null)));
 
     Button btnZoomIn = new Button("Send Zoom In");
-    btnZoomIn.setOnMousePressed(new EventHandler <MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            path.fireEvent(new ZoomEvent(ZoomEvent.ZOOM, 350, 300, 350, 300,
-                    false, false, false, false, false, false, 1.1, 1.1, null));
-        }
-    });
+    btnZoomIn.setOnMousePressed(event -> path.fireEvent(new ZoomEvent(ZoomEvent.ZOOM, 350, 300, 350, 300,
+            false, false, false, false, false, false, 1.1, 1.1, null)));
 
     Button btnZoomOut = new Button("Send Zoom Out");
-    btnZoomOut.setOnMousePressed(new EventHandler <MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            path.fireEvent(new ZoomEvent(ZoomEvent.ZOOM, 350, 300, 350, 300,
-                    false, false, false, false, false, false, 0.9, 0.9, null));
-        }
-    });
+    btnZoomOut.setOnMousePressed(event -> path.fireEvent(new ZoomEvent(ZoomEvent.ZOOM, 350, 300, 350, 300,
+            false, false, false, false, false, false, 0.9, 0.9, null)));
 
     VBox vb = new VBox(15);
     vb.getChildren().addAll(btnRotateR, btnRotateL, btnScrollU, btnScrollD,

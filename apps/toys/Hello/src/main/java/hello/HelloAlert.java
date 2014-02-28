@@ -29,8 +29,6 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -71,17 +69,15 @@ public class HelloAlert extends Application {
         button1.setText("Toggle color");
         button1.setLayoutX(25);
         button1.setLayoutY(40);
-        button1.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                boolean answer = Alert.confirm(stage, "Verify Change",
-                        "Really toggle the color?");
-                if (answer) {
-                    Color newColor = Color.RED.equals(rect.getFill())
-                            ? Color.GREEN : Color.RED;
-                    rect.setFill(newColor);
-                } else {
-                    System.err.println("Color change canceled");
-                }
+        button1.setOnAction(e -> {
+            boolean answer = Alert.confirm(stage, "Verify Change",
+                    "Really toggle the color?");
+            if (answer) {
+                Color newColor = Color.RED.equals(rect.getFill())
+                        ? Color.GREEN : Color.RED;
+                rect.setFill(newColor);
+            } else {
+                System.err.println("Color change canceled");
             }
         });
 
@@ -91,15 +87,13 @@ public class HelloAlert extends Application {
         button2.setText("Question");
         button2.setLayoutX(25);
         button2.setLayoutY(80);
-        button2.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                boolean answer = Alert.question(stage, "SF Giants",
-                        "How about those Giants?");
-                if (answer) {
-                    System.err.println("Good answer");
-                } else {
-                    System.err.println("What do you mean 'NO' ???");
-                }
+        button2.setOnAction(e -> {
+            boolean answer = Alert.question(stage, "SF Giants",
+                    "How about those Giants?");
+            if (answer) {
+                System.err.println("Good answer");
+            } else {
+                System.err.println("What do you mean 'NO' ???");
             }
         });
 
@@ -109,11 +103,9 @@ public class HelloAlert extends Application {
         button3.setText("Dialog");
         button3.setLayoutX(25);
         button3.setLayoutY(120);
-        button3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                Alert.inform(stage, "Hi, I'll be your modal dialog today");
-                System.err.println("Continue");
-            }
+        button3.setOnAction(e -> {
+            Alert.inform(stage, "Hi, I'll be your modal dialog today");
+            System.err.println("Continue");
         });
 
         root.getChildren().add(button3);

@@ -29,8 +29,6 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.ProgressIndicator;
@@ -134,8 +132,7 @@ public class HelloProgressIndicator extends Application {
         pInd9.setLayoutY(250);
         pInd9.setProgress(-0.1);
 
-        pInd9.progressProperty().addListener(new ChangeListener<Number>() {
-           @Override public void changed(ObservableValue ov, Number oldVal, Number newVal) {
+        pInd9.progressProperty().addListener((ov, oldVal, newVal) -> {
 
                final double percent = newVal.doubleValue();
                if (percent < 0) return; // progress bar went indeterminate
@@ -169,8 +166,7 @@ public class HelloProgressIndicator extends Application {
                }
                final String style = String.format("-fx-progress-color: rgb(%d,%d,%d)", r, g, b);
                pInd9.setStyle(style);
-            }
-        });
+            });
         root.getChildren().add(pInd9);
 
         final Timeline timeline = new Timeline();

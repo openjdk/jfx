@@ -25,8 +25,6 @@
 
 package hello;
 
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -37,6 +35,7 @@ import javafx.stage.Screen;
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
+
 import java.io.File;
 
 /**
@@ -65,60 +64,28 @@ public class HelloSanity extends Application {
         Label welcome = new Label("Welcome to Hello Sanity");
 
         Button bControls = new Button("Controls");
-        bControls.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                builder.controlTest(globalScene, mainBox);
-            }
-        });
+        bControls.setOnAction(e -> builder.controlTest(globalScene, mainBox));
 
         Button bTabs = new Button("Tabs and Menus");
-        bTabs.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                builder.menusTest(globalScene, mainBox, primaryStage);
-            }
-        });
+        bTabs.setOnAction(e -> builder.menusTest(globalScene, mainBox, primaryStage));
 
         Button bWins = new Button("Windows");
-        bWins.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                builder.windowsTest(globalScene, mainBox, primaryStage);
-            }
-        });
+        bWins.setOnAction(e -> builder.windowsTest(globalScene, mainBox, primaryStage));
 
         Button bAnim = new Button("Animation");
-        bAnim.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                builder.animationTest(globalScene, mainBox);
-            }
-        });
+        bAnim.setOnAction(e -> builder.animationTest(globalScene, mainBox));
 
         Button bEffs = new Button("Effects");
-        bEffs.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                builder.effectsTest(globalScene, mainBox);
-            }
-        });
+        bEffs.setOnAction(e -> builder.effectsTest(globalScene, mainBox));
 
         Button bRobot = new Button("Robot");
-        bRobot.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                builder.robotTest(globalScene, mainBox, primaryStage);
-            }
-        });
+        bRobot.setOnAction(e -> builder.robotTest(globalScene, mainBox, primaryStage));
 
         Button bswipe = new Button("Swipe");
-        bswipe.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                builder.swipeTest(globalScene, mainBox);
-            }
-        });
+        bswipe.setOnAction(e -> builder.swipeTest(globalScene, mainBox));
         
         Button bquit = new Button("Quit");
-        bquit.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                primaryStage.close();
-            }
-        });
+        bquit.setOnAction(e -> primaryStage.close());
         
         mainBox.getChildren().addAll(welcome, bControls, bTabs, bWins, bRobot,
                                      bAnim, bEffs, bswipe, bquit);

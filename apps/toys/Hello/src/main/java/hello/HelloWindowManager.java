@@ -26,14 +26,12 @@
 package hello;
 
 import java.util.Iterator;
+
 import javafx.application.Application;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -57,7 +55,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import javafx.stage.WindowEvent;
 
 public class HelloWindowManager extends Application {
     private static double WIDTH = 300;
@@ -214,46 +211,23 @@ public class HelloWindowManager extends Application {
         stage.setWidth(WIDTH);
         stage.setHeight(HEIGHT);
 
-        EventHandler showHideHandler = new EventHandler<Event>() {
-            @Override
-            public void handle(Event t) {
-                System.out.println(eventTag+" ShowHide " + t.getEventType());
-            }
-        };
+        EventHandler showHideHandler = t -> System.out.println(eventTag+" ShowHide " + t.getEventType());
 
 
         Scene scene = createScene(new PopupPlacement(0, 500 - (stageCount -1)*200),stage,name);
 
         stage.setResizable(true);
 
-        stage.addEventHandler(KeyEvent.ANY, new EventHandler<KeyEvent>() {
-
-            @Override
-            public void handle(KeyEvent ke) {
-                System.out.println(eventTag+" " + ke);
-            }
-        });
+        stage.addEventHandler(KeyEvent.ANY, ke -> System.out.println(eventTag+" " + ke));
 
         stage.setOnShowing(showHideHandler);
         stage.setOnShown(showHideHandler);
         stage.setOnHiding(showHideHandler);
         stage.setOnHidden(showHideHandler);
 
-        stage.onShowingProperty().addListener(new ChangeListener<EventHandler<WindowEvent>>() {
+        stage.onShowingProperty().addListener((ov, t, t1) -> System.out.println(eventTag+t));
 
-            @Override
-            public void changed(ObservableValue<? extends EventHandler<WindowEvent>> ov, EventHandler<WindowEvent> t, EventHandler<WindowEvent> t1) {
-                System.out.println(eventTag+t);
-            }
-        });
-
-        stage.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                System.out.println(eventTag+" Focused changed to "+newValue);
-                
-            }
-
-        });
+        stage.focusedProperty().addListener((observable, oldValue, newValue) -> System.out.println(eventTag+" Focused changed to "+newValue));
 
         stage.setScene(scene);
 
@@ -271,13 +245,10 @@ public class HelloWindowManager extends Application {
         final Rectangle rect = new Rectangle();
         rect.setX(0);
         rect.setY(0);
-        rect.sceneProperty().addListener(new ChangeListener<Scene>() {
-            @Override public void changed(ObservableValue<? extends Scene> ov,
-                    Scene oldScene, Scene newScene) {
-                rect.widthProperty().bind(newScene.widthProperty());
-                rect.heightProperty().bind(newScene.heightProperty());
-            }
-        });
+        rect.sceneProperty().addListener((ov, oldScene, newScene) -> {
+            rect.widthProperty().bind(newScene.widthProperty());
+            rect.heightProperty().bind(newScene.heightProperty());
+         });
         Rectangle rectInner = new Rectangle();
         rectInner.setX(1);
         rectInner.setY(1);
@@ -288,21 +259,13 @@ public class HelloWindowManager extends Application {
         rectInner.setStrokeWidth(2);
         content.add(rect);
         content.add(rectInner);
-        rectInner.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent me) {
-                if (showMouse)
-                    System.out.println(eventTag+" " + me);
-            }
+        rectInner.addEventHandler(MouseEvent.ANY, me -> {
+            if (showMouse)
+                System.out.println(eventTag+" " + me);
         });
-        rectInner.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-
-            @Override
-            public void handle(ScrollEvent se) {
-                if (showMouse)
-                    System.out.println(eventTag+" " + se);
-            }
+        rectInner.addEventHandler(ScrollEvent.ANY, se -> {
+            if (showMouse)
+                System.out.println(eventTag+" " + se);
         });
 
         final Label nameLabel = new Label(name);
@@ -381,14 +344,9 @@ public class HelloWindowManager extends Application {
             fsButton.setOnAction(new ReshapingHandler(ReshapingActions.FULLSCREEN_TOGGLE, window));
             content.add(fsButton);
             
-            ((Stage)window).fullScreenProperty().addListener(new ChangeListener<Boolean>() {
-
-                @Override
-                public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                    System.out.println("FULLSCREEN now +"+newValue);
-                    fsButton.setText(newValue ? "Normal": "Full Screen");
-                }
-
+            ((Stage)window).fullScreenProperty().addListener((ov, oldValue, newValue) -> {
+                System.out.println("FULLSCREEN now +"+newValue);
+                fsButton.setText(newValue ? "Normal": "Full Screen");
             });
 
             final Button normalButton = new Button("Close");
@@ -429,12 +387,7 @@ public class HelloWindowManager extends Application {
         final Button mouseButton = new Button("Mouse Output");
         mouseButton.setLayoutX(50);
         mouseButton.setLayoutY(line);
-        mouseButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                showMouse = !showMouse;
-            }
-        });
+        mouseButton.setOnAction(t -> showMouse = !showMouse);
         content.add(mouseButton);
 
         if (window instanceof javafx.stage.Stage) {
@@ -458,28 +411,24 @@ public class HelloWindowManager extends Application {
             escbox.getChildren().add(escrb2);
             escbox.getChildren().add(escrb3);
 
-            escgroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-                @Override
-                public void changed(ObservableValue<? extends Toggle> ov,
-                        Toggle old_toggle, Toggle new_toggle) {
-                    System.out.print("ESC CHANGED: ");
-                    Toggle selected = escgroup.getSelectedToggle();
-                    if (selected != null) {
-                        Stage s = (Stage)window;
-                        if (selected.equals(escrb1)) {
-                            System.out.println("DEFAULT");
-                            s.setFullScreenExitKeyCombination(null);
-                        } else if (selected.equals(escrb2)) {
-                            s.setFullScreenExitKeyCombination(ctrlC);
-                            System.out.println("CTRL-C");
-                        }else if (selected.equals(escrb3)) {
-                            s.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
-                            System.out.println("NO_MATCH");
-                        } else {
-                            System.out.println("NO MATCH FOR ESC KEY TOGGLE?");
-                        }
-                    }
-                }
+            escgroup.selectedToggleProperty().addListener((ov, old_toggle, new_toggle) -> {
+               System.out.print("ESC CHANGED: ");
+               Toggle selected = escgroup.getSelectedToggle();
+               if (selected != null) {
+            Stage s = (Stage)window;
+            if (selected.equals(escrb1)) {
+                System.out.println("DEFAULT");
+                s.setFullScreenExitKeyCombination(null);
+            } else if (selected.equals(escrb2)) {
+                s.setFullScreenExitKeyCombination(ctrlC);
+                System.out.println("CTRL-C");
+            }else if (selected.equals(escrb3)) {
+                s.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+                System.out.println("NO_MATCH");
+            } else {
+                System.out.println("NO MATCH FOR ESC KEY TOGGLE?");
+            }
+               }
             });
 
             VBox hintbox = new VBox();
@@ -500,28 +449,24 @@ public class HelloWindowManager extends Application {
             hintbox.getChildren().add(hintrb2);
             hintbox.getChildren().add(hintrb3);
 
-            hintgroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-                @Override
-                public void changed(ObservableValue<? extends Toggle> ov,
-                        Toggle old_toggle, Toggle new_toggle) {
-                    Toggle selected = hintgroup.getSelectedToggle();
-                    System.out.print("HINT CHANGED:");
-                    if (selected != null) {
-                        Stage s = (Stage)window;
-                        if (selected.equals(hintrb1)) {
-                            System.out.println("DEFAULT");
-                            s.setFullScreenExitHint(null);
-                        } else if (selected.equals(hintrb2)) {
-                            System.out.println("HI WORLD");
-                            s.setFullScreenExitHint("HI WORLD");
-                        }else if (selected.equals(hintrb3)) {
-                            System.out.println("Disable empty string");
-                            s.setFullScreenExitHint("");
-                        } else {
-                            System.out.println("NO MATCH FOR ESC HINT TOGGLE?");
-                        }
-                    }
-                }
+            hintgroup.selectedToggleProperty().addListener((ov, old_toggle, new_toggle) -> {
+               Toggle selected = hintgroup.getSelectedToggle();
+               System.out.print("HINT CHANGED:");
+               if (selected != null) {
+            Stage s = (Stage)window;
+            if (selected.equals(hintrb1)) {
+                System.out.println("DEFAULT");
+                s.setFullScreenExitHint(null);
+            } else if (selected.equals(hintrb2)) {
+                System.out.println("HI WORLD");
+                s.setFullScreenExitHint("HI WORLD");
+            }else if (selected.equals(hintrb3)) {
+                System.out.println("Disable empty string");
+                s.setFullScreenExitHint("");
+            } else {
+                System.out.println("NO MATCH FOR ESC HINT TOGGLE?");
+            }
+               }
             });
 
             if (true) {
@@ -564,42 +509,18 @@ public class HelloWindowManager extends Application {
         final String name = "Popup"+Integer.toString(popupID);
         final String eventTag = "#"+name;
 
-        EventHandler showHideHandler = new EventHandler<Event>() {
-            @Override
-            public void handle(Event t) {
-                System.out.println(eventTag+" ShowHide " + t.getEventType());
-            }
-        };
+        EventHandler showHideHandler = t -> System.out.println(eventTag+" ShowHide " + t.getEventType());
 
         popup.setOnShowing(showHideHandler);
         popup.setOnShown(showHideHandler);
         popup.setOnHiding(showHideHandler);
         popup.setOnHidden(showHideHandler);
 
-        popup.addEventHandler(KeyEvent.ANY, new EventHandler<KeyEvent>() {
+        popup.addEventHandler(KeyEvent.ANY, ke -> System.out.println(eventTag+" " + ke));
 
-            @Override
-            public void handle(KeyEvent ke) {
-                System.out.println(eventTag+" " + ke);
-            }
-        });
+       popup.addEventHandler(MouseEvent.ANY, me -> System.out.println(eventTag+" " + me));
 
-       popup.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent me) {
-                System.out.println(eventTag+" " + me);
-            }
-        });
-
-        popup.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                System.out.println(eventTag+" Focused changed to "+newValue);
-                
-            }
-
-        });
+        popup.focusedProperty().addListener((observable, oldValue, newValue) -> System.out.println(eventTag+" Focused changed to "+newValue));
 
         popup.getContent().add(createRootGroup(popupPlacement,name,popup));
         popup.setAutoHide(true);

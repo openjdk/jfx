@@ -26,8 +26,6 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -47,11 +45,7 @@ public class HelloFullscreenToggle extends Application {
         button.setText("Toggle Fullscreen");
         button.setLayoutX(25);
         button.setLayoutY(40);
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                stage.setFullScreen(!stage.isFullScreen());
-            }
-        });
+        button.setOnAction(e -> stage.setFullScreen(!stage.isFullScreen()));
 
         root.getChildren().add(button);
         stage.setScene(scene);

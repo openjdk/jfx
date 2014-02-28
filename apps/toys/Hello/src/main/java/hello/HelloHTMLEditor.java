@@ -27,8 +27,6 @@ package hello;
 
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
@@ -61,12 +59,7 @@ public class HelloHTMLEditor extends Application {
         root.getChildren().add(htmlEditor);
 
         Button dumpHTMLButton = new Button("Dump HTML");
-        dumpHTMLButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                System.out.println(htmlEditor.getHtmlText());
-            }
-        });
+        dumpHTMLButton.setOnAction(arg0 -> System.out.println(htmlEditor.getHtmlText()));
 
         root.getChildren().add(dumpHTMLButton);
 

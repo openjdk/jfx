@@ -27,8 +27,6 @@ package hello;
 
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -57,22 +55,14 @@ public class HelloFullscreen extends Application {
         button.setText("Exit");
         button.setLayoutX(15);
         button.setLayoutY(100);
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                Platform.exit();
-            }
-        });
+        button.setOnAction(e -> Platform.exit());
         root.getChildren().add(button);
 
         Button button2 = new Button();
         button2.setText("Close");
         button2.setLayoutX(75);
         button2.setLayoutY(100);
-        button2.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                stage.hide();
-            }
-        });
+        button2.setOnAction(e -> stage.hide());
         root.getChildren().add(button2);
 
         stage.setScene(scene);

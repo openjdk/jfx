@@ -28,7 +28,6 @@ package hello;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.property.DoubleProperty;
-import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
@@ -48,6 +47,7 @@ import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.geometry.Point2D;
 import javafx.geometry.Insets;
+
 import com.sun.glass.ui.Robot;
 
 public class HelloTouch extends Application {
@@ -101,30 +101,22 @@ public class HelloTouch extends Application {
         rec.setLayoutY(10);
 
         btnA.setId("custom-red-button");
-        redPressHandler = new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent event) {
-                increaseCount(aPressed, "A: ");
-                increaseCount(allPressed, "All: ");
-                rec.setFill(Color.RED);
-            }
+        redPressHandler = event -> {
+            increaseCount(aPressed, "A: ");
+            increaseCount(allPressed, "All: ");
+            rec.setFill(Color.RED);
         };
         btnA.setOnMousePressed(redPressHandler);
 
         btnB.setId("custom-green-button");
-        greenPressHandler = new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent event) {
-                increaseCount(bPressed, "B: ");
-                increaseCount(allPressed, "All: ");
-                rec.setFill(Color.GREEN);
-            }
+        greenPressHandler = event -> {
+            increaseCount(bPressed, "B: ");
+            increaseCount(allPressed, "All: ");
+            rec.setFill(Color.GREEN);
         };
         btnB.setOnMousePressed(greenPressHandler);
 
-        EventHandler<MouseEvent> releaseHandler = new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent event) {
-                rec.setFill(Color.WHITE);
-            }
-        };
+        EventHandler<MouseEvent> releaseHandler = event -> rec.setFill(Color.WHITE);
         btnA.setOnMouseReleased(releaseHandler);
         btnB.setOnMouseReleased(releaseHandler);
 
@@ -136,11 +128,7 @@ public class HelloTouch extends Application {
         frame.setFill(Color.WHITE);
 
         buttonsPane.getChildren().addAll(frame, btnA, btnB);
-        buttonsPane.setOnMousePressed(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent event) {
-                increaseCount(allPressed, "All: ");
-            }
-        });
+        buttonsPane.setOnMousePressed(event -> increaseCount(allPressed, "All: "));
 
         // Radio Buttons configuration
         ToggleGroup radioBtnsGroup = new ToggleGroup();
@@ -170,51 +158,36 @@ public class HelloTouch extends Application {
 
         option1.setToggleGroup(optionsGroup);
         option1.setSelected(true);
-        option1.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                optionFlag = 1;
-                updateButtonPane();
-            }
+        option1.setOnAction(e -> {
+            optionFlag = 1;
+            updateButtonPane();
         });
 
         RadioButton option2 = new RadioButton("Small Gap");
         option2.setToggleGroup(optionsGroup);
-        option2.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                optionFlag = 2;
-                updateButtonPane();
-            }
+        option2.setOnAction(e -> {
+            optionFlag = 2;
+            updateButtonPane();
         });
 
         option3.setToggleGroup(optionsGroup);
-        option3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                optionFlag = 3;
-                updateButtonPane();
-            }
+        option3.setOnAction(e -> {
+            optionFlag = 3;
+            updateButtonPane();
         });
 
         RadioButton option4 = new RadioButton("Small Button");
         option4.setToggleGroup(optionsGroup);
-        option4.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                optionFlag = 4;
-                updateButtonPane();
-            }
+        option4.setOnAction(e -> {
+            optionFlag = 4;
+            updateButtonPane();
         });
 
         RadioButton option5 = new RadioButton("Custom: ");
         option5.setToggleGroup(optionsGroup);
-        option5.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                optionFlag = 5;
-                updateButtonPane();
-            }
+        option5.setOnAction(e -> {
+            optionFlag = 5;
+            updateButtonPane();
         });
 
         btnSizeSlider.setDisable(true);
@@ -231,32 +204,23 @@ public class HelloTouch extends Application {
         RadioButton mode1 = new RadioButton("Buttons");
         mode1.setToggleGroup(modeGroup);
         mode1.setSelected(true);
-        mode1.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                modeFlag = 1;
-                updateButtonPane();
-            }
+        mode1.setOnAction(e -> {
+            modeFlag = 1;
+            updateButtonPane();
         });
 
         RadioButton mode2 = new RadioButton("Radio Buttons");
         mode2.setToggleGroup(modeGroup);
-        mode2.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                modeFlag = 2;
-                updateButtonPane();
-            }
+        mode2.setOnAction(e -> {
+            modeFlag = 2;
+            updateButtonPane();
         });
 
         RadioButton mode3 = new RadioButton("Checkboxes");
         mode3.setToggleGroup(modeGroup);
-        mode3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                modeFlag = 3;
-                updateButtonPane();
-            }
+        mode3.setOnAction(e -> {
+            modeFlag = 3;
+            updateButtonPane();
         });
 
         VBox modeRadioBox = new VBox(15);
@@ -276,16 +240,13 @@ public class HelloTouch extends Application {
         allPressed.setLayoutY(20);
 
         Button reset = new Button("Reset");
-        reset.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                countA = 0;
-                aPressed.setText("A: 0");
-                countB = 0;
-                bPressed.setText("B: 0");
-                countAll = 0;
-                allPressed.setText("All: 0");
-            }
+        reset.setOnAction(e -> {
+            countA = 0;
+            aPressed.setText("A: 0");
+            countB = 0;
+            bPressed.setText("B: 0");
+            countAll = 0;
+            allPressed.setText("All: 0");
         });
 
         reset.setLayoutX(650);
@@ -318,32 +279,23 @@ public class HelloTouch extends Application {
     public void setEditMode(final Control b1, final Control b2) {
         pressedX = 0;
         pressedY = 0;
-        final EventHandler<MouseEvent> onpress = new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                pressedX = event.getX();
-                pressedY = event.getY();
-            }
+        final EventHandler<MouseEvent> onpress = event -> {
+            pressedX = event.getX();
+            pressedY = event.getY();
         };
         b1.setOnMousePressed(onpress);
-        b1.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                b1.setLayoutX(b1.getLayoutX() + event.getX() - pressedX);
-                b1.setLayoutY(b1.getLayoutY() + event.getY() - pressedY);
-                currentAX = pixelToCm(b1.getLayoutX());
-                currentAY = pixelToCm(b1.getLayoutY());
-            }
+        b1.setOnMouseDragged(event -> {
+            b1.setLayoutX(b1.getLayoutX() + event.getX() - pressedX);
+            b1.setLayoutY(b1.getLayoutY() + event.getY() - pressedY);
+            currentAX = pixelToCm(b1.getLayoutX());
+            currentAY = pixelToCm(b1.getLayoutY());
         });
         b2.setOnMousePressed(onpress);
-        b2.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                b2.setLayoutX(b2.getLayoutX() + event.getX() - pressedX);
-                b2.setLayoutY(b2.getLayoutY() + event.getY() - pressedY);
-                currentBX = pixelToCm(b2.getLayoutX());
-                currentBY = pixelToCm(b2.getLayoutY());
-            }
+        b2.setOnMouseDragged(event -> {
+            b2.setLayoutX(b2.getLayoutX() + event.getX() - pressedX);
+            b2.setLayoutY(b2.getLayoutY() + event.getY() - pressedY);
+            currentBX = pixelToCm(b2.getLayoutX());
+            currentBY = pixelToCm(b2.getLayoutY());
         });
     }
 
@@ -413,14 +365,11 @@ public class HelloTouch extends Application {
                                             currentAY), new Point2D(currentBX,
                                             currentBY));
                         });
-                editMode.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent event) {
-                        if (editMode.isSelected()) {
-                            setEditMode(btnA, btnB);
-                        } else {
-                            setDefaultMode(btnA, btnB);
-                        }
+                editMode.setOnAction(event -> {
+                    if (editMode.isSelected()) {
+                        setEditMode(btnA, btnB);
+                    } else {
+                        setDefaultMode(btnA, btnB);
                     }
                 });
                 break;
@@ -478,14 +427,11 @@ public class HelloTouch extends Application {
                                             currentAY), new Point2D(currentBX,
                                             currentBY));
                         });
-                editMode.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent event) {
-                        if (editMode.isSelected()) {
-                            setEditMode(rbtnA, rbtnB);
-                        } else {
-                            setDefaultMode(rbtnA, rbtnB);
-                        }
+                editMode.setOnAction(event -> {
+                    if (editMode.isSelected()) {
+                        setEditMode(rbtnA, rbtnB);
+                    } else {
+                        setDefaultMode(rbtnA, rbtnB);
                     }
                 });
                 break;
@@ -544,14 +490,11 @@ public class HelloTouch extends Application {
                                             currentAY), new Point2D(currentBX,
                                             currentBY));
                         });
-                editMode.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent event) {
-                        if (editMode.isSelected()) {
-                            setEditMode(chbtnA, chbtnB);
-                        } else {
-                            setDefaultMode(chbtnA, chbtnB);
-                        }
+                editMode.setOnAction(event -> {
+                    if (editMode.isSelected()) {
+                        setEditMode(chbtnA, chbtnB);
+                    } else {
+                        setDefaultMode(chbtnA, chbtnB);
                     }
                 });
                 break;

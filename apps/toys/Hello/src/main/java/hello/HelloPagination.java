@@ -28,9 +28,6 @@ package hello;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Pagination;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.AnchorPane;
@@ -38,7 +35,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 
 
 public class HelloPagination extends Application {
@@ -76,117 +72,61 @@ public class HelloPagination extends Application {
     public void start(final Stage stage) throws Exception {
         pagination = new Pagination(28, 0);
         pagination.setStyle("-fx-border-color:red;");
-        pagination.setPageFactory(new Callback<Integer, Node>() {
-            @Override
-            public Node call(Integer pageIndex) {
-                return createPage(pageIndex);
-            }
-        });
+        pagination.setPageFactory(pageIndex -> createPage(pageIndex));
 
         VBox toolbar = new VBox(10);
         Button setMaxPageIndicatorCount = new Button("setMaxPageIndicatorCount = 5");
-        setMaxPageIndicatorCount.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("setPageIndicatorCount = 5");
-                pagination.setMaxPageIndicatorCount(5);
-            }
+        setMaxPageIndicatorCount.setOnAction(t -> {
+            System.out.println("setPageIndicatorCount = 5");
+            pagination.setMaxPageIndicatorCount(5);
         });
 
         Button getMaxPageIndicatorCount = new Button("getMaxPageIndicatorCount");
-        getMaxPageIndicatorCount.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("getPageIndicatorCount = " + pagination.getMaxPageIndicatorCount());
-            }
-        });
+        getMaxPageIndicatorCount.setOnAction(t -> System.out.println("getPageIndicatorCount = " + pagination.getMaxPageIndicatorCount()));
 
         Button setCurrentPageIndex = new Button("setCurrentPageIndex = 19");
-        setCurrentPageIndex.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("setCurrentPageIndex = 19");
-                pagination.setCurrentPageIndex(19);
-            }
+        setCurrentPageIndex.setOnAction(t -> {
+            System.out.println("setCurrentPageIndex = 19");
+            pagination.setCurrentPageIndex(19);
         });
 
         Button setCurrentPageIndex2 = new Button("setCurrentPageIndex = 0");
-        setCurrentPageIndex2.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("setCurrentPageIndex = 0");
-                pagination.setCurrentPageIndex(0);
-            }
+        setCurrentPageIndex2.setOnAction(t -> {
+            System.out.println("setCurrentPageIndex = 0");
+            pagination.setCurrentPageIndex(0);
         });
 
         Button setCurrentPageIndex3 = new Button("setCurrentPageIndex = 8");
-        setCurrentPageIndex3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("setCurrentPageIndex = 8");
-                pagination.setCurrentPageIndex(8);
-            }
+        setCurrentPageIndex3.setOnAction(t -> {
+            System.out.println("setCurrentPageIndex = 8");
+            pagination.setCurrentPageIndex(8);
         });
 
         Button getCurrentPageIndex = new Button("getCurrentPageIndex");
-        getCurrentPageIndex.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("getCurrentPageIndex = " + pagination.getCurrentPageIndex());
-            }
-        });
+        getCurrentPageIndex.setOnAction(t -> System.out.println("getCurrentPageIndex = " + pagination.getCurrentPageIndex()));
 
         Button setOldPageFactory = new Button("set OLD PageFactory");
-        setOldPageFactory.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                pagination.setPageFactory(new Callback<Integer, Node>() {
-                    @Override
-                    public Node call(Integer pageIndex) {
-                        return createPage(pageIndex);
-                    }
-                });
-            }
-        });
+        setOldPageFactory.setOnAction(t -> pagination.setPageFactory(pageIndex -> createPage(pageIndex)));
 
         Button setNewPageFactory = new Button("set NEW PageFactory");
-        setNewPageFactory.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                pagination.setPageFactory(new Callback<Integer, Node>() {
-                    @Override
-                    public Node call(Integer pageIndex) {
-                        return createPage2(pageIndex);
-                    }
-                });
-            }
-        });
+        setNewPageFactory.setOnAction(t -> pagination.setPageFactory(pageIndex -> createPage2(pageIndex)));
 
         Button setPageCount = new Button("setPageCount = 8");
-        setPageCount.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("setPageCount = 8");
-                pagination.setPageCount(8);
-            }
+        setPageCount.setOnAction(t -> {
+            System.out.println("setPageCount = 8");
+            pagination.setPageCount(8);
         });
 
         Button setPageCount2 = new Button("setPageCount = 18");
-        setPageCount2.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("setPageCount = 18");
-                pagination.setPageCount(18);
-            }
+        setPageCount2.setOnAction(t -> {
+            System.out.println("setPageCount = 18");
+            pagination.setPageCount(18);
         });
 
         Button setPageCount3 = new Button("setPageCount = INDETERMINATE");
-        setPageCount3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("setPageCount = INDETERMINATE");
-                pagination.setPageCount(Pagination.INDETERMINATE);
-            }
+        setPageCount3.setOnAction(t -> {
+            System.out.println("setPageCount = INDETERMINATE");
+            pagination.setPageCount(Pagination.INDETERMINATE);
         });
 
         toolbar.getChildren().addAll(

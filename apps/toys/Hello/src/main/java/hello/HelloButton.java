@@ -27,8 +27,6 @@ package hello;
 
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -51,17 +49,9 @@ public class HelloButton extends Application {
         button.setLayoutX(25);
         button.setLayoutY(40);
 
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("Event: " + e);
-            }
-        });
+        button.setOnAction(e -> System.out.println("Event: " + e));
 
-        button.addEventHandler(KeyEvent.KEY_RELEASED, new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent e) {
-                System.out.println("Event: " + e);
-            }
-        });
+        button.addEventHandler(KeyEvent.KEY_RELEASED, e -> System.out.println("Event: " + e));
 
         ((Group)scene.getRoot()).getChildren().add(button);
 

@@ -36,17 +36,13 @@ import java.util.function.Predicate;
 
 import javafx.application.Application;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import javafx.collections.transformation.FilteredList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
@@ -66,8 +62,6 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableColumn.CellEditEvent;
-import javafx.scene.control.TableColumn.CellDataFeatures;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
@@ -78,8 +72,6 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -87,7 +79,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 
 public class HelloTableView extends Application {
 
@@ -118,11 +109,7 @@ public class HelloTableView extends Application {
             this.email = new SimpleStringProperty(email);
             this.invited = new SimpleBooleanProperty(invited);
 
-            this.invited.addListener(new ChangeListener<Boolean>() {
-                public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                    System.out.println(getFirstName() + " invited: " + t1);
-                }
-            });
+            this.invited.addListener((ov, t, t1) -> System.out.println(getFirstName() + " invited: " + t1));
         }
 
         public Boolean isInvited() { return invited.get(); }
@@ -274,18 +261,7 @@ public class HelloTableView extends Application {
 //                return p.getValue().firstName;
 //            }
 //        });
-        firstNameCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
-            @Override public void handle(CellEditEvent<Person, String> t) {
-                System.out.println("Edit commit event: " + t.getNewValue());
-//                Object obj = t.getNewValue();
-//
-//                if (obj instanceof String) {
-//                    ListView lv = t.getSource();
-//                    lv.getItems().remove((int) lv.getEditingIndex());
-//                    lv.getItems().add( (int) lv.getEditingIndex(), obj);
-//                }
-            }
-        });
+        firstNameCol.setOnEditCommit(t -> System.out.println("Edit commit event: " + t.getNewValue()));
 
 //        final Node graphic1 = new ImageView(new Image("file:src/hello/about_16.png"));
         lastNameCol = new TableColumn<Person, String>();
@@ -293,11 +269,7 @@ public class HelloTableView extends Application {
         lastNameCol.setText("Last");
 //        lastNameCol.setResizable(false);
 //        lastNameCol.setProperty("lastName");
-        lastNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
-            public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
-                return p.getValue().lastNameProperty();
-            }
-        });
+        lastNameCol.setCellValueFactory(p -> p.getValue().lastNameProperty());
 
         nameCol = new TableColumn<Person, String>();
         nameCol.setText("Name");
@@ -310,30 +282,18 @@ public class HelloTableView extends Application {
 //        emailCol.setContextMenu(emailMenu);
         emailCol.setMinWidth(200);
 //        emailCol.setResizable(false);
-        emailCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
-            public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
-                return p.getValue().emailProperty();
-            }
-        });
+        emailCol.setCellValueFactory(p -> p.getValue().emailProperty());
 
         countryCol = new TableColumn<Person, String>();
         countryCol.setText("Country");
-        countryCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
-            public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
-                return new ReadOnlyObjectWrapper<String>("New Zealand");
-            }
-        });
+        countryCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<String>("New Zealand"));
 //        countryCol.setProperty("country");
 
         invitedCol = new TableColumn<Person, Boolean>();
         invitedCol.setText("Invited");
         invitedCol.setMaxWidth(50);
         invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
-        invitedCol.setCellFactory(new Callback<TableColumn<Person, Boolean>, TableCell<Person, Boolean>>() {
-            public TableCell<Person, Boolean> call(TableColumn<Person, Boolean> p) {
-                return new CheckBoxTableCell<Person, Boolean>();
-            }
-        });
+        invitedCol.setCellFactory(p -> new CheckBoxTableCell<Person, Boolean>());
         /*
         ContextMenu ctx = new ContextMenu();
         final MenuItem cutMI    = new MenuItem("Cut");
@@ -368,11 +328,9 @@ public class HelloTableView extends Application {
         tabPane.setPrefWidth(scene.getWidth());
         tabPane.setPrefHeight(scene.getHeight());
 
-        InvalidationListener sceneListener = new InvalidationListener() {
-            @Override public void invalidated(Observable ov) {
-                tabPane.setPrefWidth(scene.getWidth());
-                tabPane.setPrefHeight(scene.getHeight());
-            }
+        InvalidationListener sceneListener = ov -> {
+            tabPane.setPrefWidth(scene.getWidth());
+            tabPane.setPrefHeight(scene.getHeight());
         };
         scene.widthProperty().addListener(sceneListener);
         scene.heightProperty().addListener(sceneListener);
@@ -445,42 +403,34 @@ public class HelloTableView extends Application {
 
         tableView.setPlaceholder(new ProgressBar(-1));
 
-        tableView.setRowFactory(new Callback<TableView<Person>, TableRow<Person>>() {
-            @Override public TableRow<Person> call(TableView<Person> p) {
-                return new TableRow<Person>() {
-                    @Override public void updateItem(Person item, boolean empty) {
-                        super.updateItem(item, empty);
+        tableView.setRowFactory(p -> new TableRow<Person>() {
+            @Override public void updateItem(Person item, boolean empty) {
+                super.updateItem(item, empty);
 
-                        TableView.TableViewSelectionModel sm = tableView.getSelectionModel();
+                TableView.TableViewSelectionModel sm = tableView.getSelectionModel();
 
-                        // get the row and column currently being editing
-                        TablePosition editCell = tableView.getEditingCell();
+                // get the row and column currently being editing
+                TablePosition editCell = tableView.getEditingCell();
 
-                        // set the columns to only be shown if we aren't currently
-                        // editing this row. If we are editing this row, we
-                        // turn off the columns to show our custom node, which
-                        // is set below.
-                        boolean showColumns = sm == null ||
-                                sm.isCellSelectionEnabled() ||
-                                editCell == null ||
-                                editCell.getColumn() != -1 ||
-                                editCell.getRow() != getIndex();
+                // set the columns to only be shown if we aren't currently
+                // editing this row. If we are editing this row, we
+                // turn off the columns to show our custom node, which
+                // is set below.
+                boolean showColumns = sm == null ||
+                        sm.isCellSelectionEnabled() ||
+                        editCell == null ||
+                        editCell.getColumn() != -1 ||
+                        editCell.getRow() != getIndex();
 
-                        if (showColumns) {
-                            setGraphic(null);
-                        } else {
-                            Button stopEditingBtn = new Button("Stop editing");
-                            stopEditingBtn.setPrefSize(200, 50);
-                            stopEditingBtn.setOnAction(new EventHandler<ActionEvent>() {
-                                @Override public void handle(ActionEvent t) {
-                                    tableView.edit(-1, null);
-                                }
-                            });
-                            setGraphic(stopEditingBtn);
-                        }
-                        setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-                    }
-                };
+                if (showColumns) {
+                    setGraphic(null);
+                } else {
+                    Button stopEditingBtn = new Button("Stop editing");
+                    stopEditingBtn.setPrefSize(200, 50);
+                    stopEditingBtn.setOnAction(t -> tableView.edit(-1, null));
+                    setGraphic(stopEditingBtn);
+                }
+                setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
             }
         });
 
@@ -550,18 +500,16 @@ public class HelloTableView extends Application {
         grid.getChildren().add(multipleCell);
         GridPane.setConstraints(multipleCell, 1, 3);
 
-        tg.selectedToggleProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                RadioButton toggle = (RadioButton) tg.getSelectedToggle();
-                if (toggle == null) return;
+        tg.selectedToggleProperty().addListener(ov -> {
+            RadioButton toggle = (RadioButton) tg.getSelectedToggle();
+            if (toggle == null) return;
 
-                Map<Object, Object> properties = toggle.getProperties();
-                SelectionMode selectMode = (SelectionMode) properties.get(MULTI_SELECT);
-                boolean cellSelect = (Boolean) properties.get(CELL_SELECT);
+            Map<Object, Object> properties = toggle.getProperties();
+            SelectionMode selectMode = (SelectionMode) properties.get(MULTI_SELECT);
+            boolean cellSelect = (Boolean) properties.get(CELL_SELECT);
 
-                tableView.getSelectionModel().setSelectionMode(selectMode);
-                tableView.getSelectionModel().setCellSelectionEnabled(cellSelect);
-            }
+            tableView.getSelectionModel().setSelectionMode(selectMode);
+            tableView.getSelectionModel().setCellSelectionEnabled(cellSelect);
         });
         // -- end of selection mode controls
 
@@ -586,11 +534,7 @@ public class HelloTableView extends Application {
         // show/hide column control button
         final ToggleButton columnControlBtn = new ToggleButton("Column Control");
         columnControlBtn.setSelected(false);
-        columnControlBtn.selectedProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable ov) {
-                tableView.setTableMenuButtonVisible(columnControlBtn.isSelected());
-            }
-        });
+        columnControlBtn.selectedProperty().addListener(ov -> tableView.setTableMenuButtonVisible(columnControlBtn.isSelected()));
         grid.getChildren().add(columnControlBtn);
         GridPane.setConstraints(columnControlBtn, 1, 5);
         // -- end of show/hide column control button
@@ -609,14 +553,12 @@ public class HelloTableView extends Application {
         // constrained resize button
         final ToggleButton constrainResizeBtn = new ToggleButton("Constrained Resize");
         constrainResizeBtn.setSelected(false);
-        constrainResizeBtn.selectedProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable ov) {
-                 if (constrainResizeBtn.isSelected()) {
-                     tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-                 } else {
-                     tableView.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-                 }
-            }
+        constrainResizeBtn.selectedProperty().addListener(ov -> {
+             if (constrainResizeBtn.isSelected()) {
+                 tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+             } else {
+                 tableView.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+             }
         });
         grid.add(constrainResizeBtn, 1, 7);
         // -- end of constrained resize button
@@ -626,16 +568,14 @@ public class HelloTableView extends Application {
         // actions
         // Dump to console button (for debugging the tableView observableArrayList)
         Button dumpButton = new Button("Dump to console");
-        dumpButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                System.out.println("================================");
-                System.out.println("TableView dump:");
-                System.out.println("Columns: " + tableView.getColumns());
+        dumpButton.setOnAction(e -> {
+            System.out.println("================================");
+            System.out.println("TableView dump:");
+            System.out.println("Columns: " + tableView.getColumns());
 //                System.out.println("View Columns: " + tableView.getViewColumns());
 //                System.out.println("Leaf Columns: " + tableView.getLeafColumns());
-                System.out.println("Visible Leaf Columns: " + tableView.getVisibleLeafColumns());
-                System.out.println("================================");
-            }
+            System.out.println("Visible Leaf Columns: " + tableView.getVisibleLeafColumns());
+            System.out.println("================================");
         });
         grid.getChildren().add(dumpButton);
         GridPane.setConstraints(dumpButton, 1, 8);
@@ -643,21 +583,12 @@ public class HelloTableView extends Application {
 
         // insert button
         final Button insertBtn = new Button("Insert row");
-        insertBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                data.add(0, new Person("First Name", "Last Name", "Email"));
-            }
-        });
+        insertBtn.setOnAction(t -> data.add(0, new Person("First Name", "Last Name", "Email")));
         grid.getChildren().add(insertBtn);
         GridPane.setConstraints(insertBtn, 1, 9);
 
         final Button renameEthanBtn = new Button("Rename Ethan");
-        renameEthanBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                data.get(2).setFirstName(new BigInteger(40, new Random()).toString(32));
-//                data.set(2, new Person("Jonathan", "Giles"));
-            }
-        });
+        renameEthanBtn.setOnAction(t -> data.get(2).setFirstName(new BigInteger(40, new Random()).toString(32)));
         grid.getChildren().add(renameEthanBtn);
         GridPane.setConstraints(renameEthanBtn, 1, 10);
 
@@ -722,11 +653,7 @@ public class HelloTableView extends Application {
 
         TableColumn<Integer, Number> numberColumn = new TableColumn<>("Numbers");
         numberColumn.setPrefWidth(81);
-        numberColumn.setCellValueFactory(new Callback<CellDataFeatures<Integer, Number>, ObservableValue<Number>>() {
-            @Override public ObservableValue<Number> call(CellDataFeatures<Integer, Number> param) {
-                return new ReadOnlyIntegerWrapper(param.getValue());
-            }
-        });
+        numberColumn.setCellValueFactory(param -> new ReadOnlyIntegerWrapper(param.getValue()));
         tableView.getColumns().add(numberColumn);
 
         return tableView;
@@ -837,29 +764,23 @@ public class HelloTableView extends Application {
         final TextField filterInput = new TextField();
         filterInput.setPromptText("Enter filter text");
 //        filterInput.setColumns(35);
-        filterInput.setOnKeyReleased(new EventHandler<KeyEvent>() {
-            public void handle(KeyEvent t) {
-                filteredList2.setPredicate((Person e) -> {
-                        String input = filterInput.getText().toUpperCase();
+        filterInput.setOnKeyReleased(t -> filteredList2.setPredicate((Person e) -> {
+                String input = filterInput.getText().toUpperCase();
 
-                        // match against the first and last names
-                        return e.getFirstName().toUpperCase().contains(input) || e.getLastName().toUpperCase().contains(input);
-                    }
-                );
+                // match against the first and last names
+                return e.getFirstName().toUpperCase().contains(input) || e.getLastName().toUpperCase().contains(input);
             }
-        });
+        ));
         vbox.getChildren().add(filterInput);
 
         final TextField newItemInput = new TextField();
         newItemInput.setPromptText("Enter \"firstName lastName\", then press enter to add person to table");
 //        newItemInput.setColumns(35);
-        newItemInput.setOnKeyReleased(new EventHandler<KeyEvent>() {
-            public void handle(KeyEvent t) {
-                if (t.getCode() == KeyCode.ENTER) {
-                    String[] name = newItemInput.getText().split(" ");
-                    data.add(new Person(name[0], name[1]));
-                    newItemInput.setText("");
-                }
+        newItemInput.setOnKeyReleased(t -> {
+            if (t.getCode() == KeyCode.ENTER) {
+                String[] name = newItemInput.getText().split(" ");
+                data.add(new Person(name[0], name[1]));
+                newItemInput.setText("");
             }
         });
         vbox.getChildren().add(newItemInput);
@@ -875,11 +796,7 @@ public class HelloTableView extends Application {
         TableColumn<Person, String> firstNameCol = new TableColumn<>();
         firstNameCol.setText("First");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person,String>("firstName"));
-        firstNameCol.setOnEditCommit(new EventHandler<CellEditEvent<Person, String>>() {
-            @Override public void handle(CellEditEvent<Person, String> t) {
-                System.out.println("Edit commit event: " + t.getNewValue());
-            }
-        });
+        firstNameCol.setOnEditCommit(t -> System.out.println("Edit commit event: " + t.getNewValue()));
 
         return firstNameCol;
     }
@@ -887,11 +804,7 @@ public class HelloTableView extends Application {
     private TableColumn createLastNameCol() {
         TableColumn<Person, String> lastNameCol = new TableColumn<Person, String>();
         lastNameCol.setText("Last");
-        lastNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
-            public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
-                return p.getValue().lastNameProperty();
-            }
-        });
+        lastNameCol.setCellValueFactory(p -> p.getValue().lastNameProperty());
         return lastNameCol;
     }
 
@@ -915,14 +828,12 @@ public class HelloTableView extends Application {
 
         getLines(bigData);
 
-        tableView.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent t) {
-                if (t.getClickCount() == 3) {
-                    System.out.println("resetting data...");
-                    bigData.clear();
-                    getLines(bigData);
-                    System.out.println("Done");
-                }
+        tableView.setOnMouseReleased(t -> {
+            if (t.getClickCount() == 3) {
+                System.out.println("resetting data...");
+                bigData.clear();
+                getLines(bigData);
+                System.out.println("Done");
             }
         });
 
@@ -959,34 +870,26 @@ public class HelloTableView extends Application {
         for (int i = 0; i <= NB_COL; i++) {
             TableColumn<List<Double>,Double> col = new TableColumn<List<Double>,Double>("Col" + i);
             final int coli = i;
-            col.setCellValueFactory(new Callback<CellDataFeatures<List<Double>,Double>, ObservableValue<Double>>() {
-                public ObservableValue<Double> call(CellDataFeatures<List<Double>,Double> p) {
-                    return new ReadOnlyObjectWrapper<Double>(((List<Double>) p.getValue()).get(coli));
-                }
-            });
+            col.setCellValueFactory(p -> new ReadOnlyObjectWrapper<Double>(((List<Double>) p.getValue()).get(coli)));
 
             if (customCell) {
-                col.setCellFactory(new Callback<TableColumn<List<Double>,Double>, TableCell<List<Double>,Double>>() {
-                    public TableCell<List<Double>,Double> call(TableColumn<List<Double>,Double> p) {
-                        return new TableCell<List<Double>,Double>() {
-                            CheckBox chk;
+                col.setCellFactory(p -> new TableCell<List<Double>,Double>() {
+                    CheckBox chk;
 
-                            @Override public void updateItem(Double item, boolean empty) {
-                                super.updateItem(item, empty);
+                    @Override public void updateItem(Double item, boolean empty) {
+                        super.updateItem(item, empty);
 
-                                if (empty) {
-                                    setGraphic(null);
-                                } else {
-                                    if (chk == null) {
-                                        chk = new CheckBox();
-                                    }
-
-                                    chk.setText(item.toString());
-                                    setGraphic(chk);
-                                }
-                                setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+                        if (empty) {
+                            setGraphic(null);
+                        } else {
+                            if (chk == null) {
+                                chk = new CheckBox();
                             }
-                        };
+
+                            chk.setText(item.toString());
+                            setGraphic(chk);
+                        }
+                        setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
                     }
                 });
             }

@@ -30,11 +30,9 @@ import javafx.animation.RotateTransition;
 import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
@@ -65,24 +63,9 @@ public class CubicCurveT3D extends Application {
                 CycleMethod.NO_CYCLE,
                 new Stop(0, Color.LIME),
                 new Stop(1, Color.GREEN)));
-        cubiccurve.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Mouse Clicked:" + e);
-                }
-            });
-        cubiccurve.setOnMouseEntered(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Mouse Entered");
-                }
-            });
-        cubiccurve.setOnMouseExited(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Mouse Exited");
-                }
-            });
+        cubiccurve.setOnMouseClicked(e -> System.out.println("Mouse Clicked:" + e));
+        cubiccurve.setOnMouseEntered(e -> System.out.println("Mouse Entered"));
+        cubiccurve.setOnMouseExited(e -> System.out.println("Mouse Exited"));
         final Group group = new Group(cubiccurve);
         group.setRotate(30);
         group.setTranslateX((sceneWidth - 300) / 2);

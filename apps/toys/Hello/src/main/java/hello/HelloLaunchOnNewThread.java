@@ -74,24 +74,22 @@ public class HelloLaunchOnNewThread extends Application {
      * @param args the command line arguments
      */
     public static void main(final String[] args) {
-        new Thread(new Runnable() {
-            public void run() {
-                // Sleep for a very short time to ensure main thread exits,
-                // since that will provoke RT-9824
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException ex) {}
-                System.err.println("Calling Application.launch from currentThread="
-                        + Thread.currentThread().getName());
-                System.err.print("LAUNCHING...");
-                System.err.flush();
-                long startTime = System.nanoTime();
-                Application.launch(HelloLaunchOnNewThread.class, args);
-                long endTime = System.nanoTime();
-                long elapsedMsec = (endTime - startTime + 500000) / 1000000;
-                System.err.println("DONE: elapsed time = " + elapsedMsec + " msec");
-                System.err.println("You should now see the 'HelloWorld' rectangle in the window");
-            }
+        new Thread(() -> {
+            // Sleep for a very short time to ensure main thread exits,
+            // since that will provoke RT-9824
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {}
+            System.err.println("Calling Application.launch from currentThread="
+                    + Thread.currentThread().getName());
+            System.err.print("LAUNCHING...");
+            System.err.flush();
+            long startTime = System.nanoTime();
+            Application.launch(HelloLaunchOnNewThread.class, args);
+            long endTime = System.nanoTime();
+            long elapsedMsec = (endTime - startTime + 500000) / 1000000;
+            System.err.println("DONE: elapsed time = " + elapsedMsec + " msec");
+            System.err.println("You should now see the 'HelloWorld' rectangle in the window");
         }).start();
         System.err.println("Main thread exiting: currentThread="
                     + Thread.currentThread().getName());

@@ -29,8 +29,6 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
@@ -89,14 +87,12 @@ public class HelloFPS extends Application {
         tlTracker.setCycleCount(Timeline.INDEFINITE);
         final KeyFrame kfTracker = new KeyFrame(
                 Duration.millis(500),
-                new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent event){
-                int fps = (int) Math.round(tracker.getInstantFPS());
-                text.setText("" + fps + " fps");
-                curColorIdx = (curColorIdx + 1) % colors.length;
-                text.setFill(colors[curColorIdx]);
-            }
-        });
+                event -> {
+                    int fps = (int) Math.round(tracker.getInstantFPS());
+                    text.setText("" + fps + " fps");
+                    curColorIdx = (curColorIdx + 1) % colors.length;
+                    text.setFill(colors[curColorIdx]);
+                });
         tlTracker.getKeyFrames().add(kfTracker);
         tlTracker.play();
     }

@@ -25,10 +25,6 @@ package hello;
  */
 
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -52,12 +48,7 @@ public class HelloStageOnTop extends Application{
         Scene scene = new Scene(root);
 
 
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                createNewStage(0, null, box.isSelected());
-            }
-        });
+        button.setOnAction(event -> createNewStage(0, null, box.isSelected()));
 
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -77,31 +68,18 @@ public class HelloStageOnTop extends Application{
         ToggleButton onTopButton = new ToggleButton(onTop ? DISABLE_ON_TOP : ENABLE_ON_TOP);
         onTopButton.setSelected(onTop);
 
-        stage.alwaysOnTopProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                onTopButton.setSelected(newValue);
-                onTopButton.setText(newValue ? DISABLE_ON_TOP : ENABLE_ON_TOP);
-            }
+        stage.alwaysOnTopProperty().addListener((observable, oldValue, newValue) -> {
+            onTopButton.setSelected(newValue);
+            onTopButton.setText(newValue ? DISABLE_ON_TOP : ENABLE_ON_TOP);
         });
 
-        onTopButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                stage.setAlwaysOnTop(!stage.isAlwaysOnTop());
-            }
-        });
+        onTopButton.setOnAction(event -> stage.setAlwaysOnTop(!stage.isAlwaysOnTop()));
 
         CheckBox box = new CheckBox("Child stage always on top");
         box.setSelected(true);
         Button newStageButton = new Button("Open child stage");
 
-        newStageButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                createNewStage(level + 1, stage, box.isSelected());
-            }
-        });
+        newStageButton.setOnAction(event -> createNewStage(level + 1, stage, box.isSelected()));
 
         root.getChildren().addAll(onTopButton, box, newStageButton);
 

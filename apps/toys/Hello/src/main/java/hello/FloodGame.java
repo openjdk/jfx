@@ -33,8 +33,6 @@ import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.SequentialTransition;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -127,29 +125,18 @@ public class FloodGame extends Application {
             fadeOut.setFromValue(1);
             fadeOut.setToValue(0);
             fadeOut.setInterpolator(Interpolator.EASE_OUT);
-            fadeOut.setOnFinished( new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    // setFill
-                    cellf.setFill(newColor);
-                }
-            });
+            fadeOut.setOnFinished( event -> cellf.setFill(newColor));
 
             // fade in
             FadeTransition fadeIn = new FadeTransition(Duration.millis(300), cell);
             fadeIn.setFromValue(0);
             fadeIn.setToValue(1);
             fadeIn.setInterpolator(Interpolator.EASE_OUT);
-            fadeIn.setOnFinished(new EventHandler<ActionEvent>() {
-                // TODO not the best place to put the win check, since
-                // this gets called once for EVERY cell that's changing color
-                @Override
-                public void handle(ActionEvent event) {
-                    if (gameWon()) {
-                        doneLabel.setText("YOU WON!!");
-                    } else {
-                        doneLabel.setText("");
-                    }
+            fadeIn.setOnFinished(event -> {
+                if (gameWon()) {
+                    doneLabel.setText("YOU WON!!");
+                } else {
+                    doneLabel.setText("");
                 }
             });
 
@@ -216,16 +203,14 @@ public class FloodGame extends Application {
             button.setGraphic(rect);
             vbox.getChildren().add(button);
           
-            button.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent e) {
-                    System.out.println("Action on Button");
-                    changingCells.clear();
-                    changingCells = findMatchingCells();
-                    newColor = c;
-                    animate();
-                    numMoves += 1;
-                    label.setText("Moves: " + numMoves);
-                }
+            button.setOnAction(e -> {
+                System.out.println("Action on Button");
+                changingCells.clear();
+                changingCells = findMatchingCells();
+                newColor = c;
+                animate();
+                numMoves += 1;
+                label.setText("Moves: " + numMoves);
             });
         }
         label = new Label();

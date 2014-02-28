@@ -26,7 +26,6 @@
 package hello;
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -55,27 +54,19 @@ public class HelloImageClipboard extends Application {
         overlay.setWidth(800);
         overlay.setHeight(600);
         overlay.setFill(Color.TRANSPARENT);
-        EventHandler<DragEvent> drop =  new EventHandler<DragEvent>() {
-                public void handle(DragEvent de) {
-                    checkBoard(de.getDragboard(), de);
-                }
-            };
+        EventHandler<DragEvent> drop =  de -> checkBoard(de.getDragboard(), de);
             
-        EventHandler<DragEvent> enter =  new EventHandler<DragEvent>() {
-                public void handle(DragEvent de) {
-                    if (de != null && de.getDragboard() != null && de.getDragboard().hasImage()) {
-                        de.acceptTransferModes(TransferMode.ANY);
-                    }
-                }
-            };
+        EventHandler<DragEvent> enter =  de -> {
+            if (de != null && de.getDragboard() != null && de.getDragboard().hasImage()) {
+                de.acceptTransferModes(TransferMode.ANY);
+            }
+        };
 
-        EventHandler<DragEvent> dragged =  new EventHandler<DragEvent>() {
-                public void handle(DragEvent de) {
-                    if (de != null && de.getDragboard() != null && de.getDragboard().hasImage()) {
-                        de.acceptTransferModes(TransferMode.ANY);
-                    }
-                }
-            };
+        EventHandler<DragEvent> dragged =  de -> {
+            if (de != null && de.getDragboard() != null && de.getDragboard().hasImage()) {
+                de.acceptTransferModes(TransferMode.ANY);
+            }
+        };
 
         overlay.setOnDragDropped(drop);
         overlay.setOnDragEntered(enter);
@@ -93,19 +84,13 @@ public class HelloImageClipboard extends Application {
         pasteBtn.setTranslateX(200);
         pasteBtn.setTranslateY(30);
 
-        clearBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) { clear(); }
+        clearBtn.setOnAction(e -> clear());
+        copyBtn.setOnAction(e -> {
+            ClipboardContent content = new ClipboardContent();
+            content.putImage(imageView.getImage());
+            Clipboard.getSystemClipboard().setContent(content);
         });
-        copyBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                ClipboardContent content = new ClipboardContent();
-                content.putImage(imageView.getImage());
-                Clipboard.getSystemClipboard().setContent(content);
-            }
-        });
-        pasteBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) { checkBoard(Clipboard.getSystemClipboard(), null); }
-        });
+        pasteBtn.setOnAction(e -> checkBoard(Clipboard.getSystemClipboard(), null));
         
         Group root = (Group)scene.getRoot();
         root.getChildren().add(overlay);
