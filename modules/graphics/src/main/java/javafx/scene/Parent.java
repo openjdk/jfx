@@ -253,7 +253,8 @@ public abstract class Parent extends Node {
                     List<Node> removed = c.getRemoved();
                     int removedSize = removed.size();
                     for (int i = 0; i < removedSize; ++i) {
-                        if (removed.get(i).isManaged()) {
+                        final Node n = removed.get(i);
+                        if (n.isManaged()) {
                             relayout = true;
                         }
                     }
@@ -641,6 +642,12 @@ public abstract class Parent extends Node {
     @Override
     void scenesChanged(final Scene newScene, final SubScene newSubScene,
                        final Scene oldScene, final SubScene oldSubScene) {
+
+        if (oldScene != null && newScene == null) {
+            // RT-34863 - clean up CSS cache when Parent is removed from scene-graph
+            StyleManager.getInstance().forget(this);
+        }
+
         for (int i=0; i<children.size(); i++) {
             children.get(i).setScenes(newScene, newSubScene);
         }
