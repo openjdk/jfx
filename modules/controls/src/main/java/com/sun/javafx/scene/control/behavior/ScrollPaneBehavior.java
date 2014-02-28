@@ -137,8 +137,6 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
     static final String VERTICAL_PAGEINCREMENT = "VerticalPageIncrement";
     static final String VERTICAL_HOME = "VerticalHome";
     static final String VERTICAL_END = "VerticalEnd";
-    static final String TRAVERSE_NEXT = "TraverseNext";
-    static final String TRAVERSE_PREVIOUS = "TraversePrevious";
 
     /**
      * We manually handle focus traversal keys due to the ScrollPane binding
@@ -161,10 +159,6 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
 
         SCROLL_PANE_BINDINGS.add(new KeyBinding(HOME, VERTICAL_HOME));
         SCROLL_PANE_BINDINGS.add(new KeyBinding(END, VERTICAL_END));
-
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(TAB, TRAVERSE_NEXT));
-        SCROLL_PANE_BINDINGS.add(new KeyBinding(TAB, TRAVERSE_PREVIOUS).shift());
-
     }
 
     protected /*final*/ String matchActionForEvent(KeyEvent e) {
@@ -210,87 +204,11 @@ public class ScrollPaneBehavior extends BehaviorBase<ScrollPane> {
         case VERTICAL_END:
             verticalEnd();
             break;
-        case TRAVERSE_NEXT:
-        case TRAVERSE_PREVIOUS:
-            // Is there any focusable node in the ScrollPane content
-            if (!getControl().getImpl_traversalEngine().registeredNodes.isEmpty() ||
-                TabPaneBehavior.getFirstPopulatedInnerTraversalEngine(getControl().getChildrenUnmodifiable()) != null) {
-                /**
-                 * if we have the focus owner then traverse from it, otherwise
-                 * request focus in the top-left
-                 */
-                List<Node> children = getControl().getChildrenUnmodifiable();
-                Node focusNode = getControl().getScene().getFocusOwner();
-                if (focusNode != null && isChildFocused(focusNode, children)) {
-                    // This happens if the child doesn't have the key binding
-                    // for traversal and the event bubbled up to this class.
-                    focusNode.impl_traverse("TraverseNext".equals(name) ? Direction.NEXT : Direction.PREVIOUS);
-                } else if ("TraverseNext".equals(name)) {
-                    focusFirstChild(children);
-                } else {
-                    super.callAction(name);
-                }
-            } else {
-                super.callAction(name);
-            }
-            break;
-
         default :
          super.callAction(name);
             break;
         }
     }
-
-    public static boolean isChildFocused(Node focusedNode, List<Node> children) {
-        boolean answer = false;
-        for(int i = 0; i < children.size(); i++) {
-            if (children.get(i) == focusedNode) {
-                answer = true;
-                break;
-            }
-            if (children.get(i) instanceof Parent) {
-                if (isChildFocused(focusedNode, ((Parent)children.get(i)).getChildrenUnmodifiable())) {
-                    return true;
-                }
-            }
-        }
-        return answer;
-    }
-
-    public static boolean focusFirstChild(List<Node> children) {
-        for(int i = 0; i < children.size(); i++) {
-            Node n = children.get(i);
-            if (n.isFocusTraversable() && n.impl_isTreeVisible() && !n.isDisabled()) {
-                n.requestFocus();
-                return true;
-            }
-            else if (n instanceof Parent) {
-                if (focusFirstChild(((Parent)n).getChildrenUnmodifiable())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public static boolean focusLastChild(List<Node> children) {
-        for(int i = children.size()-1 ; i > -1; i--) {
-            Node n = children.get(i);
-            if (n.isFocusTraversable() && n.impl_isTreeVisible() && !n.isDisabled()) {
-                n.requestFocus();
-                return true;
-            }
-            else if (n instanceof Parent) {
-                if (focusFirstChild(((Parent)n).getChildrenUnmodifiable())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-
-
 
     /***************************************************************************
      *                                                                         *

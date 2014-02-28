@@ -1424,7 +1424,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
      * TabContentRegion: each tab has one to contain the tab's content node
      *
      **************************************************************************/
-    class TabContentRegion extends StackPane implements TraverseListener {
+    class TabContentRegion extends StackPane {
 
         private TraversalEngine engine;
         private Direction direction = Direction.NEXT;
@@ -1459,15 +1459,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
             tab.selectedProperty().addListener(weakTabSelectedListener);
             tab.contentProperty().addListener(weakTabContentListener);
-
-            engine = new TraversalEngine(this, false) {
-                @Override public boolean trav(Node owner, Direction dir) {
-                    direction = dir;
-                    return super.trav(owner, dir);
-                }
-            };
-            engine.addTraverseListener(this);
-            setImpl_traversalEngine(engine);
         }
 
         private void updateContent() {
@@ -1482,21 +1473,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         private void removeListeners(Tab tab) {
             tab.selectedProperty().removeListener(weakTabSelectedListener);
             tab.contentProperty().removeListener(weakTabContentListener);
-            engine.removeTraverseListener(this);
         }
 
-        @Override public void onTraverse(Node node, Bounds bounds) {
-            int index = engine.registeredNodes.indexOf(node);
-
-            if (index == -1 && direction.equals(Direction.PREVIOUS)) {
-                // Sends the focus back the tab
-                getSkinnable().requestFocus();
-            }
-            if (index == -1 && direction.equals(Direction.NEXT)) {
-                // Sends the focus to the next focusable control outside of the TabPane
-                new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.NEXT);
-            }
-        }
     } /* End TabContentRegion */
 
     /**************************************************************************

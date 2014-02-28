@@ -99,12 +99,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
                 if (content != null) {
                     getChildren().setAll(content);
                 }
-
-                setImpl_traversalEngine(new TraversalEngine(this, false) {
-                    @Override public boolean trav(Node owner, Direction dir) {
-                        return super.trav(owner, dir);
-                    }
-                });
             }
         };
         contentContainer.setClip(clipRect);

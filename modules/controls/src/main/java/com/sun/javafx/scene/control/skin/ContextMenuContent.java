@@ -1091,7 +1091,7 @@ public class ContextMenuContent extends Region {
             
             getStyleClass().addAll(item.getStyleClass());
             setId(item.getId());
-            setFocusTraversable(true);
+            setFocusTraversable(!(item instanceof CustomMenuItem));
             this.item = item;
 
             createChildren();
