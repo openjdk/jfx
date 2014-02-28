@@ -982,11 +982,6 @@ public class FXCollections {
             this.mutex = mutex;
         }
 
-        SynchronizedList(List<T> seq) {
-            this (seq, new Object());
-        }
-
-
         @Override
         public int size() {
             synchronized(mutex) {
@@ -1233,22 +1228,30 @@ public class FXCollections {
 
         @Override
         public final void addListener(InvalidationListener listener) {
-            helper = ListListenerHelper.addListener(helper, listener);
+            synchronized (mutex) {
+                helper = ListListenerHelper.addListener(helper, listener);
+            }
         }
         
         @Override
         public final void removeListener(InvalidationListener listener) {
-            helper = ListListenerHelper.removeListener(helper, listener);
+            synchronized (mutex) {
+                helper = ListListenerHelper.removeListener(helper, listener);
+            }
         }
         
         @Override
         public void addListener(ListChangeListener<? super T> listener) {
-            helper = ListListenerHelper.addListener(helper, listener);
+            synchronized (mutex) {
+                helper = ListListenerHelper.addListener(helper, listener);
+            }
         }
 
         @Override
         public void removeListener(ListChangeListener<? super T> listener) {
-            helper = ListListenerHelper.removeListener(helper, listener);
+            synchronized (mutex) {
+                helper = ListListenerHelper.removeListener(helper, listener);
+            }
         }
 
 
@@ -1871,21 +1874,29 @@ public class FXCollections {
 
         @Override
         public void addListener(InvalidationListener listener) {
-            listenerHelper = SetListenerHelper.addListener(listenerHelper, listener);
+            synchronized (mutex) {
+                listenerHelper = SetListenerHelper.addListener(listenerHelper, listener);
+            }
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
-            listenerHelper = SetListenerHelper.removeListener(listenerHelper, listener);
+            synchronized (mutex) {
+                listenerHelper = SetListenerHelper.removeListener(listenerHelper, listener);
+            }
         }
         @Override
         public void addListener(SetChangeListener<? super E> listener) {
-            listenerHelper = SetListenerHelper.addListener(listenerHelper, listener);
+            synchronized (mutex) {
+                listenerHelper = SetListenerHelper.addListener(listenerHelper, listener);
+            }
         }
 
         @Override
         public void removeListener(SetChangeListener<? super E> listener) {
-            listenerHelper = SetListenerHelper.removeListener(listenerHelper, listener);
+            synchronized (mutex) {
+                listenerHelper = SetListenerHelper.removeListener(listenerHelper, listener);
+            }
         }
     }
 
@@ -2757,23 +2768,30 @@ public class FXCollections {
 
         @Override
         public void addListener(InvalidationListener listener) {
-            listenerHelper = MapListenerHelper.addListener(listenerHelper, listener);
-
+            synchronized (mutex) {
+                listenerHelper = MapListenerHelper.addListener(listenerHelper, listener);
+            }
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
-            listenerHelper = MapListenerHelper.removeListener(listenerHelper, listener);
+            synchronized (mutex) {
+                listenerHelper = MapListenerHelper.removeListener(listenerHelper, listener);
+            }
         }
 
         @Override
         public void addListener(MapChangeListener<? super K, ? super V> listener) {
-            listenerHelper = MapListenerHelper.addListener(listenerHelper, listener);
+            synchronized (mutex) {
+                listenerHelper = MapListenerHelper.addListener(listenerHelper, listener);
+            }
         }
 
         @Override
         public void removeListener(MapChangeListener<? super K, ? super V> listener) {
-            listenerHelper = MapListenerHelper.removeListener(listenerHelper, listener);
+            synchronized (mutex) {
+                listenerHelper = MapListenerHelper.removeListener(listenerHelper, listener);
+            }
         }
 
     }
