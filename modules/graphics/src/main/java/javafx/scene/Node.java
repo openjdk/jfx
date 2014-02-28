@@ -5358,6 +5358,9 @@ public abstract class Node implements EventTarget, Styleable {
                     n.localToSceneTransformProperty().removeListener(
                             getLocalToSceneInvalidationListener());
                 }
+                if (localToSceneTransform != null) {
+                    localToSceneTransform.validityUnknown();
+                }
             }
         }
 
@@ -6022,6 +6025,23 @@ public abstract class Node implements EventTarget, Styleable {
         // overriden in Parent
     }
 
+    private Node getMirroringOrientationParent() {
+        Node parentValue = getParent();
+        while (parentValue != null) {
+            if (parentValue.usesMirroring()) {
+                return parentValue;
+            }
+            parentValue = parentValue.getParent();
+        }
+
+        final Node subSceneValue = getSubScene();
+        if (subSceneValue != null) {
+            return subSceneValue;
+        }
+
+        return null;
+    }
+
     private Node getOrientationParent() {
         final Node parentValue = getParent();
         if (parentValue != null) {
@@ -6072,7 +6092,7 @@ public abstract class Node implements EventTarget, Styleable {
                        : AUTOMATIC_ORIENTATION_RTL;
         }
 
-        final Node parentValue = getOrientationParent();
+        final Node parentValue = getMirroringOrientationParent();
         if (parentValue != null) {
             // automatic node orientation is inherited
             return getAutomaticOrientation(parentValue.resolvedNodeOrientation);
@@ -8953,6 +8973,12 @@ public abstract class Node implements EventTarget, Styleable {
             transform = getInternalValue();
             canReuse = false;
             return transform;
+        }
+
+        public void validityUnknown() {
+            if (valid == VALID) {
+                valid = VALIDITY_UNKNOWN;
+            }
         }
 
         public void invalidate() {

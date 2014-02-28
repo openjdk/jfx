@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,27 +23,29 @@
  * questions.
  */
 
-package com.sun.javafx.css.parser;
+package com.sun.javafx.logging;
 
+import com.oracle.jrockit.jfr.ContentType;
+import com.oracle.jrockit.jfr.EventDefinition;
+import com.oracle.jrockit.jfr.EventToken;
+import com.oracle.jrockit.jfr.TimedEvent;
+import com.oracle.jrockit.jfr.ValueDefinition;
 
-class SimpleRecognizer implements Recognizer {
+@EventDefinition(path="javafx/input", name = "JavaFX Input", description="JavaFX input event", stacktrace=false, thread=true)
+public class JFRInputEvent extends TimedEvent {
 
-    public boolean recognize(int c) {
-        for (int n=0; n<recognizedChars.length; n++)
-            if (recognizedChars[n] == c) return true;
-        return false;
+    @ValueDefinition(name="inputType", description="Input event type", contentType=ContentType.None)
+    private String input;
+    
+    public JFRInputEvent(EventToken eventToken) {
+        super(eventToken);
     }
 
-    public SimpleRecognizer(int c, int... others) {
-        final int nChars = 1 + (others != null ? others.length : 0);
-        recognizedChars = new int[nChars];
-        recognizedChars[0] = c;
-        for (int n=1; n<nChars; n++) recognizedChars[n] = others[n-1];
+    public String getInput() {
+        return input;
     }
-
-    private SimpleRecognizer() {
-        recognizedChars = null;
-    }
-
-    private final int[] recognizedChars;
+    
+    public void setInput(String s) {
+        input = s;
+    }    
 }

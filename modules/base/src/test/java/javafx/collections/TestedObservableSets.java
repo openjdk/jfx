@@ -32,42 +32,17 @@ import javafx.beans.property.SimpleSetProperty;
 
 public interface TestedObservableSets {
 
-    Callable<ObservableSet<String>> HASH_SET = new Callable<ObservableSet<String>>() {
-        @Override
-        public ObservableSet<String> call() throws Exception {
-            return FXCollections.observableSet(new HashSet<String>());
-        }
-    };
+    Callable<ObservableSet<String>> HASH_SET = () -> FXCollections.observableSet(new HashSet<String>());
 
     Callable<ObservableSet<String>> TREE_SET = new CallableTreeSetImpl();
 
-    Callable<ObservableSet<String>> LINKED_HASH_SET = new Callable<ObservableSet<String>>() {
-        @Override
-        public ObservableSet<String> call() throws Exception {
-            return FXCollections.observableSet(new LinkedHashSet<String>());
-        }
-    };
+    Callable<ObservableSet<String>> LINKED_HASH_SET = () -> FXCollections.observableSet(new LinkedHashSet<String>());
 
-    Callable<ObservableSet<String>> CHECKED_OBSERVABLE_HASH_SET = new Callable<ObservableSet<String>>() {
-        @Override
-        public ObservableSet<String> call() throws Exception {
-            return FXCollections.checkedObservableSet(FXCollections.observableSet(new HashSet()), String.class);
-        }
-    };
+    Callable<ObservableSet<String>> CHECKED_OBSERVABLE_HASH_SET = () -> FXCollections.checkedObservableSet(FXCollections.observableSet(new HashSet()), String.class);
 
-    Callable<ObservableSet<String>> SYNCHRONIZED_OBSERVABLE_HASH_SET = new Callable<ObservableSet<String>>() {
-        @Override
-        public ObservableSet<String> call() throws Exception {
-            return FXCollections.synchronizedObservableSet(FXCollections.observableSet(new HashSet<String>()));
-        }
-    };
+    Callable<ObservableSet<String>> SYNCHRONIZED_OBSERVABLE_HASH_SET = () -> FXCollections.synchronizedObservableSet(FXCollections.observableSet(new HashSet<String>()));
     
-    Callable<ObservableSet<String>> OBSERVABLE_SET_PROPERTY = new Callable<ObservableSet<String>>() {
-        @Override
-        public ObservableSet<String> call() throws Exception {
-            return new SimpleSetProperty<>(FXCollections.observableSet(new HashSet<String>()));
-        }
-    };
+    Callable<ObservableSet<String>> OBSERVABLE_SET_PROPERTY = () -> new SimpleSetProperty<>(FXCollections.observableSet(new HashSet<String>()));
 
     static class CallableTreeSetImpl implements Callable<ObservableSet<String>> {
         public CallableTreeSetImpl() {

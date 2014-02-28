@@ -848,18 +848,7 @@ public class FXMLLoader {
                 }
 
                 // Set the controller field value
-                if (controller != null) {
-                    Field field = controllerAccessor.getControllerFields()
-                                                    .get(fx_id);
-
-                    if (field != null) {
-                        try {
-                            field.set(controller, value);
-                        } catch (IllegalAccessException exception) {
-                            throw new RuntimeException(exception);
-                        }
-                    }
-                }
+                injectFields(fx_id, value);
             }
         }
 
@@ -1148,22 +1137,25 @@ public class FXMLLoader {
                 Object controller = fxmlLoader.getController();
 
                 namespace.put(id, controller);
-
-                if (FXMLLoader.this.controller != null) {
-                    Field field = controllerAccessor.getControllerFields()
-                                                    .get(id);
-
-                    if (field != null) {
-                        try {
-                            field.set(FXMLLoader.this.controller, controller);
-                        } catch (IllegalAccessException exception) {
-                            throw constructLoadException(exception);
-                        }
-                    }
-                }
+                injectFields(id, controller);
             }
 
             return value;
+        }
+    }
+
+    private void injectFields(String fieldName, Object value) throws LoadException {
+        if (controller != null && fieldName != null) {
+            List<Field> fields = controllerAccessor.getControllerFields().get(fieldName);
+            if (fields != null) {
+                try {
+                    for (Field f : fields) {
+                        f.set(controller, value);
+                    }
+                } catch (IllegalAccessException exception) {
+                    throw constructLoadException(exception);
+                }
+            }
         }
     }
 
@@ -2548,28 +2540,12 @@ public class FXMLLoader {
                     ((Initializable)controller).initialize(location, resources);
                 } else {
                     // Inject controller fields
-                    Map<String, Field> controllerFields =
+                    Map<String, List<Field>> controllerFields =
                             controllerAccessor.getControllerFields();
 
-                    Field locationField = controllerFields.get(LOCATION_KEY);
-                    if (locationField != null) {
-                        try {
-                            locationField.set(controller, location);
-                        } catch (IllegalAccessException exception) {
-                            // TODO Throw when Initializable is deprecated/removed
-                            // throw constructLoadException(exception);
-                        }
-                    }
+                    injectFields(LOCATION_KEY, location);
 
-                    Field resourcesField = controllerFields.get(RESOURCES_KEY);
-                    if (resourcesField != null) {
-                        try {
-                            resourcesField.set(controller, resources);
-                        } catch (IllegalAccessException exception) {
-                            // TODO Throw when Initializable is deprecated/removed
-                            // throw constructLoadException(exception);
-                        }
-                    }
+                    injectFields(RESOURCES_KEY, resources);
 
                     // Initialize the controller
                     Method initializeMethod = controllerAccessor
@@ -3334,7 +3310,7 @@ public class FXMLLoader {
         private Object controller;
         private ClassLoader callerClassLoader;
 
-        private Map<String, Field> controllerFields;
+        private Map<String, List<Field>> controllerFields;
         private Map<SupportedType, Map<String, Method>> controllerMethods;
 
         void setController(final Object controller) {
@@ -3359,7 +3335,7 @@ public class FXMLLoader {
             controllerMethods = null;
         }
 
-        Map<String, Field> getControllerFields() {
+        Map<String, List<Field>> getControllerFields() {
             if (controllerFields == null) {
                 controllerFields = new HashMap<>();
 
@@ -3425,7 +3401,7 @@ public class FXMLLoader {
 
             addAccessibleMembers(type.getSuperclass(),
                                  allowedClassAccess,
-                                 allowedMemberAccess & ~PRIVATE,
+                                 allowedMemberAccess,
                                  membersType);
 
             final int finalAllowedMemberAccess = allowedMemberAccess;
@@ -3446,19 +3422,6 @@ public class FXMLLoader {
                     });
         }
 
-        private boolean isAccessibleToController(
-                final Class<?> type, final int memberModifiers) {
-            if (Modifier.isPublic(memberModifiers)
-                    || Modifier.isProtected(memberModifiers)) {
-                return true;
-            }
-
-            return Reflection.verifyMemberAccess(controller.getClass(),
-                                                 type,
-                                                 controller,
-                                                 memberModifiers);
-        }
-
         private void addAccessibleFields(final Class<?> type,
                                          final int allowedMemberAccess) {
             final boolean isPublicType = Modifier.isPublic(type.getModifiers());
@@ -3471,8 +3434,7 @@ public class FXMLLoader {
                 if (((memberModifiers & (Modifier.STATIC
                                              | Modifier.FINAL)) != 0)
                         || ((getAccess(memberModifiers) & allowedMemberAccess)
-                                == 0)
-                        || !isAccessibleToController(type, memberModifiers)) {
+                                == 0)) {
                     continue;
                 }
 
@@ -3486,7 +3448,13 @@ public class FXMLLoader {
                     field.setAccessible(true);
                 }
 
-                controllerFields.put(field.getName(), field);
+                List<Field> list = controllerFields.get(field.getName());
+                if (list == null) {
+                    list = new ArrayList<>(1);
+                    controllerFields.put(field.getName(), list);
+                }
+                list.add(field);
+
             }
         }
 
@@ -3502,8 +3470,7 @@ public class FXMLLoader {
                 if (((memberModifiers & (Modifier.STATIC
                                              | Modifier.NATIVE)) != 0)
                         || ((getAccess(memberModifiers) & allowedMemberAccess)
-                                == 0)
-                        || !isAccessibleToController(type, memberModifiers)) {
+                                == 0)) {
                     continue;
                 }
 

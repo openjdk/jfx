@@ -39,7 +39,7 @@ public class SSELinearConvolveShadowPeer extends SSELinearConvolvePeer {
     }
 
     private float[] getShadowColor() {
-        return getKernel().getShadowColorComponents(getPass());
+        return getRenderState().getPassShadowColorComponents();
     }
 
     private static native void

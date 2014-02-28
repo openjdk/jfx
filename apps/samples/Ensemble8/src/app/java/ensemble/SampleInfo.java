@@ -205,19 +205,16 @@ public class SampleInfo {
             final Method fPlay = play;
             final Method fStop = stop;
             
-            root.sceneProperty().addListener(new ChangeListener<Scene>() {
-                @Override
-                public void changed(ObservableValue<? extends Scene> ov, Scene oldScene, Scene newScene) {
-                    try {
-                        if (oldScene != null && fStop != null) {
-                            fStop.invoke(app);
-                        }
-                        if (newScene != null && fPlay != null) {
-                            fPlay.invoke(app);
-                        }
-                    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
-                        Logger.getLogger(SamplePage.class.getName()).log(Level.SEVERE, null, ex);
+            root.sceneProperty().addListener((ObservableValue<? extends Scene> ov, Scene oldScene, Scene newScene) -> {
+                try {
+                    if (oldScene != null && fStop != null) {
+                        fStop.invoke(app);
                     }
+                    if (newScene != null && fPlay != null) {
+                        fPlay.invoke(app);
+                    }
+                } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
+                    Logger.getLogger(SamplePage.class.getName()).log(Level.SEVERE, null, ex);
                 }
             });
 

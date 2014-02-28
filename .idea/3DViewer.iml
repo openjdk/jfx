@@ -17,20 +17,11 @@
       <sourceFolder url="file://$MODULE_DIR$/apps/experiments/3DViewer/src/test/java" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/apps/experiments/3DViewer/src/test/resources" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/apps/experiments/3DViewer/build" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/experiments/3DViewer/nbproject" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module-library">
-      <library name="3DViewer.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/apps/experiments/3DViewer/build/libs/3DViewer.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
     <orderEntry type="module" module-name="rt" />
     <orderEntry type="inheritedJdk" />
-    <orderEntry type="module" module-name="builders" />
   </component>
 </module>
 

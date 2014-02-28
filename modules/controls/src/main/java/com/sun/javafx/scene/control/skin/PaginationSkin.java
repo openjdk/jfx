@@ -832,7 +832,6 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             for (int i = fromIndex; i <= toIndex; i++) {
                 IndicatorButton ib = new IndicatorButton(i);
                 ib.setMinSize(minButtonSize, minButtonSize);
-                ib.setPrefSize(minButtonSize, minButtonSize);
                 ib.setToggleGroup(indicatorButtons);
                 controlBox.getChildren().add(ib);
             }

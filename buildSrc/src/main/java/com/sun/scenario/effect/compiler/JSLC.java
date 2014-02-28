@@ -181,6 +181,7 @@ public class JSLC {
         throws Exception
     {
         int outTypes = jslcinfo.outTypes;
+        String genericsName = jslcinfo.genericsName;
         String interfaceName = jslcinfo.interfaceName;
         String peerName = jslcinfo.peerName;
         String shaderName = jslcinfo.shaderName;
@@ -210,7 +211,7 @@ public class JSLC {
             if (jslcinfo.force || outOfDate(outFile, sourceTime)) {
                 if (pinfo == null) pinfo = getParserInfo(stream);
                 JSWBackend javaBackend = new JSWBackend(pinfo.parser, pinfo.program);
-                String genCode = javaBackend.getGenCode(shaderName, peerName, interfaceName);
+                String genCode = javaBackend.getGenCode(shaderName, peerName, genericsName, interfaceName);
                 write(genCode, outFile);
             }
         }
@@ -227,7 +228,7 @@ public class JSLC {
                 if (pinfo == null) pinfo = getParserInfo(stream);
                 SSEBackend sseBackend = new SSEBackend(pinfo.parser, pinfo.program);
                 SSEBackend.GenCode gen =
-                    sseBackend.getGenCode(shaderName, peerName, interfaceName);
+                    sseBackend.getGenCode(shaderName, peerName, genericsName, interfaceName);
 
                 // write impl class
                 if (outFileStale) {
@@ -253,7 +254,7 @@ public class JSLC {
                 if (pinfo == null) pinfo = getParserInfo(stream);
                 MEBackend sseBackend = new MEBackend(pinfo.parser, pinfo.program);
                 MEBackend.GenCode gen =
-                    sseBackend.getGenCode(shaderName, peerName, interfaceName);
+                    sseBackend.getGenCode(shaderName, peerName, genericsName, interfaceName);
 
                 // write impl class
                 if (outFileStale) {
@@ -272,7 +273,7 @@ public class JSLC {
             if (jslcinfo.force || outOfDate(outFile, sourceTime)) {
                 if (pinfo == null) pinfo = getParserInfo(stream);
                 PrismBackend prismBackend = new PrismBackend(pinfo.parser, pinfo.program);
-                String genCode = prismBackend.getGlueCode(shaderName, peerName, interfaceName);
+                String genCode = prismBackend.getGlueCode(shaderName, peerName, genericsName, interfaceName);
                 write(genCode, outFile);
             }
         }
@@ -312,6 +313,7 @@ public class JSLC {
         public List<String> srcDirs = new ArrayList<String>();
         public String shaderName;
         public String peerName;
+        public String genericsName;
         public String interfaceName;
         public String pkgName = rootPkg;
         public Map<Integer, String> outNameMap = initDefaultInfoMap();

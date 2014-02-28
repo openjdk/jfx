@@ -2157,7 +2157,7 @@ is being used to size a border should also be in pixels.
 }
 .pagination > .pagination-control > .control-box > .number-button {
     -fx-background-radius: 0;
-    -fx-padding: 0.166667em 0.25em 0.25em 0.333em;
+    -fx-padding: 0.166667em 0.333em 0.25em 0.333em;
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
 .pagination > .pagination-control > .control-box > .number-button:selected {   

@@ -175,6 +175,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         super.mousePressed(e);
         getFocus();
         arm(e);
+        wasComboBoxButtonClickedForAutoHide = false;
     }
     
     @Override public void mouseReleased(MouseEvent e) {

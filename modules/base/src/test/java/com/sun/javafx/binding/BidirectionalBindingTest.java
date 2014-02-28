@@ -268,14 +268,10 @@ public class BidirectionalBindingTest<T> {
             op1.bind(op3);
             assertEquals(op3.getValue(), op1.getValue());
             assertEquals(op2.getValue(), op1.getValue());
-            
-            thrown.expect(RuntimeException.class);
-            try {
-                op2.setValue(v[2]);
-            } finally {
-                assertEquals(op3.getValue(), op1.getValue());
-                assertEquals(op2.getValue(), op1.getValue());
-            }
+
+            op2.setValue(v[2]);
+            assertEquals(op3.getValue(), op1.getValue());
+            assertEquals(op2.getValue(), op1.getValue());
         }
         
         @Test
@@ -283,21 +279,17 @@ public class BidirectionalBindingTest<T> {
             func.bind(op1, op2);
             op1.bind(op3);
             op4.setValue(v[0]);
-            
-            thrown.expect(RuntimeException.class);
-            try {
-                op2.bind(op4);
-            } finally {
-                assertEquals(op4.getValue(), op2.getValue());
-                assertEquals(op3.getValue(), op1.getValue());
-                // Test that bidirectional binding was unbound in this case
-                op3.setValue(v[0]);
-                op4.setValue(v[1]);
-                assertEquals(op4.getValue(), op2.getValue());
-                assertEquals(op3.getValue(), op1.getValue());
-                assertEquals(v[0], op1.getValue());
-                assertEquals(v[1], op2.getValue());
-            }
+
+            op2.bind(op4);
+            assertEquals(op4.getValue(), op2.getValue());
+            assertEquals(op3.getValue(), op1.getValue());
+            // Test that bidirectional binding was unbound in this case
+            op3.setValue(v[0]);
+            op4.setValue(v[1]);
+            assertEquals(op4.getValue(), op2.getValue());
+            assertEquals(op3.getValue(), op1.getValue());
+            assertEquals(v[0], op1.getValue());
+            assertEquals(v[1], op2.getValue());
         }
         
     @Parameterized.Parameters

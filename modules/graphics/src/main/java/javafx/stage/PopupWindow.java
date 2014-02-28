@@ -66,13 +66,13 @@ import java.security.AllPermission;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
 
@@ -962,8 +962,9 @@ public abstract class PopupWindow extends Window {
 
             final EventType<?> eventType = event.getEventType();
 
-            if (eventType == MouseEvent.MOUSE_PRESSED) {
-                handleMousePressedEvent(eventSource, event);
+            if (eventType == MouseEvent.MOUSE_PRESSED
+                    || eventType == ScrollEvent.SCROLL) {
+                handleAutoHidingEvents(eventSource, event);
                 return;
             }
 
@@ -1006,8 +1007,8 @@ public abstract class PopupWindow extends Window {
             }
         }
 
-        private void handleMousePressedEvent(final Object eventSource,
-                final Event event) {
+        private void handleAutoHidingEvents(final Object eventSource,
+                                            final Event event) {
             // we handle mouse pressed only for the immediate parent window,
             // where we can check whether the mouse press is inside of the owner
             // control or not, we will force possible child popups to close

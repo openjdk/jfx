@@ -526,7 +526,9 @@ public class CacheFilter {
             }
         }
         if (needToRenderCache(xform, xformInfo)) {
-            if (PulseLogger.PULSE_LOGGING_ENABLED) PulseLogger.PULSE_LOGGER.renderIncrementCounter("CacheFilter rebuilding");
+            if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                PulseLogger.incrementCounter("CacheFilter rebuilding");
+            }
             if (cachedImageData != null) {
                 Filterable implImage = cachedImageData.getUntransformedImage();
                 if (implImage != null) {
@@ -599,7 +601,9 @@ public class CacheFilter {
 
         Filterable implImage = cachedImageData.getUntransformedImage();
         if (implImage == null) {
-            if (PulseLogger.PULSE_LOGGING_ENABLED) PulseLogger.PULSE_LOGGER.renderIncrementCounter("CacheFilter not used");
+            if (PulseLogger.PULSE_LOGGING_ENABLED) {
+                PulseLogger.incrementCounter("CacheFilter not used");
+            }
             impl_renderNodeToScreen(g);
         } else {
             double mxt = xform.getMxt();

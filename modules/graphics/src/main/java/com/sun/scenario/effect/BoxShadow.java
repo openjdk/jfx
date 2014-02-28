@@ -33,6 +33,7 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.state.BoxShadowState;
+import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 
 /**
  * A shadow effect using a box-shaped convolution kernel, with a configurable
@@ -121,7 +122,7 @@ public class BoxShadow extends AbstractShadow {
     }
 
     @Override
-    Object getState() {
+    LinearConvolveKernel getState() {
         return state;
     }
 
@@ -168,8 +169,7 @@ public class BoxShadow extends AbstractShadow {
      * @throws IllegalArgumentException if {@code hsize}
      * is outside the allowable range
      */
-    public void setHorizontalSize(int hsize) {
-        int old = state.getHsize();
+    public final void setHorizontalSize(int hsize) {
         state.setHsize(hsize);
     }
 
@@ -195,8 +195,7 @@ public class BoxShadow extends AbstractShadow {
      * @throws IllegalArgumentException if {@code vsize}
      * is outside the allowable range
      */
-    public void setVerticalSize(int vsize) {
-        int old = state.getVsize();
+    public final void setVerticalSize(int vsize) {
         state.setVsize(vsize);
     }
 
@@ -226,8 +225,7 @@ public class BoxShadow extends AbstractShadow {
      * @throws IllegalArgumentException if {@code passes} is outside the
      * allowable range
      */
-    public void setPasses(int passes) {
-        int old = state.getBlurPasses();
+    public final void setPasses(int passes) {
         state.setBlurPasses(passes);
     }
 
@@ -252,8 +250,7 @@ public class BoxShadow extends AbstractShadow {
      * @param color the shadow color
      * @throws IllegalArgumentException if {@code color} is null
      */
-    public void setColor(Color4f color) {
-        Color4f old = state.getShadowColor();
+    public final void setColor(Color4f color) {
         state.setShadowColor(color);
     }
 
@@ -288,8 +285,7 @@ public class BoxShadow extends AbstractShadow {
      * @throws IllegalArgumentException if {@code spread} is outside the
      * allowable range
      */
-    public void setSpread(float spread) {
-        float old = state.getSpread();
+    public final void setSpread(float spread) {
         state.setSpread(spread);
     }
 
@@ -382,39 +378,6 @@ public class BoxShadow extends AbstractShadow {
         r = state.getResultBounds(r, 1);
         r.intersectWith(outputClip);
         return r;
-    }
-
-    @Override
-    public ImageData filterImageDatas(FilterContext fctx,
-                                      BaseTransform transform,
-                                      Rectangle outputClip,
-                                      ImageData... inputs)
-    {
-        return state.filterImageDatas(this, fctx, transform, outputClip, inputs);
-    }
-
-    @Override
-    public boolean operatesInUserSpace() {
-        return true;
-    }
-
-    @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
-    {
-        // A blur needs as much "fringe" data from its input as it creates
-        // around its output so we use the same expansion as is used in the
-        // result bounds.
-        if (outputClip != null) {
-            int hgrow = state.getKernelSize(0) / 2;
-            int vgrow = state.getKernelSize(1) / 2;
-            if ((hgrow | vgrow) != 0) {
-                outputClip = new Rectangle(outputClip);
-                outputClip.grow(hgrow, vgrow);
-            }
-        }
-        return outputClip;
     }
 
     @Override

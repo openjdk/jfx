@@ -78,12 +78,9 @@ public class PillButtonApp extends Application {
         // enforce rule that one of the ToggleButtons must be selected at any
         // time (that is, it is not valid to have zero ToggleButtons selected).
         // (Fix for RT-34920 that considered this to be a bug)
-        group.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-            @Override
-            public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) {
-                if (newValue == null) {
-                    group.selectToggle(oldValue);
-                }
+        group.selectedToggleProperty().addListener((ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) -> {
+            if (newValue == null) {
+                group.selectToggle(oldValue);
             }
         });
 

@@ -6,14 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/apps/toys/Hello/src/main/java" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="base" />
-    <orderEntry type="module" module-name="controls" />
-    <orderEntry type="module" module-name="fxml" />
-    <orderEntry type="module" module-name="graphics" />
-    <orderEntry type="module" module-name="media" />
-    <orderEntry type="module" module-name="swing" />
-    <orderEntry type="module" module-name="swt" />
-    <orderEntry type="module" module-name="web" />
+    <orderEntry type="module" module-name="rt" />
     <orderEntry type="inheritedJdk" />
   </component>
 </module>

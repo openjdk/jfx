@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,8 +23,18 @@
  * questions.
  */
 
-package com.sun.scenario.effect.impl.state;
+package com.sun.javafx.logging;
 
-public interface LinearConvolveShadowPeer {
-
+/**
+ * Common API for pulse loggers
+ */
+public class Logger {
+    public void pulseStart() {}
+    public void pulseEnd() {}
+    public void renderStart() {}
+    public void renderEnd() {}
+    public void addMessage(String message) {}
+    public void incrementCounter(String counter) {}
+    public void newPhase(String name) {}
+    public void newInput(String name) {}
 }

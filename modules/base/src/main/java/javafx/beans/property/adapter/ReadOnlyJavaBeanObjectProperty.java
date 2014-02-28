@@ -68,11 +68,8 @@ public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPrope
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<T>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new Runnable() {
-            @Override
-            public void run() {
-                ReadOnlyJavaBeanObjectProperty.this.descriptor.removeListener(listener);
-            }
+        Cleaner.create(this, () -> {
+            ReadOnlyJavaBeanObjectProperty.this.descriptor.removeListener(listener);
         });
     }
 
@@ -85,15 +82,13 @@ public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPrope
      */
     @Override
     public T get() {
-        return AccessController.doPrivileged(new PrivilegedAction<T>() {
-            public T run() {
-                try {
-                    return (T)MethodUtil.invoke(descriptor.getGetter(), getBean(), (Object[])null);
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
+        return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
+            try {
+                return (T)MethodUtil.invoke(descriptor.getGetter(), getBean(), (Object[])null);
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
         }, acc);
     }

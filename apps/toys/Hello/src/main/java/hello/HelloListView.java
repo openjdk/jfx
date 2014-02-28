@@ -773,9 +773,10 @@ public class HelloListView extends Application implements InvalidationListener {
         ObservableList<String> listOneItems = FXCollections.observableArrayList(names.subList(0, 8));
         ObservableList<String> listTwoItems = FXCollections.observableArrayList(names.subList(8, 16));
 
-        Label introLabel = new Label("By default, DnD is a MOVE, hold ctrl/cmd whilst dragging for COPY.");
+        Label introLabel = new Label("On Windows: DnD is a MOVE, hold ctrl/cmd whilst dragging for COPY.\n"
+                                    +"On Mac: DnD is a COPY. With any modifier held, no DnD operation is performed.");
         introLabel.setWrapText(true);
-        introLabel.setFont(Font.font(18));
+        introLabel.setFont(Font.font(14));
         grid.add(introLabel, 0, 0, 2, 1);
 
         // --- list one

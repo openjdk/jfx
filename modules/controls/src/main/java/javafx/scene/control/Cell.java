@@ -640,7 +640,6 @@ public class Cell<T> extends Labeled {
      * @expert
      */
     protected void updateItem(T item, boolean empty) {
-        if (isEditing()) cancelEdit();
         setItem(item);
         setEmpty(empty);
         if (empty && isSelected()) {

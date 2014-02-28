@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,7 +86,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.*;
 
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
@@ -2347,31 +2347,32 @@ public class Scene implements EventTarget {
             focusCleanup();
 
             if (PULSE_LOGGING_ENABLED) {
-                long start = System.currentTimeMillis();
-                Scene.this.doCSSPass();
-                PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "CSS Pass");
-
-                start = System.currentTimeMillis();
-                Scene.this.doLayoutPass();
-                PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Layout Pass");
-            } else {
-                Scene.this.doCSSPass();
-                Scene.this.doLayoutPass();
+                PulseLogger.newPhase("CSS Pass");
             }
+            Scene.this.doCSSPass();
+
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newPhase("Layout Pass");
+            }
+            Scene.this.doLayoutPass();
 
             boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty();
             if (dirty) {
+                if (PULSE_LOGGING_ENABLED) {
+                    PulseLogger.newPhase("Update bounds");
+                }
                 getRoot().updateBounds();
                 if (impl_peer != null) {
                     try {
-                        long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+                        if (PULSE_LOGGING_ENABLED) {
+                            PulseLogger.newPhase("Waiting for previous rendering");
+                        }
                         impl_peer.waitForRenderingToComplete();
                         impl_peer.waitForSynchronization();
-                        if (PULSE_LOGGING_ENABLED) {
-                            PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Waiting for previous rendering");
-                        }
-                        start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
                         // synchronize scene properties
+                        if (PULSE_LOGGING_ENABLED) {
+                            PulseLogger.newPhase("Copy state to render graph");
+                        }
                         syncLights();
                         synchronizeSceneProperties();
                         // Run the synchronizer
@@ -2379,21 +2380,16 @@ public class Scene implements EventTarget {
                         Scene.this.mouseHandler.pulse();
                         // Tell the scene peer that it needs to repaint
                         impl_peer.markDirty();
-                        if (PULSE_LOGGING_ENABLED) {
-                            PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Copy state to render graph");
-                        }
                     } finally {
                         impl_peer.releaseSynchronization(true);
                     }
                 } else {
-                    long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+                    if (PULSE_LOGGING_ENABLED) {
+                        PulseLogger.newPhase("Synchronize with null peer");
+                    }
                     synchronizeSceneProperties();
                     synchronizeSceneNodes();
                     Scene.this.mouseHandler.pulse();
-                    if (PULSE_LOGGING_ENABLED) {
-                        PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Synchronize with null peer");
-                    }
-
                 }
 
                 if (Scene.this.getRoot().cssFlag != CssFlags.CLEAN) {

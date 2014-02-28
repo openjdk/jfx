@@ -91,14 +91,7 @@ public class FilteredListTest {
 
     @Test
     public void testLiveMode_Permutation() {
-        FXCollections.sort(list, new Comparator<String>() {
-
-            @Override
-            public int compare(String o1, String o2) {
-                return -o1.compareTo(o2);
-            }
-
-        });
+        FXCollections.sort(list, (o1, o2) -> -o1.compareTo(o2));
         mlo.check1Permutation(filteredList, new int[] {1, 0});
         assertEquals(Arrays.asList("d", "a"), filteredList);
     }

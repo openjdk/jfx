@@ -53,7 +53,7 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
@@ -1945,7 +1945,9 @@ public abstract class NGNode {
      * @param g The graphics object we're rendering to. This must never be null.
      */
     public final void render(Graphics g) {
-        if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.renderIncrementCounter("Nodes visited during render");
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.incrementCounter("Nodes visited during render");
+        }
         // Clear the visuals changed flag
         clearDirty();
         // If it isn't visible, then punt
@@ -2064,7 +2066,9 @@ public abstract class NGNode {
         // restore previous depth test state
         g.setDepthTest(prevDepthTest);
 
-        if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.renderIncrementCounter("Nodes rendered");
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.incrementCounter("Nodes rendered");
+        }
 
         // Used for debug purposes. This is not entirely accurate, as it doesn't measure the
         // number of times this node drew to the pixels, and in some cases reports a node as

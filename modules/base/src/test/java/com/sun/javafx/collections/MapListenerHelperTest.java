@@ -33,8 +33,11 @@ import javafx.collections.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.BitSet;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class MapListenerHelperTest {
     
@@ -146,11 +149,8 @@ public class MapListenerHelperTest {
     
     @Test
     public void testInvalidation_ChangeInPulse() {
-        final InvalidationListener listener = new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                helper = MapListenerHelper.addListener(helper, invalidationListenerMock[0]);
-            }
+        final InvalidationListener listener = observable -> {
+            helper = MapListenerHelper.addListener(helper, invalidationListenerMock[0]);
         };
         helper = MapListenerHelper.addListener(helper, listener);
         MapListenerHelper.fireValueChangedEvent(helper, change);
@@ -205,11 +205,8 @@ public class MapListenerHelperTest {
 
     @Test
     public void testChange_ChangeInPulse() {
-        final MapChangeListener<Object, Object> listener = new MapChangeListener<Object, Object>() {
-            @Override
-            public void onChanged(Change<? extends Object, ? extends Object> change) {
-                helper = MapListenerHelper.addListener(helper, changeListenerMock[0]);
-            }
+        final MapChangeListener<Object, Object> listener = change1 -> {
+            helper = MapListenerHelper.addListener(helper, changeListenerMock[0]);
         };
         helper = MapListenerHelper.addListener(helper, listener);
         MapListenerHelper.fireValueChangedEvent(helper, change);
@@ -613,4 +610,60 @@ public class MapListenerHelperTest {
         assertEquals(0, changeListenerMock[2].getCallsNumber());
     }
 
+
+
+    @Test
+    public void testExceptionNotPropagatedFromSingleInvalidation() {
+        helper = MapListenerHelper.addListener(helper,(Observable o) -> {throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromMultipleInvalidation() {
+        BitSet called = new BitSet();
+
+        helper = MapListenerHelper.addListener(helper, (Observable o) -> {called.set(0); throw new RuntimeException();});
+        helper = MapListenerHelper.addListener(helper, (Observable o) -> {called.set(1); throw new RuntimeException();});
+
+        helper.fireValueChangedEvent(change);
+
+        assertTrue(called.get(0));
+        assertTrue(called.get(1));
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromSingleChange() {
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {
+            throw new RuntimeException();
+        });
+        helper.fireValueChangedEvent(change);
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromMultipleChange() {
+        BitSet called = new BitSet();
+
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {called.set(0); throw new RuntimeException();});
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {called.set(1); throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+
+        assertTrue(called.get(0));
+        assertTrue(called.get(1));
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromMultipleChangeAndInvalidation() {
+        BitSet called = new BitSet();
+
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {called.set(0); throw new RuntimeException();});
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {called.set(1); throw new RuntimeException();});
+        helper = MapListenerHelper.addListener(helper, (Observable o) -> {called.set(2); throw new RuntimeException();});
+        helper = MapListenerHelper.addListener(helper, (Observable o) -> {called.set(3); throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+
+        assertTrue(called.get(0));
+        assertTrue(called.get(1));
+        assertTrue(called.get(2));
+        assertTrue(called.get(3));
+    }
 }

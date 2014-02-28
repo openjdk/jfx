@@ -195,22 +195,16 @@ public class EnsembleApp extends Application {
         root.getChildren().add(0, pageBrowser);
         pageBrowser.goHome();
         // wire nav buttons
-        backButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                pageBrowser.backward();
-            }
+        backButton.setOnAction((ActionEvent event) -> {
+            pageBrowser.backward();
         });
         backButton.disableProperty().bind(pageBrowser.backPossibleProperty().not());
-        forwardButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                pageBrowser.forward();
-            }
+        forwardButton.setOnAction((ActionEvent event) -> {
+            pageBrowser.forward();
         });
         forwardButton.disableProperty().bind(pageBrowser.forwardPossibleProperty().not());
-        homeButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                pageBrowser.goHome();
-            }
+        homeButton.setOnAction((ActionEvent event) -> {
+            pageBrowser.goHome();
         });
         homeButton.disableProperty().bind(pageBrowser.atHomeProperty());
         
@@ -219,19 +213,15 @@ public class EnsembleApp extends Application {
         sampleListPopover.setPrefWidth(440);
         root.getChildren().add(sampleListPopover);
         final SamplePopoverTreeList rootPage = new SamplePopoverTreeList(Samples.ROOT,pageBrowser);
-        listButton.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {
-                if (sampleListPopover.isVisible()) {
-                    sampleListPopover.hide();
-                } else {
-                    sampleListPopover.clearPages();
-                    sampleListPopover.pushPage(rootPage);
-                    sampleListPopover.show(new Runnable() {
-                        @Override public void run() {
-                            listButton.setSelected(false);
-                        }
-                    });
-                }
+        listButton.setOnMouseClicked((MouseEvent e) -> {
+            if (sampleListPopover.isVisible()) {
+                sampleListPopover.hide();
+            } else {
+                sampleListPopover.clearPages();
+                sampleListPopover.pushPage(rootPage);
+                sampleListPopover.show(() -> {
+                    listButton.setSelected(false);
+                });
             }
         });
         
@@ -268,11 +258,8 @@ public class EnsembleApp extends Application {
                         } else {
                             sampleListPopover.clearPages();
                             sampleListPopover.pushPage(rootPage);
-                            sampleListPopover.show(new Runnable() {
-                                @Override
-                                public void run() {
-                                    listButton.setSelected(false);
-                                }
+                            sampleListPopover.show(() -> {
+                                listButton.setSelected(false);
                             });
                         }
                         event.consume();
@@ -289,31 +276,29 @@ public class EnsembleApp extends Application {
     private RadioMenuItem screenSizeMenuItem(String text, final int width, final int height, final boolean retina, ToggleGroup tg) {
         RadioMenuItem radioMenuItem = new RadioMenuItem(text + " " + width + "x" + height);
         radioMenuItem.setToggleGroup(tg);
-        radioMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                double menuHeight = IS_IOS || IS_MAC || IS_ANDROID ? 0 : menuBar.prefHeight(width);
-                scene.getWindow().setWidth(width + scene.getWindow().getWidth() - scene.getWidth());
-                scene.getWindow().setHeight(height + menuHeight + scene.getWindow().getHeight() - scene.getHeight());
-                if (retina) {
-                    Parent root = scene.getRoot();
-                    if (root instanceof Pane) {
-                        Group newRoot = new Group();
-                        newRoot.setAutoSizeChildren(false);
-                        scene.setRoot(newRoot);
-                        newRoot.getChildren().add(root);
-                        root.getTransforms().add(new Scale(2, 2, 0, 0));
-                        root.resize(width/2, height/2);
-                    } else {
-                        root.getChildrenUnmodifiable().get(0).resize(width/2, height/2);
-                    }
+        radioMenuItem.setOnAction((ActionEvent t) -> {
+            double menuHeight = IS_IOS || IS_MAC || IS_ANDROID ? 0 : menuBar.prefHeight(width);
+            scene.getWindow().setWidth(width + scene.getWindow().getWidth() - scene.getWidth());
+            scene.getWindow().setHeight(height + menuHeight + scene.getWindow().getHeight() - scene.getHeight());
+            if (retina) {
+                Parent root = scene.getRoot();
+                if (root instanceof Pane) {
+                    Group newRoot = new Group();
+                    newRoot.setAutoSizeChildren(false);
+                    scene.setRoot(newRoot);
+                    newRoot.getChildren().add(root);
+                    root.getTransforms().add(new Scale(2, 2, 0, 0));
+                    root.resize(width/2, height/2);
                 } else {
-                    Parent root = scene.getRoot();
-                    if (root instanceof Group) {
-                        Pane oldRoot = (Pane)root.getChildrenUnmodifiable().get(0);
-                        ((Group)root).getChildren().clear();
-                        oldRoot.getTransforms().clear();
-                        scene.setRoot(oldRoot);
-                    }
+                    root.getChildrenUnmodifiable().get(0).resize(width/2, height/2);
+                }
+            } else {
+                Parent root = scene.getRoot();
+                if (root instanceof Group) {
+                    Pane oldRoot = (Pane)root.getChildrenUnmodifiable().get(0);
+                    ((Group)root).getChildren().clear();
+                    oldRoot.getTransforms().clear();
+                    scene.setRoot(oldRoot);
                 }
             }
         });
@@ -323,36 +308,26 @@ public class EnsembleApp extends Application {
     private void setStylesheets() {
         final String EXTERNAL_STYLESHEET = "http://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600";
         scene.getStylesheets().setAll("/ensemble/EnsembleStylesCommon.css");
-        Thread backgroundThread = new Thread(new Runnable() {
-            
-            @Override
-            public void run() {
-                try {
-                    URL url = new URL(EXTERNAL_STYLESHEET);
-                    try (
-                            ReadableByteChannel rbc = Channels.newChannel(url.openStream());
-                            Reader newReader = Channels.newReader(rbc, "ISO-8859-1");
-                            BufferedReader bufferedReader = new BufferedReader(newReader)
-                            ) {
-                        // Checking whether we can read a line from this url
-                        // without exception
-                        bufferedReader.readLine();
-                    }
-                    Platform.runLater(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            
-                            // when succeeded add this stylesheet to the scene
-                            scene.getStylesheets().add(EXTERNAL_STYLESHEET);
-                        }
-                    });
-                } catch (MalformedURLException ex) {
-                    Logger.getLogger(EnsembleApp.class.getName()).log(Level.FINE, "Failed to load external stylesheet", ex);
-                } catch (IOException ex) {
+        Thread backgroundThread = new Thread(() -> {
+            try {
+                URL url = new URL(EXTERNAL_STYLESHEET);
+                try (
+                        ReadableByteChannel rbc = Channels.newChannel(url.openStream());
+                        Reader newReader = Channels.newReader(rbc, "ISO-8859-1");
+                        BufferedReader bufferedReader = new BufferedReader(newReader)
+                        ) {
+                    // Checking whether we can read a line from this url
+                    // without exception
+                    bufferedReader.readLine();
+                }
+                Platform.runLater(() -> {
+                    scene.getStylesheets().add(EXTERNAL_STYLESHEET);
+                });
+            }catch (MalformedURLException ex) {
+                Logger.getLogger(EnsembleApp.class.getName()).log(Level.FINE, "Failed to load external stylesheet", ex);
+            }catch (IOException ex) {
                     Logger.getLogger(EnsembleApp.class.getName()).log(Level.FINE, "Failed to load external stylesheet", ex);
                 }
-            }
         }, "Trying to reach external styleshet");
         backgroundThread.setDaemon(true);
         backgroundThread.start();

@@ -127,15 +127,12 @@ public class Popover extends Region implements EventHandler<Event>{
         setScaleX(.8);
         setScaleY(.8);
         // create handlers for auto hiding
-        popoverHideHandler = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {
-                // check if event is outside popup
-                Point2D mouseInFilterPane = sceneToLocal(t.getX(), t.getY());
-                if (mouseInFilterPane.getX() < 0 || mouseInFilterPane.getX() > (getWidth()) ||
+        popoverHideHandler = (MouseEvent t) -> {
+            Point2D mouseInFilterPane = sceneToLocal(t.getX(), t.getY());
+            if (mouseInFilterPane.getX() < 0 || mouseInFilterPane.getX() > (getWidth()) ||
                     mouseInFilterPane.getY() < 0 || mouseInFilterPane.getY() > (getHeight())) {
-                    hide();
-                    t.consume();
-                }
+                hide();
+                t.consume();
             }
         };
 //        popoverScrollHandler = new EventHandler<ScrollEvent>() {
@@ -304,15 +301,12 @@ public class Popover extends Region implements EventHandler<Event>{
             int pageWidth = width - left - right;
             final int newPageX = (pageWidth+PAGE_GAP) * (pages.size()-1);
             new Timeline(
-                    new KeyFrame(Duration.millis(350),
-                        new EventHandler<ActionEvent>() {
-                            @Override public void handle(ActionEvent t) {
-                                pagesPane.setCache(false);
-                                pagesPane.getChildren().remove(pagesPane.getChildren().size()-1);
-                                titlesPane.getChildren().remove(titlesPane.getChildren().size()-1);
-                                resizePopoverToNewPage(pages.getFirst().getPageNode());
-                            }
-                        },
+                    new KeyFrame(Duration.millis(350), (ActionEvent t) -> {
+                        pagesPane.setCache(false);
+                        pagesPane.getChildren().remove(pagesPane.getChildren().size()-1);
+                        titlesPane.getChildren().remove(titlesPane.getChildren().size()-1);
+                        resizePopoverToNewPage(pages.getFirst().getPageNode());
+            },
                         new KeyValue(pagesPane.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
                         new KeyValue(titlesPane.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
                         new KeyValue(pagesClipRect.xProperty(), newPageX, Interpolator.EASE_BOTH),
@@ -345,13 +339,10 @@ public class Popover extends Region implements EventHandler<Event>{
         
         if (!pages.isEmpty() && isVisible()) {
             final Timeline timeline = new Timeline(
-                    new KeyFrame(Duration.millis(350),
-                        new EventHandler<ActionEvent>() {
-                            @Override public void handle(ActionEvent t) {
-                                pagesPane.setCache(false);
-                                resizePopoverToNewPage(pageNode);
-                            }
-                        },
+                    new KeyFrame(Duration.millis(350), (ActionEvent t) -> {
+                        pagesPane.setCache(false);
+                        resizePopoverToNewPage(pageNode);
+            },
                         new KeyValue(pagesPane.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
                         new KeyValue(titlesPane.translateXProperty(), -newPageX, Interpolator.EASE_BOTH),
                         new KeyValue(pagesClipRect.xProperty(), newPageX, Interpolator.EASE_BOTH),
@@ -400,10 +391,8 @@ public class Popover extends Region implements EventHandler<Event>{
 
             FadeTransition fade = new FadeTransition(Duration.seconds(.1), this);
             fade.setToValue(1.0);
-            fade.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    fadeAnimation = null;
-                }
+            fade.setOnFinished((ActionEvent event) -> {
+                fadeAnimation = null;
             });
 
             ScaleTransition scale = new ScaleTransition(Duration.seconds(.1), this);
@@ -427,13 +416,11 @@ public class Popover extends Region implements EventHandler<Event>{
 
             FadeTransition fade = new FadeTransition(Duration.seconds(.1), this);
             fade.setToValue(0);
-            fade.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    fadeAnimation = null;
-                    setVisible(false);
-                    clearPages();
-                    if (onHideCallback != null) onHideCallback.run();
-                }
+            fade.setOnFinished((ActionEvent event) -> {
+                fadeAnimation = null;
+                setVisible(false);
+                clearPages();
+                if (onHideCallback != null) onHideCallback.run();
             });
 
             ScaleTransition scale = new ScaleTransition(Duration.seconds(.1), this);

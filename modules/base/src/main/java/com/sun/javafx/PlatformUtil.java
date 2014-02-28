@@ -48,38 +48,14 @@ public class PlatformUtil {
     private static String javafxPlatform;
 
     static {
-        javafxPlatform = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override public String run() {
-                return System.getProperty("javafx.platform");
-            }
-        });
+        javafxPlatform = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("javafx.platform"));
         loadProperties();
-        embedded = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("com.sun.javafx.isEmbedded");
-            }
-        });
-        embedded3DEnabled = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("com.sun.javafx.experimental.embedded.3d");
-            }
-        });
-        embeddedType = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override public String run() {
-                return System.getProperty("embedded");
-            }
-        });
-        useEGL = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("use.egl");
-            }
-        });
+        embedded = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.isEmbedded"));
+        embedded3DEnabled = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.experimental.embedded.3d"));
+        embeddedType = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("embedded"));
+        useEGL = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("use.egl"));
         if (useEGL) {
-            doEGLCompositing = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override public Boolean run() {
-                    return Boolean.getBoolean("doNativeComposite");
-                }
-            });
+            doEGLCompositing = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("doNativeComposite"));
         } else
             doEGLCompositing = false;
     }
@@ -156,11 +132,7 @@ public class PlatformUtil {
     public static boolean useGLES2() {
         String useGles2 = "false";
         useGles2 =
-                AccessController.doPrivileged(new PrivilegedAction<String>() {
-                    public String run() {
-                        return System.getProperty("use.gles2");
-                    }
-                });
+                AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("use.gles2"));
         if ("true".equals(useGles2))
             return true;
         else
@@ -278,35 +250,33 @@ public class PlatformUtil {
                 (vmname != null && vmname.indexOf("Embedded") > 0))) {
             return;
         }
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                final File rtDir = getRTDir();
-                final String propertyFilename = "javafx.platform.properties";
-                File rtProperties = new File(rtDir, propertyFilename);
-                // First look for javafx.platform.properties in the JavaFX runtime
-                // Then in the installation directory of the JRE
-                if (rtProperties.exists()) {
-                    loadPropertiesFromFile(rtProperties);
-                    return null;
-                } 
-                String javaHome = System.getProperty("java.home");
-                File javaHomeProperties = new File(javaHome,
-                                                   "lib" + File.separator
-                                                   + propertyFilename);
-                if (javaHomeProperties.exists()) {
-                    loadPropertiesFromFile(javaHomeProperties);
-                    return null;
-                } 
-                
-                String javafxRuntimePath = System.getProperty("javafx.runtime.path");
-                File javafxRuntimePathProperties = new File(javafxRuntimePath,
-                                                         File.separator + propertyFilename);
-                if (javafxRuntimePathProperties.exists()) {
-                   loadPropertiesFromFile(javafxRuntimePathProperties);
-                   return null;
-                }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            final File rtDir = getRTDir();
+            final String propertyFilename = "javafx.platform.properties";
+            File rtProperties = new File(rtDir, propertyFilename);
+            // First look for javafx.platform.properties in the JavaFX runtime
+            // Then in the installation directory of the JRE
+            if (rtProperties.exists()) {
+                loadPropertiesFromFile(rtProperties);
                 return null;
             }
+            String javaHome = System.getProperty("java.home");
+            File javaHomeProperties = new File(javaHome,
+                                               "lib" + File.separator
+                                               + propertyFilename);
+            if (javaHomeProperties.exists()) {
+                loadPropertiesFromFile(javaHomeProperties);
+                return null;
+            }
+
+            String javafxRuntimePath = System.getProperty("javafx.runtime.path");
+            File javafxRuntimePathProperties = new File(javafxRuntimePath,
+                                                     File.separator + propertyFilename);
+            if (javafxRuntimePathProperties.exists()) {
+               loadPropertiesFromFile(javafxRuntimePathProperties);
+               return null;
+            }
+            return null;
         });
     }
     

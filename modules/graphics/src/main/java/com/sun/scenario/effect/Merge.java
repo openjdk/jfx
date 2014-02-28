@@ -28,6 +28,7 @@ package com.sun.scenario.effect;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * An effect that merges two inputs together into one result.  This produces
@@ -35,7 +36,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * {@code Blend.Mode.SRC_OVER} and {@code opacity=1.0}, except possibly
  * more efficient.
  */
-public class Merge extends CoreEffect {
+public class Merge extends CoreEffect<RenderState> {
 
     /**
      * Constructs a new {@code Merge} effect for the given inputs.
@@ -166,7 +167,9 @@ public class Merge extends CoreEffect {
         if (!topimg.validate(fctx)) {
             return new ImageData(fctx, null, null);
         }
-        ImageData ret = filterImageDatas(fctx, transform, outputClip,
+        RenderState rstate = getRenderState(fctx, transform, outputClip,
+                                            renderHelper, defaultInput);
+        ImageData ret = filterImageDatas(fctx, transform, outputClip, rstate,
                                          botimg, topimg);
         botimg.unref();
         topimg.unref();
@@ -174,14 +177,13 @@ public class Merge extends CoreEffect {
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
-        // This no longer matters since we completely override the
-        // filter method so the FilterEffect.filter() method no longer
-        // comes into play.
-        throw new InternalError("Merge.getInputClip should not be called");
+        return RenderState.RenderSpaceRenderState;
     }
 
     @Override

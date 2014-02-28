@@ -43,6 +43,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Cell;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
@@ -1887,10 +1888,41 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void cleanPile() {
+        boolean wasFocusOwner = false;
+
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
+            wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
         }
+
+        // Fix for RT-35876: Rather than have the cells do weird things with
+        // focus (in particular, have focus jump between cells), we return focus
+        // to the VirtualFlow itself.
+        if (wasFocusOwner) {
+            requestFocus();
+        }
+    }
+
+    private boolean doesCellContainFocus(Cell c) {
+        Scene scene = c.getScene();
+        final Node focusOwner = scene == null ? null : scene.getFocusOwner();
+
+        if (focusOwner != null) {
+            if (c.equals(focusOwner)) {
+                return true;
+            }
+
+            Parent p = focusOwner.getParent();
+            while (p != null && ! (p instanceof VirtualFlow)) {
+                if (c.equals(p)) {
+                    return true;
+                }
+                p = p.getParent();
+            }
+        }
+
+        return false;
     }
 
     /**

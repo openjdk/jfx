@@ -925,12 +925,8 @@ public class FXCollections {
 
         public UnmodifiableObservableListImpl(ObservableList<T> backingList) {
             this.backingList = backingList;
-            listener = new ListChangeListener<T>() {
-
-                @Override
-                public void onChanged(Change<? extends T> c) {
-                    fireChange(new SourceAdapterChange<T>(UnmodifiableObservableListImpl.this, c));
-                }
+            listener = c -> {
+                fireChange(new SourceAdapterChange<T>(UnmodifiableObservableListImpl.this, c));
             };
             this.backingList.addListener(new WeakListChangeListener<T>(listener));
         }
@@ -1183,12 +1179,8 @@ public class FXCollections {
         SynchronizedObservableList(ObservableList<T> seq, Object mutex) {
             super(seq, mutex);
             this.backingList = seq;
-            listener = new ListChangeListener<T>() {
-
-                @Override
-                public void onChanged(Change<? extends T> c) {
-                    ListListenerHelper.fireValueChangedEvent(helper, new SourceAdapterChange<T>(SynchronizedObservableList.this, c));
-                }
+            listener = c -> {
+                ListListenerHelper.fireValueChangedEvent(helper, new SourceAdapterChange<T>(SynchronizedObservableList.this, c));
             };
             backingList.addListener(new WeakListChangeListener<T>(listener));
         }
@@ -1274,12 +1266,8 @@ public class FXCollections {
             }
             this.list = list;
             this.type = type;
-            listener = new ListChangeListener<T>() {
-
-                @Override
-                public void onChanged(Change<? extends T> c) {
-                    fireChange(new SourceAdapterChange<T>(CheckedObservableList.this, c));
-                }
+            listener = c -> {
+                fireChange(new SourceAdapterChange<T>(CheckedObservableList.this, c));
             };
             list.addListener(new WeakListChangeListener<T>(listener));
         }
@@ -1651,11 +1639,8 @@ public class FXCollections {
 
         private void initListener() {
             if (listener == null) {
-                listener = new SetChangeListener<E>() {
-                    @Override
-                    public void onChanged(Change<? extends E> c) {
-                        callObservers(new SetAdapterChange<E>(UnmodifiableObservableSet.this, c));
-                    }
+                listener = c -> {
+                    callObservers(new SetAdapterChange<E>(UnmodifiableObservableSet.this, c));
                 };
                 this.backingSet.addListener(new WeakSetChangeListener<E>(listener));
             }
@@ -1874,11 +1859,8 @@ public class FXCollections {
         SynchronizedObservableSet(ObservableSet<E> set, Object mutex) {
             super(set, mutex);
             backingSet = set;
-            listener = new SetChangeListener<E>() {
-                @Override
-                public void onChanged(Change<? extends E> c) {
-                    SetListenerHelper.fireValueChangedEvent(listenerHelper, new SetAdapterChange<E>(SynchronizedObservableSet.this, c));
-                }
+            listener = c -> {
+                SetListenerHelper.fireValueChangedEvent(listenerHelper, new SetAdapterChange<E>(SynchronizedObservableSet.this, c));
             };
             backingSet.addListener(new WeakSetChangeListener<E>(listener));
         }
@@ -1920,11 +1902,8 @@ public class FXCollections {
             }
             backingSet = set;
             this.type = type;
-            listener = new SetChangeListener<E>() {
-                @Override
-                public void onChanged(SetChangeListener.Change<? extends E> c) {
-                    callObservers(new SetAdapterChange<E>(CheckedObservableSet.this, c));
-                }
+            listener = c -> {
+                callObservers(new SetAdapterChange<E>(CheckedObservableSet.this, c));
             };
             backingSet.addListener(new WeakSetChangeListener<E>(listener));
         }
@@ -2148,11 +2127,8 @@ public class FXCollections {
             backingMap = map;
             this.keyType = keyType;
             this.valueType = valueType;
-            listener = new MapChangeListener<K, V>() {
-                @Override
-                public void onChanged(MapChangeListener.Change<? extends K, ? extends V> c) {
-                    callObservers(new MapAdapterChange<K, V>(CheckedObservableMap.this, c));
-                }
+            listener = c -> {
+                callObservers(new MapAdapterChange<K, V>(CheckedObservableMap.this, c));
             };
             backingMap.addListener(new WeakMapChangeListener<K, V>(listener));
         }
@@ -2769,11 +2745,8 @@ public class FXCollections {
         SynchronizedObservableMap(ObservableMap<K, V> map, Object mutex) {
             super(map, mutex);
             backingMap = map;
-            listener = new MapChangeListener<K, V>() {
-                @Override
-                public void onChanged(Change<? extends K, ? extends V> c) {
-                    MapListenerHelper.fireValueChangedEvent(listenerHelper, new MapAdapterChange<K, V>(SynchronizedObservableMap.this, c));
-                }
+            listener = c -> {
+                MapListenerHelper.fireValueChangedEvent(listenerHelper, new MapAdapterChange<K, V>(SynchronizedObservableMap.this, c));
             };
             backingMap.addListener(new WeakMapChangeListener<K, V>(listener));
         }

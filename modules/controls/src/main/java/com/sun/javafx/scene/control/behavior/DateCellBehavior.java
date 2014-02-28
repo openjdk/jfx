@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,10 +94,10 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
                   if (dpc != null) {
                       DateCell cell = (DateCell)node;
                       switch (dir) {
-                        case UP:    dpc.goToDayCell(cell, -1, WEEKS); break;
-                        case DOWN:  dpc.goToDayCell(cell, +1, WEEKS); break;
-                        case LEFT:  dpc.goToDayCell(cell, -1, DAYS); break;
-                        case RIGHT: dpc.goToDayCell(cell, +1, DAYS); break;
+                        case UP:    dpc.goToDayCell(cell, -1, WEEKS, true); break;
+                        case DOWN:  dpc.goToDayCell(cell, +1, WEEKS, true); break;
+                        case LEFT:  dpc.goToDayCell(cell, -1, DAYS,  true); break;
+                        case RIGHT: dpc.goToDayCell(cell, +1, DAYS,  true); break;
                       }
                       return;
                   }

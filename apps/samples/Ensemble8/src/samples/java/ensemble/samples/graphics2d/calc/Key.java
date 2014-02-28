@@ -96,16 +96,12 @@ public class Key extends Parent {
     }
 
     private void initListeners() {
-        setOnMouseEntered(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                background.setFill(CELL_SEL_FILL);
-            }
+        setOnMouseEntered((MouseEvent me) -> {
+            background.setFill(CELL_SEL_FILL);
         });
 
-        setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                background.setFill(CELL_FILL);
-            }
+        setOnMouseExited((MouseEvent me) -> {
+            background.setFill(CELL_FILL);
         });
     }
 

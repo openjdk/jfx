@@ -25,6 +25,7 @@
 
 package com.sun.javafx.collections;
 
+import com.sun.javafx.binding.ExpressionHelper;
 import javafx.beans.InvalidationListener;
 import javafx.beans.InvalidationListenerMock;
 import javafx.beans.Observable;
@@ -35,7 +36,10 @@ import javafx.collections.ObservableList;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.BitSet;
+
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class ListListenerHelperTest {
     
@@ -147,11 +151,8 @@ public class ListListenerHelperTest {
     
     @Test
     public void testInvalidation_ChangeInPulse() {
-        final InvalidationListener listener = new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                helper = ListListenerHelper.addListener(helper, invalidationListenerMock[0]);
-            }
+        final InvalidationListener listener = observable -> {
+            helper = ListListenerHelper.addListener(helper, invalidationListenerMock[0]);
         };
         helper = ListListenerHelper.addListener(helper, listener);
         ListListenerHelper.fireValueChangedEvent(helper, change);
@@ -206,11 +207,8 @@ public class ListListenerHelperTest {
 
     @Test
     public void testChange_ChangeInPulse() {
-        final ListChangeListener<Object> listener = new ListChangeListener<Object>() {
-            @Override
-            public void onChanged(Change<? extends Object> c) {
-                helper = ListListenerHelper.addListener(helper, changeListenerMock[0]);
-            }
+        final ListChangeListener<Object> listener = c -> {
+            helper = ListListenerHelper.addListener(helper, changeListenerMock[0]);
         };
         helper = ListListenerHelper.addListener(helper, listener);
         ListListenerHelper.fireValueChangedEvent(helper, change);
@@ -612,6 +610,62 @@ public class ListListenerHelperTest {
         changeListenerMock[3].check0();
         changeListenerMock[1].check0();
         changeListenerMock[2].check0();
+    }
+
+
+    @Test
+    public void testExceptionNotPropagatedFromSingleInvalidation() {
+        helper = ListListenerHelper.addListener(helper,(Observable o) -> {throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromMultipleInvalidation() {
+        BitSet called = new BitSet();
+
+        helper = ListListenerHelper.addListener(helper, (Observable o) -> {called.set(0); throw new RuntimeException();});
+        helper = ListListenerHelper.addListener(helper, (Observable o) -> {called.set(1); throw new RuntimeException();});
+
+        helper.fireValueChangedEvent(change);
+
+        assertTrue(called.get(0));
+        assertTrue(called.get(1));
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromSingleChange() {
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {
+            throw new RuntimeException();
+        });
+        helper.fireValueChangedEvent(change);
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromMultipleChange() {
+        BitSet called = new BitSet();
+
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {called.set(0); throw new RuntimeException();});
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {called.set(1); throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+
+        assertTrue(called.get(0));
+        assertTrue(called.get(1));
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromMultipleChangeAndInvalidation() {
+        BitSet called = new BitSet();
+
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {called.set(0); throw new RuntimeException();});
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {called.set(1); throw new RuntimeException();});
+        helper = ListListenerHelper.addListener(helper, (Observable o) -> {called.set(2); throw new RuntimeException();});
+        helper = ListListenerHelper.addListener(helper, (Observable o) -> {called.set(3); throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+
+        assertTrue(called.get(0));
+        assertTrue(called.get(1));
+        assertTrue(called.get(2));
+        assertTrue(called.get(3));
     }
 
 }

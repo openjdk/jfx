@@ -36,6 +36,7 @@ import com.sun.scenario.effect.Flood;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 public class PrFloodPeer extends EffectPeer {
 
@@ -45,6 +46,7 @@ public class PrFloodPeer extends EffectPeer {
 
     @Override
     public ImageData filter(Effect effect,
+                            RenderState rstate,
                             BaseTransform transform,
                             Rectangle outputClip,
                             ImageData... inputs)
