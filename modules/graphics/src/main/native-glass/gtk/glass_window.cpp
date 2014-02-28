@@ -630,6 +630,11 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
     gtk_widget =  gtk_window_new(type == POPUP ? GTK_WINDOW_POPUP : GTK_WINDOW_TOPLEVEL);
+    
+    if (gchar* app_name = get_application_name()) {
+        gtk_window_set_wmclass(GTK_WINDOW(gtk_widget), app_name, app_name);
+        g_free(app_name);
+    }
 
     if (owner) {
         owner->add_child(this);

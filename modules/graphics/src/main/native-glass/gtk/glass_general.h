@@ -185,6 +185,8 @@ private:
     extern jfieldID jApplicationScreen; //com.sun.glass.ui.gtk.GtkApplication#screen
     extern jfieldID jApplicationVisualID; //com.sun.glass.ui.gtk.GtkApplication#visualID
     extern jmethodID jApplicationReportException; // reportException(Ljava/lang/Throwable;)V
+    extern jmethodID jApplicationGetApplication; // GetApplication()()Lcom/sun/glass/ui/Application;
+    extern jmethodID jApplicationGetName; // getName()Ljava/lang/String;
 
 #ifdef VERBOSE
 #define LOG0(msg) {printf(msg);fflush(stdout);}
@@ -220,6 +222,7 @@ private:
 
 #define LOG_EXCEPTION(env) check_and_clear_exception(env);
 
+    gchar* get_application_name();
     void glass_throw_exception(JNIEnv * env,
             const char * exceptionClass,
             const char * exceptionMessage);
