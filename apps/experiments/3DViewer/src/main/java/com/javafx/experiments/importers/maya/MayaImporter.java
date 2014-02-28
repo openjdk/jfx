@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2014 Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,6 +31,7 @@
  */
 package com.javafx.experiments.importers.maya;
 
+import com.javafx.experiments.importers.Importer;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +49,7 @@ import javafx.scene.shape.TriangleMesh;
  * <p/>
  * MayaImporter.getRoot() returns a JavaFX node hierarchy MayaImporter.getTimeline() returns a JavaFX timeline
  */
-public class MayaImporter {
+public class MayaImporter extends Importer {
     public static final boolean DEBUG = Loader.DEBUG;
     public static final boolean WARN = Loader.WARN;
 
@@ -65,6 +66,7 @@ public class MayaImporter {
     //        return rootCharacter;
     // }
 
+    @Override
     public MayaGroup getRoot() {
         return root;
     }
@@ -75,6 +77,7 @@ public class MayaImporter {
     // MayaImporter.getTimeline() returns a JavaFX timeline
     // (javafx.animation.Timeline)
     //=========================================================================
+    @Override
     public Timeline getTimeline() {
         return timeline;
     }
@@ -89,6 +92,7 @@ public class MayaImporter {
     //=========================================================================
     // MayaImporter.load
     //=========================================================================
+    @Override
     public void load(String url, boolean asPolygonMesh) {
         try {
             Loader loader = new Loader();
@@ -143,5 +147,10 @@ public class MayaImporter {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+    
+    @Override
+    public boolean isSupported(String extension) {
+        return extension != null && extension.equals("ma");
     }
 }

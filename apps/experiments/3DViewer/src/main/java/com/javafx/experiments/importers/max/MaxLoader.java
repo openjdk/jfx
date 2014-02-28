@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2014 Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,6 +31,7 @@
  */
 package com.javafx.experiments.importers.max;
 
+import com.javafx.experiments.importers.Importer;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -52,7 +53,7 @@ import javafx.scene.transform.Transform;
 import com.sun.javafx.scene.transform.TransformUtils;
 
 /** Max ASCII file loader */
-public class MaxLoader {
+public class MaxLoader extends Importer {
     private static Mesh createMaxMesh(MaxData.GeomNode maxNode, Transform tm) {
         Transform tmr = null;
         try {
@@ -323,4 +324,27 @@ public class MaxLoader {
 
         return new MaxScene(root, lroot);
     }
+    
+    private MaxScene root;
+    
+    @Override
+    public void load(String fileUrl, boolean asPolygonMesh) throws IOException {
+        loadMaxUrl(fileUrl);
+        if (asPolygonMesh) {
+            throw new RuntimeException("Polygon Mesh is not supported");          
+        } else {
+            root = loadMaxUrl(fileUrl);          
+        }
+    }
+
+    @Override
+    public Group getRoot() {
+        return root;
+    }
+
+    @Override
+    public boolean isSupported(String extension) {
+        return extension != null && extension.equals("ase");
+    }
+    
 }

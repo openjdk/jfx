@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2014 Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,6 +31,7 @@
  */
 package com.javafx.experiments.importers.dae;
 
+import com.javafx.experiments.importers.Importer;
 import javafx.geometry.Point3D;
 import javafx.scene.*;
 import javafx.scene.paint.Color;
@@ -58,31 +59,23 @@ import java.util.*;
  *  - Assume 1 Unit = 1 FX Unit
  */
 @SuppressWarnings("UnusedDeclaration")
-public class DaeImporter {
+public class DaeImporter extends Importer {
     private Group rootNode = new Group();
     private Camera firstCamera = null;
     private double firstCameraAspectRatio = 4/3;
     private Map<String,Camera> cameras = new HashMap<>();
     private Map<String,Object> meshes = new HashMap<>();
-    private final boolean createPolyMesh;
+    private  boolean createPolyMesh;
 
     {
         // CHANGE FOR Y_UP
         rootNode.getTransforms().add(new Rotate(180,0,0,0,Rotate.X_AXIS));
     }
 
+    public DaeImporter() {        
+    }
     public DaeImporter(String url, boolean createPolyMesh) {
-        this.createPolyMesh = createPolyMesh;
-        long START = System.currentTimeMillis();
-        try {
-            SAXParserFactory factory = SAXParserFactory.newInstance();
-            SAXParser saxParser = factory.newSAXParser();
-            saxParser.parse(url, new DaeSaxParser());
-        } catch (ParserConfigurationException | SAXException | IOException e) {
-            e.printStackTrace();
-        }
-        long END = System.currentTimeMillis();
-        System.out.println("IMPORTED ["+url+"] in  "+((END-START))+"ms");
+        load(url, createPolyMesh);
     }
 
     public DaeImporter(File file, boolean createPolyMesh) {
@@ -118,10 +111,30 @@ public class DaeImporter {
         return firstCamera;
     }
 
-    public Group getRootNode() {
+    @Override
+    public Group getRoot() {
         return rootNode;
     }
 
+    @Override
+    public void load(String url, boolean createPolygonMesh) {
+    this.createPolyMesh = createPolygonMesh;
+        long START = System.currentTimeMillis();
+        try {
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            SAXParser saxParser = factory.newSAXParser();
+            saxParser.parse(url, new DaeSaxParser());
+        } catch (ParserConfigurationException | SAXException | IOException e) {
+            e.printStackTrace();
+        }
+        long END = System.currentTimeMillis();
+        System.out.println("IMPORTED ["+url+"] in  "+((END-START))+"ms");     
+    }
+    
+    @Override
+    public boolean isSupported(String extension) {
+        return extension != null && extension.equals("dae");
+    }
     private static enum State {
         UNKNOWN,camera,visual_scene,node,aspect_ratio,xfov,yfov,znear,zfar,instance_camera,instance_geometry,
         translate,rotate,scale,matrix,float_array,polygons,input,p,vertices,authoring_tool,polylist,vcount}

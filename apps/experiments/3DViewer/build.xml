@@ -110,4 +110,32 @@
              goal="install:install-file"
              resultproperty="maven.build.result"/>
     </target>
+    <!-- The following is to support dependency injection with ServiceLoader for importers --> 
+    <target name="-post-jar" >            
+        <jar destfile="${dist.dir}/lib/MayaImporter.jar" basedir="./build/classes">
+            <service type="com.javafx.experiments.importers.Importer">
+                <provider classname="com.javafx.experiments.importers.maya.MayaImporter" />
+            </service>
+        </jar>
+        <jar destfile="${dist.dir}/lib/DaeImporter.jar" basedir="./build/classes">
+            <service type="com.javafx.experiments.importers.Importer">
+                <provider classname="com.javafx.experiments.importers.dae.DaeImporter" />
+            </service>
+        </jar>
+        <jar destfile="${dist.dir}/lib/ObjOrPolyObjImporter.jar" basedir="./build/classes">
+            <service type="com.javafx.experiments.importers.Importer">
+                <provider classname="com.javafx.experiments.importers.obj.ObjOrPolyObjImporter" />
+            </service>
+        </jar>
+        <jar destfile="${dist.dir}/lib/MaxLoader.jar" basedir="./build/classes">
+            <service type="com.javafx.experiments.importers.Importer">
+                <provider classname="com.javafx.experiments.importers.max.MaxLoader" />
+            </service>
+        </jar>
+        <!--<jar destfile="${dist.dir}/3Dlib/FxmlLoader.jar" basedir="./build/classes">
+            <service type="com.javafx.experiments.importers.Importer">
+                <provider classname="com.javafx.experiments.importers.fxml.FxmlLoader" />
+            </service>
+        </jar> -->                    
+    </target> 
 </project>
