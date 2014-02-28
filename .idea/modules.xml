@@ -10,6 +10,8 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/Hello.iml" filepath="$PROJECT_DIR$/.idea/Hello.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/MandelbrotSet.iml" filepath="$PROJECT_DIR$/.idea/MandelbrotSet.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Modena.iml" filepath="$PROJECT_DIR$/.idea/Modena.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/SceneBuilderApp.iml" filepath="$PROJECT_DIR$/.idea/SceneBuilderApp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/SceneBuilderKit.iml" filepath="$PROJECT_DIR$/.idea/SceneBuilderKit.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Shape3DToy.iml" filepath="$PROJECT_DIR$/.idea/Shape3DToy.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/StretchyGrid.iml" filepath="$PROJECT_DIR$/.idea/StretchyGrid.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/SystemTests.iml" filepath="$PROJECT_DIR$/.idea/SystemTests.iml" />
