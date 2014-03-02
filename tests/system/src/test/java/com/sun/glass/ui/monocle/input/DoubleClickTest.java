@@ -70,7 +70,6 @@ public class DoubleClickTest extends ParameterizedTestBase {
 
     @Test
     public void testDoubleClick2() throws Exception {
-        Assume.assumeTrue(TestApplication.isMonocle()); // RT-35536
         int x1 = (int) Math.round(width / 2.0);
         int y1 = (int) Math.round(height / 2.0);
         int x2 = x1 + device.getTapRadius();
