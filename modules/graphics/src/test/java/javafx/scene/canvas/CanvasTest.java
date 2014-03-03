@@ -174,9 +174,35 @@ public class CanvasTest {
         gc.stroke();
         gc.fill();
     }
-    
-    
-    
+
+    @Test public void testGCPath_LineTo_NoMoveto() throws Exception {
+        gc.lineTo(10, 10);
+    }
+
+    @Test public void testGCPath_QuadraticCurveTo_NoMoveto() throws Exception {
+        gc.quadraticCurveTo(10, 10, 20, 20);
+    }
+
+    @Test public void testGCPath_BezierCurveTo_NoMoveto() throws Exception {
+        gc.bezierCurveTo(10, 10, 20, 20, 30, 30);
+    }
+
+    @Test public void testGCPath_ArcTo_NoMoveto() throws Exception {
+        gc.arcTo(10, 10, 20, 20, 30);
+    }
+
+    @Test public void testGCPath_Arc_NoMoveto() throws Exception {
+        gc.arc(10, 10, 20, 20, 30, 30);
+    }
+
+    @Test public void testGCPath_ClosePath_NoMoveto() throws Exception {
+        gc.closePath();
+    }
+
+    @Test public void testGCPath_Rect_NoMoveto() throws Exception {
+        gc.rect(10, 10, 20, 20);
+    }
+
     @Test public void testGCState_Translate() throws Exception {
         gc.translate(50, 50);
         Affine result = gc.getTransform();
