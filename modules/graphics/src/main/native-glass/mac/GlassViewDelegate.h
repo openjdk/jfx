@@ -49,6 +49,7 @@
     
     BOOL                    mouseIsDown;
     BOOL                    mouseIsOver;
+    int                     mouseDownMask; // bit 0 - left, 1 - right, 2 - other button
     
     BOOL                    gestureInProgress;
     
