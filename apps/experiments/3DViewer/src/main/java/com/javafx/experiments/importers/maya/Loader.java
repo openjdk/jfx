@@ -32,6 +32,7 @@
 package com.javafx.experiments.importers.maya;
 
 import com.javafx.experiments.importers.SmoothingGroups;
+
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -44,6 +45,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -60,6 +62,7 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Affine;
 import javafx.util.Duration;
+
 import com.javafx.experiments.importers.maya.parser.MParser;
 import com.javafx.experiments.importers.maya.values.MArray;
 import com.javafx.experiments.importers.maya.values.MBool;
@@ -79,14 +82,13 @@ import com.javafx.experiments.shape3d.PolygonMesh;
 import com.javafx.experiments.shape3d.PolygonMeshView;
 import com.javafx.experiments.shape3d.SkinningMesh;
 import com.sun.javafx.geom.Vec3f;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Arrays;
+
 import javafx.animation.AnimationTimer;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 
 /** Loader */
 class Loader {
@@ -309,14 +311,11 @@ class Loader {
             if (targetMayaMeshNode.getScene() != null) {
                 skinningMeshTimer.start();
             }
-            targetMayaMeshView.sceneProperty().addListener(new ChangeListener<Scene>() {
-                @Override
-                public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
-                    if (newValue == null) {
-                        skinningMeshTimer.stop();
-                    } else {
-                        skinningMeshTimer.start();
-                    }
+            targetMayaMeshView.sceneProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue == null) {
+                    skinningMeshTimer.stop();
+                } else {
+                    skinningMeshTimer.start();
                 }
             });
         } else {

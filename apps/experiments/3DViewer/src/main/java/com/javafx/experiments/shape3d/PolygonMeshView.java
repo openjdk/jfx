@@ -32,11 +32,10 @@
 package com.javafx.experiments.shape3d;
 
 import java.util.Arrays;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ArrayChangeListener;
 import javafx.collections.ObservableFloatArray;
 import javafx.scene.Parent;
@@ -45,7 +44,6 @@ import javafx.scene.shape.CullFace;
 import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
-
 import static javafx.scene.shape.TriangleMesh.*;
 import static com.javafx.experiments.shape3d.SubdivisionMesh.*;
 
@@ -61,19 +59,13 @@ public class PolygonMeshView extends Parent {
     // this is null if no subdivision is happening (i.e. subdivisionLevel = 0);
     private SubdivisionMesh subdivisionMesh;
     
-    private final ArrayChangeListener<ObservableFloatArray> meshPointsListener = new ArrayChangeListener<ObservableFloatArray>() {
-        @Override
-        public void onChanged(ObservableFloatArray t, boolean bln, int i, int i1) {
-            pointsDirty = true;
-            updateMesh();
-        }
+    private final ArrayChangeListener<ObservableFloatArray> meshPointsListener = (t, bln, i, i1) -> {
+        pointsDirty = true;
+        updateMesh();
     };
-    private final ArrayChangeListener<ObservableFloatArray> meshTexCoordListener = new ArrayChangeListener<ObservableFloatArray>() {
-        @Override
-        public void onChanged(ObservableFloatArray t, boolean bln, int i, int i1) {
-            texCoordsDirty = true;
-            updateMesh();
-        }
+    private final ArrayChangeListener<ObservableFloatArray> meshTexCoordListener = (t, bln, i, i1) -> {
+        texCoordsDirty = true;
+        updateMesh();
     };
     
     private boolean pointsDirty = true;
@@ -95,23 +87,20 @@ public class PolygonMeshView extends Parent {
     public ObjectProperty<PolygonMesh> meshProperty() { 
         if (meshProperty == null) {
             meshProperty = new SimpleObjectProperty<PolygonMesh>();
-            meshProperty.addListener(new ChangeListener<PolygonMesh>() {
-                @Override
-                public void changed(ObservableValue<? extends PolygonMesh> observable, PolygonMesh oldValue, PolygonMesh newValue) {
-                    if (oldValue != null) {
-                        oldValue.getPoints().removeListener(meshPointsListener);
-                        oldValue.getPoints().removeListener(meshTexCoordListener);
-                    }
+            meshProperty.addListener((observable, oldValue, newValue) -> {
+                if (oldValue != null) {
+                    oldValue.getPoints().removeListener(meshPointsListener);
+                    oldValue.getPoints().removeListener(meshTexCoordListener);
+                }
 
-                    meshProperty.set(newValue);
+                meshProperty.set(newValue);
 
-                    pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true;
-                    updateMesh();
-                    
-                    if (newValue != null) {
-                        newValue.getPoints().addListener(meshPointsListener);
-                        newValue.getTexCoords().addListener(meshTexCoordListener);
-                    }
+                pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true;
+                updateMesh();
+                
+                if (newValue != null) {
+                    newValue.getPoints().addListener(meshPointsListener);
+                    newValue.getTexCoords().addListener(meshTexCoordListener);
                 }
             });
         }
@@ -185,12 +174,7 @@ public class PolygonMeshView extends Parent {
                     // create SubdivisionMesh if subdivisionLevel is greater than 0
                     if ((getSubdivisionLevel() > 0) && (subdivisionMesh == null)) {
                         subdivisionMesh = new SubdivisionMesh(getMesh(), getSubdivisionLevel(), getBoundaryMode(), getMapBorderMode());
-                        subdivisionMesh.getOriginalMesh().getPoints().addListener(new ArrayChangeListener<ObservableFloatArray>() {
-                            @Override
-                            public void onChanged(ObservableFloatArray t, boolean bln, int i, int i1) {
-                                subdivisionMesh.update();
-                            }
-                        });
+                        subdivisionMesh.getOriginalMesh().getPoints().addListener((t, bln, i, i1) -> subdivisionMesh.update());
                         setMesh(subdivisionMesh);
                     }
                     if (subdivisionMesh != null) {

@@ -32,12 +32,13 @@
 package com.javafx.experiments.shape3d;
 
 import com.javafx.experiments.importers.maya.Joint;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.ObservableFloatArray;
 import javafx.geometry.Point3D;
 import javafx.scene.Node;
@@ -127,12 +128,7 @@ public class SkinningMesh extends PolygonMesh {
         // Add a listener to all the joints (and their parents nodes) so that we can track when any of their transforms have changed
         // Set of joints that already have a listener (so we don't attach a listener to the same node more than once)
         Set<Node> processedNodes = new HashSet<Node>(joints.size());
-        InvalidationListener invalidationListener = new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                jointsTransformDirty = true;
-            }
-        };
+        InvalidationListener invalidationListener = observable -> jointsTransformDirty = true;
         for (int j = 0; j < joints.size(); j++) {
             Node node = joints.get(j);
             while (!processedNodes.contains(node)) {

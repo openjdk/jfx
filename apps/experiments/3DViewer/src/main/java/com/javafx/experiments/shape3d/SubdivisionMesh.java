@@ -33,10 +33,9 @@
 
 import com.javafx.experiments.shape3d.symbolic.SymbolicPolygonMesh;
 import com.javafx.experiments.shape3d.symbolic.SymbolicSubdivisionBuilder;
+
 import java.util.ArrayList;
 import java.util.List;
-import javafx.collections.ArrayChangeListener;
-import javafx.collections.ObservableFloatArray;
 
 /**
  * Catmull Clark subdivision surface polygon mesh
@@ -92,22 +91,14 @@ public class SubdivisionMesh extends PolygonMesh {
         
         symbolicMeshes = new ArrayList<>(4); // the polymesh is usually subdivided up to 3 times
 
-        originalMesh.getPoints().addListener(new ArrayChangeListener<ObservableFloatArray>() {
-            @Override
-            public void onChanged(ObservableFloatArray observableArray, boolean sizeChanged, int from, int to) {
-                if (sizeChanged) {
-                    meshDirty = true;
-                } else {
-                    pointValuesDirty = true;
-                }
-            }
-        });
-        originalMesh.getTexCoords().addListener(new ArrayChangeListener<ObservableFloatArray>() {
-            @Override
-            public void onChanged(ObservableFloatArray observableArray, boolean sizeChanged, int from, int to) {
+        originalMesh.getPoints().addListener((observableArray, sizeChanged, from, to) -> {
+            if (sizeChanged) {
                 meshDirty = true;
+            } else {
+                pointValuesDirty = true;
             }
         });
+        originalMesh.getTexCoords().addListener((observableArray, sizeChanged, from, to) -> meshDirty = true);
     }
     
     /**

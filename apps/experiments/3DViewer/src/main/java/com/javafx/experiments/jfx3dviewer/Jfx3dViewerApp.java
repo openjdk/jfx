@@ -33,13 +33,12 @@ package com.javafx.experiments.jfx3dviewer;
 
 import java.io.File;
 import java.util.List;
+
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
 
 /**
  * JavaFX 3D Viewer Application
@@ -69,12 +68,7 @@ public class Jfx3dViewerApp extends Application {
         stage.setScene(scene);
         stage.show();
 
-        stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
-            @Override
-            public void handle(WindowEvent event) {
-                sessionManager.saveSession();
-            }
-        });
+        stage.setOnCloseRequest(event -> sessionManager.saveSession());
 
 //        org.scenicview.ScenicView.show(contentModel.getSubScene().getRoot());
     }

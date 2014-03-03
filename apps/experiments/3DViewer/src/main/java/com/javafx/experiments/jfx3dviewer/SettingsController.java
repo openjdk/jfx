@@ -33,24 +33,23 @@ package com.javafx.experiments.jfx3dviewer;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+
 import javafx.application.Platform;
 import javafx.beans.binding.DoubleBinding;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TitledPane;
-import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
+
 import com.javafx.experiments.shape3d.SubdivisionMesh;
+
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.DoubleProperty;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
@@ -61,10 +60,7 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.control.cell.CheckBoxTreeTableCell;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.transform.Transform;
-import javafx.util.Callback;
 import javafx.util.StringConverter;
 
 /**
@@ -118,56 +114,40 @@ public class SettingsController implements Initializable {
     
     @Override public void initialize(URL location, ResourceBundle resources) {
         // keep one pane open always
-        settings.expandedPaneProperty().addListener(new ChangeListener<TitledPane>() {
-            @Override public void changed(ObservableValue<? extends TitledPane> observable, TitledPane oldValue, TitledPane newValue) {
-                Platform.runLater(
-                        new Runnable() {
-                            @Override public void run() {
-                                if (settings.getExpandedPane() == null)
-                                    settings.setExpandedPane(settings.getPanes().get(0));
-                            }
-                        });
-            }
-        });
+        settings.expandedPaneProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(
+                () -> {
+                    if (settings.getExpandedPane() == null)
+                        settings.setExpandedPane(settings.getPanes().get(0));
+                }));
         // wire up settings in OPTIONS
         contentModel.msaaProperty().bind(msaaCheckBox.selectedProperty());
         contentModel.showAxisProperty().bind(showAxisCheckBox.selectedProperty());
         contentModel.yUpProperty().bind(yUpCheckBox.selectedProperty());
         backgroundColorPicker.setValue((Color)contentModel.getSubScene().getFill());
         contentModel.getSubScene().fillProperty().bind(backgroundColorPicker.valueProperty());
-        wireFrameCheckbox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean isWireframe) {
-                contentModel.setWireFrame(isWireframe);
+        wireFrameCheckbox.selectedProperty().addListener((observable, oldValue, isWireframe) -> contentModel.setWireFrame(isWireframe));
+        subdivisionLevelGroup.selectedToggleProperty().addListener((observable, oldValue, selectedToggle) -> {
+            if (selectedToggle == null && oldValue != null) {
+                subdivisionLevelGroup.selectToggle(oldValue);
+                selectedToggle = oldValue;
+            } else {
+                contentModel.setSubdivisionLevel(Integer.parseInt((String)selectedToggle.getUserData()));
             }
         });
-        subdivisionLevelGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-            @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
-                if (selectedToggle == null && oldValue != null) {
-                    subdivisionLevelGroup.selectToggle(oldValue);
-                    selectedToggle = oldValue;
-                } else {
-                    contentModel.setSubdivisionLevel(Integer.parseInt((String)selectedToggle.getUserData()));
-                }
+        subdivisionBoundaryGroup.selectedToggleProperty().addListener((observable, oldValue, selectedToggle) -> {
+            if (selectedToggle == null && oldValue != null) {
+                subdivisionBoundaryGroup.selectToggle(oldValue);
+                selectedToggle = oldValue;
+            } else {
+                contentModel.setBoundaryMode((SubdivisionMesh.BoundaryMode) selectedToggle.getUserData());
             }
         });
-        subdivisionBoundaryGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-            @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
-                if (selectedToggle == null && oldValue != null) {
-                    subdivisionBoundaryGroup.selectToggle(oldValue);
-                    selectedToggle = oldValue;
-                } else {
-                    contentModel.setBoundaryMode((SubdivisionMesh.BoundaryMode) selectedToggle.getUserData());
-                }
-            }
-        });
-        subdivisionSmoothGroup.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-            @Override public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
-                if (selectedToggle == null && oldValue != null) {
-                    subdivisionSmoothGroup.selectToggle(oldValue);
-                    selectedToggle = oldValue;
-                } else {
-                    contentModel.setMapBorderMode((SubdivisionMesh.MapBorderMode) selectedToggle.getUserData());
-                }
+        subdivisionSmoothGroup.selectedToggleProperty().addListener((observable, oldValue, selectedToggle) -> {
+            if (selectedToggle == null && oldValue != null) {
+                subdivisionSmoothGroup.selectToggle(oldValue);
+                selectedToggle = oldValue;
+            } else {
+                contentModel.setMapBorderMode((SubdivisionMesh.MapBorderMode) selectedToggle.getUserData());
             }
         });
         // wire up settings in LIGHTS
@@ -184,32 +164,30 @@ public class SettingsController implements Initializable {
         light1x.disableProperty().bind(light1followCameraCheckBox.selectedProperty());
         light1y.disableProperty().bind(light1followCameraCheckBox.selectedProperty());
         light1z.disableProperty().bind(light1followCameraCheckBox.selectedProperty());
-        light1followCameraCheckBox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                if (newValue) {
-                    contentModel.getLight1().translateXProperty().bind(new DoubleBinding() {
-                        { bind(contentModel.getCamera().boundsInParentProperty()); }
-                        @Override protected double computeValue() {
-                            return contentModel.getCamera().getBoundsInParent().getMinX();
-                        }
-                    });
-                    contentModel.getLight1().translateYProperty().bind(new DoubleBinding() {
-                        { bind(contentModel.getCamera().boundsInParentProperty()); }
-                        @Override protected double computeValue() {
-                            return contentModel.getCamera().getBoundsInParent().getMinY();
-                        }
-                    });
-                    contentModel.getLight1().translateZProperty().bind(new DoubleBinding() {
-                        { bind(contentModel.getCamera().boundsInParentProperty()); }
-                        @Override protected double computeValue() {
-                            return contentModel.getCamera().getBoundsInParent().getMinZ();
-                        }
-                    });
-                } else {
-                    contentModel.getLight1().translateXProperty().bind(light1x.valueProperty());
-                    contentModel.getLight1().translateYProperty().bind(light1y.valueProperty());
-                    contentModel.getLight1().translateZProperty().bind(light1z.valueProperty());
-                }
+        light1followCameraCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                contentModel.getLight1().translateXProperty().bind(new DoubleBinding() {
+                    { bind(contentModel.getCamera().boundsInParentProperty()); }
+                    @Override protected double computeValue() {
+                        return contentModel.getCamera().getBoundsInParent().getMinX();
+                    }
+                });
+                contentModel.getLight1().translateYProperty().bind(new DoubleBinding() {
+                    { bind(contentModel.getCamera().boundsInParentProperty()); }
+                    @Override protected double computeValue() {
+                        return contentModel.getCamera().getBoundsInParent().getMinY();
+                    }
+                });
+                contentModel.getLight1().translateZProperty().bind(new DoubleBinding() {
+                    { bind(contentModel.getCamera().boundsInParentProperty()); }
+                    @Override protected double computeValue() {
+                        return contentModel.getCamera().getBoundsInParent().getMinZ();
+                    }
+                });
+            } else {
+                contentModel.getLight1().translateXProperty().bind(light1x.valueProperty());
+                contentModel.getLight1().translateYProperty().bind(light1y.valueProperty());
+                contentModel.getLight1().translateZProperty().bind(light1z.valueProperty());
             }
         });
         // LIGHT 2
@@ -254,78 +232,43 @@ public class SettingsController implements Initializable {
                 }
             }
         });
-        hierarachyTreeTable.setOnMouseClicked(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent t) {
-                if (t.getClickCount() == 2) {
-                    settings.setExpandedPane(x6);
-                    t.consume();
+        hierarachyTreeTable.setOnMouseClicked(t -> {
+            if (t.getClickCount() == 2) {
+                settings.setExpandedPane(x6);
+                t.consume();
+            }
+        });
+        hierarachyTreeTable.setOnKeyPressed(t -> {
+            if (t.getCode() == KeyCode.SPACE) {
+                TreeItem<Node> selectedItem = hierarachyTreeTable.getSelectionModel().getSelectedItem();
+                if (selectedItem != null) {
+                    Node node = selectedItem.getValue();
+                    node.setVisible(!node.isVisible());
+                }
+                t.consume();
+            }
+        });
+        x6.expandedProperty().addListener((ov, t, t1) -> {
+            if (t1) {
+                TreeItem<Node> selectedItem = hierarachyTreeTable.getSelectionModel().getSelectedItem();
+                if (selectedItem == null) {
+                    transformsList.setItems(null);
+                    selectedNodeLabel.setText("");
+                } else {
+                    Node node = selectedItem.getValue();
+                    transformsList.setItems(node.getTransforms());
+                    selectedNodeLabel.setText(node.toString());
                 }
             }
         });
-        hierarachyTreeTable.setOnKeyPressed(new EventHandler<KeyEvent>() {
-
-            @Override
-            public void handle(KeyEvent t) {
-                if (t.getCode() == KeyCode.SPACE) {
-                    TreeItem<Node> selectedItem = hierarachyTreeTable.getSelectionModel().getSelectedItem();
-                    if (selectedItem != null) {
-                        Node node = selectedItem.getValue();
-                        node.setVisible(!node.isVisible());
-                    }
-                    t.consume();
-                }
-            }
-        });
-        x6.expandedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (t1) {
-                    TreeItem<Node> selectedItem = hierarachyTreeTable.getSelectionModel().getSelectedItem();
-                    if (selectedItem == null) {
-                        transformsList.setItems(null);
-                        selectedNodeLabel.setText("");
-                    } else {
-                        Node node = selectedItem.getValue();
-                        transformsList.setItems(node.getTransforms());
-                        selectedNodeLabel.setText(node.toString());
-                    }
-                }
-            }
-        });
-        nodeColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, String>, ObservableValue<String>>() {
-
-            @Override
-            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Node, String> p) {
-                return p.getValue().valueProperty().asString();
-            }
-        });
-        idColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, String>, ObservableValue<String>>() {
-
-            @Override
-            public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Node, String> p) {
-                return p.getValue().getValue().idProperty();
-            }
-        });
-        visibilityColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Boolean>, ObservableValue<Boolean>>() {
-
-            @Override
-            public ObservableValue<Boolean> call(TreeTableColumn.CellDataFeatures<Node, Boolean> p) {
-                return p.getValue().getValue().visibleProperty();
-            }
-        });
+        nodeColumn.setCellValueFactory(p -> p.getValue().valueProperty().asString());
+        idColumn.setCellValueFactory(p -> p.getValue().getValue().idProperty());
+        visibilityColumn.setCellValueFactory(p -> p.getValue().getValue().visibleProperty());
         visibilityColumn.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(visibilityColumn));
-        widthColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Double>, ObservableValue<Double>>() {
-            @Override
-            public ObservableValue<Double> call(final TreeTableColumn.CellDataFeatures<Node, Double> p) {
-                return new ObjectBinding<Double>() {
-                    {  bind(p.getValue().getValue().boundsInLocalProperty()); }
-                    @Override protected Double computeValue() {
-                        return p.getValue().getValue().getBoundsInLocal().getWidth();
-                    }
-                };
+        widthColumn.setCellValueFactory(p -> new ObjectBinding<Double>() {
+            {  bind(p.getValue().getValue().boundsInLocalProperty()); }
+            @Override protected Double computeValue() {
+                return p.getValue().getValue().getBoundsInLocal().getWidth();
             }
         });
         StringConverter<Double> niceDoubleStringConverter = new StringConverter<Double>() {
@@ -342,26 +285,16 @@ public class SettingsController implements Initializable {
         widthColumn.setCellFactory(TextFieldTreeTableCell.<Node, Double>forTreeTableColumn(niceDoubleStringConverter));
         heightColumn.setCellFactory(TextFieldTreeTableCell.<Node, Double>forTreeTableColumn(niceDoubleStringConverter));
         depthColumn.setCellFactory(TextFieldTreeTableCell.<Node, Double>forTreeTableColumn(niceDoubleStringConverter));
-        heightColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Double>, ObservableValue<Double>>() {
-            @Override
-            public ObservableValue<Double> call(final TreeTableColumn.CellDataFeatures<Node, Double> p) {
-                return new ObjectBinding<Double>() {
-                    {  bind(p.getValue().getValue().boundsInLocalProperty()); }
-                    @Override protected Double computeValue() {
-                        return p.getValue().getValue().getBoundsInLocal().getHeight();
-                    }
-                };
+        heightColumn.setCellValueFactory(p -> new ObjectBinding<Double>() {
+            {  bind(p.getValue().getValue().boundsInLocalProperty()); }
+            @Override protected Double computeValue() {
+                return p.getValue().getValue().getBoundsInLocal().getHeight();
             }
         });
-        depthColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Node, Double>, ObservableValue<Double>>() {
-            @Override
-            public ObservableValue<Double> call(final TreeTableColumn.CellDataFeatures<Node, Double> p) {
-                return new ObjectBinding<Double>() {
-                    {  bind(p.getValue().getValue().boundsInLocalProperty()); }
-                    @Override protected Double computeValue() {
-                        return p.getValue().getValue().getBoundsInLocal().getDepth();
-                    }
-                };
+        depthColumn.setCellValueFactory(p -> new ObjectBinding<Double>() {
+            {  bind(p.getValue().getValue().boundsInLocalProperty()); }
+            @Override protected Double computeValue() {
+                return p.getValue().getValue().getBoundsInLocal().getDepth();
             }
         });
 
@@ -406,19 +339,15 @@ public class SettingsController implements Initializable {
                     getChildren().add(new TreeItemImpl(n));
                 }
             }
-            node.setOnMouseClicked(new EventHandler<MouseEvent>() {
-
-                @Override
-                public void handle(MouseEvent t) {
-                    TreeItem<Node> parent = getParent();
-                    while (parent != null) {
-                        parent.setExpanded(true);
-                        parent = parent.getParent();
-                    }
-                    hierarachyTreeTable.getSelectionModel().select(TreeItemImpl.this);
-                    hierarachyTreeTable.scrollTo(hierarachyTreeTable.getSelectionModel().getSelectedIndex());
-                    t.consume();
+            node.setOnMouseClicked(t -> {
+                TreeItem<Node> parent = getParent();
+                while (parent != null) {
+                    parent.setExpanded(true);
+                    parent = parent.getParent();
                 }
+                hierarachyTreeTable.getSelectionModel().select(TreeItemImpl.this);
+                hierarachyTreeTable.scrollTo(hierarachyTreeTable.getSelectionModel().getSelectedIndex());
+                t.consume();
             });
         }
     }

@@ -64,19 +64,15 @@ public class MConnection {
         return sourcePath.hashCode() ^ targetPath.hashCode();
     }
 
-    public static final Comparator SOURCE_PATH_COMPARATOR = new Comparator() {
-        public int compare(Object o1, Object o2) {
-            MConnection c1 = (MConnection) o1;
-            MConnection c2 = (MConnection) o2;
-            return c1.getSourcePath().compareTo(c2.getSourcePath());
-        }
+    public static final Comparator SOURCE_PATH_COMPARATOR = (o1, o2) -> {
+        MConnection c1 = (MConnection) o1;
+        MConnection c2 = (MConnection) o2;
+        return c1.getSourcePath().compareTo(c2.getSourcePath());
     };
 
-    public static final Comparator TARGET_PATH_COMPARATOR = new Comparator() {
-        public int compare(Object o1, Object o2) {
-            MConnection c1 = (MConnection) o1;
-            MConnection c2 = (MConnection) o2;
-            return c1.getTargetPath().compareTo(c2.getTargetPath());
-        }
+    public static final Comparator TARGET_PATH_COMPARATOR = (o1, o2) -> {
+        MConnection c1 = (MConnection) o1;
+        MConnection c2 = (MConnection) o2;
+        return c1.getTargetPath().compareTo(c2.getTargetPath());
     };
 }

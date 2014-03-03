@@ -97,51 +97,43 @@ public class DragSupport {
 
     public DragSupport(Scene target, final KeyCode modifier, final MouseButton mouseButton, final Orientation orientation, final Property<Number> property, final double factor) {
         this.target = target;
-        mouseEventHandler = new EventHandler<MouseEvent>() {
-            
-            @Override
-            public void handle(MouseEvent t) {
-                if (t.getEventType() != MouseEvent.MOUSE_ENTERED_TARGET
-                        && t.getEventType() != MouseEvent.MOUSE_EXITED_TARGET) {
-                    lastMouseEvent = t;
+        mouseEventHandler = t -> {
+            if (t.getEventType() != MouseEvent.MOUSE_ENTERED_TARGET
+                    && t.getEventType() != MouseEvent.MOUSE_EXITED_TARGET) {
+                lastMouseEvent = t;
+            }
+            if (t.getEventType() == MouseEvent.MOUSE_PRESSED) {
+                if (t.getButton() == mouseButton
+                        && isModifierCorrect(t, modifier)) {
+                    anchor = property.getValue();
+                    dragAnchor = getCoord(t, orientation);
+                    t.consume();
                 }
-                if (t.getEventType() == MouseEvent.MOUSE_PRESSED) {
-                    if (t.getButton() == mouseButton
-                            && isModifierCorrect(t, modifier)) {
-                        anchor = property.getValue();
-                        dragAnchor = getCoord(t, orientation);
-                        t.consume();
-                    }
-                } else if (t.getEventType() == MouseEvent.MOUSE_DRAGGED) {
-                    if (t.getButton() == mouseButton
-                            && isModifierCorrect(t, modifier)) {
-                        property.setValue(anchor.doubleValue()
-                                + (getCoord(t, orientation) - dragAnchor) * factor);
-                        t.consume();
-                    }
+            } else if (t.getEventType() == MouseEvent.MOUSE_DRAGGED) {
+                if (t.getButton() == mouseButton
+                        && isModifierCorrect(t, modifier)) {
+                    property.setValue(anchor.doubleValue()
+                            + (getCoord(t, orientation) - dragAnchor) * factor);
+                    t.consume();
                 }
             }
         };
-        keyboardEventHandler = new EventHandler<KeyEvent>() {
-            
-            @Override
-            public void handle(KeyEvent t) {
-                if (t.getEventType() == KeyEvent.KEY_PRESSED) {
-                    if (t.getCode() == modifier) {
-                        anchor = property.getValue();
-                        if (lastMouseEvent != null) {
-                            dragAnchor = getCoord(lastMouseEvent, orientation);
-                        }
-                        t.consume();
+        keyboardEventHandler = t -> {
+            if (t.getEventType() == KeyEvent.KEY_PRESSED) {
+                if (t.getCode() == modifier) {
+                    anchor = property.getValue();
+                    if (lastMouseEvent != null) {
+                        dragAnchor = getCoord(lastMouseEvent, orientation);
                     }
-                } else if (t.getEventType() == KeyEvent.KEY_RELEASED) {
-                    if (t.getCode() != modifier && isModifierCorrect(t, modifier)) {
-                        anchor = property.getValue();
-                        if (lastMouseEvent != null) {
-                            dragAnchor = getCoord(lastMouseEvent, orientation);
-                        }
-                        t.consume();
+                    t.consume();
+                }
+            } else if (t.getEventType() == KeyEvent.KEY_RELEASED) {
+                if (t.getCode() != modifier && isModifierCorrect(t, modifier)) {
+                    anchor = property.getValue();
+                    if (lastMouseEvent != null) {
+                        dragAnchor = getCoord(lastMouseEvent, orientation);
                     }
+                    t.consume();
                 }
             }
         };

@@ -34,7 +34,9 @@ package com.javafx.experiments.height2normal;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+
 import javax.imageio.ImageIO;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -42,8 +44,6 @@ import javafx.application.Application;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.embed.swing.SwingFXUtils;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
@@ -67,6 +67,7 @@ import javafx.scene.transform.Translate;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+
 import com.javafx.experiments.jfx3dviewer.AutoScalingGroup;
 
 /**
@@ -90,17 +91,9 @@ public class Height2NormalApp  extends Application {
         // create toolbar
         ToolBar toolBar = new ToolBar();
         Button openButton = new Button("Open...");
-        openButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                open();
-            }
-        });
+        openButton.setOnAction(event -> open());
         Button saveButton = new Button("Save...");
-        saveButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                save();
-            }
-        });
+        saveButton.setOnAction(event -> save());
         final CheckBox invertCheckBox = new CheckBox("invert");
         final Slider scaleSlider = new Slider(1,50,2);
         toolBar.getItems().addAll(openButton,saveButton,

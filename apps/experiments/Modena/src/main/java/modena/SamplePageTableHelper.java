@@ -38,12 +38,9 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.SetChangeListener;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
@@ -58,7 +55,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
-import javafx.util.Callback;
 
 /**
  * Helper class for creating table views for testing
@@ -95,11 +91,7 @@ public class SamplePageTableHelper {
                     return firstName.get() + " " + lastName.get();
                 }
             });
-            this.invited.addListener(new ChangeListener<Boolean>() {
-                public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                    System.out.println(getFirstName() + " invited: " + t1);
-                }
-            });
+            this.invited.addListener((ov, t, t1) -> System.out.println(getFirstName() + " invited: " + t1));
         }
         
         public Boolean isInvited() { return invited.get(); }
@@ -216,18 +208,10 @@ public class SamplePageTableHelper {
         emailCol = new TableColumn<Person, String>();
         emailCol.setText("Email");
         emailCol.setMinWidth(200);
-        emailCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {
-            public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> p) {
-                return p.getValue().emailProperty();
-            }
-        });
+        emailCol.setCellValueFactory(p -> p.getValue().emailProperty());
         countryCol = new TableColumn<Person, String>();
         countryCol.setText("Country");
-        countryCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {
-            public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> p) {
-                return new ReadOnlyObjectWrapper<String>("New Zealand");
-            }
-        });
+        countryCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<String>("New Zealand"));
         // Create TableView
         TableView<Person> tableView = new TableView<Person>();
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
@@ -268,54 +252,36 @@ public class SamplePageTableHelper {
 //        });
 //        firstNameCol.setSortNode(sortNode);
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person,String>("firstName"));
-        firstNameCol.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> t) {
-                System.out.println("Edit commit event: " + t.getNewValue());
-            }
-        });
+        firstNameCol.setOnEditCommit(t -> System.out.println("Edit commit event: " + t.getNewValue()));
         lastNameCol = new TableColumn<Person, String>();
         lastNameCol.setText("Last");
         lastNameCol.setSortType(TableColumn.SortType.DESCENDING);
-        lastNameCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {
-            public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> p) {
-                return p.getValue().lastNameProperty();
-            }
-        });
+        lastNameCol.setCellValueFactory(p -> p.getValue().lastNameProperty());
         nameCol = new TableColumn<Person, String>();
         nameCol.setText("Name");
         nameCol.getColumns().addAll(firstNameCol, lastNameCol);
         emailCol = new TableColumn<Person, String>();
         emailCol.setText("Email");
         emailCol.setMinWidth(200);
-        emailCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {
-            public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> p) {
-                return p.getValue().emailProperty();
-            }
-        });
+        emailCol.setCellValueFactory(p -> p.getValue().emailProperty());
         countryCol = new TableColumn<Person, String>();
         countryCol.setText("Country");
-        countryCol.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Person, String>, ObservableValue<String>>() {
-            public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> p) {
-                return new ReadOnlyObjectWrapper<String>("New Zealand");
-            }
-        });
+        countryCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<String>("New Zealand"));
         // Test case for RT-28410 MODENA: can't make tree/table cell factories change color based
         // on background when setGraphic(...) is used
-        countryCol.setCellFactory(new Callback<TableColumn<Person, String>, TableCell<Person, String>>() {
-            @Override public TableCell<Person, String> call(TableColumn<Person, String> param) {
-                final Label label = new Label();
-                label.setStyle(
-                        "-fx-font-family: 'Times New Roman';" +
-                        "-fx-font-size: 0.8em;" +
-                        "-fx-text-fill: ladder(-fx-background, yellow 49%, red 50%);");
-                TableCell cell = new TableCell() {
-                    @Override protected void updateItem(Object item, boolean empty) {
-                        label.setText(empty ? null : item.toString());
-                    }
-                };
-                cell.setGraphic(label);
-                return cell;
-            }
+        countryCol.setCellFactory(param -> {
+            final Label label = new Label();
+            label.setStyle(
+                    "-fx-font-family: 'Times New Roman';" +
+                    "-fx-font-size: 0.8em;" +
+                    "-fx-text-fill: ladder(-fx-background, yellow 49%, red 50%);");
+            TableCell cell = new TableCell() {
+                @Override protected void updateItem(Object item, boolean empty) {
+                    label.setText(empty ? null : item.toString());
+                }
+            };
+            cell.setGraphic(label);
+            return cell;
         });
 
         invitedCol = new TableColumn<Person, Boolean>();
@@ -323,11 +289,7 @@ public class SamplePageTableHelper {
         invitedCol.setPrefWidth(55);
         invitedCol.setMaxWidth(55);
         invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
-        invitedCol.setCellFactory(new Callback<TableColumn<Person, Boolean>, TableCell<Person, Boolean>>() {
-            public TableCell<Person, Boolean> call(TableColumn<Person, Boolean> p) {
-                return new CheckBoxTableCell<Person, Boolean>();
-            }
-        });
+        invitedCol.setCellFactory(p -> new CheckBoxTableCell<Person, Boolean>());
         
         
         TableView<Person> tableView = new TableView<Person>();

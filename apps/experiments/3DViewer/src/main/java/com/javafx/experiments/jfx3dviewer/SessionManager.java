@@ -39,13 +39,10 @@ import java.io.Reader;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToggleGroup;
@@ -111,37 +108,19 @@ public class SessionManager {
     public void bind(final BooleanProperty property, final String propertyName) {
         String value = props.getProperty(propertyName);
         if (value != null) property.set(Boolean.valueOf(value));
-        property.addListener(new InvalidationListener() {
-
-            @Override
-            public void invalidated(Observable o) {
-                props.setProperty(propertyName, property.getValue().toString());
-            }
-        });
+        property.addListener(o -> props.setProperty(propertyName, property.getValue().toString()));
     }
 
     public void bind(final ObjectProperty<Color> property, final String propertyName) {
         String value = props.getProperty(propertyName);
         if (value != null) property.set(Color.valueOf(value));
-        property.addListener(new InvalidationListener() {
-
-            @Override
-            public void invalidated(Observable o) {
-                props.setProperty(propertyName, property.getValue().toString());
-            }
-        });
+        property.addListener(o -> props.setProperty(propertyName, property.getValue().toString()));
     }
 
     public void bind(final DoubleProperty property, final String propertyName) {
         String value = props.getProperty(propertyName);
         if (value != null) property.set(Double.valueOf(value));
-        property.addListener(new InvalidationListener() {
-
-            @Override
-            public void invalidated(Observable o) {
-                props.setProperty(propertyName, property.getValue().toString());
-            }
-        });
+        property.addListener(o -> props.setProperty(propertyName, property.getValue().toString()));
     }
 
     public void bind(final ToggleGroup toggleGroup, final String propertyName) {
@@ -153,15 +132,11 @@ public class SessionManager {
             }
         } catch (Exception ignored) {
         }
-        toggleGroup.selectedToggleProperty().addListener(new InvalidationListener() {
-
-            @Override
-            public void invalidated(Observable o) {
-                if (toggleGroup.getSelectedToggle() == null) {
-                    props.remove(propertyName);
-                } else {
-                    props.setProperty(propertyName, Integer.toString(toggleGroup.getToggles().indexOf(toggleGroup.getSelectedToggle())));
-                }
+        toggleGroup.selectedToggleProperty().addListener(o -> {
+            if (toggleGroup.getSelectedToggle() == null) {
+                props.remove(propertyName);
+            } else {
+                props.setProperty(propertyName, Integer.toString(toggleGroup.getToggles().indexOf(toggleGroup.getSelectedToggle())));
             }
         });
     }
@@ -174,13 +149,9 @@ public class SessionManager {
                 break;
             }
         }
-        accordion.expandedPaneProperty().addListener(new ChangeListener<TitledPane>() {
-
-            @Override
-            public void changed(ObservableValue<? extends TitledPane> ov, TitledPane t, TitledPane expandedPane) {
-                if (expandedPane != null) {
-                    props.setProperty(propertyName, expandedPane.getText());
-                }
+        accordion.expandedPaneProperty().addListener((ov, t, expandedPane) -> {
+            if (expandedPane != null) {
+                props.setProperty(propertyName, expandedPane.getText());
             }
         });
     }

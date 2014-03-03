@@ -34,12 +34,11 @@ package com.javafx.experiments.jfx3dviewer;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.PerspectiveCamera;
@@ -50,6 +49,7 @@ import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
+
 import com.javafx.experiments.importers.Importer3D;
 import com.sun.javafx.perf.PerformanceTracker;
 
@@ -108,11 +108,7 @@ public class SimpleViewerApp extends Application {
         stage.show();
 
         // MEASURE FPS
-        Timeline fpsTimeline = new Timeline(new KeyFrame(Duration.seconds(2), new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                System.out.println("fps = " + PerformanceTracker.getSceneTracker(scene).getInstantFPS());
-            }
-        }));
+        Timeline fpsTimeline = new Timeline(new KeyFrame(Duration.seconds(2), t -> System.out.println("fps = " + PerformanceTracker.getSceneTracker(scene).getInstantFPS())));
         fpsTimeline.setCycleCount(Timeline.INDEFINITE);
         fpsTimeline.play();
     }

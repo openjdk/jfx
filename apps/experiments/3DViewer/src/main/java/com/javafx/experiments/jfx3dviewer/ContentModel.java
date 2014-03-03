@@ -34,8 +34,6 @@ package com.javafx.experiments.jfx3dviewer;
 import javafx.animation.Timeline;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.AmbientLight;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -53,8 +51,10 @@ import javafx.scene.shape.MeshView;
 import javafx.scene.shape.Sphere;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
+
 import com.javafx.experiments.shape3d.PolygonMeshView;
 import com.javafx.experiments.shape3d.SubdivisionMesh;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -571,16 +571,14 @@ public class ContentModel {
     public void setContent(Node content) { this.content.set(content); }
 
     {
-        contentProperty().addListener(new ChangeListener<Node>() {
-            @Override public void changed(ObservableValue<? extends Node> ov, Node oldContent, Node newContent) {
-                autoScalingGroup.getChildren().remove(oldContent);
-                autoScalingGroup.getChildren().add(newContent);
-                setWireFrame(newContent,wireframe);
-                // TODO mesh is updated each time these are called even if no rendering needs to happen
-                setSubdivisionLevel(newContent, subdivisionLevel);
-                setBoundaryMode(newContent, boundaryMode);
-                setMapBorderMode(newContent, mapBorderMode);
-            }
+        contentProperty().addListener((ov, oldContent, newContent) -> {
+            autoScalingGroup.getChildren().remove(oldContent);
+            autoScalingGroup.getChildren().add(newContent);
+            setWireFrame(newContent,wireframe);
+            // TODO mesh is updated each time these are called even if no rendering needs to happen
+            setSubdivisionLevel(newContent, subdivisionLevel);
+            setBoundaryMode(newContent, boundaryMode);
+            setMapBorderMode(newContent, mapBorderMode);
         });
     }
 

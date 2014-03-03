@@ -33,7 +33,6 @@ package com.javafx.experiments.jfx3dviewer;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.input.MouseEvent;
@@ -73,57 +72,45 @@ public class FourWayNavControl extends GridPane {
         getChildren().addAll(upIcon,downIcon,leftIcon,rightIcon,centerIcon);
 
         eventFiringTimeline = new Timeline(
-            new KeyFrame(Duration.millis(80), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    if (listener != null && currentDirection != null) listener.navigateStep(currentDirection,0.5);
-                    hasFired = true;
-                }
+            new KeyFrame(Duration.millis(80), event -> {
+                if (listener != null && currentDirection != null) listener.navigateStep(currentDirection,0.5);
+                hasFired = true;
             })
         );
         eventFiringTimeline.setDelay(Duration.millis(300));
         eventFiringTimeline.setCycleCount(Timeline.INDEFINITE);
 
         upIcon.setOnMousePressed(
-                new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        currentDirection = Side.TOP;
-                        hasFired = false;
-                        eventFiringTimeline.playFromStart();
-                    }
+                event -> {
+                    currentDirection = Side.TOP;
+                    hasFired = false;
+                    eventFiringTimeline.playFromStart();
                 });
         downIcon.setOnMousePressed(
-                new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        currentDirection = Side.BOTTOM;
-                        hasFired = false;
-                        eventFiringTimeline.playFromStart();
-                    }
+                event -> {
+                    currentDirection = Side.BOTTOM;
+                    hasFired = false;
+                    eventFiringTimeline.playFromStart();
                 });
         leftIcon.setOnMousePressed(
-                new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        currentDirection = Side.LEFT;
-                        hasFired = false;
-                        eventFiringTimeline.playFromStart();
-                    }
+                event -> {
+                    currentDirection = Side.LEFT;
+                    hasFired = false;
+                    eventFiringTimeline.playFromStart();
                 });
         rightIcon.setOnMousePressed(
-                new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        currentDirection = Side.RIGHT;
-                        hasFired = false;
-                        eventFiringTimeline.playFromStart();
-                    }
+                event -> {
+                    currentDirection = Side.RIGHT;
+                    hasFired = false;
+                    eventFiringTimeline.playFromStart();
                 });
 
-        EventHandler<MouseEvent> stopHandler = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                if (listener != null && currentDirection != null && !hasFired) {
-                    listener.navigateStep(currentDirection,10);
-                }
-                currentDirection = null;
-                eventFiringTimeline.stop();
+        EventHandler<MouseEvent> stopHandler = event -> {
+            if (listener != null && currentDirection != null && !hasFired) {
+                listener.navigateStep(currentDirection,10);
             }
+            currentDirection = null;
+            eventFiringTimeline.stop();
         };
         upIcon.setOnMouseReleased(stopHandler);
         downIcon.setOnMouseReleased(stopHandler);
