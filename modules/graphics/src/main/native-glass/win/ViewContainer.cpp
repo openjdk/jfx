@@ -59,14 +59,17 @@ namespace {
 
 bool IsTouchEvent()
 {
+    // Read this link if you wonder why we need to hard code the mask and signature:
     // http://msdn.microsoft.com/en-us/library/windows/desktop/ms703320(v=vs.85).aspx
+    //"The lower 8 bits returned from GetMessageExtraInfo are variable.
+    // Of those bits, 7 (the lower 7, masked by 0x7F) are used to represent the cursor ID,
+    // zero for the mouse or a variable value for the pen ID.
+    // Additionally, in Windows Vista, the eighth bit, masked by 0x80, is used to
+    // differentiate touch input from pen input (0 = pen, 1 = touch)."
+    UINT SIGNATURE = 0xFF515780;
+    UINT MASK = 0xFFFFFF80;
 
-    enum {
-        SIGNATURE = 0xFF515780,
-        MASK = 0xFFFFFF80
-    };
-
-    const LPARAM v = GetMessageExtraInfo();
+    UINT v = (UINT) GetMessageExtraInfo();
 
     return ((v & MASK) == SIGNATURE);
 }
