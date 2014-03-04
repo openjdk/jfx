@@ -66,9 +66,7 @@ public final class ReadOnlyJavaBeanBooleanProperty extends ReadOnlyBooleanProper
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<Boolean>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, () -> {
-            ReadOnlyJavaBeanBooleanProperty.this.descriptor.removeListener(listener);
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**

@@ -66,9 +66,7 @@ public final class ReadOnlyJavaBeanIntegerProperty extends ReadOnlyIntegerProper
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, () -> {
-            ReadOnlyJavaBeanIntegerProperty.this.descriptor.removeListener(listener);
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
