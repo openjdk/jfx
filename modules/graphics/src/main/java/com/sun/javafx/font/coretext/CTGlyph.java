@@ -45,6 +45,7 @@ class CTGlyph implements Glyph {
     private static long cachedContextRef;
     private static final int BITMAP_WIDTH = 256;
     private static final int BITMAP_HEIGHT = 256;
+    private static final int MAX_SIZE = 320;
     private static final long GRAY_COLORSPACE = OS.CGColorSpaceCreateDeviceGray();
     private static final long RGB_COLORSPACE = OS.CGColorSpaceCreateDeviceRGB();
 
@@ -101,12 +102,21 @@ class CTGlyph implements Glyph {
             OS.CGRectApplyAffineTransform(bounds, strike.matrix);
         }
 
-        /* The box is increased to capture all fragments from LCD rendering  */
-        bounds.origin.x = (int)Math.floor(bounds.origin.x) - 1;
-        bounds.origin.y = (int)Math.floor(bounds.origin.y) - 1;
-        bounds.size.width = (int)Math.ceil(bounds.size.width) + 1 + 1 + 1;
-        bounds.size.height = (int)Math.ceil(bounds.size.height) + 1 + 1 + 1;
+        if (bounds.size.width < 0 || bounds.size.height < 0 ||
+            bounds.size.width > MAX_SIZE || bounds.size.height > MAX_SIZE) {
+            /* Negative values for dimensions can indicate the font is corrupted.
+             * Overly large dimensions also indicate problem with the font as
+             * JavaFX uses path rasterizers for fontSize greater than 80pt.
+             */
+            bounds.origin.x = bounds.origin.y = bounds.size.width = bounds.size.height = 0;
+        } else {
 
+            /* The box is increased to capture all fragments from LCD rendering  */
+            bounds.origin.x = (int)Math.floor(bounds.origin.x) - 1;
+            bounds.origin.y = (int)Math.floor(bounds.origin.y) - 1;
+            bounds.size.width = (int)Math.ceil(bounds.size.width) + 1 + 1 + 1;
+            bounds.size.height = (int)Math.ceil(bounds.size.height) + 1 + 1 + 1;
+        }
     }
 
     @Override public Shape getShape() {
