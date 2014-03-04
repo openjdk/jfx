@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
+    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
     <classpathentry kind="src" path="3DViewer/src/main/java"/>
     <classpathentry kind="src" path="3DViewer/src/test/java"/>
     <classpathentry kind="src" path="3DViewer/src/main/resources"/>
     <classpathentry kind="src" path="3DViewer/src/test/resources"/>
+    <!--
+    <classpathentry kind="src" path="Chess/ChessLibrary/src/main/java"/>
+    -->
     <classpathentry kind="src" path="Modena/src/main/java"/>
     <classpathentry kind="src" path="Modena/src/main/resources"/>
     <classpathentry combineaccessrules="false" kind="src" path="/rt">
@@ -11,6 +15,5 @@
         <attribute name="optional" value="true"/>
         </attributes>
     </classpathentry>
-    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
     <classpathentry kind="output" path="bin"/>
 </classpath>
