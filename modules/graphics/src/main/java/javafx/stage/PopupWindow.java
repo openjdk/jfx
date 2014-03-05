@@ -768,11 +768,11 @@ public abstract class PopupWindow extends Window {
 
         // update popup position
         // don't set Window.xExplicit unnecessarily
-        if (!Double.isNaN(windowScrMinX) || !Double.isNaN(getX())) {
+        if (!Double.isNaN(windowScrMinX)) {
             super.setXInternal(windowScrMinX);
         }
         // don't set Window.yExplicit unnecessarily
-        if (!Double.isNaN(windowScrMinY) || !Double.isNaN(getY())) {
+        if (!Double.isNaN(windowScrMinY)) {
             super.setYInternal(windowScrMinY);
         }
 
