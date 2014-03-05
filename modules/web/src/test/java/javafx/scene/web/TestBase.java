@@ -18,6 +18,7 @@ import javafx.concurrent.Worker;
 
 import com.sun.javafx.application.PlatformImpl;
 import java.util.concurrent.ExecutionException;
+import org.junit.BeforeClass;
 import org.w3c.dom.Document;
 
 public class TestBase implements ChangeListener, InvalidationListener {
@@ -27,7 +28,8 @@ public class TestBase implements ChangeListener, InvalidationListener {
 
     private static WebView view;
 
-    static {
+    @BeforeClass
+    public static void setupOnce() {
         final CountDownLatch startupLatch = new CountDownLatch(1);
 
         PlatformImpl.startup(new Runnable() {
