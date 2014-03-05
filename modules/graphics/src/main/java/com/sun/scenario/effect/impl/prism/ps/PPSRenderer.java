@@ -56,6 +56,7 @@ import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.hw.ShaderSource;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
+import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
 import com.sun.scenario.effect.impl.prism.PrRenderer;
 import com.sun.scenario.effect.impl.prism.PrTexture;
@@ -271,7 +272,8 @@ public class PPSRenderer extends PrRenderer {
             // create an intrinsic peer (one that's handled by Prism)
             return createIntrinsicPeer(fctx, name);
         } else if (needsSWDispMap && name.equals("DisplacementMap")) {
-            return new PPStoPSWDisplacementMapPeer(fctx, this, name);
+            PrFilterContext swctx = ((PrFilterContext) fctx).getSoftwareInstance();
+            return new PPStoPSWDisplacementMapPeer(swctx, this, name);
         } else {
             // try creating a platform-specific peer
             return createPlatformPeer(fctx, name, unrollCount);
