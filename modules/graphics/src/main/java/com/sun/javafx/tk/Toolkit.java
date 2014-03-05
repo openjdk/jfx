@@ -357,6 +357,9 @@ public abstract class Toolkit {
         }
     }
     public void addStageTkPulseListener(TKPulseListener listener) {
+        if (listener == null) {
+            return;
+        }
         synchronized (this) {
             AccessControlContext acc = AccessController.getContext();
             stagePulseListeners.put(listener, acc);
@@ -368,6 +371,9 @@ public abstract class Toolkit {
         }
     }
     public void addSceneTkPulseListener(TKPulseListener listener) {
+        if (listener == null) {
+            return;
+        }
         synchronized (this) {
             AccessControlContext acc = AccessController.getContext();
             scenePulseListeners.put(listener, acc);
@@ -379,6 +385,9 @@ public abstract class Toolkit {
         }
     }
     public void addPostSceneTkPulseListener(TKPulseListener listener) {
+        if (listener == null) {
+            return;
+        }
         synchronized (this) {
             AccessControlContext acc = AccessController.getContext();
             postScenePulseListeners.put(listener, acc);
@@ -391,6 +400,9 @@ public abstract class Toolkit {
     }
 
     public void addTkListener(TKListener listener) {
+        if (listener == null) {
+            return;
+        }
         AccessControlContext acc = AccessController.getContext();
         toolkitListeners.put(listener, acc);
     }
@@ -407,6 +419,9 @@ public abstract class Toolkit {
     }
 
     public void addShutdownHook(Runnable hook) {
+        if (hook == null) {
+            return;
+        }
         synchronized (shutdownHooks) {
             shutdownHooks.add(hook);
         }
