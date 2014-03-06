@@ -105,10 +105,8 @@ public class MediaDisposer {
 
             // start a background thread that blocks on purgatory and runs indefinitely
             Thread disposerThread = new Thread(
-                    new Runnable() {
-                        public void run() {
-                            theDisposinator.disposerLoop();
-                        }
+                    () -> {
+                        theDisposinator.disposerLoop();
                     },
                     "Media Resource Disposer");
             disposerThread.setDaemon(true);
