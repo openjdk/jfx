@@ -868,6 +868,9 @@ public class ContextMenuContent extends Region {
      *                         Stylesheet Handling                             *
      *                                                                         *
      **************************************************************************/
+    @Override public Styleable getStyleableParent() {
+        return contextMenu;
+    }
 
      /** @treatAsPrivate */
     private static class StyleableProperties {
@@ -1018,7 +1021,7 @@ public class ContextMenuContent extends Region {
     }
     
     /*
-     * Container responsible for laying out a singel row in the menu - in other
+     * Container responsible for laying out a single row in the menu - in other
      * words, this contains and lays out a single MenuItem, regardless of it's 
      * specific subtype.
      */
