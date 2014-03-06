@@ -26,6 +26,7 @@
 package com.sun.javafx.collections;
 
 import com.sun.javafx.binding.ExpressionHelper;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.InvalidationListenerMock;
 import javafx.beans.Observable;
@@ -33,6 +34,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MockListObserver;
 import javafx.collections.ObservableList;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -634,7 +636,7 @@ public class ListListenerHelperTest {
 
     @Test
     public void testExceptionNotPropagatedFromSingleChange() {
-        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<? extends Object> c) -> {
             throw new RuntimeException();
         });
         helper.fireValueChangedEvent(change);
@@ -644,8 +646,8 @@ public class ListListenerHelperTest {
     public void testExceptionNotPropagatedFromMultipleChange() {
         BitSet called = new BitSet();
 
-        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {called.set(0); throw new RuntimeException();});
-        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {called.set(1); throw new RuntimeException();});
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<? extends Object> c) -> {called.set(0); throw new RuntimeException();});
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<? extends Object> c) -> {called.set(1); throw new RuntimeException();});
         helper.fireValueChangedEvent(change);
 
         assertTrue(called.get(0));
@@ -656,8 +658,8 @@ public class ListListenerHelperTest {
     public void testExceptionNotPropagatedFromMultipleChangeAndInvalidation() {
         BitSet called = new BitSet();
 
-        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {called.set(0); throw new RuntimeException();});
-        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<?> c) -> {called.set(1); throw new RuntimeException();});
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<? extends Object> c) -> {called.set(0); throw new RuntimeException();});
+        helper = ListListenerHelper.addListener(helper, (ListChangeListener.Change<? extends Object> c) -> {called.set(1); throw new RuntimeException();});
         helper = ListListenerHelper.addListener(helper, (Observable o) -> {called.set(2); throw new RuntimeException();});
         helper = ListListenerHelper.addListener(helper, (Observable o) -> {called.set(3); throw new RuntimeException();});
         helper.fireValueChangedEvent(change);

@@ -637,7 +637,7 @@ public class SetListenerHelperTest {
 
     @Test
     public void testExceptionNotPropagatedFromSingleChange() {
-        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<?> c) -> {
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> {
             throw new RuntimeException();
         });
         helper.fireValueChangedEvent(change);
@@ -647,8 +647,8 @@ public class SetListenerHelperTest {
     public void testExceptionNotPropagatedFromMultipleChange() {
         BitSet called = new BitSet();
 
-        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<?> c) -> {called.set(0); throw new RuntimeException();});
-        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<?> c) -> {called.set(1); throw new RuntimeException();});
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> {called.set(0); throw new RuntimeException();});
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> {called.set(1); throw new RuntimeException();});
         helper.fireValueChangedEvent(change);
 
         assertTrue(called.get(0));
@@ -659,8 +659,8 @@ public class SetListenerHelperTest {
     public void testExceptionNotPropagatedFromMultipleChangeAndInvalidation() {
         BitSet called = new BitSet();
 
-        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<?> c) -> {called.set(0); throw new RuntimeException();});
-        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<?> c) -> {called.set(1); throw new RuntimeException();});
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> {called.set(0); throw new RuntimeException();});
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> {called.set(1); throw new RuntimeException();});
         helper = SetListenerHelper.addListener(helper, (Observable o) -> {called.set(2); throw new RuntimeException();});
         helper = SetListenerHelper.addListener(helper, (Observable o) -> {called.set(3); throw new RuntimeException();});
         helper.fireValueChangedEvent(change);
