@@ -932,7 +932,7 @@ public class PieChart extends Chart {
         /**
          * Readonly access to the node that represents the pie slice. You can use this to add mouse event listeners etc.
          */
-        private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node");
+        private ReadOnlyObjectWrapper<Node> node = new ReadOnlyObjectWrapper<>(this, "node");
 
         /**
          * Returns the node that represents the pie slice. You can use this to
@@ -946,8 +946,8 @@ public class PieChart extends Chart {
             node.setValue(value);
         }
 
-        private ObjectProperty<Node> nodeProperty() {
-            return node;
+        public ReadOnlyObjectProperty<Node> nodeProperty() {
+            return node.getReadOnlyProperty();
         }
 
         // -------------- CONSTRUCTOR -------------------------------------------------
