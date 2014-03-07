@@ -163,10 +163,10 @@ class FontFileWriter implements FontConstants {
 
     private void checkTracker(int size) throws IOException {
         if (tracker != null) {
-            if (pos + size > FontTracker.MAX_FILE_SIZE) {
+            if (size < 0 || pos > FontTracker.MAX_FILE_SIZE - size) {
                 throw new IOException("File too big.");
             }
-            if (pos + tracker.getNumBytes() > FontTracker.MAX_TOTAL_BYTES) {
+            if (tracker.getNumBytes() > FontTracker.MAX_TOTAL_BYTES - size) {
                 throw new IOException("Total files too big.");
             }
         }
