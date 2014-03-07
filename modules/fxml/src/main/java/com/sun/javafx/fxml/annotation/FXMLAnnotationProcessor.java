@@ -30,6 +30,8 @@ import javafx.fxml.FXML;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedSourceVersion;
+import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
@@ -39,6 +41,7 @@ import javax.lang.model.util.SimpleElementVisitor8;
 import javax.tools.Diagnostic;
 
 @SupportedAnnotationTypes("javafx.fxml.FXML")
+@SupportedSourceVersion(SourceVersion.RELEASE_8)
 public class FXMLAnnotationProcessor extends AbstractProcessor{
 
     @Override

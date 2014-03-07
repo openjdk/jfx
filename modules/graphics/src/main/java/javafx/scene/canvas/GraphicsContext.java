@@ -1127,6 +1127,9 @@ public final class GraphicsContext {
         coords[0] = (float) x1;
         coords[1] = (float) y1;
         curState.transform.transform(coords, 0, coords, 0, 1);
+        if (path.getNumCommands() == 0) {
+            path.moveTo(coords[0], coords[1]);
+        }
         path.lineTo(coords[0], coords[1]);
         markPathDirty();
     }
@@ -1145,6 +1148,9 @@ public final class GraphicsContext {
         coords[2] = (float) x1;
         coords[3] = (float) y1;
         curState.transform.transform(coords, 0, coords, 0, 2);
+        if (path.getNumCommands() == 0) {
+            path.moveTo(coords[0], coords[1]);
+        }
         path.quadTo(coords[0], coords[1], coords[2], coords[3]);
         markPathDirty();
     }
@@ -1167,6 +1173,9 @@ public final class GraphicsContext {
         coords[4] = (float) x1;
         coords[5] = (float) y1;
         curState.transform.transform(coords, 0, coords, 0, 3);
+        if (path.getNumCommands() == 0) {
+            path.moveTo(coords[0], coords[1]);
+        }
         path.curveTo(coords[0], coords[1], coords[2], coords[3], coords[4], coords[5]);
         markPathDirty();
     }
@@ -1464,8 +1473,10 @@ public final class GraphicsContext {
      * Closes the path.
      */
     public void closePath() {
-        path.closePath();
-        markPathDirty();
+        if (path.getNumCommands() > 0) {
+            path.closePath();
+            markPathDirty();
+        }
     }
 
     /**
