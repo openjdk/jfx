@@ -652,13 +652,17 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
     if (type == com_sun_glass_events_MouseEvent_WHEEL) {
         jdouble dx, dy;
-        if (msg == WM_MOUSEWHEEL) {
-            dx = 0.0;
-            dy = wheelRotation;
-        } else { // WM_MOUSEHWHEEL
+        if (msg == WM_MOUSEHWHEEL) { // native horizontal scroll
             // Negate the value to be more "natural"
             dx = -wheelRotation;
             dy = 0.0;
+        } else if (msg == WM_MOUSEWHEEL && LOWORD(wParam) & MK_SHIFT) {
+            // Do not negate the emulated horizontal scroll amount
+            dx = wheelRotation;
+            dy = 0.0;
+        } else { // vertical scroll
+            dx = 0.0;
+            dy = wheelRotation;
         }
 
         jint ls, cs;
