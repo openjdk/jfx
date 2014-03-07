@@ -72,7 +72,8 @@ void setEGLAttrs(jint *attrs, int *eglAttrs) {
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGL_eglGetDisplay
     (JNIEnv *env, jclass clazz, jlong display) {
-    EGLDisplay dpy = eglGetDisplay(display);
+    // EGLNativeDisplayType is defined differently on different systems; can be an int or a ptr so cast with care
+    EGLDisplay dpy = eglGetDisplay(((EGLNativeDisplayType) (unsigned long)(display)));
     return asJLong(dpy);
 }
 

@@ -161,6 +161,8 @@ def iioLFlags = [extraLFlags].flatten()
 
 def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
 def es2EglfbLFlags = [extraLFlags].flatten()
+def es2MonocleCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
+def es2MonocleLFlags = [extraLFlags].flatten()
 
 def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX"].flatten()
 def es2X11LFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
@@ -254,7 +256,7 @@ monocle.prism.maxvram=128m
 monocle.prism.targetvram=112m
 monocle.use.egl=true
 monocle.use.gles2=true
-monocle.embedded=eglfb
+monocle.embedded=monocle
 monocle.com.sun.javafx.isEmbedded=true
 monocle.doNativeComposite=true
 monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
@@ -341,6 +343,8 @@ ARMV6HF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/lens/*",
+    "com/sun/glass/ui/monocle/*",
+    "com/sun/glass/ui/monocle/dispman/*",
     "com/sun/glass/ui/monocle/linux/*",
     "com/sun/glass/ui/monocle/util/*",
     "com/sun/glass/ui/monocle/x11/*",
@@ -360,6 +364,8 @@ ARMV6HF.glass.lensport.lib = "lens_porting"
 
 ARMV6HF.glass.monocle = [:]
 ARMV6HF.glass.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle"),
+        file("modules/graphics/src/main/native-glass/monocle/dispman"),
         file("modules/graphics/src/main/native-glass/monocle/linux"),
         file("modules/graphics/src/main/native-glass/monocle/util") ]
 ARMV6HF.glass.monocle.compiler = compiler
@@ -483,7 +489,7 @@ ARMV6HF.iio.linkFlags = iioLFlags
 ARMV6HF.iio.lib = "javafx_iio"
 
 ARMV6HF.prismES2 = [:]
-ARMV6HF.prismES2.variants = ["eglfb"]
+ARMV6HF.prismES2.variants = ["eglfb", "monocle"]
 ARMV6HF.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 ARMV6HF.prismES2.eglfb = [:]
@@ -497,6 +503,18 @@ ARMV6HF.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", ARMV6HF.glass.lensport.
 ARMV6HF.prismES2.eglfb.linker = linker
 ARMV6HF.prismES2.eglfb.linkFlags = es2EglfbLFlags
 ARMV6HF.prismES2.eglfb.lib = "prism_es2_eglfb"
+
+ARMV6HF.prismES2.monocle= [:]
+ARMV6HF.prismES2.monocle.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/monocle")
+]
+ARMV6HF.prismES2.monocle.compiler = compiler
+ARMV6HF.prismES2.monocle.ccFlags = [ es2EglfbCFlags, "-I", ARMV6HF.glass.lensport.nativeSource ].flatten()
+ARMV6HF.prismES2.monocle.linker = linker
+ARMV6HF.prismES2.monocle.linkFlags = es2EglfbLFlags
+ARMV6HF.prismES2.monocle.lib = "prism_es2_monocle"
 
 ARMV6HF.prismES2.eglx11 = [:]
 ARMV6HF.prismES2.eglx11.nativeSource = [

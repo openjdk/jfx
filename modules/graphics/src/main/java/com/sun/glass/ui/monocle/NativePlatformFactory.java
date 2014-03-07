@@ -43,7 +43,7 @@ public abstract class NativePlatformFactory {
                 @Override
                 public String run() {
                     return System.getProperty("monocle.platform",
-                                              "MX6,OMAP,Linux,Headless");
+                                              "MX6,OMAP,Dispman,Linux,Headless");
                 }
             });
             String[] platformFactories = platformFactoryProperty.split(",");
