@@ -79,9 +79,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
         this.descriptor = descriptor;
         this.listener = descriptor.new Listener<T>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, () -> {
-            JavaBeanObjectProperty.this.descriptor.removeListener(listener);
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**

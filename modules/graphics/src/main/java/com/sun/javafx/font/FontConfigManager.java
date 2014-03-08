@@ -365,38 +365,19 @@ class FontConfigManager {
                 fontDir = fontDirProp;
             } else {
                 try {
-                    // In a jar, the URL string for a class looks like
-                    // jar:file:/home/user/rt/lib/ext/jfxrt.jar!/com/pkg/FCM.class
-                    // Strip this down to get the "lib" directory URL.
-                    Class c = FontConfigManager.class;
-                    String name = "FontConfigManager.class";
-                    String urlStr = c.getResource(name).toString();
-                    if (debugFonts) {
-                        System.err.println("Class URL is " + urlStr);
-                    }
-                    if (urlStr == null) {
+                    // no fontConfig or -Dprism.fontdir, lets fallback
+                    // to {java.home}/lib/fonts if it exists
+                    final String javaHome = System.getProperty("java.home");
+                    if (javaHome == null) {
                         return;
                     }
-                    int ei =  urlStr.indexOf("!");
-                    if (urlStr.startsWith("jar:file:") || ei != -1) {
-                        urlStr = urlStr.substring(9, ei);
-                        int lsi = Math.max(urlStr.lastIndexOf("/"),
-                                           urlStr.lastIndexOf("\\"));
-                        urlStr = urlStr.substring(0, lsi);
-                    }
-
-                    if(urlStr.endsWith("lib/ext")) {
-                        // jfxrt.jar lives in lib/ext, and fonts in lib/fonts
-                        urlStr = urlStr.substring(0, urlStr.length()-3);
-                    }
-
-                    File fontDirectory = new File(urlStr, "fonts");
-                    fontDir = fontDirectory.getPath();
+                    File fontDirectory = new File(javaHome, "lib/fonts");
                     if (fontDirectory.exists()) {
                         fontDirFromJRE = true;
+                        fontDir = fontDirectory.getPath();
                     }
                     if (debugFonts) {
-                        System.err.println("Font Dir is " + fontDirectory +
+                        System.err.println("Fallback fontDir is " + fontDirectory +
                                            " exists = " +
                                            fontDirectory.exists());
                     }
@@ -487,6 +468,9 @@ class FontConfigManager {
                     // if we can intuit one.... this is checked next.
                     for(int i=0; i < jreFontsProperties.length; i += 2) {
                         props.setProperty(jreFontsProperties[i],jreFontsProperties[i+1]);
+                    }
+                    if (debugFonts) {
+                        System.err.println("Using fallback implied logicalfonts.properties");
                     }
                 }
             } catch (IOException ioe) {

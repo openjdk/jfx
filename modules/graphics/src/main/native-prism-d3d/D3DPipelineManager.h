@@ -141,6 +141,9 @@ private:
     D3DDEVTYPE devType;
 
     D3DAdapter *pAdapters;
+
+    bool isVsyncEnabled;
+
     // instance of this object
     static D3DPipelineManager* pMgr;
 

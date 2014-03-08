@@ -26,10 +26,12 @@
 package com.sun.javafx.collections;
 
 import com.sun.javafx.binding.MapExpressionHelper;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.InvalidationListenerMock;
 import javafx.beans.Observable;
 import javafx.collections.*;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -633,7 +635,7 @@ public class MapListenerHelperTest {
 
     @Test
     public void testExceptionNotPropagatedFromSingleChange() {
-        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<? extends Object,? extends Object> c) -> {
             throw new RuntimeException();
         });
         helper.fireValueChangedEvent(change);
@@ -643,8 +645,8 @@ public class MapListenerHelperTest {
     public void testExceptionNotPropagatedFromMultipleChange() {
         BitSet called = new BitSet();
 
-        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {called.set(0); throw new RuntimeException();});
-        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {called.set(1); throw new RuntimeException();});
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<? extends Object,? extends Object> c) -> {called.set(0); throw new RuntimeException();});
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<? extends Object,? extends Object> c) -> {called.set(1); throw new RuntimeException();});
         helper.fireValueChangedEvent(change);
 
         assertTrue(called.get(0));
@@ -655,8 +657,8 @@ public class MapListenerHelperTest {
     public void testExceptionNotPropagatedFromMultipleChangeAndInvalidation() {
         BitSet called = new BitSet();
 
-        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {called.set(0); throw new RuntimeException();});
-        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<?,?> c) -> {called.set(1); throw new RuntimeException();});
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<? extends Object,? extends Object> c) -> {called.set(0); throw new RuntimeException();});
+        helper = MapListenerHelper.addListener(helper, (MapChangeListener.Change<? extends Object,? extends Object> c) -> {called.set(1); throw new RuntimeException();});
         helper = MapListenerHelper.addListener(helper, (Observable o) -> {called.set(2); throw new RuntimeException();});
         helper = MapListenerHelper.addListener(helper, (Observable o) -> {called.set(3); throw new RuntimeException();});
         helper.fireValueChangedEvent(change);

@@ -44,7 +44,7 @@ public class PPStoPSWDisplacementMapPeer extends EffectPeer  {
 
     public PPStoPSWDisplacementMapPeer(FilterContext fctx, Renderer r, String shaderName) {
         super(fctx, r, shaderName);
-        softwareRenderer = PrRenderer.createSoftwareRenderer(fctx);
+        softwareRenderer = (PrRenderer) Renderer.getRenderer(fctx);
         softwarePeer = softwareRenderer.getPeerInstance(fctx, "DisplacementMap", 0);
     }
 
@@ -60,7 +60,7 @@ public class PPStoPSWDisplacementMapPeer extends EffectPeer  {
         RTTexture srcRT = (RTTexture) srcTex.getTextureObject();
         // The software renderer produces drawables that also implement HeapImage
         PrDrawable srcDrawable = softwareRenderer.createDrawable(srcRT);
-        ImageData heapinput = new ImageData(input.getFilterContext(), srcDrawable,
+        ImageData heapinput = new ImageData(getFilterContext(), srcDrawable,
                                             input.getUntransformedBounds());
         heapinput = heapinput.transform(input.getTransform());
 

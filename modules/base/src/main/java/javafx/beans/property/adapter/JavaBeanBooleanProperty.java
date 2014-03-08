@@ -77,9 +77,7 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
         this.descriptor = descriptor;
         this.listener = descriptor.new Listener<Boolean>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, () -> {
-            JavaBeanBooleanProperty.this.descriptor.removeListener(listener);
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**

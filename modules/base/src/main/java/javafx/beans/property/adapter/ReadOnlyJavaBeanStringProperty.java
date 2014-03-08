@@ -66,9 +66,7 @@ public final class ReadOnlyJavaBeanStringProperty extends ReadOnlyStringProperty
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<String>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, () -> {
-            ReadOnlyJavaBeanStringProperty.this.descriptor.removeListener(listener);
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**

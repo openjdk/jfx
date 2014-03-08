@@ -33,7 +33,7 @@ public abstract class NativePlatform {
     protected final RunnableProcessor runnableProcessor;
     private NativeCursor cursor;
     private NativeScreen screen;
-    private AcceleratedScreen accScreen;
+    protected AcceleratedScreen accScreen;
 
     protected NativePlatform() {
         runnableProcessor = new RunnableProcessor();

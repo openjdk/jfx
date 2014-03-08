@@ -105,10 +105,14 @@ public class HelloFonts extends Application {
         column2.setCellFactory(param -> new TableCell<FontData, Font>() {
             @Override
             protected void updateItem(Font item, boolean empty) {
-//                        if (item == getItem()) return;
-                if (item == null) System.err.println("**********NULL why is it null");
-                setText(sampleText);
-                if (item != null) setFont(item);
+                super.updateItem(item, empty);
+
+                if (empty) {
+                    setText(null);
+                } else {
+                    setText(sampleText);
+                    setFont(item);
+                }
             }
         });
         table.setItems(FXCollections.observableList(data));
@@ -149,10 +153,14 @@ public class HelloFonts extends Application {
         column4.setCellFactory(param -> new TableCell<FontData, Font>() {
             @Override
             protected void updateItem(Font item, boolean empty) {
-//                        if (item == getItem()) return;
-                if (item == null) System.err.println("**********NULL why is it null");
-                setText(sampleText);
-                if (item != null) setFont(item);
+                super.updateItem(item, empty);
+
+                if (empty) {
+                    setText(null);
+                } else {
+                    setText(sampleText);
+                    setFont(item);
+                }
             }
         });
 

@@ -31,7 +31,7 @@ public class AcceleratedScreen {
 
     private static long glesLibraryHandle;
     private static long eglLibraryHandle;
-    private static boolean initialized = false;
+    protected static boolean initialized = false;
     long eglSurface, eglContext, eglDisplay;
 
     protected long platformGetNativeDisplay() {
@@ -48,16 +48,13 @@ public class AcceleratedScreen {
         int major[] = {0}, minor[]={0};
         eglDisplay =
                 EGL.eglGetDisplay(platformGetNativeDisplay());
-
         EGL.eglInitialize(eglDisplay, major, minor);
-
         EGL.eglBindAPI(EGL.EGL_OPENGL_ES_BIT);
 
         long eglConfigs[] = {0};
         int configCount[] = {0};
 
         EGL.eglChooseConfig(eglDisplay, attributes, eglConfigs, 1, configCount);
-
         eglSurface =
                 EGL.eglCreateWindowSurface(eglDisplay, eglConfigs[0],
                         platformGetNativeWindow(), null);

@@ -72,6 +72,7 @@ D3DPipelineManager::D3DPipelineManager(IConfig &cfg)
     pd3d9Ex = NULL;
     pAdapters = NULL;
     adapterCount = 0;
+    isVsyncEnabled = cfg.getBool("isVsyncEnabled");
 
     devType = SelectDeviceType();
 
@@ -609,7 +610,7 @@ HRESULT D3DPipelineManager::GetD3DContext(UINT adapterOrdinal,
                         "  initializing context for adapter %d",adapterOrdinal);
 
             if (SUCCEEDED(res = D3DEnabledOnAdapter(adapterOrdinal))) {
-                res = D3DContext::CreateInstance(pd3d9, pd3d9Ex, adapterOrdinal, &pCtx);
+                res = D3DContext::CreateInstance(pd3d9, pd3d9Ex, adapterOrdinal, isVsyncEnabled, &pCtx);
                 if (FAILED(res)) {
                     RlsTraceLn1(NWT_TRACE_ERROR,
                         "D3DPPLM::GetD3DContext: failed to create context "\

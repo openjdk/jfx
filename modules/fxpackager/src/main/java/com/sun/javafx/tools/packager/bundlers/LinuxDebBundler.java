@@ -75,6 +75,13 @@ public class LinuxDebBundler extends AbstractBundler {
             params -> APP_NAME.fetchFrom(params) + "-" + VERSION.fetchFrom(params),
             false, s -> s);
 
+    public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
+            I18N.getString("param.config-root.name"),
+            I18N.getString("param.config-root.description"),
+            "configRoot", //KEY
+            File.class, null, params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
+            false, s -> new File(s));
+
     public static final BundlerParamInfo<File> IMAGE_DIR = new StandardBundlerParam<>(
             I18N.getString("param.image-dir.name"), 
             I18N.getString("param.image-dir.description"),
@@ -149,6 +156,8 @@ public class LinuxDebBundler extends AbstractBundler {
 
     private final static String DEFAULT_ICON = "javalogo_white_32.png";
     private final static String DEFAULT_CONTROL_TEMPLATE = "template.control";
+    private final static String DEFAULT_PRERM_TEMPLATE = "template.prerm";
+    private final static String DEFAULT_PREINSTALL_TEMPLATE = "template.preinst";
     private final static String DEFAULT_POSTRM_TEMPLATE = "template.postrm";
     private final static String DEFAULT_POSTINSTALL_TEMPLATE = "template.postinst";
     private final static String DEFAULT_COPYRIGHT_TEMPLATE = "template.copyright";
@@ -265,7 +274,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
     protected void saveConfigFiles(Map<String, ? super Object> params) {
         try {
-            File configRoot = CONFIG_DIR.fetchFrom(params);
+            File configRoot = CONFIG_ROOT.fetchFrom(params);
 
             if (getConfig_ControlFile(params).exists()) {
                 IOUtils.copyFile(getConfig_ControlFile(params),
@@ -274,6 +283,14 @@ public class LinuxDebBundler extends AbstractBundler {
             if (getConfig_CopyrightFile(params).exists()) {
                 IOUtils.copyFile(getConfig_CopyrightFile(params),
                         new File(configRoot, getConfig_CopyrightFile(params).getName()));
+            }
+            if (getConfig_PreinstallFile(params).exists()) {
+                IOUtils.copyFile(getConfig_PreinstallFile(params),
+                        new File(configRoot, getConfig_PreinstallFile(params).getName()));
+            }
+            if (getConfig_PrermFile(params).exists()) {
+                IOUtils.copyFile(getConfig_PrermFile(params),
+                        new File(configRoot, getConfig_PrermFile(params).getName()));
             }
             if (getConfig_PostinstallFile(params).exists()) {
                 IOUtils.copyFile(getConfig_PostinstallFile(params),
@@ -359,11 +376,31 @@ public class LinuxDebBundler extends AbstractBundler {
         w.write(content);
         w.close();
 
+        w = new BufferedWriter(new FileWriter(getConfig_PreinstallFile(params)));
+        content = preprocessTextResource(
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PreinstallFile(params).getName(),
+                I18N.getString("resource.deb-preinstall-script"),
+                DEFAULT_PREINSTALL_TEMPLATE,
+                data);
+        w.write(content);
+        w.close();
+        setPermissions(getConfig_PreinstallFile(params), "rwxr-xr-x");
+
+        w = new BufferedWriter(new FileWriter(getConfig_PrermFile(params)));
+        content = preprocessTextResource(
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PrermFile(params).getName(),
+                I18N.getString("resource.deb-prerm-script"),
+                DEFAULT_PRERM_TEMPLATE,
+                data);
+        w.write(content);
+        w.close();
+        setPermissions(getConfig_PrermFile(params), "rwxr-xr-x");
+
         w = new BufferedWriter(new FileWriter(getConfig_PostinstallFile(params)));
         content = preprocessTextResource(
                 LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PostinstallFile(params).getName(),
-                I18N.getString("resource.deb-postinstall-script"), 
-                DEFAULT_POSTINSTALL_TEMPLATE, 
+                I18N.getString("resource.deb-postinstall-script"),
+                DEFAULT_POSTINSTALL_TEMPLATE,
                 data);
         w.write(content);
         w.close();
@@ -372,8 +409,8 @@ public class LinuxDebBundler extends AbstractBundler {
         w = new BufferedWriter(new FileWriter(getConfig_PostrmFile(params)));
         content = preprocessTextResource(
                 LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PostrmFile(params).getName(),
-                I18N.getString("resource.deb-postrm-script"), 
-                DEFAULT_POSTRM_TEMPLATE, 
+                I18N.getString("resource.deb-postrm-script"),
+                DEFAULT_POSTRM_TEMPLATE,
                 data);
         w.write(content);
         w.close();
@@ -430,6 +467,14 @@ public class LinuxDebBundler extends AbstractBundler {
 
     private File getConfig_ControlFile(Map<String, ? super Object> params) {
         return new File(CONFIG_DIR.fetchFrom(params), "control");
+    }
+
+    private File getConfig_PreinstallFile(Map<String, ? super Object> params) {
+        return new File(CONFIG_DIR.fetchFrom(params), "preinst");
+    }
+
+    private File getConfig_PrermFile(Map<String, ? super Object> params) {
+        return new File(CONFIG_DIR.fetchFrom(params), "prerm");
     }
 
     private File getConfig_PostinstallFile(Map<String, ? super Object> params) {

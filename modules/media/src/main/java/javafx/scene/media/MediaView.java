@@ -113,11 +113,9 @@ public class MediaView extends Node {
     private InvalidationListener errorListener = new MediaErrorInvalidationListener();
 
     /** Listener which causes the geometry to be updated when the media dimension changes. */
-    private InvalidationListener mediaDimensionListener = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            impl_markDirty(DirtyBits.NODE_VIEWPORT);
-            impl_geomChanged();
-        }
+    private InvalidationListener mediaDimensionListener = value -> {
+        impl_markDirty(DirtyBits.NODE_VIEWPORT);
+        impl_geomChanged();
     };
 
     /** Listener for decoded frame rate. */
@@ -138,19 +136,11 @@ public class MediaView extends Node {
         if (listenerProp == null || !Boolean.getBoolean(VIDEO_FRAME_RATE_PROPERTY_NAME)) {
             return null;
         } else {
-            return new com.sun.media.jfxmedia.events.VideoFrameRateListener() {
-
-                @Override
-                public void onFrameRateChanged(final double videoFrameRate) {
-                    Platform.runLater(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            ObservableMap props = getProperties();
-                            props.put(VIDEO_FRAME_RATE_PROPERTY_NAME, videoFrameRate);
-                        }
-                    });
-                }
+            return videoFrameRate -> {
+                Platform.runLater(() -> {
+                    ObservableMap props = getProperties();
+                    props.put(VIDEO_FRAME_RATE_PROPERTY_NAME, videoFrameRate);
+                });
             };
         }
     }
@@ -164,25 +154,16 @@ public class MediaView extends Node {
     private ChangeListener<Number> opacityListener;
     
     private void createListeners() {
-        parentListener = new ChangeListener<Parent>() {
-            @Override
-            public void changed(ObservableValue<? extends Parent> ov, Parent oldParent, Parent newParent) {
-                updateOverlayVisibility();
-            }
+        parentListener = (ov2, oldParent, newParent) -> {
+            updateOverlayVisibility();
         };
         
-        treeVisibleListener = new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldVisible, Boolean newVisible) {
-                updateOverlayVisibility();
-            }
+        treeVisibleListener = (ov1, oldVisible, newVisible) -> {
+            updateOverlayVisibility();
         };
         
-        opacityListener = new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number oldOpacity, Number newOpacity) {
-                updateOverlayOpacity();
-            }
+        opacityListener = (ov, oldOpacity, newOpacity) -> {
+            updateOverlayOpacity();
         };
     }
     

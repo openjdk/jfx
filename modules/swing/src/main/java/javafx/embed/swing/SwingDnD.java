@@ -227,30 +227,22 @@ final class SwingDnD {
     }
 
     HostDragStartListener getDragStartListener() {
-        return new HostDragStartListener() {
-            @Override
-            public void dragStarted(final EmbeddedSceneDSInterface dragSource,
-                                    final TransferMode dragAction)
-            {
-                assert Toolkit.getToolkit().isFxUserThread();
-                assert dragSource != null;
+        return (dragSource, dragAction) -> {
+            assert Toolkit.getToolkit().isFxUserThread();
+            assert dragSource != null;
+            
+            // The method is called from FX Scene just before entering
+            // nested event loop servicing DnD events.
+            // It should initialize DnD in AWT EDT.
+            SwingUtilities.invokeLater(() -> {
+                assert fxDragSource == null;
+                assert swingDragSource == null;
+                assert fxDropTarget == null;
                 
-                // The method is called from FX Scene just before entering
-                // nested event loop servicing DnD events.
-                // It should initialize DnD in AWT EDT.
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        assert fxDragSource == null;
-                        assert swingDragSource == null;
-                        assert fxDropTarget == null;
-                        
-                        fxDragSource = dragSource;
-                        startDrag(me, dndTransferable, dragSource.
-                                getSupportedActions(), dragAction);
-                    }
-                });
-            }
+                fxDragSource = dragSource;
+                startDrag(me, dndTransferable, dragSource.
+                        getSupportedActions(), dragAction);
+            });
         };
     }
 

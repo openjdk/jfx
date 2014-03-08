@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,9 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Screen;
 import javafx.stage.WindowEvent;
+
+import static com.sun.javafx.scene.control.skin.ColorPickerSkin.getString;
+
 /**
  *
  * @author paru
@@ -72,7 +75,7 @@ public class CustomColorDialog extends HBox {
     public CustomColorDialog(Window owner) {
         getStyleClass().add("custom-color-dialog");
         if (owner != null) dialog.initOwner(owner);
-        dialog.setTitle("Custom Colors");
+        dialog.setTitle(getString("customColorDialogTitle"));
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.initStyle(StageStyle.UTILITY);
         colorRectPane = new ColorRectPane();
@@ -526,17 +529,17 @@ public class CustomColorDialog extends HBox {
                 }
             });
 
-            currentColorLabel = new Label("Current Color");
-            newColorLabel = new Label("New Color");
+            currentColorLabel = new Label(getString("currentColor"));
+            newColorLabel = new Label(getString("newColor"));
             
             whiteBox = new Region();
             whiteBox.getStyleClass().add("customcolor-controls-background");
             
-            hsbButton = new ToggleButton("HSB");
+            hsbButton = new ToggleButton(getString("colorType.hsb"));
             hsbButton.getStyleClass().add("left-pill");
-            rgbButton = new ToggleButton("RGB");
+            rgbButton = new ToggleButton(getString("colorType.rgb"));
             rgbButton.getStyleClass().add("center-pill");
-            webButton = new ToggleButton("Web");
+            webButton = new ToggleButton(getString("colorType.web"));
             webButton.getStyleClass().add("right-pill");
             final ToggleGroup group = new ToggleGroup();
             
@@ -634,7 +637,7 @@ public class CustomColorDialog extends HBox {
                 settingsPane.add(units[i], 4, row);
             }
             
-            set(3, "Opacity:", 100, colorRectPane.alpha);
+            set(3, getString("opacity_colon"), 100, colorRectPane.alpha);
             
             hsbButton.setToggleGroup(group);
             rgbButton.setToggleGroup(group);
@@ -661,7 +664,7 @@ public class CustomColorDialog extends HBox {
             buttonBox = new HBox();
             buttonBox.setId("buttons-hbox");
             
-            Button saveButton = new Button("Save");
+            Button saveButton = new Button(getString("Save"));
             saveButton.setDefaultButton(true);
             saveButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent t) {
@@ -672,7 +675,7 @@ public class CustomColorDialog extends HBox {
                 }
             });
             
-            Button useButton = new Button("Use");
+            Button useButton = new Button(getString("Use"));
             useButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent t) {
                     if (onUse != null) {
@@ -682,7 +685,7 @@ public class CustomColorDialog extends HBox {
                 }
             });
             
-            Button cancelButton = new Button("Cancel");
+            Button cancelButton = new Button(getString("Cancel"));
             cancelButton.setCancelButton(true);
             cancelButton.setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent e) {
@@ -699,19 +702,19 @@ public class CustomColorDialog extends HBox {
         }
         
         private void showHSBSettings() {
-            set(0, "Hue:", 360, colorRectPane.hue);
-            set(1, "Saturation:", 100, colorRectPane.sat);
-            set(2, "Brightness:", 100, colorRectPane.bright);
+            set(0, getString("hue_colon"), 360, colorRectPane.hue);
+            set(1, getString("saturation_colon"), 100, colorRectPane.sat);
+            set(2, getString("brightness_colon"), 100, colorRectPane.bright);
         }
         
         private void showRGBSettings() {
-            set(0, "Red:", 255, colorRectPane.red);
-            set(1, "Green:", 255, colorRectPane.green);
-            set(2, "Blue:", 255, colorRectPane.blue);
+            set(0, getString("red_colon"), 255, colorRectPane.red);
+            set(1, getString("green_colon"), 255, colorRectPane.green);
+            set(2, getString("blue_colon"), 255, colorRectPane.blue);
         }
         
         private void showWebSettings() {
-            labels[0].setText("Web:");
+            labels[0].setText(getString("web_colon"));
         }
                 
         private Property<Number>[] bindedProperties = new Property[4];

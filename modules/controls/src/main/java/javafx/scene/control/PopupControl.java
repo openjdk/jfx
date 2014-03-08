@@ -957,29 +957,16 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     private void recomputeSkinSize() {
-        if (!skinSizeComputed)  {
+        if (!skinSizeComputed) {
             // RT-14094, RT-16754: We need the skins of the popup
             // and it children before the stage is visible so we
             // can calculate the popup position based on content
             // size.
-            getScene().getRoot().impl_processCSS(true);
+            bridge.applyCss();
             skinSizeComputed = true;
         }
     }
 //    public double getBaselineOffset() { return getSkinNode() == null? 0 : getSkinNode().getBaselineOffset(); }
-
-    @Override protected void show() {
-
-        //RT-27546 : The problem here is before the first show the content of the popup
-        // is not initialized yet and hence the prefWidth & prefHeight remains 0
-        // This leads to incorrect translation of anchor to screen coordinates.
-        // A call to show initializes the content. Skin is null only the very first time.
-        if(getSkin() == null) {
-            bridge.applyCss();
-        }
-        super.show();
-
-    }
 
     /**
      * Create a new instance of the default skin for this control. This is called to create a skin for the control if
@@ -1077,7 +1064,25 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      */
     @Override
     public Styleable getStyleableParent() {
-        return bridge.getStyleableParent();
+
+        final Node ownerNode = getOwnerNode();
+        if (ownerNode != null) {
+            return ownerNode;
+
+        } else {
+
+            final Window ownerWindow = getOwnerWindow();
+            if (ownerWindow != null) {
+
+                final Scene ownerScene = ownerWindow.getScene();
+                if (ownerScene != null) {
+                    return ownerScene.getRoot();
+                }
+            }
+        }
+
+        return bridge.getParent();
+
     }
 
     /**
@@ -1123,30 +1128,13 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             minHeightCache = -1;
             maxWidthCache = -1;
             maxHeightCache = -1;
-            skinSizeComputed = false;
+            //skinSizeComputed = false; -- RT-33073 disabled this
             super.requestLayout();
         }
 
         @Override
         public final Styleable getStyleableParent() {
-
-            final Node ownerNode = getOwnerNode();
-            if (ownerNode != null) {
-                return ownerNode;
-
-            } else {
-
-                final Window ownerWindow = getOwnerWindow();
-                if (ownerWindow != null) {
-
-                    final Scene ownerScene = ownerWindow.getScene();
-                    if (ownerScene != null) {
-                        return ownerScene.getRoot();
-                    }
-                }
-            }
-
-            return bridge.getParent();
+            return PopupControl.this.getStyleableParent();
         }
 
         @Override
@@ -1175,8 +1163,6 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
                 final Skin<?> defaultSkin = createDefaultSkin();
                 if (defaultSkin != null) {
                     skinProperty().set(defaultSkin);
-                    // we have to reapply css again so that the newly set skin gets css applied as well.
-                    super.impl_processCSS(cacheHint);
                 } else {
                     final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                             " and createDefaultSkin() returned null.";

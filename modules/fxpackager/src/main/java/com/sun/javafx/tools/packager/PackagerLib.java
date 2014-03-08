@@ -734,26 +734,28 @@ public class PackagerLib {
             } finally {
                 sources.close();
             }
+            String classpath = jfxHome + "/../rt/lib/ext/jfxrt.jar";
+            if (makeAllParams.classpath != null) {
+                classpath += File.pathSeparator + makeAllParams.classpath;
+            }
             if (makeAllParams.verbose) {
                 System.out.println("Executing javac:");
-                System.out.format("%s %s %s %s %s %s %s %s %s %s\n",
+                System.out.printf("%s %s %s %s %s %s%n",
                         javac.getAbsolutePath(),
-                        "-target", "1.5",
-                        "-source", "1.5",
                         "-d", compiledDirName,
-                        "-cp", jfxHome + "/../rt/lib/ext/jfxrt.jar",
+                        "-cp", classpath,
                         "@" + tmpFile.getAbsolutePath());
             }
             int ret = execute(
                     javac.getAbsolutePath(),
-                    "-target", "1.5",
-                    "-source", "1.5",
                     "-d", compiledDirName,
-                    "-cp", jfxHome + "/../rt/lib/ext/jfxrt.jar",
+                    "-cp", classpath,
                     "@" + tmpFile.getAbsolutePath());
             if (ret != 0) {
                 throw new PackagerException("ERR_JavacFailed", Integer.toString(ret));
             }
+        } catch (PackagerException e) {
+            throw e;
         } catch (Exception e) {
             throw new PackagerException(e, "ERR_MakeAllJavacFailed");
         }

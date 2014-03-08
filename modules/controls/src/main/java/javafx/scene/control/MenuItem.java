@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -616,5 +616,30 @@ public class MenuItem implements EventTarget, Styleable {
         }
 
         return null;
+    }
+
+    @Override public String toString() {
+        StringBuilder sbuf = new StringBuilder(getClass().getSimpleName());
+
+        boolean hasId = id != null && !"".equals(getId());
+        boolean hasStyleClass = !getStyleClass().isEmpty();
+
+        if (!hasId) {
+            sbuf.append('@');
+            sbuf.append(Integer.toHexString(hashCode()));
+        } else {
+            sbuf.append("[id=");
+            sbuf.append(getId());
+            if (!hasStyleClass) sbuf.append("]");
+        }
+
+        if (hasStyleClass) {
+            if (!hasId) sbuf.append('[');
+            else sbuf.append(", ");
+            sbuf.append("styleClass=");
+            sbuf.append(getStyleClass());
+            sbuf.append("]");
+        }
+        return sbuf.toString();
     }
 }

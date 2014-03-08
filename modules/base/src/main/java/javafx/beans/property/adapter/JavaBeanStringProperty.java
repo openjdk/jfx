@@ -77,9 +77,7 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
         this.descriptor = descriptor;
         this.listener = descriptor.new Listener<String>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, () -> {
-            JavaBeanStringProperty.this.descriptor.removeListener(listener);
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**

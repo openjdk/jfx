@@ -35,6 +35,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Parent;
@@ -226,6 +227,31 @@ public class PopupTest {
         assertEquals(300.0, popup.getAnchorY(), 1e-100);
         assertEquals(310.0, peer.x, 1e-100);
         assertEquals(140.0, peer.y, 1e-100);
+    }
+
+    @Test
+    public void testPopupWithoutAnchorStayInTheCenter() {
+        final Popup popup = new Popup();
+        popup.setWidth(100);
+        popup.setHeight(100);
+        popup.show(stage);
+        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+
+        double centerX = Math.ceil((bounds.getMinX() + (bounds.getWidth() - 100))/2);
+        double centerY = Math.ceil((bounds.getMinY() + (bounds.getHeight() - 100))/3);
+
+        StubPopupStage peer = (StubPopupStage) popup.impl_getPeer();
+
+        assertEquals(centerX, Math.ceil(peer.x), 1e-100);
+        assertEquals(centerY, Math.ceil(peer.y), 1e-100);
+
+        popup.hide();
+        popup.show(stage);
+
+        peer = (StubPopupStage) popup.impl_getPeer();
+
+        assertEquals(centerX, Math.ceil(peer.x), 1e-100);
+        assertEquals(centerY, Math.ceil(peer.y), 1e-100);
     }
 
     @Test

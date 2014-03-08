@@ -66,9 +66,7 @@ public final class ReadOnlyJavaBeanFloatProperty extends ReadOnlyFloatPropertyBa
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, () -> {
-            ReadOnlyJavaBeanFloatProperty.this.descriptor.removeListener(listener);
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**

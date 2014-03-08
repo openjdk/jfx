@@ -127,9 +127,9 @@ public class ContextMenuContent extends Region {
         getChildren().add(itemsContainer);
         getChildren().add(upArrow);
         getChildren().add(downArrow);
-        computeInitialSize();
         initialize();
         setUpBinds();
+        updateItems();
         // RT-20197 add menuitems only on first show.
         popupMenu.showingProperty().addListener(weakPopupShowingListener);
 
@@ -412,40 +412,6 @@ public class ContextMenuContent extends Region {
 
     private boolean isFirstShow = true;
     private double ty;
-
-    /**
-    * Optimization part of RT-20197. In order to match the width of the choiceBox
-    * with the width of the widest menu item, we get the index of the widest 
-    * menuItem and add it to the itemsContainer so the visual metrics is calculated 
-    * correctly even though all the items are not added before show.
-    * This item will be removed when the first show happens.
-    */
-    private void computeInitialSize() {
-        int index = getLongestLabel();
-        itemsContainer.getChildren().clear();
-        if (index != -1) {
-            // We need to strip mnemonic symbols to avoid mnemonic duplicates
-            String itemText = new TextBinding(getItems().get(index).getText()).getText().
-                    replaceAll("_", "__").replaceAll("@", "@@");
-            MenuItemContainer menuItemContainer = new MenuItemContainer(new MenuItem(itemText));
-            itemsContainer.getChildren().add(menuItemContainer);
-        }
-    }
-
-    private int getLongestLabel() {
-        int len = 0;
-        int index = -1;
-        for (int row = 0; row < getItems().size(); row++) {
-            final MenuItem item = getItems().get(row);
-            if ((item instanceof CustomMenuItem && ((CustomMenuItem) item).getContent() == null) ||
-                    item instanceof SeparatorMenuItem)  continue;
-            if ( item != null && item.getText() != null && item.getText().length() > len) {
-                index = row;
-                len =  item.getText().length();
-            }
-        }
-        return index;
-    }
 
     private void initialize() {
         // keyboard navigation support. Initially focus goes to this ContextMenu,
@@ -902,6 +868,9 @@ public class ContextMenuContent extends Region {
      *                         Stylesheet Handling                             *
      *                                                                         *
      **************************************************************************/
+    @Override public Styleable getStyleableParent() {
+        return contextMenu;
+    }
 
      /** @treatAsPrivate */
     private static class StyleableProperties {
@@ -1052,7 +1021,7 @@ public class ContextMenuContent extends Region {
     }
     
     /*
-     * Container responsible for laying out a singel row in the menu - in other
+     * Container responsible for laying out a single row in the menu - in other
      * words, this contains and lays out a single MenuItem, regardless of it's 
      * specific subtype.
      */

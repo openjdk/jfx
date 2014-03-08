@@ -51,6 +51,8 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.WindowEvent;
 
+import static com.sun.javafx.scene.control.skin.ColorPickerSkin.getString;
+
 public class ColorPalette extends Region {
 
     private static final int SQUARE_SIZE = 15;
@@ -59,13 +61,13 @@ public class ColorPalette extends Region {
 
     // package protected for testing purposes
     ColorPickerGrid colorPickerGrid;
-    final Hyperlink customColorLink = new Hyperlink("Custom Color..");
+    final Hyperlink customColorLink = new Hyperlink(getString("customColorLink"));
     CustomColorDialog customColorDialog = null;
 
     private ColorPicker colorPicker;
     private final GridPane customColorGrid = new GridPane();
     private final Separator separator = new Separator();
-    private final Label customColorLabel = new Label("Custom Colors");
+    private final Label customColorLabel = new Label(getString("customColorLabel"));
     private final List<ColorSquare> customSquares = FXCollections.observableArrayList();
  
     private PopupControl popupControl;
@@ -196,7 +198,7 @@ public class ColorPalette extends Region {
             customColorGrid.setVisible(true);
             customColorGrid.setManaged(true);
             if (contextMenu == null) {
-                MenuItem item = new MenuItem("Remove Color");
+                MenuItem item = new MenuItem(getString("removeColor"));
                 item.setOnAction(new EventHandler<ActionEvent>() {
                     @Override public void handle(ActionEvent e) {
                         ColorSquare square = (ColorSquare)contextMenu.getOwnerNode();
@@ -428,7 +430,7 @@ public class ColorPalette extends Region {
             rectangle.setSmooth(false);
             rectangle.setStrokeType(StrokeType.INSIDE);
 
-            String tooltipStr = ColorPickerSkin.colorValueToWeb(color);
+            String tooltipStr = ColorPickerSkin.tooltipString(color);
             Tooltip.install(this, new Tooltip((tooltipStr == null) ? "" : tooltipStr));
           
             rectangle.getStyleClass().add("color-rect");

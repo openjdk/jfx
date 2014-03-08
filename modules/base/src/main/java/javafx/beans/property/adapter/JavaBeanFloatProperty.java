@@ -77,9 +77,7 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
         this.descriptor = descriptor;
         this.listener = descriptor.new Listener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, () -> {
-            JavaBeanFloatProperty.this.descriptor.removeListener(listener);
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
