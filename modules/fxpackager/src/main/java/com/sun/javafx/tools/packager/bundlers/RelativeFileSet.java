@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,13 @@ package com.sun.javafx.tools.packager.bundlers;
 
 import com.sun.javafx.tools.packager.Log;
 import java.io.File;
-import java.util.HashSet;
+
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class RelativeFileSet {
     private File basedir;
-    Set<String> files = new HashSet<String>();
+    Set<String> files = new LinkedHashSet<>();
 
     public RelativeFileSet(File base, Set<File> files) {
         basedir = base;
@@ -76,6 +77,11 @@ public class RelativeFileSet {
             Log.verbose("  " + fname);
         }
         Log.verbose("\n========");
+    }
+    
+    @Override
+    public String toString() {
+        return "RelativeFileSet{basedir:" + basedir + ", files:" + files + "}";
     }
 
 }

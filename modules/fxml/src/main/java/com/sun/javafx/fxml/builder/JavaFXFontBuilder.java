@@ -46,7 +46,6 @@ public final class JavaFXFontBuilder extends AbstractMap<String, Object> impleme
     private FontPosture posture = null;
     private URL         url     = null;
 
-
     @Override
     public Font build() {
         Font f;
@@ -126,6 +125,16 @@ public final class JavaFXFontBuilder extends AbstractMap<String, Object> impleme
             throw new IllegalArgumentException("Unknown Font property: " + key);
         }
         return null;
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        return false; // False in this context means that the property is NOT read only
+    }
+
+    @Override
+    public Object get(Object key) {
+        return null; // In certain cases, get is also required to return null for read-write "properties"
     }
 
     @Override

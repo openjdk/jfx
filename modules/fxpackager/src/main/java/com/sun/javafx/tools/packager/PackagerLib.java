@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,11 @@
 
 package com.sun.javafx.tools.packager;
 
+import com.oracle.bundlers.Bundlers;
 import com.sun.javafx.tools.ant.Utils;
 import com.sun.javafx.tools.packager.DeployParams.Icon;
 import com.sun.javafx.tools.packager.JarSignature.InputStreamSource;
-import com.sun.javafx.tools.packager.bundlers.BundleParams;
-import com.sun.javafx.tools.packager.bundlers.Bundler;
+import com.sun.javafx.tools.packager.bundlers.*;
 import com.sun.javafx.tools.resource.DeployResource;
 import com.sun.javafx.tools.resource.PackagerResource;
 import java.io.BufferedReader;
@@ -64,6 +64,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
@@ -85,6 +86,8 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import sun.misc.BASE64Encoder;
+
+import static com.oracle.bundlers.StandardBundlerParam.*;
 
 
 public class PackagerLib {
@@ -178,7 +181,7 @@ public class PackagerLib {
             JarFile jf = null;
             try {
                 //extract data we want to preserve
-                Log.info("Updating jar file: "+jarToUpdate.getAbsolutePath());
+                Log.info(MessageFormat.format(bundle.getString("MSG_UpdatingJar"), jarToUpdate.getAbsolutePath()));
                 jf = new JarFile(jarToUpdate);
                 m = jf.getManifest();
                 if (m != null) {
@@ -428,8 +431,8 @@ public class PackagerLib {
             File odir = deployParams.outdir;
             odir.mkdirs();
 
-            if (deployParams.includeDT) {
-                extractWebFiles();
+            if (deployParams.includeDT && !extractWebFiles()) {
+                throw new PackagerException("ERR_NoEmbeddedDT");
             }
 
             ByteArrayOutputStream jnlp_bos_webstart = new ByteArrayOutputStream();
@@ -500,28 +503,46 @@ public class PackagerLib {
 
         BundleParams bp = deployParams.getBundleParams();
         if (bp != null) {
-           generateNativeBundles(deployParams.outdir, bp, deployParams.verbose);
+           generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType(), deployParams.getTargetFormat(), deployParams.verbose);
         }
 
         this.deployParams = null;
     }
 
-    private void generateNativeBundles(File outdir, BundleParams bp, boolean verbose) {
+    private void generateNativeBundles(File outdir, Map<String, ? super Object> params, BundleType bundleType, String bundleFormat, boolean verbose) {
         outdir = new File(outdir, "bundles");
 
-        if (bp.getRuntime() != null) {
-            Log.info("Using base JDK at: "
-                    + bp.getRuntime().getBaseDirectory().getAbsolutePath());
-            if (Log.isDebug()) {
-                bp.getRuntime().dump();
+        if (params.containsKey(RUNTIME.getID())) {
+            RelativeFileSet runtime = RUNTIME.fetchFrom(params);
+            if (runtime == null) {
+                Log.info(bundle.getString("MSG_NoJREPackaged"));
+            } else {
+                Log.info(MessageFormat.format(bundle.getString("MSG_UserProvidedJRE"), runtime.getBaseDirectory().getAbsolutePath()));
+                if (Log.isDebug()) {
+                    runtime.dump();
+                }
             }
         } else {
-            Log.info("No base JDK. Package will use system JRE.");
+            Log.info(bundle.getString("MSG_UseSystemJRE"));
         }
 
-        List<Bundler> bundlers = Bundler.get(bp, Log.isDebug() || verbose);
-        for (Bundler b: bundlers) {
-            b.bundle(bp, outdir);
+        for (com.oracle.bundlers.Bundler bundler : Bundlers.createBundlersInstance().getBundlers(bundleType)) {
+            // if they specify the bundle format, require we match the ID
+            if (bundleFormat != null && !bundleFormat.equals(bundler.getID())) continue;
+            
+            try {
+                if (bundler.validate(params)) {
+                    bundler.execute(params, outdir);
+                }
+                
+            } catch (UnsupportedPlatformException e) {
+                Log.debug(MessageFormat.format(bundle.getString("MSG_BundlerPlatformException"), bundler.getName()));
+            } catch (ConfigException e) {
+                Log.info(MessageFormat.format(bundle.getString("MSG_BundlerConfigException"), bundler.getName(), e.getMessage(), e.getAdvice()));
+            } catch (RuntimeException re) {
+                Log.info(MessageFormat.format(bundle.getString("MSG_BundlerRuntimeException"), bundler.getName(), re.toString()));
+                Log.debug(re);
+            }
         }
     }
 
@@ -529,8 +550,11 @@ public class PackagerLib {
 
         if (resource.getFile().isDirectory()) {
             final File baseDir = resource.getBaseDir();
-            for (File file: resource.getFile().listFiles()) {
-                copyFiles(new DeployResource(baseDir, file), outdir);
+            File[] children = resource.getFile().listFiles();
+            if (children != null) {
+                for (File file : children) {
+                    copyFiles(new DeployResource(baseDir, file), outdir);
+                }
             }
         } else {
             final File srcFile = resource.getFile();
@@ -544,8 +568,7 @@ public class PackagerLib {
                     copyFileToOutDir(new FileInputStream(srcFile),
                                      destFile);
                 } else {
-                    Log.verbose("Skip jar copy to itself: " +
-                            resource.getRelativePath());
+                    Log.verbose(MessageFormat.format(bundle.getString("MSG_JarNoSelfCopy"), resource.getRelativePath()));
                 }
             }
         }
@@ -614,9 +637,12 @@ public class PackagerLib {
             PackagerResource pr, JarSignature signature, File outdir, boolean verbose)
                throws NoSuchAlgorithmException, IOException, SignatureException {
         if (pr.getFile().isDirectory()) {
-            for (File innerFile : pr.getFile().listFiles()) {
-                signFile(new PackagerResource(
-                        pr.getBaseDir(), innerFile), signature, outdir, verbose);
+            File[] children = pr.getFile().listFiles();
+            if (children != null) {
+                for (File innerFile : children) {
+                    signFile(new PackagerResource(
+                            pr.getBaseDir(), innerFile), signature, outdir, verbose);
+                }
             }
         } else {
             File jar = pr.getFile();
@@ -708,26 +734,28 @@ public class PackagerLib {
             } finally {
                 sources.close();
             }
+            String classpath = jfxHome + "/../rt/lib/ext/jfxrt.jar";
+            if (makeAllParams.classpath != null) {
+                classpath += File.pathSeparator + makeAllParams.classpath;
+            }
             if (makeAllParams.verbose) {
                 System.out.println("Executing javac:");
-                System.out.format("%s %s %s %s %s %s %s %s %s %s\n",
+                System.out.printf("%s %s %s %s %s %s%n",
                         javac.getAbsolutePath(),
-                        "-target", "1.5",
-                        "-source", "1.5",
                         "-d", compiledDirName,
-                        "-cp", jfxHome + "/../rt/lib/ext/jfxrt.jar",
+                        "-cp", classpath,
                         "@" + tmpFile.getAbsolutePath());
             }
             int ret = execute(
                     javac.getAbsolutePath(),
-                    "-target", "1.5",
-                    "-source", "1.5",
                     "-d", compiledDirName,
-                    "-cp", jfxHome + "/../rt/lib/ext/jfxrt.jar",
+                    "-cp", classpath,
                     "@" + tmpFile.getAbsolutePath());
             if (ret != 0) {
                 throw new PackagerException("ERR_JavacFailed", Integer.toString(ret));
             }
+        } catch (PackagerException e) {
+            throw e;
         } catch (Exception e) {
             throw new PackagerException(e, "ERR_MakeAllJavacFailed");
         }
@@ -753,7 +781,7 @@ public class PackagerLib {
         dp.outdir = distDir;
         dp.outfile = outfileName;
         dp.addResource(distDir, jarName);
-        dp.setBundleType(Bundler.BundleType.ALL);
+        dp.setBundleType(BundleType.ALL);
 
         generateDeploymentPackages(dp);
 
@@ -1446,8 +1474,11 @@ public class PackagerLib {
         }
 
         if (f.isDirectory()) {
-            for (File innerFile : f.listFiles()) {
-                jar(innerFile, jar, filter, cut);
+            File[] children = f.listFiles();
+            if (children != null) {
+                for (File innerFile : children) {
+                    jar(innerFile, jar, filter, cut);
+                }
             }
         } else if (filter == Filter.ALL
                 || (filter == Filter.CLASSES_ONLY && f.getName().endsWith(".class"))
@@ -1501,8 +1532,11 @@ public class PackagerLib {
     private void createBinaryCss(File f, File outdir, String relPath)
             throws PackagerException {
         if (f.isDirectory()) {
-            for (File innerFile : f.listFiles()) {
-                createBinaryCss(innerFile, outdir, relPath + '/' + innerFile.getName());
+            File[] children = f.listFiles();
+            if (children != null) {
+                for (File innerFile : children) {
+                    createBinaryCss(innerFile, outdir, relPath + '/' + innerFile.getName());
+                }
             }
         } else if (f.getName().endsWith(".css")) {
             String cssFileName = f.getAbsolutePath();
@@ -1650,11 +1684,11 @@ public class PackagerLib {
 
     private static String prefixWebFiles = "/resources/web-files/";
 
-    private void extractWebFiles() throws PackagerException {
-        doExtractWebFiles(webFiles);
+    private boolean extractWebFiles() throws PackagerException {
+        return doExtractWebFiles(webFiles);
     }
 
-    private void doExtractWebFiles(String lst[]) throws PackagerException {
+    private boolean doExtractWebFiles(String lst[]) throws PackagerException {
         File f = new File(deployParams.outdir, webfilesDir);
         f.mkdirs();
 
@@ -1664,10 +1698,12 @@ public class PackagerLib {
             if (is == null) {
                 System.err.println("Internal error. Missing resources [" +
                         (prefixWebFiles+s) + "]");
+                return false;
             } else {
                 copyFileToOutDir(is, new File(f, s));
             }
         }
+        return true;
     }
 
     private static boolean deleteDirectory(File dir) {

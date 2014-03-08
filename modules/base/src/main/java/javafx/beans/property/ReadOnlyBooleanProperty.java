@@ -94,13 +94,10 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
         return property instanceof ReadOnlyBooleanProperty ? (ReadOnlyBooleanProperty) property
                 : new ReadOnlyBooleanPropertyBase() {
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 
@@ -141,13 +138,10 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
         return new ReadOnlyObjectPropertyBase<Boolean>() {
 
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 

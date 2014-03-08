@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,6 +43,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Cell;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
@@ -590,20 +591,17 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     /*
                     ** only consume it if we use it
                     */
-                    adjustPixels(-virtualDelta);
-                    event.consume();
+                    double result = adjustPixels(-virtualDelta);
+                    if (result != 0.0) {
+                        event.consume();
+                    }
                 }
-                else {
-                    /*
-                    ** we didn't scroll in the Virtual plane, lets see
-                    ** if we scrolled on the other plane.
-                    */
-                    ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
-                    if (nonVirtualBar.isVisible()) {                        
 
-                        double nonVirtualDelta = isVertical() ? event.getDeltaX() : event.getDeltaY();
+                ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
+                if (needBreadthBar) {
+                    double nonVirtualDelta = isVertical() ? event.getDeltaX() : event.getDeltaY();
+                    if (nonVirtualDelta != 0.0) {
                         double newValue = nonVirtualBar.getValue() - nonVirtualDelta;
-
                         if (newValue < nonVirtualBar.getMin()) {
                             nonVirtualBar.setValue(nonVirtualBar.getMin());
                         } else if (newValue > nonVirtualBar.getMax()) {
@@ -979,6 +977,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 return;
             }
         }
+
+        // once per layout we reset the maximum pref breadth to -1 to allow for
+        // it to be recalculated. This is particularly useful when dealing with
+        // issues related to the control growing / shrinking in width and not
+        // correctly resizing cells (as the maxPrefBreadth was larger than the
+        // viewportBreadth when compared in fitCells()).
+        // The issue that resulted in this line being added was RT-34897.
+        setMaxPrefBreadth(-1);
 
 //        layingOut = true;
 
@@ -1882,10 +1888,41 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void cleanPile() {
+        boolean wasFocusOwner = false;
+
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
+            wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
         }
+
+        // Fix for RT-35876: Rather than have the cells do weird things with
+        // focus (in particular, have focus jump between cells), we return focus
+        // to the VirtualFlow itself.
+        if (wasFocusOwner) {
+            requestFocus();
+        }
+    }
+
+    private boolean doesCellContainFocus(Cell c) {
+        Scene scene = c.getScene();
+        final Node focusOwner = scene == null ? null : scene.getFocusOwner();
+
+        if (focusOwner != null) {
+            if (c.equals(focusOwner)) {
+                return true;
+            }
+
+            Parent p = focusOwner.getParent();
+            while (p != null && ! (p instanceof VirtualFlow)) {
+                if (c.equals(p)) {
+                    return true;
+                }
+                p = p.getParent();
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -1959,7 +1996,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             final double cellStart = getCellPosition(cell);
             final double cellEnd = cellStart + getCellLength(cell);
-            if (cellEnd <= max) {
+
+            // we use the magic +2 to allow for a little bit of fuzziness,
+            // this is to help in situations such as RT-34407
+            if (cellEnd <= (max + 2)) {
                 return cell;
             }
         }
@@ -2110,7 +2150,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         final boolean isVertical = isVertical();
         if (((isVertical && (tempVisibility ? !needLengthBar : !vbar.isVisible())) ||
-                (! isVertical && (tempVisibility ? !needBreadthBar : !hbar.isVisible())))) return 0;
+                (! isVertical && (tempVisibility ? !needLengthBar : !hbar.isVisible())))) return 0;
         
         double pos = getPosition();
         if (pos == 0.0f && delta < 0) return 0;

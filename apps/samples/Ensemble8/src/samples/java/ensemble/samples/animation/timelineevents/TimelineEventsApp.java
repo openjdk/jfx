@@ -102,13 +102,10 @@ public class TimelineEventsApp extends Application {
         //create a keyFrame, the keyValue is reached at time 2s
         Duration duration = Duration.seconds(2);
         //one can add a specific action when the keyframe is reached
-        EventHandler<ActionEvent> onFinished = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                 stack.setTranslateX(java.lang.Math.random() * 200);
-                 //reset counter
-                 i = 0;
-            }
+        EventHandler<ActionEvent> onFinished = (ActionEvent t) -> {
+            stack.setTranslateX(java.lang.Math.random() * 200);
+            //reset counter
+            i = 0;
         };
         KeyFrame keyFrame = new KeyFrame(duration, onFinished , keyValueX, keyValueY);
         //add the keyframe to the timeline

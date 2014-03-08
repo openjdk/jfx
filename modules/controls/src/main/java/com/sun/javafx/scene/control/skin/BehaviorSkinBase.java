@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.control.SkinBase;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
@@ -100,6 +101,13 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
             }
         }
     };
+
+    private final EventHandler<ContextMenuEvent> contextMenuHandler =
+            new EventHandler<ContextMenuEvent>() {
+                @Override public void handle(ContextMenuEvent event) {
+                    behavior.contextMenuRequested(event);
+                }
+            };
     
     /***************************************************************************
      *                                                                         *
@@ -130,6 +138,8 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
         control.addEventHandler(MouseEvent.MOUSE_PRESSED, mouseHandler);
         control.addEventHandler(MouseEvent.MOUSE_RELEASED, mouseHandler);
         control.addEventHandler(MouseEvent.MOUSE_DRAGGED, mouseHandler);
+
+        control.addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, contextMenuHandler);
     }
     
     

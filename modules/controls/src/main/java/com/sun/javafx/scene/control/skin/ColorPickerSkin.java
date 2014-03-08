@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,6 +57,10 @@ import javafx.event.ActionEvent;
 import javafx.scene.control.Label;
 import javafx.scene.paint.Color;
 
+import com.sun.javafx.scene.control.skin.resources.ControlResources;
+
+import static javafx.scene.paint.Color.*;
+
 /**
  *
  */
@@ -70,7 +74,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         @Override public void invalidated() {
             if (displayNode != null) {
                 if (colorLabelVisible.get()) {
-                    displayNode.setText(colorValueToWeb(((ColorPicker)getSkinnable()).getValue()));
+                    displayNode.setText(colorDisplayName(((ColorPicker)getSkinnable()).getValue()));
                 } else {
                     displayNode.setText("");
                 }
@@ -244,200 +248,237 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
 
     private void updateComboBoxMode() {
-        if (getSkinnable().getStyleClass().contains(ColorPicker.STYLE_CLASS_BUTTON)) {
+        List<String> styleClass = getSkinnable().getStyleClass();
+        if (styleClass.contains(ColorPicker.STYLE_CLASS_BUTTON)) {
             setMode(ComboBoxMode.BUTTON);
-        }
-        else if (getSkinnable().getStyleClass().contains(ColorPicker.STYLE_CLASS_SPLIT_BUTTON)) {
+        } else if (styleClass.contains(ColorPicker.STYLE_CLASS_SPLIT_BUTTON)) {
             setMode(ComboBoxMode.SPLITBUTTON);
         }
     }
-    
-    private static final Map<Color, String> colorNameMap = new HashMap<Color, String>(147);
+
+    private static final Map<Color, String> colorNameMap = new HashMap<Color, String>(24);
+    private static final Map<Color, String> cssNameMap = new HashMap<Color, String>(139);
     static {
-        // The following code is used to generate the hard-coded colorNameMap
-        // below, but it is then hand tweaked to proper represent the colour
-        // names.
-        
-//        // Initializes the namedColors map
-//        Color.web("white", 1.0);
-//        for (Field f : Color.class.getDeclaredFields()) {
-//            int modifier = f.getModifiers();
-//            if (Modifier.isStatic(modifier) && Modifier.isPublic(modifier) && f.getType().equals(Color.class)) {
-//                colorNames.add(f.getName());
-//                
-//                String name = f.toString();
-//                name = name.substring(name.lastIndexOf("Color."));
-//                
-//                String displayName = f.getName();
-//                displayName = displayName.substring(0, 1) + displayName.substring(1).toLowerCase(Locale.ROOT);
-//                
-//                System.out.println("colorNameMap.put(" + name + ", \"" + displayName + "\");");
-//            }
-//        }
-        
-        colorNameMap.put(Color.TRANSPARENT, "Transparent");
-        colorNameMap.put(Color.ALICEBLUE, "Alice Blue");
-        colorNameMap.put(Color.ANTIQUEWHITE, "Antique White");
-        colorNameMap.put(Color.AQUA, "Aqua");
-        colorNameMap.put(Color.AQUAMARINE, "Aquamarine");
-        colorNameMap.put(Color.AZURE, "Azure");
-        colorNameMap.put(Color.BEIGE, "Beige");
-        colorNameMap.put(Color.BISQUE, "Bisque");
-        colorNameMap.put(Color.BLACK, "Black");
-        colorNameMap.put(Color.BLANCHEDALMOND, "Blanched Almond");
-        colorNameMap.put(Color.BLUE, "Blue");
-        colorNameMap.put(Color.BLUEVIOLET, "Blue Violet");
-        colorNameMap.put(Color.BROWN, "Brown");
-        colorNameMap.put(Color.BURLYWOOD, "Burlywood");
-        colorNameMap.put(Color.CADETBLUE, "Cadet Blue");
-        colorNameMap.put(Color.CHARTREUSE, "Chartreuse");
-        colorNameMap.put(Color.CHOCOLATE, "Chocolate");
-        colorNameMap.put(Color.CORAL, "Coral");
-        colorNameMap.put(Color.CORNFLOWERBLUE, "Cornflower Blue");
-        colorNameMap.put(Color.CORNSILK, "Cornsilk");
-        colorNameMap.put(Color.CRIMSON, "Crimson");
-        colorNameMap.put(Color.CYAN, "Cyan");
-        colorNameMap.put(Color.DARKBLUE, "Dark Blue");
-        colorNameMap.put(Color.DARKCYAN, "Dark Cyan");
-        colorNameMap.put(Color.DARKGOLDENROD, "Dark Goldenrod");
-        colorNameMap.put(Color.DARKGRAY, "Dark Gray");
-        colorNameMap.put(Color.DARKGREEN, "Dark Green");
-        colorNameMap.put(Color.DARKGREY, "Dark Grey");
-        colorNameMap.put(Color.DARKKHAKI, "Dark Khaki");
-        colorNameMap.put(Color.DARKMAGENTA, "Dark Magenta");
-        colorNameMap.put(Color.DARKOLIVEGREEN, "Dark Olive Green");
-        colorNameMap.put(Color.DARKORANGE, "Dark Orange");
-        colorNameMap.put(Color.DARKORCHID, "Dark Orchid");
-        colorNameMap.put(Color.DARKRED, "Dark Red");
-        colorNameMap.put(Color.DARKSALMON, "Dark Salmon");
-        colorNameMap.put(Color.DARKSEAGREEN, "Dark Sea Green");
-        colorNameMap.put(Color.DARKSLATEBLUE, "Dark Slate Blue");
-        colorNameMap.put(Color.DARKSLATEGRAY, "Dark Slate Gray");
-        colorNameMap.put(Color.DARKSLATEGREY, "Dark Slate Grey");
-        colorNameMap.put(Color.DARKTURQUOISE, "Dark Turquoise");
-        colorNameMap.put(Color.DARKVIOLET, "Dark Violet");
-        colorNameMap.put(Color.DEEPPINK, "Deep Pink");
-        colorNameMap.put(Color.DEEPSKYBLUE, "Deep Sky Blue");
-        colorNameMap.put(Color.DIMGRAY, "Dim Gray");
-        colorNameMap.put(Color.DIMGREY, "Dim Grey");
-        colorNameMap.put(Color.DODGERBLUE, "Dodger Blue");
-        colorNameMap.put(Color.FIREBRICK, "Firebrick");
-        colorNameMap.put(Color.FLORALWHITE, "Floral White");
-        colorNameMap.put(Color.FORESTGREEN, "Forest Green");
-        colorNameMap.put(Color.FUCHSIA, "Fuchsia");
-        colorNameMap.put(Color.GAINSBORO, "Gainsboro");
-        colorNameMap.put(Color.GHOSTWHITE, "Ghost White");
-        colorNameMap.put(Color.GOLD, "Gold");
-        colorNameMap.put(Color.GOLDENROD, "Goldenrod");
-        colorNameMap.put(Color.GRAY, "Gray");
-        colorNameMap.put(Color.GREEN, "Green");
-        colorNameMap.put(Color.GREENYELLOW, "Green Yellow");
-        colorNameMap.put(Color.GREY, "Grey");
-        colorNameMap.put(Color.HONEYDEW, "Honeydew");
-        colorNameMap.put(Color.HOTPINK, "Hot Pink");
-        colorNameMap.put(Color.INDIANRED, "Indian Red");
-        colorNameMap.put(Color.INDIGO, "Indigo");
-        colorNameMap.put(Color.IVORY, "Ivory");
-        colorNameMap.put(Color.KHAKI, "Khaki");
-        colorNameMap.put(Color.LAVENDER, "Lavender");
-        colorNameMap.put(Color.LAVENDERBLUSH, "Lavender Blush");
-        colorNameMap.put(Color.LAWNGREEN, "Lawn Green");
-        colorNameMap.put(Color.LEMONCHIFFON, "Lemon Chiffon");
-        colorNameMap.put(Color.LIGHTBLUE, "Light Blue");
-        colorNameMap.put(Color.LIGHTCORAL, "Light Coral");
-        colorNameMap.put(Color.LIGHTCYAN, "Light Cyan");
-        colorNameMap.put(Color.LIGHTGOLDENRODYELLOW, "Light Goldenrod Yellow");
-        colorNameMap.put(Color.LIGHTGRAY, "Light Gray");
-        colorNameMap.put(Color.LIGHTGREEN, "Light Green");
-        colorNameMap.put(Color.LIGHTGREY, "Light Grey");
-        colorNameMap.put(Color.LIGHTPINK, "Light Pink");
-        colorNameMap.put(Color.LIGHTSALMON, "Light Salmon");
-        colorNameMap.put(Color.LIGHTSEAGREEN, "Light Sea Green");
-        colorNameMap.put(Color.LIGHTSKYBLUE, "Light Sky Blue");
-        colorNameMap.put(Color.LIGHTSLATEGRAY, "Light Slate Gray");
-        colorNameMap.put(Color.LIGHTSLATEGREY, "Light Slate Grey");
-        colorNameMap.put(Color.LIGHTSTEELBLUE, "Light Steel Blue");
-        colorNameMap.put(Color.LIGHTYELLOW, "Light Yellow");
-        colorNameMap.put(Color.LIME, "Lime");
-        colorNameMap.put(Color.LIMEGREEN, "Lime Green");
-        colorNameMap.put(Color.LINEN, "Linen");
-        colorNameMap.put(Color.MAGENTA, "Magenta");
-        colorNameMap.put(Color.MAROON, "Maroon");
-        colorNameMap.put(Color.MEDIUMAQUAMARINE, "Medium Aquamarine");
-        colorNameMap.put(Color.MEDIUMBLUE, "Medium Blue");
-        colorNameMap.put(Color.MEDIUMORCHID, "Medium Orchid");
-        colorNameMap.put(Color.MEDIUMPURPLE, "Medium Purple");
-        colorNameMap.put(Color.MEDIUMSEAGREEN, "Medium Sea Green");
-        colorNameMap.put(Color.MEDIUMSLATEBLUE, "Medium Slate Blue");
-        colorNameMap.put(Color.MEDIUMSPRINGGREEN, "Medium Spring Green");
-        colorNameMap.put(Color.MEDIUMTURQUOISE, "Medium Turquoise");
-        colorNameMap.put(Color.MEDIUMVIOLETRED, "Medium Violet Red");
-        colorNameMap.put(Color.MIDNIGHTBLUE, "Midnight Blue");
-        colorNameMap.put(Color.MINTCREAM, "Mint Cream");
-        colorNameMap.put(Color.MISTYROSE, "Misty Rose");
-        colorNameMap.put(Color.MOCCASIN, "Moccasin");
-        colorNameMap.put(Color.NAVAJOWHITE, "Navajo White");
-        colorNameMap.put(Color.NAVY, "Navy");
-        colorNameMap.put(Color.OLDLACE, "Old Lace");
-        colorNameMap.put(Color.OLIVE, "Olive");
-        colorNameMap.put(Color.OLIVEDRAB, "Olive Drab");
-        colorNameMap.put(Color.ORANGE, "Orange");
-        colorNameMap.put(Color.ORANGERED, "Orange Red");
-        colorNameMap.put(Color.ORCHID, "Orchid");
-        colorNameMap.put(Color.PALEGOLDENROD, "Pale Goldenrod");
-        colorNameMap.put(Color.PALEGREEN, "Pale Green");
-        colorNameMap.put(Color.PALETURQUOISE, "Pale Turquoise");
-        colorNameMap.put(Color.PALEVIOLETRED, "Pale Violet Red");
-        colorNameMap.put(Color.PAPAYAWHIP, "Papaya Whip");
-        colorNameMap.put(Color.PEACHPUFF, "Peach Puff");
-        colorNameMap.put(Color.PERU, "Peru");
-        colorNameMap.put(Color.PINK, "Pink");
-        colorNameMap.put(Color.PLUM, "Plum");
-        colorNameMap.put(Color.POWDERBLUE, "Powder Blue");
-        colorNameMap.put(Color.PURPLE, "Purple");
-        colorNameMap.put(Color.RED, "Red");
-        colorNameMap.put(Color.ROSYBROWN, "Rosy Brown");
-        colorNameMap.put(Color.ROYALBLUE, "Royal Blue");
-        colorNameMap.put(Color.SADDLEBROWN, "Saddle Brown");
-        colorNameMap.put(Color.SALMON, "Salmon");
-        colorNameMap.put(Color.SANDYBROWN, "Sandy Brown");
-        colorNameMap.put(Color.SEAGREEN, "Sea Green");
-        colorNameMap.put(Color.SEASHELL, "Seashell");
-        colorNameMap.put(Color.SIENNA, "Sienna");
-        colorNameMap.put(Color.SILVER, "Silver");
-        colorNameMap.put(Color.SKYBLUE, "Sky Blue");
-        colorNameMap.put(Color.SLATEBLUE, "Slate Blue");
-        colorNameMap.put(Color.SLATEGRAY, "Slate Gray");
-        colorNameMap.put(Color.SLATEGREY, "Slate Grey");
-        colorNameMap.put(Color.SNOW, "Snow");
-        colorNameMap.put(Color.SPRINGGREEN, "Spring Green");
-        colorNameMap.put(Color.STEELBLUE, "Steel Blue");
-        colorNameMap.put(Color.TAN, "Tan");
-        colorNameMap.put(Color.TEAL, "Teal");
-        colorNameMap.put(Color.THISTLE, "Thistle");
-        colorNameMap.put(Color.TOMATO, "Tomato");
-        colorNameMap.put(Color.TURQUOISE, "Turquoise");
-        colorNameMap.put(Color.VIOLET, "Violet");
-        colorNameMap.put(Color.WHEAT, "Wheat");
-        colorNameMap.put(Color.WHITE, "White");
-        colorNameMap.put(Color.WHITESMOKE, "White Smoke");
-        colorNameMap.put(Color.YELLOW, "Yellow");
-        colorNameMap.put(Color.YELLOWGREEN, "Yellow Green");
+        // Translatable display names for the most common colors
+        colorNameMap.put(TRANSPARENT, getString("colorName.transparent"));
+        colorNameMap.put(BLACK,       getString("colorName.black"));
+        colorNameMap.put(BLUE,        getString("colorName.blue"));
+        colorNameMap.put(CYAN,        getString("colorName.cyan"));
+        colorNameMap.put(DARKBLUE,    getString("colorName.darkblue"));
+        colorNameMap.put(DARKCYAN,    getString("colorName.darkcyan"));
+        colorNameMap.put(DARKGRAY,    getString("colorName.darkgray"));
+        colorNameMap.put(DARKGREEN,   getString("colorName.darkgreen"));
+        colorNameMap.put(DARKMAGENTA, getString("colorName.darkmagenta"));
+        colorNameMap.put(DARKRED,     getString("colorName.darkred"));
+        colorNameMap.put(GRAY,        getString("colorName.gray"));
+        colorNameMap.put(GREEN,       getString("colorName.green"));
+        colorNameMap.put(LIGHTBLUE,   getString("colorName.lightblue"));
+        colorNameMap.put(LIGHTCYAN,   getString("colorName.lightcyan"));
+        colorNameMap.put(LIGHTGRAY,   getString("colorName.lightgray"));
+        colorNameMap.put(LIGHTGREEN,  getString("colorName.lightgreen"));
+        colorNameMap.put(LIGHTYELLOW, getString("colorName.lightyellow"));
+        colorNameMap.put(MAGENTA,     getString("colorName.magenta"));
+        colorNameMap.put(MEDIUMBLUE,  getString("colorName.mediumblue"));
+        colorNameMap.put(ORANGE,      getString("colorName.orange"));
+        colorNameMap.put(PINK,        getString("colorName.pink"));
+        colorNameMap.put(RED,         getString("colorName.red"));
+        colorNameMap.put(WHITE,       getString("colorName.white"));
+        colorNameMap.put(YELLOW,      getString("colorName.yellow"));
+
+        // CSS names.
+        // Note that synonyms (such as "grey") have been removed here,
+        // since a color can be presented with only one name in this
+        // skin. If a reverse map is created for parsing names in the
+        // future, then the synonyms should be included there. For a
+        // full list of CSS names, see Color.java.
+        cssNameMap.put(ALICEBLUE,            "aliceblue");
+        cssNameMap.put(ANTIQUEWHITE,         "antiquewhite");
+        cssNameMap.put(AQUAMARINE,           "aquamarine");
+        cssNameMap.put(AZURE,                "azure");
+        cssNameMap.put(BEIGE,                "beige");
+        cssNameMap.put(BISQUE,               "bisque");
+        cssNameMap.put(BLACK,                "black");
+        cssNameMap.put(BLANCHEDALMOND,       "blanchedalmond");
+        cssNameMap.put(BLUE,                 "blue");
+        cssNameMap.put(BLUEVIOLET,           "blueviolet");
+        cssNameMap.put(BROWN,                "brown");
+        cssNameMap.put(BURLYWOOD,            "burlywood");
+        cssNameMap.put(CADETBLUE,            "cadetblue");
+        cssNameMap.put(CHARTREUSE,           "chartreuse");
+        cssNameMap.put(CHOCOLATE,            "chocolate");
+        cssNameMap.put(CORAL,                "coral");
+        cssNameMap.put(CORNFLOWERBLUE,       "cornflowerblue");
+        cssNameMap.put(CORNSILK,             "cornsilk");
+        cssNameMap.put(CRIMSON,              "crimson");
+        cssNameMap.put(CYAN,                 "cyan");
+        cssNameMap.put(DARKBLUE,             "darkblue");
+        cssNameMap.put(DARKCYAN,             "darkcyan");
+        cssNameMap.put(DARKGOLDENROD,        "darkgoldenrod");
+        cssNameMap.put(DARKGRAY,             "darkgray");
+        cssNameMap.put(DARKGREEN,            "darkgreen");
+        cssNameMap.put(DARKKHAKI,            "darkkhaki");
+        cssNameMap.put(DARKMAGENTA,          "darkmagenta");
+        cssNameMap.put(DARKOLIVEGREEN,       "darkolivegreen");
+        cssNameMap.put(DARKORANGE,           "darkorange");
+        cssNameMap.put(DARKORCHID,           "darkorchid");
+        cssNameMap.put(DARKRED,              "darkred");
+        cssNameMap.put(DARKSALMON,           "darksalmon");
+        cssNameMap.put(DARKSEAGREEN,         "darkseagreen");
+        cssNameMap.put(DARKSLATEBLUE,        "darkslateblue");
+        cssNameMap.put(DARKSLATEGRAY,        "darkslategray");
+        cssNameMap.put(DARKTURQUOISE,        "darkturquoise");
+        cssNameMap.put(DARKVIOLET,           "darkviolet");
+        cssNameMap.put(DEEPPINK,             "deeppink");
+        cssNameMap.put(DEEPSKYBLUE,          "deepskyblue");
+        cssNameMap.put(DIMGRAY,              "dimgray");
+        cssNameMap.put(DODGERBLUE,           "dodgerblue");
+        cssNameMap.put(FIREBRICK,            "firebrick");
+        cssNameMap.put(FLORALWHITE,          "floralwhite");
+        cssNameMap.put(FORESTGREEN,          "forestgreen");
+        cssNameMap.put(GAINSBORO,            "gainsboro");
+        cssNameMap.put(GHOSTWHITE,           "ghostwhite");
+        cssNameMap.put(GOLD,                 "gold");
+        cssNameMap.put(GOLDENROD,            "goldenrod");
+        cssNameMap.put(GRAY,                 "gray");
+        cssNameMap.put(GREEN,                "green");
+        cssNameMap.put(GREENYELLOW,          "greenyellow");
+        cssNameMap.put(HONEYDEW,             "honeydew");
+        cssNameMap.put(HOTPINK,              "hotpink");
+        cssNameMap.put(INDIANRED,            "indianred");
+        cssNameMap.put(INDIGO,               "indigo");
+        cssNameMap.put(IVORY,                "ivory");
+        cssNameMap.put(KHAKI,                "khaki");
+        cssNameMap.put(LAVENDER,             "lavender");
+        cssNameMap.put(LAVENDERBLUSH,        "lavenderblush");
+        cssNameMap.put(LAWNGREEN,            "lawngreen");
+        cssNameMap.put(LEMONCHIFFON,         "lemonchiffon");
+        cssNameMap.put(LIGHTBLUE,            "lightblue");
+        cssNameMap.put(LIGHTCORAL,           "lightcoral");
+        cssNameMap.put(LIGHTCYAN,            "lightcyan");
+        cssNameMap.put(LIGHTGOLDENRODYELLOW, "lightgoldenrodyellow");
+        cssNameMap.put(LIGHTGRAY,            "lightgray");
+        cssNameMap.put(LIGHTGREEN,           "lightgreen");
+        cssNameMap.put(LIGHTPINK,            "lightpink");
+        cssNameMap.put(LIGHTSALMON,          "lightsalmon");
+        cssNameMap.put(LIGHTSEAGREEN,        "lightseagreen");
+        cssNameMap.put(LIGHTSKYBLUE,         "lightskyblue");
+        cssNameMap.put(LIGHTSLATEGRAY,       "lightslategray");
+        cssNameMap.put(LIGHTSTEELBLUE,       "lightsteelblue");
+        cssNameMap.put(LIGHTYELLOW,          "lightyellow");
+        cssNameMap.put(LIME,                 "lime");
+        cssNameMap.put(LIMEGREEN,            "limegreen");
+        cssNameMap.put(LINEN,                "linen");
+        cssNameMap.put(MAGENTA,              "magenta");
+        cssNameMap.put(MAROON,               "maroon");
+        cssNameMap.put(MEDIUMAQUAMARINE,     "mediumaquamarine");
+        cssNameMap.put(MEDIUMBLUE,           "mediumblue");
+        cssNameMap.put(MEDIUMORCHID,         "mediumorchid");
+        cssNameMap.put(MEDIUMPURPLE,         "mediumpurple");
+        cssNameMap.put(MEDIUMSEAGREEN,       "mediumseagreen");
+        cssNameMap.put(MEDIUMSLATEBLUE,      "mediumslateblue");
+        cssNameMap.put(MEDIUMSPRINGGREEN,    "mediumspringgreen");
+        cssNameMap.put(MEDIUMTURQUOISE,      "mediumturquoise");
+        cssNameMap.put(MEDIUMVIOLETRED,      "mediumvioletred");
+        cssNameMap.put(MIDNIGHTBLUE,         "midnightblue");
+        cssNameMap.put(MINTCREAM,            "mintcream");
+        cssNameMap.put(MISTYROSE,            "mistyrose");
+        cssNameMap.put(MOCCASIN,             "moccasin");
+        cssNameMap.put(NAVAJOWHITE,          "navajowhite");
+        cssNameMap.put(NAVY,                 "navy");
+        cssNameMap.put(OLDLACE,              "oldlace");
+        cssNameMap.put(OLIVE,                "olive");
+        cssNameMap.put(OLIVEDRAB,            "olivedrab");
+        cssNameMap.put(ORANGE,               "orange");
+        cssNameMap.put(ORANGERED,            "orangered");
+        cssNameMap.put(ORCHID,               "orchid");
+        cssNameMap.put(PALEGOLDENROD,        "palegoldenrod");
+        cssNameMap.put(PALEGREEN,            "palegreen");
+        cssNameMap.put(PALETURQUOISE,        "paleturquoise");
+        cssNameMap.put(PALEVIOLETRED,        "palevioletred");
+        cssNameMap.put(PAPAYAWHIP,           "papayawhip");
+        cssNameMap.put(PEACHPUFF,            "peachpuff");
+        cssNameMap.put(PERU,                 "peru");
+        cssNameMap.put(PINK,                 "pink");
+        cssNameMap.put(PLUM,                 "plum");
+        cssNameMap.put(POWDERBLUE,           "powderblue");
+        cssNameMap.put(PURPLE,               "purple");
+        cssNameMap.put(RED,                  "red");
+        cssNameMap.put(ROSYBROWN,            "rosybrown");
+        cssNameMap.put(ROYALBLUE,            "royalblue");
+        cssNameMap.put(SADDLEBROWN,          "saddlebrown");
+        cssNameMap.put(SALMON,               "salmon");
+        cssNameMap.put(SANDYBROWN,           "sandybrown");
+        cssNameMap.put(SEAGREEN,             "seagreen");
+        cssNameMap.put(SEASHELL,             "seashell");
+        cssNameMap.put(SIENNA,               "sienna");
+        cssNameMap.put(SILVER,               "silver");
+        cssNameMap.put(SKYBLUE,              "skyblue");
+        cssNameMap.put(SLATEBLUE,            "slateblue");
+        cssNameMap.put(SLATEGRAY,            "slategray");
+        cssNameMap.put(SNOW,                 "snow");
+        cssNameMap.put(SPRINGGREEN,          "springgreen");
+        cssNameMap.put(STEELBLUE,            "steelblue");
+        cssNameMap.put(TAN,                  "tan");
+        cssNameMap.put(TEAL,                 "teal");
+        cssNameMap.put(THISTLE,              "thistle");
+        cssNameMap.put(TOMATO,               "tomato");
+        cssNameMap.put(TRANSPARENT,          "transparent");
+        cssNameMap.put(TURQUOISE,            "turquoise");
+        cssNameMap.put(VIOLET,               "violet");
+        cssNameMap.put(WHEAT,                "wheat");
+        cssNameMap.put(WHITE,                "white");
+        cssNameMap.put(WHITESMOKE,           "whitesmoke");
+        cssNameMap.put(YELLOW,               "yellow");
+        cssNameMap.put(YELLOWGREEN,          "yellowgreen");
     }
-    
-    static String colorValueToWeb(Color c) {
-        if (c == null) return null;
-        String web = colorNameMap.get(c);
-        if (web == null) {
-            web = String.format((Locale) null, "%02x%02x%02x", Math.round(c.getRed() * 255), Math.round(c.getGreen() * 255), Math.round(c.getBlue() * 255));
+
+    static String colorDisplayName(Color c) {
+        if (c != null) {
+            String displayName = colorNameMap.get(c);
+            if (displayName == null) {
+                displayName = formatHexString(c);
+            }
+            return displayName;
+        } else {
+            return null;
         }
-        return web;
     }
- 
+
+    static String tooltipString(Color c) {
+        if (c != null) {
+            String tooltipStr = "";
+            String displayName = colorNameMap.get(c);
+            if (displayName != null) {
+                tooltipStr += displayName + " ";
+            }
+
+            tooltipStr += formatHexString(c);
+
+            String cssName = cssNameMap.get(c);
+            if (cssName != null) {
+                tooltipStr += " (css: " + cssName + ")";
+            }
+            return tooltipStr;
+        } else {
+            return null;
+        }
+    }
+
+    static String formatHexString(Color c) {
+        if (c != null) {
+            return String.format((Locale) null, "#%02x%02x%02x",
+                                 Math.round(c.getRed() * 255),
+                                 Math.round(c.getGreen() * 255),
+                                 Math.round(c.getBlue() * 255));
+        } else {
+            return null;
+        }
+    }
+
     @Override protected Node getPopupContent() {
         if (popupContent == null) {
 //            popupContent = new ColorPalette(colorPicker.getValue(), colorPicker);
-            popupContent = new ColorPalette(getSkinnable().getValue(), (ColorPicker)getSkinnable());
+            popupContent = new ColorPalette((ColorPicker)getSkinnable());
             popupContent.setPopupControl(getPopup());
         }
        return popupContent;
@@ -479,7 +520,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         final ColorPicker colorPicker = (ColorPicker)getSkinnable();
         colorRect.setFill(colorPicker.getValue());
         if (colorLabelVisible.get()) {
-            displayNode.setText(colorValueToWeb(colorPicker.getValue()));
+            displayNode.setText(colorDisplayName(colorPicker.getValue()));
         } else {
             displayNode.setText("");
         }
@@ -496,6 +537,10 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             final double w, final double h) {
         updateComboBoxMode();
         super.layoutChildren(x,y,w,h);
+    }
+
+    static String getString(String key) {
+        return ControlResources.getString("ColorPicker."+key);
     }
 
     /***************************************************************************

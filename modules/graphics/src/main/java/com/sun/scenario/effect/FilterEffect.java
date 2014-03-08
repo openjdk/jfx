@@ -31,12 +31,15 @@ import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * The implementation base class for {@link Effect} subclasses that operate
  * by filtering the inputs at the pixel level.
+ * @param <T> the specific subclass of {@link RenderState} returned from the
+ *        {@link #getRenderState()} method.
  */
-public abstract class FilterEffect extends Effect {
+public abstract class FilterEffect<T extends RenderState> extends Effect {
     protected FilterEffect() {
         super();
     }
@@ -49,18 +52,14 @@ public abstract class FilterEffect extends Effect {
         super(input1, input2);
     }
 
-    public boolean operatesInUserSpace() {
-        return false;
-    }
-
+    @Override
     public BaseBounds getBounds(BaseTransform transform,
-                              Effect defaultInput)
+                                Effect defaultInput)
     {
         int numinputs = getNumInputs();
-        BaseTransform inputtx = transform;
-        if (operatesInUserSpace()) {
-            inputtx = BaseTransform.IDENTITY_TRANSFORM;
-        }
+        RenderState rstate = getRenderState(null, transform, null,
+                                            null, defaultInput);
+        BaseTransform inputtx = rstate.getInputTransform(transform);
         BaseBounds ret;
         if (numinputs == 1) {
             Effect input = getDefaultedInput(0, defaultInput);
@@ -73,15 +72,8 @@ public abstract class FilterEffect extends Effect {
             }
             ret = combineBounds(inputBounds);
         }
-        if (inputtx != transform) {
-            ret = transformBounds(transform, ret);
-        }
-        return ret;
+        return transformBounds(rstate.getResultTransform(transform), ret);
     }
-
-    protected abstract Rectangle getInputClip(int inputIndex,
-                                              BaseTransform transform,
-                                              Rectangle outputBounds);
 
     protected static Rectangle untransformClip(BaseTransform transform,
                                                Rectangle clip)
@@ -144,6 +136,30 @@ public abstract class FilterEffect extends Effect {
         return transformedBounds;
     }
 
+    /**
+     * Returns the object representing the rendering strategy and state for
+     * the filter operation characterized by the specified arguments.
+     * This call can also be used to get a state object for non-rendering
+     * cases like querying the bounds of an operation in which case the
+     * {@link FilterContext} object may be null.
+     * {@code outputClip} and {@code renderHelper} may always be null just
+     * as they may be null for a given filter operation.
+     * 
+     * @param fctx the context object that would be used by the Renderer
+     *             if this call is preparing for a render operation, or null
+     * @param transform the transform for the output of this operation
+     * @param outputClip the clip rectangle that may restrict this operation, or null
+     * @param renderHelper the rendering helper object that can be used to shortcut
+     *                     this operation under certain conditions, or null
+     * @param defaultInput the {@link Effect} to be used in place of any null inputs
+     * @return 
+     */
+    public abstract T getRenderState(FilterContext fctx,
+                                     BaseTransform transform,
+                                     Rectangle outputClip,
+                                     Object renderHelper,
+                                     Effect defaultInput);
+
     @Override
     public ImageData filter(FilterContext fctx,
                             BaseTransform transform,
@@ -151,22 +167,23 @@ public abstract class FilterEffect extends Effect {
                             Object renderHelper,
                             Effect defaultInput)
     {
+        T rstate = getRenderState(fctx, transform, outputClip,
+                                  renderHelper, defaultInput);
         int numinputs = getNumInputs();
         ImageData inputDatas[] = new ImageData[numinputs];
-        Rectangle inputClip;
-        BaseTransform inputtx;
-        if (operatesInUserSpace()) {
-            inputClip = untransformClip(transform, outputClip);
-            inputtx = BaseTransform.IDENTITY_TRANSFORM;
+        Rectangle filterClip;
+        BaseTransform inputtx = rstate.getInputTransform(transform);
+        BaseTransform resulttx = rstate.getResultTransform(transform);
+        if (resulttx.isIdentity()) {
+            filterClip = outputClip;
         } else {
-            inputClip = outputClip;
-            inputtx = transform;
+            filterClip = untransformClip(resulttx, outputClip);
         }
         for (int i = 0; i < numinputs; i++) {
             Effect input = getDefaultedInput(i, defaultInput);
             inputDatas[i] =
                 input.filter(fctx, inputtx,
-                             getInputClip(i, inputtx, inputClip),
+                             rstate.getInputClip(i, filterClip),
                              null, defaultInput);
             if (!inputDatas[i].validate(fctx)) {
                 for (int j = 0; j <= i; j++) {
@@ -175,18 +192,18 @@ public abstract class FilterEffect extends Effect {
                 return new ImageData(fctx, null, null);
             }
         }
-        ImageData ret = filterImageDatas(fctx, inputtx, inputClip, inputDatas);
+        ImageData ret = filterImageDatas(fctx, inputtx, filterClip, rstate, inputDatas);
         for (int i = 0; i < numinputs; i++) {
             inputDatas[i].unref();
         }
-        if (inputtx != transform) {
+        if (!resulttx.isIdentity()) {
             if (renderHelper instanceof ImageDataRenderer) {
                 ImageDataRenderer renderer = (ImageDataRenderer) renderHelper;
-                renderer.renderImage(ret, transform, fctx);
+                renderer.renderImage(ret, resulttx, fctx);
                 ret.unref();
                 ret = null;
             } else {
-                ret = ret.transform(transform);
+                ret = ret.transform(resulttx);
             }
         }
         return ret;
@@ -205,5 +222,6 @@ public abstract class FilterEffect extends Effect {
     protected abstract ImageData filterImageDatas(FilterContext fctx,
                                                   BaseTransform transform,
                                                   Rectangle outputClip,
+                                                  T rstate,
                                                   ImageData... inputDatas);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
+import com.sun.javafx.scene.text.HitInfo;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
@@ -61,9 +63,8 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
+
 import java.util.List;
-import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
-import com.sun.javafx.scene.text.HitInfo;
 
 /**
  * Text area skin.
@@ -402,6 +403,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     public static final int SCROLL_RATE = 30;
 
     private double pressX, pressY; // For dragging handles on embedded
+    private boolean handlePressed;
 
     public TextAreaSkin(final TextArea textArea) {
         super(textArea, new TextAreaBehavior(textArea));
@@ -441,17 +443,14 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
 
-        // RT-21658: We can currently only handle scroll events from touch if
-        // on the embedded platform.
-        if (!SHOW_HANDLES) {
-            scrollPane.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-                @Override public void handle(ScrollEvent event) {
-                    if (event.isDirect()) {
-                        event.consume();
-                    }
+        getSkinnable().addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
+            @Override
+            public void handle(ScrollEvent event) {
+                if (event.isDirect() && handlePressed) {
+                    event.consume();
                 }
-            });
-        }
+            }
+        });
 
         // Add selection
         selectionHighlightGroup.setManaged(false);
@@ -664,13 +663,25 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 @Override public void handle(MouseEvent e) {
                     pressX = e.getX();
                     pressY = e.getY();
+                    handlePressed = true;
                     e.consume();
+                }
+            };
+
+            EventHandler<MouseEvent> handleReleaseHandler = new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent event) {
+                    handlePressed = false;
                 }
             };
 
             caretHandle.setOnMousePressed(handlePressHandler);
             selectionHandle1.setOnMousePressed(handlePressHandler);
             selectionHandle2.setOnMousePressed(handlePressHandler);
+
+            caretHandle.setOnMouseReleased(handleReleaseHandler);
+            selectionHandle1.setOnMouseReleased(handleReleaseHandler);
+            selectionHandle2.setOnMouseReleased(handleReleaseHandler);
 
             caretHandle.setOnMouseDragged(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent e) {
@@ -1121,18 +1132,18 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         return (Text)paragraphNodes.getChildren().get(0);
     }
 
-    public HitInfo getIndex(MouseEvent e) {
+    public HitInfo getIndex(double x, double y) {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
         Text textNode = getTextNode();
-        Point2D p = new Point2D(e.getX() - textNode.getLayoutX(), e.getY() - getTextTranslateY());
+        Point2D p = new Point2D(x - textNode.getLayoutX(), y - getTextTranslateY());
         HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
         int pos = hit.getCharIndex();
         if (pos > 0) {
             int oldPos = textNode.getImpl_caretPosition();
             textNode.setImpl_caretPosition(pos);
             PathElement element = textNode.getImpl_caretShape()[0];
-            if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+            if (element instanceof MoveTo && ((MoveTo)element).getY() > y - getTextTranslateY()) {
                 hit.setCharIndex(pos - 1);
             }
             textNode.setImpl_caretPosition(oldPos);

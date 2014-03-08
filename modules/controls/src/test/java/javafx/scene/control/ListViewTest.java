@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,9 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import javafx.beans.property.ObjectProperty;
@@ -44,6 +46,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.control.cell.CheckBoxListCell;
@@ -781,5 +784,73 @@ public class ListViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+    }
+
+    @Test public void test_rt35039() {
+        final List<String> data = new ArrayList<>();
+        data.add("aabbaa");
+        data.add("bbc");
+
+        final ListView<String> listView = new ListView<>();
+        listView.setItems(FXCollections.observableArrayList(data));
+
+        new StageLoader(listView);
+
+        // everything should be null to start with
+        assertNull(listView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        listView.getSelectionModel().select(1);
+        assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        listView.setItems(FXCollections.observableArrayList(data));
+        assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void test_rt35857() {
+        ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
+        final ListView<String> listView = new ListView<String>(fxList);
+
+        listView.getSelectionModel().select(0);
+
+        ObservableList<String> selectedItems = listView.getSelectionModel().getSelectedItems();
+        assertEquals(1, selectedItems.size());
+        assertEquals("A", selectedItems.get(0));
+
+        listView.getItems().removeAll(selectedItems);
+        assertEquals(2, fxList.size());
+        assertEquals("B", fxList.get(0));
+        assertEquals("C", fxList.get(1));
+    }
+
+    private int rt_35889_cancel_count = 0;
+    @Test public void test_rt35889() {
+        final ListView<String> textFieldListView = new ListView<String>();
+        textFieldListView.setItems(FXCollections.observableArrayList("A", "B", "C"));
+        textFieldListView.setEditable(true);
+        textFieldListView.setCellFactory(TextFieldListCell.forListView());
+        textFieldListView.setOnEditCancel(new EventHandler<ListView.EditEvent<String>>() {
+            @Override public void handle(ListView.EditEvent<String> t) {
+                rt_35889_cancel_count++;
+                System.out.println("On Edit Cancel: " + t);
+            }
+        });
+
+        ListCell cell0 = (ListCell) VirtualFlowTestUtils.getCell(textFieldListView, 0);
+        assertNull(cell0.getGraphic());
+        assertEquals("A", cell0.getText());
+
+        textFieldListView.edit(0);
+        TextField textField = (TextField) cell0.getGraphic();
+        assertNotNull(textField);
+
+        assertEquals(0, rt_35889_cancel_count);
+
+        textField.setText("Z");
+        textField.getOnAction().handle(new ActionEvent());
+
+        assertEquals(0, rt_35889_cancel_count);
     }
 }

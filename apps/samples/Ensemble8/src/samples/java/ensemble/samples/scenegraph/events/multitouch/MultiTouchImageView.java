@@ -54,60 +54,39 @@ public class MultiTouchImageView extends StackPane {
         imageView.setSmooth(true);
         getChildren().add(imageView);
 
-        setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-
-                lastX = event.getX();
-                lastY = event.getY();
-                toFront();
-                //  postView.toFront();
+        setOnMousePressed((MouseEvent event) -> {
+            lastX = event.getX();
+            lastY = event.getY();
+            toFront();
+        });
+        setOnMouseDragged((MouseEvent event) -> {
+            double layoutX = getLayoutX() + (event.getX() - lastX);
+            double layoutY = getLayoutY() + (event.getY() - lastY);
+            
+            if ((layoutX >= 0) && (layoutX <= (getParent().getLayoutBounds().getWidth()))) {
+                setLayoutX(layoutX);
+            }
+            
+            if ((layoutY >= 0) && (layoutY <= (getParent().getLayoutBounds().getHeight()))) {
+                setLayoutY(layoutY);
+            }
+            
+            if ((getLayoutX() + (event.getX() - lastX) <= 0)) {
+                setLayoutX(0);
             }
         });
-        setOnMouseDragged(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-
-                double layoutX = getLayoutX() + (event.getX() - lastX);
-                double layoutY = getLayoutY() + (event.getY() - lastY);
-
-                if ((layoutX >= 0) && (layoutX <= (getParent().getLayoutBounds().getWidth()))) {
-                    setLayoutX(layoutX);
-                }
-
-                if ((layoutY >= 0) && (layoutY <= (getParent().getLayoutBounds().getHeight()))) {
-                    setLayoutY(layoutY);
-                }
-
-                if ((getLayoutX() + (event.getX() - lastX) <= 0)) {
-                    setLayoutX(0);
-                }
-            }
+        addEventHandler(ZoomEvent.ZOOM_STARTED, (ZoomEvent event) -> {
+            startScale = getScaleX();
         });
-        addEventHandler(ZoomEvent.ZOOM_STARTED, new EventHandler<ZoomEvent>() {
-            @Override
-            public void handle(ZoomEvent event) {
-                startScale = getScaleX();
-            }
+        addEventHandler(ZoomEvent.ZOOM, (ZoomEvent event) -> {
+            setScaleX(event.getTotalZoomFactor());
+            setScaleY(event.getTotalZoomFactor());
         });
-        addEventHandler(ZoomEvent.ZOOM, new EventHandler<ZoomEvent>() {
-            @Override
-            public void handle(ZoomEvent event) {
-                setScaleX(event.getTotalZoomFactor());
-                setScaleY(event.getTotalZoomFactor());
-            }
+        addEventHandler(RotateEvent.ROTATION_STARTED, (RotateEvent event) -> {
+            startRotate = getRotate();
         });
-        addEventHandler(RotateEvent.ROTATION_STARTED, new EventHandler<RotateEvent>() {
-            @Override
-            public void handle(RotateEvent event) {
-                startRotate = getRotate();
-            }
-        });
-        addEventHandler(RotateEvent.ROTATE, new EventHandler<RotateEvent>() {
-            @Override
-            public void handle(RotateEvent event) {
-                setRotate(event.getTotalAngle());
-            }
+        addEventHandler(RotateEvent.ROTATE, (RotateEvent event) -> {
+            setRotate(event.getTotalAngle());
         });
 
     }

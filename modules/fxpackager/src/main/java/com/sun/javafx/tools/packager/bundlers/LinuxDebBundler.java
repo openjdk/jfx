@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,36 +25,139 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
+import com.oracle.bundlers.AbstractBundler;
+import com.oracle.bundlers.BundlerParamInfo;
+import com.oracle.bundlers.StandardBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.resource.linux.LinuxResources;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
+
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.text.MessageFormat;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class LinuxDebBundler extends Bundler {
-    LinuxAppBundler appBundler = new LinuxAppBundler();
-    BundleParams params;
-    private File configRoot = null;
-    File imageDir = null;
-    File configDir = null;
-    File appImageRoot = null;
+import static com.oracle.bundlers.StandardBundlerParam.*;
 
-    private boolean menuShortcut = false;
-    private boolean desktopShortcut = false;
+public class LinuxDebBundler extends AbstractBundler {
+
+    private static final ResourceBundle I18N =
+            ResourceBundle.getBundle("com.oracle.bundlers.linux.LinuxDebBundler");
+
+    public static final BundlerParamInfo<LinuxAppBundler> APP_BUNDLER = new StandardBundlerParam<>(
+            I18N.getString("param.app-bundler.name"),
+            I18N.getString("param.app-bundler.description"),
+            "linuxAppBundler",  //KEY
+            LinuxAppBundler.class, null, params -> new LinuxAppBundler(), false, s -> null);
+
+    public static final BundlerParamInfo<String> BUNDLE_NAME = new StandardBundlerParam<> (
+            I18N.getString("param.bundle-name.name"),
+            I18N.getString("param.bundle-name.description"),
+            "bundleName",  //KEY
+            String.class, null, params -> {
+                String nm = APP_NAME.fetchFrom(params);
+                if (nm == null) return null;
+        
+                //spaces are not allowed in RPM package names
+                nm = nm.replaceAll(" ", "");
+                return nm;
+        
+            }, false, s -> s);
+
+    public static final BundlerParamInfo<String> FULL_PACKAGE_NAME = new StandardBundlerParam<> (
+            I18N.getString("param.full-package-name.name"),
+            I18N.getString("param.full-package-name.description"),
+            "fullPackageName",  //KEY
+            String.class, null,
+            params -> APP_NAME.fetchFrom(params) + "-" + VERSION.fetchFrom(params),
+            false, s -> s);
+
+    public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
+            I18N.getString("param.config-root.name"),
+            I18N.getString("param.config-root.description"),
+            "configRoot", //KEY
+            File.class, null, params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
+            false, s -> new File(s));
+
+    public static final BundlerParamInfo<File> IMAGE_DIR = new StandardBundlerParam<>(
+            I18N.getString("param.image-dir.name"), 
+            I18N.getString("param.image-dir.description"),
+            "imageDir",  //KEY
+            File.class, null, params -> {
+                File imagesRoot = IMAGES_ROOT.fetchFrom(params);
+                return new File(new File(imagesRoot, "linux-deb.image"), FULL_PACKAGE_NAME.fetchFrom(params));
+            }, false, File::new);
+
+    public static final BundlerParamInfo<File> APP_IMAGE_ROOT = new StandardBundlerParam<>(
+            I18N.getString("param.app-image-root.name"),
+            I18N.getString("param.app-image-root.description"),
+            "appImageRoot",  //KEY
+            File.class, null, params -> {
+                File imageDir = IMAGE_DIR.fetchFrom(params);
+                return new File(imageDir, "opt");
+            }, false, File::new);
+
+    public static final BundlerParamInfo<File> CONFIG_DIR = new StandardBundlerParam<>(
+            I18N.getString("param.config-dir.name"), 
+            I18N.getString("param.config-dir.description"),
+            "configDir",  //KEY
+            File.class, null, params ->  new File(IMAGE_DIR.fetchFrom(params), "DEBIAN"),
+            false, File::new);
+
+    public static final BundlerParamInfo<String> EMAIL = new StandardBundlerParam<> (
+            I18N.getString("param.maintainer-email.name"), 
+            I18N.getString("param.maintainer-email.description"),
+            BundleParams.PARAM_EMAIL,
+            String.class, null,
+            params -> "Unknown",
+            false, s -> s);
+
+    public static final BundlerParamInfo<String> MAINTAINER = new StandardBundlerParam<> (
+            I18N.getString("param.maintainer-name.name"), 
+            I18N.getString("param.maintainer-name.description"),
+            "maintainer", //KEY
+            String.class, null,
+            params -> VENDOR.fetchFrom(params) + " <" + EMAIL.fetchFrom(params) + ">",
+            false, s -> s);
+
+    public static final BundlerParamInfo<String> LICENCE_TYPE = new StandardBundlerParam<> (
+            I18N.getString("param.license-type.name"), 
+            I18N.getString("param.license-type.description"),
+            "licenceType", //KEY
+            String.class, null,
+            params -> "Unknown", // FIXME default
+            false, s -> s);
+
+
+    public static final BundlerParamInfo<String> LICENSE_TEXT = new StandardBundlerParam<> (
+            I18N.getString("param.license-text.name"), 
+            I18N.getString("param.license-text.description"),
+            "licenceText", //KEY
+            String.class, null,
+            params -> {
+                try {
+                    List<String> licenseFiles = LICENSE_FILES.fetchFrom(params);
+                    RelativeFileSet appRoot = APP_RESOURCES.fetchFrom(params);
+                    //need to copy license file to the root of win-app.image
+                    for (String s : licenseFiles) {
+                        return new String(IOUtils.readFully(new File(appRoot.getBaseDirectory(), s)));
+                    }
+                } catch (Exception e) {
+                    if (Log.isDebug()) {
+                        e.printStackTrace();
+                    }
+                }
+                return LICENSE_TYPE.fetchFrom(params);
+            },
+            false, s -> s);
 
     private final static String DEFAULT_ICON = "javalogo_white_32.png";
     private final static String DEFAULT_CONTROL_TEMPLATE = "template.control";
+    private final static String DEFAULT_PRERM_TEMPLATE = "template.prerm";
+    private final static String DEFAULT_PREINSTALL_TEMPLATE = "template.preinst";
     private final static String DEFAULT_POSTRM_TEMPLATE = "template.postrm";
     private final static String DEFAULT_POSTINSTALL_TEMPLATE = "template.postinst";
     private final static String DEFAULT_COPYRIGHT_TEMPLATE = "template.copyright";
@@ -67,64 +170,47 @@ public class LinuxDebBundler extends Bundler {
         baseResourceLoader = LinuxResources.class;
     }
 
-    @Override
-    protected void setBuildRoot(File dir) {
-        super.setBuildRoot(dir);
-        configRoot = new File(dir, "linux");
-        configRoot.mkdirs();
-        appBundler.setBuildRoot(dir);
-    }
-
-    @Override
-    public void setVerbose(boolean m) {
-        super.setVerbose(m);
-        appBundler.setVerbose(m);
-    }
-
     private boolean testTool(String toolName, String minVersion) {
         try {
             ProcessBuilder pb = new ProcessBuilder(
-                toolName,
-                "--version");
+                    toolName,
+                    "--version");
             IOUtils.exec(pb, Log.isDebug(), true); //not interested in the output
         } catch (Exception e) {
-            Log.verbose("Test for ["+toolName+"]. Result: "+e.getMessage());
+            Log.verbose(MessageFormat.format(I18N.getString("message.test-for-tool"), toolName, e.getMessage()));
             return false;
         }
         return true;
     }
 
     @Override
-    boolean validate(BundleParams p) throws Bundler.UnsupportedPlatformException, Bundler.ConfigException {
-        if (!(p.type == Bundler.BundleType.ALL || p.type == Bundler.BundleType.INSTALLER)
-                 || !(p.bundleFormat == null || "deb".equals(p.bundleFormat))) {
-            return false;
-        }
+    public boolean validate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
+        if (p == null) throw new ConfigException(
+                I18N.getString("error.parameters-null"),
+                I18N.getString("error.parameters-null.advice"));
+
         //run basic validation to ensure requirements are met
         //we are not interested in return code, only possible exception
-        appBundler.doValidate(p);
+        APP_BUNDLER.fetchFrom(p).doValidate(p);
 
         //NOTE: Can we validate that the required tools are available before we start?
         if (!testTool(TOOL_DPKG, "1")){
-            throw new Bundler.ConfigException(
-                    "Can not find " + TOOL_DPKG + ".",
-                    "  Please install required packages.");
+            throw new ConfigException(
+                    MessageFormat.format(I18N.getString("error.tool-not-found"), TOOL_DPKG),
+                    I18N.getString("error.tool-not-found.advice"));
         }
 
         return true;
     }
 
-    private boolean prepareProto() {
-        if (!appBundler.doBundle(params, appImageRoot, true)) {
-            return false;
-        }
-        return true;
+    private boolean prepareProto(Map<String, ? super Object> p) {
+        File appImageRoot = APP_IMAGE_ROOT.fetchFrom(p);
+        File appDir = APP_BUNDLER.fetchFrom(p).doBundle(p, appImageRoot, true);
+        return appDir != null;
     }
 
-    @Override
-    public boolean bundle(BundleParams p, File outdir) {
-        params = p;
-
+    //@Override
+    public File bundle(Map<String, ? super Object> p, File outdir) {
         //we want to create following structure
         //   <package-name>
         //        DEBIAN
@@ -136,47 +222,35 @@ public class LinuxDebBundler extends Bundler {
         //             launcher executable
         //             app
         //             runtime
-        String packageName =  getFullPackageName();
-        imageDir = new File(new File(imagesRoot, "linux-deb.image"),
-                packageName);
 
-        configDir = new File(imageDir, "DEBIAN");
-        configDir.mkdirs();
-
-        appImageRoot = new File(imageDir, "opt");
+        File imageDir = IMAGE_DIR.fetchFrom(p);
+        File configDir = CONFIG_DIR.fetchFrom(p);
 
         try {
 
             imageDir.mkdirs();
+            configDir.mkdirs();
 
-            menuShortcut = params.needMenu;
-            desktopShortcut = params.needShortcut;
-            if (!menuShortcut && !desktopShortcut) {
-               //both can not be false - user will not find the app
-               Log.verbose("At least one type of shortcut is required. Enabling menu shortcut.");
-               menuShortcut = true;
+            if (prepareProto(p) && prepareProjectConfig(p)) {
+                return buildDeb(p, outdir);
             }
-
-            if (prepareProto() && prepareProjectConfig()) {
-                return buildDeb(outdir);
-            }
-            return false;
+            return null;
         } catch (IOException ex) {
             ex.printStackTrace();
-            return false;
+            return null;
         } finally {
             try {
                 if (verbose) {
-                    saveConfigFiles();
+                    saveConfigFiles(p);
                 }
                 if (imageDir != null && !Log.isDebug()) {
                     IOUtils.deleteRecursive(imageDir);
                 } else if (imageDir != null) {
-                    Log.info("Kept working directory for debug: "
-                            + imageDir.getAbsolutePath());
+                    Log.info(MessageFormat.format(I18N.getString("message.debug-working-directory"), imageDir.getAbsolutePath()));
                 }
-             } catch (FileNotFoundException ex) {
-                return false;
+            } catch (FileNotFoundException ex) {
+                //noinspection ReturnInsideFinallyBlock
+                return null;
             }
         }
     }
@@ -197,36 +271,44 @@ public class LinuxDebBundler extends Bundler {
         }
 
     }
-    
-    protected void saveConfigFiles() {
+
+    protected void saveConfigFiles(Map<String, ? super Object> params) {
         try {
-            if (getConfig_ControlFile().exists()) {
-                IOUtils.copyFile(getConfig_ControlFile(),
-                        new File(configRoot, getConfig_ControlFile().getName()));
+            File configRoot = CONFIG_ROOT.fetchFrom(params);
+
+            if (getConfig_ControlFile(params).exists()) {
+                IOUtils.copyFile(getConfig_ControlFile(params),
+                        new File(configRoot, getConfig_ControlFile(params).getName()));
             }
-            if (getConfig_CopyrightFile().exists()) {
-                IOUtils.copyFile(getConfig_CopyrightFile(),
-                        new File(configRoot, getConfig_CopyrightFile().getName()));
+            if (getConfig_CopyrightFile(params).exists()) {
+                IOUtils.copyFile(getConfig_CopyrightFile(params),
+                        new File(configRoot, getConfig_CopyrightFile(params).getName()));
             }
-            if (getConfig_PostinstallFile().exists()) {
-                IOUtils.copyFile(getConfig_PostinstallFile(), 
-                        new File(configRoot, getConfig_PostinstallFile().getName()));
+            if (getConfig_PreinstallFile(params).exists()) {
+                IOUtils.copyFile(getConfig_PreinstallFile(params),
+                        new File(configRoot, getConfig_PreinstallFile(params).getName()));
             }
-            if (getConfig_PostrmFile().exists()) {
-                IOUtils.copyFile(getConfig_PostrmFile(), 
-                        new File(configRoot, getConfig_PostrmFile().getName()));
+            if (getConfig_PrermFile(params).exists()) {
+                IOUtils.copyFile(getConfig_PrermFile(params),
+                        new File(configRoot, getConfig_PrermFile(params).getName()));
             }
-            if (getConfig_DesktopShortcutFile().exists()) {
-                IOUtils.copyFile(getConfig_DesktopShortcutFile(),
-                        new File(configRoot, getConfig_DesktopShortcutFile().getName()));
+            if (getConfig_PostinstallFile(params).exists()) {
+                IOUtils.copyFile(getConfig_PostinstallFile(params),
+                        new File(configRoot, getConfig_PostinstallFile(params).getName()));
             }
-            if (getConfig_IconFile().exists()) {
-                IOUtils.copyFile(getConfig_IconFile(),
-                        new File(configRoot, getConfig_IconFile().getName()));
+            if (getConfig_PostrmFile(params).exists()) {
+                IOUtils.copyFile(getConfig_PostrmFile(params),
+                        new File(configRoot, getConfig_PostrmFile(params).getName()));
             }
-            Log.info("  Config files are saved to "
-                    + configRoot.getAbsolutePath()
-                    + ". Use them to customize package.");
+            if (getConfig_DesktopShortcutFile(params).exists()) {
+                IOUtils.copyFile(getConfig_DesktopShortcutFile(params),
+                        new File(configRoot, getConfig_DesktopShortcutFile(params).getName()));
+            }
+            if (getConfig_IconFile(params).exists()) {
+                IOUtils.copyFile(getConfig_IconFile(params),
+                        new File(configRoot, getConfig_IconFile(params).getName()));
+            }
+            Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), configRoot.getAbsolutePath()));
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
@@ -234,33 +316,7 @@ public class LinuxDebBundler extends Bundler {
 
     @Override
     public String toString() {
-        return "DEB bundler";
-    }
-
-    private String getFullPackageName() {
-        return getBundleName()+"-"+getVersion();
-    }
-
-    private String getBundleName() {
-        String nm;
-
-        if (params.name != null) {
-            nm = params.name;
-        } else {
-            nm = params.getMainClassName();
-        }
-
-        //spaces are not allowed in RPM package names
-        nm = nm.replaceAll(" ", "");
-        return nm;
-    }
-
-    private String getVersion() {
-        if (params.appVersion != null) {
-            return params.appVersion;
-        } else {
-            return "1.0";
-        }
+        return getName();
     }
 
     private String getArch() {
@@ -271,195 +327,243 @@ public class LinuxDebBundler extends Bundler {
             return "amd64";
     }
 
-    private String getLicenseText() {
-        try {
-            if (params.licenseFile.isEmpty()) {
-                if (params.licenseType != null) {
-                    return params.licenseType;
-                } else {
-                    return "Unknown";
-                }
-            }
-
-            File appdir = new File(
-                    LinuxAppBundler.getLauncher(appImageRoot, params).getParentFile(),
-                    "app");
-            return new String(
-                    IOUtils.readFully(new File(appdir, params.licenseFile.get(0))));
-        } catch (Exception e) {
-            if (Log.isDebug()) {
-                e.printStackTrace();
-            }
-            if (params.licenseType != null) {
-                return params.licenseType;
-            } else {
-                return "Unknown";
-            }
-        }
-    }
-
-    private long getInstalledSizeKB() {
-        return getInstalledSizeKB(appImageRoot) >> 10;
+    private long getInstalledSizeKB(Map<String, ? super Object> params) {
+        return getInstalledSizeKB(APP_IMAGE_ROOT.fetchFrom(params)) >> 10;
     }
 
     private long getInstalledSizeKB(File dir) {
         long count = 0;
-        for (File file : dir.listFiles()) {
-            if (file.isFile()) {
-                count += file.length();
-            }
-            else if (file.isDirectory()) {
-                count += getInstalledSizeKB(file);
+        File[] children = dir.listFiles();
+        if (children != null) {
+            for (File file : children) {
+                if (file.isFile()) {
+                    count += file.length();
+                }
+                else if (file.isDirectory()) {
+                    count += getInstalledSizeKB(file);
+                }
             }
         }
         return count;
     }
-    
-    private String getVendor() {
-        return params.vendor != null ? params.vendor : "Unknown";
-    }
 
-    /*
-     * maintainer is required by Debian and must be in the form
-     * "Name <contact@company.com>"
-     * 
-     * Note that we combine Vendor and then whatever email is supplied
-     */
-    private String getMaintainer() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(getVendor());
-        sb.append("<");
-        sb.append(params.email != null ? params.email : "Unknown");
-        sb.append(">");
-        return sb.toString();
-    }
-    
-    private boolean prepareProjectConfig() throws IOException {
-        Map<String, String> data = new HashMap<String, String>();
+    private boolean prepareProjectConfig(Map<String, ? super Object> params) throws IOException {
+        Map<String, String> data = new HashMap<>();
 
-        data.put("APPLICATION_NAME", getBundleName());
-        data.put("APPLICATION_PACKAGE", getBundleName().toLowerCase());
-        data.put("APPLICATION_VENDOR", getVendor());
-        data.put("APPLICATION_MAINTAINER", getMaintainer());
-        data.put("APPLICATION_VERSION", getVersion());
+        data.put("APPLICATION_NAME", BUNDLE_NAME.fetchFrom(params));
+        data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params).toLowerCase());
+        data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
+        data.put("APPLICATION_MAINTAINER", MAINTAINER.fetchFrom(params));
+        data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
         data.put("APPLICATION_LAUNCHER_FILENAME",
-                appBundler.getLauncher(imageDir, params).getName());
-        data.put("DEPLOY_BUNDLE_CATEGORY",
-                params.applicationCategory != null ?
-                  params.applicationCategory : "Applications;");
-        data.put("APPLICATION_DESCRIPTION",
-                params.description != null ?
-                   params.description : params.name);
-        data.put("APPLICATION_SUMMARY",
-                params.title != null ?
-                   params.title : params.name);
-        data.put("APPLICATION_COPYRIGHT",
-                 params.copyright != null ? params.copyright : "Unknown");
-        data.put("APPLICATION_LICENSE_TYPE",
-                params.licenseType != null ? params.licenseType : "unknown");
-        data.put("APPLICATION_LICENSE_TEXT", getLicenseText());
+                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getName());
+        data.put("DEPLOY_BUNDLE_CATEGORY", CATEGORY.fetchFrom(params));
+        data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
+        data.put("APPLICATION_SUMMARY", TITLE.fetchFrom(params));
+        data.put("APPLICATION_COPYRIGHT", COPYRIGHT.fetchFrom(params));
+        data.put("APPLICATION_LICENSE_TYPE", LICENSE_TYPE.fetchFrom(params));
+        data.put("APPLICATION_LICENSE_TEXT", LICENSE_TEXT.fetchFrom(params));
         data.put("APPLICATION_ARCH", getArch());
-        data.put("APPLICATION_INSTALLED_SIZE", Long.toString(getInstalledSizeKB()));
+        data.put("APPLICATION_INSTALLED_SIZE", Long.toString(getInstalledSizeKB(params)));
 
         //prepare control file
-        Writer w = new BufferedWriter(new FileWriter(getConfig_ControlFile()));
+        Writer w = new BufferedWriter(new FileWriter(getConfig_ControlFile(params)));
         String content = preprocessTextResource(
-                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_ControlFile().getName(),
-                "DEB control file", DEFAULT_CONTROL_TEMPLATE, data);
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_ControlFile(params).getName(),
+                I18N.getString("resource.deb-control-file"), 
+                DEFAULT_CONTROL_TEMPLATE, 
+                data);
         w.write(content);
         w.close();
 
-        w = new BufferedWriter(new FileWriter(getConfig_PostinstallFile()));
+        w = new BufferedWriter(new FileWriter(getConfig_PreinstallFile(params)));
         content = preprocessTextResource(
-                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PostinstallFile().getName(),
-                "DEB postinstall script", DEFAULT_POSTINSTALL_TEMPLATE, data);
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PreinstallFile(params).getName(),
+                I18N.getString("resource.deb-preinstall-script"),
+                DEFAULT_PREINSTALL_TEMPLATE,
+                data);
         w.write(content);
         w.close();
-        setPermissions(getConfig_PostinstallFile(), "rwxr-xr-x");
+        setPermissions(getConfig_PreinstallFile(params), "rwxr-xr-x");
 
-        w = new BufferedWriter(new FileWriter(getConfig_PostrmFile()));
+        w = new BufferedWriter(new FileWriter(getConfig_PrermFile(params)));
         content = preprocessTextResource(
-                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PostrmFile().getName(),
-                "DEB postinstall script", DEFAULT_POSTRM_TEMPLATE, data);
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PrermFile(params).getName(),
+                I18N.getString("resource.deb-prerm-script"),
+                DEFAULT_PRERM_TEMPLATE,
+                data);
         w.write(content);
         w.close();
-        setPermissions(getConfig_PostrmFile(), "rwxr-xr-x");
- 
-        w = new BufferedWriter(new FileWriter(getConfig_CopyrightFile()));
+        setPermissions(getConfig_PrermFile(params), "rwxr-xr-x");
+
+        w = new BufferedWriter(new FileWriter(getConfig_PostinstallFile(params)));
         content = preprocessTextResource(
-                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_CopyrightFile().getName(),
-                "DEB copyright file", DEFAULT_COPYRIGHT_TEMPLATE, data);
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PostinstallFile(params).getName(),
+                I18N.getString("resource.deb-postinstall-script"),
+                DEFAULT_POSTINSTALL_TEMPLATE,
+                data);
+        w.write(content);
+        w.close();
+        setPermissions(getConfig_PostinstallFile(params), "rwxr-xr-x");
+
+        w = new BufferedWriter(new FileWriter(getConfig_PostrmFile(params)));
+        content = preprocessTextResource(
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_PostrmFile(params).getName(),
+                I18N.getString("resource.deb-postrm-script"),
+                DEFAULT_POSTRM_TEMPLATE,
+                data);
+        w.write(content);
+        w.close();
+        setPermissions(getConfig_PostrmFile(params), "rwxr-xr-x");
+
+        w = new BufferedWriter(new FileWriter(getConfig_CopyrightFile(params)));
+        content = preprocessTextResource(
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_CopyrightFile(params).getName(),
+                I18N.getString("resource.deb-copyright-file"), 
+                DEFAULT_COPYRIGHT_TEMPLATE, 
+                data);
         w.write(content);
         w.close();
 
         //prepare desktop shortcut
-        w = new BufferedWriter(new FileWriter(getConfig_DesktopShortcutFile()));
+        w = new BufferedWriter(new FileWriter(getConfig_DesktopShortcutFile(params)));
         content = preprocessTextResource(
-                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_DesktopShortcutFile().getName(),
-                "Menu shortcut descriptor", DEFAULT_DESKTOP_FILE_TEMPLATE, data);
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_DesktopShortcutFile(params).getName(),
+                I18N.getString("resource.menu-shortcut-descriptor"), 
+                DEFAULT_DESKTOP_FILE_TEMPLATE, 
+                data);
         w.write(content);
         w.close();
 
         //prepare installer icon
-        File iconTarget = getConfig_IconFile();
-        if (params.icon == null || !params.icon.exists()) {
+        File iconTarget = getConfig_IconFile(params);
+        File icon = ICON.fetchFrom(params);
+        if (icon == null || !icon.exists()) {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
-                    "menu icon",
+                    I18N.getString("resource.menu-icon"),
                     DEFAULT_ICON,
                     iconTarget);
         } else {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
-                    "menu icon",
-                    params.icon,
+                    I18N.getString("resource.menu-icon"),
+                    icon,
                     iconTarget);
         }
 
         return true;
     }
 
-    private File getConfig_DesktopShortcutFile() {
+    private File getConfig_DesktopShortcutFile(Map<String, ? super Object> params) {
         return new File(
-                LinuxAppBundler.getLauncher(appImageRoot, params).getParentFile(),
-                getBundleName() + ".desktop");
+                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
+                BUNDLE_NAME.fetchFrom(params) + ".desktop");
     }
 
-    private File getConfig_IconFile() {
+    private File getConfig_IconFile(Map<String, ? super Object> params) {
         return new File(
-                LinuxAppBundler.getLauncher(appImageRoot, params).getParentFile(),
-                getBundleName() + ".png");
+                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
+                BUNDLE_NAME.fetchFrom(params) + ".png");
     }
 
-    private File getConfig_ControlFile() {
-        return new File(configDir, "control");
+    private File getConfig_ControlFile(Map<String, ? super Object> params) {
+        return new File(CONFIG_DIR.fetchFrom(params), "control");
     }
 
-    private File getConfig_PostinstallFile() {
-        return new File(configDir, "postinst");
+    private File getConfig_PreinstallFile(Map<String, ? super Object> params) {
+        return new File(CONFIG_DIR.fetchFrom(params), "preinst");
     }
 
-    private File getConfig_PostrmFile() {
-        return new File(configDir, "postrm");
+    private File getConfig_PrermFile(Map<String, ? super Object> params) {
+        return new File(CONFIG_DIR.fetchFrom(params), "prerm");
     }
 
-    private File getConfig_CopyrightFile() {
-        return new File(configDir, "copyright");
+    private File getConfig_PostinstallFile(Map<String, ? super Object> params) {
+        return new File(CONFIG_DIR.fetchFrom(params), "postinst");
     }
 
-    private boolean buildDeb(File outdir) throws IOException {
-        File outFile = new File(outdir, getFullPackageName()+".deb");
-        Log.verbose("Generating DEB for installer to: " + outFile.getAbsolutePath());
+    private File getConfig_PostrmFile(Map<String, ? super Object> params) {
+        return new File(CONFIG_DIR.fetchFrom(params), "postrm");
+    }
+
+    private File getConfig_CopyrightFile(Map<String, ? super Object> params) {
+        return new File(CONFIG_DIR.fetchFrom(params), "copyright");
+    }
+
+    private File buildDeb(Map<String, ? super Object> params, File outdir) throws IOException {
+        File outFile = new File(outdir, FULL_PACKAGE_NAME.fetchFrom(params)+".deb");
+        Log.verbose(MessageFormat.format(I18N.getString("message.outputting-to-location"), outFile.getAbsolutePath()));
 
         outFile.getParentFile().mkdirs();
 
-        //run rpmbuild
+        //run dpkg
         ProcessBuilder pb = new ProcessBuilder(
-                "fakeroot", TOOL_DPKG, "-b",  getFullPackageName(),
+                "fakeroot", TOOL_DPKG, "-b",  FULL_PACKAGE_NAME.fetchFrom(params),
                 outFile.getAbsolutePath());
-        pb = pb.directory(imageDir.getParentFile());
+        pb = pb.directory(IMAGE_DIR.fetchFrom(params).getParentFile());
         IOUtils.exec(pb, verbose);
 
-        Log.info("Package (.deb) saved to: " + outFile.getAbsolutePath());
+        Log.info(MessageFormat.format(I18N.getString("message.output-to-location"), outFile.getAbsolutePath()));
 
-        return true;
+        return outFile;
     }
+
+    @Override
+    public String getName() {
+        return I18N.getString("bundler.name");
+    }
+
+    @Override
+    public String getDescription() {
+        return I18N.getString("bundler.description");
+    }
+
+    @Override
+    public String getID() {
+        return "deb"; //KEY
+    }
+
+    @Override
+    public BundleType getBundleType() {
+        return BundleType.INSTALLER;
+    }
+
+    @Override
+    public Collection<BundlerParamInfo<?>> getBundleParameters() {
+        Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();
+        results.addAll(LinuxAppBundler.getAppBundleParameters());
+        results.addAll(getDebBundleParameters());
+        return results;
+    }
+
+    public static Collection<BundlerParamInfo<?>> getDebBundleParameters() {
+        return Arrays.asList(
+                APP_BUNDLER,
+                APP_IMAGE_ROOT,
+                APP_NAME,
+                APP_RESOURCES,
+                BUNDLE_NAME,
+                CONFIG_DIR,
+                COPYRIGHT,
+                CATEGORY,
+                DESCRIPTION,
+                EMAIL,
+                FULL_PACKAGE_NAME,
+                ICON,
+                IMAGE_DIR,
+                IMAGES_ROOT,
+                LICENSE_FILES,
+                LICENSE_TEXT,
+                LICENSE_TYPE,
+                MAINTAINER,
+                TITLE,
+                VENDOR,
+                VERSION
+        );
+    }
+
+    @Override
+    public File execute(Map<String, ? super Object> params, File outputParentDir) {
+        return bundle(params, outputParentDir);
+    }
+
 }

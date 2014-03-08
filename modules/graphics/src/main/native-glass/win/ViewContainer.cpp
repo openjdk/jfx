@@ -59,14 +59,17 @@ namespace {
 
 bool IsTouchEvent()
 {
+    // Read this link if you wonder why we need to hard code the mask and signature:
     // http://msdn.microsoft.com/en-us/library/windows/desktop/ms703320(v=vs.85).aspx
+    //"The lower 8 bits returned from GetMessageExtraInfo are variable.
+    // Of those bits, 7 (the lower 7, masked by 0x7F) are used to represent the cursor ID,
+    // zero for the mouse or a variable value for the pen ID.
+    // Additionally, in Windows Vista, the eighth bit, masked by 0x80, is used to
+    // differentiate touch input from pen input (0 = pen, 1 = touch)."
+    UINT SIGNATURE = 0xFF515780;
+    UINT MASK = 0xFFFFFF80;
 
-    enum {
-        SIGNATURE = 0xFF515780,
-        MASK = 0xFFFFFF80
-    };
-
-    const LPARAM v = GetMessageExtraInfo();
+    UINT v = (UINT) GetMessageExtraInfo();
 
     return ((v & MASK) == SIGNATURE);
 }
@@ -293,9 +296,100 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     }
 
     WORD mbChar;
-    UINT scancode = ::MapVirtualKey(wKey, 0);
+    UINT scancode = ::MapVirtualKeyEx(wKey, 0, m_kbLayout);
     int converted = ::ToAsciiEx(wKey, scancode, kbState,
                                 &mbChar, 0, m_kbLayout);
+
+    // Depress modifiers to map a Unicode char to a key code
+    kbState[VK_CONTROL] &= ~0x80;
+    kbState[VK_SHIFT]   &= ~0x80;
+    kbState[VK_MENU]    &= ~0x80;
+    wchar_t wChar[4] = {0};
+    int unicodeConverted = ::ToUnicodeEx(wKey, scancode, kbState,
+                                wChar, 4, 0, m_kbLayout);
+    
+    // Some virtual codes require special handling
+    switch (wKey) {
+        case 0x00BA:// VK_OEM_1
+        case 0x00BB:// VK_OEM_PLUS
+        case 0x00BC:// VK_OEM_COMMA
+        case 0x00BD:// VK_OEM_MINUS
+        case 0x00BE:// VK_OEM_PERIOD
+        case 0x00BF:// VK_OEM_2
+        case 0x00C0:// VK_OEM_3
+        case 0x00DB:// VK_OEM_4
+        case 0x00DC:// VK_OEM_5
+        case 0x00DD:// VK_OEM_6
+        case 0x00DE:// VK_OEM_7
+        case 0x00DF:// VK_OEM_8
+        case 0x00E2:// VK_OEM_102
+            if (unicodeConverted < 0) {
+                // Dead key
+                switch (wChar[0]) {
+                    case L'`':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_GRAVE; break;
+                    case L'\'':  jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_ACUTE; break;
+                    case 0x00B4: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_ACUTE; break;
+                    case L'^':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_CIRCUMFLEX; break;
+                    case L'~':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_TILDE; break;
+                    case 0x02DC: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_TILDE; break;
+                    case 0x00AF: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_MACRON; break;
+                    case 0x02D8: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_BREVE; break;
+                    case 0x02D9: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_ABOVEDOT; break;
+                    case L'"':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_DIAERESIS; break;
+                    case 0x00A8: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_DIAERESIS; break;
+                    case 0x02DA: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_ABOVERING; break;
+                    case 0x02DD: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_DOUBLEACUTE; break;
+                    case 0x02C7: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_CARON; break;            // aka hacek
+                    case L',':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_CEDILLA; break;
+                    case 0x00B8: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_CEDILLA; break;
+                    case 0x02DB: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_OGONEK; break;
+                    case 0x037A: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_IOTA; break;             // ASCII ???
+                    case 0x309B: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_VOICED_SOUND; break;
+                    case 0x309C: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_SEMIVOICED_SOUND; break;
+
+                    default:     jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED; break;
+                };
+            } else if (unicodeConverted == 1) {
+                switch (wChar[0]) {
+                    case L'!':   jKeyCode = com_sun_glass_events_KeyEvent_VK_EXCLAMATION; break;
+                    case L'"':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DOUBLE_QUOTE; break;
+                    case L'#':   jKeyCode = com_sun_glass_events_KeyEvent_VK_NUMBER_SIGN; break;
+                    case L'$':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DOLLAR; break;
+                    case L'&':   jKeyCode = com_sun_glass_events_KeyEvent_VK_AMPERSAND; break;
+                    case L'\'':  jKeyCode = com_sun_glass_events_KeyEvent_VK_QUOTE; break;
+                    case L'(':   jKeyCode = com_sun_glass_events_KeyEvent_VK_LEFT_PARENTHESIS; break;
+                    case L')':   jKeyCode = com_sun_glass_events_KeyEvent_VK_RIGHT_PARENTHESIS; break;
+                    case L'*':   jKeyCode = com_sun_glass_events_KeyEvent_VK_ASTERISK; break;
+                    case L'+':   jKeyCode = com_sun_glass_events_KeyEvent_VK_PLUS; break;
+                    case L',':   jKeyCode = com_sun_glass_events_KeyEvent_VK_COMMA; break;
+                    case L'-':   jKeyCode = com_sun_glass_events_KeyEvent_VK_MINUS; break;
+                    case L'.':   jKeyCode = com_sun_glass_events_KeyEvent_VK_PERIOD; break;
+                    case L'/':   jKeyCode = com_sun_glass_events_KeyEvent_VK_SLASH; break;
+                    case L':':   jKeyCode = com_sun_glass_events_KeyEvent_VK_COLON; break;
+                    case L';':   jKeyCode = com_sun_glass_events_KeyEvent_VK_SEMICOLON; break;
+                    case L'<':   jKeyCode = com_sun_glass_events_KeyEvent_VK_LESS; break;
+                    case L'=':   jKeyCode = com_sun_glass_events_KeyEvent_VK_EQUALS; break;
+                    case L'>':   jKeyCode = com_sun_glass_events_KeyEvent_VK_GREATER; break;
+                    case L'@':   jKeyCode = com_sun_glass_events_KeyEvent_VK_AT; break;
+                    case L'[':   jKeyCode = com_sun_glass_events_KeyEvent_VK_OPEN_BRACKET; break;
+                    case L'\\':  jKeyCode = com_sun_glass_events_KeyEvent_VK_BACK_SLASH; break;
+                    case L']':   jKeyCode = com_sun_glass_events_KeyEvent_VK_CLOSE_BRACKET; break;
+                    case L'^':   jKeyCode = com_sun_glass_events_KeyEvent_VK_CIRCUMFLEX; break;
+                    case L'_':   jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDERSCORE; break;
+                    case L'`':   jKeyCode = com_sun_glass_events_KeyEvent_VK_BACK_QUOTE; break;
+                    case L'{':   jKeyCode = com_sun_glass_events_KeyEvent_VK_BRACELEFT; break;
+                    case L'}':   jKeyCode = com_sun_glass_events_KeyEvent_VK_BRACERIGHT; break;
+                    case 0x00A1: jKeyCode = com_sun_glass_events_KeyEvent_VK_INV_EXCLAMATION; break;
+                    case 0x20A0: jKeyCode = com_sun_glass_events_KeyEvent_VK_EURO_SIGN; break;
+
+                    default:     jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED; break;
+                }
+            } else if (unicodeConverted == 0 || unicodeConverted > 1) {
+                jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+            }
+            break;
+    };
+
 
     int keyCharCount = 0;
     jchar keyChars[4];
@@ -558,13 +652,17 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
     if (type == com_sun_glass_events_MouseEvent_WHEEL) {
         jdouble dx, dy;
-        if (msg == WM_MOUSEWHEEL) {
-            dx = 0.0;
-            dy = wheelRotation;
-        } else { // WM_MOUSEHWHEEL
+        if (msg == WM_MOUSEHWHEEL) { // native horizontal scroll
             // Negate the value to be more "natural"
             dx = -wheelRotation;
             dy = 0.0;
+        } else if (msg == WM_MOUSEWHEEL && LOWORD(wParam) & MK_SHIFT) {
+            // Do not negate the emulated horizontal scroll amount
+            dx = wheelRotation;
+            dy = 0.0;
+        } else { // vertical scroll
+            dx = 0.0;
+            dy = wheelRotation;
         }
 
         jint ls, cs;

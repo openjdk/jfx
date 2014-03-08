@@ -1183,6 +1183,8 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
                 break;
             case com_sun_glass_events_TouchEvent_TOUCH_STILL:
                 //nothing to do
+                _mousePosX = absX;
+                _mousePosY = absY;
                 GLASS_LOG_FINEST("touch -> mouse - still, ignoring");
                 break;
             case com_sun_glass_events_TouchEvent_TOUCH_RELEASED:

@@ -549,7 +549,14 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
             // when the items list totally changes, we should clear out
             // the selection and focus
-            setSelectedIndex(-1);
+            int newValueIndex = -1;
+            if (newList != null) {
+                T value = comboBox.getValue();
+                if (value != null) {
+                    newValueIndex = newList.indexOf(value);
+                }
+            }
+            setSelectedIndex(newValueIndex);
         }
 
         // API Implementation

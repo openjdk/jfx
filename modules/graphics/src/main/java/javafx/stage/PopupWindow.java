@@ -66,13 +66,13 @@ import java.security.AllPermission;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
 
@@ -427,14 +427,15 @@ public abstract class PopupWindow extends Window {
         }
 
         final Scene sceneValue = getScene();
-        if (sceneValue != null) {
-            SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);            
-        }
+        SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);            
         
         // RT-28447
         final Scene ownerScene = getRootWindow(owner).getScene();
         if (ownerScene != null) {
             sceneValue.getStylesheets().setAll(ownerScene.getStylesheets());
+            if (sceneValue.getCursor() == null) {
+                sceneValue.setCursor(ownerScene.getCursor());
+            }
         }
 
         // It is required that the root window exist and be visible to show the popup.
@@ -767,11 +768,11 @@ public abstract class PopupWindow extends Window {
 
         // update popup position
         // don't set Window.xExplicit unnecessarily
-        if (!Double.isNaN(windowScrMinX) || !Double.isNaN(getX())) {
+        if (!Double.isNaN(windowScrMinX)) {
             super.setXInternal(windowScrMinX);
         }
         // don't set Window.yExplicit unnecessarily
-        if (!Double.isNaN(windowScrMinY) || !Double.isNaN(getY())) {
+        if (!Double.isNaN(windowScrMinY)) {
             super.setYInternal(windowScrMinY);
         }
 
@@ -961,8 +962,9 @@ public abstract class PopupWindow extends Window {
 
             final EventType<?> eventType = event.getEventType();
 
-            if (eventType == MouseEvent.MOUSE_PRESSED) {
-                handleMousePressedEvent(eventSource, event);
+            if (eventType == MouseEvent.MOUSE_PRESSED
+                    || eventType == ScrollEvent.SCROLL) {
+                handleAutoHidingEvents(eventSource, event);
                 return;
             }
 
@@ -982,7 +984,7 @@ public abstract class PopupWindow extends Window {
                 final Node sceneFocusOwner = scene.getFocusOwner();
                 final EventTarget eventTarget =
                         (sceneFocusOwner != null) ? sceneFocusOwner : scene;
-                if (EventUtil.fireEvent(eventTarget, new DirectEvent(event))
+                if (EventUtil.fireEvent(eventTarget, new DirectEvent(event.copyFor(popupWindow, eventTarget)))
                         == null) {
                     event.consume();
                     return;
@@ -1005,8 +1007,8 @@ public abstract class PopupWindow extends Window {
             }
         }
 
-        private void handleMousePressedEvent(final Object eventSource,
-                final Event event) {
+        private void handleAutoHidingEvents(final Object eventSource,
+                                            final Event event) {
             // we handle mouse pressed only for the immediate parent window,
             // where we can check whether the mouse press is inside of the owner
             // control or not, we will force possible child popups to close

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -361,10 +361,11 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Slider s = getSkinnable();
-         if (s.getOrientation() == Orientation.HORIZONTAL) {
-            return(topInset + thumb.prefHeight(-1) + bottomInset);
+        if (s.getOrientation() == Orientation.HORIZONTAL) {
+            double axisHeight = showTickMarks ? (tickLine.prefHeight(-1) + trackToTickGap) : 0;
+            return topInset + thumb.prefHeight(-1) + axisHeight + bottomInset;
         } else {
-            return(topInset + minTrackLength() + thumb.prefHeight(-1) + bottomInset);
+            return topInset + minTrackLength() + thumb.prefHeight(-1) + bottomInset;
         }
     }
 
@@ -377,8 +378,8 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
                 return 140;
             }
         } else {
-            return leftInset + Math.max(thumb.prefWidth(-1), track.prefWidth(-1)) +
-            ((showTickMarks) ? (trackToTickGap+tickLine.prefWidth(-1)) : 0) + rightInset;
+            double axisWidth = showTickMarks ? (tickLine.prefWidth(-1) + trackToTickGap) : 0;
+            return leftInset + Math.max(thumb.prefWidth(-1), track.prefWidth(-1)) + axisWidth + rightInset;
         }
     }
 

@@ -32,16 +32,21 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * The abstract base class for all {@code Effect} implementation peers.
+ * 
+ * @param <T> an optional subclass of RenderState that can be assumed as the
+ *            return value for the getRenderState() method
  */
-public abstract class EffectPeer {
+public abstract class EffectPeer<T extends RenderState> {
 
     private final FilterContext fctx;
     private final Renderer renderer;
     private final String uniqueName;
     private Effect effect;
+    private T renderState;
     private int pass;
 
     protected EffectPeer(FilterContext fctx, Renderer renderer, String uniqueName) {
@@ -58,6 +63,7 @@ public abstract class EffectPeer {
     }
 
     public abstract ImageData filter(Effect effect,
+                                     T renderState,
                                      BaseTransform transform,
                                      Rectangle outputClip,
                                      ImageData... inputs);
@@ -99,6 +105,14 @@ public abstract class EffectPeer {
 
     protected void setEffect(Effect effect) {
         this.effect = effect;
+    }
+
+    protected T getRenderState() {
+        return renderState;
+    }
+
+    protected void setRenderState(T renderState) {
+        this.renderState = renderState;
     }
 
     public final int getPass() {

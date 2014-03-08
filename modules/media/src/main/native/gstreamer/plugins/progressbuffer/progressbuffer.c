@@ -778,7 +778,7 @@ static GstFlowReturn progress_buffer_chain(GstPad *pad, GstBuffer *data)
     gst_buffer_unref(data);
 
     // Here we can maintain some prebuffering strategy.
-    if (!element->srcpad)
+    if (result != GST_FLOW_ERROR && !element->srcpad)
         progress_buffer_create_sourcepad(element);
 
     return result;

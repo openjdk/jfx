@@ -105,14 +105,14 @@ public:
      * to initialize and test the device last time, it doesn't attempt
      * to create/init/test the device.
      */
-    static HRESULT CreateInstance(IDirect3D9 *pd3d9, IDirect3D9Ex *pd3d9Ex, UINT adapter, D3DContext **ppCtx);
+    static HRESULT CreateInstance(IDirect3D9 *pd3d9, IDirect3D9Ex *pd3d9Ex, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx);
 
     // desrtoys this instance
     /* virtual */ int release();
 
-    // creates a new D3D windowed device with swap copy effect and default
+    // creates a new D3D windowed device with swap copy effect and specified
     // present interval
-    HRESULT InitContext();
+    HRESULT InitContext(bool isVsyncEnabled);
 
     // resets existing D3D device with the current presentation parameters
     HRESULT ResetContext();

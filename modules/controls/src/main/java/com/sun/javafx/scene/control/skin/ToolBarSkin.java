@@ -93,17 +93,18 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         registerChangeListener(toolbar.orientationProperty(), "ORIENTATION");
 
         engine = new TraversalEngine(getSkinnable(), false) {
-            @Override public void trav(Node owner, Direction dir) {
+            @Override public boolean trav(Node owner, Direction dir) {
                 // This allows the right arrow to select the overflow menu
                 // without it only the tab key can select the overflow menu.
                 if (overflow) {
                     engine.reg(overflowMenu);
                 }
                 direction = dir;
-                super.trav(owner, dir);
+                boolean result = super.trav(owner, dir);
                 if (overflow) {
                     engine.unreg(overflowMenu);
                 }
+                return result;
             }
         };
         engine.addTraverseListener(this);

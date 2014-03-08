@@ -195,15 +195,18 @@ public class PackagerResource {
             }
 
             final int resetLength = relativePathBuilder.length();
-            for (final File nextFile: file.listFiles()) {
-                if (resetLength > 0) {
-                    relativePathBuilder.append('/');
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (final File nextFile : children) {
+                    if (resetLength > 0) {
+                        relativePathBuilder.append('/');
+                    }
+                    relativePathBuilder.append(nextFile.getName());
+                    if (!traverse(nextFile)) {
+                        return false;
+                    }
+                    relativePathBuilder.setLength(resetLength);
                 }
-                relativePathBuilder.append(nextFile.getName());
-                if (!traverse(nextFile)) {
-                    return false;
-                }
-                relativePathBuilder.setLength(resetLength);
             }
 
             return true;

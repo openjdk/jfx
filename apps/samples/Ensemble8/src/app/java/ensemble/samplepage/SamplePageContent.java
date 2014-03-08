@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014 Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -55,13 +55,9 @@ class SamplePageContent extends Region {
         this.samplePage = samplePage;
         playground = new PlaygroundNode(samplePage);
         description = new Description(samplePage);
-        samplePage.registerSampleInfoUpdater(new Callback<SampleInfo, Void>() {
-
-            @Override
-            public Void call(SampleInfo sampleInfo) {
-                update(sampleInfo);
-                return null;
-            }
+        samplePage.registerSampleInfoUpdater((SampleInfo sampleInfo) -> {
+            update(sampleInfo);
+            return null;
         });
     }
 
@@ -121,7 +117,7 @@ class SamplePageContent extends Region {
     private void update(SampleInfo sampleInfo) {
         sampleContainer = new SampleContainer(samplePage.sampleRuntimeInfoProperty.get().getSampleNode());
         sampleContainer.getStyleClass().add("sample-page-sample-node");
-        if (PlatformFeatures.EMBEDDED) {
+        if (!PlatformFeatures.DISPLAY_PLAYGROUND) {
             needsPlayground = false;
         } else {
             needsPlayground = sampleInfo.needsPlayground();

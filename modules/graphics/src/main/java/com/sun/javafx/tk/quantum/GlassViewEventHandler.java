@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,8 @@ import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.logging.PulseLogger;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.javafx.scene.input.KeyCodeMap;
 
 import javafx.collections.ListChangeListener;
@@ -130,6 +132,9 @@ class GlassViewEventHandler extends View.EventHandler {
 
         @Override
         public Void run() {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(keyEventType(type).toString());
+            }
             WindowStage stage = scene.getWindowStage();
             try {
                 if (stage != null) {
@@ -178,6 +183,9 @@ class GlassViewEventHandler extends View.EventHandler {
             } finally {
                 if (stage != null) {
                     stage.setInEventHandler(false);
+                }
+                if (PULSE_LOGGING_ENABLED) {
+                    PulseLogger.newInput(null);
                 }
             }
             return null;
@@ -252,6 +260,10 @@ class GlassViewEventHandler extends View.EventHandler {
 
         @Override
         public Void run() {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(mouseEventType(type).toString());
+            }
+                    
             int buttonMask;
             switch (button) {
                 case MouseEvent.BUTTON_LEFT:
@@ -320,6 +332,9 @@ class GlassViewEventHandler extends View.EventHandler {
                 if (stage != null) {
                     stage.setInEventHandler(false);
                 }
+                if (PULSE_LOGGING_ENABLED) {
+                    PulseLogger.newInput(null);
+                }
             }
             return null;
         }
@@ -349,6 +364,9 @@ class GlassViewEventHandler extends View.EventHandler {
                                           final int x, final int y, final int xAbs, final int yAbs,
                                           final boolean isKeyboardTrigger)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("MENU_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -367,6 +385,9 @@ class GlassViewEventHandler extends View.EventHandler {
             if (stage != null) {
                 stage.setInEventHandler(false);
             }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
         }
     }
 
@@ -377,6 +398,9 @@ class GlassViewEventHandler extends View.EventHandler {
                                             final int defaultLines, final int defaultChars,
                                             final double xMultiplier, final double yMultiplier)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("SCROLL_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -405,6 +429,9 @@ class GlassViewEventHandler extends View.EventHandler {
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
     }
@@ -481,6 +508,9 @@ class GlassViewEventHandler extends View.EventHandler {
                                                  final int[] attrBoundary, final byte[] attrValue,
                                                  final int commitCount, final int cursorPos)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("INPUT_METHOD_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -504,6 +534,9 @@ class GlassViewEventHandler extends View.EventHandler {
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
     }
@@ -566,15 +599,33 @@ class GlassViewEventHandler extends View.EventHandler {
                                          final int recommendedDropAction,
                                          final ClipboardAssistance dropTargetAssistant)
     {
-        TransferMode action =
-            dndHandler.handleDragEnter(x, y, xAbs, yAbs,
-                actionToTransferMode(recommendedDropAction),
-                dropTargetAssistant);
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_ENTER");
+        }
+        TransferMode action;
+        try {
+            action = dndHandler.handleDragEnter(x, y, xAbs, yAbs,
+                    actionToTransferMode(recommendedDropAction),
+                    dropTargetAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
         return transferModeToAction(action);
     }
 
     @Override public void handleDragLeave(View view, final ClipboardAssistance dropTargetAssistant) {
-        dndHandler.handleDragLeave(dropTargetAssistant);
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_LEAVE");
+        }
+        try {
+            dndHandler.handleDragLeave(dropTargetAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
     }
 
     @Override public int handleDragDrop(View view,
@@ -582,10 +633,19 @@ class GlassViewEventHandler extends View.EventHandler {
                                         final int recommendedDropAction,
                                         final ClipboardAssistance dropTargetAssistant)
     {
-        TransferMode action =
-            dndHandler.handleDragDrop(x, y, xAbs, yAbs,
-                actionToTransferMode(recommendedDropAction),
-                dropTargetAssistant);
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_DROP");
+        }
+        TransferMode action;
+        try {
+            action = dndHandler.handleDragDrop(x, y, xAbs, yAbs,
+                    actionToTransferMode(recommendedDropAction),
+                    dropTargetAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
         return transferModeToAction(action);
     }
 
@@ -594,10 +654,19 @@ class GlassViewEventHandler extends View.EventHandler {
                                         final int recommendedDropAction,
                                         final ClipboardAssistance dropTargetAssistant)
     {
-        final TransferMode action =
-            dndHandler.handleDragOver(x, y, xAbs, yAbs,
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_OVER");
+        }
+        TransferMode action;
+        try {
+            action = dndHandler.handleDragOver(x, y, xAbs, yAbs,
                 actionToTransferMode(recommendedDropAction),
                 dropTargetAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
         return transferModeToAction(action);
     }
 
@@ -607,12 +676,30 @@ class GlassViewEventHandler extends View.EventHandler {
                                           final int x, final int y, final int xAbs, final int yAbs,
                                           final ClipboardAssistance assistant)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_START");
+        }
         dropSourceAssistant = assistant;
-        dndHandler.handleDragStart(button, x, y, xAbs, yAbs, assistant);
+        try {
+            dndHandler.handleDragStart(button, x, y, xAbs, yAbs, assistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
     }
 
     @Override public void handleDragEnd(View view, final int performedAction) {
-        dndHandler.handleDragEnd(actionToTransferMode(performedAction), dropSourceAssistant);
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_END");
+        }
+        try {
+            dndHandler.handleDragEnd(actionToTransferMode(performedAction), dropSourceAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
     }
 
     // TODO - dropTargetListener.dropActionChanged
@@ -684,11 +771,20 @@ class GlassViewEventHandler extends View.EventHandler {
     }
 
     @Override public void handleViewEvent(View view, long time, final int type) {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("VIEW_EVENT: "+ViewEvent.getTypeString(type));
+        }
         viewNotification.view = view;
         viewNotification.time = time;
         viewNotification.type = type;
-
-        AccessController.doPrivileged(viewNotification, scene.getAccessControlContext());
+        try {
+            AccessController.doPrivileged(viewNotification, scene.getAccessControlContext());
+        }
+        finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
     }
 
     @Override public void handleScrollGestureEvent(
@@ -697,6 +793,9 @@ class GlassViewEventHandler extends View.EventHandler {
             final int x, final int y, final int xAbs, final int yAbs, final double dx, final double dy,
             final double totaldx, final double totaldy, final double multiplierX, final double multiplierY)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("SCROLL_GESTURE_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -741,6 +840,9 @@ class GlassViewEventHandler extends View.EventHandler {
             if (stage != null) {
                 stage.setInEventHandler(false);
             }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
         }
     }
 
@@ -752,6 +854,9 @@ class GlassViewEventHandler extends View.EventHandler {
             final double scale, double expansion,
             final double totalscale, double totalexpansion)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("ZOOM_GESTURE_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -793,6 +898,9 @@ class GlassViewEventHandler extends View.EventHandler {
             if (stage != null) {
                 stage.setInEventHandler(false);
             }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
         }
     }
 
@@ -803,6 +911,9 @@ class GlassViewEventHandler extends View.EventHandler {
             final int originxAbs, final int originyAbs,
             final double dangle, final double totalangle)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("ROTATE_GESTURE_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -844,6 +955,9 @@ class GlassViewEventHandler extends View.EventHandler {
             if (stage != null) {
                 stage.setInEventHandler(false);
             }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
         }
     }
 
@@ -853,6 +967,9 @@ class GlassViewEventHandler extends View.EventHandler {
             boolean isInertia, final int touchCount,
             final int dir, final int x, final int y, final int xAbs, final int yAbs)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("SWIPE_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -897,6 +1014,9 @@ class GlassViewEventHandler extends View.EventHandler {
             if (stage != null) {
                 stage.setInEventHandler(false);
             }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
         }
     }
 
@@ -904,6 +1024,9 @@ class GlassViewEventHandler extends View.EventHandler {
             View view, final long time, final int modifiers,
             final boolean isDirect, final int touchEventCount)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("BEGIN_TOUCH_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -927,6 +1050,9 @@ class GlassViewEventHandler extends View.EventHandler {
             if (stage != null) {
                 stage.setInEventHandler(false);
             }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
         }
 
         gestures.notifyBeginTouchEvent(time, modifiers, isDirect, touchEventCount);
@@ -936,6 +1062,9 @@ class GlassViewEventHandler extends View.EventHandler {
             View view, final long time, final int type, final long touchId,
             final int x, final int y, final int xAbs, final int yAbs)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("NEXT_TOUCH_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -971,12 +1100,18 @@ class GlassViewEventHandler extends View.EventHandler {
             if (stage != null) {
                 stage.setInEventHandler(false);
             }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
         }
 
         gestures.notifyNextTouchEvent(time, type, touchId, x, y, xAbs, yAbs);
     }
 
     @Override public void handleEndTouchEvent(View view, long time) {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("END_TOUCH_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
@@ -994,6 +1129,9 @@ class GlassViewEventHandler extends View.EventHandler {
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
 

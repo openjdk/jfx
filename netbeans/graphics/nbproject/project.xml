@@ -7,10 +7,15 @@
             <explicit-platform explicit-source-supported="true"/>
             <source-roots>
                 <root id="src.dir"/>
+                <root id="src.resources.dir"/>
+                <root id="src.jsl-decora.dir"/>
+                <root id="src.jsl-prism.dir"/>
+                <root id="src.jsl-decora2.dir"/>
+                <root id="src.jsl-prism2.dir"/>
             </source-roots>
             <test-roots>
-                <root id="test.src.dir"/>
-                <root id="test.resources.dir" name="Test Resources"/>
+                <root id="test.java.dir"/>
+                <root id="test.resources.dir"/>
             </test-roots>
         </data>
         <references xmlns="http://www.netbeans.org/ns/ant-project-references/1">

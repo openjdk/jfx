@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,6 +76,7 @@ jmethodID jWindowNotifyFocus;
 jmethodID jWindowNotifyFocusDisabled;
 jmethodID jWindowNotifyFocusUngrab;
 jmethodID jWindowNotifyMoveToAnotherScreen;
+jmethodID jWindowNotifyLevelChanged;
 jmethodID jWindowIsEnabled;
 jmethodID jWindowNotifyDelegatePtr;
 jfieldID jWindowPtr;
@@ -107,6 +108,8 @@ jfieldID jApplicationDisplay;
 jfieldID jApplicationScreen;
 jfieldID jApplicationVisualID;
 jmethodID jApplicationReportException;
+jmethodID jApplicationGetApplication;
+jmethodID jApplicationGetName;
 
 void init_threads() {
     if (!g_thread_supported()) {
@@ -177,6 +180,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jWindowNotifyFocusDisabled = env->GetMethodID(clazz, "notifyFocusDisabled", "()V");
     jWindowNotifyFocusUngrab = env->GetMethodID(clazz, "notifyFocusUngrab", "()V");
     jWindowNotifyMoveToAnotherScreen = env->GetMethodID(clazz, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
+    jWindowNotifyLevelChanged = env->GetMethodID(clazz, "notifyLevelChanged", "(I)V");
     jWindowIsEnabled = env->GetMethodID(clazz, "isEnabled", "()Z");
     jWindowNotifyDelegatePtr = env->GetMethodID(clazz, "notifyDelegatePtr", "(J)V");
     jWindowPtr = env->GetFieldID(clazz, "ptr", "J");
@@ -220,6 +224,9 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jApplicationVisualID = env->GetStaticFieldID(jApplicationCls, "visualID", "J");
     jApplicationReportException = env->GetStaticMethodID(
         jApplicationCls, "reportException", "(Ljava/lang/Throwable;)V");
+    jApplicationGetApplication = env->GetStaticMethodID(
+        jApplicationCls, "GetApplication", "()Lcom/sun/glass/ui/Application;");
+    jApplicationGetName = env->GetMethodID(jApplicationCls, "getName", "()Ljava/lang/String;");
 
     clazz = env->FindClass("sun/misc/GThreadHelper");
     if (clazz) {
@@ -301,6 +308,21 @@ gboolean check_and_clear_exception(JNIEnv *env) {
         return TRUE;
     }
     return FALSE;
+}
+
+// The returned string should be freed with g_free().
+gchar* get_application_name() {
+    gchar* ret = NULL;
+    
+    jobject japp = mainEnv->CallStaticObjectMethod(jApplicationCls, jApplicationGetApplication);
+    CHECK_JNI_EXCEPTION_RET(mainEnv, NULL);
+    jstring jname = (jstring) mainEnv->CallObjectMethod(japp, jApplicationGetName);
+    CHECK_JNI_EXCEPTION_RET(mainEnv, NULL);
+    if (const gchar *name = mainEnv->GetStringUTFChars(jname, NULL)) {
+        ret = g_strdup(name);
+        mainEnv->ReleaseStringUTFChars(jname, name);
+    }
+    return ret;
 }
 
 gpointer glass_try_malloc_n(gsize m, gsize n, 

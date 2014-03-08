@@ -65,35 +65,19 @@ public class PieChartDataVisualizer extends TableView<Data> {
         setMinHeight(100);
         setMinWidth(100);
         
-        chart.dataProperty().addListener(new ChangeListener<ObservableList<Data>>() {
-
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<Data>> ov, ObservableList<Data> t, ObservableList<Data> t1) {
-                setItems(t1);
-            }
+        chart.dataProperty().addListener((ObservableValue<? extends ObservableList<Data>> ov, ObservableList<Data> t, ObservableList<Data> t1) -> {
+            setItems(t1);
         });
         
         TableColumn<Data, String> nameColumn = new TableColumn<>("Name");
-        nameColumn.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Data, String>, ObservableValue<String>>() {
-
-            @Override
-            public ObservableValue<String> call(CellDataFeatures<Data, String> p) {
-                return p.getValue().nameProperty();
-            }
-        });
+        nameColumn.setCellValueFactory((CellDataFeatures<Data, String> p) -> p.getValue().nameProperty());
         nameColumn.setCellFactory(TextFieldTableCell.<Data>forTableColumn());
         nameColumn.setEditable(true);
         nameColumn.setSortable(false);
         nameColumn.setMinWidth(80);
         
         TableColumn<Data, Number> pieValueColumn = new TableColumn<>("PieValue");
-        pieValueColumn.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<Data, Number>, ObservableValue<Number>>() {
-
-            @Override
-            public ObservableValue<Number> call(CellDataFeatures<Data, Number> p) {
-                return p.getValue().pieValueProperty();
-            }
-        });
+        pieValueColumn.setCellValueFactory((CellDataFeatures<Data, Number> p) -> p.getValue().pieValueProperty());
         pieValueColumn.setCellFactory(TextFieldTableCell.<Data, Number>forTableColumn(new StringConverter<Number>() {
 
                 @Override
@@ -117,24 +101,20 @@ public class PieChartDataVisualizer extends TableView<Data> {
         pieValueColumn.setSortable(false);
         pieValueColumn.setMinWidth(80);
         
-        setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
-
-            @Override
-            public void handle(ContextMenuEvent t) {
-                Node node = t.getPickResult().getIntersectedNode();
-                while (node != null && !(node instanceof TableRow) && !(node instanceof TableCell)) {
-                    node = node.getParent();
-                }
-                if (node instanceof TableCell) {
-                    TableCell tc = (TableCell) node;
-                    getSelectionModel().select(tc.getIndex());
-                } else if (node instanceof TableRow) {
-                    TableRow tr = (TableRow) node;
-                    if (tr.getItem() == null) {
-                        getSelectionModel().clearSelection();
-                    } else {
-                        getSelectionModel().select(tr.getIndex());
-                    }
+        setOnContextMenuRequested((ContextMenuEvent t) -> {
+            Node node = t.getPickResult().getIntersectedNode();
+            while (node != null && !(node instanceof TableRow) && !(node instanceof TableCell)) {
+                node = node.getParent();
+            }
+            if (node instanceof TableCell) {
+                TableCell tc = (TableCell) node;
+                getSelectionModel().select(tc.getIndex());
+            } else if (node instanceof TableRow) {
+                TableRow tr = (TableRow) node;
+                if (tr.getItem() == null) {
+                    getSelectionModel().clearSelection();
+                } else {
+                    getSelectionModel().select(tr.getIndex());
                 }
             }
         });
@@ -162,36 +142,24 @@ public class PieChartDataVisualizer extends TableView<Data> {
                     MenuItemBuilder.create()
                         .text("Delete item")
 //                        .accelerator(new KeyCodeCombination(KeyCode.DELETE, KeyCombination.CONTROL_DOWN))
-                        .onAction(new EventHandler<ActionEvent>() {
-
-                            @Override
-                            public void handle(ActionEvent t) {
-                                int index = getSelectionModel().getSelectedIndex();
-                                if (index >= 0 && index < chart.getData().size()) {
-                                    chart.getData().remove(index);
-                                }
+                        .onAction((ActionEvent t) -> {
+                            int index = getSelectionModel().getSelectedIndex();
+                            if (index >= 0 && index < chart.getData().size()) {
+                                chart.getData().remove(index);
                             }
-                        })
+        })
                         .build(),
                     MenuItemBuilder.create()
                         .text("Clear data")
-                        .onAction(new EventHandler<ActionEvent>() {
-
-                            @Override
-                            public void handle(ActionEvent t) {
-                                chart.getData().clear();
-                            }
-                        })
+                        .onAction((ActionEvent t) -> {
+                            chart.getData().clear();
+        })
                         .build(),
                     MenuItemBuilder.create()
                         .text("Set new data")
-                        .onAction(new EventHandler<ActionEvent>() {
-
-                            @Override
-                            public void handle(ActionEvent t) {
-                                chart.setData(PieChartApp.generateData());
-                            }
-                        })
+                        .onAction((ActionEvent t) -> {
+                            chart.setData(PieChartApp.generateData());
+        })
                         .build())
                 .build());
         

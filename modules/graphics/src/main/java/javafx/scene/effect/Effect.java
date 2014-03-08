@@ -271,7 +271,8 @@ public abstract class Effect {
     }
 
     // utility method used in calculation of bounds in BoxBlur and DropShadow effects
-    static int getKernelSize(int ksize, int iterations) {
+    static int getKernelSize(float fsize, int iterations) {
+        int ksize = (int) Math.ceil(fsize);
         if (ksize < 1) ksize = 1;
         ksize = (ksize-1) * iterations + 1;
         ksize |= 1;

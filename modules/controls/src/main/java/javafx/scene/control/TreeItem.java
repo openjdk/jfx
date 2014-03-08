@@ -1038,6 +1038,10 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
             this.removed = removed;
             this.wasExpanded = false;
             this.wasCollapsed = false;
+
+            this.wasPermutated = added != null && removed != null &&
+                                 added.size() == removed.size() &&
+                                 added.containsAll(removed);
         }
 
         /**

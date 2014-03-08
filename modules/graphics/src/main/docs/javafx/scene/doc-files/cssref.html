@@ -9,7 +9,7 @@
               JavaFX GUI development, JavaFX application development">
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>JavaFX CSS Reference Guide</title>
-    <style>
+    <style type="text/css">
             body {
                 font-family: Helvetica, Arial, sans-serif;
                 font-size: 14px;
@@ -125,6 +125,11 @@
                 color:#090;
                 margin: 0px;
             }
+            span.example {
+                font-family:"Lucida Console", Monaco, monospace;
+                font-size: 14px;
+                color:#090;
+            }
             p.subtitle {
                 font-style: italic;
                 color:#999;
@@ -201,7 +206,7 @@
           <li><a href="#typeangle">&lt;angle&gt;</a></li>
           <li><a href="#typepoint">&lt;point&gt;</a></li>
           <li><a href="#typecolorstop">&lt;color-stop&gt;</a></li>
-          <li><a href="#typeuri">&lt;uri&gt;</a></li>
+          <li><a href="#typeurl">&lt;uri&gt;</a></li>
           <li><a href="#typeeffect">&lt;effect&gt;</a></li>
           <li><a href="#typefont">&lt;font&gt;</a></li>
           <li><a href="#typepaint">&lt;paint&gt;</a></li>
@@ -252,6 +257,13 @@
           </li>
         </ul>
         <ul>
+          <li>javafx.scene.media
+            <ul>
+              <li><a href="#mediaview">MediaView</a></li>
+            </ul>
+          </li>
+        </ul>
+        <ul>
           <li>javafx.scene.shape
             <ul>
               <li><a href="#shape">Shape</a></li>
@@ -296,7 +308,9 @@
               <li><a href="#choicebox">ChoiceBox</a></li>
               <li><a href="#colorpicker">ColorPicker</a></li>
               <li><a href="#combobox">ComboBox</a></li>
-              <li><a href="#control">Control</a></li>
+                <li><a href="#contextmenu">ContextMenu</a></li>
+                <li><a href="#control">Control</a></li>
+              <li><a href="#htmleditor">HTMLEditor</a></li>
               <li><a href="#hyperlink">Hyperlink</a></li>
               <li><a href="#indexedcell">IndexedCell</a></li>
               <li><a href="#label">Label</a></li>
@@ -332,6 +346,7 @@
               <li><a href="#tooltip">Tooltip</a></li>
               <li><a href="#treecell">TreeCell</a></li>
               <li><a href="#treeview">TreeView</a></li>
+              <li><a href="#webview">WebView</a></li>
             </ul>
           </li>
         </ul>
@@ -341,18 +356,18 @@
           <li> javafx.scene.chart
             <ul>
               <li><a href="#areachart">AreaChart</a> </li>
+              <li><a href="#axis">Axis</a> </li>
               <li><a href="#barchart">BarChart</a> </li>
               <li><a href="#bubblechart">BubbleChart</a> </li>
-              <li><a href="#chart">Chart</a> </li>
-              <li><a href="#linechart">LineChart</a> </li>
-              <li><a href="#scatterchart">ScatterChart</a> </li>
-              <li><a href="#piechart">PieChart</a> </li>
-              <li><a href="#xychart">XYChart</a> </li>
-              <li><a href="#axis">Axis</a> </li>
-              <li><a href="#valueaxis">ValueAxis</a> </li>
-              <li><a href="#numberaxis">NumberAxis</a> </li>
               <li><a href="#categoryaxis">CategoryAxis</a> </li>
+              <li><a href="#chart">Chart</a> </li>
               <li><a href="#legend">Legend</a> </li>
+              <li><a href="#linechart">LineChart</a> </li>
+              <li><a href="#numberaxis">NumberAxis</a> </li>
+              <li><a href="#piechart">PieChart</a> </li>
+              <li><a href="#scatterchart">ScatterChart</a> </li>
+              <li><a href="#valueaxis">ValueAxis</a> </li>
+              <li><a href="#xychart">XYChart</a> </li>
             </ul>
           </li>
         </ul>
@@ -487,19 +502,6 @@
         inline styles, the style sheets of all its ancestors, and any style sheets
         from the Scene.
     </p>
-    <p>
-        A style sheet URL may be an absolute URL or a relative URL. If a relative
-        URL is given, it is resolved against the base URL of the ClassLoader of
-        the concrete Application class. If, for example, there is a main class <code>com.wicked.cool.ui.Main</code>
-        that extends Application, the relative URL
-        "/com/wicked/cool/resources/styles.css" would resolve correctly,
-        as would "com/wicked/cool/resources/styles.css". The
-        relative URL "../resources/styles.css" would not since the path ".."
-        relative to the root is not a valid path. It is often easier to use the
-        ClassLoader of some class to find the resource. For example, if the
-        "styles.css" file resides in the same package as Main, the following code
-        will give the correct URL: <code>com.wicked.cool.ui.Main.class.getResource("styles.css").toExternalForm()</code>.
-    </p>
     The implementation allows designers to style an application by using style
     sheets to override property values set from code. For example, a call to <code>rectangle.setFill(Color.YELLOW)</code>
     can be overridden by an inline&#8209;style or a style from an author stylesheet. This has implications for
@@ -527,7 +529,7 @@
         "-fx-blend-mode". </p>
     <h3><a name="intropublicapi" id="intropublicapi">CSS Public API</a></h3>
     Beginning with JavaFX 8.0, public API is available for developers to create styleable properties and manage
-    pseudo-class state. Refer to <a href="../../../javafx/css/package.html">javafx.css</a> for details.
+    pseudo-class state. Refer to <a href="../../../javafx/css/package-summary.html">javafx.css</a> for details.
     <h3><a name="introlimitations" id="introlimitations">Limitations</a></h3>
     <p> While the JavaFX CSS parser will parse valid CSS syntax, it is not a
         fully compliant CSS parser. One should not expect the parser to handle
@@ -545,7 +547,7 @@
         specifying fonts is not supported. There is no equivalent for the
         font-variant property.</p>
     <p>JavaFX CSS uses the HSB color model instead of the HSL color model. </p>
-    If a property of a node is initialized by calling the set method of the
+    <p>If a property of a node is initialized by calling the set method of the
     property, the CSS implementation will see this as a user set value and the
     value will not be overwritten by a style from a user agent style
     sheet.</p>
@@ -586,7 +588,7 @@
         <tr>
             <td>javafx.scene.text.Font</td>
             <td>font</td>
-            <td>-fx-font</td>
+            <td>-fx-font, -fx-font-family, -fx-font-size, -fx-font-weight, -fx-font-style</td>
             <td>Font.DEFAULT (12px system)</td>
         </tr>
         </tbody>
@@ -601,6 +603,12 @@
         using a JavaFX class name as a type selector is an exact match, providing
         style declarations for a Shape will not cause a Rectangle to use those
         values (unless the .css value for the Rectangle's property is "inherit").</p>
+    <p>For font inheritance, the CSS engine looks <span style="font-style:italic;">only</span> for the styles in the table above. When
+        looking for a font to inherit, the search
+        terminates at any node that has a Font property that was set by the user. The user-set font is
+        inherited provided there is not an author or an inline-style that applies specifically to that node.
+        In this case, the inherited font is created from the user-set font and any parts of the applicable
+        author or in-line style.
     <h3><a name="introexamples" id="introexamples">Examples</a></h3>
     <p>Consider the following simple JavaFX application: </p>
     <p class="example">Scene scene = new Scene(new Group()); <br>
@@ -614,7 +622,7 @@
         test.css contains the following: </p>
     <p class="example">.my-rect { -fx-fill: red; }</p>
     <p>the rectangle will be red instead of black: </p>
-    <p><img src="cssexample1.png"></p>
+    <p><img src="cssexample1.png" alt="A rectangle with red fill"></p>
     <p>If test.css contains the following: </p>
     <p class="example">.my-rect {<br>
         &nbsp;&nbsp;&nbsp; -fx-fill: yellow;<br>
@@ -627,7 +635,7 @@
     </p>
     <p>the result will be a yellow rectangle with a nicely dashed green border:
     </p>
-    <p><img src="cssexample2.png"></p>
+    <p><img src="cssexample2.png" alt="A rectangle with yellow fill and a green, dashed border"></p>
     <h3><a name="introparserwarnings" id="introparserwarnings">Understanding
         Parser Warnings</a></h3>
     <p>When the JavaFX CSS parser encounters a syntax error, a warning message
@@ -725,7 +733,7 @@
     <p class="grammar"><a href="#typenumber">&lt;number&gt;</a>[ deg | rad |
       grad | turn ]</p>
     <ul>
-      <li><strong>deg</strong>: angle in degrees - all other angle units are
+      <li><strong>deg</strong>: angle in degrees &mdash; all other angle units are
         converted to degrees.</li>
       <li><strong>rad</strong>: angle in radians</li>
       <li><strong>grad</strong>: angle in gradians</li>
@@ -749,23 +757,80 @@
       values are used, then the distance value for first and last stop in the
       series must be specified. This restriction may be removed in a future
       release.</p>
-    <p>"<font color="#009900">red, white 70%, blue</font>" is valid since the
+    <p>"<span style="color: #009900; ">red, white 70%, blue</span>" is valid since the
       distance for red and blue is assumed to be 0% and 100%, respectively.</p>
-    <p>"<font color="#009900">red 10, white, blue 90</font>" is valid. Because
+    <p>"<span style="color: #009900; ">red 10, white, blue 90</span>" is valid. Because
       distance for red and blue is 10 and 90, respectively, the distance for
       white can be calculated.</p>
-    <p>"<font color="#009900">red, white 70, blue</font>" is <em>not</em> valid
+    <p>"<span style="color: #009900; ">red, white 70, blue</span>" is <span style="font-style:italic;">not</span> valid
       since distance units do not agree.</p>
-    <p>"<font color="#009900">red, white, blue</font>" is valid. The stops are
+    <p>"<span style="color: #009900; ">red, white, blue</span>" is valid. The stops are
       distributed evenly between 0% and 100%.</p>
-    <h3><a name="typeuri" id="typeuri">&lt;uri&gt;</a></h3>
+    <h3><a name="typeurl" id="typeurl">&lt;uri&gt;</a></h3>
     <p class="grammar">url ( [\"\']? &lt;address&gt; [\"\']? )</p>
-    <p><span class="grammar">&lt;address&gt;</span> can be an absolute URI, for
-      example:</p>
-    <p class="example">url(http://example.com)<br>
-      url('http://example.com')<br>
-      url("http://example.com")</p>
-    <p>or it can be relative to the location of the CSS file. </p>
+    <p><span class="grammar">&lt;address&gt;</span> is a hierarchical URI of the form [scheme:][//authority][path] <a href="#references">(see [2])</a>.
+        For example:</p>
+    <p class="example">
+        url(http://example.com/images/Duke.png)<br>
+        url(/com/example/javafx/app/images/Duke.png)<br>
+    <p>If the <span class="grammar">&lt;address&gt;</span> does not have a [scheme:] component, the <span class="grammar">&lt;address&gt;</span>
+        is considered to be the [path] component only. Any leading '/' character of the [path] is ignored and the
+        [path] is treated as a relative path. If the style appears in a stylesheet, the path is relative to the base
+        URI of the stylesheet. If the style appears in an inline style, the path is relative to the root of the
+        classpath.
+    </p>
+    <table class="csspropertytable" cellspacing="3" cellpadding="4">
+            <caption>Examples of Resolving URLs in Stylesheets</caption>
+            <tr>
+                <th>Stylesheet URL</th><th>URL in Style</th><th>Resolves to</th>
+            </tr>
+            <tr>
+                <td>file:///some/path/build/classes/com/mycompany/myapp/mystyles.css</td>
+                <td>url(images/Duke.png)</td>
+                <td>file:///some/path/build/classes/com/mycompany/myapp/images/Duke.png</td>
+            </tr>
+            <tr>
+                <td>file:///some/path/build/classes/com/mycompany/myapp/mystyles.css</td>
+                <td>url(../images/Duke.png)</td>
+                <td>file:///some/path/build/classes/com/mycompany/images/Duke.png</td>
+            </tr>
+        <tr>
+            <td>jar:file:/some/path/build/myapp.jar!/com/mycompany/myapp/mystyles.css</td>
+            <td>url(images/Duke.png)</td>
+            <td>jar:file:/some/path/build/myapp.jar!/com/mycompany/myapp/images/Duke.png</td>
+        </tr>
+        </table>
+    <p></p>
+    <table class="csspropertytable" cellspacing="3" cellpadding="4">
+        <caption>Examples of Resolving URLs in Inline Styles</caption>
+        <tr>
+            <th>Classpath</th><th>URL in Style</th><th>Resolved URL</th>
+        </tr>
+        <tr>
+            <td>file:///some/path/build/classes</td>
+            <td>url(/com/mycompany/resources/images/Duke.png)</td>
+            <td>file:///some/path/build/classes/com/mycompany/resources/images/Duke.png</td>
+        </tr>
+        <tr>
+            <td>file:///some/path/build/myapp.jar</td>
+            <td>url(/com/mycompany/resources/images/Duke.png)</td>
+            <td>jar:file:/some/path/build/myapp.jar!/com/mycompany/resources/images/Duke.png</td>
+        </tr>
+    </table>
+    <p>Note that for inline styles, leading dot-segments (e.g. '..' or '.') do resolve since the path is always
+    anchored at the root of the classpath.</p>
+    <p>This snippet of code creates a scene filled with the "paste" image from HTMLEditor which is found in jfxrt.jar.</p>
+    <textarea rows="8" cols="132">
+
+    @Override public void start(Stage stage) {
+        StackPane root = new StackPane();
+        root.setStyle("-fx-background-image: url(/com/sun/javafx/scene/control/skin/modena/HTMLEditor-Paste.png);");
+        Scene scene = new Scene(root, 300, 250);
+        stage.setScene(scene);
+        stage.show();
+    }
+    </textarea>
+    <p>The same style would work equally as well from a stylesheet.</p>
     <h3><a name="typeeffect" id="typeeffect">&lt;effect&gt;</a></h3>
     <p>JavaFX CSS currently supports the DropShadow and InnerShadow effects from
       the JavaFX platform. See the class documentation in javafx.scene.effect
@@ -913,16 +978,16 @@
     <p class="grammar"><a href="#typecolor" class="typelink">&lt;color&gt;</a> |
       <a href="#typelinear-gradient" class="typelink">&lt;linear-gradient&gt;</a> |
       <a href="#typeradial-gradient" class="typelink">&lt;radial-gradient&gt;</a> |
-      <a href="#typeimage-pattern" class="typelink">&lt;image-pattern&gt;</a></p>
+      <a href="#typeimage-pattern" class="typelink">&lt;image-pattern&gt;</a>
       <a href="#typeimage-pattern" class="typelink">&lt;repeating-image-pattern&gt;</a></p>
     <h4>Linear Gradients<span class="grammar" style="font-size: smaller;">
             <a name="typelinear-gradient" id="typelinear-gradient">&lt;linear-gradient&gt;</a>
         </span></h4>
     <p class="grammar">linear-gradient( [ [from <a href="#typepoint" class="typelink">&lt;point&gt;</a>
       to <a href="#typepoint" class="typelink">&lt;point&gt;</a>] | [ to
-      &lt;side-or-corner&gt;], ]? [ [ repeat | reflect ], ]? <a href="#color-stop"
+      &lt;side-or-corner&gt;], ]? [ [ repeat | reflect ], ]? <a href="#typecolorstop"
         class="typelink">&lt;color-stop&gt;</a>[,
-      <a href="#color-stop" class="typelink">&lt;color-stop&gt;</a>]+) <br>
+      <a href="#typecolorstop" class="typelink">&lt;color-stop&gt;</a>]+) <br>
       <br>
       where &lt;side-or-corner&gt; = [left | right] || [top | bottom] </p>
     <p> </p>
@@ -950,13 +1015,13 @@
       color gradient with white underneath for the rest of the filled area.</p>
     <p class="example">linear-gradient(from 0px 0px to 0px 50px, gray, darkgray
       50%, dimgray 99%, white)</p>
-    <p><font color="#af0000">The following syntax for linear gradient does not
+    <p><span style="color: #af0000; ">The following syntax for linear gradient does not
         conform to the CSS grammar and is deprecated in JavaFX 2.0. The JavaFX
         2.0 CSS parser supports the syntax but this support may be removed in
-        later releases.</font></p>
-    <p class="grammar"><font color="#af0000">linear (&lt;size&gt;, &lt;size&gt;)
+        later releases.</span></p>
+    <p class="grammar"><span style="color: #af0000; ">linear (&lt;size&gt;, &lt;size&gt;)
         to (&lt;size&gt;, &lt;size&gt;) stops [ (&lt;number&gt;,&lt;color&gt;)
-        ]+ [ repeat | reflect ]?</font></p>
+        ]+ [ repeat | reflect ]?</span></p>
     <h4>Radial Gradients <span class="grammar" style="font-size: smaller;">
             <a name="typeradial-gradient" id="typeradial-gradient">&lt;radial-gradient&gt;</a>
         </span></h4>
@@ -977,14 +1042,14 @@
     <p class="example">radial-gradient(radius 100%, red, darkgray, black)</p>
     <p class="example">radial-gradient(focus-angle 45deg, focus-distance 20%,
       center 25% 25%, radius 50%, reflect, gray, darkgray 75%, dimgray)</p>
-    <p><font color="#af0000">The following syntax for radial gradient does not
+    <p><span style="color: #af0000; ">The following syntax for radial gradient does not
         conform to the CSS grammar and is deprecated in JavaFX 2.0. The JavaFX
         2.0 CSS parser supports the syntax but this support may be removed in
-        later releases.</font></p>
-    <p class="grammar"><font color="#af0000">radial [focus-angle &lt;number&gt;
+        later releases.</span></p>
+    <p class="grammar"><span style="color: #af0000; ">radial [focus-angle &lt;number&gt;
         | &lt;number&gt; ] ]? [ focus-distance &lt;size&gt; ]? [ center
         &lt;size,size&gt; ]? &lt;size&gt; stops [ ( &lt;number&gt;,
-        &lt;color&gt; ) ]+ [ repeat | reflect ]?</font></p>
+        &lt;color&gt; ) ]+ [ repeat | reflect ]?</span></p>
     <h4>Image Paint <span class="grammar" style="font-size: smaller;">
             <a name="typeimage-pattern" id="typeimage-pattern">&lt;image-pattern&gt;</a>
         </span></h4>
@@ -999,9 +1064,9 @@
     <span class="grammar"><a href="#typestring" class="typelink">&lt;string&gt;</a></span>
       The URL of the image.<br>
       <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
-      The <i>x</i> origin of the anchor rectangle.<br>
+      The <span style="font-style:italic;">x</span> origin of the anchor rectangle.<br>
       <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
-      The <i>y</i> origin of the anchor rectangle.<br>
+      The <span style="font-style: italic;">y</span> origin of the anchor rectangle.<br>
       <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
       The width of the anchor rectangle.<br>
       <span class="grammar"><a href="#typesize" class="typelink">&lt;size&gt;</a></span>
@@ -1020,7 +1085,6 @@
     <p>Related, there is the <code>repeating-image-pattern</code> function which is a shorthand
     for producing tiled image based fills. It is equivalent to
     <p class="example">image-pattern("images/Duke.png", 0, 0, imageWidth, imageHeight, false)</p>
-    </p>
 
     <p class="grammar">repeating-image-pattern(<a href="#typestring" class="typelink">&lt;string&gt;</a>)</p>
     <p>The only parameter is the uri of the image. Following is an example of the use of image-pattern:</p>
@@ -1633,10 +1697,10 @@
       following examples all specify the same color:</p>
     <p class="example"></p>
     <ul style="list-style: none;">
-      <li>.label { -fx-text-fill: rgb(255,0,0) } /* integer range 0 - 255*/</li>
+      <li>.label { -fx-text-fill: rgb(255,0,0) } /* integer range 0 &mdash; 255*/</li>
       <li> .label { -fx-text-fill: rgba(255,0,0,1) /* the same, with explicit
         opacity of 1 */</li>
-      <li> .label { -fx-text-fill: rgb(100%,0%,0%) } /* float range 0.0% -
+      <li> .label { -fx-text-fill: rgb(100%,0%,0%) } /* float range 0.0% &mdash;
         100.0% */</li>
       <li> .label { -fx-text-fill: rgba(100%,0%,0%,1) } /* the same, with
         explicit opacity of 1 */</li>
@@ -1654,9 +1718,9 @@
       , <a href="#typenumber" class="typelink">&lt;number&gt;</a>% , <a href="#typenumber"
         class="typelink">&lt;number&gt;</a>
       )</p>
-    <p>The first number is <em>hue</em>, a number in the range 0 to 360
+    <p>The first number is <span style="font-style:italic;">hue</span>, a number in the range 0 to 360
       degrees. The second number is <em>saturation,</em> a percentage in the
-      range 0% to 100%. The third number is <em>brightness</em>, also a
+      range 0% to 100%. The third number is <span style="font-style:italic;">brightness</span>, also a
       percentage in the range 0% to 100%. The hsba(...) form takes a fourth
       parameter at the end which is a alpha value in the range 0.0 to 1.0,
       specifying completely transparent and completely opaque, respectively.</p>
@@ -1702,15 +1766,15 @@
       black. If we were to change the background color to black or dark grey,
       the brightness would be less than 50%, giving an -fx-text-fill value of
       white.</p>
-    <p><font color="#af0000">The following syntax for ladder does not
+    <p><span style="color: #af0000; ">The following syntax for ladder does not
         conform to the CSS grammar and is deprecated in JavaFX 2.0. The JavaFX
         2.0 CSS parser supports the syntax but this support may be removed in
-        later releases.</font></p>
-    <p class="grammar"><font color="#af0000">ladder(<a href="#typecolor" class="typelink">&lt;color&gt;</a>)
+        later releases.</span></p>
+    <p class="grammar"><span style="color: #af0000; ">ladder(<a href="#typecolor" class="typelink">&lt;color&gt;</a>)
         stops [ ( <a href="#typenumber" class="typelink">&lt;number&gt;</a> , <a
           href="#typecolor"
           class="typelink">&lt;color&gt;</a>
-        ) ]+ </font></p>
+        ) ]+ </span></p>
     <h2><a name="stage" id="stage">Stage</a></h2>
     <table summary="property table" class="package" width="100%">
         <tbody>
@@ -1869,7 +1933,7 @@
         <tr>
           <td class="propertyname">visibility</td>
           <td class="value">[ visible | hidden | collapse | inherit ]</td>
-          <td class="default">visible</td>
+          <td class="default">true (i.e, visible)</td>
           <td class="range">&nbsp;</td>
           <td>See <a href="http://www.w3.org/TR/CSS2/visufx.html#visibility">W3C
               visibility property</a></td>
@@ -1948,7 +2012,7 @@
       </tbody>
     </table>
     <h4><a name="imageview" id="imageview">ImageView</a></h4>
-<p class="styleclass">Style class: empty by default</p>
+<p class="styleclass">Style class: image-view</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -1961,7 +2025,7 @@
       <tbody>
         <tr>
           <td class="propertyname">-fx-image</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a></td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a></td>
           <td class="default">null</td>
           <td>Relative URLs are resolved against the URL of the stylesheet.</td>
         </tr>
@@ -2157,7 +2221,7 @@
         <tr>
           <td class="propertyname">-fx-fill-height</td>
           <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
-          <td class="default">false</td>
+          <td class="default">true</td>
           <td>&nbsp;</td>
         </tr>
         <tr>
@@ -2226,7 +2290,7 @@
       will be painted with the second radius value and second insets value, and
       so forth.</p>
     <p>Note also that properties such as -fx-background-radius and
-      -fx-background-insets can contain a series of values or <em>sets</em> of
+      -fx-background-insets can contain a series of values or <span style="font-style:italic;">sets</span> of
       four values. A set of values is separated by whitespace, whereas the
       values or sets-of-values in a series are separated by commas. For
       -fx-background-radius, a single value indicates that the value should be
@@ -2339,8 +2403,8 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-background-image</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a>
-            [ , <a href="#typeuri" class="typelink">&lt;uri&gt;</a> ]*</td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a>
+            [ , <a href="#typeurl" class="typelink">&lt;uri&gt;</a> ]*</td>
           <td class="default">null</td>
           <td>A series of image URIs separated by commas.</td>
         </tr>
@@ -2482,14 +2546,14 @@
             <p>A series of border style values, separated by commas. Each item
               in the series applies to the corresponding item in the series of
               border colors.</p>
-            <p>The <i>segments</i> dash-style defines a sequence representing
+            <p>The <span style="font-style:italic;">segments</span> dash-style defines a sequence representing
               the lengths of the dash segments. Alternate entries in the
               sequence represent the lengths of the opaque and transparent
-              segments of the dashes. This corresponds to the <i>strokeDashArray</i>
+              segments of the dashes. This corresponds to the <span style="font-style:italic;">strokeDashArray</span>
               variable of Shape.</p>
-            <p>The optional <i>phase</i> parameter defines the point in the
+            <p>The optional <span style="font-style:italic;">phase</span> parameter defines the point in the
               dashing pattern that will correspond to the beginning of the
-              stroke. This corresponds to the <i>strokeDashOffset</i> variable
+              stroke. This corresponds to the <span style="font-style:italic;">strokeDashOffset</span> variable
               of Shape.</p>
           </td>
         </tr>
@@ -2519,8 +2583,8 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-border-image-source</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a>
-            [ , <a href="#typeuri" class="typelink">&lt;uri&gt;</a> ]*</td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a>
+            [ , <a href="#typeurl" class="typelink">&lt;uri&gt;</a> ]*</td>
           <td class="default">null</td>
           <td>
             <p>A series of image URIs, separated by commas.</p>
@@ -2621,7 +2685,7 @@
           </td>
         </tr>
         <tr>
-          <td colspan="4" class="propertyname"><em>OTHER</em></td>
+          <td colspan="4" class="propertyname"><span style="font-style:italic;">OTHER</span></td>
         </tr>
         <tr>
           <td class="propertyname">-fx-padding</td>
@@ -2855,6 +2919,17 @@
         </tr>
       </tbody>
     </table>
+
+    <table summary="property table" class="package" width="100%">
+      <tbody>
+        <tr>
+          <td>javafx.scene.media</td>
+        </tr>
+      </tbody>
+    </table>
+    <h4><a name="mediaview" id="mediaview">MediaView</a></h4>
+<p class="styleclass">Style class: media-view</p>
+
     <table summary="property table" class="package" width="100%">
       <tbody>
         <tr>
@@ -3194,8 +3269,7 @@
         </tr>
       </tbody>
     </table>
-    <!--
-        --        --        -- Controls        --        -->
+    <!-- Controls -->
     <table summary="property table" class="package" width="100%">
       <tbody>
         <tr>
@@ -3221,7 +3295,7 @@
     <p>The Accordion control has all the properties and pseudo&#8209;classes of <a href="#control">Control</a></p>
     <h4>Substructure</h4>
     <ul>
-      <li>first-titled-pane - the first TitledPane </li>
+      <li>first-titled-pane &mdash; the first TitledPane </li>
     </ul>
     <h4><a name="button" id="button">Button</a></h4>
     <p class="styleclass">Style class: button</p>
@@ -3323,7 +3397,7 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>text - a Labeled</li>
+      <li>text &mdash; a Labeled</li>
     </ul>
     <h4><a name="checkbox" id="checkbox">CheckBox</a></h4>
     <p class="styleclass">Style class: check-box</p>
@@ -3357,10 +3431,11 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>box &mdash; a StackPane</li>
+      <li>box &mdash; a StackPane
       <ul>
         <li>mark &mdash; a StackPane</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="checkmenuitem" id="checkmenuitem">CheckMenuItem</a></h4>
     <h4>Pseudo-classes</h4>
@@ -3416,28 +3491,29 @@
     <h4>Substructure</h4>
     <ul>
 	  <li>color display node  &mdash; Label</li>
-      <li>arrow-button - StackPane</li>
+      <li>arrow-button &mdash; StackPane
 	    <ul>
 		  <li>arrow &mdash; StackPane</li>
 	    </ul>
-	  </ul>
+      </li>
     </ul>
     <h4><a name="combobox" id="combobox">ComboBox</a></h4>
     <p class="styleclass">Style class: combo-box</p>
     <p>The ComboBox control has all the properties and pseudo&#8209;classes of <a href="#comboboxbase">ComboBoxBase</a></p>
     <h4>Substructure</h4>
     <ul>
-      <li>list-cell - a ListCell instance used to show the selection in the
+      <li>list-cell &mdash; a ListCell instance used to show the selection in the
         button area of a non-editable ComboBox</li>
       <li>text-input &mdash; a TextField instance used to show the selection and
         allow input in the button area of an editable ComboBox</li>
-      <li>combo-box-popup - a PopupControl that is displayed when the button is
+      <li>combo-box-popup &mdash; a PopupControl that is displayed when the button is
         pressed
         <ul>
-          <li>list-view - a ListView</li>
+          <li>list-view &mdash; a ListView
           <ul>
-            <li>list-cell - a ListCell</li>
+            <li>list-cell &mdash; a ListCell</li>
           </ul>
+          </li>
         </ul>
       </li>
     </ul>
@@ -3474,23 +3550,57 @@
         </tr>
       </tbody>
     </table>
+    <h4><a name="contextmenu" id="contextmenu">ContextMenu</a></h4>
+    <p class="styleclass">Style class: context-menu</p>
+    <p>The ContextMenu class has all the properties of <a href="#poupucontrol">PopupControl</a>.</p>
+    The selector for a ContextMenu may be made more specific by using the selector for the control from which the ContextMenu was shown.
+    For example,</p><p class="example">.choice-box > .context-menu { ... }</p>
+    <h4>Substructure</h4>
+    <ul>
+        <li>context-menu &mdash a Region
+            <ul>
+                <li>scroll-arrow &mdash; a StackPane
+                    <ul>menu-up-arrow &mdash; a StackPane</ul>
+                </li>
+                <li>scroll-arrow &mdash; a StackPane
+                    <ul>menu-down-arrow &mdash; a StackPane</ul>
+                </li>
+                <li>* &mdash; a VBox
+                    <ul>
+                        <li>menu-item &mdash; a Region
+                            <ul>
+                                <li>label &mdash; a Label</li>
+                                <li>left-container &mdash; a StackPane (for radio buttons and check boxes)</li>
+                                <li>right-container &mdash; a StackPane (for pull-right menus)
+                                    <ul>
+                                        <li>arrow &mdash; a Region</li>
+                                    </ul>
+                                </li>
+                                <li>graphic-container &mdash; a StackPane (for MenuItem graphic)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ul>
     <h4><a name="control" id="control">Control</a></h4>
     <p>The Control class has all the properties of <a href="#region">Region</a></p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
+        <thead>
         <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
         </tr>
-      </thead>
-      <tbody>
+        </thead>
+        <tbody>
         <tr>
-          <td class="propertyname">-fx-skin</td>
-          <td class="value"><a href="#typestring" class="typelink">&lt;string&gt;</a></td>
-          <td>null</td>
-          <td>The class name of the Control's Skin.</td>
+            <td class="propertyname">-fx-skin</td>
+            <td class="value"><a href="#typestring" class="typelink">&lt;string&gt;</a></td>
+            <td>null</td>
+            <td>The class name of the Control's Skin.</td>
         </tr>
         <tr>
             <td class="propertyname">-fx-focus-traversable</td>
@@ -3500,8 +3610,49 @@
                 of the focusTraversable property for the following controls is false: Accordion, Cell, Label, MenuBar,
                 ProgressBar, ProgressIndicator, ScrollBar, ScrollPane, Separator, SplitPane, ToolBar.</td>
         </tr>
-      </tbody>
+        </tbody>
     </table>
+    <h4><a name="htmleditor" id="htmleditor">HTMLEditor</a></h4>
+    <p class="styleclass">Style class: html-editor</p>
+    <p>The Hyperlink control has all the properties of <a href="#control">Control</a>.</p>
+    <h4>Substructure</h4>
+    <ul>
+        <li>grid &mdash; GridPane (contains WebView)
+            <ul>
+                <li>top-toolbar &mdash; ToolBar
+                    <ul>
+                        <li>html-editor-cut &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-copy &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-paste &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-align-left &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-align-right &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-align-center &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-align-justify &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-outdent &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-indent &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-bullets &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-numbers &mdash <a href="#togglebutton">ToggleButton</a></li>
+                    </ul>
+                </li>
+                <li>web-view &mdash; <a href="#webview">WebView</a></li>
+                <li>bottom-toolbar &mdash; ToolBar
+                    <ul>
+                        <li>format-menu-button &mdash ComboBox</li>
+                        <li>font-family-menu-button &mdash <a href="#combobox">ComboBox</a></li>
+                        <li>font-size-menu-button &mdash <a href="#combobox">ComboBox</a></li>
+                        <li>html-editor-bold &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-italic &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-underline &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-strike &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-hr &mdash <a href="#togglebutton">ToggleButton</a></li>
+                        <li>html-editor-foreground &mdash <a href="#colorpicker">ColorPicker</a></li>
+                        <li>html-editor-background &mdash <a href="#colorpicker">ColorPicker</a></li>
+
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ul>
     <h4><a name="hyperlink" id="hyperlink">Hyperlink</a></h4>
     <p class="styleclass">Style class: hyperlink</p>
     <p>The Hyperlink control has all the properties of <a href="#buttonbase">ButtonBase</a>.</p>
@@ -3631,7 +3782,7 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-graphic</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a></td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a></td>
           <td>null</td>
           <td>&nbsp;</td>
         </tr>
@@ -3844,20 +3995,23 @@
     <h4>Substructure</h4>
     <ul>
 	  <li>page &mdash; StackPane</li>
-      <li>pagination-control &mdash; StackPane</li>
+      <li>pagination-control &mdash; StackPane
         <ul>
-          <li>leftArrowButton - Button</li>
-	    <ul>
-		  <li>leftArrow &mdash; StackPane</li>
-	    </ul>
-	    <li>rightArrowButton - Button</li>
-	    <ul>
-		  <li>rightArrow &mdash; StackPane</li>
-	    </ul>
-	    <li>bullet-button - ToggleButton</li>
-	    <li>number-button - ToogleButton</li>
-	    <li>page-information - Label</li>
+          <li>leftArrowButton &mdash; Button
+	        <ul>
+		      <li>leftArrow &mdash; StackPane</li>
+	        </ul>
+          </li>
+	      <li>rightArrowButton &mdash; Button
+     	    <ul>
+	    	  <li>rightArrow &mdash; StackPane</li>
+	        </ul>
+          </li>
+	      <li>bullet-button &mdash; ToggleButton</li>
+	      <li>number-button &mdash; ToogleButton</li>
+	      <li>page-information &mdash; Label</li>
 	  </ul>
+      </li>
     </ul>
     <h4><a name="passwordfield" id="passwordfield">PasswordField</a></h4>
     <p class="styleclass">Style class: password-field</p>
@@ -3901,16 +4055,40 @@
           <td>2.0</td>
           <td>&nbsp;</td>
         </tr>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#control">Control</a></td>
+        </tr>
       </tbody>
     </table>
-    <p>The ProgressBar control has all the properties of and pseudo&#8209;class state
-      of <a href="#progressindicator">ProgressIndicator</a></p>
+    <h4>Pseudo-classes</h4>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Pseudo-class</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">determinate</td>
+            <td>applies if the <strong>indeterminate</strong> variable is false</td>
+        </tr>
+        <tr>
+            <td class="propertyname">indetermindate</td>
+            <td>applies if the <strong>indeterminate</strong> variable is true</td>
+        </tr>
+        <tr>
+            <td colspan="2" class="parents">Also has all pseudo&#8209;classes of <a href="#control">Control</a></td>
+        </tr>
+        </tbody>
+    </table>
     <h4>Substructure</h4>
     <ul>
-      <li>track - StackPane</li>
+      <li>track &mdash; StackPane
       <ul>
         <li>bar &mdash; Region</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="progressindicator" id="progressindicator">ProgressIndicator</a></h4>
     <p class="styleclass">Style class: progress-indicator</p>
@@ -3972,9 +4150,9 @@
     <h4>Substructure</h4>
     <ul>
       <li>indicator &mdash; StackPane</li>
-      <li>progress - StackPane</li>
-      <li>percentage - Text</li>
-      <li>tick - StackPane</li>
+      <li>progress &mdash; StackPane</li>
+      <li>percentage &mdash; Text</li>
+      <li>tick &mdash; StackPane</li>
     </ul>
     <h4><a name="radiobutton" id="radiobutton">RadioButton</a></h4>
     <p class="styleclass">Style class: radio-button</p>
@@ -4060,16 +4238,18 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>decrement-button &mdash; StackPane</li>
-      <ul>
-        <li>decrement-arrow &mdash; StackPane </li>
-      </ul>
+      <li>decrement-button &mdash; StackPane
+        <ul>
+          <li>decrement-arrow &mdash; StackPane </li>
+        </ul>
+      </li>
       <li>track &mdash; StackPane</li>
       <li>thumb &mdash; StackPane</li>
-      <li>increment-button &mdash; StackPane</li>
-      <ul>
-        <li>increment-arrow &mdash; StackPane</li>
-      </ul>
+      <li>increment-button &mdash; StackPane
+        <ul>
+          <li>increment-arrow &mdash; StackPane</li>
+        </ul>
+      </li>
     </ul>
     <h4><a name="scrollpane" id="scrollpane">ScrollPane</a></h4>
     <p class="styleclass">Style class: scroll-pane</p>
@@ -4148,7 +4328,7 @@
     <ul>
       <li>scroll-bar:vertical &mdash; ScrollBar</li>
       <li>scroll-bar:horizontall &mdash; ScrollBar</li>
-      <li>corner - StackPane</li>
+      <li>corner &mdash; StackPane</li>
     </ul>
     <h4><a name="separator" id="separator">Separator</a></h4>
     <p class="styleclass">Style class: separator</p>
@@ -4368,11 +4548,12 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>split-pane-divider &mdash; StackPane</li>
+      <li>split-pane-divider &mdash; StackPane
       <ul>
         <li>vertical-grabber &mdash; StackPane</li>
         <li>horizontal-grabber &mdash; StackPane</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="tabpane" id="tabpane">TabPane</a></h4>
     <p class="styleclass">Style class: tab-pane</p>
@@ -4460,23 +4641,27 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>tab-header-area &mdash; StackPane</li>
+      <li>tab-header-area &mdash; StackPane
       <ul>
-        <li>headers-region - StackPane</li>
-        <li>tab-header-background - StackPane</li>
-        <li>control-buttons-tab - StackPane</li>
+        <li>headers-region &mdash; StackPane</li>
+        <li>tab-header-background &mdash; StackPane</li>
+        <li>control-buttons-tab &mdash; StackPane
         <ul>
-          <li>tab-down-button - Pane</li>
+          <li>tab-down-button &mdash; Pane
           <ul>
-            <li>arrow - StackPane</li>
+            <li>arrow &mdash; StackPane</li>
           </ul>
+          </li>
         </ul>
-        <li>tab - Tab</li>
+        </li>
+        <li>tab &mdash; Tab
         <ul>
-          <li>tab-label - Label</li>
-          <li>tab-close-button - StackPane</li>
+          <li>tab-label &mdash; Label</li>
+          <li>tab-close-button &mdash; StackPane</li>
         </ul>
+        </li>
       </ul>
+      </li>
       <li>tab-content-area &mdash; StackPane</li>
     </ul>
     <h4><a name="tablecolumnheader" id="tablecolumnheader">TableColumnHeader</a></h4>
@@ -4493,7 +4678,6 @@
             <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
             <td>20</td>
             <td>The table column header size.</td>
-        </tr>
         </tr>
         </thead>
         <tbody>
@@ -4522,25 +4706,29 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-        <li>column-resize-line - Region</li>
-        <li>column-overlay - Region</li>
-        <li>placeholder - StackPane</li>
-        <li>column-header-background - StackPane</li>
+        <li>column-resize-line &mdash; Region</li>
+        <li>column-overlay &mdash; Region</li>
+        <li>placeholder &mdash; StackPane</li>
+        <li>column-header-background &mdash; StackPane
         <ul>
-            <li>nested-column-header</li>
+            <li>nested-column-header
             <ul>
                 <li>column-header</li>
             </ul>
-            <li>filler - Region</li>
-            <li>show-hide-columns-button - StackPane</li>
+            </li>
+            <li>filler &mdash; Region</li>
+            <li>show-hide-columns-button &mdash; StackPane
             <ul>
-                <li>show-hide-column-image - StackPane</li>
+                <li>show-hide-column-image &mdash; StackPane</li>
             </ul>
-            <li>column-drag-header - StackPane</li>
+            </li>
+            <li>column-drag-header &mdash; StackPane
             <ul>
-                <li>label - Label</li>
+                <li>label &mdash; Label</li>
             </ul>
+            </li>
         </ul>
+        </li>
     </ul>
     <h4><a name="tableview" id="tableview">TableView</a></h4>
     <p class="styleclass">Style class: table-view</p>
@@ -4557,7 +4745,6 @@
           <td>-1</td>
           <td>A value greater than zero sets the fixed cell size of the table.
               A value of zero or less disables fixed cell size.</td>
-        </tr>
         </tr>
       </thead>
       <tbody>
@@ -4590,26 +4777,30 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>column-resize-line - Region</li>
-      <li>column-overlay - Region</li>
-      <li>placeholder - StackPane</li>
-      <li>column-header-background - StackPane</li>
+      <li>column-resize-line &mdash; Region</li>
+      <li>column-overlay &mdash; Region</li>
+      <li>placeholder &mdash; StackPane</li>
+      <li>column-header-background &mdash; StackPane
       <ul>
-        <li>nested-column-header</li>
+        <li>nested-column-header
         <ul>
           <li>column-header</li>
         </ul>
-        <li>filler - Region</li>
-        <li>show-hide-columns-button - StackPane</li>
+        </li>
+        <li>filler &mdash; Region</li>
+        <li>show-hide-columns-button &mdash; StackPane
         <ul>
-          <li>show-hide-column-image - StackPane</li>
+          <li>show-hide-column-image &mdash; StackPane</li>
         </ul>
-        <li>column-drag-header - StackPane</li>
+        </li>
+        <li>column-drag-header &mdash; StackPane
         <ul>
-          <li>label - Label</li>
+          <li>label &mdash; Label</li>
         </ul>
+        </li>
       </ul>
-        <li>table-column - TableColumn</li>
+      </li>
+        <li>table-column &mdash; TableColumn</li>
     </ul>
     <h4><a name="textarea" id="textarea">TextArea</a></h4>
     <p class="styleclass">Style class: text-area</p>
@@ -4648,10 +4839,11 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>scroll-pane - ScrollPane</li>
+      <li>scroll-pane &mdash; ScrollPane
       <ul>
-        <li>content - Region</li>
+        <li>content &mdash; Region</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="textinputcontrol" id="textinputcontrol">TextInputControl</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -4809,7 +5001,7 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>title &mdash; HBox</li>
+      <li>title &mdash; HBox
       <ul>
         <li>text &mdash; Label/li&gt; </li>
         <li>arrow-button &mdash; StackPane/li&gt;
@@ -4818,6 +5010,7 @@
           </ul>
         </li>
       </ul>
+      </li>
       <li>content &mdash; StackPane/li&gt; </li>
     </ul>
     <h4><a name="togglebutton" id="togglebutton">ToggleButton</a></h4>
@@ -4888,10 +5081,11 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>tool-bar-overflow-button - StackPane</li>
+      <li>tool-bar-overflow-button &mdash; StackPane
       <ul>
-        <li>arrow - StackPane</li>
+        <li>arrow &mdash; StackPane</li>
       </ul>
+      </li>
     </ul>
     <h4><a name="tooltip" id="tooltip">Tooltip</a></h4>
     <p class="styleclass">Style class: tooltip</p>
@@ -4927,7 +5121,7 @@
         </tr>
         <tr>
           <td class="propertyname">-fx-graphic</td>
-          <td class="value"><a href="#typeuri" class="typelink">&lt;uri&gt;</a></td>
+          <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a></td>
           <td>null</td>
           <td>&nbsp;</td>
         </tr>
@@ -5030,14 +5224,14 @@
           <td class="propertyname">"chart-series-area-line series&lt;i&gt;
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
-            series&rsquo; color index</td>
+            series&rsquo; color index.
           <td><a href="#node" class="typelink">Node</a> </td>
         </tr>
         <tr>
           <td class="propertyname">"chart-series-area-fill series&lt;i&gt;
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
-            series&rsquo; color index</td>
+            series&rsquo; color index.
           <td><a href="#path" class="typelink">Path</a> </td>
         </tr>
         <tr>
@@ -5073,7 +5267,70 @@
           </tr>
         </tbody>
       </table>
-    </p>
+    <h4><a name="axis" id="axis">Axis</a></h4>
+    <p class="styleclass">Style class: axis</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-side</td>
+            <td class="value">Side</td>
+            <td>null</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-length</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>8</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-label-font</td>
+            <td class="value"><a href="#typefont" class="typelink">&lt;font&gt;</a></td>
+            <td>8 system</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-label-fill</td>
+            <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
+            <td>black</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-label-gap</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>3</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-mark-visible</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-labels-visible</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>axis-label &mdash; Text</li>
+        <li>axis-tick-mark &mdash; Path</li>
+    </ul>
     <h4><a name="barchart" id="barchart">BarChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5094,8 +5351,9 @@
             default-color&lt;k&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series, &lt;j&gt; is the index
             of the data within the series, and &lt;k&gt; is the series&rsquo;
-            color index. If the data value is negative, the "negative" style
-            class is added.</td>
+            color index.
+            If the data value is negative, the "negative" style
+            class is added; e.g., <code>.negative.chart-bar</code>.</td>
           <td><a href="#node" class="typelink">Node</a> </td>
         </tr>
         <tr>
@@ -5135,7 +5393,6 @@
           </tr>
         </tbody>
       </table>
-    </p>
     <h4><a name="bubblechart" id="bubblechart">BubbleChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5179,47 +5436,103 @@
           </tr>
         </tbody>
       </table>
-    </p>
-    <h4><a name="chart" id="chart">Chart</a></h4>
+    <h4><a name="categoyaxis" id="categoryaxis">CategoryAxis</a></h4>
+    <p class="styleclass">Style class: axis</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-<p class="styleclass">Style class: chart</p>
-      <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
-          <tr>
+        <tr>
             <th class="propertyname">CSS Property</th>
             <th class="value">Values</th>
             <th>Default</th>
             <th>Comments</th>
-          </tr>
+        </tr>
         </thead>
         <tbody>
-          <tr>
+        <tr>
+            <td class="propertyname">-fx-start-margin</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
+            <td>5</td>
+            <td>The margin between the axis start and the first tick-mark</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-end-margin</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
+            <td>5</td>
+            <td>The margin between the axis start and the first tick-mark</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-gap-start-and-end</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>If this is true then half the space between ticks is left at the
+                start and end</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#axis">Axis</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4><a name="chart" id="chart">Chart</a></h4>
+    <p class="styleclass">Style class: chart</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
             <td class="propertyname">-fx-legend-side</td>
             <td class="value">Side</td>
             <td>bottom</td>
             <td>&nbsp;</td>
-          </tr>
-          <tr>
+        </tr>
+        <tr>
             <td class="propertyname">-fx-legend-visible</td>
             <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
             <td>true</td>
             <td>&nbsp;</td>
-          </tr>
-          <tr>
+        </tr>
+        <tr>
             <td class="propertyname">-fx-title-side</td>
             <td class="value">Side</td>
             <td>top</td>
             <td>&nbsp;</td>
-          </tr>
-          <tr>
+        </tr>
+        <tr>
             <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
-          </tr>
+        </tr>
         </tbody>
-      </table>
+    </table>
     <h4>Substructure</h4>
     <ul>
-      <li>chart-title &mdash; Label</li>
-      <li>chart-content &mdash; Pane</li>
+        <li>chart-title &mdash; Label</li>
+        <li>chart-content &mdash; Pane</li>
+    </ul>
+    <h4><a name="legend" id="legend">Legend</a></h4>
+    <p class="styleclass">Style class: chart-legend</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>chart-legend-item &mdash; Label</li>
+        <li>chart-legend-item-symbol &mdash; Node (the Label's graphic)</li>
     </ul>
     <h4><a name="linechart" id="linechart">LineChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -5247,7 +5560,7 @@
           <td><a href="#node" class="typelink">Node</a> </td>
         </tr>
         <tr>
-          <td class="propertyname">"chart-line-symblol series&lt;i&gt;
+          <td class="propertyname">"chart-line-symbol series&lt;i&gt;
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
             series&rsquo; color index</td>
@@ -5277,50 +5590,29 @@
           </tr>
         </tbody>
       </table>
-    </p>
-    <h4><a name="scatterchart" id="scatterchart">ScatterChart</a></h4>
+    <h4><a name="numberaxis" id="numberaxis">NumberAxis</a></h4>
+    <p class="styleclass">Style class: axis</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">Style class</th>
-          <th>Comments</th>
-          <th>Properties</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">"chart-symbol series&lt;i&gt; data&lt;j&gt;
-            default-color&lt;k&gt;"</td>
-          <td>Where &lt;i&gt; is the index of the series, &lt;j&gt; is the index
-            of the data within the series, and &lt;k&gt; is the series&rsquo;
-            color index</td>
-          <td><a href="#node" class="typelink">Node</a> </td>
-        </tr>
-        <tr>
-          <td class="propertyname">&nbsp;</td>
-          <td>The LegendItem symbols are assigned the style&#8209;class of the first
-            symbol of the series.</td>
-          <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
-        </tr>
-      </tbody>
-    </table>
-    <p>
-      <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
-          <tr>
+        <tr>
             <th class="propertyname">CSS Property</th>
             <th class="value">Values</th>
             <th>Default</th>
             <th>Comments</th>
-          </tr>
+        </tr>
         </thead>
         <tbody>
-          <tr>
-            <td colspan="4" class="parents">Has all properties of <a href="#xychart">XYChart</a></td>
-          </tr>
+        <tr>
+            <td class="propertyname">-fx-tick-unit</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
+            <td>5</td>
+            <td>The value between each major tick mark in data units.</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#valueaxis">ValueAxis</a></td>
+        </tr>
         </tbody>
-      </table>
-    </p>
+    </table>
     <h4><a name="piechart" id="piechart">PieChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5336,7 +5628,7 @@
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the data and &lt;j&gt; is the
             series&rsquo; color index. If the data value is negative, the
-            "negative" style&#8209;class is added.</td>
+            "negative" style&#8209;class is added; e.g., <code>.negative.chart-pie</code>.</td>
           <td><a href="#node" class="typelink">Node</a> </td>
         </tr>
         <tr>
@@ -5350,7 +5642,7 @@
           <td><a href="#path" class="typelink">Text</a> </td>
         </tr>
         <tr>
-          <td class="propertyname">"pie-legend-symbol &lt;<i>i<sup>th</sup></i>
+          <td class="propertyname">"pie-legend-symbol &lt;<em>i&ndash;th</em>
             data item&rsquo;s style&#8209;class&gt;"</td>
           <td>Each item in the legend has the style&#8209;class "pie-legend-symbol"
             plus the style&#8209;class of the corresponding data item</td>
@@ -5398,7 +5690,87 @@
           </tr>
         </tbody>
       </table>
-    </p>
+    <h4><a name="scatterchart" id="scatterchart">ScatterChart</a></h4>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">Style class</th>
+            <th>Comments</th>
+            <th>Properties</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">"chart-symbol series&lt;i&gt; data&lt;j&gt;
+                default-color&lt;k&gt;"</td>
+            <td>Where &lt;i&gt; is the index of the series, &lt;j&gt; is the index
+                of the data within the series, and &lt;k&gt; is the series&rsquo;
+                color index</td>
+            <td><a href="#node" class="typelink">Node</a> </td>
+        </tr>
+        <tr>
+            <td class="propertyname">&nbsp;</td>
+            <td>The LegendItem symbols are assigned the style&#8209;class of the first
+                symbol of the series.</td>
+            <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
+        </tr>
+        </tbody>
+    </table>
+    <p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#xychart">XYChart</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4><a name="valueaxis" id="valueaxis">ValueAxis</a></h4>
+    <p class="styleclass">Style class: axis</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-minor-tick-length</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>5</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-minor-tick-count</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>5</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-minor-tick-visible</td>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Has all properties of <a href="#axis">Axis</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>axis-minor-tick-mark &mdash; Path</li>
+    </ul>
     <h4><a name="xychart" id="xychart">XYChart</a></h4>
     <p class="styleclass">Style class: set by sub-type</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -5463,190 +5835,6 @@
         <li>chart-vertical-zero-line &mdash; Line</li>
         <li>chart-horizontal-zero-line &mdash; Line</li>
     </ul>
-    <h4><a name="axis" id="axis">Axis</a></h4>
-    <p class="styleclass">Style class: axis</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">-fx-side</td>
-          <td class="value">Side</td>
-          <td>null</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-length</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>8</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-label-font</td>
-          <td class="value"><a href="#typefont" class="typelink">&lt;font&gt;</a></td>
-          <td>8 system</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-label-fill</td>
-          <td class="value"><a href="#typepaint" class="typelink">&lt;paint&gt;</a></td>
-          <td>black</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-label-gap</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>3</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-mark-visible</td>
-          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
-          <td>true</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-tick-labels-visible</td>
-          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
-          <td>true</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4>Substructure</h4>
-    <ul>
-      <li>axis-label &mdash; Text</li>
-      <li>axis-tick-mark &mdash; Path</li>
-    </ul>
-    <h4><a name="valueaxis" id="valueaxis">ValueAxis</a></h4>
-    <p class="styleclass">Style class: axis</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">-fx-minor-tick-length</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>5</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-minor-tick-count</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
-          <td>5</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-minor-tick-visible</td>
-          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
-          <td>true</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#axis">Axis</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4>Substructure</h4>
-    <ul>
-      <li>axis-minor-tick-mark &mdash; Path</li>
-    </ul>
-    <h4><a name="numberaxis" id="numberaxis">NumberAxis</a></h4>
-    <p class="styleclass">Style class: axis</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">-fx-tick-unit</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
-          <td>5</td>
-          <td>The value between each major tick mark in data units.</td>
-        </tr>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#valueaxis">ValueAxis</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4><a name="categoyaxis" id="categoryaxis">CategoryAxis</a></h4>
-    <p class="styleclass">Style class: axis</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="propertyname">-fx-start-margin</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
-          <td>5</td>
-          <td>The margin between the axis start and the first tick-mark</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-end-margin</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;number&gt;</a></td>
-          <td>5</td>
-          <td>The margin between the axis start and the first tick-mark</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-gap-start-and-end</td>
-          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
-          <td>true</td>
-          <td>If this is true then half the space between ticks is left at the
-            start and end</td>
-        </tr>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#axis">Axis</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4><a name="legend" id="legend">Legend</a></h4>
-    <p class="styleclass">Style class: chart-legend</p>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-      <thead>
-        <tr>
-          <th class="propertyname">CSS Property</th>
-          <th class="value">Values</th>
-          <th>Default</th>
-          <th>Comments</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td colspan="4" class="parents">Has all properties of <a href="#region">Region</a></td>
-        </tr>
-      </tbody>
-    </table>
-    <h4>Substructure</h4>
-    <ul>
-      <li>chart-legend-item - Label</li>
-      <li>chart-legend-item-symbol - Node</li>
-    </ul>
     <h2><a name="references" id="references">References</a></h2>
     <p>[1] CSS 2.1: <a href="http://www.w3.org/TR/CSS21/" target="_blank">http://www.w3.org/TR/CSS21/</a>
     </p>
@@ -5661,9 +5849,8 @@
     <p>[5] Uniform Resource Identifier (URI): Generic Syntax <a href="http://www.ietf.org/rfc/rfc3986">RFC-3986</a></p>
     <hr>
     <p>
-<small><a href="http://docs.oracle.com/javase/8/docs/legal/cpyr.html">Copyright</a> (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.</small>
+<span style="font-size: small;"><a href="http://docs.oracle.com/javase/8/docs/legal/cpyr.html">Copyright</a> (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.</span>
     </p>
     <br>
-    </table>
   </body>
 </html>

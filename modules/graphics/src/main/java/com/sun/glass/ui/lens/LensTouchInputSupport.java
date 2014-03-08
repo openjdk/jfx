@@ -50,7 +50,7 @@ final class LensTouchInputSupport {
      * Property is used by Lens native input driver 
      * 
      */
-    private static final int touchTapRadius;
+    static final int touchTapRadius;
     /**
      * This property determine the sensitivity of move events from touch. The 
      * bigger the value the less sensitive is the touch screen. In practice move
@@ -116,7 +116,7 @@ final class LensTouchInputSupport {
         new PrivilegedAction<Boolean>() {
             @Override
             public Boolean run() {
-                return Boolean.getBoolean("com.sun.javafx.experimental.embedded.multiTouch");
+                return !(Boolean.getBoolean("lens.input.forceSingleTouch"));
             }
         });
 

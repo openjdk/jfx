@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1572,7 +1572,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     if (scanline_ptr == NULL) {
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
-                "Writing JPEG Stream");
+                "Reading JPEG Stream");
         RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
         return JNI_FALSE;
     }
@@ -1659,7 +1659,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompres
     if (buf == NULL) {
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
-                "Writing JPEG Stream");
+                "Reading JPEG Stream");
         return NULL;
     }
 

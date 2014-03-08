@@ -35,8 +35,6 @@ if (BUILD_CLOSED) {
 IOS.canBuild = IS_MAC
 if (!IOS.canBuild) return;
 
-IOS.artifactsName = "ios"
-
 IOS.compileSwing = false;
 IOS.compileSWT = false;
 IOS.compileFXPackager = false;

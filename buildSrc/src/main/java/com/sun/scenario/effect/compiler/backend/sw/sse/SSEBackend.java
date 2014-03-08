@@ -94,9 +94,11 @@ public class SSEBackend extends TreeScanner {
 
     public final GenCode getGenCode(String effectName,
                                     String peerName,
+                                    String genericsName,
                                     String interfaceName)
     {
         Map<String, Variable> vars = parser.getSymbolTable().getGlobalVariables();
+        StringBuilder genericsDecl = new StringBuilder();
         StringBuilder interfaceDecl = new StringBuilder();
         StringBuilder constants = new StringBuilder();
         StringBuilder samplers = new StringBuilder();
@@ -309,6 +311,10 @@ public class SSEBackend extends TreeScanner {
             }
         }
 
+        if (genericsName != null) {
+            genericsDecl.append("<"+genericsName+">");
+        }
+
         if (interfaceName != null) {
             interfaceDecl.append("implements "+interfaceName);
         }
@@ -318,6 +324,7 @@ public class SSEBackend extends TreeScanner {
         StringTemplate jglue = group.getInstanceOf("glue");
         jglue.setAttribute("effectName", effectName);
         jglue.setAttribute("peerName", peerName);
+        jglue.setAttribute("genericsDecl", genericsDecl.toString());
         jglue.setAttribute("interfaceDecl", interfaceDecl.toString());
         jglue.setAttribute("usercode", usercode.toString());
         jglue.setAttribute("samplers", samplers.toString());

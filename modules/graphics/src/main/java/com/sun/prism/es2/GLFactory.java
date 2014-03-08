@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,6 +67,8 @@ abstract class GLFactory {
                 factoryClassName = "com.sun.prism.es2.EGLX11GLFactory";
             else if ("eglfb".equals(PlatformUtil.getEmbeddedType()))
                 factoryClassName = "com.sun.prism.es2.EGLFBGLFactory";
+            else if ("monocle".equals(PlatformUtil.getEmbeddedType()))
+                factoryClassName = "com.sun.prism.es2.MonocleGLFactory";
             else
                 factoryClassName = "com.sun.prism.es2.X11GLFactory";
         } else if (PlatformUtil.isWindows()) {

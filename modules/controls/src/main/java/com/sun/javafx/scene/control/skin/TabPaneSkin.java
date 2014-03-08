@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,8 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
@@ -49,7 +49,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
@@ -79,10 +78,8 @@ import javafx.util.Callback;
 import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
@@ -168,7 +165,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private ObservableList<TabContentRegion> tabContentRegions;
     private Rectangle clipRect;
     private Rectangle tabHeaderAreaClipRect;
-    boolean focusTraversable = true;
     private Tab selectedTab;
     private Tab previousSelectedTab;
     private boolean isSelectingTab;
@@ -241,51 +237,35 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             clipRect.setHeight(getSkinnable().getHeight());
         }
     }
-    private void removeTabs(List<? extends Tab> removedList, final Map<Tab, Timeline> closedTab) {
+    private void removeTabs(List<? extends Tab> removedList) {
         for (final Tab tab : removedList) {
             // Animate the tab removal
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
-            Timeline closedTabTimeline = null;
             if (tabRegion != null) {
-                if( closeTabAnimation.get() == TabAnimation.GROW ) {
+                if (closeTabAnimation.get() == TabAnimation.GROW) {
                     tabRegion.animating = true;
-                    closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED * 1.5F), 0.0F, new EventHandler<ActionEvent>() {
+                    Timeline closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, new EventHandler<ActionEvent>() {
                         @Override public void handle(ActionEvent event) {      
-                            handleClosedTab(tab, closedTab);
+                            handleClosedTab(tab);
                         }
                     });
                     closedTabTimeline.play();    
                 } else {
-                    handleClosedTab(tab, closedTab);
+                    handleClosedTab(tab);
                 }
             }
-            closedTab.put(tab, closedTabTimeline);
         }
     }
     
-    private void handleClosedTab(Tab tab, Map<Tab, Timeline> closedTab) {
+    private void handleClosedTab(Tab tab) {
         removeTab(tab);
-        closedTab.remove(tab);
         if (getSkinnable().getTabs().isEmpty()) {
             tabHeaderArea.setVisible(false);
         }
     }
-    private void addTabs(List<? extends Tab> addedList, int from, boolean handle, final Map<Tab, Timeline> closedTab) {
+    private void addTabs(List<? extends Tab> addedList, int from) {
         int i = 0;
         for (final Tab tab : addedList) {
-            // Handle the case where we are removing and adding the same tab.
-            Timeline closedTabTimeline = closedTab.get(tab);
-            if (closedTabTimeline != null) {
-                closedTabTimeline.stop();
-                Iterator<Tab> keys = closedTab.keySet().iterator();
-                while (keys.hasNext()) {
-                    Tab key = keys.next();
-                    if (tab.equals(key)) {
-                        removeTab(key);
-                        keys.remove();                                    
-                    }
-                }
-            }
             // A new tab was added - animate it out
             if (!tabHeaderArea.isVisible()) {
                 tabHeaderArea.setVisible(true);
@@ -295,21 +275,16 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             addTabContent(tab);
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
             if (tabRegion != null) {
-                if( openTabAnimation.get() == TabAnimation.GROW ) {
-                    tabRegion.animateNewTab = new Runnable() {
-                        @Override public void run() {
-                            final double w = snapSize(tabRegion.prefWidth(-1));
-                            tabRegion.animating = true;
-                            tabRegion.prefWidth.set(0.0);
-                            tabRegion.setVisible(true);
-                            createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), w, new EventHandler<ActionEvent>() {
-                                @Override public void handle(ActionEvent event) {
-                                    tabRegion.animating = false;
-                                    tabRegion.inner.requestLayout();
-                                }
-                            }).play();
+                if (openTabAnimation.get() == TabAnimation.GROW) {
+                    tabRegion.animating = true;
+                    tabRegion.animationTransition.setValue(0.0);
+                    tabRegion.setVisible(true);
+                    createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 1.0, new EventHandler<ActionEvent>() {
+                        @Override public void handle(ActionEvent event) {
+                            tabRegion.animating = false;
+                            tabRegion.inner.requestLayout();
                         }
-                    };    
+                    }).play();
                 } else {
                     tabRegion.setVisible(true);
                     tabRegion.inner.requestLayout();
@@ -319,13 +294,17 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
     
     private void initializeTabListener() {
-        final Map<Tab, Timeline> closedTab = new HashMap<Tab, Timeline>();
         getSkinnable().getTabs().addListener(new ListChangeListener<Tab>() {
-            @Override public void onChanged(final Change<? extends Tab> c) {      
+            @Override public void onChanged(final Change<? extends Tab> c) {
+                List<Tab> tabsToRemove = new ArrayList<>();
+                List<Tab> tabsToAdd = new ArrayList<>();
+                int insertPos = -1;
+
                 while (c.next()) {
                     if (c.wasPermutated()) { 
                         TabPane tabPane = getSkinnable();
                         List<Tab> tabs = tabPane.getTabs();
+
                         // tabs sorted : create list of permutated tabs.
                         // clear selection, set tab animation to NONE
                         // remove permutated tabs, add them back in correct order.
@@ -334,6 +313,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         Tab selTab = tabPane.getSelectionModel().getSelectedItem();
                         List<Tab> permutatedTabs = new ArrayList<Tab>(size);
                         getSkinnable().getSelectionModel().clearSelection();
+
                         // save and set tab animation to none - as it is not a good idea
                         // to animate on the same data for open and close. 
                         TabAnimation prevOpenAnimation = openTabAnimation.get();
@@ -343,19 +323,39 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         for (int i = c.getFrom(); i < c.getTo(); i++) {
                             permutatedTabs.add(tabs.get(i));
                         }
-                        removeTabs(permutatedTabs, closedTab);
-                        addTabs(permutatedTabs, c.getFrom(), false, closedTab);
+
+                        removeTabs(permutatedTabs);
+                        addTabs(permutatedTabs, c.getFrom());
                         openTabAnimation.set(prevOpenAnimation);
                         closeTabAnimation.set(prevCloseAnimation);
                         getSkinnable().getSelectionModel().select(selTab);
                     }
-                    if (c.getRemovedSize() > 0) {
-                        removeTabs(c.getRemoved(), closedTab);
+
+                    if (c.wasRemoved()) {
+                        tabsToRemove.addAll(c.getRemoved());
                     }
-                    if (c.getAddedSize() > 0) {
-                        addTabs(c.getAddedSubList(), c.getFrom(), true, closedTab);
+
+                    if (c.wasAdded()) {
+                        tabsToAdd.addAll(c.getAddedSubList());
+                        insertPos = c.getFrom();
                     }
                 }
+
+                // now only remove the tabs that are not in the tabsToAdd list
+                tabsToRemove.removeAll(tabsToAdd);
+                removeTabs(tabsToRemove);
+
+                // and add in any new tabs (that we don't already have showing)
+                for (TabContentRegion tabContentRegion : tabContentRegions) {
+                    if (tabsToAdd.contains(tabContentRegion.getTab())) {
+                        tabsToAdd.remove(tabContentRegion.getTab());
+                    }
+                }
+
+                addTabs(tabsToAdd, insertPos == -1 ? tabContentRegions.size() : insertPos);
+
+                // Fix for RT-34692
+                getSkinnable().requestLayout();
             }
         });
     }
@@ -381,11 +381,28 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     private void removeTab(Tab tab) {
         final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
+        tabRegion.removeListeners(tab);
         tabHeaderArea.removeTab(tab);
         removeTabContent(tab);
+
+        // remove the menu item from the popup menu
+        ContextMenu popupMenu = tabHeaderArea.controlButtons.popup;
+        TabMenuItem tabItem = null;
+        for (MenuItem item : popupMenu.getItems()) {
+            tabItem = (TabMenuItem) item;
+            if (tab == tabItem.getTab()) {
+                break;
+            }
+            tabItem = null;
+        }
+        if (tabItem != null) {
+            tabItem.dispose();
+            popupMenu.getItems().remove(tabItem);
+        }
+        // end of removing menu item
+
         tabRegion.animating = false;
         tabHeaderArea.requestLayout();
-        tab = null;
     }
 
     private void updateTabPosition() {
@@ -398,7 +415,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         Timeline timeline = new Timeline();
         timeline.setCycleCount(1);
 
-        KeyValue keyValue = new KeyValue(tabRegion.prefWidth, endValue, Interpolator.LINEAR);
+        KeyValue keyValue = new KeyValue(tabRegion.animationTransition, endValue, Interpolator.LINEAR);
 
         timeline.getKeyFrames().clear();
         timeline.getKeyFrames().add(new KeyFrame(duration, func, keyValue));
@@ -431,26 +448,20 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         return getSkinnable().getStyleClass().contains(TabPane.STYLE_CLASS_FLOATING);
     }
 
-//    @Override protected void setWidth(double value) {
-//        super.setWidth(value);
-//        clipRect.setWidth(value);
-//    }
-//
-//    @Override protected void setHeight(double value) {
-//        super.setHeight(value);
-//        clipRect.setHeight(value);
-//    }
-
     private double maxw = 0.0d;
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         // The TabPane can only be as wide as it widest content width.
         for (TabContentRegion contentRegion: tabContentRegions) {
              maxw = Math.max(maxw, snapSize(contentRegion.prefWidth(-1)));
         }
-        double prefwidth = isHorizontal() ?
-            Math.max(maxw, snapSize(tabHeaderArea.prefWidth(-1))) : 
-                maxw + snapSize(tabHeaderArea.prefWidth(-1));
-        return snapSize(prefwidth) + rightInset + leftInset;
+
+        final boolean isHorizontal = isHorizontal();
+        final double tabHeaderAreaSize = snapSize(isHorizontal ?
+                tabHeaderArea.prefWidth(-1) : tabHeaderArea.prefHeight(-1));
+
+        double prefWidth = isHorizontal ?
+            Math.max(maxw, tabHeaderAreaSize) : maxw + tabHeaderAreaSize;
+        return snapSize(prefWidth) + rightInset + leftInset;
     }
 
     private double maxh = 0.0d;
@@ -459,10 +470,14 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         for (TabContentRegion contentRegion: tabContentRegions) {
              maxh = Math.max(maxh, snapSize(contentRegion.prefHeight(-1)));
         }
-        double prefheight = isHorizontal()?
-             maxh + snapSize(tabHeaderArea.prefHeight(-1)) : 
-                Math.max(maxh, snapSize(tabHeaderArea.prefHeight(-1)));
-        return snapSize(prefheight) + topInset + bottomInset;
+
+        final boolean isHorizontal = isHorizontal();
+        final double tabHeaderAreaSize = snapSize(isHorizontal ?
+                tabHeaderArea.prefHeight(-1) : tabHeaderArea.prefWidth(-1));
+
+        double prefHeight = isHorizontal ?
+             maxh + snapSize(tabHeaderAreaSize) : Math.max(maxh, tabHeaderAreaSize);
+        return snapSize(prefHeight) + topInset + bottomInset;
     }
 
     @Override public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -566,11 +581,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             // see RT-29167
             tabContent.resize(contentWidth, contentHeight);
             tabContent.relocate(contentStartX, contentStartY);
-            
-            Node content = tabContent.getTab().getContent();
-            if (content != null) {
-                content.setVisible(tabContent.getTab().equals(selectedTab));
-            }
         }
     }
     
@@ -647,10 +657,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         private StackPane headerBackground;
         private TabControlButtons controlButtons;
 
-        // -- drag support for tabs
-        private double lastDragPos;
-
-        // + headersRegion.padding.top + headersRegion.padding.bottom;
         private double scrollOffset;
         public double getScrollOffset() {
             return scrollOffset;
@@ -659,7 +665,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             scrollOffset = value;
             headersRegion.requestLayout();
         }
-        private Point2D dragAnchor;
+
         public TabHeaderArea() {
             getStyleClass().setAll("tab-header-area");
             setManaged(false);
@@ -717,30 +723,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     }
 
                     if (isSelectingTab) {
-                        double offset = 0;
-                        double selectedTabOffset = 0;
-                        double selectedTabWidth = 0;
-                        double previousSelectedTabOffset = 0;
-                        double previousSelectedTabWidth = 0;
-                        for (Node node: getChildren()) {
-                            TabHeaderSkin tabHeader = (TabHeaderSkin)node;
-                            // size and position the header relative to the other headers
-                            double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1));
-                            if (selectedTab != null && selectedTab.equals(tabHeader.getTab())) {
-                                selectedTabOffset = offset;
-                                selectedTabWidth = tabHeaderPrefWidth;
-                            }
-                            if (previousSelectedTab != null && previousSelectedTab.equals(tabHeader.getTab())) {
-                                previousSelectedTabOffset = offset;
-                                previousSelectedTabWidth = tabHeaderPrefWidth;
-                            }
-                            offset+=tabHeaderPrefWidth;
-                        }
-                        if (selectedTabOffset > previousSelectedTabOffset) {
-                            scrollToSelectedTab(selectedTabOffset + selectedTabWidth, previousSelectedTabOffset);
-                        } else {
-                            scrollToSelectedTab(selectedTabOffset, previousSelectedTabOffset);
-                        }
+                        ensureSelectedTabIsVisible();
                         isSelectingTab = false;
                     }
 
@@ -752,10 +735,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     updateHeaderClip();
                     for (Node node : getChildren()) {
                         TabHeaderSkin tabHeader = (TabHeaderSkin)node;
+
                         // size and position the header relative to the other headers
-                        double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1));
+                        double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1) * tabHeader.animationTransition.get());
                         double tabHeaderPrefHeight = snapSize(tabHeader.prefHeight(-1));
                         tabHeader.resize(tabHeaderPrefWidth, tabHeaderPrefHeight);
+
                         // This ensures that the tabs are located in the correct position
                         // when there are tabs of differing heights.
                         double startY = tabPosition.equals(Side.BOTTOM) ?
@@ -869,35 +854,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             return null;
         }
 
-        // ----- Code for scrolling the tab header area based on the user clicking
-        // the left/right arrows on the control buttons tab
-        private Timeline scroller;
-
-        private void createScrollTimeline(final double val) {
-            scroll(val);
-            scroller = new Timeline();
-            scroller.setCycleCount(Timeline.INDEFINITE);
-            scroller.getKeyFrames().add(new KeyFrame(Duration.millis(150), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    scroll(val);
-                }
-            }));
-        }
-
-        // ----- End of control button scrolling support
-        private void scroll(double d) {
-            if (tabsFit()) {
-                return;
-            }
-            Side tabPosition = getSkinnable().getSide();
-            double headerPrefWidth = snapSize(headersRegion.prefWidth(-1));
-            double controlTabWidth = snapSize(controlButtons.prefWidth(-1));
-            double max = getWidth() - headerPrefWidth - controlTabWidth;
-            double delta = tabPosition.equals(Side.LEFT) || tabPosition.equals(Side.BOTTOM) ? -d : d;
-            double newOffset = getScrollOffset() + delta;
-            setScrollOffset(newOffset >= 0 ? 0.0F : (newOffset <= max ? max : newOffset));
-        }
-
         private boolean tabsFit() {
             double headerPrefWidth = snapSize(headersRegion.prefWidth(-1));
             double controlTabWidth = snapSize(controlButtons.prefWidth(-1));
@@ -905,21 +861,46 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             return visibleWidth < getWidth();
         }
 
-        private void scrollToSelectedTab(double selected, double previous) {
-            if (selected > previous) {
-                // needs to scroll to the left
-                double distance = selected - previous;
-                double offset = (previous + getScrollOffset()) + distance;
-                double width = snapSize(getWidth()) - snapSize(controlButtons.prefWidth(-1)) - firstTabIndent() - SPACER;
-                if (offset > width) {
-                    setScrollOffset(getScrollOffset() -(offset - width));
+        private void ensureSelectedTabIsVisible() {
+            // work out the visible width of the tab header
+            double tabPaneWidth = snapSize(getSkinnable().getWidth());
+            double controlTabWidth = snapSize(controlButtons.getWidth());
+            double visibleWidth = tabPaneWidth - controlTabWidth - firstTabIndent() - SPACER;
+
+            // and get where the selected tab is in the header area
+            double offset = 0.0;
+            double selectedTabOffset = 0.0;
+            double selectedTabWidth = 0.0;
+            for (Node node : headersRegion.getChildren()) {
+                TabHeaderSkin tabHeader = (TabHeaderSkin)node;
+
+                double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1));
+
+                if (selectedTab != null && selectedTab.equals(tabHeader.getTab())) {
+                    selectedTabOffset = offset;
+                    selectedTabWidth = tabHeaderPrefWidth;
                 }
-            } else {
-                // needs to scroll to the right
-                double offset = selected + getScrollOffset();
-                if (offset < 0) {
-                    setScrollOffset(getScrollOffset() - offset);
-                }
+                offset += tabHeaderPrefWidth;
+            }
+
+            final double scrollOffset = getScrollOffset();
+            final double selectedTabStartX = selectedTabOffset;
+            final double selectedTabEndX = selectedTabOffset + selectedTabWidth;
+
+            final double visibleAreaEndX = visibleWidth;
+
+            if (selectedTabStartX < -scrollOffset) {
+                setScrollOffset(-selectedTabStartX);
+            } else if (selectedTabEndX > (visibleAreaEndX - scrollOffset)) {
+                setScrollOffset(visibleAreaEndX - selectedTabEndX);
+            }
+
+            // need to make sure the right-most tab is attached to the
+            // right-hand side of the tab header (e.g. if the tab header area width
+            // is expanded), and if it isn't modify the scroll offset to bring
+            // it into line. See RT-35194 for a test case.
+            if ((visibleWidth - scrollOffset) > offset && scrollOffset < 0) {
+                setScrollOffset(visibleWidth - offset);
             }
         }
 
@@ -940,7 +921,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             double padding = isHorizontal() ?
                 snappedLeftInset() + snappedRightInset() :
                 snappedTopInset() + snappedBottomInset();
-            return snapSize(headersRegion.prefWidth(-1)) + controlButtons.prefWidth(-1) + 
+            return snapSize(headersRegion.prefWidth(height)) + controlButtons.prefWidth(height) +
                     firstTabIndent() + SPACER + padding;
         }
 
@@ -978,10 +959,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             }
             
             updateHeaderClip();
+            headersRegion.requestLayout();
 
             // RESIZE CONTROL BUTTONS
             double btnWidth = snapSize(controlButtons.prefWidth(-1));
             controlButtons.resize(btnWidth, controlButtons.getControlTabHeight());
+
             // POSITION TABS
             headersRegion.resize(headersPrefWidth, headersPrefHeight);
 
@@ -1093,7 +1076,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     Tab tab = getTab();
                     TabPaneBehavior behavior = getBehavior();
                     if (behavior.canCloseTab(tab)) {
-                         removeListeners(tab);
                          behavior.closeTab(tab);
                          setOnMousePressed(null);    
                     }
@@ -1145,9 +1127,10 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     }
 
                     if (animating) {
-                        if (prefWidth.getValue() < labelAreaWidth) {
-                            labelAreaWidth = prefWidth.getValue();
-                        }
+//                        if (prefWidth.getValue() < labelAreaWidth) {
+//                            labelAreaWidth = prefWidth.getValue();
+//                        }
+                        labelAreaWidth *= animationTransition.get();
                         closeBtn.setVisible(false);
                     } else {
                         closeBtn.setVisible(showCloseButton());
@@ -1345,20 +1328,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     getSkinnable().getTabClosingPolicy().equals(TabClosingPolicy.SELECTED_TAB) && tab.isSelected());
         }
 
-        private final DoubleProperty prefWidth = new DoublePropertyBase() {
-            @Override
-            protected void invalidated() {
+        private final DoubleProperty animationTransition = new SimpleDoubleProperty(this, "animationTransition", 1.0) {
+            @Override protected void invalidated() {
                 requestLayout();
-            }
-
-            @Override
-            public Object getBean() {
-                return TabHeaderSkin.this;
-            }
-
-            @Override
-            public String getName() {
-                return "prefWidth";
             }
         };
 
@@ -1375,9 +1347,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         private boolean animating = false;
 
         @Override protected double computePrefWidth(double height) {
-            if (animating) {
-                return prefWidth.getValue();
-            }
+//            if (animating) {
+//                return prefWidth.getValue();
+//            }
             double minWidth = snapSize(getSkinnable().getTabMinWidth());
             double maxWidth = snapSize(getSkinnable().getTabMaxWidth());
             double paddingRight = snappedRightInset();
@@ -1395,7 +1367,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 tmpPrefWidth = minWidth;
             }
             tmpPrefWidth += paddingRight + paddingLeft;
-            prefWidth.setValue(tmpPrefWidth);
+//            prefWidth.setValue(tmpPrefWidth);
             return tmpPrefWidth;
         }
 
@@ -1415,17 +1387,10 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             return tmpPrefHeight;
         }
 
-        private Runnable animateNewTab = null;
-
         @Override protected void layoutChildren() {
-            inner.resize(snapSize(getWidth()) - snappedRightInset() - snappedLeftInset(),
-                    snapSize(getHeight()) - snappedTopInset() - snappedBottomInset());
+            double w = (snapSize(getWidth()) - snappedRightInset() - snappedLeftInset()) * animationTransition.getValue();
+            inner.resize(w, snapSize(getHeight()) - snappedTopInset() - snappedBottomInset());
             inner.relocate(snappedLeftInset(), snappedTopInset());
-
-            if (animateNewTab != null) {
-                animateNewTab.run();
-                animateNewTab = null;
-            }
         }
 
         @Override protected void setWidth(double value) {
@@ -1459,13 +1424,27 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
      * TabContentRegion: each tab has one to contain the tab's content node
      *
      **************************************************************************/
-    class TabContentRegion extends StackPane implements TraverseListener {
+    class TabContentRegion extends StackPane {
 
         private TraversalEngine engine;
         private Direction direction = Direction.NEXT;
-        //private Direction direction;
         private Tab tab;
-        private InvalidationListener tabListener;
+
+        private InvalidationListener tabContentListener = new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                updateContent();
+            }
+        };
+        private InvalidationListener tabSelectedListener = new InvalidationListener() {
+            @Override public void invalidated(Observable valueModel) {
+                setVisible(tab.isSelected());
+            }
+        };
+
+        private WeakInvalidationListener weakTabContentListener =
+                new WeakInvalidationListener(tabContentListener);
+        private WeakInvalidationListener weakTabSelectedListener =
+                new WeakInvalidationListener(tabSelectedListener);
 
         public Tab getTab() {
             return tab;
@@ -1476,67 +1455,26 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             setManaged(false);
             this.tab = tab;
             updateContent();
-
-            tabListener = new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    if (valueModel == getTab().selectedProperty()) {
-                        setVisible(getTab().isSelected());
-                    } else if (valueModel == getTab().contentProperty()) {
-                        getChildren().clear();
-                        updateContent();
-                    }
-                }
-            };
-            tab.selectedProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    setVisible(getTab().isSelected());
-                }
-            });
-            tab.contentProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    getChildren().clear();
-                    updateContent();
-                }
-            });
-
-            tab.selectedProperty().addListener(tabListener);
-            tab.contentProperty().addListener(tabListener);
-
-            engine = new TraversalEngine(this, false) {
-                @Override public void trav(Node owner, Direction dir) {
-                    direction = dir;
-                    super.trav(owner, dir);
-                }
-            };
-            engine.addTraverseListener(this);
-            setImpl_traversalEngine(engine);
             setVisible(tab.isSelected());
+
+            tab.selectedProperty().addListener(weakTabSelectedListener);
+            tab.contentProperty().addListener(weakTabContentListener);
         }
 
         private void updateContent() {
-            if (getTab().getContent() != null) {
-                getChildren().add(getTab().getContent());
+            Node newContent = getTab().getContent();
+            if (newContent == null) {
+                getChildren().clear();
+            } else {
+                getChildren().setAll(newContent);
             }
         }
 
         private void removeListeners(Tab tab) {
-            tab.selectedProperty().removeListener(tabListener);
-            tab.contentProperty().removeListener(tabListener);
-            engine.removeTraverseListener(this);
+            tab.selectedProperty().removeListener(weakTabSelectedListener);
+            tab.contentProperty().removeListener(weakTabContentListener);
         }
 
-        @Override public void onTraverse(Node node, Bounds bounds) {
-            int index = engine.registeredNodes.indexOf(node);
-
-            if (index == -1 && direction.equals(Direction.PREVIOUS)) {
-                // Sends the focus back the tab
-                getSkinnable().requestFocus();
-            }
-            if (index == -1 && direction.equals(Direction.NEXT)) {
-                // Sends the focus to the next focusable control outside of the TabPane
-                new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.NEXT);
-            }
-        }
     } /* End TabContentRegion */
 
     /**************************************************************************
@@ -1844,20 +1782,29 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     class TabMenuItem extends RadioMenuItem {
         Tab tab;
+
+        private InvalidationListener disableListener = new InvalidationListener() {
+            @Override public void invalidated(Observable o) {
+                setDisable(tab.isDisable());
+            }
+        };
+
+        private WeakInvalidationListener weakDisableListener =
+                new WeakInvalidationListener(disableListener);
+
         public TabMenuItem(final Tab tab) {
             super(tab.getText(), TabPaneSkin.clone(tab.getGraphic()));                        
             this.tab = tab;
             setDisable(tab.isDisable());
-            tab.disableProperty().addListener(new InvalidationListener() {
-                @Override
-                public void invalidated(Observable arg0) {
-                    setDisable(tab.isDisable());
-                }
-            });                   
+            tab.disableProperty().addListener(weakDisableListener);
         }
 
         public Tab getTab() {
             return tab;
+        }
+
+        public void dispose() {
+            tab.disableProperty().removeListener(weakDisableListener);
         }
     }
 }

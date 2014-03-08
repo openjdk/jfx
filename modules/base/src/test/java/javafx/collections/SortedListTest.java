@@ -186,27 +186,23 @@ public class SortedListTest {
       sourceList.addAll(other);
       // wrap into a sorted list and add a listener to the sorted
       final SortedList<Double> sorted = new SortedList<Double>(sourceList, new NaturalElementComparator<>());
-      ListChangeListener<Double> listener = new ListChangeListener<Double>() {
+      ListChangeListener<Double> listener = c -> {
+          assertEquals(Arrays.<Double>asList(400.0, 600.0, 1300.0), c.getList());
 
-          @Override
-          public void onChanged(Change<? extends Double> c) {
-              assertEquals(Arrays.<Double>asList(400.0, 600.0, 1300.0), c.getList());
-
-              c.next();
-              assertEquals(Arrays.<Double>asList(-300.0, 50.0), c.getRemoved());
-              assertEquals(0, c.getFrom());
-              assertEquals(0, c.getTo());
-              assertTrue(c.next());
-              assertEquals(Arrays.<Double>asList(4000.), c.getRemoved());
-              assertEquals(3, c.getFrom());
-              assertEquals(3, c.getTo());
-              assertFalse(c.next());
+          c.next();
+          assertEquals(Arrays.<Double>asList(-300.0, 50.0), c.getRemoved());
+          assertEquals(0, c.getFrom());
+          assertEquals(0, c.getTo());
+          assertTrue(c.next());
+          assertEquals(Arrays.<Double>asList(4000.), c.getRemoved());
+          assertEquals(3, c.getFrom());
+          assertEquals(3, c.getTo());
+          assertFalse(c.next());
 
 
-              // grab sourceIndex of last (aka: highest) value in sorted list
-              int sourceIndex = sorted.getSourceIndex(sorted.size() - 1);
-              assertEquals(0, sourceIndex);
-          }
+          // grab sourceIndex of last (aka: highest) value in sorted list
+          int sourceIndex = sorted.getSourceIndex(sorted.size() - 1);
+          assertEquals(0, sourceIndex);
       };
       sorted.addListener(listener);
       sourceList.removeAll(other);
@@ -224,18 +220,14 @@ public class SortedListTest {
         ObservableList<Person> list = FXCollections.observableList(backingList, (Person p) -> new Observable[] {p.name});
 
         SortedList<Person> sorted = new SortedList<Person>(list, new NaturalElementComparator<>());
-        ListChangeListener<Person> listener = new ListChangeListener<Person>() {
-
-            @Override
-            public void onChanged(Change<? extends Person> c) {
-                c.next();
-                assertTrue(c.wasPermutated());
-                assertArrayEquals(new int[] {0, 4, 1, 2, 3}, c.getPermutation());
-                assertTrue(c.next());
-                assertTrue(c.wasUpdated());
-                assertEquals(4, c.getFrom());
-                assertEquals(5, c.getTo());
-            }
+        ListChangeListener<Person> listener = c -> {
+            c.next();
+            assertTrue(c.wasPermutated());
+            assertArrayEquals(new int[] {0, 4, 1, 2, 3}, c.getPermutation());
+            assertTrue(c.next());
+            assertTrue(c.wasUpdated());
+            assertEquals(4, c.getFrom());
+            assertEquals(5, c.getTo());
         };
         assertEquals(Arrays.asList(new Person("b"),
                 new Person("c"),

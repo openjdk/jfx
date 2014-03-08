@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -124,20 +124,18 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     }
     
     private void updateDisplayArea() {
-        List<Node> children = getChildren();
-        if (displayNode != null) {
-            children.remove(displayNode);
-        }
+        final List<Node> children = getChildren();
+        final Node oldDisplayNode = displayNode;
         displayNode = getDisplayNode();
+
+        // don't remove displayNode if it hasn't changed.
+        if (oldDisplayNode != null && oldDisplayNode != displayNode) {
+            children.remove(oldDisplayNode);
+        }
+
         if (displayNode != null && !children.contains(displayNode)) {
             children.add(displayNode);
-
-            // RT-20575: The display node is being brought into the scenegraph
-            // early so we get the correct prefHeight, but at this point it
-            // may not have had a layout pass run over it itself, so the
-            // displayNode will return a prefHeight of 0. Here we are forcing
-            // a one-off run of the layout over the displayNode.
-            displayNode.impl_processCSS(true);
+            displayNode.applyCss();
         }
     }
     
@@ -159,13 +157,13 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         if (displayNode != null) {
             displayNode.resizeRelocate(x, y, w - arrowButtonWidth, h);
         }
-        
-        if (isButton()) return;
-        
-        arrowButton.resize(arrowButtonWidth, h);
-        positionInArea(arrowButton, 
-                (x+w) - arrowButtonWidth, y,
-                arrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
+
+        arrowButton.setVisible(! isButton());
+        if (! isButton()) {
+            arrowButton.resize(arrowButtonWidth, h);
+            positionInArea(arrowButton, (x + w) - arrowButtonWidth, y,
+                    arrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
+        }
     }
     
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -174,7 +172,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         }
 
         final double arrowWidth = snapSize(arrow.prefWidth(-1));
-        final double arrowButtonWidth = (isButton()) ? 0 : 
+        final double arrowButtonWidth = isButton() ? 0 :
                                         arrowButton.snappedLeftInset() +
                                         arrowWidth + 
                                         arrowButton.snappedRightInset();

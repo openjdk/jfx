@@ -25,10 +25,16 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.Control;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableFocusModel;
+import javafx.scene.control.TablePositionBase;
+import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -74,20 +80,11 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      * Private fields                                                          *
      *                                                                         *
      **************************************************************************/      
-    
-    // For RT-17456: have selection occur as fast as possible with mouse input.
-    // The idea is (consistently with some native applications we've tested) to 
-    // do the action as soon as you can. It takes a bit more coding but provides
-    // the best feel:
-    //  - when you click on a not-selected item, you can select immediately on press
-    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first 
+
     // To support touch devices, we have to slightly modify this behavior, such
     // that selection only happens on mouse release, if only minimal dragging
     // has occurred.
     private boolean latePress = false;
-    private boolean wasSelected = false;
-
-
 
     /***************************************************************************
      *                                                                         *
@@ -134,17 +131,13 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      **************************************************************************/    
     
     @Override public void mousePressed(MouseEvent event) {
-        boolean selectedBefore = isSelected();
-        
-        if (isSelected()) {
+        if (event.isSynthesized()) {
             latePress = true;
-            return;
-        }
-
-        doSelect(event);
-        
-        if (IS_TOUCH_SUPPORTED && selectedBefore) {
-            wasSelected = isSelected();
+        } else {
+            latePress  = getControl().isSelected();
+            if (!latePress) {
+                doSelect(event);
+            }
         }
     }
     
@@ -153,19 +146,10 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
             latePress = false;
             doSelect(event);
         }
-        
-        wasSelected = false;
     }
     
     @Override public void mouseDragged(MouseEvent event) {
         latePress = false;
-        
-        // the mouse has now been dragged on a touch device, we should
-        // remove the selection if we just added it in the last mouse press
-        // event
-        if (IS_TOUCH_SUPPORTED && ! wasSelected && isSelected()) {
-            getSelectionModel().clearSelection(getControl().getIndex());
-        }
     }
     
     
@@ -306,16 +290,18 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     }
 
     protected void simpleSelect(MouseEvent e) {
-        TableSelectionModel<S> sm = getSelectionModel();
-        int row = getControl().getIndex();
-        TableColumnBase<S,T> column = getTableColumn();
-        boolean isAlreadySelected = sm.isSelected(row, column);
+        final TableSelectionModel<S> sm = getSelectionModel();
+        final int row = getControl().getIndex();
+        final TableColumnBase<S,T> column = getTableColumn();
+        boolean isAlreadySelected = sm.isSelected(row, sm.isCellSelectionEnabled() ? column : null);
 
         if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
             sm.clearSelection(row, column);
+            getFocusModel().focus(row, (TC) (sm.isCellSelectionEnabled() ? column : null));
             isAlreadySelected = false;
         } else {
-            sm.clearAndSelect(row, column);
+            // we check if cell selection is enabled to fix RT-33897
+            sm.clearAndSelect(row, sm.isCellSelectionEnabled() ? column : null);
         }
 
         // handle editing, which only occurs with the primary mouse button

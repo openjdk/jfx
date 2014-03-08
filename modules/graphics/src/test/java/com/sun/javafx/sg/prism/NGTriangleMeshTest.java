@@ -43,7 +43,7 @@ public class NGTriangleMeshTest {
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.syncFaceSmoothingGroups(new IntegerArraySyncer() {
 
-            public int[] syncTo(int[] array) {
+            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
                 return faceSmoothingGroups;
             }
         });
@@ -61,13 +61,13 @@ public class NGTriangleMeshTest {
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.syncFaceSmoothingGroups(new IntegerArraySyncer() {
 
-            public int[] syncTo(int[] array) {
+            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
                 return faceSmoothingGroups;
             }
         });
         instance.syncFaceSmoothingGroups(new IntegerArraySyncer() {
 
-            public int[] syncTo(int[] array) {
+            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
                 Arrays.fill(array, 1, 1 + 4, 1);
                 return array;
             }
@@ -86,7 +86,7 @@ public class NGTriangleMeshTest {
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.syncPoints(new FloatArraySyncer() {
 
-            public float[] syncTo(float[] array) {
+            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
                 return points;
             }
         });
@@ -104,13 +104,13 @@ public class NGTriangleMeshTest {
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.syncPoints(new FloatArraySyncer() {
 
-            public float[] syncTo(float[] array) {
+            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
                 return points;
             }
         });
         instance.syncPoints(new FloatArraySyncer() {
 
-            public float[] syncTo(float[] array) {
+            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
                 Arrays.fill(array, 1, 1 + 4, 1);
                 return array;
             }
@@ -129,7 +129,7 @@ public class NGTriangleMeshTest {
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.syncTexCoords(new FloatArraySyncer() {
 
-            public float[] syncTo(float[] array) {
+            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
                 return texcoords;
             }
         });
@@ -147,13 +147,13 @@ public class NGTriangleMeshTest {
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.syncTexCoords(new FloatArraySyncer() {
 
-            public float[] syncTo(float[] array) {
+            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
                 return texcoords;
             }
         });
         instance.syncTexCoords(new FloatArraySyncer() {
 
-            public float[] syncTo(float[] array) {
+            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
                 Arrays.fill(array, 1, 1 + 4, 1);
                 return array;
             }
@@ -172,7 +172,7 @@ public class NGTriangleMeshTest {
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.syncFaces(new IntegerArraySyncer() {
 
-            public int[] syncTo(int[] array) {
+            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
                 return faces;
             }
         });
@@ -190,13 +190,13 @@ public class NGTriangleMeshTest {
         NGTriangleMesh instance = new NGTriangleMesh();
         instance.syncFaces(new IntegerArraySyncer() {
 
-            public int[] syncTo(int[] array) {
+            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
                 return faces;
             }
         });
         instance.syncFaces(new IntegerArraySyncer() {
 
-            public int[] syncTo(int[] array) {
+            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
                 Arrays.fill(array, 1, 1 + 4, 1);
                 return array;
             }

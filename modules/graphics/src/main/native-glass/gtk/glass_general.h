@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -153,6 +153,8 @@ private:
     extern jmethodID jWindowNotifyFocusUngrab; // com.sun.glass.ui.Window#notifyFocusUngrab ()V
     extern jmethodID jWindowNotifyMoveToAnotherScreen; // com.sun.glass.ui.Window#notifyMoveToAnotherScreen (Lcom/sun/glass/ui/Screen;)V
     extern jmethodID jWindowNotifyDelegatePtr; //com.sun.glass.ui.Window#notifyDelegatePtr (J)V
+    extern jmethodID jWindowNotifyLevelChanged; //com.sun.glass.ui.Window#notifyLevelChanged (I)V
+    
     extern jmethodID jWindowIsEnabled; // com.sun.glass.ui.Window#isEnabled ()Z
     extern jfieldID jWindowPtr; // com.sun.glass.ui.Window#ptr
     extern jfieldID jCursorPtr; // com.sun.glass.ui.Cursor#ptr
@@ -183,6 +185,8 @@ private:
     extern jfieldID jApplicationScreen; //com.sun.glass.ui.gtk.GtkApplication#screen
     extern jfieldID jApplicationVisualID; //com.sun.glass.ui.gtk.GtkApplication#visualID
     extern jmethodID jApplicationReportException; // reportException(Ljava/lang/Throwable;)V
+    extern jmethodID jApplicationGetApplication; // GetApplication()()Lcom/sun/glass/ui/Application;
+    extern jmethodID jApplicationGetName; // getName()Ljava/lang/String;
 
 #ifdef VERBOSE
 #define LOG0(msg) {printf(msg);fflush(stdout);}
@@ -218,6 +222,7 @@ private:
 
 #define LOG_EXCEPTION(env) check_and_clear_exception(env);
 
+    gchar* get_application_name();
     void glass_throw_exception(JNIEnv * env,
             const char * exceptionClass,
             const char * exceptionMessage);

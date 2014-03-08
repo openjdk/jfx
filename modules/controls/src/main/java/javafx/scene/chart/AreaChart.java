@@ -468,7 +468,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                         getYAxis().toRealValue(getYAxis().toNumericValue(item.getCurrentY()) * seriesYAnimMultiplier.getValue()));
                 if (isFirst) {
                     isFirst = false;
-                    fillPath.getElements().add(new MoveTo(x, getYAxis().getZeroPosition()));
+                    fillPath.getElements().add(new MoveTo(x, getYAxis().getHeight()));
                     seriesLine.getElements().add(new MoveTo(x, y));
                 } else {
                     seriesLine.getElements().add(new LineTo(x, y));
@@ -482,9 +482,9 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 }
             }
             if (fillPath.getElements().size() >= 1) {
-                fillPath.getElements().add(new LineTo(lastX, getYAxis().getZeroPosition()));
+                fillPath.getElements().add(new LineTo(lastX, getYAxis().getHeight()));
             } else {
-                fillPath.getElements().add(new MoveTo(lastX, getYAxis().getZeroPosition()));
+                fillPath.getElements().add(new MoveTo(lastX, getYAxis().getHeight()));
             }
             fillPath.getElements().add(new ClosePath());
         }

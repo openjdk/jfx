@@ -147,11 +147,7 @@ public class BuildEnsembleSearchIndex {
                 continue;
             }
             System.out.println(docPageUrl);
-            tasks.add(new Callable<List<Document>>() {
-                @Override public List<Document> call() throws Exception {
-                    return indexDocumentationPage(docPageUrl);
-                }
-            });
+            tasks.add((Callable<List<Document>>) () -> indexDocumentationPage(docPageUrl));
         }
         System.out.println(" --- end of list ---");
         return tasks;
@@ -197,11 +193,7 @@ public class BuildEnsembleSearchIndex {
         Matcher matcher = findClassUrl.matcher(content);
         while (matcher.find()) {
             final String classUrl = javaDocBaseUrl+matcher.group(1);
-            tasks.add(new Callable<List<Document>>() {
-                @Override public List<Document> call() throws Exception {
-                    return indexApiDocs(classUrl);
-                }
-            });
+            tasks.add((Callable<List<Document>>) () -> indexApiDocs(classUrl));
         }
         return tasks;
     }

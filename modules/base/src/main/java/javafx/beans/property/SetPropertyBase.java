@@ -50,13 +50,10 @@ import javafx.collections.SetChangeListener;
  */
 public abstract class SetPropertyBase<E> extends SetProperty<E> {
 
-    private final SetChangeListener<E> setChangeListener = new SetChangeListener<E>() {
-        @Override
-        public void onChanged(Change<? extends E> change) {
-            invalidateProperties();
-            invalidated();
-            fireValueChangedEvent(change);
-        }
+    private final SetChangeListener<E> setChangeListener = change -> {
+        invalidateProperties();
+        invalidated();
+        fireValueChangedEvent(change);
     };
 
     private ObservableSet<E> value;

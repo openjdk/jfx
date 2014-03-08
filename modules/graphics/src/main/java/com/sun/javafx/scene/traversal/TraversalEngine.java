@@ -106,13 +106,13 @@ public class TraversalEngine {
         registeredNodes.remove(n);
     }
 
-    public void trav(Node owner, Direction dir) {
-
+    public boolean trav(Node owner, Direction dir) {
         Node newNode = algorithm.traverse(owner, dir, this);
         if (newNode == null) {
             if (focusLogger.isLoggable(Level.FINE)) {
                 focusLogger.fine("new node is null, focus not moved");
             }
+            return false;
         } else {
             if (focusLogger.isLoggable(Level.FINER)) {
                 focusLogger.finer("new focus owner : "+newNode);
@@ -121,6 +121,7 @@ public class TraversalEngine {
             for (TraverseListener listener : listeners) {
                 listener.onTraverse(newNode, getBounds(newNode));
             }
+            return true;
         }
     }
 

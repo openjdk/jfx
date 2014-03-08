@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ import com.sun.javafx.tk.CompletionListener;
 import com.sun.javafx.tk.RenderJob;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.logging.PulseLogger;
 
 /**
  * Manages the collection and rendering of dirty scenes. This class has
@@ -299,10 +299,12 @@ final class PaintCollector implements CompletionListener {
                 toolkit.vsyncHint();
             }
 
+            Application.GetApplication().notifyRenderingFinished();
+
             // If pulse logging is enabled, then we must call renderEnd now
             // that we know that all of the scene's being rendered are finished
             if (PULSE_LOGGING_ENABLED) {
-                PULSE_LOGGER.renderEnd();
+                PulseLogger.renderEnd();
             }
         }
 
@@ -378,7 +380,7 @@ final class PaintCollector implements CompletionListener {
         // If pulse logging is enabled, then we must call renderStart
         // BEFORE we actually call repaint on any of the dirty scenes.
         if (PULSE_LOGGING_ENABLED) {
-            PULSE_LOGGER.renderStart();
+            PulseLogger.renderStart();
         }
 
         // This part needs to be handled a bit differently depending on whether our platform has a native

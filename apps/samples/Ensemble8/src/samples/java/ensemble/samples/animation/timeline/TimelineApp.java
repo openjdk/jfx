@@ -107,55 +107,33 @@ public class TimelineApp extends Application {
         //method for creating navigation panel
         //start/stop/pause/play from start buttons
         Button buttonStart = new Button("Start");
-        buttonStart.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                //start timeline
-                timeline.play();
-            }
+        buttonStart.setOnAction((ActionEvent t) -> {
+            timeline.play();
         });
         Button buttonStop = new Button("Stop");
-        buttonStop.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                //stop timeline
-                timeline.stop();
-            }
+        buttonStop.setOnAction((ActionEvent t) -> {
+            timeline.stop();
         });
         Button buttonPlayFromStart = new Button("Restart");
-        buttonPlayFromStart.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                //play from start
-                timeline.playFromStart();
-            }
+        buttonPlayFromStart.setOnAction((ActionEvent t) -> {
+            timeline.playFromStart();
         });
         Button buttonPause = new Button("Pause");
-        buttonPause.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                //pause from start
-                timeline.pause();
-            }
+        buttonPause.setOnAction((ActionEvent t) -> {
+            timeline.pause();
         });
         //text showing current time
         final Text currentRateText = new Text("Current time: 0 ms");
         currentRateText.setBoundsType(TextBoundsType.VISUAL);
-        timeline.currentTimeProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable ov) {
-                int time = (int) timeline.getCurrentTime().toMillis();
-                currentRateText.setText("Current time: " + time + " ms");
-            }
+        timeline.currentTimeProperty().addListener((Observable ov) -> {
+            int time = (int) timeline.getCurrentTime().toMillis();
+            currentRateText.setText("Current time: " + time + " ms");
         });
         //Autoreverse checkbox
         final CheckBox checkBoxAutoReverse = new CheckBox("Auto Reverse");
         checkBoxAutoReverse.setSelected(true);
-        checkBoxAutoReverse.selectedProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable ov) {
-                timeline.setAutoReverse(checkBoxAutoReverse.isSelected());
-            }
+        checkBoxAutoReverse.selectedProperty().addListener((Observable ov) -> {
+            timeline.setAutoReverse(checkBoxAutoReverse.isSelected());
         });
         //add all navigation to layout
         HBox hBox1 = new HBox(10);

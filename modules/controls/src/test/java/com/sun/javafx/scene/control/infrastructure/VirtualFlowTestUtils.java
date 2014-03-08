@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -363,6 +363,10 @@ public class VirtualFlowTestUtils {
     }
 
     public static TableHeaderRow getTableHeaderRow(final Control control) {
+        if (control.getSkin() == null) {
+            new StageLoader(control);
+        }
+
         TableViewSkinBase<?,?,?,?,?,?> skin = (TableViewSkinBase) control.getSkin();
         TableHeaderRow headerRow = null;
         for (Node n : skin.getChildren()) {
@@ -387,5 +391,26 @@ public class VirtualFlowTestUtils {
         }
 
         return scrollBar;
+    }
+
+    public static TableColumnHeader getTableColumnHeader(Control table, TableColumn<?,?> column) {
+        TableHeaderRow headerRow = VirtualFlowTestUtils.getTableHeaderRow(table);
+        return findColumnHeader(headerRow.getRootHeader(), column);
+    }
+
+    private static TableColumnHeader findColumnHeader(NestedTableColumnHeader nestedHeader, TableColumnBase<?,?> column) {
+        for (TableColumnHeader header : nestedHeader.getColumnHeaders()) {
+            if (header instanceof NestedTableColumnHeader) {
+                TableColumnHeader result = findColumnHeader((NestedTableColumnHeader)header, column);
+                if (result != null) {
+                    return result;
+                }
+            } else {
+                if (column.equals(header.getTableColumn())) {
+                    return header;
+                }
+            }
+        }
+        return null;
     }
 }

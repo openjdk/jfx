@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -218,6 +218,8 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 //             }
             datePickerContent = null;
             popup = null;
+        } else if ("CONVERTER".equals(p)) {
+            updateDisplayNode();
         } else if ("EDITOR".equals(p)) {
             getEditableInputNode();
         } else if ("SHOWING".equals(p)) {
@@ -284,7 +286,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
         if (textField != null) return textField;
 
         textField = datePicker.getEditor();
-        textField.setFocusTraversable(true);
+        textField.focusTraversableProperty().bindBidirectional(datePicker.focusTraversableProperty());
         textField.promptTextProperty().bind(datePicker.promptTextProperty());
 
         textField.focusedProperty().addListener(new ChangeListener<Boolean>() {

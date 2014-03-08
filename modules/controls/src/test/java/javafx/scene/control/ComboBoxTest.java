@@ -37,8 +37,7 @@ import com.sun.javafx.scene.control.skin.VirtualFlow;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
 
-import java.util.Arrays;
-import java.util.Set;
+import java.util.*;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -56,6 +55,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
@@ -1158,5 +1158,107 @@ public class ComboBoxTest {
         assertEquals("A", comboBox.getButtonCell().getText());
         assertEquals(0, comboBox.getButtonCell().getIndex());
         assertFalse(customCell.getPseudoClassStates().contains(empty));
+    }
+
+    private int test_rt34603_count = 0;
+    @Ignore("Bug has not yet been resolved")
+    @Test public void test_rt34603() {
+        assertEquals(0, test_rt34603_count);
+
+        VBox hbox = new VBox(10);
+
+        ComboBox<String> box = new ComboBox<>();
+        box.getItems().add("test");
+        box.setEditable(true);
+        box.getSelectionModel().selectFirst();
+
+        Button defaultButton = new Button("press");
+        defaultButton.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent arg0) {
+                test_rt34603_count++;
+            }
+        });
+        defaultButton.setDefaultButton(true);
+
+        hbox.getChildren().addAll(box, defaultButton);
+
+        new StageLoader(hbox);
+
+        box.getEditor().requestFocus();
+        KeyEventFirer keyboard = new KeyEventFirer(box);
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals(1, test_rt34603_count);
+    }
+
+    private int test_rt35586_count = 0;
+    @Test public void test_rt35586() {
+        assertEquals(0, test_rt34603_count);
+
+        final ComboBox<String> cb = new ComboBox<String>();
+        cb.setEditable(true);
+        cb.setOnAction(new EventHandler<ActionEvent>() {
+            @Override public void handle(ActionEvent event) {
+                test_rt35586_count++;
+                assertEquals("Test", cb.getEditor().getText());
+            }
+        });
+
+        new StageLoader(cb);
+
+        cb.getEditor().requestFocus();
+        cb.getEditor().setText("Test");
+        KeyEventFirer keyboard = new KeyEventFirer(cb.getEditor());
+        keyboard.doKeyPress(KeyCode.ENTER);
+
+        assertEquals(1, test_rt35586_count);
+    }
+
+    @Test public void test_rt35039() {
+        final List<String> data = new ArrayList<>();
+        data.add("aabbaa");
+        data.add("bbc");
+
+        final ComboBox<String> combo = new ComboBox<>();
+        combo.setEditable(true);
+        combo.setItems(FXCollections.observableArrayList(data));
+
+        new StageLoader(combo);
+
+        // everything should be null to start with
+        assertNull(combo.getValue());
+        assertTrue(combo.getEditor().getText().isEmpty());
+        assertNull(combo.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        combo.getSelectionModel().select(1);
+        assertEquals("bbc", combo.getValue());
+        assertEquals("bbc", combo.getEditor().getText());
+        assertEquals("bbc", combo.getSelectionModel().getSelectedItem());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        combo.setItems(FXCollections.observableArrayList(data));
+        assertEquals("bbc", combo.getValue());
+        assertEquals("bbc", combo.getEditor().getText());
+        assertEquals("bbc", combo.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void test_rt35840() {
+        final ComboBox<String> cb = new ComboBox<String>();
+        cb.setEditable(true);
+        StageLoader sl = new StageLoader(cb);
+        cb.requestFocus();
+
+        KeyEventFirer keyboard = new KeyEventFirer(cb);
+        keyboard.doKeyTyped(KeyCode.T);
+        keyboard.doKeyTyped(KeyCode.E);
+        keyboard.doKeyTyped(KeyCode.S);
+        keyboard.doKeyTyped(KeyCode.T);
+        assertEquals("TEST", cb.getEditor().getText());
+
+        assertNull(cb.getValue());
+        keyboard.doKeyPress(KeyCode.ENTER);
+        assertEquals("TEST", cb.getValue());
     }
 }

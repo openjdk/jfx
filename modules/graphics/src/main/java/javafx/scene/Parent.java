@@ -95,7 +95,7 @@ public abstract class Parent extends Node {
      * Do not populate list of removed children when its number exceeds threshold,
      * but mark whole parent dirty.
      */
-    private boolean removedChildrenExceedsThreshold = false;
+    private boolean removedChildrenOptimizationDisabled = false;
 
     /**
      * @treatAsPrivate implementation detail
@@ -123,9 +123,9 @@ public abstract class Parent extends Node {
             for (int idx = startIdx; idx < children.size(); idx++) {
                 peer.add(idx, children.get(idx).impl_getPeer());
             }
-            if (removedChildrenExceedsThreshold) {
+            if (removedChildrenOptimizationDisabled) {
                 peer.markDirty();
-                removedChildrenExceedsThreshold = false;
+                removedChildrenOptimizationDisabled = false;
             } else {
                 if (removed != null && !removed.isEmpty()) {
                     for(int i = 0; i < removed.size(); i++) {
@@ -195,14 +195,6 @@ public abstract class Parent extends Node {
         System.out.println(str);
     }
 
-    /**
-     * Variable used to avoid executing the body of the on replace trigger on
-     * children. This is specifically used when we know that changes to the
-     * children is going to be valid so as to avoid all the scenegraph surgery
-     * validation routines in the trigger.
-     */
-    private boolean ignoreChildrenTrigger = false;
-
     // Variable used to indicate that the change to the children ObservableList is
     // a simple permutation as the result of a toFront or toBack operation.
     // We can avoid almost all of the processing of the on replace trigger in
@@ -261,7 +253,8 @@ public abstract class Parent extends Node {
                     List<Node> removed = c.getRemoved();
                     int removedSize = removed.size();
                     for (int i = 0; i < removedSize; ++i) {
-                        if (removed.get(i).isManaged()) {
+                        final Node n = removed.get(i);
+                        if (n.isManaged()) {
                             relayout = true;
                         }
                     }
@@ -364,9 +357,6 @@ public abstract class Parent extends Node {
     }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int[] toBeRemoved) {
-            if (ignoreChildrenTrigger) {
-                return;
-            }
             if (Parent.this.getScene() != null) {
                 // NOTE: this will throw IllegalStateException if we are on the wrong thread
                 Toolkit.getToolkit().checkFxUserThread();
@@ -479,9 +469,9 @@ public abstract class Parent extends Node {
             if (removed == null) {
                 removed = new ArrayList<Node>();
             }
-            if (removed.size() + removedLength > REMOVED_CHILDREN_THRESHOLD) {
+            if (removed.size() + removedLength > REMOVED_CHILDREN_THRESHOLD || !impl_isTreeVisible()) {
                 //do not populate too many children in removed list
-                removedChildrenExceedsThreshold = true;
+                removedChildrenOptimizationDisabled = true;
             }
             for (int i = 0; i < toBeRemoved.length; i += 2) {
                 for (int j = toBeRemoved[i]; j < toBeRemoved[i + 1]; j++) {
@@ -501,7 +491,7 @@ public abstract class Parent extends Node {
                         old.setParent(null);
                         old.setScenes(null, null);
                     }
-                    if (!removedChildrenExceedsThreshold) {
+                    if (!removedChildrenOptimizationDisabled) {
                         removed.add(old);
                     }
                 }
@@ -652,6 +642,12 @@ public abstract class Parent extends Node {
     @Override
     void scenesChanged(final Scene newScene, final SubScene newSubScene,
                        final Scene oldScene, final SubScene oldSubScene) {
+
+        if (oldScene != null && newScene == null) {
+            // RT-34863 - clean up CSS cache when Parent is removed from scene-graph
+            StyleManager.getInstance().forget(this);
+        }
+
         for (int i=0; i<children.size(); i++) {
             children.get(i).setScenes(newScene, newSubScene);
         }
@@ -1167,9 +1163,10 @@ public abstract class Parent extends Node {
 
     /**
      * Gets an observable list of string URLs linking to the stylesheets to use
-     * with this Parent's contents. For additional information about using CSS
+     * with this Parent's contents. See {@link Scene#getStylesheets()} for details.
+     * <p>For additional information about using CSS
      * with the scene graph, see the <a href="doc-files/cssref.html">CSS Reference
-     * Guide</a>.
+     * Guide</a>.</p>
      *
      * @return the list of stylesheets to use with this Parent
      * @since JavaFX 2.1

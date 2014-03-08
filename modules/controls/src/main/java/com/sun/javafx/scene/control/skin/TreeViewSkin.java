@@ -108,11 +108,11 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         getBehavior().setOnMoveToLastCell(new Runnable() {
             @Override public void run() { onMoveToLastCell(); }
         });
-        getBehavior().setOnScrollPageDown(new Callback<Integer, Integer>() {
-            @Override public Integer call(Integer anchor) { return onScrollPageDown(anchor); }
+        getBehavior().setOnScrollPageDown(new Callback<Boolean, Integer>() {
+            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageDown(isFocusDriven); }
         });
-        getBehavior().setOnScrollPageUp(new Callback<Integer, Integer>() {
-            @Override public Integer call(Integer anchor) { return onScrollPageUp(anchor); }
+        getBehavior().setOnScrollPageUp(new Callback<Boolean, Integer>() {
+            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageUp(isFocusDriven); }
         });
         getBehavior().setOnSelectPreviousRow(new Runnable() {
             @Override public void run() { onSelectPreviousCell(); }
@@ -402,7 +402,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     /**
      * Function used to scroll the container down by one 'page'.
      */
-    public int onScrollPageDown(int anchor) {
+    public int onScrollPageDown(boolean isFocusDriven) {
         TreeCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
 
@@ -411,13 +411,27 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         if (sm == null || fm == null) return -1;
 
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
-        if (sm.isSelected(lastVisibleCellIndex) || fm.isFocused(lastVisibleCellIndex) || lastVisibleCellIndex == anchor) {
-            // if the last visible cell is selected, we want to shift that cell up
-            // to be the top-most cell, or at least as far to the top as we can go.
-            flow.showAsFirst(lastVisibleCell);
-            
-            TreeCell<T> newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
-            lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
+
+        // isSelected represents focus OR selection
+        boolean isSelected = false;
+        if (isFocusDriven) {
+            isSelected = lastVisibleCell.isFocused() || fm.isFocused(lastVisibleCellIndex);
+        } else {
+            isSelected = lastVisibleCell.isSelected() || sm.isSelected(lastVisibleCellIndex);
+        }
+
+        if (isSelected) {
+            boolean isLeadIndex = (isFocusDriven && fm.getFocusedIndex() == lastVisibleCellIndex)
+                    || (! isFocusDriven && sm.getSelectedIndex() == lastVisibleCellIndex);
+
+            if (isLeadIndex) {
+                // if the last visible cell is selected, we want to shift that cell up
+                // to be the top-most cell, or at least as far to the top as we can go.
+                flow.showAsFirst(lastVisibleCell);
+
+                TreeCell<T> newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+                lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
+            }
         } else {
             // if the selection is not on the 'bottom' most cell, we firstly move
             // the selection down to that, without scrolling the contents, so
@@ -432,7 +446,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     /**
      * Function used to scroll the container up by one 'page'.
      */
-    public int onScrollPageUp(int anchor) {
+    public int onScrollPageUp(boolean isFocusDriven) {
         TreeCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
 
@@ -441,13 +455,27 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         if (sm == null || fm == null) return -1;
 
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
-        if (sm.isSelected(firstVisibleCellIndex) || fm.isFocused(firstVisibleCellIndex) || firstVisibleCellIndex == anchor) {
-            // if the first visible cell is selected, we want to shift that cell down
-            // to be the bottom-most cell, or at least as far to the bottom as we can go.
-            flow.showAsLast(firstVisibleCell);
 
-            TreeCell<T> newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
-            firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
+        // isSelected represents focus OR selection
+        boolean isSelected = false;
+        if (isFocusDriven) {
+            isSelected = firstVisibleCell.isFocused() || fm.isFocused(firstVisibleCellIndex);
+        } else {
+            isSelected = firstVisibleCell.isSelected() || sm.isSelected(firstVisibleCellIndex);
+        }
+
+        if (isSelected) {
+            boolean isLeadIndex = (isFocusDriven && fm.getFocusedIndex() == firstVisibleCellIndex)
+                    || (! isFocusDriven && sm.getSelectedIndex() == firstVisibleCellIndex);
+
+            if (isLeadIndex) {
+                // if the first visible cell is selected, we want to shift that cell down
+                // to be the bottom-most cell, or at least as far to the bottom as we can go.
+                flow.showAsLast(firstVisibleCell);
+
+                TreeCell<T> newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+                firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
+            }
         } else {
             // if the selection is not on the 'top' most cell, we firstly move
             // the selection up to that, without scrolling the contents, so

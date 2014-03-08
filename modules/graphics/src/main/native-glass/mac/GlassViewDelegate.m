@@ -150,6 +150,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         self->nsView = view;
         self->jView = (*env)->NewGlobalRef(env, jview);
         self->mouseIsOver = NO;
+        self->mouseDownMask = 0;
 
         self->gestureInProgress = NO;
 
@@ -510,6 +511,12 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         switch (type) {
             // prepare GlassDragSource for possible drag,
             case com_sun_glass_events_MouseEvent_DOWN:
+                switch (button) {
+                    case com_sun_glass_events_MouseEvent_BUTTON_LEFT:  self->mouseDownMask |= 1 << 0; break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_RIGHT: self->mouseDownMask |= 1 << 1; break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_OTHER: self->mouseDownMask |= 1 << 2; break;
+                }
+                //fall through
             case com_sun_glass_events_MouseEvent_DRAG:
                 [GlassDragSource setDelegate:self];
                 // fall through to save the lastEvent
@@ -517,6 +524,14 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             case com_sun_glass_events_MouseEvent_MOVE:
                 self->lastEvent = [theEvent retain];
                 break;
+            case com_sun_glass_events_MouseEvent_UP:
+                switch (button) {
+                    case com_sun_glass_events_MouseEvent_BUTTON_LEFT:  self->mouseDownMask &= ~(1 << 0); break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_RIGHT: self->mouseDownMask &= ~(1 << 1); break;
+                    case com_sun_glass_events_MouseEvent_BUTTON_OTHER: self->mouseDownMask &= ~(1 << 2); break;
+                }
+                break;
+
 
 
             // Track whether the mouse is over the view
@@ -930,11 +945,32 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     self->dragOperation = NSDragOperationNone;
 }
 
+- (void)synthesizeMouseUp:(NSEventType)type
+{
+    NSEvent* theEvent = [NSEvent
+        mouseEventWithType:type
+                  location:[NSEvent mouseLocation]
+             modifierFlags:0
+                 timestamp:[NSDate timeIntervalSinceReferenceDate]
+              windowNumber:[[self->nsView window] windowNumber]
+                   context:[NSGraphicsContext currentContext]
+               eventNumber:0
+                clickCount:0
+                  pressure:0.0];
+
+    [self sendJavaMouseEvent:theEvent];
+}
+
 - (void)draggingEnded
 {
     GET_MAIN_JENV;
     (*env)->CallVoidMethod(env, self->jView, jViewNotifyDragEnd,  [GlassDragSource getMask]);
     GLASS_CHECK_EXCEPTION(env);
+
+    // RT-36038: OS X won't send mouseUp after DnD is complete, so we synthesize them
+    if (self->mouseDownMask & 1 << 0) [self synthesizeMouseUp:NSLeftMouseUp];
+    if (self->mouseDownMask & 1 << 1) [self synthesizeMouseUp:NSRightMouseUp];
+    if (self->mouseDownMask & 1 << 2) [self synthesizeMouseUp:NSOtherMouseUp];
 }
 
 - (BOOL)suppressMouseEnterExitOnMouseDown

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,8 @@ import static org.junit.Assert.*;
 
 import java.util.*;
 
+import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
+import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -42,11 +44,15 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.scene.Node;
+import javafx.geometry.Orientation;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -63,6 +69,8 @@ import com.sun.javafx.scene.control.TableColumnComparatorBase.TableColumnCompara
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
+
+import static com.sun.javafx.scene.control.skin.TableColumnHeaderRetriever.*;
 
 public class TableViewTest {
     private TableView<String> table;
@@ -2004,7 +2012,8 @@ public class TableViewTest {
 
         TableColumn<Person,String> first = new TableColumn<Person,String>("first");
         first.setCellValueFactory(new PropertyValueFactory("firstName"));
-        first.setCellFactory(TextFieldTableCell.forTableColumn());       // note that only the first name col is editable
+        Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
+        first.setCellFactory(factory);       // note that only the first name col is editable
 
         EventHandler<TableColumn.CellEditEvent<Person, String>> onEditCommit = first.getOnEditCommit();
         first.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
@@ -2054,5 +2063,634 @@ public class TableViewTest {
         assertEquals("Andrew", cell.getText());
         assertEquals("Andrew", person1.getFirstName());
         assertEquals(1, test_rt_34685_commitCount);
+    }
+
+    @Test public void test_rt_35224() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        table.getColumns().setAll(col1, col2);
+
+        new StageLoader(table);
+
+        Toolkit.getToolkit().firePulse();
+        col1.getColumns().setAll(new TableColumn(), new TableColumn());
+        Toolkit.getToolkit().firePulse();
+        col2.getColumns().setAll(new TableColumn(), new TableColumn());
+        Toolkit.getToolkit().firePulse();
+    }
+
+    @Test public void test_rt_35141_simple_switch_two_columns_move_col1_forward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        table.getColumns().setAll(col1, col2);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+
+        moveColumn(col1, 1);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+    }
+
+    @Test public void test_rt_35141_simple_switch_two_columns_move_col2_backward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        table.getColumns().setAll(col1, col2);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+
+        moveColumn(col2, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col1_forward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col1, 1);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col2_backward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col2, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col2_forward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col2, 2);
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(2, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col3_backward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col3, 1);
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(2, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col0_forward_2_places() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col1, 2);
+        assertEquals(2, getColumnIndex(col1));
+        assertEquals(0, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_simple_switch_three_columns_move_col3_backward_2_places() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+
+        moveColumn(col3, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(2, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_hidden_column_move_col1_forward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        col2.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+
+        moveColumn(col1, 1);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_hidden_column_move_col1_forward_100_places() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        col2.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+
+        moveColumn(col1, 100);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_hidden_column_move_col3_backward_1_place() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3);
+
+        col2.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+
+        moveColumn(col3, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col1_to_middle() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col1, 1);    // 1 should represent the spot between col2 and col4
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col1_to_end() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col1, 3);    // 3 should represent the end place
+        assertEquals(3, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(1, getColumnIndex(col5));
+        assertEquals(2, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col3_to_start() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col3, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(0, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col3_to_end() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col3, 3);    // 3 should represent the end place
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(3, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(1, getColumnIndex(col5));
+        assertEquals(2, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col6_to_start() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col6, 0);
+        assertEquals(1, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(3, getColumnIndex(col5));
+        assertEquals(0, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_35141_multiple_hidden_columns_move_col6_to_middle() {
+        TableView table = new TableView();
+        TableColumn col1 = new TableColumn();
+        TableColumn col2 = new TableColumn();
+        TableColumn col3 = new TableColumn();
+        TableColumn col4 = new TableColumn();
+        TableColumn col5 = new TableColumn();
+        TableColumn col6 = new TableColumn();
+        table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        col2.setVisible(false);
+        col4.setVisible(false);
+
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(1, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(2, getColumnIndex(col5));
+        assertEquals(3, getColumnIndex(col6));
+
+        moveColumn(col6, 1);
+        assertEquals(0, getColumnIndex(col1));
+        assertEquals(-1, getColumnIndex(col2));
+        assertEquals(2, getColumnIndex(col3));
+        assertEquals(-1, getColumnIndex(col4));
+        assertEquals(3, getColumnIndex(col5));
+        assertEquals(1, getColumnIndex(col6));
+    }
+
+    @Test public void test_rt_34042() {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                        new Person("Emma", "Jones", "emma.jones@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        Scene scene = new Scene(new Group());
+        SplitPane splitPane = new SplitPane();
+        splitPane.setOrientation(Orientation.VERTICAL);
+
+        //TREETABLECOLUMN
+        TreeTableView<Person> treeTableView = new TreeTableView<>();
+        TreeTableColumn temp = new TreeTableColumn("First Name");
+        temp.setMinWidth(100);
+        temp.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn temp2 = new TreeTableColumn("Last Name");
+        temp2.setMinWidth(100);
+        temp2.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn temp3 = new TreeTableColumn("Email");
+        temp3.setMinWidth(200);
+        temp3.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        treeTableView.getColumns().addAll(temp, temp2, temp3);
+
+        //TABLE
+        TableView<Person> table = new TableView<Person>();
+        table.setEditable(true);
+        table.getSelectionModel().setCellSelectionEnabled(true);
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setMinWidth(100);
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setMinWidth(100);
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setMinWidth(200);
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.setItems(data);
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        splitPane.getItems().add(treeTableView);
+        splitPane.getItems().add(table);
+
+        ((Group) scene.getRoot()).getChildren().addAll(splitPane);
+
+        new StageLoader(scene);
+
+        TableView.TableViewSelectionModel sm = table.getSelectionModel();
+        sm.select(2, lastNameCol);
+        assertFalse(sm.isSelected(2, firstNameCol));
+        assertTrue(sm.isSelected(2, lastNameCol));
+        assertFalse(sm.isSelected(2, emailCol));
+
+        KeyEventFirer keyboard = new KeyEventFirer(table);
+        keyboard.doKeyPress(KeyCode.LEFT);
+        assertTrue(sm.isSelected(2, firstNameCol));
+        assertFalse(sm.isSelected(2, lastNameCol));
+        assertFalse(sm.isSelected(2, emailCol));
+
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        assertFalse(sm.isSelected(2, firstNameCol));
+        assertTrue(sm.isSelected(2, lastNameCol));
+        assertFalse(sm.isSelected(2, emailCol));
+
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        assertFalse(sm.isSelected(2, firstNameCol));
+        assertFalse(sm.isSelected(2, lastNameCol));
+        assertTrue(sm.isSelected(2, emailCol));
+    }
+
+    @Test public void test_rt35039() {
+        final List<String> data = new ArrayList<>();
+        data.add("aabbaa");
+        data.add("bbc");
+
+        final TableView<String> tableView = new TableView<>();
+        tableView.setItems(FXCollections.observableArrayList(data));
+
+        new StageLoader(tableView);
+
+        // everything should be null to start with
+        assertNull(tableView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        tableView.getSelectionModel().select(1);
+        assertEquals("bbc", tableView.getSelectionModel().getSelectedItem());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        tableView.setItems(FXCollections.observableArrayList(data));
+        assertEquals("bbc", tableView.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void test_rt35763_observableList() {
+        TableView<Person> table = new TableView();
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        table.getColumns().add(firstNameCol);
+
+        Person jacob, isabella, ethan, emma, michael;
+        table.setItems(FXCollections.observableArrayList(
+                jacob = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                isabella = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                ethan = new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                emma = new Person("Emma", "Jones", "emma.jones@example.com"),
+                michael = new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        assertEquals(jacob, table.getItems().get(0));
+        assertEquals(isabella, table.getItems().get(1));
+        assertEquals(ethan, table.getItems().get(2));
+        assertEquals(emma, table.getItems().get(3));
+        assertEquals(michael, table.getItems().get(4));
+
+        // change sort order - expect items to be sorted
+        table.getSortOrder().setAll(firstNameCol);
+
+        assertEquals(jacob, table.getItems().get(3));
+        assertEquals(isabella, table.getItems().get(2));
+        assertEquals(ethan, table.getItems().get(1));
+        assertEquals(emma, table.getItems().get(0));
+        assertEquals(michael, table.getItems().get(4));
+
+        // set new items into items list - expect sortOrder list to be reset
+        // and the items list to remain unsorted
+        table.setItems(FXCollections.observableArrayList(
+                jacob = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                isabella = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                ethan = new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                emma = new Person("Emma", "Jones", "emma.jones@example.com"),
+                michael = new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        assertEquals(jacob, table.getItems().get(0));
+        assertEquals(isabella, table.getItems().get(1));
+        assertEquals(ethan, table.getItems().get(2));
+        assertEquals(emma, table.getItems().get(3));
+        assertEquals(michael, table.getItems().get(4));
+
+        assertTrue(table.getSortOrder().isEmpty());
+    }
+
+    @Test public void test_rt35763_sortedList() {
+        TableView<Person> table = new TableView();
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+        table.getColumns().add(firstNameCol);
+
+        Person jacob, isabella, ethan, emma, michael;
+        SortedList<Person> sortedList = new SortedList<>(FXCollections.observableArrayList(
+                jacob = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                isabella = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                ethan = new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                emma = new Person("Emma", "Jones", "emma.jones@example.com"),
+                michael = new Person("Michael", "Brown", "michael.brown@example.com")));
+        sortedList.comparatorProperty().bind(table.comparatorProperty());
+        table.setItems(sortedList);
+
+        assertEquals(jacob, table.getItems().get(0));
+        assertEquals(isabella, table.getItems().get(1));
+        assertEquals(ethan, table.getItems().get(2));
+        assertEquals(emma, table.getItems().get(3));
+        assertEquals(michael, table.getItems().get(4));
+
+        // change sort order - expect items to be sorted
+        table.getSortOrder().setAll(firstNameCol);
+
+        assertEquals(jacob, table.getItems().get(3));
+        assertEquals(isabella, table.getItems().get(2));
+        assertEquals(ethan, table.getItems().get(1));
+        assertEquals(emma, table.getItems().get(0));
+        assertEquals(michael, table.getItems().get(4));
+
+        // set new items into items list - expect sortOrder list to be retained
+        // as we're inserting a SortedList
+        SortedList<Person> sortedList2 = new SortedList<>(FXCollections.observableArrayList(
+                jacob = new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                isabella = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                ethan = new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                emma = new Person("Emma", "Jones", "emma.jones@example.com"),
+                michael = new Person("Michael", "Brown", "michael.brown@example.com")));
+        sortedList2.comparatorProperty().bind(table.comparatorProperty());
+        table.setItems(sortedList2);
+
+        assertEquals(jacob, table.getItems().get(3));
+        assertEquals(isabella, table.getItems().get(2));
+        assertEquals(ethan, table.getItems().get(1));
+        assertEquals(emma, table.getItems().get(0));
+        assertEquals(michael, table.getItems().get(4));
+
+        assertEquals(1, table.getSortOrder().size());
+        assertEquals(firstNameCol, table.getSortOrder().get(0));
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void test_rt35768_negativeFrom() {
+        readOnlyUnbackedObservableListSubListTest(-1, 0);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void test_rt35768_bigTo() {
+        readOnlyUnbackedObservableListSubListTest(0, 10);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void test_rt35768_fromEqualsTo() {
+        readOnlyUnbackedObservableListSubListTest(1, 1);
+    }
+
+    private void readOnlyUnbackedObservableListSubListTest(int from, int to) {
+        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<>(new ListChangeListener<TablePosition>() {
+            @Override public void onChanged(javafx.collections.ListChangeListener.Change<? extends TablePosition> c) {
+                // Do nothing
+            }
+        });
+        ReadOnlyUnbackedObservableList<TablePosition<Object, ?>> selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<Object, ?>>() {
+            @Override public TablePosition<Object, ?> get(int i) {
+                return selectedCellsMap.get(i);
+            }
+
+            @Override public int size() {
+                return selectedCellsMap.size();
+            }
+        };
+
+        // This should result in an IOOBE, but didn't until this bug was fixed
+        selectedCellsSeq.subList(from, to);
+    }
+
+    @Test public void test_rt35857() {
+        ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
+        final TableView<String> tableView = new TableView<String>(fxList);
+
+        tableView.getSelectionModel().select(0);
+
+        ObservableList<String> selectedItems = tableView.getSelectionModel().getSelectedItems();
+        assertEquals(1, selectedItems.size());
+        assertEquals("A", selectedItems.get(0));
+
+        tableView.getItems().removeAll(selectedItems);
+        assertEquals(2, fxList.size());
+        assertEquals("B", fxList.get(0));
+        assertEquals("C", fxList.get(1));
     }
 }

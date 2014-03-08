@@ -45,10 +45,10 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * label shown within the MenuButton.
  * <p>
  * As mentioned, like the Menu API itself, you'll find an {@link #items} ObservableList
- * within which you can provide any type of Node, although it is recommended to
- * only insert controls that extend from {@link MenuItem}. There are several useful subclasses
- * of {@link MenuItem} including {@link RadioMenuItem}, {@link CheckMenuItem}, 
- * {@link Menu}, {@link Separator} and {@link CustomMenuItem}.
+ * within which you can provide anything that extends from {@link MenuItem}.
+ * There are several useful subclasses of {@link MenuItem} including
+ * {@link RadioMenuItem}, {@link CheckMenuItem}, {@link Menu},
+ * {@link SeparatorMenuItem} and {@link CustomMenuItem}.
  * <p>
  * A MenuButton can be set to show its menu on any side of the button. This is
  * specified using the {@link #popupSideProperty() popupSide} property. By default

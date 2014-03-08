@@ -25,6 +25,7 @@
 
 package javafx.scene.chart;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.collections.FXCollections;
@@ -32,7 +33,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.text.Text;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 /**
  *
@@ -98,6 +99,18 @@ public class PieChartTest extends ChartTestBase {
         pc.getData().addAll(data);
         pc.getData().remove(0);
         assertEquals(4, pc.getData().size());
+    }
+
+
+    @Test
+    public void testDataNodeChangeReported() {
+        AtomicBoolean called = new AtomicBoolean();
+
+        PieChart.Data data = new PieChart.Data("ABC", 40);
+        data.nodeProperty().addListener((o) -> called.set(true));
+        pc.getData().add(data);
+
+        assertTrue(called.get());
     }
     
 }

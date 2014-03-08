@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -357,6 +357,35 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      *           }
      *       }
      *   });
+     * </code></pre>
+     *
+     * <p>The default base year for parsing input containing only two digits for
+     * the year is 2000 (see {@link java.time.format.DateTimeFormatter}).  This
+     * default is not useful for allowing a person's date of birth to be typed.
+     * The following example modifies the converter's fromString() method to
+     * allow a two digit year for birth dates up to 99 years in the past.
+     * <pre><code>
+     *   &#064;Override public LocalDate fromString(String text) {
+     *       if (text != null && !text.isEmpty()) {
+     *           Locale locale = Locale.getDefault(Locale.Category.FORMAT);
+     *           Chronology chrono = datePicker.getChronology();
+     *           String pattern =
+     *               DateTimeFormatterBuilder.getLocalizedDateTimePattern(FormatStyle.SHORT,
+     *                                                                    null, chrono, locale);
+     *           String prePattern = pattern.substring(0, pattern.indexOf("y"));
+     *           String postPattern = pattern.substring(pattern.lastIndexOf("y")+1);
+     *           int baseYear = LocalDate.now().getYear() - 99;
+     *           DateTimeFormatter df = new DateTimeFormatterBuilder()
+     *                       .parseLenient()
+     *                       .appendPattern(prePattern)
+     *                       .appendValueReduced(ChronoField.YEAR, 2, 2, baseYear)
+     *                       .appendPattern(postPattern)
+     *                       .toFormatter();
+     *           return LocalDate.from(chrono.date(df.parse(text)));
+     *       } else {
+     *           return null;
+     *       }
+     *   }
      * </code></pre>
      *
      * @see javafx.scene.control.ComboBox#converterProperty

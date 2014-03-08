@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -204,8 +204,7 @@ public class DatePickerContent extends VBox {
 
         refresh();
 
-        // RT-30511: This enables traversal (not sure why Scene doesn't handle this),
-        // plus it prevents key events from reaching the popup's owner.
+        // RT-30511: This prevents key events from reaching the popup's owner.
         addEventHandler(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent e) {
                 Node node = getScene().getFocusOwner();
@@ -215,37 +214,8 @@ public class DatePickerContent extends VBox {
 
                 if (e.getEventType() == KeyEvent.KEY_PRESSED) {
                     switch (e.getCode()) {
-                      case TAB:
-                          node.impl_traverse(e.isShiftDown() ? Direction.PREVIOUS : Direction.NEXT);
-                          e.consume();
-                          break;
-
-                      case UP:
-                          if (!e.isAltDown()) {
-                              node.impl_traverse(Direction.UP);
-                              e.consume();
-                          }
-                          break;
-
-                      case DOWN:
-                          if (!e.isAltDown()) {
-                              node.impl_traverse(Direction.DOWN);
-                              e.consume();
-                          }
-                          break;
-
-                      case LEFT:
-                          node.impl_traverse(Direction.LEFT);
-                          e.consume();
-                          break;
-
-                      case RIGHT:
-                          node.impl_traverse(Direction.RIGHT);
-                          e.consume();
-                          break;
-
                       case HOME:
-                          goToDate(LocalDate.now());
+                          goToDate(LocalDate.now(), true);
                           e.consume();
                           break;
 
@@ -253,11 +223,11 @@ public class DatePickerContent extends VBox {
                       case PAGE_UP:
                           if ((isMac() && e.isMetaDown()) || (!isMac() && e.isControlDown())) {
                               if (!backYearButton.isDisabled()) {
-                                  forward(-1, YEARS);
+                                  forward(-1, YEARS, true);
                               }
                           } else {
                               if (!backMonthButton.isDisabled()) {
-                                  forward(-1, MONTHS);
+                                  forward(-1, MONTHS, true);
                               }
                           }
                           e.consume();
@@ -266,11 +236,11 @@ public class DatePickerContent extends VBox {
                       case PAGE_DOWN:
                           if ((isMac() && e.isMetaDown()) || (!isMac() && e.isControlDown())) {
                               if (!forwardYearButton.isDisabled()) {
-                                  forward(1, YEARS);
+                                  forward(1, YEARS, true);
                               }
                           } else {
                               if (!forwardMonthButton.isDisabled()) {
-                                  forward(1, MONTHS);
+                                  forward(1, MONTHS, true);
                               }
                           }
                           e.consume();
@@ -284,14 +254,17 @@ public class DatePickerContent extends VBox {
                 }
 
                 // Consume all key events except those that control
-                // showing the popup.
+                // showing the popup and traversal.
                 switch (e.getCode()) {
                   case ESCAPE:
                   case F4:
                   case F10:
                   case UP:
                   case DOWN:
-                      break;
+                  case LEFT:
+                  case RIGHT:
+                  case TAB:
+                        break;
 
                   default:
                     e.consume();
@@ -336,7 +309,7 @@ public class DatePickerContent extends VBox {
 
         backMonthButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
-                forward(-1, MONTHS);
+                forward(-1, MONTHS, false);
             }
         });
 
@@ -345,7 +318,7 @@ public class DatePickerContent extends VBox {
 
         forwardMonthButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
-                forward(1, MONTHS);
+                forward(1, MONTHS, false);
             }
         });
 
@@ -376,7 +349,7 @@ public class DatePickerContent extends VBox {
 
         backYearButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
-                forward(-1, YEARS);
+                forward(-1, YEARS, false);
             }
         });
 
@@ -385,7 +358,7 @@ public class DatePickerContent extends VBox {
 
         forwardYearButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent t) {
-                forward(1, YEARS);
+                forward(1, YEARS, false);
             }
         });
 
@@ -674,24 +647,26 @@ yearSpinner.setFillHeight(false);
     }
 
     // public for behavior class
-    public void goToDayCell(DateCell dateCell, int offset, ChronoUnit unit) {
-        goToDate(dayCellDate(dateCell).plus(offset, unit));
+    public void goToDayCell(DateCell dateCell, int offset, ChronoUnit unit, boolean focusDayCell) {
+        goToDate(dayCellDate(dateCell).plus(offset, unit), focusDayCell);
     }
 
-    protected void forward(int offset, ChronoUnit unit) {
+    protected void forward(int offset, ChronoUnit unit, boolean focusDayCell) {
         YearMonth yearMonth = displayedYearMonth.get();
         DateCell dateCell = lastFocusedDayCell;
         if (dateCell == null || !dayCellDate(dateCell).getMonth().equals(yearMonth.getMonth())) {
             dateCell = findDayCellForDate(yearMonth.atDay(1));
         }
-        goToDayCell(dateCell, offset, unit);
+        goToDayCell(dateCell, offset, unit, focusDayCell);
     }
 
     // public for behavior class
-    public void goToDate(LocalDate date) {
+    public void goToDate(LocalDate date, boolean focusDayCell) {
         if (isValidDate(datePicker.getChronology(), date)) {
             displayedYearMonth.set(YearMonth.from(date));
-            findDayCellForDate(date).requestFocus();
+            if (focusDayCell) {
+                findDayCellForDate(date).requestFocus();
+            }
         }
     }
 
@@ -717,7 +692,7 @@ yearSpinner.setFillHeight(false);
         }
         if (YearMonth.from(focusDate).equals(displayedYearMonth.get())) {
             // focus date
-            goToDate(focusDate);
+            goToDate(focusDate, true);
         } else {
             // focus month spinner (should not happen)
             backMonthButton.requestFocus();

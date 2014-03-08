@@ -28,9 +28,6 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
 
-import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -146,7 +143,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 }
             }
         });
-        
+
         comboBox.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent ke) {
                 if (textField == null) return;
@@ -156,40 +153,42 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 // of the conditions below.
                 if (ke.getTarget().equals(textField)) return;
 
-                // When the user hits the enter or F4 keys, we respond before 
-                // ever giving the event to the TextField.
-                if (ke.getCode() == KeyCode.ENTER) {
-                    setTextFromTextFieldIntoComboBoxValue();
-                    /*
-                    ** don't consume this if we're on an embedded
-                    ** platform that supports 5-button navigation 
-                    */
-                    if (!Utils.isTwoLevelFocus()) {
-                        ke.consume();
-                    }
-                    return;
-                } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
-                    if (comboBox.isShowing()) comboBox.hide();
-                    else comboBox.show();
-                    ke.consume();
-                    return;
-                } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
-                    // RT-23275: The TextField fires F10 and ESCAPE key events
-                    // up to the parent, which are then fired back at the 
-                    // TextField, and this ends up in an infinite loop until
-                    // the stack overflows. So, here we consume these two
-                    // events and stop them from going any further.
-                    ke.consume();
-                    return;
-                } else {
-                    // Fix for the regression noted in a comment in RT-29885.
-                    // This forwards the event down into the TextField when
-                    // the key event is actually received by the ComboBox.
-                    textField.fireEvent(ke.copyFor(textField, textField));
-                    ke.consume();
-                }
+                // Fix for the regression noted in a comment in RT-29885.
+                // This forwards the event down into the TextField when
+                // the key event is actually received by the ComboBox.
+                textField.fireEvent(ke.copyFor(textField, textField));
+                ke.consume();
             }
         });
+
+        if (textField != null) {
+            textField.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
+                @Override public void handle(KeyEvent ke) {
+                    if (textField == null) return;
+
+                    // When the user hits the enter or F4 keys, we respond before
+                    // ever giving the event to the TextField.
+                    if (ke.getCode() == KeyCode.ENTER) {
+                        setTextFromTextFieldIntoComboBoxValue();
+                        ke.consume();
+                        return;
+                    } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
+                        if (comboBox.isShowing()) comboBox.hide();
+                        else comboBox.show();
+                        ke.consume();
+                        return;
+                    } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
+                        // RT-23275: The TextField fires F10 and ESCAPE key events
+                        // up to the parent, which are then fired back at the
+                        // TextField, and this ends up in an infinite loop until
+                        // the stack overflows. So, here we consume these two
+                        // events and stop them from going any further.
+                        ke.consume();
+                        return;
+                    }
+                }
+            });
+        }
 
         // Fix for RT-31093 - drag events from the textfield were not surfacing
         // properly for the ComboBox.
@@ -290,7 +289,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
 
         this.listViewItems = comboBoxItems;
-        listView.setItems(null);
         listView.setItems(listViewItems);
 
         if (listViewItems != null) {
@@ -395,7 +393,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (textField != null) return textField;
         
         textField = comboBox.getEditor();
-        textField.setFocusTraversable(true);
+        textField.focusTraversableProperty().bindBidirectional(comboBox.focusTraversableProperty());
         textField.promptTextProperty().bind(comboBox.promptTextProperty());
         textField.tooltipProperty().bind(comboBox.tooltipProperty());
 
@@ -586,6 +584,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         _listView.setId("list-view");
         _listView.placeholderProperty().bind(comboBox.placeholderProperty());
         _listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        _listView.setFocusTraversable(false);
 
         _listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
              @Override public void invalidated(Observable o) {

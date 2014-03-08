@@ -29,11 +29,9 @@ import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
@@ -64,24 +62,14 @@ public class MixedShapesT3DOpacity1 extends Application {
         ellipse.setFill(Color.ORANGE);
         ellipse.setStroke(Color.BLUE);
         ellipse.setStrokeWidth(5.0F);
-        ellipse.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Ellipse: Mouse Clicked:" + e);
-                }
-            });
+        ellipse.setOnMouseClicked(e -> System.out.println("Ellipse: Mouse Clicked:" + e));
         Arc arc = new Arc(250.0F, 80.0F, 50.0F, 25.0F, 45.0F, 270.0F);
         arc.setOpacity(0.5F);
         arc.setType(ArcType.ROUND);
         arc.setFill(lg);
         arc.setStroke(Color.BLUE);
         arc.setStrokeWidth(5.0F);
-        arc.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Arc: Mouse Clicked:" + e);
-                }
-            });
+        arc.setOnMouseClicked(e -> System.out.println("Arc: Mouse Clicked:" + e));
         Rectangle rectangle = new Rectangle(50.0F, 150.0F, 100.0F, 75.0F);
         rectangle.setOpacity(0.5F);
         rectangle.setArcHeight(20.0F);
@@ -89,12 +77,7 @@ public class MixedShapesT3DOpacity1 extends Application {
         rectangle.setFill(Color.GREEN);
         rectangle.setStroke(Color.BLUE);
         rectangle.setStrokeWidth(5.0F);
-        rectangle.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Rectangle: Mouse Clicked:" + e);
-                }
-            });
+        rectangle.setOnMouseClicked(e -> System.out.println("Rectangle: Mouse Clicked:" + e));
         ObservableList<Double> floats = javafx.collections.FXCollections.<Double>observableArrayList();
         floats.addAll(200.0, 150.0, 250.0, 220.0, 300.0, 150.0);
         Polygon polygon = new Polygon();
@@ -103,12 +86,7 @@ public class MixedShapesT3DOpacity1 extends Application {
         polygon.setFill(Color.YELLOW);
         polygon.setStroke(Color.BLUE);
         polygon.setStrokeWidth(5.0F);
-        polygon.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Polygon: Mouse Clicked:" + e);
-                }
-            });
+        polygon.setOnMouseClicked(e -> System.out.println("Polygon: Mouse Clicked:" + e));
         group2.getChildren().addAll(ellipse, arc, rectangle, polygon);
         group.getChildren().addAll(group2);
         ((Group)scene.getRoot()).getChildren().addAll(group);

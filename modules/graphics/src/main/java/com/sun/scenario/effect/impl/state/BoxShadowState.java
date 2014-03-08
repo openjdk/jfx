@@ -26,10 +26,6 @@
 package com.sun.scenario.effect.impl.state;
 
 import com.sun.scenario.effect.Color4f;
-import com.sun.scenario.effect.Effect.AccelType;
-import com.sun.scenario.effect.FilterContext;
-import com.sun.scenario.effect.impl.EffectPeer;
-import com.sun.scenario.effect.impl.Renderer;
 
 /**
  * The helper class for defining a 1 dimensional linear convolution shadow
@@ -42,6 +38,7 @@ public class BoxShadowState extends BoxBlurState {
     private Color4f shadowColor;
     private float spread;
 
+    @Override
     public Color4f getShadowColor() {
         return shadowColor;
     }
@@ -73,52 +70,7 @@ public class BoxShadowState extends BoxBlurState {
     }
 
     @Override
-    public boolean isNop(int pass) {
-        // Only the first pass of a shadow can be a NOP since the second
-        // pass always replaces the colors if nothing else.
-        return (pass == 0) && super.isNop(pass);
-    }
-
-    @Override
     public boolean isShadow() {
         return true;
-    }
-
-    @Override
-    public float[] getShadowColorComponents(int pass) {
-        return (pass == 0)
-            ? BLACK_COMPONENTS
-            : shadowColor.getPremultipliedRGBComponents();
-    }
-
-    @Override
-    public EffectPeer getPeer(Renderer r, FilterContext fctx, int pass) {
-        int ksize = getScaledKernelSize(pass);
-        if (pass == 0 && ksize <= 1) {
-            // The result of ksize being too <= 1 is a NOP
-            // so we return null here to skip the corresponding
-            // filter pass.
-            // Note that we can only skip the first pass, the
-            // second pass is always required to convert the
-            // colors of the source into the desired shadow color.
-            return null;
-        }
-        int psize = getPeerSize(ksize);
-        AccelType actype = r.getAccelType();
-        String name;
-        switch (actype) {
-            case NONE:
-            case SIMD:
-                if (spread == 0.0f) {
-                    name = "BoxShadow";
-                    break;
-                }
-                /* FALLS THROUGH */
-            default:
-                name = "LinearConvolveShadow";
-                break;
-        }
-        EffectPeer peer = r.getPeerInstance(fctx, name, psize);
-        return peer;
     }
 }

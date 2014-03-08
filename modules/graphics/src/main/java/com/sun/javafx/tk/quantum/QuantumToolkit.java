@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -126,7 +126,7 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.prism.impl.ManagedResource;
 
@@ -244,19 +244,21 @@ public final class QuantumToolkit extends Toolkit {
         renderer = QuantumRenderer.getInstance();
         collector = PaintCollector.createInstance(this);
         pipeline = GraphicsPipeline.getPipeline();
-        if (PrismSettings.shutdownHook) {
-            shutdownHook = new Thread("Glass/Prism Shutdown Hook") {
-                @Override public void run() {
-                    dispose();
-                }
-            };
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override public Void run() {
-                    Runtime.getRuntime().addShutdownHook(shutdownHook);
-                    return null;
-                }
-            });
-        }
+
+        /* shutdown the pipeline on System.exit, ^c
+         * needed with X11 and Windows, see RT-32501
+         */
+        shutdownHook = new Thread("Glass/Prism Shutdown Hook") {
+            @Override public void run() {
+                dispose();
+            }
+        };
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override public Void run() {
+                Runtime.getRuntime().addShutdownHook(shutdownHook);
+                return null;
+            }
+        });
         return true;
     }
 
@@ -463,7 +465,7 @@ public final class QuantumToolkit extends Toolkit {
     void pulse(boolean collect) {
         try {
             if (PULSE_LOGGING_ENABLED) {
-                PULSE_LOGGER.pulseStart();
+                PulseLogger.pulseStart();
             }
 
             if (!toolkitRunning.get()) {
@@ -481,7 +483,7 @@ public final class QuantumToolkit extends Toolkit {
         } finally {
             endPulseRunning();
             if (PULSE_LOGGING_ENABLED) {
-                PULSE_LOGGER.pulseEnd();
+                PulseLogger.pulseEnd();
             }
         }
     }
@@ -679,7 +681,6 @@ public final class QuantumToolkit extends Toolkit {
 
     @Override public void exit() {
             notifyShutdownHooks();
-            pulseTimer.stop();
 
             ViewPainter.renderLock.lock();
             try {
@@ -698,14 +699,13 @@ public final class QuantumToolkit extends Toolkit {
 
     public void dispose() {
         if (toolkitRunning.compareAndSet(true, false)) {
+            pulseTimer.stop();
             renderer.stopRenderer();
 
-            if (PrismSettings.shutdownHook) {
-                try {
-                    Runtime.getRuntime().removeShutdownHook(shutdownHook);
-                } catch (IllegalStateException ignore) {
-                    // throw when shutdown hook already removed
-                }
+            try {
+                Runtime.getRuntime().removeShutdownHook(shutdownHook);
+            } catch (IllegalStateException ignore) {
+                // throw when shutdown hook already removed
             }
         }
     }

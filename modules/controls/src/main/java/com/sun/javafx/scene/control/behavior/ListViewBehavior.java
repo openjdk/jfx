@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.control.skin.Utils;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
@@ -34,33 +36,20 @@ import javafx.collections.WeakListChangeListener;
 import javafx.event.EventType;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
-import javafx.scene.control.*;
+import javafx.scene.control.Control;
+import javafx.scene.control.FocusModel;
+import javafx.scene.control.ListView;
+import javafx.scene.control.MultipleSelectionModel;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
+
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.skin.Utils;
-import static javafx.scene.input.KeyCode.A;
-import static javafx.scene.input.KeyCode.BACK_SLASH;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
-import static javafx.scene.input.KeyCode.F2;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.PAGE_DOWN;
-import static javafx.scene.input.KeyCode.PAGE_UP;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.UP;
+
+import static javafx.scene.input.KeyCode.*;
 
 /**
  *
@@ -231,8 +220,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private boolean isShiftDown = false;
     private boolean isShortcutDown = false;
     
-    private Callback<Integer, Integer> onScrollPageUp;
-    private Callback<Integer, Integer> onScrollPageDown;
+    private Callback<Boolean, Integer> onScrollPageUp;
+    private Callback<Boolean, Integer> onScrollPageDown;
     private Runnable onFocusPreviousRow;
     private Runnable onFocusNextRow;
     private Runnable onSelectPreviousRow;
@@ -240,8 +229,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private Runnable onMoveToFirstCell;
     private Runnable onMoveToLastCell;
 
-    public void setOnScrollPageUp(Callback<Integer, Integer> c) { onScrollPageUp = c; }
-    public void setOnScrollPageDown(Callback<Integer, Integer> c) { onScrollPageDown = c; }
+    public void setOnScrollPageUp(Callback<Boolean, Integer> c) { onScrollPageUp = c; }
+    public void setOnScrollPageDown(Callback<Boolean, Integer> c) { onScrollPageDown = c; }
     public void setOnFocusPreviousRow(Runnable r) { onFocusPreviousRow = r; }
     public void setOnFocusNextRow(Runnable r) { onFocusNextRow = r; }
     public void setOnSelectPreviousRow(Runnable r) { onSelectPreviousRow = r; }
@@ -366,7 +355,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     @Override public void mousePressed(MouseEvent e) {
         super.mousePressed(e);
         
-        if (! e.isShiftDown()) {
+        if (! e.isShiftDown() && ! e.isSynthesized()) {
             int index = getControl().getSelectionModel().getSelectedIndex();
             setAnchor(index);
         }
@@ -387,7 +376,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void scrollPageUp() {
         int newSelectedIndex = -1;
         if (onScrollPageUp != null) {
-            newSelectedIndex = onScrollPageUp.call(getAnchor());
+            newSelectedIndex = onScrollPageUp.call(false);
         }
         if (newSelectedIndex == -1) return;
         
@@ -399,7 +388,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void scrollPageDown() {
         int newSelectedIndex = -1;
         if (onScrollPageDown != null) {
-            newSelectedIndex = onScrollPageDown.call(getAnchor());
+            newSelectedIndex = onScrollPageDown.call(false);
         }
         if (newSelectedIndex == -1) return;
         
@@ -457,7 +446,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
     
     private void focusPageUp() {
-        int newFocusIndex = onScrollPageUp.call(getAnchor());
+        int newFocusIndex = onScrollPageUp.call(true);
         
         FocusModel<T> fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -465,7 +454,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
     
     private void focusPageDown() {
-        int newFocusIndex = onScrollPageDown.call(getAnchor());
+        int newFocusIndex = onScrollPageDown.call(true);
         
         FocusModel<T> fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -485,9 +474,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             
             if (! hasAnchor()) {
                 setAnchor(fm.getFocusedIndex());
-            } 
-            
-            clearSelectionOutsideRange(anchor, newRow);
+            }
+
+            if (sm.getSelectedIndices().size() > 1) {
+                clearSelectionOutsideRange(anchor, newRow);
+            }
 
             if (anchor > newRow) {
                 sm.selectRange(anchor, newRow - 1);
@@ -516,7 +507,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
                 setAnchor(fm.getFocusedIndex());
             } 
 
-            clearSelectionOutsideRange(anchor, newRow);
+            if (sm.getSelectedIndices().size() > 1) {
+                clearSelectionOutsideRange(anchor, newRow);
+            }
 
             if (anchor > newRow) {
                 sm.selectRange(anchor, newRow - 1);
@@ -537,7 +530,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         int min = Math.min(start, end);
         int max = Math.max(start, end);
         
-        List<Integer> indices = new ArrayList<Integer>(sm.getSelectedIndices());
+        List<Integer> indices = new ArrayList<>(sm.getSelectedIndices());
         
         selectionChanging = true;
         for (int i = 0; i < indices.size(); i++) {
@@ -603,7 +596,10 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
+        int leadSelectedIndex = onScrollPageUp.call(false);
+
+        // fix for RT-34407
+        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
 
         MultipleSelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -613,7 +609,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             sm.select(leadSelectedIndex);
         } else {
             sm.clearSelection();
-            sm.selectRange(leadIndex, leadSelectedIndex - 1);
+            sm.selectRange(leadIndex, leadSelectedIndex + adjust);
         }
         selectionChanging = false;
     }
@@ -628,17 +624,20 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
+        int leadSelectedIndex = onScrollPageDown.call(false);
+
+        // fix for RT-34407
+        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
         
         MultipleSelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
-        
+
         selectionChanging = true;
         if (sm.getSelectionMode() == SelectionMode.SINGLE) {
             sm.select(leadSelectedIndex);
         } else {
             sm.clearSelection();
-            sm.selectRange(leadIndex, leadSelectedIndex + 1);
+            sm.selectRange(leadIndex, leadSelectedIndex + adjust);
         }
         selectionChanging = false;
     }
@@ -813,7 +812,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (fm == null) return;
 
         int leadIndex = fm.getFocusedIndex();
-        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
+        int leadSelectedIndex = onScrollPageUp.call(false);
         sm.selectRange(leadIndex, leadSelectedIndex - 1);
     }
     
@@ -825,7 +824,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         if (fm == null) return;
         
         int leadIndex = fm.getFocusedIndex();
-        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
+        int leadSelectedIndex = onScrollPageDown.call(false);
         sm.selectRange(leadIndex, leadSelectedIndex + 1);
     }
     

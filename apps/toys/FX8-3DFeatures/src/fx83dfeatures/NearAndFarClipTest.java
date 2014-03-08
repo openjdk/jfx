@@ -25,12 +25,10 @@
 package fx83dfeatures;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
 import javafx.scene.control.Slider;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -102,11 +100,7 @@ public class NearAndFarClipTest extends Application {
 
         // Intentionally set depth buffer to false to reduce test complexity
         Scene scene = new Scene(root, WIDTH, HEIGHT, false);
-        scene.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                System.out.println("Clicked: " + event.getTarget());
-            }
-        });
+        scene.setOnMousePressed(event -> System.out.println("Clicked: " + event.getTarget()));
 
 
         PerspectiveCamera camera = new PerspectiveCamera();

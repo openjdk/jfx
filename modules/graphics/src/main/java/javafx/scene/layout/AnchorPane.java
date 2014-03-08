@@ -271,7 +271,7 @@ public class AnchorPane extends Pane {
                 childHeight = computeChildHeight(child, getTopAnchor(child), getBottomAnchor(child), contentHeight, -1);
             }
             max = Math.max(max, left + (minimum && leftAnchor != null && rightAnchor != null?
-                    child.minWidth(childHeight) : child.prefWidth(childHeight)) + right);
+                    child.minWidth(childHeight) : computeChildPrefAreaWidth(child, -1, null, childHeight, false)) + right);
         }
 
         final Insets insets = getInsets();
@@ -294,7 +294,7 @@ public class AnchorPane extends Pane {
                 childWidth = computeChildWidth(child, getLeftAnchor(child), getRightAnchor(child), contentWidth, -1);
             }
             max = Math.max(max, top + (minimum && topAnchor != null && bottomAnchor != null?
-                    child.minHeight(childWidth) : child.prefHeight(childWidth)) + bottom);
+                    child.minHeight(childWidth) : computeChildPrefAreaHeight(child, -1, null, childWidth)) + bottom);
         }
 
         final Insets insets = getInsets();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@ package com.sun.javafx.collections;
 
 import javafx.collections.ModifiableObservableListBase;
 import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
+
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -168,31 +170,39 @@ public class ObservableListWrapper<E> extends ModifiableObservableListBase<E> im
     @Override
     public boolean removeAll(Collection<?> c) {
         beginChange();
-        boolean modified = false;
+        BitSet bs = new BitSet(c.size());
         for (int i = 0; i < size(); ++i) {
             if (c.contains(get(i))) {
-                remove(i);
-                --i;
-                modified = true;
+                bs.set(i);
+            }
+        }
+        if (!bs.isEmpty()) {
+            int cur = size();
+            while ((cur = bs.previousSetBit(cur - 1)) >= 0) {
+                remove(cur);
             }
         }
         endChange();
-        return modified;
+        return !bs.isEmpty();
     }
 
     @Override
     public boolean retainAll(Collection<?> c) {
         beginChange();
-        boolean modified = false;
+        BitSet bs = new BitSet(c.size());
         for (int i = 0; i < size(); ++i) {
             if (!c.contains(get(i))) {
-                remove(i);
-                --i;
-                modified = true;
+                bs.set(i);
+            }
+        }
+        if (!bs.isEmpty()) {
+            int cur = size();
+            while ((cur = bs.previousSetBit(cur - 1)) >= 0) {
+                remove(cur);
             }
         }
         endChange();
-        return modified;
+        return !bs.isEmpty();
     }
 
     private SortHelper helper;

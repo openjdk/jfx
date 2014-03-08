@@ -1005,7 +1005,10 @@ public class GridPane extends Pane {
         final List<Node> managed = getManagedChildren();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
-            if (rowIndex == getNodeRowIndex(child)) {
+            final int nodeRowIndex = getNodeRowIndex(child); 
+            final int nodeRowEnd = getNodeRowEnd(child);
+            if (rowIndex >= nodeRowIndex && 
+                    (rowIndex <= nodeRowEnd || nodeRowEnd == REMAINING)) {
                 int index = getNodeColumnIndex(child);
                 int end = getNodeColumnEnd(child);
                 columnIndex = Math.max(columnIndex, (end != REMAINING? end : index) + 1);
@@ -1031,7 +1034,10 @@ public class GridPane extends Pane {
         final List<Node> managed = getManagedChildren();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
-            if (columnIndex == getNodeColumnIndex(child)) {
+            final int nodeColumnIndex = getNodeColumnIndex(child);
+            final int nodeColumnEnd = getNodeColumnEnd(child);
+            if (columnIndex >= nodeColumnIndex
+                    && (columnIndex <= nodeColumnEnd || nodeColumnEnd == REMAINING)) {
                 int index = getNodeRowIndex(child);
                 int end = getNodeRowEnd(child);
                 rowIndex = Math.max(rowIndex, (end != REMAINING? end : index) + 1);
@@ -1632,7 +1638,10 @@ public class GridPane extends Pane {
         // If metricsDirty is set true during a layout pass the next call to computeGridMetrics()
         // will clear all the cell bounds resulting in out of date info until the
         // next layout pass.
-        if (performingLayout || metricsDirty) {
+        if (performingLayout) {
+            return;
+        } else if (metricsDirty) {
+            super.requestLayout();
             return;
         }
         metricsDirty = true;
@@ -2616,9 +2625,17 @@ public class GridPane extends Pane {
             }
             if (totalFixedPercent > 0) {
                 double totalFixed = 0;
+                // First, remove the sizes that are fixed to be 0
                 for (int i = 0; i < fixedPercent.length; ++i) {
-                    if (fixedPercent[i] != -1) {
+                    if (fixedPercent[i] == 0) {
+                        total -= singleSizes[i];
+                    }
+                }
+                for (int i = 0; i < fixedPercent.length; ++i) {
+                    if (fixedPercent[i] > 0) {
                         totalFixed += singleSizes[i];
+                        // Grow the total so that every size at it's value corresponds at least to it's fixedPercent of the total
+                        // i.e. total * fixedPercent[i] >= singleSizes[i]
                         total = Math.max(total, singleSizes[i] * (100 / fixedPercent[i]));
                     }
                 }
