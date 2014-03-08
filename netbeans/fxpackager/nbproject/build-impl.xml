@@ -170,12 +170,7 @@ is divided into following sections:
         </condition>
         <path id="endorsed.classpath.path" path="${endorsed.classpath}"/>
         <condition else="" property="endorsed.classpath.cmd.line.arg" value="-Xbootclasspath/p:'${toString:endorsed.classpath.path}'">
-            <and>
-                <isset property="endorsed.classpath"/>
-                <not>
-                    <equals arg1="${endorsed.classpath}" arg2="" trim="true"/>
-                </not>
-            </and>
+            <length length="0" string="${endorsed.classpath}" when="greater"/>
         </condition>
         <condition else="" property="javac.profile.cmd.line.arg" value="-profile ${javac.profile}">
             <isset property="profile.available"/>
@@ -831,8 +826,8 @@ is divided into following sections:
                     </chainedmapper>
                 </pathconvert>
                 <taskdef classname="org.netbeans.modules.java.j2seproject.copylibstask.CopyLibs" classpath="${libs.CopyLibs.classpath}" name="copylibs"/>
-                <copylibs compress="${jar.compress}" excludeFromCopy="${copylibs.excludes}" index="${jar.index}" indexMetaInf="${jar.index.metainf}" jarfile="${dist.jar}" manifest="@{manifest}" rebase="${copylibs.rebase}" runtimeclasspath="${run.classpath.without.build.classes.dir}">
-                    <fileset dir="${build.classes.dir}" excludes="${dist.archive.excludes}"/>
+                <copylibs compress="${jar.compress}" index="${jar.index}" indexMetaInf="${jar.index.metainf}" jarfile="${dist.jar}" manifest="@{manifest}" rebase="${copylibs.rebase}" runtimeclasspath="${run.classpath.without.build.classes.dir}">
+                    <fileset dir="${build.classes.dir}"/>
                     <manifest>
                         <attribute name="Class-Path" value="${jar.classpath}"/>
                         <customize/>
@@ -844,7 +839,7 @@ is divided into following sections:
     <target name="-init-presetdef-jar">
         <presetdef name="jar" uri="http://www.netbeans.org/ns/j2se-project/1">
             <jar compress="${jar.compress}" index="${jar.index}" jarfile="${dist.jar}">
-                <j2seproject1:fileset dir="${build.classes.dir}" excludes="${dist.archive.excludes}"/>
+                <j2seproject1:fileset dir="${build.classes.dir}"/>
             </jar>
         </presetdef>
     </target>

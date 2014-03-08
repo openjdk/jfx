@@ -70,38 +70,38 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism.${CND_DLIB_EXT}: ${OB
 
 ${OBJECTDIR}/_ext/342980646/Curve.o: ../../modules/graphics/src/main/native-prism/Curve.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
-	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Curve.o ../../modules/graphics/src/main/native-prism/Curve.c
+	${RM} $@.d
+	$(COMPILE.c) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/342980646/Curve.o ../../modules/graphics/src/main/native-prism/Curve.c
 
 ${OBJECTDIR}/_ext/342980646/Dasher.o: ../../modules/graphics/src/main/native-prism/Dasher.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
-	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Dasher.o ../../modules/graphics/src/main/native-prism/Dasher.c
+	${RM} $@.d
+	$(COMPILE.c) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/342980646/Dasher.o ../../modules/graphics/src/main/native-prism/Dasher.c
 
 ${OBJECTDIR}/_ext/342980646/Helpers.o: ../../modules/graphics/src/main/native-prism/Helpers.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
-	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Helpers.o ../../modules/graphics/src/main/native-prism/Helpers.c
+	${RM} $@.d
+	$(COMPILE.c) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/342980646/Helpers.o ../../modules/graphics/src/main/native-prism/Helpers.c
 
 ${OBJECTDIR}/_ext/342980646/NativePiscesRasterizer.o: ../../modules/graphics/src/main/native-prism/NativePiscesRasterizer.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
-	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/NativePiscesRasterizer.o ../../modules/graphics/src/main/native-prism/NativePiscesRasterizer.c
+	${RM} $@.d
+	$(COMPILE.c) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/342980646/NativePiscesRasterizer.o ../../modules/graphics/src/main/native-prism/NativePiscesRasterizer.c
 
 ${OBJECTDIR}/_ext/342980646/Renderer.o: ../../modules/graphics/src/main/native-prism/Renderer.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
-	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Renderer.o ../../modules/graphics/src/main/native-prism/Renderer.c
+	${RM} $@.d
+	$(COMPILE.c) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/342980646/Renderer.o ../../modules/graphics/src/main/native-prism/Renderer.c
 
 ${OBJECTDIR}/_ext/342980646/Stroker.o: ../../modules/graphics/src/main/native-prism/Stroker.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
-	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Stroker.o ../../modules/graphics/src/main/native-prism/Stroker.c
+	${RM} $@.d
+	$(COMPILE.c) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/342980646/Stroker.o ../../modules/graphics/src/main/native-prism/Stroker.c
 
 ${OBJECTDIR}/_ext/342980646/Transformer.o: ../../modules/graphics/src/main/native-prism/Transformer.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
-	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Transformer.o ../../modules/graphics/src/main/native-prism/Transformer.c
+	${RM} $@.d
+	$(COMPILE.c) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/342980646/Transformer.o ../../modules/graphics/src/main/native-prism/Transformer.c
 
 # Subprojects
 .build-subprojects:

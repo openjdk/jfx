@@ -194,658 +194,658 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-glass.${CND_DLIB_EXT}: ${OB
 
 ${OBJECTDIR}/_ext/1568819164/GlassApplication.o: ../../modules/graphics/src/main/native-glass/gtk/GlassApplication.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassApplication.o ../../modules/graphics/src/main/native-glass/gtk/GlassApplication.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassApplication.o ../../modules/graphics/src/main/native-glass/gtk/GlassApplication.cpp
 
 ${OBJECTDIR}/_ext/1568819164/GlassCommonDialogs.o: ../../modules/graphics/src/main/native-glass/gtk/GlassCommonDialogs.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassCommonDialogs.o ../../modules/graphics/src/main/native-glass/gtk/GlassCommonDialogs.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassCommonDialogs.o ../../modules/graphics/src/main/native-glass/gtk/GlassCommonDialogs.cpp
 
 ${OBJECTDIR}/_ext/1568819164/GlassCursor.o: ../../modules/graphics/src/main/native-glass/gtk/GlassCursor.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassCursor.o ../../modules/graphics/src/main/native-glass/gtk/GlassCursor.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassCursor.o ../../modules/graphics/src/main/native-glass/gtk/GlassCursor.cpp
 
 ${OBJECTDIR}/_ext/1568819164/GlassDnDClipboard.o: ../../modules/graphics/src/main/native-glass/gtk/GlassDnDClipboard.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassDnDClipboard.o ../../modules/graphics/src/main/native-glass/gtk/GlassDnDClipboard.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassDnDClipboard.o ../../modules/graphics/src/main/native-glass/gtk/GlassDnDClipboard.cpp
 
 ${OBJECTDIR}/_ext/1568819164/GlassPixels.o: ../../modules/graphics/src/main/native-glass/gtk/GlassPixels.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassPixels.o ../../modules/graphics/src/main/native-glass/gtk/GlassPixels.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassPixels.o ../../modules/graphics/src/main/native-glass/gtk/GlassPixels.cpp
 
 ${OBJECTDIR}/_ext/1568819164/GlassRobot.o: ../../modules/graphics/src/main/native-glass/gtk/GlassRobot.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassRobot.o ../../modules/graphics/src/main/native-glass/gtk/GlassRobot.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassRobot.o ../../modules/graphics/src/main/native-glass/gtk/GlassRobot.cpp
 
 ${OBJECTDIR}/_ext/1568819164/GlassSystemClipboard.o: ../../modules/graphics/src/main/native-glass/gtk/GlassSystemClipboard.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassSystemClipboard.o ../../modules/graphics/src/main/native-glass/gtk/GlassSystemClipboard.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassSystemClipboard.o ../../modules/graphics/src/main/native-glass/gtk/GlassSystemClipboard.cpp
 
 ${OBJECTDIR}/_ext/1568819164/GlassTimer.o: ../../modules/graphics/src/main/native-glass/gtk/GlassTimer.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassTimer.o ../../modules/graphics/src/main/native-glass/gtk/GlassTimer.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassTimer.o ../../modules/graphics/src/main/native-glass/gtk/GlassTimer.cpp
 
 ${OBJECTDIR}/_ext/1568819164/GlassView.o: ../../modules/graphics/src/main/native-glass/gtk/GlassView.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassView.o ../../modules/graphics/src/main/native-glass/gtk/GlassView.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassView.o ../../modules/graphics/src/main/native-glass/gtk/GlassView.cpp
 
 ${OBJECTDIR}/_ext/1568819164/GlassWindow.o: ../../modules/graphics/src/main/native-glass/gtk/GlassWindow.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/GlassWindow.o ../../modules/graphics/src/main/native-glass/gtk/GlassWindow.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/GlassWindow.o ../../modules/graphics/src/main/native-glass/gtk/GlassWindow.cpp
 
 ${OBJECTDIR}/_ext/1568819164/glass_dnd.o: ../../modules/graphics/src/main/native-glass/gtk/glass_dnd.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/glass_dnd.o ../../modules/graphics/src/main/native-glass/gtk/glass_dnd.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/glass_dnd.o ../../modules/graphics/src/main/native-glass/gtk/glass_dnd.cpp
 
 ${OBJECTDIR}/_ext/1568819164/glass_evloop.o: ../../modules/graphics/src/main/native-glass/gtk/glass_evloop.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/glass_evloop.o ../../modules/graphics/src/main/native-glass/gtk/glass_evloop.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/glass_evloop.o ../../modules/graphics/src/main/native-glass/gtk/glass_evloop.cpp
 
 ${OBJECTDIR}/_ext/1568819164/glass_general.o: ../../modules/graphics/src/main/native-glass/gtk/glass_general.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/glass_general.o ../../modules/graphics/src/main/native-glass/gtk/glass_general.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/glass_general.o ../../modules/graphics/src/main/native-glass/gtk/glass_general.cpp
 
 ${OBJECTDIR}/_ext/1568819164/glass_gtkcompat.o: ../../modules/graphics/src/main/native-glass/gtk/glass_gtkcompat.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/glass_gtkcompat.o ../../modules/graphics/src/main/native-glass/gtk/glass_gtkcompat.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/glass_gtkcompat.o ../../modules/graphics/src/main/native-glass/gtk/glass_gtkcompat.cpp
 
 ${OBJECTDIR}/_ext/1568819164/glass_key.o: ../../modules/graphics/src/main/native-glass/gtk/glass_key.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/glass_key.o ../../modules/graphics/src/main/native-glass/gtk/glass_key.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/glass_key.o ../../modules/graphics/src/main/native-glass/gtk/glass_key.cpp
 
 ${OBJECTDIR}/_ext/1568819164/glass_window.o: ../../modules/graphics/src/main/native-glass/gtk/glass_window.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/glass_window.o ../../modules/graphics/src/main/native-glass/gtk/glass_window.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/glass_window.o ../../modules/graphics/src/main/native-glass/gtk/glass_window.cpp
 
 ${OBJECTDIR}/_ext/1568819164/glass_window_ime.o: ../../modules/graphics/src/main/native-glass/gtk/glass_window_ime.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568819164
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568819164/glass_window_ime.o ../../modules/graphics/src/main/native-glass/gtk/glass_window_ime.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568819164/glass_window_ime.o ../../modules/graphics/src/main/native-glass/gtk/glass_window_ime.cpp
 
 ${OBJECTDIR}/_ext/1568817389/GlassApplication.o: ../../modules/graphics/src/main/native-glass/ios/GlassApplication.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassApplication.o ../../modules/graphics/src/main/native-glass/ios/GlassApplication.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassApplication.o ../../modules/graphics/src/main/native-glass/ios/GlassApplication.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassCursor.o: ../../modules/graphics/src/main/native-glass/ios/GlassCursor.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassCursor.o ../../modules/graphics/src/main/native-glass/ios/GlassCursor.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassCursor.o ../../modules/graphics/src/main/native-glass/ios/GlassCursor.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassDragDelegate.o: ../../modules/graphics/src/main/native-glass/ios/GlassDragDelegate.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassDragDelegate.o ../../modules/graphics/src/main/native-glass/ios/GlassDragDelegate.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassDragDelegate.o ../../modules/graphics/src/main/native-glass/ios/GlassDragDelegate.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassGestureSupport.o: ../../modules/graphics/src/main/native-glass/ios/GlassGestureSupport.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassGestureSupport.o ../../modules/graphics/src/main/native-glass/ios/GlassGestureSupport.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassGestureSupport.o ../../modules/graphics/src/main/native-glass/ios/GlassGestureSupport.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassHelper.o: ../../modules/graphics/src/main/native-glass/ios/GlassHelper.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassHelper.o ../../modules/graphics/src/main/native-glass/ios/GlassHelper.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassHelper.o ../../modules/graphics/src/main/native-glass/ios/GlassHelper.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassKey.o: ../../modules/graphics/src/main/native-glass/ios/GlassKey.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassKey.o ../../modules/graphics/src/main/native-glass/ios/GlassKey.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassKey.o ../../modules/graphics/src/main/native-glass/ios/GlassKey.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassPasteboard.o: ../../modules/graphics/src/main/native-glass/ios/GlassPasteboard.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassPasteboard.o ../../modules/graphics/src/main/native-glass/ios/GlassPasteboard.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassPasteboard.o ../../modules/graphics/src/main/native-glass/ios/GlassPasteboard.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassRobot.o: ../../modules/graphics/src/main/native-glass/ios/GlassRobot.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassRobot.o ../../modules/graphics/src/main/native-glass/ios/GlassRobot.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassRobot.o ../../modules/graphics/src/main/native-glass/ios/GlassRobot.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassScreen.o: ../../modules/graphics/src/main/native-glass/ios/GlassScreen.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassScreen.o ../../modules/graphics/src/main/native-glass/ios/GlassScreen.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassScreen.o ../../modules/graphics/src/main/native-glass/ios/GlassScreen.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassStatics.o: ../../modules/graphics/src/main/native-glass/ios/GlassStatics.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassStatics.o ../../modules/graphics/src/main/native-glass/ios/GlassStatics.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassStatics.o ../../modules/graphics/src/main/native-glass/ios/GlassStatics.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassTimer.o: ../../modules/graphics/src/main/native-glass/ios/GlassTimer.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassTimer.o ../../modules/graphics/src/main/native-glass/ios/GlassTimer.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassTimer.o ../../modules/graphics/src/main/native-glass/ios/GlassTimer.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassView.o: ../../modules/graphics/src/main/native-glass/ios/GlassView.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassView.o ../../modules/graphics/src/main/native-glass/ios/GlassView.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassView.o ../../modules/graphics/src/main/native-glass/ios/GlassView.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassViewController.o: ../../modules/graphics/src/main/native-glass/ios/GlassViewController.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassViewController.o ../../modules/graphics/src/main/native-glass/ios/GlassViewController.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassViewController.o ../../modules/graphics/src/main/native-glass/ios/GlassViewController.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassViewDelegate.o: ../../modules/graphics/src/main/native-glass/ios/GlassViewDelegate.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassViewDelegate.o ../../modules/graphics/src/main/native-glass/ios/GlassViewDelegate.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassViewDelegate.o ../../modules/graphics/src/main/native-glass/ios/GlassViewDelegate.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassViewGL.o: ../../modules/graphics/src/main/native-glass/ios/GlassViewGL.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassViewGL.o ../../modules/graphics/src/main/native-glass/ios/GlassViewGL.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassViewGL.o ../../modules/graphics/src/main/native-glass/ios/GlassViewGL.m
 
 ${OBJECTDIR}/_ext/1568817389/GlassWindow.o: ../../modules/graphics/src/main/native-glass/ios/GlassWindow.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568817389
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568817389/GlassWindow.o ../../modules/graphics/src/main/native-glass/ios/GlassWindow.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568817389/GlassWindow.o ../../modules/graphics/src/main/native-glass/ios/GlassWindow.m
 
 ${OBJECTDIR}/_ext/1388619080/LensApplication.o: ../../modules/graphics/src/main/native-glass/lens/LensApplication.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensApplication.o ../../modules/graphics/src/main/native-glass/lens/LensApplication.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensApplication.o ../../modules/graphics/src/main/native-glass/lens/LensApplication.c
 
 ${OBJECTDIR}/_ext/1388619080/LensCursor.o: ../../modules/graphics/src/main/native-glass/lens/LensCursor.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensCursor.o ../../modules/graphics/src/main/native-glass/lens/LensCursor.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensCursor.o ../../modules/graphics/src/main/native-glass/lens/LensCursor.c
 
 ${OBJECTDIR}/_ext/1388619080/LensCursorImages.o: ../../modules/graphics/src/main/native-glass/lens/LensCursorImages.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensCursorImages.o ../../modules/graphics/src/main/native-glass/lens/LensCursorImages.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensCursorImages.o ../../modules/graphics/src/main/native-glass/lens/LensCursorImages.c
 
 ${OBJECTDIR}/_ext/1388619080/LensInputEvents.o: ../../modules/graphics/src/main/native-glass/lens/LensInputEvents.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensInputEvents.o ../../modules/graphics/src/main/native-glass/lens/LensInputEvents.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensInputEvents.o ../../modules/graphics/src/main/native-glass/lens/LensInputEvents.c
 
 ${OBJECTDIR}/_ext/1388619080/LensLogger.o: ../../modules/graphics/src/main/native-glass/lens/LensLogger.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensLogger.o ../../modules/graphics/src/main/native-glass/lens/LensLogger.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensLogger.o ../../modules/graphics/src/main/native-glass/lens/LensLogger.c
 
 ${OBJECTDIR}/_ext/1388619080/LensPixels.o: ../../modules/graphics/src/main/native-glass/lens/LensPixels.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensPixels.o ../../modules/graphics/src/main/native-glass/lens/LensPixels.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensPixels.o ../../modules/graphics/src/main/native-glass/lens/LensPixels.c
 
 ${OBJECTDIR}/_ext/1388619080/LensRobot.o: ../../modules/graphics/src/main/native-glass/lens/LensRobot.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensRobot.o ../../modules/graphics/src/main/native-glass/lens/LensRobot.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensRobot.o ../../modules/graphics/src/main/native-glass/lens/LensRobot.c
 
 ${OBJECTDIR}/_ext/1388619080/LensScreen.o: ../../modules/graphics/src/main/native-glass/lens/LensScreen.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensScreen.o ../../modules/graphics/src/main/native-glass/lens/LensScreen.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensScreen.o ../../modules/graphics/src/main/native-glass/lens/LensScreen.c
 
 ${OBJECTDIR}/_ext/1388619080/LensView.o: ../../modules/graphics/src/main/native-glass/lens/LensView.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensView.o ../../modules/graphics/src/main/native-glass/lens/LensView.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensView.o ../../modules/graphics/src/main/native-glass/lens/LensView.c
 
 ${OBJECTDIR}/_ext/1388619080/LensWindow.o: ../../modules/graphics/src/main/native-glass/lens/LensWindow.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1388619080
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1388619080/LensWindow.o ../../modules/graphics/src/main/native-glass/lens/LensWindow.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1388619080/LensWindow.o ../../modules/graphics/src/main/native-glass/lens/LensWindow.c
 
 ${OBJECTDIR}/_ext/1049586152/android.o: ../../modules/graphics/src/main/native-glass/lens/android/android.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1049586152
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1049586152/android.o ../../modules/graphics/src/main/native-glass/lens/android/android.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1049586152/android.o ../../modules/graphics/src/main/native-glass/lens/android/android.c
 
 ${OBJECTDIR}/_ext/1170728052/fbCursor.o: ../../modules/graphics/src/main/native-glass/lens/cursor/fbCursor/fbCursor.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1170728052
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1170728052/fbCursor.o ../../modules/graphics/src/main/native-glass/lens/cursor/fbCursor/fbCursor.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1170728052/fbCursor.o ../../modules/graphics/src/main/native-glass/lens/cursor/fbCursor/fbCursor.c
 
 ${OBJECTDIR}/_ext/1170728052/fbDispman.o: ../../modules/graphics/src/main/native-glass/lens/cursor/fbCursor/fbDispman.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1170728052
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1170728052/fbDispman.o ../../modules/graphics/src/main/native-glass/lens/cursor/fbCursor/fbDispman.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1170728052/fbDispman.o ../../modules/graphics/src/main/native-glass/lens/cursor/fbCursor/fbDispman.c
 
 ${OBJECTDIR}/_ext/1170728052/wrapped_bcm.o: ../../modules/graphics/src/main/native-glass/lens/cursor/fbCursor/wrapped_bcm.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1170728052
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1170728052/wrapped_bcm.o ../../modules/graphics/src/main/native-glass/lens/cursor/fbCursor/wrapped_bcm.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1170728052/wrapped_bcm.o ../../modules/graphics/src/main/native-glass/lens/cursor/fbCursor/wrapped_bcm.c
 
 ${OBJECTDIR}/_ext/228741247/nullCursor.o: ../../modules/graphics/src/main/native-glass/lens/cursor/nullCursor/nullCursor.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/228741247
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/228741247/nullCursor.o ../../modules/graphics/src/main/native-glass/lens/cursor/nullCursor/nullCursor.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/228741247/nullCursor.o ../../modules/graphics/src/main/native-glass/lens/cursor/nullCursor/nullCursor.c
 
 ${OBJECTDIR}/_ext/1804231149/androidInput.o: ../../modules/graphics/src/main/native-glass/lens/input/android/androidInput.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1804231149
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1804231149/androidInput.o ../../modules/graphics/src/main/native-glass/lens/input/android/androidInput.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1804231149/androidInput.o ../../modules/graphics/src/main/native-glass/lens/input/android/androidInput.c
 
 ${OBJECTDIR}/_ext/1804231149/androidLens.o: ../../modules/graphics/src/main/native-glass/lens/input/android/androidLens.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1804231149
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1804231149/androidLens.o ../../modules/graphics/src/main/native-glass/lens/input/android/androidLens.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1804231149/androidLens.o ../../modules/graphics/src/main/native-glass/lens/input/android/androidLens.c
 
 ${OBJECTDIR}/_ext/239661476/udevInput.o: ../../modules/graphics/src/main/native-glass/lens/input/udev/udevInput.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/239661476
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/239661476/udevInput.o ../../modules/graphics/src/main/native-glass/lens/input/udev/udevInput.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/239661476/udevInput.o ../../modules/graphics/src/main/native-glass/lens/input/udev/udevInput.c
 
 ${OBJECTDIR}/_ext/660835749/x11Input.o: ../../modules/graphics/src/main/native-glass/lens/input/x11Container/x11Input.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/660835749
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/660835749/x11Input.o ../../modules/graphics/src/main/native-glass/lens/input/x11Container/x11Input.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/660835749/x11Input.o ../../modules/graphics/src/main/native-glass/lens/input/x11Container/x11Input.c
 
 ${OBJECTDIR}/_ext/125406599/rfb.o: ../../modules/graphics/src/main/native-glass/lens/lensRFB/rfb.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/125406599
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/125406599/rfb.o ../../modules/graphics/src/main/native-glass/lens/lensRFB/rfb.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/125406599/rfb.o ../../modules/graphics/src/main/native-glass/lens/lensRFB/rfb.c
 
 ${OBJECTDIR}/_ext/774031757/LensWindowManager.o: ../../modules/graphics/src/main/native-glass/lens/wm/LensWindowManager.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/774031757
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/774031757/LensWindowManager.o ../../modules/graphics/src/main/native-glass/lens/wm/LensWindowManager.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/774031757/LensWindowManager.o ../../modules/graphics/src/main/native-glass/lens/wm/LensWindowManager.c
 
 ${OBJECTDIR}/_ext/774031757/robot.o: ../../modules/graphics/src/main/native-glass/lens/wm/robot.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/774031757
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/774031757/robot.o ../../modules/graphics/src/main/native-glass/lens/wm/robot.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/774031757/robot.o ../../modules/graphics/src/main/native-glass/lens/wm/robot.c
 
 ${OBJECTDIR}/_ext/1962315986/androidScreen.o: ../../modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1962315986
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1962315986/androidScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1962315986/androidScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/androidScreen.c
 
 ${OBJECTDIR}/_ext/1962315986/dfbScreen.o: ../../modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1962315986
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1962315986/dfbScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1962315986/dfbScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/dfbScreen.c
 
 ${OBJECTDIR}/_ext/1962315986/fbdevScreen.o: ../../modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1962315986
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1962315986/fbdevScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1962315986/fbdevScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/fbdevScreen.c
 
 ${OBJECTDIR}/_ext/1962315986/headlessScreen.o: ../../modules/graphics/src/main/native-glass/lens/wm/screen/headlessScreen.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1962315986
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1962315986/headlessScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/headlessScreen.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1962315986/headlessScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/headlessScreen.c
 
 ${OBJECTDIR}/_ext/1962315986/x11ContainerScreen.o: ../../modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1962315986
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1962315986/x11ContainerScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1962315986/x11ContainerScreen.o ../../modules/graphics/src/main/native-glass/lens/wm/screen/x11ContainerScreen.c
 
 ${OBJECTDIR}/_ext/1568813995/GlassAccessibleBaseProvider.o: ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleBaseProvider.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleBaseProvider.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleBaseProvider.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleBaseProvider.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleBaseProvider.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassAccessibleRoot.o: ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleRoot.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleRoot.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleRoot.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleRoot.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleRoot.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassAccessibleSelectionItemProvider.o: ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionItemProvider.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleSelectionItemProvider.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionItemProvider.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleSelectionItemProvider.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionItemProvider.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassAccessibleSelectionProvider.o: ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionProvider.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleSelectionProvider.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionProvider.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleSelectionProvider.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionProvider.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassAccessibleToggleProvider.o: ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleToggleProvider.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleToggleProvider.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleToggleProvider.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassAccessibleToggleProvider.o ../../modules/graphics/src/main/native-glass/mac/GlassAccessibleToggleProvider.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassApplication.o: ../../modules/graphics/src/main/native-glass/mac/GlassApplication.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassApplication.o ../../modules/graphics/src/main/native-glass/mac/GlassApplication.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassApplication.o ../../modules/graphics/src/main/native-glass/mac/GlassApplication.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassCursor.o: ../../modules/graphics/src/main/native-glass/mac/GlassCursor.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassCursor.o ../../modules/graphics/src/main/native-glass/mac/GlassCursor.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassCursor.o ../../modules/graphics/src/main/native-glass/mac/GlassCursor.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassDialogs.o: ../../modules/graphics/src/main/native-glass/mac/GlassDialogs.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassDialogs.o ../../modules/graphics/src/main/native-glass/mac/GlassDialogs.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassDialogs.o ../../modules/graphics/src/main/native-glass/mac/GlassDialogs.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassDragSource.o: ../../modules/graphics/src/main/native-glass/mac/GlassDragSource.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassDragSource.o ../../modules/graphics/src/main/native-glass/mac/GlassDragSource.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassDragSource.o ../../modules/graphics/src/main/native-glass/mac/GlassDragSource.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassEmbeddedWindow+Npapi.o: ../../modules/graphics/src/main/native-glass/mac/GlassEmbeddedWindow+Npapi.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassEmbeddedWindow+Npapi.o ../../modules/graphics/src/main/native-glass/mac/GlassEmbeddedWindow+Npapi.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassEmbeddedWindow+Npapi.o ../../modules/graphics/src/main/native-glass/mac/GlassEmbeddedWindow+Npapi.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassEmbeddedWindow+Overrides.o: ../../modules/graphics/src/main/native-glass/mac/GlassEmbeddedWindow+Overrides.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassEmbeddedWindow+Overrides.o ../../modules/graphics/src/main/native-glass/mac/GlassEmbeddedWindow+Overrides.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassEmbeddedWindow+Overrides.o ../../modules/graphics/src/main/native-glass/mac/GlassEmbeddedWindow+Overrides.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassFrameBufferObject.o: ../../modules/graphics/src/main/native-glass/mac/GlassFrameBufferObject.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassFrameBufferObject.o ../../modules/graphics/src/main/native-glass/mac/GlassFrameBufferObject.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassFrameBufferObject.o ../../modules/graphics/src/main/native-glass/mac/GlassFrameBufferObject.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassFullscreenWindow.o: ../../modules/graphics/src/main/native-glass/mac/GlassFullscreenWindow.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassFullscreenWindow.o ../../modules/graphics/src/main/native-glass/mac/GlassFullscreenWindow.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassFullscreenWindow.o ../../modules/graphics/src/main/native-glass/mac/GlassFullscreenWindow.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassGestureSupport.o: ../../modules/graphics/src/main/native-glass/mac/GlassGestureSupport.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassGestureSupport.o ../../modules/graphics/src/main/native-glass/mac/GlassGestureSupport.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassGestureSupport.o ../../modules/graphics/src/main/native-glass/mac/GlassGestureSupport.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassHelper.o: ../../modules/graphics/src/main/native-glass/mac/GlassHelper.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassHelper.o ../../modules/graphics/src/main/native-glass/mac/GlassHelper.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassHelper.o ../../modules/graphics/src/main/native-glass/mac/GlassHelper.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassHostView.o: ../../modules/graphics/src/main/native-glass/mac/GlassHostView.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassHostView.o ../../modules/graphics/src/main/native-glass/mac/GlassHostView.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassHostView.o ../../modules/graphics/src/main/native-glass/mac/GlassHostView.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassKey.o: ../../modules/graphics/src/main/native-glass/mac/GlassKey.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassKey.o ../../modules/graphics/src/main/native-glass/mac/GlassKey.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassKey.o ../../modules/graphics/src/main/native-glass/mac/GlassKey.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassLayer3D.o: ../../modules/graphics/src/main/native-glass/mac/GlassLayer3D.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassLayer3D.o ../../modules/graphics/src/main/native-glass/mac/GlassLayer3D.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassLayer3D.o ../../modules/graphics/src/main/native-glass/mac/GlassLayer3D.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassMacros.o: ../../modules/graphics/src/main/native-glass/mac/GlassMacros.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassMacros.o ../../modules/graphics/src/main/native-glass/mac/GlassMacros.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassMacros.o ../../modules/graphics/src/main/native-glass/mac/GlassMacros.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassMenu.o: ../../modules/graphics/src/main/native-glass/mac/GlassMenu.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassMenu.o ../../modules/graphics/src/main/native-glass/mac/GlassMenu.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassMenu.o ../../modules/graphics/src/main/native-glass/mac/GlassMenu.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassNSEvent.o: ../../modules/graphics/src/main/native-glass/mac/GlassNSEvent.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassNSEvent.o ../../modules/graphics/src/main/native-glass/mac/GlassNSEvent.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassNSEvent.o ../../modules/graphics/src/main/native-glass/mac/GlassNSEvent.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassOffscreen.o: ../../modules/graphics/src/main/native-glass/mac/GlassOffscreen.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassOffscreen.o ../../modules/graphics/src/main/native-glass/mac/GlassOffscreen.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassOffscreen.o ../../modules/graphics/src/main/native-glass/mac/GlassOffscreen.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassPasteboard.o: ../../modules/graphics/src/main/native-glass/mac/GlassPasteboard.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassPasteboard.o ../../modules/graphics/src/main/native-glass/mac/GlassPasteboard.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassPasteboard.o ../../modules/graphics/src/main/native-glass/mac/GlassPasteboard.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassPixels.o: ../../modules/graphics/src/main/native-glass/mac/GlassPixels.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassPixels.o ../../modules/graphics/src/main/native-glass/mac/GlassPixels.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassPixels.o ../../modules/graphics/src/main/native-glass/mac/GlassPixels.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassRobot.o: ../../modules/graphics/src/main/native-glass/mac/GlassRobot.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassRobot.o ../../modules/graphics/src/main/native-glass/mac/GlassRobot.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassRobot.o ../../modules/graphics/src/main/native-glass/mac/GlassRobot.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassScreen.o: ../../modules/graphics/src/main/native-glass/mac/GlassScreen.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassScreen.o ../../modules/graphics/src/main/native-glass/mac/GlassScreen.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassScreen.o ../../modules/graphics/src/main/native-glass/mac/GlassScreen.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassStatics.o: ../../modules/graphics/src/main/native-glass/mac/GlassStatics.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassStatics.o ../../modules/graphics/src/main/native-glass/mac/GlassStatics.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassStatics.o ../../modules/graphics/src/main/native-glass/mac/GlassStatics.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassSystemClipboard.o: ../../modules/graphics/src/main/native-glass/mac/GlassSystemClipboard.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassSystemClipboard.o ../../modules/graphics/src/main/native-glass/mac/GlassSystemClipboard.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassSystemClipboard.o ../../modules/graphics/src/main/native-glass/mac/GlassSystemClipboard.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassTimer.o: ../../modules/graphics/src/main/native-glass/mac/GlassTimer.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassTimer.o ../../modules/graphics/src/main/native-glass/mac/GlassTimer.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassTimer.o ../../modules/graphics/src/main/native-glass/mac/GlassTimer.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassTouches.o: ../../modules/graphics/src/main/native-glass/mac/GlassTouches.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassTouches.o ../../modules/graphics/src/main/native-glass/mac/GlassTouches.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassTouches.o ../../modules/graphics/src/main/native-glass/mac/GlassTouches.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassView.o: ../../modules/graphics/src/main/native-glass/mac/GlassView.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassView.o ../../modules/graphics/src/main/native-glass/mac/GlassView.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassView.o ../../modules/graphics/src/main/native-glass/mac/GlassView.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassView2D.o: ../../modules/graphics/src/main/native-glass/mac/GlassView2D.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassView2D.o ../../modules/graphics/src/main/native-glass/mac/GlassView2D.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassView2D.o ../../modules/graphics/src/main/native-glass/mac/GlassView2D.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassView3D+Remote.o: ../../modules/graphics/src/main/native-glass/mac/GlassView3D+Remote.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassView3D+Remote.o ../../modules/graphics/src/main/native-glass/mac/GlassView3D+Remote.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassView3D+Remote.o ../../modules/graphics/src/main/native-glass/mac/GlassView3D+Remote.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassView3D.o: ../../modules/graphics/src/main/native-glass/mac/GlassView3D.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassView3D.o ../../modules/graphics/src/main/native-glass/mac/GlassView3D.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassView3D.o ../../modules/graphics/src/main/native-glass/mac/GlassView3D.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassViewDelegate.o: ../../modules/graphics/src/main/native-glass/mac/GlassViewDelegate.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassViewDelegate.o ../../modules/graphics/src/main/native-glass/mac/GlassViewDelegate.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassViewDelegate.o ../../modules/graphics/src/main/native-glass/mac/GlassViewDelegate.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassWindow+Java.o: ../../modules/graphics/src/main/native-glass/mac/GlassWindow+Java.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassWindow+Java.o ../../modules/graphics/src/main/native-glass/mac/GlassWindow+Java.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassWindow+Java.o ../../modules/graphics/src/main/native-glass/mac/GlassWindow+Java.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassWindow+Overrides.o: ../../modules/graphics/src/main/native-glass/mac/GlassWindow+Overrides.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassWindow+Overrides.o ../../modules/graphics/src/main/native-glass/mac/GlassWindow+Overrides.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassWindow+Overrides.o ../../modules/graphics/src/main/native-glass/mac/GlassWindow+Overrides.m
 
 ${OBJECTDIR}/_ext/1568813995/GlassWindow.o: ../../modules/graphics/src/main/native-glass/mac/GlassWindow.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/GlassWindow.o ../../modules/graphics/src/main/native-glass/mac/GlassWindow.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/GlassWindow.o ../../modules/graphics/src/main/native-glass/mac/GlassWindow.m
 
 ${OBJECTDIR}/_ext/1568813995/ProcessInfo.o: ../../modules/graphics/src/main/native-glass/mac/ProcessInfo.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/ProcessInfo.o ../../modules/graphics/src/main/native-glass/mac/ProcessInfo.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/ProcessInfo.o ../../modules/graphics/src/main/native-glass/mac/ProcessInfo.m
 
 ${OBJECTDIR}/_ext/1568813995/RemoteLayerSupport.o: ../../modules/graphics/src/main/native-glass/mac/RemoteLayerSupport.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568813995
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568813995/RemoteLayerSupport.o ../../modules/graphics/src/main/native-glass/mac/RemoteLayerSupport.m
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568813995/RemoteLayerSupport.o ../../modules/graphics/src/main/native-glass/mac/RemoteLayerSupport.m
 
 ${OBJECTDIR}/_ext/1568804126/AccessibleBasePatternProvider.o: ../../modules/graphics/src/main/native-glass/win/AccessibleBasePatternProvider.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/AccessibleBasePatternProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleBasePatternProvider.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/AccessibleBasePatternProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleBasePatternProvider.cpp
 
 ${OBJECTDIR}/_ext/1568804126/AccessibleBaseProvider.o: ../../modules/graphics/src/main/native-glass/win/AccessibleBaseProvider.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/AccessibleBaseProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleBaseProvider.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/AccessibleBaseProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleBaseProvider.cpp
 
 ${OBJECTDIR}/_ext/1568804126/AccessibleGridItemProvider.o: ../../modules/graphics/src/main/native-glass/win/AccessibleGridItemProvider.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/AccessibleGridItemProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleGridItemProvider.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/AccessibleGridItemProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleGridItemProvider.cpp
 
 ${OBJECTDIR}/_ext/1568804126/AccessibleGridProvider.o: ../../modules/graphics/src/main/native-glass/win/AccessibleGridProvider.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/AccessibleGridProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleGridProvider.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/AccessibleGridProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleGridProvider.cpp
 
 ${OBJECTDIR}/_ext/1568804126/AccessibleRangeValueProvider.o: ../../modules/graphics/src/main/native-glass/win/AccessibleRangeValueProvider.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/AccessibleRangeValueProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleRangeValueProvider.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/AccessibleRangeValueProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleRangeValueProvider.cpp
 
 ${OBJECTDIR}/_ext/1568804126/AccessibleRoot.o: ../../modules/graphics/src/main/native-glass/win/AccessibleRoot.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/AccessibleRoot.o ../../modules/graphics/src/main/native-glass/win/AccessibleRoot.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/AccessibleRoot.o ../../modules/graphics/src/main/native-glass/win/AccessibleRoot.cpp
 
 ${OBJECTDIR}/_ext/1568804126/AccessibleSelectionItemProvider.o: ../../modules/graphics/src/main/native-glass/win/AccessibleSelectionItemProvider.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/AccessibleSelectionItemProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleSelectionItemProvider.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/AccessibleSelectionItemProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleSelectionItemProvider.cpp
 
 ${OBJECTDIR}/_ext/1568804126/AccessibleSelectionProvider.o: ../../modules/graphics/src/main/native-glass/win/AccessibleSelectionProvider.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/AccessibleSelectionProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleSelectionProvider.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/AccessibleSelectionProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleSelectionProvider.cpp
 
 ${OBJECTDIR}/_ext/1568804126/AccessibleToggleProvider.o: ../../modules/graphics/src/main/native-glass/win/AccessibleToggleProvider.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/AccessibleToggleProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleToggleProvider.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/AccessibleToggleProvider.o ../../modules/graphics/src/main/native-glass/win/AccessibleToggleProvider.cpp
 
 ${OBJECTDIR}/_ext/1568804126/BaseWnd.o: ../../modules/graphics/src/main/native-glass/win/BaseWnd.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/BaseWnd.o ../../modules/graphics/src/main/native-glass/win/BaseWnd.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/BaseWnd.o ../../modules/graphics/src/main/native-glass/win/BaseWnd.cpp
 
 ${OBJECTDIR}/_ext/1568804126/CommonDialogs.o: ../../modules/graphics/src/main/native-glass/win/CommonDialogs.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/CommonDialogs.o ../../modules/graphics/src/main/native-glass/win/CommonDialogs.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/CommonDialogs.o ../../modules/graphics/src/main/native-glass/win/CommonDialogs.cpp
 
 ${OBJECTDIR}/_ext/1568804126/CommonDialogs_COM.o: ../../modules/graphics/src/main/native-glass/win/CommonDialogs_COM.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/CommonDialogs_COM.o ../../modules/graphics/src/main/native-glass/win/CommonDialogs_COM.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/CommonDialogs_COM.o ../../modules/graphics/src/main/native-glass/win/CommonDialogs_COM.cpp
 
 ${OBJECTDIR}/_ext/1568804126/CommonDialogs_Standard.o: ../../modules/graphics/src/main/native-glass/win/CommonDialogs_Standard.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/CommonDialogs_Standard.o ../../modules/graphics/src/main/native-glass/win/CommonDialogs_Standard.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/CommonDialogs_Standard.o ../../modules/graphics/src/main/native-glass/win/CommonDialogs_Standard.cpp
 
 ${OBJECTDIR}/_ext/1568804126/FullScreenWindow.o: ../../modules/graphics/src/main/native-glass/win/FullScreenWindow.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/FullScreenWindow.o ../../modules/graphics/src/main/native-glass/win/FullScreenWindow.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/FullScreenWindow.o ../../modules/graphics/src/main/native-glass/win/FullScreenWindow.cpp
 
 ${OBJECTDIR}/_ext/1568804126/GlassApplication.o: ../../modules/graphics/src/main/native-glass/win/GlassApplication.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/GlassApplication.o ../../modules/graphics/src/main/native-glass/win/GlassApplication.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/GlassApplication.o ../../modules/graphics/src/main/native-glass/win/GlassApplication.cpp
 
 ${OBJECTDIR}/_ext/1568804126/GlassClipboard.o: ../../modules/graphics/src/main/native-glass/win/GlassClipboard.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/GlassClipboard.o ../../modules/graphics/src/main/native-glass/win/GlassClipboard.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/GlassClipboard.o ../../modules/graphics/src/main/native-glass/win/GlassClipboard.cpp
 
 ${OBJECTDIR}/_ext/1568804126/GlassCursor.o: ../../modules/graphics/src/main/native-glass/win/GlassCursor.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/GlassCursor.o ../../modules/graphics/src/main/native-glass/win/GlassCursor.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/GlassCursor.o ../../modules/graphics/src/main/native-glass/win/GlassCursor.cpp
 
 ${OBJECTDIR}/_ext/1568804126/GlassDnD.o: ../../modules/graphics/src/main/native-glass/win/GlassDnD.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/GlassDnD.o ../../modules/graphics/src/main/native-glass/win/GlassDnD.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/GlassDnD.o ../../modules/graphics/src/main/native-glass/win/GlassDnD.cpp
 
 ${OBJECTDIR}/_ext/1568804126/GlassInputTextInfo.o: ../../modules/graphics/src/main/native-glass/win/GlassInputTextInfo.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/GlassInputTextInfo.o ../../modules/graphics/src/main/native-glass/win/GlassInputTextInfo.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/GlassInputTextInfo.o ../../modules/graphics/src/main/native-glass/win/GlassInputTextInfo.cpp
 
 ${OBJECTDIR}/_ext/1568804126/GlassMenu.o: ../../modules/graphics/src/main/native-glass/win/GlassMenu.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/GlassMenu.o ../../modules/graphics/src/main/native-glass/win/GlassMenu.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/GlassMenu.o ../../modules/graphics/src/main/native-glass/win/GlassMenu.cpp
 
 ${OBJECTDIR}/_ext/1568804126/GlassScreen.o: ../../modules/graphics/src/main/native-glass/win/GlassScreen.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/GlassScreen.o ../../modules/graphics/src/main/native-glass/win/GlassScreen.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/GlassScreen.o ../../modules/graphics/src/main/native-glass/win/GlassScreen.cpp
 
 ${OBJECTDIR}/_ext/1568804126/GlassView.o: ../../modules/graphics/src/main/native-glass/win/GlassView.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/GlassView.o ../../modules/graphics/src/main/native-glass/win/GlassView.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/GlassView.o ../../modules/graphics/src/main/native-glass/win/GlassView.cpp
 
 ${OBJECTDIR}/_ext/1568804126/GlassWindow.o: ../../modules/graphics/src/main/native-glass/win/GlassWindow.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/GlassWindow.o ../../modules/graphics/src/main/native-glass/win/GlassWindow.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/GlassWindow.o ../../modules/graphics/src/main/native-glass/win/GlassWindow.cpp
 
 ${OBJECTDIR}/_ext/1568804126/KeyTable.o: ../../modules/graphics/src/main/native-glass/win/KeyTable.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/KeyTable.o ../../modules/graphics/src/main/native-glass/win/KeyTable.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/KeyTable.o ../../modules/graphics/src/main/native-glass/win/KeyTable.cpp
 
 ${OBJECTDIR}/_ext/1568804126/ManipulationEvents.o: ../../modules/graphics/src/main/native-glass/win/ManipulationEvents.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/ManipulationEvents.o ../../modules/graphics/src/main/native-glass/win/ManipulationEvents.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/ManipulationEvents.o ../../modules/graphics/src/main/native-glass/win/ManipulationEvents.cpp
 
 ${OBJECTDIR}/_ext/1568804126/Pixels.o: ../../modules/graphics/src/main/native-glass/win/Pixels.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/Pixels.o ../../modules/graphics/src/main/native-glass/win/Pixels.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/Pixels.o ../../modules/graphics/src/main/native-glass/win/Pixels.cpp
 
 ${OBJECTDIR}/_ext/1568804126/Robot.o: ../../modules/graphics/src/main/native-glass/win/Robot.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/Robot.o ../../modules/graphics/src/main/native-glass/win/Robot.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/Robot.o ../../modules/graphics/src/main/native-glass/win/Robot.cpp
 
 ${OBJECTDIR}/_ext/1568804126/Timer.o: ../../modules/graphics/src/main/native-glass/win/Timer.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/Timer.o ../../modules/graphics/src/main/native-glass/win/Timer.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/Timer.o ../../modules/graphics/src/main/native-glass/win/Timer.cpp
 
 ${OBJECTDIR}/_ext/1568804126/Utils.o: ../../modules/graphics/src/main/native-glass/win/Utils.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/Utils.o ../../modules/graphics/src/main/native-glass/win/Utils.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/Utils.o ../../modules/graphics/src/main/native-glass/win/Utils.cpp
 
 ${OBJECTDIR}/_ext/1568804126/ViewContainer.o: ../../modules/graphics/src/main/native-glass/win/ViewContainer.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/ViewContainer.o ../../modules/graphics/src/main/native-glass/win/ViewContainer.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/ViewContainer.o ../../modules/graphics/src/main/native-glass/win/ViewContainer.cpp
 
 ${OBJECTDIR}/_ext/1568804126/common.o: ../../modules/graphics/src/main/native-glass/win/common.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1568804126
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1568804126/common.o ../../modules/graphics/src/main/native-glass/win/common.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1568804126/common.o ../../modules/graphics/src/main/native-glass/win/common.cpp
 
 # Subprojects
 .build-subprojects:

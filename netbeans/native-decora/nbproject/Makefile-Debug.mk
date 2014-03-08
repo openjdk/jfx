@@ -68,28 +68,28 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-decora.${CND_DLIB_EXT}: ${O
 
 ${OBJECTDIR}/_ext/1896763939/SSEBoxBlurPeer.o: ../../modules/graphics/src/main/native-decora/SSEBoxBlurPeer.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1896763939
-	${RM} "$@.d"
-	$(COMPILE.cc) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1896763939/SSEBoxBlurPeer.o ../../modules/graphics/src/main/native-decora/SSEBoxBlurPeer.cc
+	${RM} $@.d
+	$(COMPILE.cc) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1896763939/SSEBoxBlurPeer.o ../../modules/graphics/src/main/native-decora/SSEBoxBlurPeer.cc
 
 ${OBJECTDIR}/_ext/1896763939/SSEBoxShadowPeer.o: ../../modules/graphics/src/main/native-decora/SSEBoxShadowPeer.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1896763939
-	${RM} "$@.d"
-	$(COMPILE.cc) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1896763939/SSEBoxShadowPeer.o ../../modules/graphics/src/main/native-decora/SSEBoxShadowPeer.cc
+	${RM} $@.d
+	$(COMPILE.cc) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1896763939/SSEBoxShadowPeer.o ../../modules/graphics/src/main/native-decora/SSEBoxShadowPeer.cc
 
 ${OBJECTDIR}/_ext/1896763939/SSELinearConvolvePeer.o: ../../modules/graphics/src/main/native-decora/SSELinearConvolvePeer.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1896763939
-	${RM} "$@.d"
-	$(COMPILE.cc) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1896763939/SSELinearConvolvePeer.o ../../modules/graphics/src/main/native-decora/SSELinearConvolvePeer.cc
+	${RM} $@.d
+	$(COMPILE.cc) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1896763939/SSELinearConvolvePeer.o ../../modules/graphics/src/main/native-decora/SSELinearConvolvePeer.cc
 
 ${OBJECTDIR}/_ext/1896763939/SSELinearConvolveShadowPeer.o: ../../modules/graphics/src/main/native-decora/SSELinearConvolveShadowPeer.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1896763939
-	${RM} "$@.d"
-	$(COMPILE.cc) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1896763939/SSELinearConvolveShadowPeer.o ../../modules/graphics/src/main/native-decora/SSELinearConvolveShadowPeer.cc
+	${RM} $@.d
+	$(COMPILE.cc) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1896763939/SSELinearConvolveShadowPeer.o ../../modules/graphics/src/main/native-decora/SSELinearConvolveShadowPeer.cc
 
 ${OBJECTDIR}/_ext/1896763939/SSEUtils.o: ../../modules/graphics/src/main/native-decora/SSEUtils.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1896763939
-	${RM} "$@.d"
-	$(COMPILE.cc) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1896763939/SSEUtils.o ../../modules/graphics/src/main/native-decora/SSEUtils.cc
+	${RM} $@.d
+	$(COMPILE.cc) -g  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1896763939/SSEUtils.o ../../modules/graphics/src/main/native-decora/SSEUtils.cc
 
 # Subprojects
 .build-subprojects:

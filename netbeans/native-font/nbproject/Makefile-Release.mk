@@ -69,33 +69,33 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-font.${CND_DLIB_EXT}: ${OBJ
 
 ${OBJECTDIR}/_ext/1812479850/MacFontFinder.o: ../../modules/graphics/src/main/native-font/MacFontFinder.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/MacFontFinder.o ../../modules/graphics/src/main/native-font/MacFontFinder.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1812479850/MacFontFinder.o ../../modules/graphics/src/main/native-font/MacFontFinder.c
 
 ${OBJECTDIR}/_ext/1812479850/coretext.o: ../../modules/graphics/src/main/native-font/coretext.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/coretext.o ../../modules/graphics/src/main/native-font/coretext.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1812479850/coretext.o ../../modules/graphics/src/main/native-font/coretext.c
 
 ${OBJECTDIR}/_ext/1812479850/dfontdecoder.o: ../../modules/graphics/src/main/native-font/dfontdecoder.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/dfontdecoder.o ../../modules/graphics/src/main/native-font/dfontdecoder.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1812479850/dfontdecoder.o ../../modules/graphics/src/main/native-font/dfontdecoder.c
 
 ${OBJECTDIR}/_ext/1812479850/directwrite.o: ../../modules/graphics/src/main/native-font/directwrite.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
-	${RM} "$@.d"
-	$(COMPILE.cc) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/directwrite.o ../../modules/graphics/src/main/native-font/directwrite.cpp
+	${RM} $@.d
+	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1812479850/directwrite.o ../../modules/graphics/src/main/native-font/directwrite.cpp
 
 ${OBJECTDIR}/_ext/1812479850/fontpath.o: ../../modules/graphics/src/main/native-font/fontpath.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/fontpath.o ../../modules/graphics/src/main/native-font/fontpath.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1812479850/fontpath.o ../../modules/graphics/src/main/native-font/fontpath.c
 
 ${OBJECTDIR}/_ext/1812479850/fontpath_linux.o: ../../modules/graphics/src/main/native-font/fontpath_linux.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
-	${RM} "$@.d"
-	$(COMPILE.c) -O2  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/fontpath_linux.o ../../modules/graphics/src/main/native-font/fontpath_linux.c
+	${RM} $@.d
+	$(COMPILE.c) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/1812479850/fontpath_linux.o ../../modules/graphics/src/main/native-font/fontpath_linux.c
 
 # Subprojects
 .build-subprojects:
