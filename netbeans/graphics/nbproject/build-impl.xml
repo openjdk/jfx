@@ -116,9 +116,15 @@ is divided into following sections:
             </and>
         </condition>
         <condition property="do.archive">
-            <not>
-                <istrue value="${jar.archive.disabled}"/>
-            </not>
+            <or>
+                <not>
+                    <istrue value="${jar.archive.disabled}"/>
+                </not>
+                <and>
+                    <istrue value="${jar.archive.disabled}"/>
+                    <istrue value="${not.archive.disabled}"/>
+                </and>
+            </or>
         </condition>
         <condition property="do.mkdist">
             <and>
@@ -164,9 +170,9 @@ is divided into following sections:
                 <available file="${src.dir}"/>
                 <available file="${src.resources.dir}"/>
                 <available file="${src.jsl-decora.dir}"/>
+                <available file="${src.jsl-decora3.dir}"/>
+                <available file="${src.jsl-prism3.dir}"/>
                 <available file="${src.jsl-prism.dir}"/>
-                <available file="${src.jsl-decora2.dir}"/>
-                <available file="${src.jsl-prism2.dir}"/>
             </or>
         </condition>
         <condition property="netbeans.home+have.tests">
@@ -256,9 +262,9 @@ is divided into following sections:
         <fail unless="src.dir">Must set src.dir</fail>
         <fail unless="src.resources.dir">Must set src.resources.dir</fail>
         <fail unless="src.jsl-decora.dir">Must set src.jsl-decora.dir</fail>
+        <fail unless="src.jsl-decora3.dir">Must set src.jsl-decora3.dir</fail>
+        <fail unless="src.jsl-prism3.dir">Must set src.jsl-prism3.dir</fail>
         <fail unless="src.jsl-prism.dir">Must set src.jsl-prism.dir</fail>
-        <fail unless="src.jsl-decora2.dir">Must set src.jsl-decora2.dir</fail>
-        <fail unless="src.jsl-prism2.dir">Must set src.jsl-prism2.dir</fail>
         <fail unless="test.java.dir">Must set test.java.dir</fail>
         <fail unless="test.resources.dir">Must set test.resources.dir</fail>
         <fail unless="build.dir">Must set build.dir</fail>
@@ -281,7 +287,7 @@ is divided into following sections:
     </target>
     <target depends="-init-ap-cmdline-properties" if="ap.supported.internal" name="-init-macrodef-javac-with-processors">
         <macrodef name="javac" uri="http://www.netbeans.org/ns/j2se-project/3">
-            <attribute default="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-prism.dir}:${src.jsl-decora2.dir}:${src.jsl-prism2.dir}" name="srcdir"/>
+            <attribute default="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}" name="srcdir"/>
             <attribute default="${build.classes.dir}" name="destdir"/>
             <attribute default="${javac.classpath}" name="classpath"/>
             <attribute default="${javac.processorpath}" name="processorpath"/>
@@ -322,7 +328,7 @@ is divided into following sections:
     </target>
     <target depends="-init-ap-cmdline-properties" name="-init-macrodef-javac-without-processors" unless="ap.supported.internal">
         <macrodef name="javac" uri="http://www.netbeans.org/ns/j2se-project/3">
-            <attribute default="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-prism.dir}:${src.jsl-decora2.dir}:${src.jsl-prism2.dir}" name="srcdir"/>
+            <attribute default="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}" name="srcdir"/>
             <attribute default="${build.classes.dir}" name="destdir"/>
             <attribute default="${javac.classpath}" name="classpath"/>
             <attribute default="${javac.processorpath}" name="processorpath"/>
@@ -355,7 +361,7 @@ is divided into following sections:
     </target>
     <target depends="-init-macrodef-javac-with-processors,-init-macrodef-javac-without-processors" name="-init-macrodef-javac">
         <macrodef name="depend" uri="http://www.netbeans.org/ns/j2se-project/3">
-            <attribute default="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-prism.dir}:${src.jsl-decora2.dir}:${src.jsl-prism2.dir}" name="srcdir"/>
+            <attribute default="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}" name="srcdir"/>
             <attribute default="${build.classes.dir}" name="destdir"/>
             <attribute default="${javac.classpath}" name="classpath"/>
             <sequential>
@@ -981,7 +987,7 @@ is divided into following sections:
                 <include name="*"/>
             </dirset>
         </pathconvert>
-        <j2seproject3:depend srcdir="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-prism.dir}:${src.jsl-decora2.dir}:${src.jsl-prism2.dir}:${build.generated.subdirs}"/>
+        <j2seproject3:depend srcdir="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}:${build.generated.subdirs}"/>
     </target>
     <target depends="init,deps-jar,-pre-pre-compile,-pre-compile, -copy-persistence-xml,-compile-depend" if="have.sources" name="-do-compile">
         <j2seproject3:javac gensrcdir="${build.generated.sources.dir}"/>
@@ -989,9 +995,9 @@ is divided into following sections:
             <fileset dir="${src.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
             <fileset dir="${src.resources.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
             <fileset dir="${src.jsl-decora.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
+            <fileset dir="${src.jsl-decora3.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
+            <fileset dir="${src.jsl-prism3.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
             <fileset dir="${src.jsl-prism.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
-            <fileset dir="${src.jsl-decora2.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
-            <fileset dir="${src.jsl-prism2.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
         </copy>
     </target>
     <target if="has.persistence.xml" name="-copy-persistence-xml">
@@ -1012,7 +1018,7 @@ is divided into following sections:
     <target depends="init,deps-jar,-pre-pre-compile" name="-do-compile-single">
         <fail unless="javac.includes">Must select some files in the IDE or set javac.includes</fail>
         <j2seproject3:force-recompile/>
-        <j2seproject3:javac excludes="" gensrcdir="${build.generated.sources.dir}" includes="${javac.includes}" sourcepath="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-prism.dir}:${src.jsl-decora2.dir}:${src.jsl-prism2.dir}"/>
+        <j2seproject3:javac excludes="" gensrcdir="${build.generated.sources.dir}" includes="${javac.includes}" sourcepath="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}"/>
     </target>
     <target name="-post-compile-single">
         <!-- Empty placeholder for easier customization. -->
@@ -1284,13 +1290,13 @@ is divided into following sections:
             <fileset dir="${src.jsl-decora.dir}" excludes="*.java,${excludes}" includes="${includes}">
                 <filename name="**/*.java"/>
             </fileset>
+            <fileset dir="${src.jsl-decora3.dir}" excludes="*.java,${excludes}" includes="${includes}">
+                <filename name="**/*.java"/>
+            </fileset>
+            <fileset dir="${src.jsl-prism3.dir}" excludes="*.java,${excludes}" includes="${includes}">
+                <filename name="**/*.java"/>
+            </fileset>
             <fileset dir="${src.jsl-prism.dir}" excludes="*.java,${excludes}" includes="${includes}">
-                <filename name="**/*.java"/>
-            </fileset>
-            <fileset dir="${src.jsl-decora2.dir}" excludes="*.java,${excludes}" includes="${includes}">
-                <filename name="**/*.java"/>
-            </fileset>
-            <fileset dir="${src.jsl-prism2.dir}" excludes="*.java,${excludes}" includes="${includes}">
                 <filename name="**/*.java"/>
             </fileset>
             <fileset dir="${build.generated.sources.dir}" erroronmissingdir="false">
@@ -1309,13 +1315,13 @@ is divided into following sections:
             <fileset dir="${src.jsl-decora.dir}" excludes="${excludes}" includes="${includes}">
                 <filename name="**/doc-files/**"/>
             </fileset>
+            <fileset dir="${src.jsl-decora3.dir}" excludes="${excludes}" includes="${includes}">
+                <filename name="**/doc-files/**"/>
+            </fileset>
+            <fileset dir="${src.jsl-prism3.dir}" excludes="${excludes}" includes="${includes}">
+                <filename name="**/doc-files/**"/>
+            </fileset>
             <fileset dir="${src.jsl-prism.dir}" excludes="${excludes}" includes="${includes}">
-                <filename name="**/doc-files/**"/>
-            </fileset>
-            <fileset dir="${src.jsl-decora2.dir}" excludes="${excludes}" includes="${includes}">
-                <filename name="**/doc-files/**"/>
-            </fileset>
-            <fileset dir="${src.jsl-prism2.dir}" excludes="${excludes}" includes="${includes}">
                 <filename name="**/doc-files/**"/>
             </fileset>
             <fileset dir="${build.generated.sources.dir}" erroronmissingdir="false">
@@ -1381,7 +1387,7 @@ is divided into following sections:
         <mkdir dir="${build.test.results.dir}"/>
     </target>
     <target depends="init,compile-test,-pre-test-run" if="have.tests" name="-do-test-run">
-        <j2seproject3:test testincludes="**/*Test.java"/>
+        <j2seproject3:test includes="${includes}" testincludes="**/*Test.java"/>
     </target>
     <target depends="init,compile-test,-pre-test-run,-do-test-run" if="have.tests" name="-post-test-run">
         <fail if="tests.failed" unless="ignore.failing.tests">Some tests failed; see details above.</fail>
