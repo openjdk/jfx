@@ -543,15 +543,12 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      
     private void updateDefaultColorIndex(final Series<X,Y> series) {
         int clearIndex = seriesColorMap.get(series);
-        colorBits.clear(clearIndex);
         for (Data<X,Y> d : series.getData()) {
             final Node bar = d.getNode();
             if (bar != null) {
                 bar.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
-                colorBits.clear(clearIndex);
             }
         }
-        seriesColorMap.remove(series);
     }
 
     private Node createBar(Series series, int seriesIndex, final Data item, int itemIndex) {

@@ -88,9 +88,9 @@ public abstract class XYChart<X,Y> extends Chart {
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
 
     // to indicate which colors are being used for the series
-    BitSet colorBits = new BitSet(8);
+    private final BitSet colorBits = new BitSet(8);
     static String DEFAULT_COLOR = "default-color";
-    Map<Series, Integer> seriesColorMap = new HashMap<Series, Integer>();
+    final Map<Series, Integer> seriesColorMap = new HashMap<Series, Integer>();
     private boolean rangeValid = false;
     private final Line verticalZeroLine = new Line();
     private final Line horizontalZeroLine = new Line();
@@ -115,6 +115,8 @@ public abstract class XYChart<X,Y> extends Chart {
                     series.setToRemove = true;
                     series.setChart(null);
                     seriesRemoved(series);
+                    int idx = seriesColorMap.remove(series);
+                    colorBits.clear(idx);
 //                    seriesDefaultColorIndex --;
                 }
                 for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {

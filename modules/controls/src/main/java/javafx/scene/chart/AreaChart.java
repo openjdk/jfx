@@ -395,7 +395,6 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     }
     private void updateDefaultColorIndex(final Series<X,Y> series) {
         int clearIndex = seriesColorMap.get(series);
-        colorBits.clear(clearIndex);
         Path seriesLine = (Path)((Group)series.getNode()).getChildren().get(1);
         Path fillPath = (Path)((Group)series.getNode()).getChildren().get(0);
         if (seriesLine != null) {
@@ -404,14 +403,12 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         if (fillPath != null) {
             fillPath.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
         }
-        colorBits.clear(clearIndex);
         for (int j=0; j < series.getData().size(); j++) {
             final Node node = series.getData().get(j).getNode();
             if(node!=null) {
                 node.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
             }
         }
-        seriesColorMap.remove(series);
     }
     @Override protected  void seriesRemoved(final Series<X,Y> series) {
         updateDefaultColorIndex(series);
