@@ -796,7 +796,7 @@ int glass_window_list_getSize(){
     return windowList_size;
 }
 
-static jboolean glass_window_isExist(NativeWindow window){
+jboolean glass_window_isExist(NativeWindow window){
 
     NativeWindow w = glass_window_list_getHead();
     while (w) {
