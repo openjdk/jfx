@@ -1477,6 +1477,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
         private final ListChangeListener<Data<X,Y>> dataChangeListener = new ListChangeListener<Data<X, Y>>() {
             @Override public void onChanged(Change<? extends Data<X, Y>> c) {
+                final XYChart<X, Y> chart = getChart();
                 while (c.next()) {
                     // RT-25187 Probably a sort happened, just reorder the pointers and return.
                     if (c.wasPermutated()) {
@@ -1504,7 +1505,7 @@ public abstract class XYChart<X,Y> extends Chart {
                     if (c.getAddedSize() > 0) {
                         for (Data<X,Y> itemPtr = begin; itemPtr != null; itemPtr = itemPtr.next) {
                             if (itemPtr.setToRemove) {
-                                getChart().dataBeingRemovedIsAdded(itemPtr, Series.this);
+                                if (chart != null) chart.dataBeingRemovedIsAdded(itemPtr, Series.this);
                                 itemPtr.setToRemove = false;
                             }
                         }
@@ -1542,7 +1543,6 @@ public abstract class XYChart<X,Y> extends Chart {
                         }
                     }
                     // inform chart
-                    XYChart<X,Y> chart = getChart();
                     if(chart!=null) chart.dataItemsChanged(Series.this,
                             (List<Data<X,Y>>)c.getRemoved(), c.getFrom(), c.getTo(), c.wasPermutated());
                 }
