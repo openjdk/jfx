@@ -25,13 +25,36 @@
 
 package com.sun.javafx.scene.traversal;
 
+import javafx.geometry.NodeOrientation;
+
 public enum Direction {
     
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-    NEXT,
-    PREVIOUS
-    
+    UP(false),
+    DOWN(true),
+    LEFT(false),
+    RIGHT(true),
+    NEXT(true),
+    PREVIOUS(false);
+    private final boolean forward;
+
+    Direction(boolean forward) {
+        this.forward = forward;
+    }
+
+    public boolean isForward() {
+        return forward;
+    }
+
+    public boolean isForward(NodeOrientation orientation) {
+        switch(this) {
+            case LEFT:
+            case RIGHT:
+            case NEXT:
+            case PREVIOUS:
+                return forward ^ (orientation == NodeOrientation.RIGHT_TO_LEFT);
+            default:
+                return forward;
+        }
+
+    }
 }

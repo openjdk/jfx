@@ -38,19 +38,11 @@ import static com.sun.javafx.scene.traversal.Direction.*;
 
 public class ContainerTabOrder implements Algorithm {
 
-    PlatformLogger focusLogger;
-
     ContainerTabOrder() {
-        focusLogger = Logging.getFocusLogger();
     }
 
-    public Node traverse(Node node, Direction dir, TraversalEngine engine) {
+    public Node select(Node node, Direction dir, TraversalEngine engine) {
         Node newNode = null;
-
-        if (focusLogger.isLoggable(Level.FINER)) {
-            focusLogger.finer("old focus owner : "+node+", bounds : "+engine.getBounds(node));
-        }
-
         if (NEXT.equals(dir)) {
             newNode = TabOrderHelper.findNextFocusablePeer(node);
         }
@@ -59,37 +51,34 @@ public class ContainerTabOrder implements Algorithm {
         }
         else if (UP.equals(dir) || DOWN.equals(dir) || LEFT.equals(dir) || RIGHT.equals(dir) ) {
             List<Node> nodes = engine.getAllTargetNodes();
-            List<Bounds> bounds = engine.getTargetBounds(nodes);
 
-            int target = trav2D(engine.getBounds(node), dir, bounds);
+            int target = trav2D(engine.getSceneLayoutBounds(node), dir, nodes, engine);
             if (target != -1) {
                 newNode = nodes.get(target);
-            }
-            nodes.clear();
-            bounds.clear();
-
-        }
-
-        if (focusLogger.isLoggable(Level.FINER)) {
-            if (newNode != null) {
-                focusLogger.finer("new focus owner : "+newNode+", bounds : "+engine.getBounds(newNode));
-            }
-            else {
-                focusLogger.finer("no focus transfer");
             }
         }
 
         return newNode;
     }
 
-    private int trav2D(Bounds origin, Direction dir, List<Bounds> targets) {
+    @Override
+    public Node selectFirst(TraversalEngine engine) {
+        return TabOrderHelper.getFirstTargetNode(engine.getRoot());
+    }
+
+    @Override
+    public Node selectLast(TraversalEngine engine) {
+        return TabOrderHelper.getLastTargetNode(engine.getRoot());
+    }
+
+    private int trav2D(Bounds origin, Direction dir, List<Node> peers, TraversalEngine engine) {
 
         Bounds bestBounds = null;
         double bestMetric = 0.0;
         int bestIndex = -1;
 
-        for (int i = 0; i < targets.size(); i++) {
-            final Bounds targetBounds = targets.get(i);
+        for (int i = 0; i < peers.size(); i++) {
+            final Bounds targetBounds = engine.getSceneLayoutBounds(peers.get(i));
             final double outd = outDistance(dir, origin, targetBounds);
             final double metric;
 

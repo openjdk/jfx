@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.javafx.scene.traversal.Algorithm;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -45,6 +47,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.CustomMenuItem;
@@ -72,7 +75,7 @@ import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import javafx.css.Styleable;
 
-public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> implements TraverseListener {
+public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
 
     private Pane box;
     private ToolBarOverflowMenu overflowMenu;
@@ -83,8 +86,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
     private double savedPrefHeight = 0;
     private ObservableList<MenuItem> overflowMenuItems;
     private boolean needsUpdate = false;
-    private TraversalEngine engine;
-    private Direction direction;
+    private final ParentTraversalEngine engine;
 
     public ToolBarSkin(ToolBar toolbar) {
         super(toolbar, new ToolBarBehavior(toolbar));
@@ -92,22 +94,74 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         initialize();
         registerChangeListener(toolbar.orientationProperty(), "ORIENTATION");
 
-        engine = new TraversalEngine(getSkinnable(), false) {
-            @Override public boolean trav(Node owner, Direction dir) {
-                // This allows the right arrow to select the overflow menu
-                // without it only the tab key can select the overflow menu.
-                if (overflow) {
-                    engine.reg(overflowMenu);
+        engine = new ParentTraversalEngine(getSkinnable(), new Algorithm() {
+
+
+            @Override
+            public Node select(Node owner, Direction dir, TraversalEngine engine) {
+                final ObservableList<Node> boxChildren = box.getChildren();
+                if (owner == overflowMenu) {
+                    if (dir.isForward(overflowMenu.getEffectiveNodeOrientation())) {
+                        return null;
+                    } else {
+                        for (int i = boxChildren.size() - 1; i >= 0; --i) {
+                            Node n = box.getChildren().get(i);
+                            if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
+                                return n;
+                            }
+                        }
+                    }
                 }
-                direction = dir;
-                boolean result = super.trav(owner, dir);
-                if (overflow) {
-                    engine.unreg(overflowMenu);
+                int idx = boxChildren.indexOf(owner);
+                if (dir.isForward(overflowMenu.getEffectiveNodeOrientation())) {
+                    for (int i = idx + 1; i < boxChildren.size(); ++i) {
+                        Node n = box.getChildren().get(i);
+                        if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
+                            return n;
+                        }
+                    }
+                    if (overflow) {
+                        overflowMenu.requestFocus();
+                        return overflowMenu;
+                    }
+                } else {
+                    for (int i = idx - 1; i >= 0; --i) {
+                        Node n = box.getChildren().get(i);
+                        if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
+                            return n;
+                        }
+                    }
                 }
-                return result;
+                return null;
             }
-        };
-        engine.addTraverseListener(this);
+
+            @Override
+            public Node selectFirst(TraversalEngine engine) {
+                final ObservableList<Node> boxChildren = box.getChildren();
+                for (int i = 0; i < boxChildren.size(); ++i) {
+                    Node n = box.getChildren().get(i);
+                    if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
+                        return n;
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public Node selectLast(TraversalEngine engine) {
+                if (overflow) {
+                    return overflowMenu;
+                }
+                final ObservableList<Node> boxChildren = box.getChildren();
+                for (int i = boxChildren.size() - 1; i >= 0; --i) {
+                    Node n = box.getChildren().get(i);
+                    if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
+                        return n;
+                    }
+                }
+                return null;
+            }
+        });
         getSkinnable().setImpl_traversalEngine(engine);
 
         toolbar.focusedProperty().addListener(new ChangeListener<Boolean>() {
@@ -457,7 +511,10 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
             } else {
                 if (node.isFocused()) {
                     if (!box.getChildren().isEmpty()) {
-                        engine.registeredNodes.get(engine.registeredNodes.size() - 1).requestFocus();
+                        Node last = engine.selectLast();
+                        if (last != null) {
+                            last.requestFocus();
+                        }
                     } else {
                         overflowMenu.requestFocus();                        
                     }
@@ -473,20 +530,13 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         // Check if we overflowed.
         overflow = overflowMenuItems.size() > 0;
         if (!overflow && overflowMenu.isFocused()) {
-            engine.registeredNodes.get(engine.registeredNodes.size() - 1).requestFocus();
+            Node last = engine.selectLast();
+            if (last != null) {
+                last.requestFocus();
+            }
         }
         overflowMenu.setVisible(overflow);
         overflowMenu.setManaged(overflow);
-    }
-
-    @Override
-    public void onTraverse(Node node, Bounds bounds) {
-        int index = engine.registeredNodes.indexOf(node);
-        if (index == -1 && direction.equals(Direction.NEXT)) {
-            if (overflow) {
-                overflowMenu.requestFocus();
-            }
-        }
     }
 
     class ToolBarOverflowMenu extends StackPane {
@@ -496,6 +546,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
 
         public ToolBarOverflowMenu(ObservableList<MenuItem> items) {
             getStyleClass().setAll("tool-bar-overflow-button");
+            setFocusTraversable(true);
             this.menuItems = items;
             downArrow = new StackPane();
             downArrow.getStyleClass().setAll("arrow");
@@ -519,10 +570,12 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
                             popup.getItems().addAll(menuItems);
                             popup.show(downArrow, Side.BOTTOM, 0, 0);
                         }
+                        ke.consume();
                     } else if (KeyCode.ESCAPE.equals(ke.getCode())) {
                         if (popup.isShowing()) {
                             popup.hide();
                         }
+                        ke.consume();
                     } else if (KeyCode.ENTER.equals(ke.getCode())) {
                         if (popup.isShowing()) {
                             popup.hide();
@@ -531,35 +584,8 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
                             popup.getItems().addAll(menuItems);
                             popup.show(downArrow, Side.BOTTOM, 0, 0);
                         }
-                    } else {
-                        boolean isRTL = getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
-                        boolean leftAction = KeyCode.LEFT.equals(ke.getCode());
-                        boolean rightAction = KeyCode.RIGHT.equals(ke.getCode()) || KeyCode.TAB.equals(ke.getCode());
-                        if (isRTL) {
-                            boolean swap = leftAction;
-                            leftAction = rightAction;
-                            rightAction = swap;
-                        }
-                        if (KeyCode.UP.equals(ke.getCode()) || leftAction ||
-                            (KeyCode.TAB.equals(ke.getCode()) && ke.isShiftDown())) {
-                            if (engine.registeredNodes.isEmpty()) {
-                                return;
-                            }
-                            int index = box.getChildren().indexOf(engine.registeredNodes.get(engine.registeredNodes.size() - 1));
-                            if (index != -1) {
-                                box.getChildren().get(index).requestFocus();                            
-                            } else {
-                                if (!box.getChildren().isEmpty()) {
-                                    box.getChildren().get(0).requestFocus();
-                                } else {
-                                    new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.PREVIOUS);
-                                }
-                            }
-                        } else if (KeyCode.DOWN.equals(ke.getCode()) || rightAction) {                        
-                            new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.NEXT);
-                        }
+                        ke.consume();
                     }
-                    ke.consume();
                 }
             });
 

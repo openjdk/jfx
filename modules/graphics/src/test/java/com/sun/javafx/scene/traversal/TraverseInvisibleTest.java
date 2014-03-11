@@ -59,7 +59,7 @@ public final class TraverseInvisibleTest {
     private Stage stage;
     private Scene scene;
     private Node[] keypadNodes;
-    private TraversalEngine traversalEngine;
+    private SceneTraversalEngine traversalEngine;
 
     /*
     **
@@ -97,7 +97,7 @@ public final class TraverseInvisibleTest {
         scene = new Scene(new Group(), 500, 500);
         stage.setScene(scene);
 
-        traversalEngine = new TraversalEngine(scene.getRoot(), true);
+        traversalEngine = new SceneTraversalEngine(scene);
 
         keypadNodes = createKeypadNodesInScene(scene, traversalEngine);
         stage.show();
@@ -140,7 +140,6 @@ public final class TraverseInvisibleTest {
 
                 keypad[index++] = keyNode;
                 ((Group)scene.getRoot()).getChildren().add(keyNode);
-                traversalEngine.reg(keyNode);
             }
         }
 

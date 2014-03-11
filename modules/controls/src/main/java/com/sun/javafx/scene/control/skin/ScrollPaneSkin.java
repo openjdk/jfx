@@ -25,6 +25,9 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalEngine;
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -51,14 +54,11 @@ import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TouchEvent;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import com.sun.javafx.Utils;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import static com.sun.javafx.Utils.*;
 import static com.sun.javafx.scene.control.skin.Utils.*;
@@ -231,7 +231,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         }
    };
 
-
     private void initialize() {
         // requestLayout calls below should not trigger requestLayout above ScrollPane
 //        setManaged(false);
@@ -239,7 +238,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         ScrollPane control = getSkinnable();
         scrollNode = control.getContent();
 
-        TraversalEngine traversalEngine = new TraversalEngine(getSkinnable(), false);
+        ParentTraversalEngine traversalEngine = new ParentTraversalEngine(getSkinnable());
         traversalEngine.addTraverseListener(this);
         getSkinnable().setImpl_traversalEngine(traversalEngine);
 

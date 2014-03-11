@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyProperty;
@@ -83,8 +84,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     private Menu openMenu;
     private MenuBarButton openMenuButton;
     private int focusedMenuIndex = -1;
-    private TraversalEngine engine;
-    private Direction direction;
 
     private static WeakHashMap<Stage, Reference<MenuBarSkin>> systemMenuMap;
     private static List<MenuBase> wrappedDefaultMenus = new ArrayList<MenuBase>();
@@ -372,15 +371,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
            acceleratorKeyCombo = KeyCombination.keyCombination("F10");
         }
         getSkinnable().getScene().getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
-        engine = new TraversalEngine(getSkinnable(), false) {
-            @Override public boolean trav(Node node, Direction dir) {
-                direction = dir;
-                return super.trav(node,dir);
-            }
-        };
+        ParentTraversalEngine engine = new ParentTraversalEngine(getSkinnable());
         engine.addTraverseListener(this);
         getSkinnable().setImpl_traversalEngine(engine);
-        
+
         control.sceneProperty().addListener(new ChangeListener<Scene>() {
             @Override
             public void changed(ObservableValue<? extends Scene> ov, Scene t, Scene t1) {
@@ -919,13 +913,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
     @Override
     public void onTraverse(Node node, Bounds bounds) {
-        if (direction.equals(Direction.NEXT)) {
-            if (openMenu != null) openMenu.hide();
-            focusedMenuIndex = 0;
-            new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.NEXT);
-        } else if (direction.equals(DOWN)) {
-            // do nothing 
-        }
+        if (openMenu != null) openMenu.hide();
+        focusedMenuIndex = 0;
     }
 
     static class MenuBarButton extends MenuButton {

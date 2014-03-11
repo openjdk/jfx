@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.SubSceneTraversalEngine;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
@@ -50,7 +53,6 @@ import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.SubSceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
@@ -241,12 +243,8 @@ public class SubScene extends Node {
 
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
-                        oldRoot.setImpl_traversalEngine(null);
                     }
                     oldRoot = _value;
-                    if (_value.getImpl_traversalEngine() == null) {
-                        _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
-                    }
                     _value.getStyleClass().add(0, "root");
                     _value.setScenes(getScene(), SubScene.this);
                     markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
@@ -642,6 +640,12 @@ public class SubScene extends Node {
             }
             dirtyLayout = false;
         }
+    }
+
+    private TopMostTraversalEngine traversalEngine = new SubSceneTraversalEngine(this);
+
+    boolean traverse(Node node, Direction dir) {
+        return traversalEngine.trav(node, dir) != null;
     }
 
     private enum SubSceneDirtyBits {

@@ -28,6 +28,9 @@ package com.sun.javafx.scene.web.skin;
 import java.util.ResourceBundle;
 
 import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.scene.traversal.Algorithm;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import org.w3c.dom.html.HTMLDocument;
 import org.w3c.dom.html.HTMLElement;
 
@@ -42,18 +45,13 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.MenuButton;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.Separator;
 import javafx.scene.control.TextInputControl;
-import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.ToolBar;
@@ -67,21 +65,17 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.web.HTMLEditor;
 import javafx.scene.web.WebView;
 import javafx.util.Callback;
 
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.ColorPickerSkin;
 import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.webkit.WebPage;
-import com.sun.webkit.event.WCFocusEvent;
 import com.sun.javafx.webkit.Accessor;
 
 import java.security.AccessController;
@@ -102,7 +96,7 @@ import javafx.print.PrinterJob;
 /**
  * HTML editor skin.
  */
-public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehavior> implements TraverseListener {
+public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehavior> {
     private GridPane gridPane;
 
     private ToolBar toolbar1;
@@ -240,7 +234,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         return DEFAULT_WINDOWS_7_MAPPINGS;
     }
 
-    private TraversalEngine engine;
+    private ParentTraversalEngine engine;
 
     private boolean resetToolbarState = false;
     private String cachedHTMLText = "<html><head></head><body contenteditable=\"true\"></body></html>";
@@ -480,9 +474,22 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         enableToolbar(true);
         setHTMLText(cachedHTMLText);
 
-        engine = new TraversalEngine(getSkinnable(), false);
-        engine.addTraverseListener(this);
-        engine.reg(toolbar1);
+        engine = new ParentTraversalEngine(getSkinnable(), new Algorithm() {
+            @Override
+            public Node select(Node owner, Direction dir, TraversalEngine engine) {
+                return cutButton;
+            }
+
+            @Override
+            public Node selectFirst(TraversalEngine engine) {
+                return cutButton;
+            }
+
+            @Override
+            public Node selectLast(TraversalEngine engine) {
+                return cutButton;
+            }
+        });
         getSkinnable().setImpl_traversalEngine(engine);
         webView.setFocusTraversable(true);
         gridPane.getChildren().addListener(itemsListener);
@@ -1183,11 +1190,6 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         }
     }
 
-    @Override
-    public void onTraverse(Node node, Bounds bounds) {
-        cutButton.requestFocus();
-    }
-    
     private boolean isFirstRun = true;
 
     @Override

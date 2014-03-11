@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,18 @@
 
 package com.sun.javafx.scene.traversal;
 
-import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.SubScene;
 
+public final class SubSceneTraversalEngine extends TopMostTraversalEngine{
 
-public interface Algorithm {
-    
-    /**
-     * Traverse from origin, in direction dir.
-     * Return a the new target Node or null if no suitable target is found.
-     */
-    public Node select(Node owner, Direction dir, TraversalEngine engine);
+    private final SubScene subScene;
 
-    public Node selectFirst(TraversalEngine engine);
+    public SubSceneTraversalEngine(SubScene scene) {
+        this.subScene = scene;
+    }
 
-    public Node selectLast(TraversalEngine engine);
-    
+    protected Parent getRoot() {
+        return subScene.getRoot();
+    }
 }

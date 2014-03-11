@@ -814,11 +814,8 @@ public abstract class Node implements EventTarget, Styleable {
         if (sceneChanged) {
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
-                if (oldScene != null) {
-                    oldScene.unregisterTraversable(Node.this);
-                }
                 if (newScene != null) {
-                    newScene.registerTraversable(Node.this);
+                    newScene.initializeInternalEventDispatcher();
                 }
             }
             focusSetDirty(oldScene);
@@ -7607,9 +7604,7 @@ public abstract class Node implements EventTarget, Styleable {
                     Scene _scene = getScene();
                     if (_scene != null) {
                         if (get()) {
-                            _scene.registerTraversable(Node.this);
-                        } else {
-                            _scene.unregisterTraversable(Node.this);
+                            _scene.initializeInternalEventDispatcher();
                         }
                         focusSetDirty(_scene);
                     }

@@ -47,7 +47,8 @@ import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.input.InputEventUtils;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalEngine;
+import com.sun.javafx.scene.traversal.SceneTraversalEngine;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.*;
@@ -1055,12 +1056,8 @@ public class Scene implements EventTarget {
 
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
-                        oldRoot.setImpl_traversalEngine(null);
                     }
                     oldRoot = _value;
-                    if (_value.getImpl_traversalEngine() == null) {
-                        _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
-                    }
                     _value.getStyleClass().add(0, "root");
                     _value.setScenes(Scene.this, null);
                     markDirty(DirtyBits.ROOT_DIRTY);
@@ -1894,80 +1891,16 @@ public class Scene implements EventTarget {
         return focusDirty;
     }
 
-    /**
-     * This is a map from focusTraversable nodes within this scene
-     * to instances of a traversal engine. The traversal engine is
-     * either the instance for the scene itself, or for a Parent
-     * nested somewhere within this scene.
-     *
-     * This has package access for testing purposes.
-     */
-    Map traversalRegistry; // Map<Node,TraversalEngine>
-
-    /**
-     * Searches up the scene graph for a Parent with a traversal engine.
-     */
-    private TraversalEngine lookupTraversalEngine(Node node) {
-        Parent p = node.getParent();
-
-        while (p != null) {
-            if (p.getImpl_traversalEngine() != null) {
-                return p.getImpl_traversalEngine();
-            }
-            p = p.getParent();
-        }
-
-        // This shouldn't ever occur, since walking up the tree
-        // should always find the Scene's root, which always has
-        // a traversal engine. But if for some reason we get here,
-        // just return the root's traversal engine.
-
-        return getRoot().getImpl_traversalEngine();
-    }
-
-    /**
-     * Registers a traversable node with a traversal engine
-     * on this scene.
-     */
-    void registerTraversable(Node n) {
-        initializeInternalEventDispatcher();
-
-        final TraversalEngine te = lookupTraversalEngine(n);
-        if (te != null) {
-            if (traversalRegistry == null) {
-                traversalRegistry = new HashMap();
-            }
-            traversalRegistry.put(n, te);
-            te.reg(n);
-        }
-    }
-
-    /**
-     * Unregisters a traversable node from this scene.
-     */
-    void unregisterTraversable(Node n) {
-        final TraversalEngine te = (TraversalEngine) traversalRegistry.remove(n);
-        if (te != null) {
-            te.unreg(n);
-        }
-    }
+    private TopMostTraversalEngine traversalEngine = new SceneTraversalEngine(this);
 
     /**
      * Traverses focus from the given node in the given direction.
      */
     boolean traverse(Node node, Direction dir) {
-        /*
-        ** if the registry is null then there are no
-        ** registered traversable nodes in this scene
-        */
-        if (traversalRegistry != null) {
-            TraversalEngine te = (TraversalEngine) traversalRegistry.get(node);
-            if (te == null) {
-                te = lookupTraversalEngine(node);
-            }
-            return te.trav(node, dir);
+        if (node.getSubScene() != null) {
+            return node.getSubScene().traverse(node, dir);
         }
-        return false;
+        return traversalEngine.trav(node, dir) != null;
     }
 
     /**
@@ -1976,7 +1909,7 @@ public class Scene implements EventTarget {
      * removed from the scene.
      */
     private void focusInitial() {
-        getRoot().getImpl_traversalEngine().getTopLeftFocusableNode();
+        traversalEngine.traverseToFirst();
     }
 
     /**
@@ -4128,7 +4061,7 @@ public class Scene implements EventTarget {
         return internalEventDispatcher;
     }
 
-    private void initializeInternalEventDispatcher() {
+    final void initializeInternalEventDispatcher() {
         if (internalEventDispatcher == null) {
             internalEventDispatcher = createInternalEventDispatcher();
             eventDispatcher = new SimpleObjectProperty<EventDispatcher>(
