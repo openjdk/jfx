@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -104,6 +104,11 @@ public class MenuBar extends Control {
 
     /**
      * Use the system menu bar if the current platform supports it.
+     *
+     * This should not be set on more than one MenuBar instance per
+     * Stage. If this property is set to true on more than one
+     * MenuBar in the same Stage, then the behavior is undefined.
+     *
      * @since JavaFX 2.1
      */
     public final BooleanProperty useSystemMenuBarProperty() {
