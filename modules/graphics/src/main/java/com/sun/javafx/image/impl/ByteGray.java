@@ -38,13 +38,13 @@ public class ByteGray {
     public static final BytePixelGetter getter = Getter.instance;
 
     public static final ByteToBytePixelConverter ToByteBgraConverter =
-        ByteRgb.ToByteBgrfConv.nonpremult;
+        ByteGray.ToByteBgrfConv.nonpremult;
     public static final ByteToBytePixelConverter ToByteBgraPreConverter =
-        ByteRgb.ToByteBgrfConv.premult;
+        ByteGray.ToByteBgrfConv.premult;
     public static final ByteToIntPixelConverter ToIntArgbConverter =
-        ByteRgb.ToIntFrgbConv.nonpremult;
+        ByteGray.ToIntFrgbConv.nonpremult;
     public static final ByteToIntPixelConverter ToIntArgbPreConverter =
-        ByteRgb.ToIntFrgbConv.premult;
+        ByteGray.ToIntFrgbConv.premult;
 
     static class Getter implements BytePixelGetter {
         static final BytePixelGetter instance = new Getter();
@@ -142,7 +142,7 @@ public class ByteGray {
             new ToIntFrgbConv(IntArgbPre.setter);
 
         private ToIntFrgbConv(IntPixelSetter setter) {
-            super(ByteRgb.getter, setter);
+            super(ByteGray.getter, setter);
         }
 
         @Override
