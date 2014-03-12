@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -123,6 +124,22 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(ENTER, "Edit"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(F2, "Edit"));
         TREE_VIEW_BINDINGS.add(new KeyBinding(ESCAPE, "CancelEdit"));
+    }
+
+    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+        String action = super.matchActionForEvent(e);
+        if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            // Rather than switching the result of the action lookup in this way, the preferred
+            // way to do this according to the current architecture would be to hoist the
+            // getEffectiveNodeOrientation call up into the key bindings, the same way that ListView
+            // orientation (horizontal vs. vertical) is handled with the OrientedKeyBinding class.
+            if ("CollapseRow".equals(action) && (e.getCode() == LEFT || e.getCode() == KP_LEFT)) {
+                action = "ExpandRow";
+            } else if ("ExpandRow".equals(action) && (e.getCode() == RIGHT || e.getCode() == KP_RIGHT)) {
+                action = "CollapseRow";
+            }
+        }
+        return action;
     }
 
     @Override protected void callAction(String name) {

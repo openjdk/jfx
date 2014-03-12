@@ -30,7 +30,6 @@ import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.EventHandler;
-import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.input.ContextMenuEvent;
@@ -248,21 +247,6 @@ public class BehaviorBase<C extends Control> {
         String action = null;
         if (match != null) {
             action = match.getAction();
-            // Rather than switching the result of the action lookup in this way, the preferred
-            // way to do this according to the current architecture would be to hoist the
-            // getEffectiveNodeOrientation call up into the key bindings, the same way that
-            // list-view orientation (horizontal vs. vertical) is handled in a key binding.
-            if (e.getCode() == LEFT || e.getCode() == RIGHT) {
-                if (control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                    if (match.getAction().equals("TraverseLeft")) {
-                        action = "TraverseRight";
-                    } else {
-                        if (match.getAction().equals("TraverseRight")) {
-                            action = "TraverseLeft";
-                        }
-                    }
-                }
-            }
         }
         return action;
     }

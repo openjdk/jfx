@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.collections.ObservableList;
 import javafx.event.Event;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.SingleSelectionModel;
@@ -68,13 +69,17 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
     }
 
     @Override protected void callAction(String name) {
-        if ("TraverseLeft".equals(name) ||
+        boolean rtl = (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+
+        if (("TraverseLeft".equals(name) && !rtl) ||
+            ("TraverseRight".equals(name) && rtl) ||
             "TraverseUp".equals(name)) {
             if (getControl().isFocused()) {
                 selectPreviousTab();
             }
-        } else if ("TraverseRight".equals(name)
-                || "TraverseDown".equals(name)) {
+        } else if (("TraverseRight".equals(name) && !rtl) || 
+                   ("TraverseLeft".equals(name) && rtl) ||
+                   "TraverseDown".equals(name)) {
             if (getControl().isFocused()) {
                 selectNextTab();
             }
