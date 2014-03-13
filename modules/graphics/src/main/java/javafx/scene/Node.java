@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -104,7 +104,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
@@ -8541,27 +8540,48 @@ public abstract class Node implements EventTarget, Styleable {
      */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
     public static List<Style> impl_getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
-         return CssStyleHelper.getMatchingStyles(styleable, cssMetaData);
+        if (styleable != null && cssMetaData != null && styleable instanceof Node) {
+
+            Node node = (Node)styleable;
+
+            if (node.styleHelper != null) {
+                return node.styleHelper.getMatchingStyles(node, cssMetaData);
+            }
+
+        }
+        return Collections.<Style>emptyList();
     }
 
-    /**
-     * Find CSS styles that were used to style this Node in its current pseudo-class state. The map will contain the styles from this node and,
-     * if the node is a Parent, its children. The node corresponding to an entry in the Map can be obtained by casting a StyleableProperty key to a
-     * javafx.beans.property.Property and calling getBean(). The List<Style> contains only those styles used to style the property and will contain
-     * styles used to resolve lookup values.
-     *
-     * @param  styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
-     * @return The Map populated with matching styles.
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
-     */
-    @Deprecated // SB-dependency: RT-21096 has been filed to track this
-     public Map<StyleableProperty<?>,List<Style>> impl_findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
+     /**
+      * RT-17293
+      * @treatAsPrivate implementation detail
+      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+      */
+     @Deprecated // SB-dependency: RT-21096 has been filed to track this
+     public final ObservableMap<StyleableProperty<?>, List<Style>> impl_getStyleMap() {
+         return styleHelper != null
+             ? styleHelper.getObservableStyleMap()
+             : FXCollections.<StyleableProperty<?>, List<Style>>emptyObservableMap();
+     }
 
-        Map<StyleableProperty<?>,List<Style>> ret = CssStyleHelper.getMatchingStyles(styleMap, this);
-        return ret != null ? ret : Collections.<StyleableProperty<?>,List<Style>>emptyMap();
-
-    }
+     /**
+      * RT-17293
+      * @treatAsPrivate implementation detail
+      * @deprecated This is an experimental API that is not intended for general use and is subject to change in future versions
+      */
+     @Deprecated // SB-dependency: RT-21096 has been filed to track this
+     public final void impl_setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
+         //
+         // Node doesn't have a field for this map. Rather, this is held by CssStyleHelper. If this node
+         // doesn't have a styleHelper, then there is nothing to attach the listener to. So a styleHelper has
+         // to be created.
+         //
+         if (styleHelper == null) {
+             styleHelper = CssStyleHelper.createStyleHelper(this, null, styleMap);
+         } else {
+             styleHelper.setObservableStyleMap(styleMap);
+         }
+     }
 
     /**
      * Flags used to indicate in which way this node is dirty (or whether it
@@ -8866,8 +8886,11 @@ public abstract class Node implements EventTarget, Styleable {
                 return;
             }
 
+            ObservableMap<StyleableProperty<?>, List<Style>> styleObserver =
+                    styleHelper != null ? styleHelper.observableStyleMap : null;
+
             // Match new styles if my own indicates I need to reapply
-            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint);
+            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint, styleObserver);
 
         }
 

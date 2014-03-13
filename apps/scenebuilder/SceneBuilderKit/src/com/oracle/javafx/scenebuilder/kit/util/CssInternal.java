@@ -269,8 +269,8 @@ public class CssInternal {
 
     private static CssPropAuthorInfo getCssInfoForNode(Node node, ValuePropertyMetadata prop) {
         @SuppressWarnings("rawtypes")
-        Map<StyleableProperty<?>, List<Style>> map = collectCssState(node);
-        for (@SuppressWarnings("rawtypes") Map.Entry<StyleableProperty<?>, List<Style>> entry : map.entrySet()) {//NOI18N
+        Map<StyleableProperty, List<Style>> map = collectCssState(node);
+        for (@SuppressWarnings("rawtypes") Map.Entry<StyleableProperty, List<Style>> entry : map.entrySet()) {//NOI18N
             StyleableProperty<?> beanProp = entry.getKey();
             List<Style> styles = new ArrayList<>(entry.getValue());
             @SuppressWarnings("unchecked") //NOI18N
@@ -403,25 +403,26 @@ public class CssInternal {
         return property;
     }
 
-//    public static void attachMapToNode(Node node) {
-//        @SuppressWarnings("rawtypes")
-//        Map<StyleableProperty<?>, List<Style>> smap = new HashMap<>();
-//        Deprecation.setStyleMap(node, FXCollections.observableMap(smap));
-//    }
+    public static void attachMapToNode(Node node) {
+        @SuppressWarnings("rawtypes")
+        Map<StyleableProperty<?>, List<Style>> smap = new HashMap<>();
+        Deprecation.setStyleMap(node, FXCollections.observableMap(smap));
+    }
 
-//    public static void detachMapToNode(Node node) {
-//        Deprecation.setStyleMap(node, null);
-//    }
+    public static void detachMapToNode(Node node) {
+        Deprecation.setStyleMap(node, null);
+    }
 
     @SuppressWarnings("rawtypes")
-    public static Map<StyleableProperty<?>, List<Style>> collectCssState(Node node) {
-//        attachMapToNode(node);
+    public static Map<StyleableProperty, List<Style>> collectCssState(Node node) {
+        attachMapToNode(node);
         // Force CSS to apply
         node.applyCss();
 
-        Map<StyleableProperty<?>, List<Style>> ret = Deprecation.getStyleMap(node);
+        Map<StyleableProperty, List<Style>> ret = new HashMap<>();
+        ret.putAll(Deprecation.getStyleMap(node));
         // Attached map may impact css performance, so remove it.
-//        detachMapToNode(node);
+        detachMapToNode(node);
         // DEBUG
 //        System.out.println("collectCssState() for " + node);
 //        for (StyleableProperty s : ret.keySet()) {
