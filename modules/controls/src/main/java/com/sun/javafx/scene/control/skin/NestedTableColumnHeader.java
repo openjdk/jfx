@@ -194,8 +194,10 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             TableColumnBase column = (TableColumnBase) rect.getProperties().get(TABLE_COLUMN_KEY);
             NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
 
-            rect.setCursor(header.isColumnResizingEnabled() && rect.isHover() &&
-                    column.isResizable() ? Cursor.H_RESIZE : Cursor.DEFAULT);
+            if (header.getCursor() == null) { // If there's a cursor for the whole header, don't override it
+                rect.setCursor(header.isColumnResizingEnabled() && rect.isHover() &&
+                        column.isResizable() ? Cursor.H_RESIZE : null);
+            }
         }
     };
     
@@ -545,6 +547,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     }
 
     private void columnResizingStarted(double startX) {
+        setCursor(Cursor.H_RESIZE);
         columnReorderLine.setLayoutX(startX);
     }
 
@@ -561,7 +564,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     }
 
     private void columnResizingComplete(TableColumnBase col, MouseEvent me) {
-//        getTableHeaderRow().getColumnReorderLine().setVisible(true);
+        setCursor(null);
         columnReorderLine.setTranslateX(0.0F);
         columnReorderLine.setLayoutX(0.0F);
         lastX = 0.0F;
