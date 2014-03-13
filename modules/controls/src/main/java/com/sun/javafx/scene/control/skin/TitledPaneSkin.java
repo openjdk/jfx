@@ -240,7 +240,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+        double titleWidth = snapSize(titleRegion.prefWidth(height));
+        double contentWidth = snapSize(contentContainer.minWidth(height));
+        return Math.max(titleWidth, contentWidth) + leftInset + rightInset;
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
