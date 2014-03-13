@@ -73,7 +73,7 @@ public class NodeCssState {
     }
 
     @SuppressWarnings("rawtypes")
-    private final Map<StyleableProperty, List<Style>> map;
+    private final Map<StyleableProperty<?>, List<Style>> map;
     private final Node node;
     private final FXOMObject fxomObject;
     private Collection<CssContentMaker.CssPropertyState> author;
@@ -84,7 +84,7 @@ public class NodeCssState {
     private Collection<CssProperty> props;
 
     @SuppressWarnings("rawtypes")
-    protected NodeCssState(Map<StyleableProperty, List<Style>> map, Node node, FXOMObject fxomObject) {
+    protected NodeCssState(Map<StyleableProperty<?>, List<Style>> map, Node node, FXOMObject fxomObject) {
         this.map = map;
         this.node = node;
         this.fxomObject = fxomObject;
@@ -641,7 +641,7 @@ public class NodeCssState {
 //                }
 //                System.out.println("\n\n\n");
 //            }
-        for (Map.Entry<StyleableProperty, List<Style>> entry : map.entrySet()) {//NOI18N
+        for (Map.Entry<StyleableProperty<?>, List<Style>> entry : map.entrySet()) {//NOI18N
             StyleableProperty<?> value = entry.getKey();
 //                System.out.println("\nStyleable property: " + value);
             assert entry.getValue() != null;

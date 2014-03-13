@@ -41,6 +41,8 @@ import com.sun.javafx.scene.input.PickResultChooser;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
+
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -59,6 +61,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.image.Image;
 import javafx.scene.layout.GridPane;
+
+import javax.naming.OperationNotSupportedException;
 
 @SuppressWarnings("deprecation")
 public class Deprecation {
@@ -80,13 +84,13 @@ public class Deprecation {
     }
 
 //    // RT-21096 : Promote impl_getStyleMap / impl_setStyleMap to public API
-    public static void setStyleMap(Node node, ObservableMap<StyleableProperty<?>, List<com.sun.javafx.css.Style>> map) {
-        node.impl_setStyleMap(map);
-    }
+//    public static void setStyleMap(Node node, ObservableMap<StyleableProperty<?>, List<com.sun.javafx.css.Style>> map) {
+//        node.impl_setStyleMap(map);
+//    }
 
 //    // RT-21096 : Promote impl_getStyleMap / impl_setStyleMap to public API
-    public static ObservableMap<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
-        return node.impl_getStyleMap();
+    public static Map<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
+        return node.impl_findStyles(null);
     }
 
     // Used to woraround RT-34863

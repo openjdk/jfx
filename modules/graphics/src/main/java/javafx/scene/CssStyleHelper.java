@@ -25,11 +25,9 @@
 package javafx.scene;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -40,8 +38,6 @@ import com.sun.javafx.scene.CssFlags;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
 import javafx.css.ParsedValue;
@@ -89,7 +85,7 @@ final class CssStyleHelper {
     /**
      * Creates a new StyleHelper.
      */
-    static CssStyleHelper createStyleHelper(final Node node, WritableValue<Boolean> clearCacheOnReuse, ObservableMap<StyleableProperty<?>, List<Style>> styleObserver) {
+    static CssStyleHelper createStyleHelper(final Node node, WritableValue<Boolean> clearCacheOnReuse) {
 
         // need to know how far we are to root in order to init arrays.
         // TODO: should we hang onto depth to avoid this nonsense later?
@@ -157,28 +153,16 @@ final class CssStyleHelper {
 
             if (mightInherit == false) {
 
-                //
-                // If there is an observer listening for css style changes, then that listener needs to be
-                // preserved, even if there aren't any changes. At some point in the future, this node might
-                // have styles and the observer should start notifying of changes.
-                //
-                // So, if there isn't an observer listening for css style changes, we can just return null here.
-                // If there is, then we'll fall through and create a new StyleHelper which will be assigned
-                // the current StyleHelper's observer.
-                //
-                if ((styleObserver == null) || (FXCollections.emptyObservableMap() == (ObservableMap)styleObserver)) {
-
-                    // If this node had a style helper, then reset properties to their initial value
-                    // since the node won't have a style helper after this call
-                    if (node.styleHelper != null) {
-                        node.styleHelper.resetToInitialValues(node);
-                    }
-
-                    //
-                    // This node didn't have a StyleHelper before and it doesn't need one now since there are
-                    // no styles in the StyleMap and no inherited styles.
-                    return null;
+                // If this node had a style helper, then reset properties to their initial value
+                // since the node won't have a style helper after this call
+                if (node.styleHelper != null) {
+                    node.styleHelper.resetToInitialValues(node);
                 }
+
+                //
+                // This node didn't have a StyleHelper before and it doesn't need one now since there are
+                // no styles in the StyleMap and no inherited styles.
+                return null;
             }
 
         }
@@ -222,9 +206,6 @@ final class CssStyleHelper {
         if (node.styleHelper != null) {
             node.styleHelper.resetToInitialValues(node);
         }
-
-        // Don't lose track of the observer, if any.
-        helper.observableStyleMap = styleObserver;
 
         return helper;
     }
@@ -543,23 +524,6 @@ final class CssStyleHelper {
 
     }
 
-    ObservableMap<StyleableProperty<?>, List<Style>> observableStyleMap;
-     /**
-      * RT-17293
-      */
-     ObservableMap<StyleableProperty<?>, List<Style>> getObservableStyleMap() {
-         return (observableStyleMap != null)
-             ? observableStyleMap
-             : FXCollections.<StyleableProperty<?>, List<Style>>emptyObservableMap();
-     }
-
-     /**
-      * RT-17293
-      */
-     void setObservableStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> observableStyleMap) {
-         this.observableStyleMap = observableStyleMap;
-     }
-
     /**
      * Called by the Node whenever it has transitioned from one set of
      * pseudo-class states to another. This function will then lookup the
@@ -647,13 +611,6 @@ final class CssStyleHelper {
             @SuppressWarnings("unchecked") // this is a widening conversion
             final CssMetaData<Styleable,Object> cssMetaData =
                     (CssMetaData<Styleable,Object>)styleables.get(n);
-
-            if (observableStyleMap != null) {
-                final StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
-                if (styleableProperty != null && observableStyleMap.containsKey(styleableProperty)) {
-                    observableStyleMap.remove(styleableProperty);
-                }
-            }
 
             // Don't bother looking up styles that don't inherit.
             if (inheritOnly && cssMetaData.isInherits() == false) {
@@ -792,12 +749,6 @@ final class CssStyleHelper {
                         cacheContainer.cssSetProperties.put(cssMetaData, initialValue);
                     }
 
-                }
-
-                if (observableStyleMap != null) {
-
-                    List<Style> styleList = getMatchingStyles(node, cssMetaData, true);
-                    observableStyleMap.put(styleableProperty, styleList);
                 }
 
             } catch (Exception e) {
@@ -1972,16 +1923,50 @@ final class CssStyleHelper {
 
 
     /**
-     * Called from CssMetaData getMatchingStyles
+     * Called from Node impl_getMatchingStyles
      * @param node
      * @param styleableProperty
      * @return
      */
-    List<Style> getMatchingStyles(final Styleable node, final CssMetaData styleableProperty) {
-        return getMatchingStyles(node, styleableProperty, false);
+    static List<Style> getMatchingStyles(final Styleable styleable, final CssMetaData styleableProperty) {
+
+        if (!(styleable instanceof Node)) return Collections.<Style>emptyList();
+
+        Node node = (Node)styleable;
+        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node, null);
+
+        if (helper != null) {
+            return helper.getMatchingStyles(node, styleableProperty, false);
+        }
+        else {
+            return Collections.<Style>emptyList();
+        }
     }
 
-    List<Style> getMatchingStyles(final Styleable node, final CssMetaData styleableProperty, boolean matchState) {
+    static Map<StyleableProperty<?>, List<Style>> getMatchingStyles(Map<StyleableProperty<?>, List<Style>> map, final Node node) {
+
+        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node, null);
+        if (helper != null) {
+            if (map == null) map = new HashMap<>();
+            for (CssMetaData metaData : node.getCssMetaData()) {
+                List<Style> styleList = helper.getMatchingStyles(node, metaData, true);
+                if (styleList != null && !styleList.isEmpty()) {
+                    StyleableProperty prop = metaData.getStyleableProperty(node);
+                    map.put(prop, styleList);
+                }
+            }
+        }
+
+        if (node instanceof Parent) {
+            for (Node child : ((Parent)node).getChildren()) {
+                map = getMatchingStyles(map, child);
+            }
+        }
+
+        return map;
+    }
+
+    private List<Style> getMatchingStyles(final Styleable node, final CssMetaData styleableProperty, boolean matchState) {
 
         final List<CascadingStyle> styleList = new ArrayList<CascadingStyle>();
 
