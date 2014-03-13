@@ -43,10 +43,8 @@ public class LoadNotificationsTest extends TestBase {
     private void testUrl(String url) {
         log.clear();
         assertion = null;
-        submit(new Runnable() {
-            @Override public void run() {
-                checkState(RUNNING, getEngine().getLoadWorker().getState());
-            }
+        submit(() -> {
+            checkState(RUNNING, getEngine().getLoadWorker().getState());
         });
         load(url);
         check();

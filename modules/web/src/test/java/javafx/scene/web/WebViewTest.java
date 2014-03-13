@@ -37,9 +37,9 @@ public class WebViewTest extends TestBase {
     }
     
     private void setFontScale(final WebView view, final float scale) throws Exception {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             view.setFontScale(scale);
-        }});
+        });
     }
 
     void checkZoom(WebView view, float zoom) {
@@ -47,10 +47,8 @@ public class WebViewTest extends TestBase {
     }
 
     private void setZoom(final WebView view, final float zoom) throws Exception {
-        submit(new Runnable() {
-            public void run() {
-                view.setZoom(zoom);
-            }
+        submit(() -> {
+            view.setZoom(zoom);
         });
     }
 }

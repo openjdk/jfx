@@ -24,11 +24,7 @@ import org.w3c.dom.Text;
 public class LoadTest extends TestBase {
     
     private State getLoadState() {
-        return submit(new Callable<State>() {
-            public State call() {
-                return getEngine().getLoadWorker().getState();
-            }
-        });
+        return submit(() -> getEngine().getLoadWorker().getState());
     }
 
     @Test public void testLoadGoodUrl() {
@@ -75,7 +71,7 @@ public class LoadTest extends TestBase {
         assertNull("Title should be null", web.getTitle());
 
         // DOM access should happen on FX thread
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Document doc = web.getDocument();
             assertNotNull("Document should not be null", doc);
             Node el = // html -> body -> pre -> text
@@ -83,7 +79,7 @@ public class LoadTest extends TestBase {
             String text = ((Text)el).getNodeValue();
             assertEquals("Plain text should not be interpreted as HTML",
                     TEXT, text);
-        }});
+        });
     }
 
     @Test public void testLoadEmpty() {
@@ -100,7 +96,7 @@ public class LoadTest extends TestBase {
         assertEquals("Location", "about:blank", web.getLocation());
         assertNull("Title should be null", web.getTitle());
 
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Document doc = web.getDocument();
             assertNotNull("Document should not be null", doc);
 
@@ -125,7 +121,7 @@ public class LoadTest extends TestBase {
             assertEquals("BODY element should have tag BODY", "BODY", body.getTagName());
             assertTrue("BODY element should have no children",
                     bodyNodes == null || bodyNodes.getLength() == 0);
-        }});
+        });
     }
 
     @Test public void testLoadUrlWithEncodedSpaces() {
@@ -149,10 +145,8 @@ public class LoadTest extends TestBase {
         WebEngine webEngine = getEngine();
         
         final StringBuilder result = new StringBuilder();
-        webEngine.setOnAlert(new EventHandler<WebEvent<String>>() {
-            @Override public void handle(WebEvent<String> event) {
-                result.append("ALERT: ").append(event.getData());
-            }
+        webEngine.setOnAlert(event -> {
+            result.append("ALERT: ").append(event.getData());
         });
         
         String scriptUrl =

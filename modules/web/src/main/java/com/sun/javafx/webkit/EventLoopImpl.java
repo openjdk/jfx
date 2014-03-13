@@ -26,16 +26,13 @@ public final class EventLoopImpl extends EventLoop {
         // a short delay so as to throttle the outer
         // ScriptDebugServer::pauseIfNeeded loop.
         final Object key = new Object();
-        executor.schedule(new Runnable() {
-            @Override
-            public void run() {
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toolkit.getToolkit().exitNestedEventLoop(key, null);
-                    }
-                });
-            }
+        executor.schedule(() -> {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    Toolkit.getToolkit().exitNestedEventLoop(key, null);
+                }
+            });
         }, DELAY, TimeUnit.MILLISECONDS);
         Toolkit.getToolkit().enterNestedEventLoop(key);
     }

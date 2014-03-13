@@ -101,21 +101,19 @@ public final class WebPage {
     private RenderFrame currentFrame = new RenderFrame();
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                NativeLibLoader.loadLibrary("jfxwebkit");
-                log.finer("jfxwebkit loaded");
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            NativeLibLoader.loadLibrary("jfxwebkit");
+            log.finer("jfxwebkit loaded");
 
-                if (CookieHandler.getDefault() == null) {
-                    boolean setDefault = Boolean.valueOf(System.getProperty(
-                            "com.sun.webkit.setDefaultCookieHandler",
-                            "true"));
-                    if (setDefault) {
-                        CookieHandler.setDefault(new CookieManager());
-                    }
+            if (CookieHandler.getDefault() == null) {
+                boolean setDefault = Boolean.valueOf(System.getProperty(
+                        "com.sun.webkit.setDefaultCookieHandler",
+                        "true"));
+                if (setDefault) {
+                    CookieHandler.setDefault(new CookieManager());
                 }
-                return null;
             }
+            return null;
         });
     }
 
@@ -594,10 +592,9 @@ public final class WebPage {
         try {
             final WCRenderQueue rq = WCGraphicsManager.getGraphicsManager().
                     createRenderQueue(new WCRectangle(x, y, w, h), true);
-            FutureTask<Void> f = new FutureTask<Void>(new Runnable() {
-                public void run() {
-                    twkUpdateContent(getPage(), rq, x, y, w, h);
-                }}, null);
+            FutureTask<Void> f = new FutureTask<Void>(() -> {
+                twkUpdateContent(getPage(), rq, x, y, w, h);
+            }, null);
             Invoker.getInvoker().invokeOnEventThread(f);
             
             try {
@@ -624,11 +621,8 @@ public final class WebPage {
             if (pageClient != null && pageClient.isBackBufferSupported()) {
                 if (!backbuffer.validate(width, height)) {
                     // We need to repaint the whole page on the next turn
-                    Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            repaintAll();
-                        }
+                    Invoker.getInvoker().invokeOnEventThread(() -> {
+                        repaintAll();
                     });
                     return;
                 }
@@ -1718,13 +1712,11 @@ public final class WebPage {
             final WCRenderQueue rq = WCGraphicsManager.getGraphicsManager().
                     createRenderQueue(null, true);
             final CountDownLatch l = new CountDownLatch(1);
-            Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-                public void run() {
-                    try {
-                        twkPrint(getPage(), rq, pageNumber, width);
-                    } finally {
-                        l.countDown();
-                    }
+            Invoker.getInvoker().invokeOnEventThread(() -> {
+                try {
+                    twkPrint(getPage(), rq, pageNumber, width);
+                } finally {
+                    l.countDown();
                 }
             });
 
