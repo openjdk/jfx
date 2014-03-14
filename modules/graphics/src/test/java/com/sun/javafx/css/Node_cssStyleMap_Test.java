@@ -56,6 +56,7 @@ import javafx.util.Pair;
 import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class Node_cssStyleMap_Test {
     
     public Node_cssStyleMap_Test() {
