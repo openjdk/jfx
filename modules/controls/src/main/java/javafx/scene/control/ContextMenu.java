@@ -243,7 +243,6 @@ public class ContextMenu extends PopupControl {
     // TODO provide more detail
      public void show(Node anchor, Side side, double dx, double dy) {
         if (anchor == null) return;
-        Event.fireEvent(this, new Event(Menu.ON_SHOWING));
         if (getItems().size() == 0) return;
 
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
@@ -269,14 +268,13 @@ public class ContextMenu extends PopupControl {
      */
     public void show(Node anchor, double screenX, double screenY) {
         if (anchor == null) return;
-        Event.fireEvent(this, new Event(Menu.ON_SHOWING));
         if (getItems().size() == 0) return;
-
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
         doShow(anchor, screenX, screenY);
     }
 
     private void doShow(Node anchor, double screenX, double screenY) {
+        Event.fireEvent(this, new Event(Menu.ON_SHOWING));
         if(isImpl_showRelativeToWindow()) {
             final Scene scene = (anchor == null) ? null : anchor.getScene();
             final Window win = (scene == null) ? null : scene.getWindow();
