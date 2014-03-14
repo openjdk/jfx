@@ -8,9 +8,9 @@
             <source-roots>
                 <root id="src.dir"/>
                 <root id="src.resources.dir" name="Resources"/>
-                <root id="src.jsl-decora-main.dir" name="JSL Decora Shader Sources"/>
-                <root id="src.jsl-prism-main.dir" name="JSL Prism Shader Sources"/>
                 <root id="src.jsl-decora.dir" name="JSL Decora Generated Sources"/>
+                <root id="src.jsl-decora3.dir"/>
+                <root id="src.jsl-prism3.dir"/>
                 <root id="src.jsl-prism.dir" name="JSL Prism Generated Sources"/>
             </source-roots>
             <test-roots>

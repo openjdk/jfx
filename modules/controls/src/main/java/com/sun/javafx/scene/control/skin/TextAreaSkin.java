@@ -807,9 +807,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         super.layoutChildren(x,y,w,h);
 
+        // Hide the scrollbars if the viewport is too small to show
+        // even the minimum amount of text (one character by default).
         Bounds bounds = scrollPane.getViewportBounds();
-        if (bounds != null && (bounds.getWidth() < contentView.minWidth(-1) ||
-                               bounds.getHeight() < contentView.minHeight(-1))) {
+        if (bounds != null && bounds.getWidth() > 0 && bounds.getHeight() > 0 &&
+            (bounds.getWidth() < contentView.minWidth(-1) ||
+             bounds.getHeight() < contentView.minHeight(-1))) {
             scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
             scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         }

@@ -1198,15 +1198,20 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
     }
     
     if (touchWindow != NULL) {
-        dx = -touchWindow->currentBounds.x;
-        dy = -touchWindow->currentBounds.y;
-        glass_application_notifyMultiTouchEvent(env, touchWindow, count,
-                                                states, ids, xabs, yabs,
-                                                dx, dy);
-        if (primaryPointIndex == -1) {
-            //all released
-            touchWindow = NULL;
+        //Check that touchWindow is still valid before using it. 
+        glass_window_list_lock();
+        if (glass_window_isExist(touchWindow)) {
+            dx = -touchWindow->currentBounds.x;
+            dy = -touchWindow->currentBounds.y;
+            glass_application_notifyMultiTouchEvent(env, touchWindow, count,
+                                                    states, ids, xabs, yabs,
+                                                    dx, dy);
+            if (primaryPointIndex == -1) {
+                //all released
+                touchWindow = NULL;
+            }
         }
+        glass_window_list_unlock();
     }
    
 }

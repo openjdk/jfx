@@ -88,9 +88,9 @@ public abstract class XYChart<X,Y> extends Chart {
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
 
     // to indicate which colors are being used for the series
-    BitSet colorBits = new BitSet(8);
+    private final BitSet colorBits = new BitSet(8);
     static String DEFAULT_COLOR = "default-color";
-    Map<Series, Integer> seriesColorMap = new HashMap<Series, Integer>();
+    final Map<Series, Integer> seriesColorMap = new HashMap<Series, Integer>();
     private boolean rangeValid = false;
     private final Line verticalZeroLine = new Line();
     private final Line horizontalZeroLine = new Line();
@@ -115,6 +115,8 @@ public abstract class XYChart<X,Y> extends Chart {
                     series.setToRemove = true;
                     series.setChart(null);
                     seriesRemoved(series);
+                    int idx = seriesColorMap.remove(series);
+                    colorBits.clear(idx);
 //                    seriesDefaultColorIndex --;
                 }
                 for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
@@ -1477,6 +1479,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
         private final ListChangeListener<Data<X,Y>> dataChangeListener = new ListChangeListener<Data<X, Y>>() {
             @Override public void onChanged(Change<? extends Data<X, Y>> c) {
+                final XYChart<X, Y> chart = getChart();
                 while (c.next()) {
                     // RT-25187 Probably a sort happened, just reorder the pointers and return.
                     if (c.wasPermutated()) {
@@ -1504,7 +1507,7 @@ public abstract class XYChart<X,Y> extends Chart {
                     if (c.getAddedSize() > 0) {
                         for (Data<X,Y> itemPtr = begin; itemPtr != null; itemPtr = itemPtr.next) {
                             if (itemPtr.setToRemove) {
-                                getChart().dataBeingRemovedIsAdded(itemPtr, Series.this);
+                                if (chart != null) chart.dataBeingRemovedIsAdded(itemPtr, Series.this);
                                 itemPtr.setToRemove = false;
                             }
                         }
@@ -1542,7 +1545,6 @@ public abstract class XYChart<X,Y> extends Chart {
                         }
                     }
                     // inform chart
-                    XYChart<X,Y> chart = getChart();
                     if(chart!=null) chart.dataItemsChanged(Series.this,
                             (List<Data<X,Y>>)c.getRemoved(), c.getFrom(), c.getTo(), c.wasPermutated());
                 }

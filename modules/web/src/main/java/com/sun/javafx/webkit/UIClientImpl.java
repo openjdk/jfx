@@ -66,22 +66,16 @@ public final class UIClientImpl implements UIClient {
             final PopupFeatures pf =
                     new PopupFeatures(menu, status, toolbar, resizable);
             WebEngine popup = AccessController.doPrivileged(
-                    new PrivilegedAction<WebEngine>() {
-                        @Override public WebEngine run() {
-                            return w.getCreatePopupHandler().call(pf);
-                        }
-                    }, getAccessContext());
+                    (PrivilegedAction<WebEngine>) () -> w.getCreatePopupHandler().call(pf), getAccessContext());
             return Accessor.getPageFor(popup);
         }
         return null;
     }
 
     private void dispatchWebEvent(final EventHandler handler, final WebEvent ev) {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override public Void run() {
-                handler.handle(ev);
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            handler.handle(ev);
+            return null;
         }, getAccessContext());
     }
 
@@ -148,11 +142,7 @@ public final class UIClientImpl implements UIClient {
         final WebEngine w = getWebEngine();
         if (w != null && w.getConfirmHandler() != null) {
             return AccessController.doPrivileged(
-                    new PrivilegedAction<Boolean>() {
-                        @Override public Boolean run() {
-                            return w.getConfirmHandler().call(text);
-                        }
-                    }, getAccessContext());
+                    (PrivilegedAction<Boolean>) () -> w.getConfirmHandler().call(text), getAccessContext());
         }
         return false;
     }
@@ -162,11 +152,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getPromptHandler() != null) {
             final PromptData data = new PromptData(text, defaultValue);
             return AccessController.doPrivileged(
-                    new PrivilegedAction<String>() {
-                        @Override public String run() {
-                            return w.getPromptHandler().call(data);
-                        }
-                    }, getAccessContext());
+                    (PrivilegedAction<String>) () -> w.getPromptHandler().call(data), getAccessContext());
         }
         return "";
     }

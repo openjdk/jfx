@@ -624,6 +624,7 @@ public abstract class TableRowSkinBase<T,
                 R cell = cellsIter.next();
                 cell.updateIndex(-1);
                 cell.getSkin().dispose();
+                cell.setSkin(null);
             }
             cellsMap.clear();
         }

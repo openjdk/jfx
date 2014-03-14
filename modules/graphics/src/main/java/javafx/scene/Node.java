@@ -104,6 +104,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
@@ -814,11 +815,8 @@ public abstract class Node implements EventTarget, Styleable {
         if (sceneChanged) {
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
-                if (oldScene != null) {
-                    oldScene.unregisterTraversable(Node.this);
-                }
                 if (newScene != null) {
-                    newScene.registerTraversable(Node.this);
+                    newScene.initializeInternalEventDispatcher();
                 }
             }
             focusSetDirty(oldScene);
@@ -7607,9 +7605,7 @@ public abstract class Node implements EventTarget, Styleable {
                     Scene _scene = getScene();
                     if (_scene != null) {
                         if (get()) {
-                            _scene.registerTraversable(Node.this);
-                        } else {
-                            _scene.unregisterTraversable(Node.this);
+                            _scene.initializeInternalEventDispatcher();
                         }
                         focusSetDirty(_scene);
                     }
@@ -8545,16 +8541,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
     public static List<Style> impl_getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
-        if (styleable != null && cssMetaData != null && styleable instanceof Node) {
-
-            Node node = (Node)styleable;
-
-            if (node.styleHelper != null) {
-                return node.styleHelper.getMatchingStyles(node, cssMetaData);
-            }
-
-        }
-        return Collections.<Style>emptyList();
+         return CssStyleHelper.getMatchingStyles(styleable, cssMetaData);
     }
 
      /**
@@ -8564,9 +8551,14 @@ public abstract class Node implements EventTarget, Styleable {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final ObservableMap<StyleableProperty<?>, List<Style>> impl_getStyleMap() {
-         return styleHelper != null
-             ? styleHelper.getObservableStyleMap()
-             : FXCollections.<StyleableProperty<?>, List<Style>>emptyObservableMap();
+         ObservableMap<StyleableProperty<?>, List<Style>> map =
+                 (ObservableMap<StyleableProperty<?>, List<Style>>)getProperties().get("STYLEMAP");
+         Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(map, this);
+         if (ret != null) {
+             if (ret instanceof ObservableMap) return (ObservableMap)ret;
+             return FXCollections.observableMap(ret);
+         }
+         return FXCollections.<StyleableProperty<?>, List<Style>>emptyObservableMap();
      }
 
      /**
@@ -8576,17 +8568,25 @@ public abstract class Node implements EventTarget, Styleable {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final void impl_setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
-         //
-         // Node doesn't have a field for this map. Rather, this is held by CssStyleHelper. If this node
-         // doesn't have a styleHelper, then there is nothing to attach the listener to. So a styleHelper has
-         // to be created.
-         //
-         if (styleHelper == null) {
-             styleHelper = CssStyleHelper.createStyleHelper(this, null, styleMap);
-         } else {
-             styleHelper.setObservableStyleMap(styleMap);
-         }
+         if (styleMap != null) getProperties().put("STYLEMAP", styleMap);
+         else getProperties().remove("STYLEMAP");
      }
+
+    /**
+     * Find CSS styles that were used to style this Node in its current pseudo-class state. The map will contain the styles from this node and,
+     * if the node is a Parent, its children. The node corresponding to an entry in the Map can be obtained by casting a StyleableProperty key to a
+     * javafx.beans.property.Property and calling getBean(). The List<Style> contains only those styles used to style the property and will contain
+     * styles used to resolve lookup values.
+     *
+     * @param styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
+     * @return The Map populated with matching styles.
+     */
+    @Deprecated // SB-dependency: RT-21096 has been filed to track this
+    public Map<StyleableProperty<?>,List<Style>> impl_findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
+
+        Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(styleMap, this);
+        return (ret != null) ? ret : Collections.<StyleableProperty<?>, List<Style>>emptyMap();
+    }
 
     /**
      * Flags used to indicate in which way this node is dirty (or whether it
@@ -8891,11 +8891,8 @@ public abstract class Node implements EventTarget, Styleable {
                 return;
             }
 
-            ObservableMap<StyleableProperty<?>, List<Style>> styleObserver =
-                    styleHelper != null ? styleHelper.observableStyleMap : null;
-
             // Match new styles if my own indicates I need to reapply
-            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint, styleObserver);
+            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint);
 
         }
 

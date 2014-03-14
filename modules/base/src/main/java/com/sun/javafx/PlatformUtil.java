@@ -37,6 +37,11 @@ import java.util.Properties;
 
 public class PlatformUtil {
 
+    // NOTE: since this class can be initialized by application code in some
+    // cases, we must encapsulate all calls to System.getProperty("...") in
+    // a doPrivileged block except for standard JVM properties such as
+    // os.name, os.version, os.arch, java.vm.name, etc.
+
     private static final String os = System.getProperty("os.name");
     private static final String version = System.getProperty("os.version");
     private static final boolean embedded;
@@ -60,7 +65,7 @@ public class PlatformUtil {
             doEGLCompositing = false;
     }
 
-    private static final boolean ANDROID = "android".equals(System.getProperty("javafx.platform")) || "Dalvik".equals(System.getProperty("java.vm.name"));
+    private static final boolean ANDROID = "android".equals(javafxPlatform) || "Dalvik".equals(System.getProperty("java.vm.name"));
     private static final boolean WINDOWS = os.startsWith("Windows");
     private static final boolean WINDOWS_VISTA_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.0f);
     private static final boolean WINDOWS_7_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.1f);

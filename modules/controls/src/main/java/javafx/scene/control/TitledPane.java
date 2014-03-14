@@ -33,6 +33,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
 
 import javafx.css.PseudoClass;
@@ -335,4 +336,9 @@ public class TitledPane extends Labeled {
         return getClassCssMetaData();
     }
 
+    @Override
+    public Orientation getContentBias() {
+        final Node c = getContent();
+        return c == null ? super.getContentBias() : c.getContentBias();
+    }
 }

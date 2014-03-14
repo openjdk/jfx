@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,25 @@
 
 package com.sun.javafx.scene.traversal;
 
-import javafx.scene.Node;
+import javafx.scene.Parent;
 
+public final class ParentTraversalEngine extends TraversalEngine{
 
-public interface Algorithm {
-    
-    /**
-     * Traverse from origin, in direction dir.
-     * Return a the new target Node or null if no suitable target is found.
-     */
-    public Node select(Node owner, Direction dir, TraversalEngine engine);
+    private final Parent root;
 
-    public Node selectFirst(TraversalEngine engine);
+    public ParentTraversalEngine(Parent root, Algorithm algorithm) {
+        super(algorithm);
+        this.root = root;
+    }
 
-    public Node selectLast(TraversalEngine engine);
-    
+    public ParentTraversalEngine(Parent root) {
+        super();
+        this.root = root;
+    }
+
+    @Override
+    protected Parent getRoot() {
+        return root;
+    }
+
 }

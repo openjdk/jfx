@@ -44,21 +44,14 @@ import javafx.geometry.Bounds;
 
 public class Hueristic2D implements Algorithm {
 
-    PlatformLogger focusLogger;
-
     Hueristic2D() {
-        focusLogger = Logging.getFocusLogger();
     }
 
     @Override
-    public Node traverse(Node node, Direction dir, TraversalEngine engine) {
+    public Node select(Node node, Direction dir, TraversalEngine engine) {
         Node newNode = null;
 
         cacheTraversal(node, dir, engine);
-
-        if (focusLogger.isLoggable(Level.FINER)) {
-            focusLogger.finer("old focus owner : "+node+", bounds : "+engine.getBounds(node));
-        }
 
         if (NEXT.equals(dir)) {
             newNode = TabOrderHelper.findNextFocusablePeer(node);
@@ -99,15 +92,6 @@ public class Hueristic2D implements Algorithm {
             }
         }
 
-        if (focusLogger.isLoggable(Level.FINER)) {
-            if (newNode != null) {
-                focusLogger.finer("new focus owner : "+newNode+", bounds : "+engine.getBounds(newNode));
-            }
-            else {
-                focusLogger.finer("no focus transfer");
-            }
-        }
-
         /*
         ** newNode will be null if there are no
         ** possible targets in the direction.
@@ -120,6 +104,16 @@ public class Hueristic2D implements Algorithm {
             }
         }
         return newNode;
+    }
+
+    @Override
+    public Node selectFirst(TraversalEngine engine) {
+        return TabOrderHelper.getFirstTargetNode(engine.getRoot());
+    }
+
+    @Override
+    public Node selectLast(TraversalEngine engine) {
+        return TabOrderHelper.getLastTargetNode(engine.getRoot());
     }
 
     private boolean isOnAxis(Direction dir, Bounds cur, Bounds tgt) {
@@ -474,30 +468,6 @@ public class Hueristic2D implements Algorithm {
             nearestNodeAverage.originLeftCornerDistance = originLeftCorner2D.distance(nearestNodeAverage.bounds.getMinX(), ySideInOpositeDirection.apply(nearestNodeAverage.bounds));
         }
 
-        if (focusLogger.isLoggable(Level.FINER)) {
-            if (nearestNodeOriginSimple2D != null) {
-                focusLogger.finer("nearestNodeOriginSimple2D.node : "+nearestNodeOriginSimple2D.node);
-            }
-            if (nearestNodeCurrentSimple2D != null) {
-                focusLogger.finer("nearestNodeCurrentSimple2D.node : "+nearestNodeCurrentSimple2D.node);
-            }
-            if (nearestNodeOnOriginX != null) {
-                focusLogger.finer("nearestNodeOnOriginX.node : "+nearestNodeOnOriginX.node);
-            }
-            if (nearestNodeOnCurrentX != null) {
-                focusLogger.finer("nearestNodeOnCurrentX.node : "+nearestNodeOnCurrentX.node);
-            }
-            if (nearestNodeAverage != null) {
-                focusLogger.finer("nearestNodeAverageUp.node : "+nearestNodeAverage.node);
-            }
-            if (nearestNodeLeft != null) {
-                focusLogger.finer("nearestNodeTopLeft.node : "+nearestNodeLeft.node);
-            }
-            if (nearestNodeAnythingAnywhere != null) {
-                focusLogger.finer("nearestNodeAnythingAnywhereUp.node : "+nearestNodeAnythingAnywhere.node);
-            }
-        }
-
         if (nearestNodeOnOriginX != null) {
             /*
             ** there's a preference, all else being equal, to return nearestNodeOnOriginX
@@ -803,30 +773,6 @@ public class Hueristic2D implements Algorithm {
             cacheStartTraversalDirection = null;
             reverseDirection = false;
             traversalNodeStack.clear();
-        }
-
-        if (focusLogger.isLoggable(Level.FINER)) {
-            if (nearestNodeOriginSimple2D != null) {
-                focusLogger.finer("nearestNodeOriginSimple2D.node : "+nearestNodeOriginSimple2D.node);
-            }
-            if (nearestNodeCurrentSimple2D != null) {
-                focusLogger.finer("nearestNodeCurrentSimple2D.node : "+nearestNodeCurrentSimple2D.node);
-            }
-            if (nearestNodeOnOriginY != null) {
-                focusLogger.finer("nearestNodeOnOriginY.node : "+nearestNodeOnOriginY.node);
-            }
-            if (nearestNodeOnCurrentY != null) {
-                focusLogger.finer("nearestNodeOnCurrentY.node : "+nearestNodeOnCurrentY.node);
-            }
-            if (nearestNodeAverage != null) {
-                focusLogger.finer("nearestNodeAverageLeft.node : "+nearestNodeAverage.node);
-            }
-            if (nearestNodeTopLeft != null) {
-                focusLogger.finer("nearestNodeTopLeft.node : "+nearestNodeTopLeft.node);
-            }
-            if (nearestNodeAnythingAnywhereLeft != null) {
-                focusLogger.finer("nearestNodeAnythingAnywhereLeft.node : "+nearestNodeAnythingAnywhereLeft.node);
-            }
         }
 
         if (nearestNodeOnOriginY != null) {

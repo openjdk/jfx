@@ -278,7 +278,7 @@ defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : 
 defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api")
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
-defineProperty("javaVersion", javaRuntimeVersion.split("[_\\-]")[0])
+defineProperty("javaVersion", javaRuntimeVersion.split("-")[0])
 defineProperty("javaBuildNumber", javaRuntimeVersion.substring(javaRuntimeVersion.lastIndexOf("-b") + 2))
 
 loadProperties("$projectDir/build.properties")
@@ -663,7 +663,7 @@ try {
                 String ver = v.substring(ib + 8, v.size() - 1);
 
                 defineProperty("jdkRuntimeVersion", ver)
-                defineProperty("jdkVersion", jdkRuntimeVersion.split("[_\\-]")[0])
+                defineProperty("jdkVersion", jdkRuntimeVersion.split("-")[0])
                 defineProperty("jdkBuildNumber", jdkRuntimeVersion.substring(jdkRuntimeVersion.lastIndexOf("-b") + 2))
             }
         }
@@ -916,16 +916,52 @@ void addJSL(Project project, String name, String pkg, Closure compile) {
     }
 }
 
+/**
+ * Parses a JDK version string. The string must be in one of the following
+ * two formats:
+ *
+ *     major.minor.subminor
+ * or
+ *     major.minor.subminor_update
+ *
+ * In both cases a list of 4 integers is returned, with element 3 set to
+ * 0 in the former case.
+ */
+List parseJdkVersion(String version) {
+    def arr = version.split("[_\\.]");
+    def intArr = [];
+    arr.each { s -> intArr += Integer.parseInt(s); }
+    if (intArr.size() < 4) intArr += 0;
+    return intArr;
+}
+
+/**
+ * Returns -1, 0, or 1 depending on whether JDK version "a" is less than,
+ * equal to, or grater than version "b".
+ */
+int compareJdkVersion(String a, String b) {
+    def aIntArr = parseJdkVersion(a);
+    def bIntArr = parseJdkVersion(b);
+
+    for (int i = 0; i < 4; i++) {
+        if (aIntArr[i] < bIntArr[i]) return -1;
+        if (aIntArr[i] > bIntArr[i]) return  1;
+    }
+    return 0;
+}
+
 // Task to verify the minimum level of Java needed to build JavaFX
 task verifyJava() {
     doLast {
-        if (jdkVersion != jfxBuildJdkVersion) {
-            fail("java version mismatch: ${jdkVersion} must be ${jfxBuildJdkVersion}")
-        }
-        def buildNum = Integer.parseInt(jdkBuildNumber)
-        def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
-        if (buildNum < minBuildNum) {
-            fail("java build number ($buildNum) < minimum build number ($minBuildNum)")
+        def status = compareJdkVersion(jdkVersion, jfxBuildJdkVersion);
+        if (status < 0) {
+            fail("java version mismatch: JDK version (${jdkVersion}) < minimum version (${jfxBuildJdkVersion})")
+        } else if (status == 0) {
+            def buildNum = Integer.parseInt(jdkBuildNumber)
+            def minBuildNum = Integer.parseInt(jfxBuildJdkBuildnumMin)
+            if (buildNum < minBuildNum) {
+                fail("JDK build number ($buildNum) < minimum build number ($minBuildNum)")
+            }
         }
     }
 }

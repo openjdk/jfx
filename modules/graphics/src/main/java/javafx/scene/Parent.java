@@ -25,6 +25,7 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -733,7 +734,7 @@ public abstract class Parent extends Node {
     }
 
     /** @treatAsPrivate implementation detail */
-    private javafx.beans.property.ObjectProperty<TraversalEngine> impl_traversalEngine;
+    private javafx.beans.property.ObjectProperty<ParentTraversalEngine> impl_traversalEngine;
 
     /**
      * @treatAsPrivate implementation detail
@@ -741,7 +742,7 @@ public abstract class Parent extends Node {
      */
     // SB-dependency: RT-21209 has been filed to track this
     @Deprecated
-    public final void setImpl_traversalEngine(TraversalEngine value) {
+    public final void setImpl_traversalEngine(ParentTraversalEngine value) {
         impl_traversalEngineProperty().set(value);
     }
 
@@ -750,7 +751,7 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final TraversalEngine getImpl_traversalEngine() {
+    public final ParentTraversalEngine getImpl_traversalEngine() {
         return impl_traversalEngine == null ? null : impl_traversalEngine.get();
     }
 
@@ -759,10 +760,10 @@ public abstract class Parent extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final ObjectProperty<TraversalEngine> impl_traversalEngineProperty() {
+    public final ObjectProperty<ParentTraversalEngine> impl_traversalEngineProperty() {
         if (impl_traversalEngine == null) {
             impl_traversalEngine =
-                    new SimpleObjectProperty<TraversalEngine>(
+                    new SimpleObjectProperty<>(
                             this, "impl_traversalEngine");
         }
         return impl_traversalEngine;

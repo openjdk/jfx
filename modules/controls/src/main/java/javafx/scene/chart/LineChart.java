@@ -396,7 +396,6 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     }
     private void updateDefaultColorIndex(final Series<X,Y> series) {
         int clearIndex = seriesColorMap.get(series);
-        colorBits.clear(clearIndex);
         series.getNode().getStyleClass().remove(DEFAULT_COLOR+clearIndex);
         for (int j=0; j < series.getData().size(); j++) {
             final Node node = series.getData().get(j).getNode();
@@ -404,7 +403,6 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 node.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
             }
         }
-        seriesColorMap.remove(series);
     }
 
     @Override protected  void seriesRemoved(final Series<X,Y> series) {

@@ -79,10 +79,8 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             int h = srcy2 - srcy1;
             final IntBuffer pixels = IntBuffer.allocate(w * h);
 
-            PrismInvoker.runOnRenderThread(new Runnable() {
-                public void run() {
-                    getTexture().readPixels(pixels);
-                }
+            PrismInvoker.runOnRenderThread(() -> {
+                getTexture().readPixels(pixels);
             });
             Image img = Image.fromIntArgbPreData(pixels, w, h);
             Texture t = g.getResourceFactory().createTexture(
@@ -101,12 +99,10 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
 
     @Override
     void dispose() {
-        PrismInvoker.invokeOnRenderThread(new Runnable() {
-            public void run() {
-                if (txt != null) {
-                    txt.dispose();
-                    txt = null;
-                }
+        PrismInvoker.invokeOnRenderThread(() -> {
+            if (txt != null) {
+                txt.dispose();
+                txt = null;
             }
         });
     }
@@ -132,38 +128,36 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             }
         }
         if (isNew || isDirty()) {
-            PrismInvoker.runOnRenderThread(new Runnable() {
-                public void run() {
-                    flushRQ();
-                    if (txt != null && pixelBuffer != null) {
-                        PixelFormat pf = txt.getPixelFormat();
-                        if (pf != PixelFormat.INT_ARGB_PRE &&
-                            pf != PixelFormat.BYTE_BGRA_PRE) {
+            PrismInvoker.runOnRenderThread(() -> {
+                flushRQ();
+                if (txt != null && pixelBuffer != null) {
+                    PixelFormat pf = txt.getPixelFormat();
+                    if (pf != PixelFormat.INT_ARGB_PRE &&
+                        pf != PixelFormat.BYTE_BGRA_PRE) {
 
-                            throw new AssertionError("Unexpected pixel format: " + pf);
-                        }
+                        throw new AssertionError("Unexpected pixel format: " + pf);
+                    }
 
-                        RTTexture t = txt;
-                        if (pixelScale != 1.0f) {
-                            // Convert [txt] to a texture the size of the image
-                            ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
-                            t = f.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
-                            Graphics g = t.createGraphics();
-                            g.drawTexture(txt, 0, 0, width, height,
-                                    0, 0, width * pixelScale, height * pixelScale);
-                        }
-                        
-                        pixelBuffer.rewind();
-                        int[] pixels = t.getPixels();
-                        if (pixels != null) {
-                            pixelBuffer.asIntBuffer().put(pixels);
-                        } else {
-                            t.readPixels(pixelBuffer);
-                        }
+                    RTTexture t = txt;
+                    if (pixelScale != 1.0f) {
+                        // Convert [txt] to a texture the size of the image
+                        ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
+                        t = f.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
+                        Graphics g = t.createGraphics();
+                        g.drawTexture(txt, 0, 0, width, height,
+                                0, 0, width * pixelScale, height * pixelScale);
+                    }
 
-                        if (t != txt) {
-                            t.dispose();
-                        }
+                    pixelBuffer.rewind();
+                    int[] pixels = t.getPixels();
+                    if (pixels != null) {
+                        pixelBuffer.asIntBuffer().put(pixels);
+                    } else {
+                        t.readPixels(pixelBuffer);
+                    }
+
+                    if (t != txt) {
+                        t.dispose();
                     }
                 }
             });
