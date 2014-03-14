@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,11 +33,14 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javafx.beans.property.Property;
 import javafx.collections.FXCollections;
 import javafx.collections.MapChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -49,6 +52,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import static org.junit.Assert.*;
 
+import javafx.util.Pair;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -58,153 +62,142 @@ public class Node_cssStyleMap_Test {
     }
 
     boolean disabled = false;
-    int nadds = 0;
-    int nremoves = 0;
 
-    static List<CascadingStyle> createStyleList(List<Declaration> decls) {
-        
-        final List<CascadingStyle> styles = new ArrayList<CascadingStyle>();
-        
-        for (Declaration decl : decls) {
-            styles.add(
-                new CascadingStyle(
-                    new Style(decl.rule.getUnobservedSelectorList().get(0), decl),
-                    new PseudoClassState(),
-                    0, 
-                    0
-                )
-            );
-        }
-        
-        return styles;
-    }
-    
-    static Map<String, List<CascadingStyle>> createStyleMap(List<CascadingStyle> styles) {
-        
-        final Map<String, List<CascadingStyle>> smap = 
-            new HashMap<String, List<CascadingStyle>>();
-        
-        final int max = styles != null ? styles.size() : 0;
-        for (int i=0; i<max; i++) {
-            final CascadingStyle style = styles.get(i);
-            final String property = style.getProperty();
-            // This is carefully written to use the minimal amount of hashing.
-            List<CascadingStyle> list = smap.get(property);
-            if (list == null) {
-                list = new ArrayList<CascadingStyle>(5);
-                smap.put(property, list);
+    private void checkFoundStyle(Property<?> property, Map<StyleableProperty<?>, List<Style>> map, List<Declaration> decls) {
+
+        List<Style> styles = map.get(property);
+        assert (styles != null && !styles.isEmpty());
+
+        String pname = ((StyleableProperty<?>)property).getCssMetaData().getProperty();
+        Declaration declaration = null;
+        for(Declaration decl : decls) {
+            if (pname.equals(decl.getProperty())) {
+                declaration = decl;
+                break;
             }
-            list.add(style);
         }
-        return smap;
+        assertNotNull(pname, declaration);
+
+        Style style = null;
+        for(Style s : styles) {
+            if (pname.equals(s.getDeclaration().getProperty())) {
+                style = s;
+                break;
+            }
+        }
+        assertNotNull(pname, style);
+
+        assert(style.getDeclaration() == declaration);
+
     }
     
-    @Test @Ignore ("Pending RT-34463")
-    public void testStyleMapTracksChanges() {
-                
+    @Test
+    public void testStyleMap() {
+
         final List<Declaration> declsNoState = new ArrayList<Declaration>();
-        Collections.addAll(declsNoState, 
+        Collections.addAll(declsNoState,
             new Declaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.RED, null), false),
             new Declaration("-fx-stroke", new ParsedValueImpl<Color,Color>(Color.YELLOW, null), false),
             new Declaration("-fx-stroke-width", new ParsedValueImpl<ParsedValue<?,Size>,Number>(
-                new ParsedValueImpl<Size,Size>(new Size(3d, SizeUnits.PX), null), 
+                new ParsedValueImpl<Size,Size>(new Size(3d, SizeUnits.PX), null),
                 SizeConverter.getInstance()), false)
         );
-        
-        
+
+
         final List<Selector> selsNoState = new ArrayList<Selector>();
-        Collections.addAll(selsNoState, 
+        Collections.addAll(selsNoState,
             Selector.createSelector(".rect")
         );
-        
-        Rule rule = new Rule(selsNoState, declsNoState);        
-        
-        Stylesheet stylesheet = new Stylesheet("testStyleMapTracksChanges");
+
+        Rule rule = new Rule(selsNoState, declsNoState);
+
+        Stylesheet stylesheet = new Stylesheet("testStyleMap");
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         stylesheet.getRules().add(rule);
-        
+
         final List<Declaration> declsDisabledState = new ArrayList<Declaration>();
-        Collections.addAll(declsDisabledState, 
+        Collections.addAll(declsDisabledState,
             new Declaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.GRAY, null), false),
             new Declaration("-fx-stroke", new ParsedValueImpl<Color,Color>(Color.DARKGRAY, null), false)
         );
-        
+
         final List<Selector> selsDisabledState = new ArrayList<Selector>();
-        Collections.addAll(selsDisabledState, 
+        Collections.addAll(selsDisabledState,
             Selector.createSelector(".rect:disabled")
         );
-        
-        rule = new Rule(selsDisabledState, declsDisabledState);        
+
+        rule = new Rule(selsDisabledState, declsDisabledState);
         stylesheet.getRules().add(rule);
-        
-        final List<CascadingStyle> stylesNoState = createStyleList(declsNoState);
-        final List<CascadingStyle> stylesDisabledState = createStyleList(declsDisabledState);
-        
-        // add to this list on wasAdded, check bean on wasRemoved.
-        final List<StyleableProperty<?>> beans = new ArrayList<StyleableProperty<?>>();
+
         Rectangle rect = new Rectangle(50,50);
         rect.getStyleClass().add("rect");
-        rect.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty<?>, List<Style>>()));
-        rect.impl_getStyleMap().addListener(new MapChangeListener<StyleableProperty, List<Style>>() {
-
-            public void onChanged(MapChangeListener.Change<? extends StyleableProperty, ? extends List<Style>> change) {
-
-                if (change.wasAdded()) {
-                    
-                    List<Style> styles = change.getValueAdded();
-                    for (Style style : styles) {
-
-                        // stroke width comes from ".rect" even for disabled state.
-                        if (disabled == false || "-fx-stroke-width".equals(style.getDeclaration().getProperty())) {
-                            assertTrue(style.getDeclaration().toString(),declsNoState.contains(style.getDeclaration()));
-                            assertTrue(style.getSelector().toString(),selsNoState.contains(style.getSelector()));
-                        } else {
-                            assertTrue(style.getDeclaration().toString(),declsDisabledState.contains(style.getDeclaration()));
-                            assertTrue(style.getSelector().toString(),selsDisabledState.contains(style.getSelector()));                            
-                        }
-                        Object value = style.getDeclaration().parsedValue.convert(null);
-                        StyleableProperty styleableProperty = change.getKey();
-                        beans.add(styleableProperty);
-                        assertEquals(styleableProperty.getValue(), value);
-                        nadds += 1;                        
-                    }
-                    
-                } if (change.wasRemoved()) {
-                    StyleableProperty styleableProperty = change.getKey();
-                    assert(beans.contains(styleableProperty));
-                    nremoves += 1;
-                }
-            }
-        });
 
         Group root = new Group();
         root.getChildren().add(rect);
-        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);        
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
         Scene scene = new Scene(root);
-        Stage stage = new Stage();
-        stage.setScene(scene);
-        stage.show();
 
-        // The three no state styles should be applied
-        assertEquals(3, nadds);
-        assertEquals(0, nremoves);
+        rect.applyCss();
+
+        Map<StyleableProperty<?>, List<Style>> map = rect.impl_findStyles(null);
+        assert (map != null && !map.isEmpty());
+
+        checkFoundStyle(rect.fillProperty(), map, declsNoState);
+        checkFoundStyle(rect.strokeProperty(), map, declsNoState);
+        checkFoundStyle(rect.strokeWidthProperty(), map, declsNoState);
 
         rect.setDisable(true);
-        disabled = true;
-        nadds = 0;
-        nremoves = 0;
-        
-        Toolkit.getToolkit().firePulse();
-        
-        // The three no state styles should be removed and the 
-        // two disabled state styles plus the stroke width style 
-        // should be applied. 
-        assertEquals(3, nadds);
-        assertEquals(3, nremoves);
-        
+        rect.applyCss();
+
+        map = rect.impl_findStyles(null);
+        assert (map != null && !map.isEmpty());
+
+        checkFoundStyle(rect.fillProperty(), map, declsDisabledState);
+        checkFoundStyle(rect.strokeProperty(), map, declsDisabledState);
+        checkFoundStyle(rect.strokeWidthProperty(), map, declsNoState);
+
     }
-    
-    @Test @Ignore ("Pending RT-34463")
+
+    @Test
+    public void testStyleMapChildren() {
+
+        final List<Declaration> declsNoState = new ArrayList<Declaration>();
+        Collections.addAll(declsNoState,
+                new Declaration("-fx-fill", new ParsedValueImpl<Color,Color>(Color.RED, null), false)
+        );
+
+        final List<Selector> selsNoState = new ArrayList<Selector>();
+        Collections.addAll(selsNoState,
+                Selector.createSelector(".rect")
+        );
+
+        Rule rule = new Rule(selsNoState, declsNoState);
+
+        Stylesheet stylesheet = new Stylesheet("testStyleMapChildren");
+        stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+        stylesheet.getRules().add(rule);
+
+        Rectangle rect = new Rectangle(50,50);
+        rect.getStyleClass().add("rect");
+
+        Group root = new Group();
+        Group group = new Group();
+        root.getChildren().add(group);
+        group.getChildren().add(rect);
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+        Scene scene = new Scene(root);
+
+        root.applyCss();
+
+        // Even though root and group have no styles, the styles for rect should still be found
+        Map<StyleableProperty<?>, List<Style>> map = root.impl_findStyles(null);
+        assert (map != null && !map.isEmpty());
+
+        checkFoundStyle(rect.fillProperty(), map, declsNoState);
+
+    }
+
+    @Test
     public void testRT_21212() {
 
         final List<Declaration> rootDecls = new ArrayList<Declaration>();
@@ -225,11 +218,6 @@ public class Node_cssStyleMap_Test {
         stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         stylesheet.getRules().add(rootRule);
 
-        final List<CascadingStyle> rootStyles = createStyleList(rootDecls);
-        final Map<String,List<CascadingStyle>> rootStyleMap = createStyleMap(rootStyles);
-        final Map<StyleCache.Key, StyleCache> styleCache = 
-            new HashMap<StyleCache.Key, StyleCache>();
-        
         Group group = new Group();
         group.getStyleClass().add("root");
         
@@ -257,42 +245,19 @@ public class Node_cssStyleMap_Test {
         Rule textRule = new Rule(textSels, textDecls);        
         stylesheet.getRules().add(textRule);
                 
-        final List<CascadingStyle> styles = createStyleList(textDecls);
-        final Map<String,List<CascadingStyle>> styleMap = createStyleMap(styles);
-        final Map<String,List<CascadingStyle>> emptyMap = createStyleMap(null);
-
         Text text = new Text("HelloWorld");
+        text.getStyleClass().add("text");
         group.getChildren().add(text);
 
-        final List<Declaration> expecteds = new ArrayList<Declaration>();
-        expecteds.addAll(rootDecls);
-        expecteds.addAll(textDecls);
-        text.getStyleClass().add("text");
-        text.impl_setStyleMap(FXCollections.observableMap(new HashMap<StyleableProperty<?>, List<Style>>()));
-        text.impl_getStyleMap().addListener(new MapChangeListener<StyleableProperty, List<Style>>() {
-
-            // a little different than the other tests since we should end up 
-            // with font and font-size in the map and nothing else. After all 
-            // the changes have been handled, the expecteds list should be empty.
-            public void onChanged(MapChangeListener.Change<? extends StyleableProperty, ? extends List<Style>> change) {
-                if (change.wasAdded()) {
-                    List<Style> styles = change.getValueAdded();
-                    for (Style style : styles) {
-                        assertTrue(expecteds.contains(style.getDeclaration()));
-                        expecteds.remove(style.getDeclaration());
-                    }
-                }
-            }
-        });
-             
-        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);        
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
         Scene scene = new Scene(group);
-        Stage stage = new Stage();
-        stage.setScene(scene);
-        stage.show();
 
-        assertEquals(18, text.getFont().getSize(),0);
-        assertTrue(Integer.toString(expecteds.size()), expecteds.isEmpty());
+        text.applyCss();
+
+        Map<StyleableProperty<?>, List<Style>> map = text.impl_findStyles(null);
+        assert (map != null && !map.isEmpty());
+
+        checkFoundStyle(text.fontProperty(), map, textDecls);
 
     }
 
