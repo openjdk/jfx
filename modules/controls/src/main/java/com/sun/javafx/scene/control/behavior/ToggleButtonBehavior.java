@@ -56,6 +56,11 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
     @Override
     protected void callAction(String name) {
         final ToggleGroup toggleGroup = getControl().getToggleGroup();
+        // A ToggleButton does not have to be in a group.
+        if (toggleGroup == null) {
+            super.callAction(name);
+            return;
+        }
         ObservableList<Toggle> toggles = toggleGroup.getToggles();
         final int currentToggleIdx = toggles.indexOf(getControl());
         switch (name) {
