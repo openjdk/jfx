@@ -31,6 +31,7 @@ import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 import static org.junit.Assert.*;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
@@ -38,16 +39,12 @@ import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.*;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.*;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
-import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
@@ -2692,5 +2689,33 @@ public class TableViewTest {
         assertEquals(2, fxList.size());
         assertEquals("B", fxList.get(0));
         assertEquals("C", fxList.get(1));
+    }
+
+    @Test public void test_rt36220() {
+        ObservableList<AtomicLong> tableItems = FXCollections.observableArrayList();
+        tableItems.add(new AtomicLong(0L));
+
+        TableView<AtomicLong> tableView = new TableView<>();
+        tableView.getItems().setAll(tableItems);
+
+        TableColumn<AtomicLong, String> col = new TableColumn<>();
+        col.setCellValueFactory(obj -> new SimpleStringProperty(String.valueOf(obj.getValue().longValue())));
+        col.setPrefWidth(180);
+        tableView.getColumns().add(col);
+
+        new StageLoader(tableView);
+
+        VirtualFlowTestUtils.assertTableCellTextEquals(tableView, 0, 0, "0");
+
+        // 1) using this trick will prevent the first update
+        col.setMinWidth(col.getPrefWidth() + 1);
+
+        long expected = System.currentTimeMillis();
+        tableItems.get(0).set(expected);
+        tableView.getItems().setAll(tableItems);
+
+        Toolkit.getToolkit().firePulse();
+
+        VirtualFlowTestUtils.assertTableCellTextEquals(tableView, 0, 0, ""+expected);
     }
 }

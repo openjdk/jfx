@@ -694,12 +694,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         
         if (needCellsRecreated) {
             flow.recreateCells();
-        } else if (needCellsReconfigured) {
-            flow.reconfigureCells();
         } else if (needCellsRebuilt) {
             flow.rebuildCells();
-        } 
-        
+        } else if (needCellsReconfigured) {
+            flow.reconfigureCells();
+        }
+
         needCellsRebuilt = false;
         needCellsRecreated = false;
         needCellsReconfigured = false;
