@@ -853,7 +853,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     
     @Override protected void layoutChildren() {
         if (needsRecreateCells) {
-            setMaxPrefBreadth(-1);
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
@@ -866,7 +865,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             cells.clear();
             pile.clear();
         } else if (needsRebuildCells) {
-            setMaxPrefBreadth(-1);
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
@@ -882,7 +880,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         final boolean hasSizeChange = sizeChanged;
         boolean recreatedOrRebuilt = needsRebuildCells || needsRecreateCells || sizeChanged;
-       
+
         needsRecreateCells = false;
         needsReconfigureCells = false;
         needsRebuildCells = false;
@@ -918,13 +916,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             corner.setVisible(false);
             return;
         }
-        
+
         // we check if any of the cells in the cells list need layout. This is a
         // sign that they are perhaps animating their sizes. Without this check,
         // we may not perform a layout here, meaning that the cell will likely
         // 'jump' (in height normally) when the user drags the virtual thumb as
         // that is the first time the layout would occur otherwise.
-        Cell cell;
         boolean cellNeedsLayout = false;
         boolean thumbNeedsLayout = false;
 
@@ -937,13 +934,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         if (!cellNeedsLayout) {
             for (int i = 0; i < cells.size(); i++) {
-                cell = cells.get(i);
+                Cell cell = cells.get(i);
                 cellNeedsLayout = cell.isNeedsLayout();
                 if (cellNeedsLayout) break;
             }
         }
-        cell = null;
-        
+
 
         T firstCell = getFirstVisibleCell();
 
@@ -977,16 +973,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 return;
             }
         }
-
-        // once per layout we reset the maximum pref breadth to -1 to allow for
-        // it to be recalculated. This is particularly useful when dealing with
-        // issues related to the control growing / shrinking in width and not
-        // correctly resizing cells (as the maxPrefBreadth was larger than the
-        // viewportBreadth when compared in fitCells()).
-        // The issue that resulted in this line being added was RT-34897.
-        setMaxPrefBreadth(-1);
-
-//        layingOut = true;
 
         /*
          * This function may get called under a variety of circumstances.
@@ -1048,13 +1034,29 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 getMaxPrefBreadth() == -1  ||
                 position != lastPosition   ||
                 cellCount != lastCellCount ||
-                hasSizeChange;
+                hasSizeChange ||
+                (isVertical && height < lastHeight) || (! isVertical && width < lastWidth);
+
+        if (!rebuild) {
+            // Check if maxPrefBreadth didn't change
+            double maxPrefBreadth = getMaxPrefBreadth();
+            boolean foundMax = false;
+            for (int i = 0; i < cells.size(); ++i) {
+                double breadth = getCellBreadth(cells.get(i));
+                if (maxPrefBreadth == breadth) {
+                    foundMax = true;
+                } else if (breadth > maxPrefBreadth) {
+                    rebuild = true;
+                    break;
+                }
+            }
+            if (!foundMax) { // All values were lower
+                rebuild = true;
+            }
+        }
 
         if (! rebuild) {
-            if ((isVertical && height < lastHeight) || (! isVertical && width < lastWidth)) {
-                // resized in the non-virtual direction
-                rebuild = true;
-            } else if ((isVertical && height > lastHeight) || (! isVertical && width > lastWidth)) {
+            if ((isVertical && height > lastHeight) || (! isVertical && width > lastWidth)) {
                 // resized in the virtual direction
                 needTrailingCells = true;
             }
@@ -1092,6 +1094,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         if (rebuild) {
+            setMaxPrefBreadth(-1);
             // Start by dumping all the cells into the pile
             addAllToPile();
             
@@ -1495,21 +1498,19 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
             }
 
-            // There was a weird bug where the newMax would sometimes go < 0
-            // when switching vertical and that would drive the min value to
-            // something crazy negative.
-            // Math.abs(..) used here to resolve RT-31653
-            double newMax = Math.max(1, Math.abs(getMaxPrefBreadth() - viewportBreadth));
-            if (newMax != breadthBar.getMax()) {
-                breadthBar.setMax(newMax);
+            if (getMaxPrefBreadth() != -1) {
+                double newMax = Math.max(1, getMaxPrefBreadth() - viewportBreadth);
+                if (newMax != breadthBar.getMax()) {
+                    breadthBar.setMax(newMax);
 
-                double breadthBarValue = breadthBar.getValue();
-                boolean maxed = breadthBarValue != 0 && newMax == breadthBarValue;
-                if (maxed || breadthBarValue > newMax) {
-                    breadthBar.setValue(newMax);
+                    double breadthBarValue = breadthBar.getValue();
+                    boolean maxed = breadthBarValue != 0 && newMax == breadthBarValue;
+                    if (maxed || breadthBarValue > newMax) {
+                        breadthBar.setValue(newMax);
+                    }
+
+                    breadthBar.setVisibleAmount((viewportBreadth / getMaxPrefBreadth()) * newMax);
                 }
-
-                breadthBar.setVisibleAmount((viewportBreadth / getMaxPrefBreadth()) * newMax);
             }
         }
         
