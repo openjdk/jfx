@@ -512,7 +512,7 @@ public class PackagerLibTest {
     @Ignore
     public void testPackageAsJar_existingJar_ExecutableJar()
             throws PackagerException, IOException {
-        System.out.println("Marker!");
+        System.err.println("Marker!");
         CreateJarParams params = defaultParams();
         params.applicationClass = null; //reset
         Manifest m = new Manifest();
