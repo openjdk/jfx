@@ -341,11 +341,11 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void setAnchor(int anchor) {
-        ListCellBehavior.setAnchor(getControl(), anchor);
+        ListCellBehavior.setAnchor(getControl(), anchor < 0 ? null : anchor);
     }
     
     private int getAnchor() {
-        return ListCellBehavior.getAnchor(getControl());
+        return ListCellBehavior.getAnchor(getControl(), getControl().getFocusModel().getFocusedIndex());
     }
     
     private boolean hasAnchor() {

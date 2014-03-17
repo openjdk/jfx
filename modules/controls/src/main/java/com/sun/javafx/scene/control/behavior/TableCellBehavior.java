@@ -56,7 +56,7 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableCol
      **************************************************************************/          
 
     /** @{@inheritDoc} */
-    @Override TableView<S> getTableControl() {
+    @Override TableView<S> getCellContainer() {
         return getControl().getTableView();
     }
 
@@ -67,22 +67,22 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableCol
 
     /** @{@inheritDoc} */
     @Override int getItemCount() {
-        return getTableControl().getItems().size();
+        return getCellContainer().getItems().size();
     }
 
     /** @{@inheritDoc} */
     @Override TableView.TableViewSelectionModel<S> getSelectionModel() {
-        return getTableControl().getSelectionModel();
+        return getCellContainer().getSelectionModel();
     }
 
     /** @{@inheritDoc} */
     @Override TableViewFocusModel<S> getFocusModel() {
-        return getTableControl().getFocusModel();
+        return getCellContainer().getFocusModel();
     }
 
     /** @{@inheritDoc} */
     @Override TablePositionBase getFocusedCell() {
-        return getTableControl().getFocusModel().getFocusedCell();
+        return getCellContainer().getFocusModel().getFocusedCell();
     }
 
     /** @{@inheritDoc} */
@@ -91,13 +91,8 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableCol
     }
 
     /** @{@inheritDoc} */
-    @Override TableColumnBase getVisibleLeafColumn(int index) {
-        return getTableControl().getVisibleLeafColumn(index);
-    }
-
-    /** @{@inheritDoc} */
     @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
-        return getTableControl().getVisibleLeafIndex((TableColumn) tc);
+        return getCellContainer().getVisibleLeafIndex((TableColumn) tc);
     }
 
     /** @{@inheritDoc} */
@@ -106,7 +101,11 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableCol
     }
 
     /** @{@inheritDoc} */
-    @Override void edit(int row, TableColumnBase tc) {
-        getTableControl().edit(row, (TableColumn)tc);
+    @Override void edit(TableCell<S,T> cell) {
+        if (cell == null) {
+            getCellContainer().edit(-1, null);
+        } else {
+            getCellContainer().edit(cell.getIndex(), cell.getTableColumn());
+        }
     }
 }

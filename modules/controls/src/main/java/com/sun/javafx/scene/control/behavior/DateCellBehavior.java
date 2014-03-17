@@ -51,7 +51,8 @@ import static javafx.scene.input.KeyEvent.*;
  * that subclasses implement so that CellSkinBase has API to call.
  *
  */
-public class DateCellBehavior extends CellBehaviorBase<DateCell> {
+public class DateCellBehavior extends BehaviorBase<DateCell> {
+
     /**************************************************************************
      *                          Setup KeyBindings                             *
      *************************************************************************/

@@ -289,11 +289,11 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void setAnchor(int anchor) {
-        TreeCellBehavior.setAnchor(getControl(), anchor);
+        TreeCellBehavior.setAnchor(getControl(), anchor < 0 ? null : anchor);
     }
     
     private int getAnchor() {
-        return TreeCellBehavior.getAnchor(getControl());
+        return TreeCellBehavior.getAnchor(getControl(), getControl().getFocusModel().getFocusedIndex());
     }
     
     private boolean hasAnchor() {

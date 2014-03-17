@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,49 +32,13 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
-import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- */
 public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, ?>, C extends IndexedCell<T>> extends CellBehaviorBase<C> {
-    
-    /***************************************************************************
-     *                                                                         *
-     * Private static implementation                                           *
-     *                                                                         *
-     **************************************************************************/
-    
-    private static final String ANCHOR_PROPERTY_KEY = "table.anchor";
-    
-    static TablePositionBase getAnchor(Control table, TablePositionBase focusedCell) {
-        return hasAnchor(table) ? 
-                (TablePositionBase) table.getProperties().get(ANCHOR_PROPERTY_KEY) : 
-                focusedCell;
-    }
-    
-    static void setAnchor(Control table, TablePositionBase anchor) {
-        if (table != null && anchor == null) {
-            removeAnchor(table);
-        } else {
-            table.getProperties().put(ANCHOR_PROPERTY_KEY, anchor);
-        }
-    }
-    
-    static boolean hasAnchor(Control table) {
-        return table.getProperties().get(ANCHOR_PROPERTY_KEY) != null;
-    }
-    
-    static void removeAnchor(Control table) {
-        table.getProperties().remove(ANCHOR_PROPERTY_KEY);
-    }
-    
-    
     
     /***************************************************************************
      *                                                                         *
@@ -82,10 +46,6 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *                                                                         *
      **************************************************************************/      
 
-    // To support touch devices, we have to slightly modify this behavior, such
-    // that selection only happens on mouse release, if only minimal dragging
-    // has occurred.
-    private boolean latePress = false;
 
     /***************************************************************************
      *                                                                         *
@@ -105,14 +65,12 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *                                                                        *  
      *************************************************************************/  
     
-    abstract Control getTableControl(); // tableCell.getTreeTableView()
     abstract TableColumnBase<S, T> getTableColumn(); // getControl().getTableColumn()
     abstract int getItemCount();        // tableView.impl_getTreeItemCount()
     abstract TableSelectionModel<S> getSelectionModel();
     abstract TableFocusModel<S,TC> getFocusModel();
     abstract TablePositionBase getFocusedCell();
     abstract boolean isTableRowSelected(); // tableCell.getTreeTableRow().isSelected()
-    abstract TableColumnBase<S,T> getVisibleLeafColumn(int index);
 
     /**
      * Returns the position of the given table column in the visible leaf columns
@@ -121,8 +79,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
     protected abstract int getVisibleLeafIndex(TableColumnBase<S,T> tc);
     
     abstract void focus(int row, TableColumnBase<S,T> tc); //fm.focus(new TreeTablePosition(tableView, row, tableColumn));
-    abstract void edit(int row, TableColumnBase<S,T> tc); 
-    
+
     
     
     /***************************************************************************
@@ -131,35 +88,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *                                                                         *
      **************************************************************************/    
     
-    @Override public void mousePressed(MouseEvent e) {
-        if (e.isSynthesized()) {
-            latePress = true;
-        } else {
-            latePress  = getControl().isSelected();
-            if (!latePress) {
-                doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
-                         e.isShiftDown(), e.isShortcutDown());
-            }
-        }
-    }
-    
-    @Override public void mouseReleased(MouseEvent e) {
-        if (latePress) {
-            latePress = false;
-            doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
-                     e.isShiftDown(), e.isShortcutDown());
-        }
-    }
-    
-    @Override public void mouseDragged(MouseEvent e) {
-        latePress = false;
-    }
 
-    @Override public void contextMenuRequested(ContextMenuEvent e) {
-        doSelect(e.getX(), e.getY(), MouseButton.SECONDARY, 1, false, false);
-    }
-
-    
     
     /***************************************************************************
      *                                                                         *
@@ -167,7 +96,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *                                                                         *
      **************************************************************************/   
     
-    private void doSelect(final double x, final double y, final MouseButton button,
+    protected void doSelect(final double x, final double y, final MouseButton button,
                           final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         // Note that table.select will reset selection
         // for out of bounds indexes. So, need to check
@@ -177,7 +106,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // we don't want to react to it.
         if (! tableCell.contains(x, y)) return;
 
-        final Control tableView = getTableControl();
+        final Control tableView = getCellContainer();
         if (tableView == null) return;
         
         int count = getItemCount();
@@ -198,8 +127,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
         // if the user has clicked on the disclosure node, we do nothing other
         // than expand/collapse the tree item (if applicable). We do not do editing!
-        boolean disclosureClicked = checkDisclosureNodeClick(x, y);
-        if (disclosureClicked) {
+        if (handleDisclosureNode(x, y)) {
             return;
         }
         
@@ -236,49 +164,21 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                     final TablePositionBase anchor = getAnchor(tableView, focusedCell);
 
                     final int anchorRow = anchor.getRow();
-                    final boolean asc = anchorRow < row;
-                    
-                    // and then determine all row and columns which must be selected
-                    int minRow = Math.min(anchor.getRow(), row);
-                    int maxRow = Math.max(anchor.getRow(), row);
-                    TableColumnBase<S,T> minColumn = anchor.getColumn() < column ? anchor.getTableColumn() : tableColumn;
-                    TableColumnBase<S,T> maxColumn = anchor.getColumn() >= column ? anchor.getTableColumn() : tableColumn;
 
                     if (sm.isCellSelectionEnabled()) {
                         // clear selection, but maintain the anchor
                         sm.clearSelection();
 
+                        // and then determine all row and columns which must be selected
+                        int minRow = Math.min(anchor.getRow(), row);
+                        int maxRow = Math.max(anchor.getRow(), row);
+                        TableColumnBase<S,T> minColumn = anchor.getColumn() < column ? anchor.getTableColumn() : tableColumn;
+                        TableColumnBase<S,T> maxColumn = anchor.getColumn() >= column ? anchor.getTableColumn() : tableColumn;
+
                         // and then perform the selection
                         sm.selectRange(minRow, minColumn, maxRow, maxColumn);
                     } else {
-                        // To prevent RT-32119, we make a copy of the selected indices
-                        // list first, so that we are not iterating and modifying it
-                        // concurrently.
-                        List<Integer> selectedIndices = new ArrayList<>(sm.getSelectedIndices());
-                        for (int i = 0, max = selectedIndices.size(); i < max; i++) {
-                            int selectedIndex = selectedIndices.get(i);
-                            if (selectedIndex < minRow || selectedIndex > maxRow) {
-                                sm.clearSelection(selectedIndex);
-                            }
-                        }
-
-                        if (minRow == maxRow) {
-                            // RT-32560: This prevents the anchor 'sticking' in
-                            // the wrong place when a range is selected and then
-                            // selection goes back to the anchor position.
-                            // (Refer to the video in RT-32560 for more detail).
-                            sm.select(minRow);
-                        } else {
-                            // RT-21444: We need to put the range in the correct
-                            // order or else the last selected row will not be the
-                            // last item in the selectedItems list of the selection
-                            // model,
-                            if (asc) {
-                                sm.selectRange(minRow, maxRow + 1);
-                            } else {
-                                sm.selectRange(maxRow, minRow - 1);
-                            }
-                        }
+                        selectRows(anchorRow, row);
                     }
 
                     // This line of code below was disabled as a fix for RT-30394.
@@ -314,20 +214,15 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // handle editing, which only occurs with the primary mouse button
         if (button == MouseButton.PRIMARY) {
             if (clickCount == 1 && isAlreadySelected) {
-                edit(row, column);
+                edit(getControl());
             } else if (clickCount == 1) {
                 // cancel editing
-                edit(-1, null);
+                edit(null);
             } else if (clickCount == 2 && getControl().isEditable()) {
                 // edit at the specified row and column
-                edit(row, column);
+                edit(getControl());
             }
         }
-    }
-
-    protected boolean checkDisclosureNodeClick(double x, double y) {
-        // by default we don't care about disclosure nodes
-        return false;
     }
 
     private int getColumn() {

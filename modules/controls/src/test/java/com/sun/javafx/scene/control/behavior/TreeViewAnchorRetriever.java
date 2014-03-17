@@ -31,6 +31,6 @@ public class TreeViewAnchorRetriever {
 
     // can only access the getAnchor method in TreeCellBehavior from this package
     public static int getAnchor(TreeView treeView) {
-        return TreeCellBehavior.getAnchor(treeView);
+        return TreeCellBehavior.getAnchor(treeView, -1);
     }
 }
