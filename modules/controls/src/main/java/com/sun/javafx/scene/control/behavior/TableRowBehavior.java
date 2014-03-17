@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.*;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
@@ -66,31 +67,36 @@ public class TableRowBehavior<T> extends CellBehaviorBase<TableRow<T>> {
      *                                                                         *
      **************************************************************************/
 
-    @Override public void mousePressed(MouseEvent event) {
+    @Override public void mousePressed(MouseEvent e) {
         // we only care about clicks to the right of the right-most column
-        if (! isClickOutsideCellBounds(event.getX())) return;
+        if (! isClickOutsideCellBounds(e.getX())) return;
 
-        if (event.isSynthesized()) {
+        if (e.isSynthesized()) {
             latePress = true;
         } else {
             latePress  = getControl().isSelected();
             if (!latePress) {
-                doSelect(event);
+                doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                         e.isShiftDown(), e.isShortcutDown());
             }
         }
     }
 
-    @Override public void mouseReleased(MouseEvent event) {
+    @Override public void mouseReleased(MouseEvent e) {
         if (latePress) {
             latePress = false;
-            doSelect(event);
+            doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                     e.isShiftDown(), e.isShortcutDown());
         }
     }
 
-    @Override public void mouseDragged(MouseEvent event) {
+    @Override public void mouseDragged(MouseEvent e) {
         latePress = false;
     }
 
+    @Override public void contextMenuRequested(ContextMenuEvent e) {
+        doSelect(e.getX(), e.getY(), MouseButton.SECONDARY, 1, false, false);
+    }
 
 
 
@@ -100,11 +106,9 @@ public class TableRowBehavior<T> extends CellBehaviorBase<TableRow<T>> {
      *                                                                         *
      **************************************************************************/
 
-    private void doSelect(MouseEvent e) {
-        super.mouseReleased(e);
-        
-        if (e.getButton() != MouseButton.PRIMARY) return;
-        
+    private void doSelect(final double x, final double y, final MouseButton button,
+                          final int clickCount, final boolean shiftDown,
+                          final boolean shortcutDown) {
         final TableRow<T> tableRow = getControl();
         final TableView<T> table = tableRow.getTableView();
         if (table == null) return;
@@ -113,20 +117,19 @@ public class TableRowBehavior<T> extends CellBehaviorBase<TableRow<T>> {
         
         final int index = getControl().getIndex();
         final boolean isAlreadySelected = sm.isSelected(index);
-        int clickCount = e.getClickCount();
         if (clickCount == 1) {
             // we only care about clicks to the right of the right-most column
-            if (! isClickOutsideCellBounds(e.getX())) return;
+            if (! isClickOutsideCellBounds(x)) return;
             
             // In the case of clicking to the right of the rightmost
             // TreeTableCell, we should still support selection, so that
             // is what we are doing here.
-            if (isAlreadySelected && e.isShortcutDown()) {
+            if (isAlreadySelected && shortcutDown) {
                 sm.clearSelection(index);
             } else {
-                if (e.isShortcutDown()) {
+                if (shortcutDown) {
                     sm.select(tableRow.getIndex());
-                } else if (e.isShiftDown()) {
+                } else if (shiftDown) {
                     // we add all rows between the current focus and
                     // this row (inclusive) to the current selection.
                     TablePositionBase anchor = TableCellBehavior.getAnchor(table, table.getFocusModel().getFocusedCell());

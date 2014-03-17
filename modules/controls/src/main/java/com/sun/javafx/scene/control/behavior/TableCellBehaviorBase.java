@@ -32,6 +32,7 @@ import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
@@ -130,28 +131,34 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *                                                                         *
      **************************************************************************/    
     
-    @Override public void mousePressed(MouseEvent event) {
-        if (event.isSynthesized()) {
+    @Override public void mousePressed(MouseEvent e) {
+        if (e.isSynthesized()) {
             latePress = true;
         } else {
             latePress  = getControl().isSelected();
             if (!latePress) {
-                doSelect(event);
+                doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                         e.isShiftDown(), e.isShortcutDown());
             }
         }
     }
     
-    @Override public void mouseReleased(MouseEvent event) {
+    @Override public void mouseReleased(MouseEvent e) {
         if (latePress) {
             latePress = false;
-            doSelect(event);
+            doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                     e.isShiftDown(), e.isShortcutDown());
         }
     }
     
-    @Override public void mouseDragged(MouseEvent event) {
+    @Override public void mouseDragged(MouseEvent e) {
         latePress = false;
     }
-    
+
+    @Override public void contextMenuRequested(ContextMenuEvent e) {
+        doSelect(e.getX(), e.getY(), MouseButton.SECONDARY, 1, false, false);
+    }
+
     
     
     /***************************************************************************
@@ -160,14 +167,15 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *                                                                         *
      **************************************************************************/   
     
-    private void doSelect(MouseEvent e) {
+    private void doSelect(final double x, final double y, final MouseButton button,
+                          final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         // Note that table.select will reset selection
         // for out of bounds indexes. So, need to check
         final C tableCell = getControl();
 
         // If the mouse event is not contained within this tableCell, then
         // we don't want to react to it.
-        if (! tableCell.contains(e.getX(), e.getY())) return;
+        if (! tableCell.contains(x, y)) return;
 
         final Control tableView = getTableControl();
         if (tableView == null) return;
@@ -190,7 +198,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
         // if the user has clicked on the disclosure node, we do nothing other
         // than expand/collapse the tree item (if applicable). We do not do editing!
-        boolean disclosureClicked = checkDisclosureNodeClick(e);
+        boolean disclosureClicked = checkDisclosureNodeClick(x, y);
         if (disclosureClicked) {
             return;
         }
@@ -199,7 +207,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // recorded, we record the focus index now so that subsequent shift+clicks
         // result in the correct selection occuring (whilst the focus index moves
         // about).
-        if (e.isShiftDown()) {
+        if (shiftDown) {
             if (! hasAnchor(tableView)) {
                 setAnchor(tableView, focusedCell);
             }
@@ -209,12 +217,11 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
         // we must update the table appropriately, and this is determined by
         // what modifiers the user held down as they released the mouse.
-        MouseButton button = e.getButton();
-        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) { 
+        if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) {
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-                simpleSelect(e);
+                simpleSelect(button, clickCount, shortcutDown);
             } else {
-                if (e.isControlDown() || e.isMetaDown()) {
+                if (shortcutDown) {
                     if (selected) {
                         // we remove this row/cell from the current selection
                         sm.clearSelection(row, tableColumn);
@@ -223,7 +230,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                         // We add this cell/row to the current selection
                         sm.select(row, tableColumn);
                     }
-                } else if (e.isShiftDown()) {
+                } else if (shiftDown) {
                     // we add all cells/rows between the current selection focus and
                     // this cell/row (inclusive) to the current selection.
                     final TablePositionBase anchor = getAnchor(tableView, focusedCell);
@@ -283,19 +290,19 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
                     // return selection back to the focus owner
                     // focus(anchor.getRow(), tableColumn);
                 } else {
-                    simpleSelect(e);
+                    simpleSelect(button, clickCount, shortcutDown);
                 }
             }
         }
     }
 
-    protected void simpleSelect(MouseEvent e) {
+    protected void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
         final TableSelectionModel<S> sm = getSelectionModel();
         final int row = getControl().getIndex();
         final TableColumnBase<S,T> column = getTableColumn();
         boolean isAlreadySelected = sm.isSelected(row, sm.isCellSelectionEnabled() ? column : null);
 
-        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
+        if (isAlreadySelected && shortcutDown) {
             sm.clearSelection(row, column);
             getFocusModel().focus(row, (TC) (sm.isCellSelectionEnabled() ? column : null));
             isAlreadySelected = false;
@@ -305,20 +312,20 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         }
 
         // handle editing, which only occurs with the primary mouse button
-        if (e.getButton() == MouseButton.PRIMARY) {
-            if (e.getClickCount() == 1 && isAlreadySelected) {
+        if (button == MouseButton.PRIMARY) {
+            if (clickCount == 1 && isAlreadySelected) {
                 edit(row, column);
-            } else if (e.getClickCount() == 1) {
+            } else if (clickCount == 1) {
                 // cancel editing
                 edit(-1, null);
-            } else if (e.getClickCount() == 2 && getControl().isEditable()) {
+            } else if (clickCount == 2 && getControl().isEditable()) {
                 // edit at the specified row and column
                 edit(row, column);
             }
         }
     }
 
-    protected boolean checkDisclosureNodeClick(MouseEvent e) {
+    protected boolean checkDisclosureNodeClick(double x, double y) {
         // by default we don't care about disclosure nodes
         return false;
     }

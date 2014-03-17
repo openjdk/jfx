@@ -33,6 +33,7 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import sun.util.logging.PlatformLogger;
@@ -112,30 +113,34 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
      *                                                                         *
      **************************************************************************/
 
-    @Override public void mousePressed(MouseEvent event) {
+    @Override public void mousePressed(MouseEvent e) {
 
-        if (event.isSynthesized()) {
+        if (e.isSynthesized()) {
             latePress = true;
         } else {
             latePress  = getControl().isSelected();
             if (!latePress) {
-                doSelect(event);
+                doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                         e.isShiftDown(), e.isShortcutDown());
             }
         }
     }
 
-    @Override public void mouseReleased(MouseEvent event) {
+    @Override public void mouseReleased(MouseEvent e) {
         if (latePress) {
             latePress = false;
-            doSelect(event);
+            doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                     e.isShiftDown(), e.isShortcutDown());
         }
     }
 
-    @Override public void mouseDragged(MouseEvent event) {
+    @Override public void mouseDragged(MouseEvent e) {
         latePress = false;
     }
 
-
+    @Override public void contextMenuRequested(ContextMenuEvent e) {
+        doSelect(e.getX(), e.getY(), MouseButton.SECONDARY, 1, false, false);
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -143,7 +148,8 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
      *                                                                         *
      **************************************************************************/
 
-    private void doSelect(MouseEvent event) {
+    private void doSelect(final double x, final double y, final MouseButton button,
+                          final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         // we update the cell to point to the new tree node
         TreeCell<T> treeCell = getControl();
         TreeView<T> treeView = treeCell.getTreeView();
@@ -151,13 +157,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
 
         // If the mouse event is not contained within this TreeCell, then
         // we don't want to react to it.
-        if (treeCell.isEmpty() || ! treeCell.contains(event.getX(), event.getY())) {
-            final PlatformLogger logger = Logging.getControlsLogger();
-            if (treeCell.isEmpty() && logger.isLoggable(Level.WARNING)) {
-//                logger.warning("TreeCell is empty, so mouse pressed event is "
-//                        + "ignored. If you've created a custom cell and overridden "
-//                        + "updateItem, be sure to call super.updateItem(item, empty)");
-            }
+        if (treeCell.isEmpty() || ! treeCell.contains(x, y)) {
             return;
         }
 
@@ -173,7 +173,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
         // than expand/collapse the tree item (if applicable). We do not do editing!
         Node disclosureNode = treeCell.getDisclosureNode();
         if (disclosureNode != null) {
-            if (disclosureNode.getBoundsInParent().contains(event.getX(), event.getY())) {
+            if (disclosureNode.getBoundsInParent().contains(x, y)) {
                 if (treeCell.getTreeItem() != null) {
                     treeCell.getTreeItem().setExpanded(! treeCell.getTreeItem().isExpanded());
                 }
@@ -185,7 +185,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
         // recorded, we record the focus index now so that subsequent shift+clicks
         // result in the correct selection occuring (whilst the focus index moves
         // about).
-        if (event.isShiftDown()) {
+        if (shiftDown) {
             if (! hasAnchor(treeView)) {
                 setAnchor(treeView, fm.getFocusedIndex());
             }
@@ -193,12 +193,11 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
             removeAnchor(treeView);
         }
 
-        MouseButton button = event.getButton();
         if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) {
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-                simpleSelect(event);
+                simpleSelect(button, clickCount, shortcutDown);
             } else {
-                if (event.isControlDown() || event.isMetaDown()) {
+                if (shortcutDown) {
                     if (selected) {
                         // we remove this row from the current selection
                         sm.clearSelection(index);
@@ -207,7 +206,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
                         // We add this row to the current selection
                         sm.select(index);
                     }
-                } else if (event.isShiftDown() && event.getClickCount() == 1) {
+                } else if (shiftDown && clickCount == 1) {
                     // we add all rows between the current selection focus and
                     // this row (inclusive) to the current selection.
                     final int focusedIndex = getAnchor(treeView);
@@ -243,20 +242,20 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
 
                     fm.focus(index);
                 } else {
-                    simpleSelect(event);
+                    simpleSelect(button, clickCount, shortcutDown);
                 }
             }
         }
     }
 
-    private void simpleSelect(MouseEvent e) {
+    private void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
         TreeView<T> tv = getControl().getTreeView();
         TreeItem<T> treeItem = getControl().getTreeItem();
         int index = getControl().getIndex();
         MultipleSelectionModel<TreeItem<T>> sm = tv.getSelectionModel();
         boolean isAlreadySelected = sm.isSelected(index);
 
-        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
+        if (isAlreadySelected && shortcutDown) {
             sm.clearSelection(index);
             tv.getFocusModel().focus(index);
             isAlreadySelected = false;
@@ -265,16 +264,16 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
         }
 
         // handle editing, which only occurs with the primary mouse button
-        if (e.getButton() == MouseButton.PRIMARY) {
-            if (e.getClickCount() == 1 && isAlreadySelected) {
+        if (button == MouseButton.PRIMARY) {
+            if (clickCount == 1 && isAlreadySelected) {
                 tv.edit(treeItem);
-            } else if (e.getClickCount() == 1) {
+            } else if (clickCount == 1) {
                 // cancel editing
                 tv.edit(null);
-            } else if (e.getClickCount() == 2 && treeItem.isLeaf()) {
+            } else if (clickCount == 2 && treeItem.isLeaf()) {
                 // attempt to edit
                 tv.edit(treeItem);
-            } else if (e.getClickCount() % 2 == 0) {
+            } else if (clickCount % 2 == 0) {
                 // try to expand/collapse branch tree item
                 treeItem.setExpanded(! treeItem.isExpanded());
             }

@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
@@ -66,24 +67,26 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
      *                                                                         *
      **************************************************************************/
 
-    @Override public void mousePressed(MouseEvent event) {
+    @Override public void mousePressed(MouseEvent e) {
         // we only care about clicks to the right of the right-most column
-        if (! isClickOutsideCellBounds(event.getX())) return;
+        if (! isClickOutsideCellBounds(e.getX())) return;
 
-        if (event.isSynthesized()) {
+        if (e.isSynthesized()) {
             latePress = true;
         } else {
             latePress  = getControl().isSelected();
             if (!latePress) {
-                doSelect(event);
+                doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                         e.isShiftDown(), e.isShortcutDown());
             }
         }
     }
 
-    @Override public void mouseReleased(MouseEvent event) {
+    @Override public void mouseReleased(MouseEvent e) {
         if (latePress) {
             latePress = false;
-            doSelect(event);
+            doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                     e.isShiftDown(), e.isShortcutDown());
         }
     }
 
@@ -91,6 +94,9 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         latePress = false;
     }
 
+    @Override public void contextMenuRequested(ContextMenuEvent e) {
+        doSelect(e.getX(), e.getY(), MouseButton.SECONDARY, 1, false, false);
+    }
 
 
 
@@ -100,11 +106,8 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
      *                                                                         *
      **************************************************************************/
 
-    private void doSelect(MouseEvent e) {
-        super.mouseReleased(e);
-        
-        if (e.getButton() != MouseButton.PRIMARY) return;
-        
+    private void doSelect(final double x, final double y, final MouseButton button,
+                          final int clickCount, final boolean shiftDown, final boolean shortcutDown) {
         TreeTableRow<T> treeTableRow = getControl();
         TreeItem<T> treeItem = treeTableRow.getTreeItem();
         if (treeItem == null) return;
@@ -113,7 +116,7 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         // than expand/collapse the tree item (if applicable). We do not do editing!
         Node disclosureNode = treeTableRow.getDisclosureNode();
         if (disclosureNode != null) {
-            if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
+            if (disclosureNode.getBoundsInParent().contains(x, y)) {
                 treeItem.setExpanded(! treeItem.isExpanded());
                 return;
             }
@@ -126,7 +129,6 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
         
         final int index = getControl().getIndex();
         final boolean isAlreadySelected = sm.isSelected(index);
-        int clickCount = e.getClickCount();
         if (clickCount == 1) {
             // get width of all visible columns (we only care about clicks to the
             // right of the right-most column)
@@ -136,17 +138,17 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
                 width += columns.get(i).getWidth();
             }
             
-            if (e.getX() < width) return;
+            if (x < width) return;
             
             // In the case of clicking to the right of the rightmost
             // TreeTableCell, we should still support selection, so that
             // is what we are doing here.
-            if (isAlreadySelected && e.isShortcutDown()) {
+            if (isAlreadySelected && shortcutDown) {
                 sm.clearSelection(index);
             } else {
-                if (e.isShortcutDown()) {
+                if (shortcutDown) {
                     sm.select(treeTableRow.getIndex());
-                } else if (e.isShiftDown()) {
+                } else if (shiftDown) {
                     // we add all rows between the current focus and
                     // this row (inclusive) to the current selection.
                     TablePositionBase anchor = TreeTableCellBehavior.getAnchor(table, table.getFocusModel().getFocusedCell());

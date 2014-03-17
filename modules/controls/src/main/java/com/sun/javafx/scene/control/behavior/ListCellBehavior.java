@@ -31,6 +31,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import sun.util.logging.PlatformLogger;
@@ -109,29 +110,33 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
      *                                                                         *
      **************************************************************************/
 
-    @Override public void mousePressed(MouseEvent event) {
-        boolean selectedBefore = getControl().isSelected();
-
-        if (event.isSynthesized()) {
+    @Override public void mousePressed(MouseEvent e) {
+        if (e.isSynthesized()) {
             latePress = true;
             return;
         } else {
             latePress  = getControl().isSelected();
             if (!latePress) {
-                doSelect(event);
+                doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                         e.isShiftDown(), e.isShortcutDown());
             }
         }
     }
 
-    @Override public void mouseReleased(MouseEvent event) {
+    @Override public void mouseReleased(MouseEvent e) {
         if (latePress) {
             latePress = false;
-            doSelect(event);
+            doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
+                     e.isShiftDown(), e.isShortcutDown());
         }
     }
 
-    @Override public void mouseDragged(MouseEvent event) {
+    @Override public void mouseDragged(MouseEvent e) {
         latePress = false;
+    }
+
+    @Override public void contextMenuRequested(ContextMenuEvent e) {
+        doSelect(e.getX(), e.getY(), MouseButton.SECONDARY, 1, false, false);
     }
 
 
@@ -142,7 +147,9 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
      *                                                                         *
      **************************************************************************/
 
-    private void doSelect(MouseEvent e) {
+    private void doSelect(final double x, final double y, final MouseButton button,
+                          final int clickCount, final boolean shiftDown,
+                          final boolean shortcutDown) {
         // Note that list.select will reset selection
         // for out of bounds indexes. So, need to check
         ListCell<T> listCell = getControl();
@@ -151,13 +158,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
 
         // If the mouse event is not contained within this ListCell, then
         // we don't want to react to it.
-        if (listCell.isEmpty() || ! listCell.contains(e.getX(), e.getY())) {
-            final PlatformLogger logger = Logging.getControlsLogger();
-            if (listCell.isEmpty() && logger.isLoggable(Level.WARNING)) {
-//                logger.warning("ListCell is empty, so mouse pressed event is "
-//                        + "ignored. If you've created a custom cell and overridden "
-//                        + "updateItem, be sure to call super.updateItem(item, empty)");
-            }
+        if (listCell.isEmpty() || ! listCell.contains(x, y)) {
             return;
         }
 
@@ -177,7 +178,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
         // recorded, we record the focus index now so that subsequent shift+clicks
         // result in the correct selection occuring (whilst the focus index moves
         // about).
-        if (e.isShiftDown()) {
+        if (shiftDown) {
             if (! hasAnchor(listView)) {
                 setAnchor(listView, fm.getFocusedIndex());
             }
@@ -185,12 +186,11 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
             removeAnchor(listView);
         }
 
-        MouseButton button = e.getButton();
         if (button == MouseButton.PRIMARY || (button == MouseButton.SECONDARY && !selected)) {
             if (sm.getSelectionMode() == SelectionMode.SINGLE) {
-                simpleSelect(e);
+                simpleSelect(button, clickCount, shortcutDown);
             } else {
-                if (e.isControlDown() || e.isMetaDown()) {
+                if (shortcutDown) {
                     if (selected) {
                         // we remove this row from the current selection
                         sm.clearSelection(index);
@@ -199,7 +199,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
                         // We add this row to the current selection
                         sm.select(index);
                     }
-                } else if (e.isShiftDown()) {
+                } else if (shiftDown) {
                     // we add all rows between the current focus and
                     // this row (inclusive) to the current selection.
                     final int focusIndex = getAnchor(listView);
@@ -236,19 +236,19 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
                     // return selection back to the focus owner
                     fm.focus(index);
                 } else {
-                    simpleSelect(e);
+                    simpleSelect(button, clickCount, shortcutDown);
                 }
             }
         }
     }
 
-    private void simpleSelect(MouseEvent e) {
+    private void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
         ListView<T> lv = getControl().getListView();
         int index = getControl().getIndex();
         MultipleSelectionModel<T> sm = lv.getSelectionModel();
         boolean isAlreadySelected = sm.isSelected(index);
 
-        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
+        if (isAlreadySelected && shortcutDown) {
             sm.clearSelection(index);
             lv.getFocusModel().focus(index);
             isAlreadySelected = false;
@@ -257,13 +257,13 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
         }
 
         // handle editing, which only occurs with the primary mouse button
-        if (e.getButton() == MouseButton.PRIMARY) {
-            if (e.getClickCount() == 1 && isAlreadySelected) {
+        if (button == MouseButton.PRIMARY) {
+            if (clickCount == 1 && isAlreadySelected) {
                 lv.edit(index);
-            } else if (e.getClickCount() == 1) {
+            } else if (clickCount == 1) {
                 // cancel editing
                 lv.edit(-1);
-            } else if (e.getClickCount() == 2 && getControl().isEditable()) {
+            } else if (clickCount == 2 && getControl().isEditable()) {
                 lv.edit(index);
             }
         }

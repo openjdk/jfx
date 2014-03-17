@@ -113,11 +113,11 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
         getTableControl().edit(row, (TreeTableColumn)tc);
     }
 
-    @Override protected boolean checkDisclosureNodeClick(MouseEvent e) {
+    @Override protected boolean checkDisclosureNodeClick(double x, double y) {
         final TreeItem<S> treeItem = getControl().getTreeTableRow().getTreeItem();
         final Node disclosureNode = getControl().getTreeTableRow().getDisclosureNode();
         if (disclosureNode != null) {
-            if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
+            if (disclosureNode.getBoundsInParent().contains(x, y)) {
                 if (treeItem != null) {
                     treeItem.setExpanded(! treeItem.isExpanded());
                 }
@@ -127,7 +127,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
         return false;
     }
     
-    @Override protected void simpleSelect(MouseEvent e) {
+    @Override protected void simpleSelect(MouseButton button, int clickCount, boolean shortcutDown) {
         TreeTableView<S> tv = getControl().getTreeTableView();
         TreeItem treeItem = getControl().getTreeTableRow().getTreeItem();
         int index = getControl().getIndex();
@@ -136,7 +136,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
         
         boolean isAlreadySelected = sm.isSelected(index, column);
 
-        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
+        if (isAlreadySelected && shortcutDown) {
             sm.clearSelection(index, column);
             isAlreadySelected = false;
         } else {
@@ -145,16 +145,16 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
         }
 
         // handle editing, which only occurs with the primary mouse button
-        if (e.getButton() == MouseButton.PRIMARY) {
-            if (e.getClickCount() == 1 && isAlreadySelected) {
+        if (button == MouseButton.PRIMARY) {
+            if (clickCount == 1 && isAlreadySelected) {
                 tv.edit(index, column);
-            } else if (e.getClickCount() == 1) {
+            } else if (clickCount == 1) {
                 // cancel editing
                 tv.edit(-1, null);
-            } else if (e.getClickCount() == 2 && treeItem.isLeaf()) {
+            } else if (clickCount == 2 && treeItem.isLeaf()) {
                 // attempt to edit
                 tv.edit(index, column);
-            } else if (e.getClickCount() % 2 == 0) {
+            } else if (clickCount % 2 == 0) {
                 // try to expand/collapse branch tree item
                 treeItem.setExpanded(! treeItem.isExpanded());
             }
