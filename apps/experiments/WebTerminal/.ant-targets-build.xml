@@ -1,0 +1,12 @@
+clean
+compile
+debug
+default
+jar
+javadoc
+profile
+profile-single
+run
+run-main
+test
+test-single
