@@ -649,50 +649,36 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     void scrollBoundsIntoView(Bounds b) {
         double dx = 0.0;
         double dy = 0.0;
-        boolean needsLayout = false;
         if (b.getMaxX() > contentWidth) {
-            dx = contentWidth - b.getMaxX();
+            dx = b.getMinX() - snappedLeftInset();
         }
-        if (b.getMinX() < 0) {
-            dx = -b.getMinX();
+        if (b.getMinX() < snappedLeftInset()) {
+            dx = b.getMaxX() - contentWidth - snappedLeftInset();
         }
-        if (b.getMaxY() > contentHeight) {
-            dy = contentHeight - b.getMaxY();
+        if (b.getMaxY() > snappedTopInset() + contentHeight) {
+            dy = b.getMinY() - snappedTopInset();
         }
-        if (b.getMinY() < 0) {
-            dy = -b.getMinY();
+        if (b.getMinY() < snappedTopInset()) {
+            dy = b.getMaxY() - contentHeight - snappedTopInset();
         }
         // We want to move contentPanel's layoutX,Y by (dx,dy).
         // But to do this we have to set the scrollbars' values appropriately.
 
-        double newHvalue = hsb.getValue();
-        double newVvalue = vsb.getValue();
         if (dx != 0) {
-            double sdx = -dx * (hsb.getMax() - hsb.getMin()) / (nodeWidth - viewRect.getWidth());
-            if (sdx < 0) {
-                sdx -= hsb.getUnitIncrement();
-            } else {
-                sdx += hsb.getUnitIncrement();
-            }
-            newHvalue = clamp(hsb.getMin(), hsb.getValue() + sdx, hsb.getMax());
-            hsb.setValue(newHvalue);
-            needsLayout = true;
-        }
-        if (dy != 0) {
-            double sdy = -dy * (vsb.getMax() - vsb.getMin()) / (nodeHeight - viewRect.getHeight());
-            if (sdy < 0) {
-                sdy -= vsb.getUnitIncrement();
-            } else {
-                sdy += vsb.getUnitIncrement();
-            }
-            newVvalue = clamp(vsb.getMin(), vsb.getValue() + sdy, vsb.getMax());
-            vsb.setValue(newVvalue);
-            needsLayout = true;
-        }
-
-        if (needsLayout == true) {
+            double sdx = dx * (hsb.getMax() - hsb.getMin()) / (nodeWidth - contentWidth);
+            // Adjust back for some amount so that the Node border is not too close to view border
+            sdx += -1 * Math.signum(sdx) * hsb.getUnitIncrement() / 5; // This accounts to 2% of view width
+            hsb.setValue(hsb.getValue() + sdx);
             getSkinnable().requestLayout();
         }
+        if (dy != 0) {
+            double sdy = dy * (vsb.getMax() - vsb.getMin()) / (nodeHeight - contentHeight);
+            // Adjust back for some amount so that the Node border is not too close to view border
+            sdy += -1 * Math.signum(sdy) * vsb.getUnitIncrement() / 5; // This accounts to 2% of view height
+            vsb.setValue(vsb.getValue() + sdy);
+            getSkinnable().requestLayout();
+        }
+
     }
 
     /*
