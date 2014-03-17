@@ -3947,10 +3947,10 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public Point2D screenToLocal(double screenX, double screenY) {
         Scene scene = getScene();
+        if (scene == null) return null;
         Window window = scene.getWindow();
-        if (scene == null || window == null) {
-            return null;
-        }
+        if (window == null) return null;
+
         final com.sun.javafx.geom.Point2D tempPt =
                 TempState.getInstance().point;
 
@@ -4159,10 +4159,9 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public Point2D localToScreen(double localX, double localY, double localZ) {
         Scene scene = getScene();
+        if (scene == null) return null;
         Window window = scene.getWindow();
-        if (scene == null || window == null) {
-            return null;
-        }
+        if (window == null) return null;
 
         Point3D pt = localToScene(localX, localY, localZ);
         final SubScene subScene = getSubScene();
