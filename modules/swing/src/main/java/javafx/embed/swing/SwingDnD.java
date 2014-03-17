@@ -62,6 +62,7 @@ import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.dnd.DropTargetEvent;
 import java.awt.dnd.DropTargetListener;
+import java.awt.dnd.InvalidDnDOperationException;
 
 import java.awt.event.InputEvent;
 import java.awt.event.MouseAdapter;
@@ -123,6 +124,8 @@ final class SwingDnD {
         };
 
         DropTargetListener dtl = new DropTargetAdapter() {
+            private TransferMode lastTransferMode;
+
             @Override
             public void dragEnter(final DropTargetDragEvent e) {
                 // This is a temporary workaround for JDK-8027913
@@ -132,7 +135,7 @@ final class SwingDnD {
 
                 assert swingDragSource == null;
                 swingDragSource = new SwingDragSource();
-                swingDragSource.updateContents(e);
+                swingDragSource.updateContents(e, false);
 
                 assert fxDropTarget == null;
                 // Cache the Transferable data in advance, as it cannot be
@@ -143,10 +146,10 @@ final class SwingDnD {
                 final Point orig = e.getLocation();
                 final Point screen = new Point(orig);
                 SwingUtilities.convertPointToScreen(screen, comp);
-                final TransferMode dr = fxDropTarget.handleDragEnter(
+                lastTransferMode = fxDropTarget.handleDragEnter(
                         orig.x, orig.y, screen.x, screen.y,
                         dropActionToTransferMode(e.getDropAction()), swingDragSource);
-                applyDragResult(dr, e);
+                applyDragResult(lastTransferMode, e);
             }
 
             @Override
@@ -157,43 +160,34 @@ final class SwingDnD {
                     fxDropTarget.handleDragLeave();
                 } finally {
                     endDnD();
+                    lastTransferMode = null;
                 }
             }
 
             @Override
             public void dragOver(final DropTargetDragEvent e) {
                 assert swingDragSource != null;
-                // We cache Transferable data in advance, as we can't fetch
-                // it from drop(), see comments in drop() below. However,
-                // caching in every dragOver() is too expensive and also for
-                // some reason has a weird side-effect: e.acceptDrag() is
-                // ignored, and no drops are possible. So the workaround is
-                // to cache all the data in dragEnter() only
-                //
-                // swingDragSource.updateContents(e);
+                swingDragSource.updateContents(e, false);
 
                 assert fxDropTarget != null;
                 final Point orig = e.getLocation();
                 final Point screen = new Point(orig);
                 SwingUtilities.convertPointToScreen(screen, comp);
-                final TransferMode dr = fxDropTarget.handleDragOver(
+                lastTransferMode = fxDropTarget.handleDragOver(
                         orig.x, orig.y, screen.x, screen.y,
                         dropActionToTransferMode(e.getDropAction()));
-                applyDragResult(dr, e);
+                applyDragResult(lastTransferMode, e);
             }
 
             @Override
             public void drop(final DropTargetDropEvent e) {
                 assert swingDragSource != null;
-                // Don't call updateContents() from drop(). In AWT, it is possible to
-                // get data from the Transferable object in drop() only after the drop
-                // has been accepted. Here we first let FX handle drop(), then accept
-                // or reject AWT drop based the result. So instead of querying the
-                // Transferable object, we use data from swingDragSource, which was
-                // cached in dragEnter(), but not in dragOver(), see comments in
-                // dragOver() above
-                //
-                // swingDragSource.updateContents(e);
+
+                // This allows the subsequent call to updateContents() to
+                // actually fetch the data from a drag source. The actual
+                // and final drop result may be redefined later.
+                applyDropResult(lastTransferMode, e);
+                swingDragSource.updateContents(e, true);
 
                 final Point orig = e.getLocation();
                 final Point screen = new Point(orig);
@@ -201,13 +195,22 @@ final class SwingDnD {
 
                 assert fxDropTarget != null;
                 try {
-                    final TransferMode dropResult = fxDropTarget.handleDragDrop(
+                    lastTransferMode = fxDropTarget.handleDragDrop(
                             orig.x, orig.y, screen.x, screen.y,
                             dropActionToTransferMode(e.getDropAction()));
-                    applyDropResult(dropResult, e);
-                    e.dropComplete(dropResult != null);
+                    try {
+                        applyDropResult(lastTransferMode, e);
+                    } catch (InvalidDnDOperationException ignore) {
+                        // This means the JDK doesn't contain a fix for 8029979 yet.
+                        // DnD still works, but a drag source won't know about
+                        // the actual drop result reported by the FX app from
+                        // its drop() handler. It will use the dropResult from
+                        // the last call to dragOver() instead.
+                    }
                 } finally {
+                    e.dropComplete(lastTransferMode != null);
                     endDnD();
+                    lastTransferMode = null;
                 }
             }
         };
