@@ -703,7 +703,12 @@ public final class QuantumToolkit extends Toolkit {
             renderer.stopRenderer();
 
             try {
-                Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                AccessController.doPrivileged(new PrivilegedAction<Void>() {
+                    @Override public Void run() {
+                        Runtime.getRuntime().removeShutdownHook(shutdownHook);
+                        return null;
+                    }
+                });
             } catch (IllegalStateException ignore) {
                 // throw when shutdown hook already removed
             }
