@@ -26,7 +26,6 @@
 package com.oracle.bundlers.windows;
 
 import com.oracle.bundlers.Bundler;
-import com.oracle.bundlers.StandardBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.RelativeFileSet;
@@ -44,6 +43,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 
+import static com.oracle.bundlers.StandardBundlerParam.*;
 import static org.junit.Assert.*;
 
 public class WinAppBundlerTest {
@@ -114,8 +114,7 @@ public class WinAppBundlerTest {
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new WinAppBundler();
-        ((WinAppBundler)bundler).setVerbose(true);
-        
+
         assertNotNull(bundler.getName());
         assertNotNull(bundler.getID());
         assertNotNull(bundler.getDescription());
@@ -123,11 +122,12 @@ public class WinAppBundlerTest {
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(StandardBundlerParam.NAME.getID(), "Smoke");
-        bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.TestPackager");
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
 
         File output = bundler.execute(bundleParams, new File(workDir, "smoke"));
         validatePackageCfg(output);
@@ -145,13 +145,12 @@ public class WinAppBundlerTest {
     @Test
     public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new WinAppBundler();
-        ((WinAppBundler)bundler).setVerbose(true);
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
         validatePackageCfg(output);

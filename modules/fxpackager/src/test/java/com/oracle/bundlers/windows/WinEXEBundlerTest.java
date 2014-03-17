@@ -26,7 +26,6 @@
 package com.oracle.bundlers.windows;
 
 import com.oracle.bundlers.Bundler;
-import com.oracle.bundlers.StandardBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.RelativeFileSet;
@@ -43,7 +42,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 
+import static com.oracle.bundlers.StandardBundlerParam.*;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class WinEXEBundlerTest {
 
@@ -116,8 +118,7 @@ public class WinEXEBundlerTest {
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new WinExeBundler();
-        ((WinExeBundler)bundler).setVerbose(true);
-        
+
         assertNotNull(bundler.getName());
         assertNotNull(bundler.getID());
         assertNotNull(bundler.getDescription());
@@ -125,13 +126,17 @@ public class WinEXEBundlerTest {
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(StandardBundlerParam.NAME.getID(), "Smoke");
-        bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.TestPackager");
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
 
-        bundler.execute(bundleParams, new File(workDir, "smoke"));
+        File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
     }
 
     /**
@@ -146,18 +151,56 @@ public class WinEXEBundlerTest {
     @Test
     public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new WinExeBundler();
-        ((WinExeBundler)bundler).setVerbose(true);
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
-        System.err.println(output);
-        //assertTrue(output.isFile());
-        Assume.assumeTrue(output.isFile());
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
     }
 
+    /**
+     * Test a misconfiguration where the iscc tools are misconfigured.
+     */
+    @Test
+    public void configISSCBad() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(WinExeBundler.TOOL_INNO_SETUP_COMPILER_EXECUTABLE.getID(), "c:\\MissingTool.exe");
+
+        File output = bundler.execute(bundleParams, new File(workDir, "BadISSC"));
+        assertNull(output);
+    }
+
+    /**
+     * Test a misconfiguration where the iscc tools are misconfigured.
+     */
+    @Test
+    public void configISSCNull() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(WinExeBundler.TOOL_INNO_SETUP_COMPILER_EXECUTABLE.getID(), null);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "NullISSC"));
+        assertNull(output);
+    }
 }

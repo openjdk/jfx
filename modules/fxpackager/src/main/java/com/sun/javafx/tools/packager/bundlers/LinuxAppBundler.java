@@ -27,6 +27,8 @@ package com.sun.javafx.tools.packager.bundlers;
 
 import com.oracle.bundlers.AbstractBundler;
 import com.oracle.bundlers.BundlerParamInfo;
+import com.oracle.bundlers.JreUtils;
+import com.oracle.bundlers.JreUtils.Rule;
 import com.oracle.bundlers.StandardBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.resource.linux.LinuxResources;
@@ -54,24 +56,63 @@ public class LinuxAppBundler extends AbstractBundler {
     public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new StandardBundlerParam<>(
             I18N.getString("param.raw-executable-url.name"),
             I18N.getString("param.raw-executable-url.description"),
-            "linux.launcher.url",  //KEY
+            "linux.launcher.url",
             URL.class, null, params -> LinuxResources.class.getResource(EXECUTABLE_NAME),
-            false, s -> {
-        try {
-            return new URL(s);
-        } catch (MalformedURLException e) {
-            Log.info(e.toString());
-            return null;
-        }
-    });
+            false, (s, p) -> {
+                try {
+                    return new URL(s);
+                } catch (MalformedURLException e) {
+                    Log.info(e.toString());
+                    return null;
+                }
+            });
+
+    //Subsetting of JRE is restricted.
+    //JRE README defines what is allowed to strip:
+    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
+    //
+    public static final BundlerParamInfo<Rule[]> LINUX_JRE_RULES = new StandardBundlerParam<>(
+            "",
+            "",
+            ".linux.runtime.rules",
+            Rule[].class,
+            null,
+            params -> new Rule[]{
+                    Rule.prefixNeg("/bin"),
+                    Rule.prefixNeg("/plugin"),
+                    //Rule.prefixNeg("/lib/ext"), //need some of jars there for https to work
+                    Rule.suffix("deploy.jar"), //take deploy.jar
+                    Rule.prefixNeg("/lib/deploy"),
+                    Rule.prefixNeg("/lib/desktop"),
+                    Rule.substrNeg("libnpjp2.so")
+            },
+            false,
+            (s, p) ->  null
+    );
+
+    public static final BundlerParamInfo<RelativeFileSet> LINUX_RUNTIME = new StandardBundlerParam<>(
+            RUNTIME.getName(),
+            RUNTIME.getDescription(),
+            RUNTIME.getID(),
+            RelativeFileSet.class,
+            null,
+            params -> JreUtils.extractJreAsRelativeFileSet(System.getProperty("java.home"),
+                    LINUX_JRE_RULES.fetchFrom(params)),
+            false,
+            (s, p) -> JreUtils.extractJreAsRelativeFileSet(s, LINUX_JRE_RULES.fetchFrom(p))
+    );
 
     @Override
     public boolean validate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
-        if (p == null) throw new ConfigException(
-                I18N.getString("error.parameters-null"),
-                I18N.getString("error.parameters-null.advice"));
+        try {
+            if (p == null) throw new ConfigException(
+                    I18N.getString("error.parameters-null"),
+                    I18N.getString("error.parameters-null.advice"));
 
-        return doValidate(p);
+            return doValidate(p);
+        } catch (RuntimeException re) {
+            throw new ConfigException(re);
+        }
     }
 
     //used by chained bundlers to reuse validation logic
@@ -221,7 +262,7 @@ public class LinuxAppBundler extends AbstractBundler {
     }
 
     private void copyRuntime(Map<String, ? super Object> params, File runtimeDirectory) throws IOException {
-        RelativeFileSet runtime = RUNTIME.fetchFrom(params);
+        RelativeFileSet runtime = LINUX_RUNTIME.fetchFrom(params);
         if (runtime == null) {
             //request to use system runtime
             return;
@@ -249,7 +290,7 @@ public class LinuxAppBundler extends AbstractBundler {
 
     @Override
     public String getID() {
-        return "linux.app";  //KEY
+        return "linux.app";
     }
 
     @Override
@@ -273,7 +314,7 @@ public class LinuxAppBundler extends AbstractBundler {
                 MAIN_JAR_CLASSPATH,
                 PREFERENCES_ID,
                 RAW_EXECUTABLE_URL,
-                RUNTIME,
+                LINUX_RUNTIME,
                 USE_FX_PACKAGING,
                 USER_JVM_OPTIONS,
                 VERSION

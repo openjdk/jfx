@@ -26,6 +26,7 @@
 package com.oracle.bundlers;
 
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 public class BundlerParamInfo<T> {
@@ -69,7 +70,7 @@ public class BundlerParamInfo<T> {
     /**
      * An optional string converter for command line arguments.
      */
-    Function<String, T> stringConverter;
+    BiFunction<String, Map<String, ? super Object>, T> stringConverter;
 
     public String getName() {
         return name;
@@ -127,11 +128,11 @@ public class BundlerParamInfo<T> {
         this.requiresUserSetting = requiresUserSetting;
     }
 
-    public Function<String, T> getStringConverter() {
+    public BiFunction<String, Map<String, ? super Object>,T> getStringConverter() {
         return stringConverter;
     }
 
-    public void setStringConverter(Function<String, T> stringConverter) {
+    public void setStringConverter(BiFunction<String, Map<String, ? super Object>, T> stringConverter) {
         this.stringConverter = stringConverter;
     }
 
@@ -139,7 +140,7 @@ public class BundlerParamInfo<T> {
     public final T fetchFrom(Map<String, ? super Object> params) {
         Object o = params.get(getID());
         if (o instanceof String && getStringConverter() != null) {
-            return getStringConverter().apply((String)o);
+            return getStringConverter().apply((String)o, params);
         }
 
         Class klass = getValueType();
@@ -159,6 +160,8 @@ public class BundlerParamInfo<T> {
                 o = params.get(fallback);
                 if (klass.isInstance(o)) {
                     return (T) o;
+                } else if (o instanceof String) {
+                    return getStringConverter().apply((String)o, params);
                 }
             }
         }

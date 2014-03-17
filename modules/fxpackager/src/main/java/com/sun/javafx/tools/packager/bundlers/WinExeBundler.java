@@ -38,6 +38,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.oracle.bundlers.StandardBundlerParam.VERBOSE;
 import static com.oracle.bundlers.windows.WindowsBundlerParam.*;
 
 public class WinExeBundler extends AbstractBundler {
@@ -48,18 +49,18 @@ public class WinExeBundler extends AbstractBundler {
     public static final BundlerParamInfo<WinAppBundler> APP_BUNDLER = new WindowsBundlerParam<>(
             I18N.getString("param.app-bundler.name"),
             I18N.getString("param.app-bundler.description"),
-            "winAppBundler", //KEY
+            "win.app.bundler",
             WinAppBundler.class, null, params -> new WinAppBundler(), false, null);
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
-            "configRoot", //KEY
+            "configRoot",
             File.class, null,params -> {
-                File imagesRoot = new File(StandardBundlerParam.BUILD_ROOT.fetchFrom(params), "windows");
+                File imagesRoot = new File(BUILD_ROOT.fetchFrom(params), "windows");
                 imagesRoot.mkdirs();
                 return imagesRoot;
-            }, false, s -> null);
+            }, false, (s, p) -> null);
 
     //default for .exe is user level installation
     // only do system wide if explicitly requested
@@ -67,28 +68,23 @@ public class WinExeBundler extends AbstractBundler {
             new StandardBundlerParam<>(
                     I18N.getString("param.system-wide.name"),
                     I18N.getString("param.system-wide.description"),
-                    "winexe" + BundleParams.PARAM_SYSTEM_WIDE, //KEY
+                    "win.exe." + BundleParams.PARAM_SYSTEM_WIDE,
                     Boolean.class,
                     new String[] {BundleParams.PARAM_SYSTEM_WIDE},
                     params -> false, // EXEs default to user local install
                     false,
-                    s -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s) // valueOf(null) is false, and we actually do want null
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s) // valueOf(null) is false, and we actually do want null
             );
 
-    public static final BundlerParamInfo<File> IMAGE_DIR = new WindowsBundlerParam<>(
+    public static final BundlerParamInfo<File> EXE_IMAGE_DIR = new WindowsBundlerParam<>(
             I18N.getString("param.image-dir.name"),
             I18N.getString("param.image-dir.description"),
-            "imageDir", //KEY
+            "win.exe.imageDir",
             File.class, null, params -> {
                 File imagesRoot = IMAGES_ROOT.fetchFrom(params);
-                return new File(imagesRoot, "win-app.image");
-            }, false, s -> null);
-
-    public static final BundlerParamInfo<File> OUT_DIR = new WindowsBundlerParam<>(
-            I18N.getString("param.out-dir.name"),
-            I18N.getString("param.out-dir.description"),
-            "outDir", //KEY
-            File.class, null, params -> null, false, s -> null);
+                if (!imagesRoot.exists()) imagesRoot.mkdirs();
+                return new File(imagesRoot, "win-exe.image");
+            }, false, (s, p) -> null);
 
     private final static String DEFAULT_EXE_PROJECT_TEMPLATE = "template.iss";
     private static final String TOOL_INNO_SETUP_COMPILER = "iscc.exe";
@@ -96,7 +92,7 @@ public class WinExeBundler extends AbstractBundler {
     public static final BundlerParamInfo<String> TOOL_INNO_SETUP_COMPILER_EXECUTABLE = new WindowsBundlerParam<>(
             I18N.getString("param.iscc-path.name"),
             I18N.getString("param.iscc-path.description"),
-            "win.iscc.exe", //KEY
+            "win.exe.iscc.exe",
             String.class, null, params -> {
                 for (String dirString : (System.getenv("PATH") + ";C:\\Program Files (x86)\\Inno Setup 5;C:\\Program Files\\Inno Setup 5").split(";")) {
                     File f = new File(dirString.replace("\"", ""), TOOL_INNO_SETUP_COMPILER);
@@ -124,7 +120,7 @@ public class WinExeBundler extends AbstractBundler {
 
     @Override
     public String getID() {
-        return "exe"; //KEY
+        return "exe";
     }
 
     @Override
@@ -146,10 +142,11 @@ public class WinExeBundler extends AbstractBundler {
                 APP_RESOURCES,
                 BUILD_ROOT,
                 //CONFIG_ROOT, // duplicate from getAppBundleParameters
+                DESCRIPTION,
                 COPYRIGHT,
                 EXE_SYSTEM_WIDE,
                 IDENTIFIER,
-                IMAGE_DIR,
+                EXE_IMAGE_DIR,
                 IMAGES_ROOT,
                 LICENSE_FILES,
                 MENU_GROUP,
@@ -209,29 +206,33 @@ public class WinExeBundler extends AbstractBundler {
 
     @Override
     public boolean validate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
-        if (p == null) throw new ConfigException(I18N.getString("error.parameters-null"), I18N.getString("error.parameters-null.advice"));
+        try {
+            if (p == null) throw new ConfigException(I18N.getString("error.parameters-null"), I18N.getString("error.parameters-null.advice"));
 
-        //run basic validation to ensure requirements are met
-        //we are not interested in return code, only possible exception
-        APP_BUNDLER.fetchFrom(p).validate(p);
+            //run basic validation to ensure requirements are met
+            //we are not interested in return code, only possible exception
+            APP_BUNDLER.fetchFrom(p).validate(p);
 
-        double innoVersion = findToolVersion(TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(p));
+            double innoVersion = findToolVersion(TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(p));
 
-        //Inno Setup 5+ is required
-        double minVersion = 5.0f;
+            //Inno Setup 5+ is required
+            double minVersion = 5.0f;
 
-        if (innoVersion < minVersion) {
-            Log.info(MessageFormat.format(I18N.getString("message.tool-wrong-version"), TOOL_INNO_SETUP_COMPILER, innoVersion, minVersion));
-            throw new ConfigException(
-                    I18N.getString("error.iscc-not-found"),
-                    I18N.getString("error.iscc-not-found.advice"));
+            if (innoVersion < minVersion) {
+                Log.info(MessageFormat.format(I18N.getString("message.tool-wrong-version"), TOOL_INNO_SETUP_COMPILER, innoVersion, minVersion));
+                throw new ConfigException(
+                        I18N.getString("error.iscc-not-found"),
+                        I18N.getString("error.iscc-not-found.advice"));
+            }
+
+            return true;
+        } catch (RuntimeException re) {
+            throw new ConfigException(re);
         }
-
-        return true;
     }
 
     private boolean prepareProto(Map<String, ? super Object> params) throws IOException {
-        File imageDir = IMAGE_DIR.fetchFrom(params);
+        File imageDir = EXE_IMAGE_DIR.fetchFrom(params);
         File appOutputDir = APP_BUNDLER.fetchFrom(params).doBundle(params, imageDir, true);
         if (appOutputDir == null) {
             return false;
@@ -249,9 +250,16 @@ public class WinExeBundler extends AbstractBundler {
     }
 
     public File bundle(Map<String, ? super Object> p, File outputDirectory) {
-        File imageDir = IMAGE_DIR.fetchFrom(p);
-        try {
+        // validate we have valid tools before continuing
+        String iscc = TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(p);
+        if (iscc == null || !new File(iscc).isFile()) {
+            Log.info(I18N.getString("error.iscc-not-found"));
+            Log.info(MessageFormat.format(I18N.getString("message.iscc-file-string"), iscc));
+            return null;
+        }
 
+        File imageDir = EXE_IMAGE_DIR.fetchFrom(p);
+        try {
             imageDir.mkdirs();
 
             boolean menuShortcut = MENU_HINT.fetchFrom(p);
@@ -266,7 +274,7 @@ public class WinExeBundler extends AbstractBundler {
                 File configScript = getConfig_Script(p);
                 if (configScript.exists()) {
                     Log.info(MessageFormat.format(I18N.getString("message.running-wsh-script"), configScript.getAbsolutePath()));
-                    IOUtils.run("wscript", configScript, verbose);
+                    IOUtils.run("wscript", configScript, VERBOSE.fetchFrom(p));
                 }
                 return buildEXE(p, outputDirectory);
             }
@@ -276,7 +284,7 @@ public class WinExeBundler extends AbstractBundler {
             return null;
         } finally {
             try {
-                if (verbose) {
+                if (VERBOSE.fetchFrom(p)) {
                     saveConfigFiles(p);
                 }
                 if (imageDir != null && !Log.isDebug()) {
@@ -293,13 +301,12 @@ public class WinExeBundler extends AbstractBundler {
 
     //name of post-image script
     private File getConfig_Script(Map<String, ? super Object> params) {
-        return new File(IMAGE_DIR.fetchFrom(params), WinAppBundler.getAppName(params) + "-post-image.wsf");
+        return new File(EXE_IMAGE_DIR.fetchFrom(params), WinAppBundler.getAppName(params) + "-post-image.wsf");
     }
 
     protected void saveConfigFiles(Map<String, ? super Object> params) {
         try {
             File configRoot = CONFIG_ROOT.fetchFrom(params);
-            File imagesRoot = IMAGES_ROOT.fetchFrom(params);
             if (getConfig_ExeProjectFile(params).exists()) {
                 IOUtils.copyFile(getConfig_ExeProjectFile(params),
                         new File(configRoot, getConfig_ExeProjectFile(params).getName()));
@@ -352,7 +359,7 @@ public class WinExeBundler extends AbstractBundler {
         data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
         data.put("APPLICATION_VERSION", VERSION.fetchFrom(params)); // TODO make our own version paraminfo?
         data.put("APPLICATION_LAUNCHER_FILENAME",
-                WinAppBundler.getLauncher(IMAGE_DIR.fetchFrom(params), params).getName());
+                WinAppBundler.getLauncher(EXE_IMAGE_DIR.fetchFrom(params), params).getName());
         data.put("APPLICATION_DESKTOP_SHORTCUT", SHORTCUT_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_MENU_SHORTCUT", MENU_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_GROUP", MENU_GROUP.fetchFrom(params));
@@ -375,12 +382,23 @@ public class WinExeBundler extends AbstractBundler {
             data.put("ARCHITECTURE_BIT_MODE", "");
         }
 
-
+        if (SERVICE_HINT.fetchFrom(params)) {
+            data.put("RUN_FILENAME", WinAppBundler.getAppSvcName(params));
+        } else {
+            data.put("RUN_FILENAME", WinAppBundler.getAppName(params));
+        }
+        data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
+        data.put("APPLICATION_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
+        data.put("APPLICATION_NOT_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnFalse" : "returnTrue");
+        data.put("START_ON_INSTALL", START_ON_INSTALL.fetchFrom(params) ? "-startOnInstall" : "");
+        data.put("STOP_ON_UNINSTALL", STOP_ON_UNINSTALL.fetchFrom(params) ? "-stopOnUninstall" : "");
+        data.put("RUN_AT_STARTUP", RUN_AT_STARTUP.fetchFrom(params) ? "-runAtStartup" : "");        
 
         Writer w = new BufferedWriter(new FileWriter(getConfig_ExeProjectFile(params)));
         String content = preprocessTextResource(
                 WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_ExeProjectFile(params).getName(),
-                I18N.getString("resource.inno-setup-project-file"), DEFAULT_EXE_PROJECT_TEMPLATE, data);
+                I18N.getString("resource.inno-setup-project-file"), DEFAULT_EXE_PROJECT_TEMPLATE, data,
+                VERBOSE.fetchFrom(params));
         w.write(content);
         w.close();
         return true;
@@ -396,22 +414,24 @@ public class WinExeBundler extends AbstractBundler {
         fetchResource(WinAppBundler.WIN_BUNDLER_PREFIX + iconTarget.getName(),
                 I18N.getString("resource.setup-icon"),
                 DEFAULT_INNO_SETUP_ICON,
-                iconTarget);
+                iconTarget,
+                VERBOSE.fetchFrom(params));
 
         fetchResource(WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_Script(params).getName(),
                 I18N.getString("resource.post-install-script"),
                 (String) null,
-                getConfig_Script(params));
+                getConfig_Script(params),
+                VERBOSE.fetchFrom(params));
         return true;
     }
 
     private File getConfig_SmallInnoSetupIcon(Map<String, ? super Object> params) {
-        return new File(IMAGE_DIR.fetchFrom(params),
+        return new File(EXE_IMAGE_DIR.fetchFrom(params),
                 WinAppBundler.getAppName(params) + "-setup-icon.bmp");
     }
 
     private File getConfig_ExeProjectFile(Map<String, ? super Object> params) {
-        return new File(IMAGE_DIR.fetchFrom(params),
+        return new File(EXE_IMAGE_DIR.fetchFrom(params),
                 WinAppBundler.getAppName(params) + ".iss");
     }
 
@@ -426,12 +446,25 @@ public class WinExeBundler extends AbstractBundler {
                 TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(params),
                 "/o"+outdir.getAbsolutePath(),
                 getConfig_ExeProjectFile(params).getAbsolutePath());
-        pb = pb.directory(IMAGE_DIR.fetchFrom(params));
-        IOUtils.exec(pb, verbose);
+        pb = pb.directory(EXE_IMAGE_DIR.fetchFrom(params));
+        IOUtils.exec(pb, VERBOSE.fetchFrom(params));
 
         Log.info(MessageFormat.format(I18N.getString("message.output-location"), outdir.getAbsolutePath()));
 
-        return outdir;
+        // presume the result is the ".exe" file with the newest modified time
+        // not the best solution, but it is the most reliable
+        File result = null;
+        long lastModified = 0;
+        File[] list = outdir.listFiles();
+        if (list != null) {
+            for (File f : list) {
+                if (f.getName().endsWith(".exe") && f.lastModified() > lastModified) {
+                    result = f;
+                    lastModified = f.lastModified();
+                }
+            }
+        }
+
+        return result;
     }
 }
- 

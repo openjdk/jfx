@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,7 +46,7 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
     
     private static final ResourceBundle I18N = ResourceBundle.getBundle("com.oracle.bundlers.windows.WindowsBundlerParam");
     
-    public WindowsBundlerParam(String name, String description, String id, Class<T> valueType, String[] fallbackIDs, Function<Map<String, ? super Object>, T> defaultValueFunction, boolean requiresUserSetting, Function<String, T> stringConverter) {
+    public WindowsBundlerParam(String name, String description, String id, Class<T> valueType, String[] fallbackIDs, Function<Map<String, ? super Object>, T> defaultValueFunction, boolean requiresUserSetting, BiFunction<String, Map<String, ? super Object>, T> stringConverter) {
         super(name, description, id, valueType, fallbackIDs, defaultValueFunction, requiresUserSetting, stringConverter);
     }
 
@@ -53,36 +54,36 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
             new StandardBundlerParam<>(
                     I18N.getString("param.menu-group.name"),
                     I18N.getString("param.menu-group.description"),
-                    "winMenuGroup", //KEY
+                    "win.menuGroup",
                     String.class,
-                    new String[] {CATEGORY.getID(), VENDOR.getID()},
+                    new String[] {VENDOR.getID(), CATEGORY.getID(), },
                     params -> I18N.getString("param.menu-group.default"),
                     false,
-                    s -> s
+                    (s, p) -> s
             );
-    
+
     public static final StandardBundlerParam<Boolean> BIT_ARCH_64 =
             new StandardBundlerParam<>(
                     I18N.getString("param.64-bit.name"),
                     I18N.getString("param.64-bit.description"),
-                    "win64Bit", //KEY
+                    "win.64Bit",
                     Boolean.class,
                     null,
                     params -> System.getProperty("os.arch").contains("64"),
                     false,
-                    Boolean::valueOf
+                    (s, p) -> Boolean.valueOf(s)
             );
 
     public static final StandardBundlerParam<Boolean> BIT_ARCH_64_RUNTIME =
             new StandardBundlerParam<>(
                     I18N.getString("param.runtime-64-bit.name"),
                     I18N.getString("param.runtime-64-bit.description"),
-                    "win64BitJreRuntime", //KEY
+                    "win.64BitJreRuntime",
                     Boolean.class,
                     null,
                     params -> {extractFlagsFromRuntime(params); return "64".equals(params.get(".runtime.bit-arc"));},
                     false,
-                    Boolean::valueOf
+                    (s, p) -> Boolean.valueOf(s)
             );
        
     public static void extractFlagsFromRuntime(Map<String, ? super Object> params) {

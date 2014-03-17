@@ -70,7 +70,6 @@ import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -88,7 +87,6 @@ import java.util.zip.ZipOutputStream;
 import sun.misc.BASE64Encoder;
 
 import static com.oracle.bundlers.StandardBundlerParam.*;
-
 
 public class PackagerLib {
     public static final String JAVAFX_VERSION = "2.2";
@@ -111,7 +109,7 @@ public class PackagerLib {
     private boolean isSignedJNLP;
 
 
-    private enum Filter {ALL, CLASSES_ONLY, RESOURCES};
+    private enum Filter {ALL, CLASSES_ONLY, RESOURCES}
 
     private ClassLoader classLoader;
 
@@ -142,21 +140,12 @@ public class PackagerLib {
             if (!f.isFile() || !f.getAbsolutePath().toLowerCase().endsWith(".jar")) {
                 return null;
             }
-            JarFile jf = null;
-            try {
-                jf = new JarFile(f);
+            try (JarFile jf = new JarFile(f)) {
                 Manifest m = jf.getManifest(); //try to read manifest to validate it is jar
                 return f;
             } catch (Exception e) {
-                //treat any excepion as "not a special case" scenario
+                //treat any exception as "not a special case" scenario
                 Log.verbose(e);
-            } finally {
-                if (jf != null) {
-                    try {
-                        jf.close();
-                    } catch (IOException ex) {
-                    }
-                }
             }
         }
         return null;
@@ -178,11 +167,9 @@ public class PackagerLib {
         Manifest m = null;
 
         if (jarToUpdate != null) {
-            JarFile jf = null;
-            try {
+            Log.info(MessageFormat.format(bundle.getString("MSG_UpdatingJar"), jarToUpdate.getAbsolutePath()));
+            try (JarFile jf = new JarFile(jarToUpdate)) {
                 //extract data we want to preserve
-                Log.info(MessageFormat.format(bundle.getString("MSG_UpdatingJar"), jarToUpdate.getAbsolutePath()));
-                jf = new JarFile(jarToUpdate);
                 m = jf.getManifest();
                 if (m != null) {
                     Attributes attrs = m.getMainAttributes();
@@ -198,13 +185,6 @@ public class PackagerLib {
             } catch (IOException ex) {
                 throw new PackagerException(
                         ex, "ERR_FileReadFailed", jarToUpdate.getAbsolutePath());
-            } finally {
-                if (jf != null) {
-                    try {
-                        jf.close();
-                    } catch (IOException ex) {
-                    }
-                }
             }
         }
 
@@ -318,24 +298,15 @@ public class PackagerLib {
 
     private String readTextFile(File in) throws PackagerException {
         StringBuilder sb = new StringBuilder();
-        InputStreamReader isr = null;
-        try {
+        try (InputStreamReader isr = new InputStreamReader(new FileInputStream(in))) {
             char[] buf = new char[16384];
             int len;
-            isr = new InputStreamReader(new FileInputStream(in));
             while ((len = isr.read(buf)) > 0) {
                 sb.append(buf, sb.length(), len);
             }
         } catch (IOException ex) {
             throw new PackagerException(ex, "ERR_FileReadFailed",
                     in.getAbsolutePath());
-        } finally {
-            if (isr != null) {
-                try {
-                    isr.close();
-                } catch (IOException ex) {
-                }
-            }
         }
         return sb.toString();
     }
@@ -405,7 +376,7 @@ public class PackagerLib {
         return result.toString();
     }
 
-    private static enum Mode {FX, APPLET, SwingAPP};
+    private static enum Mode {FX, APPLET, SwingAPP}
 
     public void generateDeploymentPackages(DeployParams deployParams) throws PackagerException {
         if (deployParams == null) {
@@ -416,7 +387,7 @@ public class PackagerLib {
         Map<TemplatePlaceholders, String> templateStrings = null;
         if (templateOn) {
             templateStrings =
-               new EnumMap<TemplatePlaceholders, String>(TemplatePlaceholders.class);
+               new EnumMap<>(TemplatePlaceholders.class);
         }
         try {
             //In case of FX app we will have one JNLP and one HTML
@@ -497,13 +468,13 @@ public class PackagerLib {
             for (DeployResource resource: deployParams.resources) {
                 copyFiles(resource, deployParams.outdir);
             }
-        } catch (Exception ex) {
-            throw new PackagerException(ex, "ERR_DeployFailed");
-        }
 
-        BundleParams bp = deployParams.getBundleParams();
-        if (bp != null) {
-           generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType(), deployParams.getTargetFormat(), deployParams.verbose);
+            BundleParams bp = deployParams.getBundleParams();
+            if (bp != null) {
+                generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType(), deployParams.getTargetFormat(), deployParams.verbose);
+            }
+        } catch (Exception ex) {
+            throw new PackagerException(ex, "ERR_DeployFailed", ex.getMessage());
         }
 
         this.deployParams = null;
@@ -538,7 +509,11 @@ public class PackagerLib {
             } catch (UnsupportedPlatformException e) {
                 Log.debug(MessageFormat.format(bundle.getString("MSG_BundlerPlatformException"), bundler.getName()));
             } catch (ConfigException e) {
-                Log.info(MessageFormat.format(bundle.getString("MSG_BundlerConfigException"), bundler.getName(), e.getMessage(), e.getAdvice()));
+                if (e.getAdvice() != null) {
+                    Log.info(MessageFormat.format(bundle.getString("MSG_BundlerConfigException"), bundler.getName(), e.getMessage(), e.getAdvice()));
+                } else {
+                    Log.info(MessageFormat.format(bundle.getString("MSG_BundlerConfigExceptionNoAdvice"), bundler.getName(), e.getMessage()));
+                }
             } catch (RuntimeException re) {
                 Log.info(MessageFormat.format(bundle.getString("MSG_BundlerRuntimeException"), bundler.getName(), re.toString()));
                 Log.debug(re);
@@ -678,12 +653,7 @@ public class PackagerLib {
             throw new IllegalStateException("Should retrieve signature first");
         }
 
-        InputStreamSource in = new InputStreamSource() {
-            @Override
-            public InputStream getInputStream() throws IOException {
-                return new FileInputStream(jar);
-            }
-        };
+        InputStreamSource in = () -> new FileInputStream(jar);
         if (!signedJar.isFile()) {
             signedJar.createNewFile();
         }
@@ -728,11 +698,8 @@ public class PackagerLib {
         try {
             final File tmpFile = File.createTempFile("javac", "sources", new File("."));
             tmpFile.deleteOnExit();
-            final FileWriter sources = new FileWriter(tmpFile);
-            try {
+            try (FileWriter sources = new FileWriter(tmpFile)) {
                 scanAndCopy(new PackagerResource(new File(srcDirName), "."), sources, compiledDir);
-            } finally {
-                sources.close();
             }
             String classpath = jfxHome + "/../rt/lib/ext/jfxrt.jar";
             if (makeAllParams.classpath != null) {
@@ -788,8 +755,9 @@ public class PackagerLib {
         deleteDirectory(compiledDir);
     }
 
+    @SuppressWarnings("unchecked")
     private static int execute(Object ... args) throws IOException, InterruptedException {
-        final ArrayList<String> argsList = new ArrayList();
+        final ArrayList<String> argsList = new ArrayList<>();
         for (Object a : args) {
             if (a instanceof List) {
                 argsList.addAll((List)a);
@@ -837,11 +805,12 @@ public class PackagerLib {
         if (!dir.getFile().exists()) {
             throw new PackagerException("ERR_MissingDirectory", dir.getFile().getName());
         }
-        if ((dir.getFile().listFiles() == null) || (dir.getFile().listFiles().length == 0)) {
+        File[] dirFilesList = dir.getFile().listFiles();
+        if ((dirFilesList == null) || (dirFilesList.length == 0)) {
             throw new PackagerException("ERR_EmptySourceDirectory", dir.getFile().getName());
         }
         try {
-            for (File f : dir.getFile().listFiles()) {
+            for (File f : dirFilesList) {
                 if (f.isDirectory()) {
                     scanAndCopy(new PackagerResource(dir.getBaseDir(), f), out, outdir);
                 } else if (f.getName().endsWith(".java")) {
@@ -903,19 +872,18 @@ public class PackagerLib {
                 ((deployParams.description != null)
                 ? deployParams.description : "Sample JavaFX 2.0 application.") +
                 "</description>");
-        for (Iterator<Icon> it = deployParams.icons.iterator(); it.hasNext();) {
-            DeployParams.Icon i = it.next();
+        for (Icon i : deployParams.icons) {
             if (i.mode == DeployParams.RunMode.WEBSTART ||
                     i.mode == DeployParams.RunMode.ALL) {
-            out.println("    <icon href=\"" + i.href+"\" " +
-                ((i.kind != null) ? " kind=\"" + i.kind + "\"" : "") +
-                ((i.width != DeployParams.Icon.UNDEFINED) ?
-                    " width=\"" + i.width + "\"" : "") +
-                ((i.height != DeployParams.Icon.UNDEFINED) ?
-                    " height=\"" + i.height + "\"" : "") +
-                ((i.depth != DeployParams.Icon.UNDEFINED) ?
-                    " depth=\"" + i.depth + "\"" : "") +
-                "/>");
+                out.println("    <icon href=\"" + i.href + "\" " +
+                        ((i.kind != null) ? " kind=\"" + i.kind + "\"" : "") +
+                        ((i.width != Icon.UNDEFINED) ?
+                                " width=\"" + i.width + "\"" : "") +
+                        ((i.height != Icon.UNDEFINED) ?
+                                " height=\"" + i.height + "\"" : "") +
+                        ((i.depth != Icon.UNDEFINED) ?
+                                " depth=\"" + i.depth + "\"" : "") +
+                        "/>");
             }
         }
 
@@ -1176,9 +1144,9 @@ public class PackagerLib {
                 "Make sure that you have a recent Java runtime, then install JavaFX Runtime 2.0 "+
                 "and check that JavaFX is enabled in the Java Control Panel.";
 
-        List w_app = new ArrayList();
-        List w_platform = new ArrayList();
-        List w_callback = new ArrayList();
+        List<String> w_app = new ArrayList<>();
+        List<String> w_platform = new ArrayList<>();
+        List<String> w_callback = new ArrayList<>();
 
         addToList(w_app, "url", jnlpfile_webstart, true);
         if (jnlp_content_webstart != null) {
@@ -1228,9 +1196,9 @@ public class PackagerLib {
         }
 
         //prepare content of embedApp()
-        List p_app = new ArrayList();
-        List p_platform = new ArrayList();
-        List p_callback = new ArrayList();
+        List<String> p_app = new ArrayList<>();
+        List<String> p_platform = new ArrayList<>();
+        List<String> p_callback = new ArrayList<>();
 
         if (appId != null) {
             addToList(p_app, "id", appId, true);
@@ -1346,16 +1314,13 @@ public class PackagerLib {
     }
 
     private static void copyFileToOutDir(
-            InputStream is, File fout) throws PackagerException {
+            InputStream isa, File fout) throws PackagerException {
 
-        OutputStream out = null;
         final File outDir = fout.getParentFile();
-        try {
-            if (!outDir.exists() && !outDir.mkdirs()) {
-                throw new PackagerException("ERR_CreatingDirFailed", outDir.getPath());
-            }
-
-            out = new FileOutputStream(fout);
+        if (!outDir.exists() && !outDir.mkdirs()) {
+            throw new PackagerException("ERR_CreatingDirFailed", outDir.getPath());
+        }
+        try (InputStream is = isa; OutputStream out = new FileOutputStream(fout)) {
             byte[] buf = new byte[16384];
             int len;
             while ((len = is.read(buf)) > 0) {
@@ -1363,18 +1328,6 @@ public class PackagerLib {
             }
         } catch (IOException ex) {
             throw new PackagerException(ex, "ERR_FileCopyFailed", outDir.getPath());
-        } finally {
-            try {
-                is.close();
-            } catch (IOException ex) {
-            }
-
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException ex) {
-                }
-            }
         }
     }
 
@@ -1419,7 +1372,7 @@ public class PackagerLib {
         }
     }
 
-    private Set<String> alreadyAddedEntries = new HashSet<String>();
+    private Set<String> alreadyAddedEntries = new HashSet<>();
     private void createParentEntries(String relativePath, JarOutputStream jar) throws IOException {
         String[] pathComponents = relativePath.split("/");
         StringBuilder pathSB = new StringBuilder();
@@ -1449,17 +1402,14 @@ public class PackagerLib {
                 continue;
             }
 
-            InputStream in = inJar.getInputStream(je);
             jar.putNextEntry(new JarEntry(je.getName()));
 
             byte b[] = new byte[65000];
             int i;
-            try {
+            try (InputStream in = inJar.getInputStream(je)) {
                 while ((i = in.read(b)) > 0) {
                     jar.write(b, 0, i);
                 }
-            } finally {
-                in.close();
             }
 
             jar.closeEntry();
@@ -1508,13 +1458,11 @@ public class PackagerLib {
 
             byte b[] = new byte[65000];
             int i;
-            FileInputStream in = new FileInputStream(f);
-            try {
+
+            try (FileInputStream in = new FileInputStream(f)) {
                 while ((i = in.read(b)) > 0) {
                     jar.write(b, 0, i);
                 }
-            } finally {
-                in.close();
             }
             jar.closeEntry();
         }
@@ -1553,7 +1501,7 @@ public class PackagerLib {
         Class theClass = PackagerLib.class;
         String classUrl = theClass.getResource(theClassFile).toString();
 
-        if (!classUrl.startsWith("jar:file:") || classUrl.indexOf("!") == -1){
+        if (!classUrl.startsWith("jar:file:") || !classUrl.contains("!")){
             throw new PackagerException("ERR_CantFindRuntime");
         }
 
@@ -1561,10 +1509,9 @@ public class PackagerLib {
         classUrl = classUrl.substring(0, classUrl.lastIndexOf("!"));
         // Strip everything after the last "/" or "\" to get rid of the jar filename
         int lastIndexOfSlash = Math.max(classUrl.lastIndexOf("/"), classUrl.lastIndexOf("\\"));
-        String jfxrtPath = classUrl.substring(0, lastIndexOfSlash)
-                    + "/../rt/lib/ext/jfxrt.jar!/";
 
-        return jfxrtPath;
+        return classUrl.substring(0, lastIndexOfSlash)
+                    + "/../rt/lib/ext/jfxrt.jar!/";
     }
 
     private Class loadClassFromRuntime(String className) throws PackagerException {
@@ -1577,10 +1524,9 @@ public class PackagerLib {
     }
 
     private void createBinaryCss(String cssFile, String binCssFile) throws PackagerException {
-        String ifname = cssFile;
         String ofname = (binCssFile != null)
                             ? binCssFile
-                            : replaceExtensionByBSS(ifname);
+                            : replaceExtensionByBSS(cssFile);
 
         // create parent directories
         File of = new File(ofname);
@@ -1591,7 +1537,7 @@ public class PackagerLib {
 
         // Using reflection because CSS parser is part of runtime
         // and we want to avoid dependency on jfxrt during build
-        Class clazz;
+        Class<?> clazz;
         try {
             clazz = Class.forName("com.sun.javafx.css.parser.Css2Bin");
         } catch (ClassNotFoundException e) {
@@ -1602,7 +1548,7 @@ public class PackagerLib {
 
         try {
             Method m = clazz.getMethod("convertToBinary", new Class[]{String.class, String.class});
-            m.invoke(null, ifname, ofname);
+            m.invoke(null, cssFile, ofname);
         } catch (Exception ex) {
             Throwable causeEx = ex.getCause();
             String cause = (causeEx != null) ? causeEx.getMessage()
@@ -1643,25 +1589,25 @@ public class PackagerLib {
             return false;
         }
         name = name.replace('\\', '/');
-        if (name.indexOf("/CVS/") >= 0) {
+        if (name.contains("/CVS/")) {
             return false;
         }
-        if (name.indexOf("/.svn/") >= 0) {
+        if (name.contains("/.svn/")) {
             return false;
         }
-        if (name.indexOf("/.hg/") >= 0) {
+        if (name.contains("/.hg/")) {
             return false;
         }
-        if (name.indexOf("/.#") >= 0) {
+        if (name.contains("/.#")) {
             return false;
         }
-        if (name.indexOf("/._") >= 0) {
+        if (name.contains("/._")) {
             return false;
         }
-        if (name.endsWith("#") && name.indexOf("/#") >= 0) {
+        if (name.endsWith("#") && name.contains("/#")) {
             return false;
         }
-        if (name.endsWith("%") && name.indexOf("/%") >= 0) {
+        if (name.endsWith("%") && name.contains("/%")) {
             return false;
         }
         if (name.endsWith("MANIFEST.MF")) {
@@ -1737,7 +1683,7 @@ public class PackagerLib {
     }
 
     private Set<CertPath> collectCertPaths() throws IOException {
-        Set<CertPath> result = new HashSet<CertPath>();
+        Set<CertPath> result = new HashSet<>();
         for (DeployResource resource: deployParams.resources) {
             final File srcFile = resource.getFile();
             if (srcFile.exists() && srcFile.isFile() &&
@@ -1749,7 +1695,7 @@ public class PackagerLib {
     }
 
     private Set<CertPath> extractCertPaths(File jar) throws IOException {
-        Set<CertPath> result = new HashSet<CertPath>();
+        Set<CertPath> result = new HashSet<>();
         JarFile jf = new JarFile(jar);
 
         // need to fully read jar file to build up internal signer info map
@@ -1761,7 +1707,7 @@ public class PackagerLib {
             JarEntry je = entries.nextElement();
             String entryName = je.getName();
 
-            CodeSigner[] signers = null;
+            CodeSigner[] signers;
             if (entryName.equalsIgnoreCase(JarSignature.BLOB_SIGNATURE)) {
                 byte[] raw = Utils.getBytes(jf.getInputStream(je));
                 try {
@@ -1790,7 +1736,7 @@ public class PackagerLib {
     }
 
     private static Collection<CertPath> extractCertPaths(CodeSigner[] signers) {
-        Collection<CertPath> result = new ArrayList<CertPath>();
+        Collection<CertPath> result = new ArrayList<>();
         if (signers != null) {
             for (CodeSigner cs : signers) {
                 CertPath cp = cs.getSignerCertPath();

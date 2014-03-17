@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+set -e
+launchctl load "/Library/LaunchDaemons/DEPLOY_LAUNCHD_PLIST_FILE"
+
+exit 0

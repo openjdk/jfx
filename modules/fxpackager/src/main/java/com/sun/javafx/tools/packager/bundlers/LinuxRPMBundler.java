@@ -32,8 +32,13 @@ import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.resource.linux.LinuxResources;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,29 +52,30 @@ public class LinuxRPMBundler extends AbstractBundler {
     public static final BundlerParamInfo<LinuxAppBundler> APP_BUNDLER = new StandardBundlerParam<>(
             I18N.getString("param.app-bundler.name"), 
             I18N.getString("param.app-bundler.description"),
-            "linuxAppBundler", //KEY
+            "linux.app.bundler",
             LinuxAppBundler.class, null, params -> new LinuxAppBundler(), false, null);
 
-    public static final BundlerParamInfo<File> IMAGE_DIR = new StandardBundlerParam<>(
+    public static final BundlerParamInfo<File> RPM_IMAGE_DIR = new StandardBundlerParam<>(
             I18N.getString("param.image-dir.name"), 
             I18N.getString("param.image-dir.description"),
-            "imageDir", //KEY
+            "linux.rpm.imageDir",
             File.class, null, params -> {
                 File imagesRoot = IMAGES_ROOT.fetchFrom(params);
+                if (!imagesRoot.exists()) imagesRoot.mkdirs();
                 return new File(imagesRoot, "linux-rpm.image");
-            }, false, File::new);
+            }, false, (s, p) -> new File(s));
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.config-root.name"), 
             I18N.getString("param.config-root.description"),
-            "configRoot", //KEY
+            "configRoot",
             File.class, null, params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
-            false, File::new);
+            false, (s, p) -> new File(s));
 
     public static final BundlerParamInfo<String> BUNDLE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.bundle-name.name"), 
             I18N.getString("param.bundle-name.description"),
-            "bundleName", //KEY
+            "linux.bundleName",
             String.class, null, params -> {
                 String nm = APP_NAME.fetchFrom(params);
                 if (nm == null) return null;
@@ -77,11 +83,12 @@ public class LinuxRPMBundler extends AbstractBundler {
                 //spaces are not allowed in RPM package names
                 nm = nm.replaceAll(" ", "");
                 return nm;
-            }, false, s -> s);
+            }, false, (s, p) -> s);
 
     private final static String DEFAULT_ICON = "javalogo_white_32.png";
     private final static String DEFAULT_SPEC_TEMPLATE = "template.spec";
     private final static String DEFAULT_DESKTOP_FILE_TEMPLATE = "template.desktop";
+    private final static String DEFAULT_INIT_SCRIPT_TEMPLATE = "template.rpm.init.script";
 
     public final static String TOOL_RPMBUILD = "rpmbuild";
     public final static double TOOL_RPMBUILD_MIN_VERSION = 4.0d;
@@ -118,32 +125,36 @@ public class LinuxRPMBundler extends AbstractBundler {
 
     @Override
     public boolean validate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
-        if (p == null) throw new ConfigException(
-                I18N.getString("error.parameters-null"), 
-                I18N.getString("error.parameters-null.advice"));
+        try {
+            if (p == null) throw new ConfigException(
+                    I18N.getString("error.parameters-null"),
+                    I18N.getString("error.parameters-null.advice"));
 
-        //run basic validation to ensure requirements are met
-        //we are not interested in return code, only possible exception
-        APP_BUNDLER.fetchFrom(p).doValidate(p);
+            //run basic validation to ensure requirements are met
+            //we are not interested in return code, only possible exception
+            APP_BUNDLER.fetchFrom(p).doValidate(p);
 
-        //TODO: validate presense of required tools?
-        if (!testTool(TOOL_RPMBUILD, TOOL_RPMBUILD_MIN_VERSION)){
-            throw new ConfigException(
-                    I18N.getString(MessageFormat.format("error.cannot-find-rpmbuild", TOOL_RPMBUILD_MIN_VERSION)),
-                    I18N.getString(MessageFormat.format("error.cannot-find-rpmbuild.advice", TOOL_RPMBUILD_MIN_VERSION)));
+            //TODO: validate presense of required tools?
+            if (!testTool(TOOL_RPMBUILD, TOOL_RPMBUILD_MIN_VERSION)){
+                throw new ConfigException(
+                        I18N.getString(MessageFormat.format("error.cannot-find-rpmbuild", TOOL_RPMBUILD_MIN_VERSION)),
+                        I18N.getString(MessageFormat.format("error.cannot-find-rpmbuild.advice", TOOL_RPMBUILD_MIN_VERSION)));
+            }
+
+            return true;
+        } catch (RuntimeException re) {
+            throw new ConfigException(re);
         }
-
-        return true;
     }
 
     private boolean prepareProto(Map<String, ? super Object> params) {
-        File imageDir = IMAGE_DIR.fetchFrom(params);
+        File imageDir = RPM_IMAGE_DIR.fetchFrom(params);
         File appDir = APP_BUNDLER.fetchFrom(params).doBundle(params, imageDir, true);
         return appDir != null;
     }
 
     public File bundle(Map<String, ? super Object> p, File outdir) {
-        File imageDir = IMAGE_DIR.fetchFrom(p);
+        File imageDir = RPM_IMAGE_DIR.fetchFrom(p);
         try {
 
             imageDir.mkdirs();
@@ -165,7 +176,7 @@ public class LinuxRPMBundler extends AbstractBundler {
             return null;
         } finally {
             try {
-                if (verbose) {
+                if (VERBOSE.fetchFrom(p)) {
                     saveConfigFiles(p);
                 }
                 if (imageDir != null && !Log.isDebug()) {
@@ -180,6 +191,22 @@ public class LinuxRPMBundler extends AbstractBundler {
         }
     }
 
+    /*
+     * set permissions with a string like "rwxr-xr-x"
+     * 
+     * This cannot be directly backport to 22u which is unfortunately built with 1.6
+     */
+    private void setPermissions(File file, String permissions) {
+        Set<PosixFilePermission> filePermissions = PosixFilePermissions.fromString(permissions);
+        try {
+            if (file.exists()) {
+                Files.setPosixFilePermissions(file.toPath(), filePermissions);
+            }
+        } catch (IOException ex) {
+            Logger.getLogger(LinuxDebBundler.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
     protected void saveConfigFiles(Map<String, ? super Object> params) {
         try {
             File configRoot = CONFIG_ROOT.fetchFrom(params);
@@ -194,6 +221,12 @@ public class LinuxRPMBundler extends AbstractBundler {
             if (getConfig_IconFile(params).exists()) {
                 IOUtils.copyFile(getConfig_IconFile(params),
                         new File(configRoot, getConfig_IconFile(params).getName()));
+            }
+            if (SERVICE_HINT.fetchFrom(params)) {
+                if (getConfig_InitScriptFile(params).exists()) {
+                    IOUtils.copyFile(getConfig_InitScriptFile(params),
+                            new File(configRoot, getConfig_InitScriptFile(params).getName()));
+                }
             }
             Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), configRoot.getAbsolutePath()));
         } catch (IOException ioe) {
@@ -224,10 +257,11 @@ public class LinuxRPMBundler extends AbstractBundler {
         Map<String, String> data = new HashMap<>();
 
         data.put("APPLICATION_NAME", BUNDLE_NAME.fetchFrom(params));
+        data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params).toLowerCase());
         data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
         data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
         data.put("APPLICATION_LAUNCHER_FILENAME",
-                LinuxAppBundler.getLauncher(IMAGE_DIR.fetchFrom(params), params).getName());
+                LinuxAppBundler.getLauncher(RPM_IMAGE_DIR.fetchFrom(params), params).getName());
         data.put("APPLICATION_DESKTOP_SHORTCUT", SHORTCUT_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_MENU_SHORTCUT", MENU_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("DEPLOY_BUNDLE_CATEGORY", CATEGORY.fetchFrom(params)); //TODO rpm categories
@@ -235,12 +269,17 @@ public class LinuxRPMBundler extends AbstractBundler {
         data.put("APPLICATION_SUMMARY", TITLE.fetchFrom(params));
         data.put("APPLICATION_LICENSE_TYPE", LICENSE_TYPE.fetchFrom(params));
         data.put("APPLICATION_LICENSE_FILE", getLicenseFileString(params));
+        data.put("SERVICE_HINT", String.valueOf(SERVICE_HINT.fetchFrom(params)));
+        data.put("START_ON_INSTALL", String.valueOf(START_ON_INSTALL.fetchFrom(params)));
+        data.put("STOP_ON_UNINSTALL", String.valueOf(STOP_ON_UNINSTALL.fetchFrom(params)));
+        data.put("RUN_AT_STARTUP", String.valueOf(RUN_AT_STARTUP.fetchFrom(params)));
 
         //prepare spec file
         Writer w = new BufferedWriter(new FileWriter(getConfig_SpecFile(params)));
         String content = preprocessTextResource(
                 LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_SpecFile(params).getName(),
-                I18N.getString("resource.rpm-spec-file"), DEFAULT_SPEC_TEMPLATE, data);
+                I18N.getString("resource.rpm-spec-file"), DEFAULT_SPEC_TEMPLATE, data,
+                VERBOSE.fetchFrom(params));
         w.write(content);
         w.close();
 
@@ -248,7 +287,8 @@ public class LinuxRPMBundler extends AbstractBundler {
         w = new BufferedWriter(new FileWriter(getConfig_DesktopShortcutFile(params)));
         content = preprocessTextResource(
                 LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_DesktopShortcutFile(params).getName(),
-                I18N.getString("resource.menu-shortcut-descriptor"), DEFAULT_DESKTOP_FILE_TEMPLATE, data);
+                I18N.getString("resource.menu-shortcut-descriptor"), DEFAULT_DESKTOP_FILE_TEMPLATE, data,
+                VERBOSE.fetchFrom(params));
         w.write(content);
         w.close();
 
@@ -259,29 +299,50 @@ public class LinuxRPMBundler extends AbstractBundler {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.menu-icon"),
                     DEFAULT_ICON,
-                    iconTarget);
+                    iconTarget,
+                    VERBOSE.fetchFrom(params));
         } else {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.menu-icon"),
                     icon,
-                    iconTarget);
+                    iconTarget,
+                    VERBOSE.fetchFrom(params));
+        }
+
+        if (SERVICE_HINT.fetchFrom(params)) {
+            //prepare init script
+            w = new BufferedWriter(new FileWriter(getConfig_InitScriptFile(params)));
+            content = preprocessTextResource(
+                    LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_InitScriptFile(params).getName(),
+                    I18N.getString("resource.rpm-init-script"), 
+                    DEFAULT_INIT_SCRIPT_TEMPLATE, 
+                    data,
+                    VERBOSE.fetchFrom(params));
+            w.write(content);
+            w.close();
+            setPermissions(getConfig_InitScriptFile(params), "rwxr-xr-x");
         }
 
         return true;
     }
 
     private File getConfig_DesktopShortcutFile(Map<String, ? super Object> params) {
-        return new File(LinuxAppBundler.getLauncher(IMAGE_DIR.fetchFrom(params), params).getParentFile(),
+        return new File(LinuxAppBundler.getLauncher(RPM_IMAGE_DIR.fetchFrom(params), params).getParentFile(),
                 BUNDLE_NAME.fetchFrom(params) + ".desktop");
     }
 
     private File getConfig_IconFile(Map<String, ? super Object> params) {
-        return new File(LinuxAppBundler.getLauncher(IMAGE_DIR.fetchFrom(params), params).getParentFile(),
+        return new File(LinuxAppBundler.getLauncher(RPM_IMAGE_DIR.fetchFrom(params), params).getParentFile(),
                 BUNDLE_NAME.fetchFrom(params) + ".png");
     }
 
+    private File getConfig_InitScriptFile(Map<String, ? super Object> params) {
+        return new File(LinuxAppBundler.getLauncher(RPM_IMAGE_DIR.fetchFrom(params), params).getParentFile(),
+                BUNDLE_NAME.fetchFrom(params) + ".init");
+    }
+
     private File getConfig_SpecFile(Map<String, ? super Object> params) {
-        return new File(IMAGE_DIR.fetchFrom(params),
+        return new File(RPM_IMAGE_DIR.fetchFrom(params),
                 BUNDLE_NAME.fetchFrom(params) + ".spec");
     }
 
@@ -297,19 +358,32 @@ public class LinuxRPMBundler extends AbstractBundler {
                 TOOL_RPMBUILD,
                 "-bb", getConfig_SpecFile(params).getAbsolutePath(),
 //                "--define", "%__jar_repack %{nil}",  //debug: improves build time (but will require unpack to install?)
-                "--define", "%_sourcedir "+IMAGE_DIR.fetchFrom(params).getAbsolutePath(),
+                "--define", "%_sourcedir "+ RPM_IMAGE_DIR.fetchFrom(params).getAbsolutePath(),
                 "--define", "%_rpmdir " + outdir.getAbsolutePath(), //save result to output dir
                 "--define", "%_topdir " + broot.getAbsolutePath() //do not use other system directories to build as current user
         );
-        pb = pb.directory(IMAGE_DIR.fetchFrom(params));
-        IOUtils.exec(pb, verbose);
+        pb = pb.directory(RPM_IMAGE_DIR.fetchFrom(params));
+        IOUtils.exec(pb, VERBOSE.fetchFrom(params));
 
         IOUtils.deleteRecursive(broot);
 
         Log.info(MessageFormat.format(I18N.getString("message.output-bundle-location"), outdir.getAbsolutePath()));
 
-        //todo look for added files and returnt hat added file.
-        return outdir;
+        // presume the result is the ".rpm" file with the newest modified time
+        // not the best solution, but it is the most reliable
+        File result = null;
+        long lastModified = 0;
+        File[] list = outdir.listFiles();
+        if (list != null) {
+            for (File f : list) {
+                if (f.getName().endsWith(".rpm") && f.lastModified() > lastModified) {
+                    result = f;
+                    lastModified = f.lastModified();
+                }
+            }
+        }
+
+        return result;
     }
 
     @Override
@@ -324,7 +398,7 @@ public class LinuxRPMBundler extends AbstractBundler {
 
     @Override
     public String getID() {
-        return "rpm"; //KEY
+        return "rpm";
     }
 
     @Override
@@ -350,7 +424,7 @@ public class LinuxRPMBundler extends AbstractBundler {
                 CATEGORY,
                 DESCRIPTION,
                 ICON,
-                IMAGE_DIR,
+                RPM_IMAGE_DIR,
                 IMAGES_ROOT,
                 LICENSE_FILES,
                 LICENSE_TYPE,

@@ -25,22 +25,23 @@
 package com.sun.javafx.tools.packager.bundlers;
 
 import com.oracle.bundlers.*;
+import com.oracle.bundlers.JreUtils.Rule;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.resource.mac.MacResources;
 
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.MessageFormat;
 import java.util.*;
 
 import static com.oracle.bundlers.StandardBundlerParam.*;
-import static com.oracle.bundlers.StandardBundlerParam.USER_JVM_OPTIONS;
-import static com.oracle.bundlers.StandardBundlerParam.VERSION;
 import static com.oracle.bundlers.mac.MacBaseInstallerBundler.getPredefinedImage;
 
 public class MacAppBundler extends AbstractBundler {
-    private File configRoot = null;
-    private Map<String, ? super Object> params;
+
+    private static final ResourceBundle I18N =
+            ResourceBundle.getBundle("com.oracle.bundlers.mac.MacAppBundler");
 
     public final static String MAC_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "macosx" + File.separator;
@@ -97,35 +98,148 @@ public class MacAppBundler extends AbstractBundler {
         return map;
     }
 
-    public static final EnumeratedBundlerParam<String> MAC_CATEGORY  =
+    public static final EnumeratedBundlerParam<String> MAC_CATEGORY =
             new EnumeratedBundlerParam<>(
                     "Category",
-                    "Mac Categories. Note that the key is the string to display to the user and the value is the id of the category",
-                    "LSApplicationCategoryType",
+                    "Mac App Store Categories. Note that the key is the string to display to the user and the value is the id of the category",
+                    "mac.category",
                     String.class,
-                    null,
+                    new String[] {CATEGORY.getID()},
                     params -> "Unknown",
                     false,
-                    s -> s,
+                    (s, p) -> s,
                     getMacCategories(),
                     false //strict - for MacStoreBundler this should be strict
             );
 
-    public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new StandardBundlerParam<>(
-            "Launcher URL", "Override the packager default launcher with a custom launcher.", "mac.launcher.url",
-            URL.class, null, params -> MacResources.class.getResource(EXECUTABLE_NAME),
-            false, s -> {
-        try {
-            return new URL(s);
-        } catch (MalformedURLException e) {
-            Log.info(e.toString());
-            return null;
-        }
-    });
+    public static final BundlerParamInfo<String> MAC_CF_BUNDLE_NAME =
+            new StandardBundlerParam<>(
+                    "CFBundleName",
+                    "The name of the app as it appears in the Menu Bar.  This can be different from the application name.  This name should be less than 16 characters long and be suitable for displaying in the menu bar and the app’s Info window.",
+                    "mac.CFBundleName",
+                    String.class,
+                    null,
+                    params -> null,
+                    false,
+                    (s, p) -> s);
 
-    private void setBuildRoot(File dir) {
-        configRoot = new File(dir, "macosx");
-        configRoot.mkdirs();
+    public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
+            I18N.getString("param.config-root.name"),
+            I18N.getString("param.config-root.description"),
+            "configRoot",
+            File.class,
+            null,
+            params -> {
+                File configRoot = new File(BUILD_ROOT.fetchFrom(params), "macosx");
+                configRoot.mkdirs();
+                return configRoot;
+            },
+            false,
+            (s, p) -> new File(s));
+
+    public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new StandardBundlerParam<>(
+            "Launcher URL",
+            "Override the packager default launcher with a custom launcher.",
+            "mac.launcher.url",
+            URL.class,
+            null,
+            params -> MacResources.class.getResource(EXECUTABLE_NAME),
+            false,
+            (s, p) -> {
+                try {
+                    return new URL(s);
+                } catch (MalformedURLException e) {
+                    Log.info(e.toString());
+                    return null;
+                }
+            });
+
+    public static final BundlerParamInfo<String> DEFAULT_ICNS_ICON = new StandardBundlerParam<>(
+            "Default Icon",
+            "The Default Icon for when a user does not specify an icns file.",
+            ".mac.default.icns",
+            String.class,
+            null,
+            params -> TEMPLATE_BUNDLE_ICON,
+            false,
+            (s, p) -> s);
+
+    //Subsetting of JRE is restricted.
+    //JRE README defines what is allowed to strip:
+    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
+    //
+    public static final BundlerParamInfo<Rule[]> MAC_JDK_RULES = new StandardBundlerParam<>(
+            "",
+            "",
+            ".mac-jdk.runtime.rules",
+            Rule[].class,
+            null,
+            params -> new Rule[]{
+                    Rule.suffixNeg("macos/libjli.dylib"),
+                    Rule.suffixNeg("resources"),
+                    Rule.suffixNeg("home/bin"),
+                    Rule.suffixNeg("home/db"),
+                    Rule.suffixNeg("home/demo"),
+                    Rule.suffixNeg("home/include"),
+                    Rule.suffixNeg("home/lib"),
+                    Rule.suffixNeg("home/man"),
+                    Rule.suffixNeg("home/release"),
+                    Rule.suffixNeg("home/sample"),
+                    Rule.suffixNeg("home/src.zip"),
+                    //"home/rt" is not part of the official builds
+                    // but we may be creating this symlink to make older NB projects
+                    // happy. Make sure to not include it into final artifact
+                    Rule.suffixNeg("home/rt"),
+                    Rule.suffixNeg("jre/bin"),
+                    Rule.suffixNeg("jre/bin/rmiregistry"),
+                    Rule.suffixNeg("jre/bin/tnameserv"),
+                    Rule.suffixNeg("jre/bin/keytool"),
+                    Rule.suffixNeg("jre/bin/klist"),
+                    Rule.suffixNeg("jre/bin/ktab"),
+                    Rule.suffixNeg("jre/bin/policytool"),
+                    Rule.suffixNeg("jre/bin/orbd"),
+                    Rule.suffixNeg("jre/bin/servertool"),
+                    Rule.suffixNeg("jre/bin/javaws"),
+                    Rule.suffixNeg("jre/bin/java"),
+                    //Rule.suffixNeg("jre/lib/ext"), //need some of jars there for https to work
+                    Rule.suffixNeg("jre/lib/nibs"),
+                    //keep core deploy APIs but strip plugin dll
+                    //Rule.suffixNeg("jre/lib/deploy"),
+                    //Rule.suffixNeg("jre/lib/deploy.jar"),
+                    //Rule.suffixNeg("jre/lib/javaws.jar"),
+                    //Rule.suffixNeg("jre/lib/libdeploy.dylib"),
+                    //Rule.suffixNeg("jre/lib/plugin.jar"),
+                    Rule.suffixNeg("jre/lib/libnpjp2.dylib"),
+                    Rule.suffixNeg("jre/lib/security/javaws.policy"),
+                    Rule.substrNeg("Contents/Info.plist")
+            },
+            false,
+            (s, p) -> null
+    );
+
+    public static final BundlerParamInfo<RelativeFileSet> MAC_RUNTIME = new StandardBundlerParam<>(
+            RUNTIME.getName(),
+            RUNTIME.getDescription(),
+            RUNTIME.getID(),
+            RelativeFileSet.class,
+            null,
+            params -> extractMacRuntime(System.getProperty("java.home"), params),
+            false,
+            MacAppBundler::extractMacRuntime
+    );
+
+    public static RelativeFileSet extractMacRuntime(String base, Map<String, ? super Object> params) {
+        if (base.endsWith("/Home")) {
+            throw new IllegalArgumentException("Currently Macs require a JDK to package");
+        } else if (base.endsWith("/Home/jre")) {
+            File baseDir = new File(base).getParentFile().getParentFile().getParentFile();
+            return JreUtils.extractJreAsRelativeFileSet(baseDir.toString(),
+                    MAC_JDK_RULES.fetchFrom(params));
+        } else {
+            // for now presume we are pointed to the top of a JDK
+            return JreUtils.extractJreAsRelativeFileSet(base,
+                    MAC_JDK_RULES.fetchFrom(params));
+        }
     }
 
     public MacAppBundler() {
@@ -135,8 +249,12 @@ public class MacAppBundler extends AbstractBundler {
 
     @Override
     public boolean validate(Map<String, ? super Object> params) throws UnsupportedPlatformException, ConfigException {
-        logParameters(params);
-        return doValidate(params);
+        try {
+            logParameters(params);
+            return doValidate(params);
+        } catch (RuntimeException re) {
+            throw new ConfigException(re);
+        }
     }
 
     //to be used by chained bundlers, e.g. by EXE bundler to avoid
@@ -150,7 +268,7 @@ public class MacAppBundler extends AbstractBundler {
             return true;
         }
 
-        if (StandardBundlerParam.MAIN_JAR.fetchFrom(p) == null) {
+        if (MAIN_JAR.fetchFrom(p) == null) {
             throw new ConfigException(
                     "Main application jar is missing.",
                     "Make sure to use fx:jar task to create main application jar.");
@@ -165,21 +283,21 @@ public class MacAppBundler extends AbstractBundler {
     }
 
 
-    private File getConfig_InfoPlist() {
-        return new File(configRoot, "Info.plist");
+    private File getConfig_InfoPlist(Map<String, ? super Object> params) {
+        return new File(CONFIG_ROOT.fetchFrom(params), "Info.plist");
     }
 
-    private File getConfig_Icon() {
-        return new File(configRoot, NAME.fetchFrom(params) + ".icns");
+    private File getConfig_Icon(Map<String, ? super Object> params) {
+        return new File(CONFIG_ROOT.fetchFrom(params), APP_NAME.fetchFrom(params) + ".icns");
     }
 
-    private void prepareConfigFiles() throws IOException {
-        File infoPlistFile = getConfig_InfoPlist();
+    private void prepareConfigFiles(Map<String, ? super Object> params) throws IOException {
+        File infoPlistFile = getConfig_InfoPlist(params);
         infoPlistFile.createNewFile();
-        writeInfoPlist(infoPlistFile);
+        writeInfoPlist(infoPlistFile, params);
 
         // Copy icon to Resources folder
-        prepareIcon();
+        prepareIcon(params);
     }
 
     public File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
@@ -189,17 +307,15 @@ public class MacAppBundler extends AbstractBundler {
             if (predefinedImage != null) {
                 return predefinedImage;
             }
-            params = p;
 
             File file = BUILD_ROOT.fetchFrom(p);
-            setBuildRoot(file);
 
             //prepare config resources (we will copy them to the bundle later)
             // NB: explicitly saving them to simplify customization
-            prepareConfigFiles();
+            prepareConfigFiles(p);
 
             // Create directory structure
-            rootDirectory = new File(outputDirectory, NAME.fetchFrom(p) + ".app");
+            rootDirectory = new File(outputDirectory, APP_NAME.fetchFrom(p) + ".app");
             IOUtils.deleteRecursive(rootDirectory);
             rootDirectory.mkdirs();
 
@@ -227,7 +343,7 @@ public class MacAppBundler extends AbstractBundler {
             writePkgInfo(pkgInfoFile);
 
             // Copy executable to MacOS folder
-            File executableFile = new File(macOSDirectory, getLauncherName());
+            File executableFile = new File(macOSDirectory, getLauncherName(p));
             IOUtils.copyFromURL(
                     RAW_EXECUTABLE_URL.fetchFrom(p),
                     executableFile);
@@ -235,10 +351,10 @@ public class MacAppBundler extends AbstractBundler {
             executableFile.setExecutable(true, false);
 
             // Copy runtime to PlugIns folder
-            copyRuntime(plugInsDirectory);
+            copyRuntime(plugInsDirectory, p);
 
             // Copy class path entries to Java folder
-            copyClassPathEntries(javaDirectory);
+            copyClassPathEntries(javaDirectory, p);
 
 //TODO: Need to support adding native libraries.
             // Copy library path entries to MacOS folder
@@ -246,47 +362,45 @@ public class MacAppBundler extends AbstractBundler {
 
             /*********** Take care of "config" files *******/
             // Copy icon to Resources folder
-            IOUtils.copyFile(getConfig_Icon(),
-                    new File(resourcesDirectory, getConfig_Icon().getName()));
+            IOUtils.copyFile(getConfig_Icon(p),
+                    new File(resourcesDirectory, getConfig_Icon(p).getName()));
             // Generate Info.plist
-            IOUtils.copyFile(getConfig_InfoPlist(),
+            IOUtils.copyFile(getConfig_InfoPlist(p),
                     new File(contentsDirectory, "Info.plist"));
-        } catch (ConfigException e) {
-            Log.info("Bundler " + getName() + " skipped because of a configuration problem: " + e.getMessage() + "\nAdvice to fix: " + e.getAdvice());
         } catch (IOException ex) {
             Log.verbose(ex);
             return null;
         } finally {
-            if (!verbose) {
+            if (!VERBOSE.fetchFrom(p)) {
                 //cleanup
-                cleanupConfigFiles();
+                cleanupConfigFiles(p);
             } else {
                 Log.info("Config files are saved to " +
-                        configRoot.getAbsolutePath()  +
+                        CONFIG_ROOT.fetchFrom(p).getAbsolutePath()  +
                         ". Use them to customize package.");
             }
         }
         return rootDirectory;
     }
 
-    public String getAppName() {
-        return  NAME.fetchFrom(params) + ".app";
+    public String getAppName(Map<String, ? super Object> params) {
+        return APP_NAME.fetchFrom(params) + ".app";
     }
 
-    protected void cleanupConfigFiles() {
+    protected void cleanupConfigFiles(Map<String, ? super Object> params) {
         //Since building the app can be bypassed, make sure configRoot was set
-        if (configRoot != null) {
-            if (getConfig_Icon() != null) {
-                getConfig_Icon().delete();
+        if (CONFIG_ROOT.fetchFrom(params) != null) {
+            if (getConfig_Icon(params) != null) {
+                getConfig_Icon(params).delete();
             }
-            if (getConfig_InfoPlist() != null) {
-                getConfig_InfoPlist().delete();
+            if (getConfig_InfoPlist(params) != null) {
+                getConfig_InfoPlist(params).delete();
             }
         }
     }
 
 
-    private void copyClassPathEntries(File javaDirectory) throws IOException {
+    private void copyClassPathEntries(File javaDirectory, Map<String, ? super Object> params) throws IOException {
         RelativeFileSet classPath = APP_RESOURCES.fetchFrom(params);
         if (classPath == null) {
             throw new RuntimeException("Null app resources?");
@@ -298,8 +412,8 @@ public class MacAppBundler extends AbstractBundler {
         }
     }
 
-    private void copyRuntime(File plugInsDirectory) throws IOException {
-        RelativeFileSet runTime = RUNTIME.fetchFrom(params);
+    private void copyRuntime(File plugInsDirectory, Map<String, ? super Object> params) throws IOException {
+        RelativeFileSet runTime = MAC_RUNTIME.fetchFrom(params);
         if (runTime == null) {
             //request to use system runtime => do not bundle
             return;
@@ -310,49 +424,47 @@ public class MacAppBundler extends AbstractBundler {
         File destDir = new File(plugInsDirectory, srcdir.getName());
         Set<String> filesToCopy = runTime.getIncludedFiles();
 
-        // We don't need the symlink to libjli or the JRE's info.plist.
-        // We are going to load it directly.
-        filesToCopy.remove("Contents/MacOS/libjli.dylib");
-        filesToCopy.remove("Contents/Info.plist");
         for (String fname : filesToCopy) {
             IOUtils.copyFile(
                     new File(srcdir, fname), new File(destDir, fname));
         }
     }
 
-
-    // get Name from bundle params
-    private String NAME() {
-        return NAME.fetchFrom(params);
-    }
-
-    private void prepareIcon() throws IOException {
+    private void prepareIcon(Map<String, ? super Object> params) throws IOException {
         File icon = ICON.fetchFrom(params);
         if (icon == null || !icon.exists()) {
-            fetchResource(MAC_BUNDLER_PREFIX+ NAME() +".icns",
+            fetchResource(MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +".icns",
                     "icon",
-                    TEMPLATE_BUNDLE_ICON,
-                    getConfig_Icon());
+                    DEFAULT_ICNS_ICON.fetchFrom(params),
+                    getConfig_Icon(params),
+                    VERBOSE.fetchFrom(params));
         } else {
-            fetchResource(MAC_BUNDLER_PREFIX+ NAME() +".icns",
+            fetchResource(MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +".icns",
                     "icon",
                     icon,
-                    getConfig_Icon());
+                    getConfig_Icon(params),
+                    VERBOSE.fetchFrom(params));
         }
     }
 
-    private String getLauncherName() {
-        if (NAME() != null) {
-            return NAME();
+    private String getLauncherName(Map<String, ? super Object> params) {
+        if (APP_NAME.fetchFrom(params) != null) {
+            return APP_NAME.fetchFrom(params);
         } else {
             return MAIN_CLASS.fetchFrom(params);
         }
     }
 
-    private String getBundleName() {
+    private String getBundleName(Map<String, ? super Object> params) {
         //TODO: Check to see what rules/limits are in place for CFBundleName
-        if (NAME() != null) {
-            return NAME();
+        if (MAC_CF_BUNDLE_NAME.fetchFrom(params) != null) {
+            String bn = MAC_CF_BUNDLE_NAME.fetchFrom(params);
+            if (bn.length() > 16) {
+                Log.info(MessageFormat.format(I18N.getString("message.bundle-name-too-long-warning"), MAC_CF_BUNDLE_NAME.getID(), bn));
+            }
+            return MAC_CF_BUNDLE_NAME.fetchFrom(params);
+        } else if (APP_NAME.fetchFrom(params) != null) {
+            return APP_NAME.fetchFrom(params);
         } else {
             String nm = MAIN_CLASS.fetchFrom(params);
             if (nm.length() > 16) {
@@ -362,28 +474,28 @@ public class MacAppBundler extends AbstractBundler {
         }
     }
 
-    private String getBundleIdentifier() {
+    private String getBundleIdentifier(Map<String, ? super Object> params) {
         //TODO: Check to see what rules/limits are in place for CFBundleIdentifier
         return  IDENTIFIER.fetchFrom(params);
     }
 
-    private void writeInfoPlist(File file) throws IOException {
+    private void writeInfoPlist(File file, Map<String, ? super Object> params) throws IOException {
         Log.verbose("Preparing Info.plist: "+file.getAbsolutePath());
 
         //prepare config for exe
         //Note: do not need CFBundleDisplayName if we do not support localization
         Map<String, String> data = new HashMap<>();
-        data.put("DEPLOY_ICON_FILE", getConfig_Icon().getName());
+        data.put("DEPLOY_ICON_FILE", getConfig_Icon(params).getName());
         data.put("DEPLOY_BUNDLE_IDENTIFIER",
-                getBundleIdentifier().toLowerCase());
+                getBundleIdentifier(params));
         data.put("DEPLOY_BUNDLE_NAME",
-                getBundleName());
+                getBundleName(params));
         data.put("DEPLOY_BUNDLE_COPYRIGHT",
                 COPYRIGHT.fetchFrom(params) != null ? COPYRIGHT.fetchFrom(params) : "Unknown");
-        data.put("DEPLOY_LAUNCHER_NAME", getLauncherName());
-        if (RUNTIME.fetchFrom(params) != null) {
+        data.put("DEPLOY_LAUNCHER_NAME", getLauncherName(params));
+        if (MAC_RUNTIME.fetchFrom(params) != null) {
             data.put("DEPLOY_JAVA_RUNTIME_NAME",
-                    RUNTIME.fetchFrom(params).getBaseDirectory().getName());
+                    MAC_RUNTIME.fetchFrom(params).getBaseDirectory().getName());
         } else {
             data.put("DEPLOY_JAVA_RUNTIME_NAME", "");
         }
@@ -391,8 +503,7 @@ public class MacAppBundler extends AbstractBundler {
                 VERSION.fetchFrom(params) != null ? VERSION.fetchFrom(params) : "1.0.0");
         data.put("DEPLOY_BUNDLE_CATEGORY",
                 //TODO parameters should provide set of values for IDEs
-                CATEGORY.fetchFrom(params) != null ?
-                        CATEGORY.fetchFrom(params) : "unknown");
+                MAC_CATEGORY.validatedFetchFrom(params));
 
         //TODO NOT THE WAY TODO THIS but good enough for first pass
         data.put("DEPLOY_MAIN_JAR_NAME", new BundleParams(params).getMainApplicationJar());
@@ -435,8 +546,9 @@ public class MacAppBundler extends AbstractBundler {
 
         Writer w = new BufferedWriter(new FileWriter(file));
         w.write(preprocessTextResource(
-                MAC_BUNDLER_PREFIX + getConfig_InfoPlist().getName(),
-                "Bundle config file", TEMPLATE_INFO_PLIST, data));
+                MAC_BUNDLER_PREFIX + getConfig_InfoPlist(params).getName(),
+                "Bundle config file", TEMPLATE_INFO_PLIST, data,
+                VERBOSE.fetchFrom(params)));
         w.close();
 
     }
@@ -492,7 +604,7 @@ public class MacAppBundler extends AbstractBundler {
                 MAIN_JAR_CLASSPATH,
                 PREFERENCES_ID,
                 RAW_EXECUTABLE_URL,
-                RUNTIME,
+                MAC_RUNTIME,
                 USE_FX_PACKAGING,
                 USER_JVM_OPTIONS,
                 VERSION,

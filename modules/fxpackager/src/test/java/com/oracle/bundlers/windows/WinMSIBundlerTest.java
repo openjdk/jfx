@@ -26,7 +26,6 @@
 package com.oracle.bundlers.windows;
 
 import com.oracle.bundlers.Bundler;
-import com.oracle.bundlers.StandardBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.RelativeFileSet;
@@ -43,7 +42,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 
+import static com.oracle.bundlers.StandardBundlerParam.*;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class WinMSIBundlerTest {
@@ -118,8 +119,7 @@ public class WinMSIBundlerTest {
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new WinMsiBundler();
-        ((WinMsiBundler)bundler).setVerbose(true);
-        
+
         assertNotNull(bundler.getName());
         assertNotNull(bundler.getID());
         assertNotNull(bundler.getDescription());
@@ -127,13 +127,17 @@ public class WinMSIBundlerTest {
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
         
-        bundleParams.put(StandardBundlerParam.NAME.getID(), "Smoke");
-        bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.TestPackager");
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
 
-        bundler.execute(bundleParams, new File(workDir, "smoke"));
+        File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
     }
 
     /**
@@ -148,17 +152,98 @@ public class WinMSIBundlerTest {
     @Test
     public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new WinMsiBundler();
-        ((WinMsiBundler)bundler).setVerbose(true);
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
-        System.err.println("Bundle written to " + output);
-        assertTrue(output.isFile());
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
     }
+
+    /**
+     * Test a misconfiguration where the wix tools are misconfigured.
+     */
+    @Test
+    public void configLightBad() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinMsiBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(WinMsiBundler.TOOL_LIGHT_EXECUTABLE.getID(), "c:\\MissingTool.exe");
+
+        File output = bundler.execute(bundleParams, new File(workDir, "BadLight"));
+        assertNull(output);
+    }
+
+    /**
+     * Test a misconfiguration where the wix tools are misconfigured.
+     */
+    @Test
+    public void configLightNull() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinMsiBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(WinMsiBundler.TOOL_LIGHT_EXECUTABLE.getID(), null);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "NullLight"));
+        assertNull(output);
+    }
+
+    /**
+     * Test a misconfiguration where the Wix tools are misconfigured.
+     */
+    @Test
+    public void configCandleBad() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinMsiBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(WinMsiBundler.TOOL_CANDLE_EXECUTABLE.getID(), "c:\\MissingTool.exe");
+
+        File output = bundler.execute(bundleParams, new File(workDir, "BadCandle"));
+        assertNull(output);
+    }
+
+    /**
+     * Test a misconfiguration where the wix tools are misconfigured.
+     */
+    @Test
+    public void configCandleNull() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinMsiBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(WinMsiBundler.TOOL_CANDLE_EXECUTABLE.getID(), null);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "NullCandle"));
+        assertNull(output);
+    }
+
 
 }
