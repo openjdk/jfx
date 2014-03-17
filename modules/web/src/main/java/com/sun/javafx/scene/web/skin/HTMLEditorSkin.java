@@ -31,6 +31,7 @@ import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalContext;
 import org.w3c.dom.html.HTMLDocument;
 import org.w3c.dom.html.HTMLElement;
 
@@ -43,7 +44,6 @@ import javafx.collections.ObservableList;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -73,8 +73,6 @@ import javafx.util.Callback;
 import com.sun.javafx.scene.control.skin.ColorPickerSkin;
 import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.webkit.WebPage;
 import com.sun.javafx.webkit.Accessor;
 
@@ -450,17 +448,17 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
 
         engine = new ParentTraversalEngine(getSkinnable(), new Algorithm() {
             @Override
-            public Node select(Node owner, Direction dir, TraversalEngine engine) {
+            public Node select(Node owner, Direction dir, TraversalContext context) {
                 return cutButton;
             }
 
             @Override
-            public Node selectFirst(TraversalEngine engine) {
+            public Node selectFirst(TraversalContext context) {
                 return cutButton;
             }
 
             @Override
-            public Node selectLast(TraversalEngine engine) {
+            public Node selectLast(TraversalContext context) {
                 return cutButton;
             }
         });

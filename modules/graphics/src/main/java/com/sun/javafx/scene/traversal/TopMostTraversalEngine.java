@@ -28,7 +28,6 @@ package com.sun.javafx.scene.traversal;
 import com.sun.javafx.application.PlatformImpl;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 
 public abstract class TopMostTraversalEngine extends TraversalEngine{
 
@@ -41,7 +40,7 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
          * for 2D arrow behaviour with a target bias and a stack use :
          *    algorithm = new Biased2DWithStack();
          */
-        super(PlatformImpl.isContextual2DNavigation() ? new Hueristic2D() : new ContainerTabOrder());
+        super(DEFAULT_ALGORITHM);
     }
 
     public final Node trav(Node node, Direction dir) {
@@ -58,13 +57,23 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
                     // The inner traversal engine wasn't able to select anything in the specified direction.
                     // So now we try to traverse from the whole parent (associated with that traversal engine)
                     // by a traversal engine that's higher in the hierarchy
-                    traverseNode = dir.isForward() ? engine.selectLast() : p;
+                    traverseNode = p;
+                    if (dir == Direction.NEXT) {
+                        dir = Direction.NEXT_IN_LINE;
+                    }
                 }
             }
             p = p.getParent();
         }
         if (newNode == null) {
-            newNode = algorithm.select(traverseNode, dir, this);
+            newNode = select(traverseNode, dir);
+        }
+        if (newNode == null) {
+            if (dir == Direction.NEXT || dir == Direction.NEXT_IN_LINE) {
+                newNode = selectFirst();
+            } else if (dir == Direction.PREVIOUS) {
+                newNode = selectLast();
+            }
         }
         if (newNode != null) {
             focusAndNotify(newNode);
@@ -90,14 +99,14 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
     }
 
     public final Node traverseToFirst() {
-        Node n = algorithm.selectFirst(this);
+        Node n = selectFirst();
         if (n != null) focusAndNotify(n);
         return n;
     }
 
 
     public final Node traverseToLast() {
-        Node n = algorithm.selectLast(this);
+        Node n = selectLast();
         if (n != null) focusAndNotify(n);
         return n;
     }

@@ -65,7 +65,7 @@ final class TabOrderHelper {
         return prevNode.isDisabled() || !prevNode.impl_isTreeVisible();
     }
 
-    public static Node findPreviousFocusablePeer(Node node) {
+    public static Node findPreviousFocusablePeer(Node node, Parent root) {
         Node startNode = node;
         Node newNode = null;
         List<Node> parentNodes = findPeers(startNode);
@@ -85,7 +85,7 @@ final class TabOrderHelper {
         ** we've reached the end of the peer nodes, and none have been selected,
         ** time to look at our parents peers.....
         */
-        while (newNode == null && startNode != null) {
+        while (newNode == null && startNode != root) {
             List<Node> peerNodes;
             int parentIndex;
 
@@ -103,15 +103,6 @@ final class TabOrderHelper {
                 }
             }
             startNode = parent;
-        }
-
-        // None of the ancestor siblings is traversable, so start from the last traversable item
-        if (newNode == null) {
-            Parent p1 = node.getParent();
-            while (p1 != null && p1.getParent() != null) {
-                p1 = p1.getParent();
-            }
-            newNode =  getLastTargetNode(p1);
         }
 
         return newNode;
@@ -159,12 +150,12 @@ final class TabOrderHelper {
         return null;
     }
 
-    public static Node findNextFocusablePeer(Node node) {
+    public static Node findNextFocusablePeer(Node node, Parent root, boolean traverseIntoCurrent) {
         Node startNode = node;
         Node newNode = null;
 
         // First, try to find next peer among the node children
-        if (node instanceof Parent) {
+        if (traverseIntoCurrent && node instanceof Parent) {
             newNode = findNextFocusableInList(((Parent)node).getChildrenUnmodifiable(), 0);
         }
 
@@ -184,7 +175,7 @@ final class TabOrderHelper {
         ** we've reached the end of the peer nodes, and none have been selected,
         ** time to look at our parents peers.....
         */
-        while (newNode == null && startNode != null) {
+        while (newNode == null && startNode != root) {
             List<Node> peerNodes;
             int parentIndex;
 
@@ -197,15 +188,6 @@ final class TabOrderHelper {
                 }
             }
             startNode = parent;
-        }
-
-        // None of the ancestors siblings is traversable, so find the first traversable Node from the root
-        if (newNode == null) {
-            Parent p1 = node.getParent();
-            while (p1 != null && p1.getParent() != null) {
-                p1 = p1.getParent();
-            }
-            newNode = getFirstTargetNode(p1);
         }
 
         return newNode;

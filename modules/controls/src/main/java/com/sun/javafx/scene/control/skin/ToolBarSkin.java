@@ -31,6 +31,7 @@ import java.util.List;
 
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -39,9 +40,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
-import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -71,8 +70,6 @@ import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.scene.traversal.TraverseListener;
 import javafx.css.Styleable;
 
 public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
@@ -96,70 +93,94 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
 
         engine = new ParentTraversalEngine(getSkinnable(), new Algorithm() {
 
-
-            @Override
-            public Node select(Node owner, Direction dir, TraversalEngine engine) {
-                final ObservableList<Node> boxChildren = box.getChildren();
-                if (owner == overflowMenu) {
-                    if (dir.isForward(overflowMenu.getEffectiveNodeOrientation())) {
-                        return null;
-                    } else {
-                        for (int i = boxChildren.size() - 1; i >= 0; --i) {
-                            Node n = box.getChildren().get(i);
-                            if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
-                                return n;
-                            }
-                        }
-                    }
-                }
-                int idx = boxChildren.indexOf(owner);
-                if (dir.isForward(overflowMenu.getEffectiveNodeOrientation())) {
-                    for (int i = idx + 1; i < boxChildren.size(); ++i) {
-                        Node n = box.getChildren().get(i);
-                        if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
-                            return n;
-                        }
-                    }
-                    if (overflow) {
-                        overflowMenu.requestFocus();
-                        return overflowMenu;
-                    }
-                } else {
-                    for (int i = idx - 1; i >= 0; --i) {
-                        Node n = box.getChildren().get(i);
-                        if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
-                            return n;
-                        }
-                    }
-                }
-                return null;
-            }
-
-            @Override
-            public Node selectFirst(TraversalEngine engine) {
-                final ObservableList<Node> boxChildren = box.getChildren();
-                for (int i = 0; i < boxChildren.size(); ++i) {
+            private Node selectPrev(int from, TraversalContext context) {
+                for (int i = from; i >= 0; --i) {
                     Node n = box.getChildren().get(i);
-                    if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
+                    if (n.isDisabled() || !n.impl_isTreeVisible()) continue;
+                    if (n instanceof Parent) {
+                        Node selected = context.selectLastInParent((Parent)n);
+                        if (selected != null) return selected;
+                    }
+                    if (n.isFocusTraversable() ) {
                         return n;
                     }
                 }
                 return null;
             }
 
+            private Node selectNext(int from, TraversalContext context) {
+                for (int i = from, max = box.getChildren().size(); i < max; ++i) {
+                    Node n = box.getChildren().get(i);
+                    if (n.isDisabled() || !n.impl_isTreeVisible()) continue;
+                    if (n.isFocusTraversable()) {
+                        return n;
+                    }
+                    if (n instanceof Parent) {
+                        Node selected = context.selectFirstInParent((Parent)n);
+                        if (selected != null) return selected;
+                    }
+                }
+                return null;
+            }
+
             @Override
-            public Node selectLast(TraversalEngine engine) {
+            public Node select(Node owner, Direction dir, TraversalContext context) {
+                final ObservableList<Node> boxChildren = box.getChildren();
+                if (owner == overflowMenu) {
+                    if (dir.isForward()) {
+                        return null;
+                    } else {
+                        Node selected = selectPrev(boxChildren.size() - 1, context);
+                        if (selected != null) return selected;
+                    }
+                }
+
+                int idx = boxChildren.indexOf(owner);
+
+                if (idx < 0) {
+                    // The current focus owner is a child of some Toolbar's item
+                    Parent item = owner.getParent();
+                    while (!boxChildren.contains(item)) {
+                        item = item.getParent();
+                    }
+                    Node selected = context.selectInSubtree(item, owner, dir);
+                    if (selected != null) return selected;
+                    idx = boxChildren.indexOf(owner);
+                    if (dir == Direction.NEXT) dir = Direction.NEXT_IN_LINE;
+                }
+
+                if (idx >= 0) {
+                    if (dir.isForward()) {
+                        Node selected = selectNext(idx + 1, context);
+                        if (selected != null) return selected;
+                        if (overflow) {
+                            overflowMenu.requestFocus();
+                            return overflowMenu;
+                        }
+                    } else {
+                        Node selected = selectPrev(idx - 1, context);
+                        if (selected != null) return selected;
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public Node selectFirst(TraversalContext context) {
+                Node selected = selectNext(0, context);
+                if (selected != null) return selected;
                 if (overflow) {
                     return overflowMenu;
                 }
-                final ObservableList<Node> boxChildren = box.getChildren();
-                for (int i = boxChildren.size() - 1; i >= 0; --i) {
-                    Node n = box.getChildren().get(i);
-                    if (n.isFocusTraversable() && !n.isDisabled() && n.impl_isTreeVisible()) {
-                        return n;
-                    }
-                }
                 return null;
+            }
+
+            @Override
+            public Node selectLast(TraversalContext context) {
+                if (overflow) {
+                    return overflowMenu;
+                }
+                return selectPrev(box.getChildren().size() - 1, context);
             }
         });
         getSkinnable().setImpl_traversalEngine(engine);

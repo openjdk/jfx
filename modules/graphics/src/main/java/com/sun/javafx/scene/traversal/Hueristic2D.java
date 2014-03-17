@@ -30,16 +30,10 @@ import java.util.Stack;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
-import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import com.sun.javafx.Logging;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 
 import static com.sun.javafx.scene.traversal.Direction.*;
 import java.util.function.Function;
-import javafx.geometry.Bounds;
 
 
 public class Hueristic2D implements Algorithm {
@@ -48,16 +42,16 @@ public class Hueristic2D implements Algorithm {
     }
 
     @Override
-    public Node select(Node node, Direction dir, TraversalEngine engine) {
+    public Node select(Node node, Direction dir, TraversalContext context) {
         Node newNode = null;
 
-        cacheTraversal(node, dir, engine);
+        cacheTraversal(node, dir);
 
-        if (NEXT.equals(dir)) {
-            newNode = TabOrderHelper.findNextFocusablePeer(node);
+        if (NEXT.equals(dir) || NEXT_IN_LINE.equals(dir)) {
+            newNode = TabOrderHelper.findNextFocusablePeer(node, context.getRoot(), dir == NEXT);
         }
         else if (PREVIOUS.equals(dir)) {
-            newNode = TabOrderHelper.findPreviousFocusablePeer(node);
+            newNode = TabOrderHelper.findPreviousFocusablePeer(node, context.getRoot());
         }
         else if (UP.equals(dir) || DOWN.equals(dir) || LEFT.equals(dir) || RIGHT.equals(dir) ) {
             /*
@@ -79,11 +73,11 @@ public class Hueristic2D implements Algorithm {
                     switch (dir) {
                         case UP:
                         case DOWN:
-                            newNode = getNearestNodeUpOrDown(currentB, cachedB, engine, node, dir);
+                            newNode = getNearestNodeUpOrDown(currentB, cachedB, context, dir);
                             break;
                         case LEFT:
                         case RIGHT:
-                            newNode = getNearestNodeLeftOrRight(currentB, cachedB, engine, node, dir);
+                            newNode = getNearestNodeLeftOrRight(currentB, cachedB, context, dir);
                             break;
                         default:
                             break;
@@ -107,13 +101,13 @@ public class Hueristic2D implements Algorithm {
     }
 
     @Override
-    public Node selectFirst(TraversalEngine engine) {
-        return TabOrderHelper.getFirstTargetNode(engine.getRoot());
+    public Node selectFirst(TraversalContext context) {
+        return TabOrderHelper.getFirstTargetNode(context.getRoot());
     }
 
     @Override
-    public Node selectLast(TraversalEngine engine) {
-        return TabOrderHelper.getLastTargetNode(engine.getRoot());
+    public Node selectLast(TraversalContext context) {
+        return TabOrderHelper.getLastTargetNode(context.getRoot());
     }
 
     private boolean isOnAxis(Direction dir, Bounds cur, Bounds tgt) {
@@ -215,7 +209,7 @@ public class Hueristic2D implements Algorithm {
     protected Node cacheLastTraversalNode = null;
     protected Stack<Node> traversalNodeStack = new Stack();
 
-    private void cacheTraversal(Node node, Direction dir, TraversalEngine engine) {
+    private void cacheTraversal(Node node, Direction dir) {
         if (!traversalNodeStack.empty() && node != cacheLastTraversalNode) {
             /*
             ** we didn't get here by arrow key,
@@ -274,9 +268,9 @@ public class Hueristic2D implements Algorithm {
         }
     };
 
-    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Direction dir) {
+    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
 
-        List<Node> nodes = engine.getAllTargetNodes();
+        List<Node> nodes = context.getAllTargetNodes();
         
         Function<Bounds, Double> ySideInDirection = dir == DOWN ? BOUNDS_BOTTOM_SIDE : BOUNDS_TOP_SIDE;
         Function<Bounds, Double> ySideInOpositeDirection = dir == DOWN ? BOUNDS_TOP_SIDE : BOUNDS_BOTTOM_SIDE;
@@ -580,9 +574,9 @@ public class Hueristic2D implements Algorithm {
         }
     };
 
-    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Direction dir) {
+    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
 
-        List<Node> nodes = engine.getAllTargetNodes();
+        List<Node> nodes = context.getAllTargetNodes();
         
         Function<Bounds, Double> xSideInDirection = dir == LEFT ? BOUNDS_LEFT_SIDE : BOUNDS_RIGHT_SIDE;
         Function<Bounds, Double> xSideInOpositeDirection = dir == LEFT ? BOUNDS_RIGHT_SIDE : BOUNDS_LEFT_SIDE;

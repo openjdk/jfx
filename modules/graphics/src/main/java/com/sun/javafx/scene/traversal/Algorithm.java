@@ -34,10 +34,10 @@ public interface Algorithm {
      * Traverse from origin, in direction dir.
      * Return a the new target Node or null if no suitable target is found.
      */
-    public Node select(Node owner, Direction dir, TraversalEngine engine);
+    public Node select(Node owner, Direction dir, TraversalContext context);
 
-    public Node selectFirst(TraversalEngine engine);
+    public Node selectFirst(TraversalContext context);
 
-    public Node selectLast(TraversalEngine engine);
+    public Node selectLast(TraversalContext context);
     
 }

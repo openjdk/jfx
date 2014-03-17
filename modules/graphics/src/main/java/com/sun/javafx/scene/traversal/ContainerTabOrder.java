@@ -27,12 +27,7 @@ package com.sun.javafx.scene.traversal;
 
 import java.util.List;
 import javafx.geometry.Bounds;
-import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import com.sun.javafx.Logging;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 
 import static com.sun.javafx.scene.traversal.Direction.*;
 
@@ -41,44 +36,45 @@ public class ContainerTabOrder implements Algorithm {
     ContainerTabOrder() {
     }
 
-    public Node select(Node node, Direction dir, TraversalEngine engine) {
-        Node newNode = null;
-        if (NEXT.equals(dir)) {
-            newNode = TabOrderHelper.findNextFocusablePeer(node);
-        }
-        else if (PREVIOUS.equals(dir)) {
-            newNode = TabOrderHelper.findPreviousFocusablePeer(node);
-        }
-        else if (UP.equals(dir) || DOWN.equals(dir) || LEFT.equals(dir) || RIGHT.equals(dir) ) {
-            List<Node> nodes = engine.getAllTargetNodes();
+    public Node select(Node node, Direction dir, TraversalContext context) {
+        switch (dir) {
+            case NEXT:
+            case NEXT_IN_LINE:
+                return TabOrderHelper.findNextFocusablePeer(node, context.getRoot(), dir == NEXT);
+            case PREVIOUS:
+                return TabOrderHelper.findPreviousFocusablePeer(node, context.getRoot());
+            case UP:
+            case DOWN:
+            case LEFT:
+            case RIGHT:
+                List<Node> nodes = context.getAllTargetNodes();
 
-            int target = trav2D(engine.getSceneLayoutBounds(node), dir, nodes, engine);
-            if (target != -1) {
-                newNode = nodes.get(target);
-            }
+                int target = trav2D(context.getSceneLayoutBounds(node), dir, nodes, context);
+                if (target != -1) {
+                    return nodes.get(target);
+                }
         }
-
-        return newNode;
+        return null;
     }
 
     @Override
-    public Node selectFirst(TraversalEngine engine) {
-        return TabOrderHelper.getFirstTargetNode(engine.getRoot());
+    public Node selectFirst(TraversalContext context) {
+        return TabOrderHelper.getFirstTargetNode(context.getRoot());
     }
 
     @Override
-    public Node selectLast(TraversalEngine engine) {
-        return TabOrderHelper.getLastTargetNode(engine.getRoot());
+    public Node selectLast(TraversalContext context) {
+        return TabOrderHelper.getLastTargetNode(context.getRoot());
     }
 
-    private int trav2D(Bounds origin, Direction dir, List<Node> peers, TraversalEngine engine) {
+    private int trav2D(Bounds origin, Direction dir, List<Node> peers, TraversalContext context) {
 
         Bounds bestBounds = null;
         double bestMetric = 0.0;
         int bestIndex = -1;
 
         for (int i = 0; i < peers.size(); i++) {
-            final Bounds targetBounds = engine.getSceneLayoutBounds(peers.get(i));
+            final Bounds targetBounds = context.getSceneLayoutBounds(peers.get(i));
             final double outd = outDistance(dir, origin, targetBounds);
             final double metric;
 

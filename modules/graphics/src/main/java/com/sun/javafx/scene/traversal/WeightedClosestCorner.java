@@ -29,9 +29,6 @@ import java.util.List;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
-import com.sun.javafx.Logging;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 
 import static com.sun.javafx.scene.traversal.Direction.*;
 
@@ -163,11 +160,11 @@ public class WeightedClosestCorner implements Algorithm {
         return distance;
     }
 
-    public Node select(Node node, Direction dir, TraversalEngine engine) {
+    public Node select(Node node, Direction dir, TraversalContext context) {
         Node newNode = null;
-        List<Node> nodes = engine.getAllTargetNodes();
+        List<Node> nodes = context.getAllTargetNodes();
 
-        int target = traverse(engine.getSceneLayoutBounds(node), dir, nodes, engine);
+        int target = traverse(context.getSceneLayoutBounds(node), dir, nodes, context);
         if (target != -1) {
             newNode = nodes.get(target);
         }
@@ -176,20 +173,20 @@ public class WeightedClosestCorner implements Algorithm {
     }
 
     @Override
-    public Node selectFirst(TraversalEngine engine) {
-        List<Node> nodes = engine.getAllTargetNodes();
+    public Node selectFirst(TraversalContext context) {
+        List<Node> nodes = context.getAllTargetNodes();
         Point2D zeroZero = new Point2D(0,0);
 
         if (nodes.size() > 0) {
             int nodeIndex;
             Node nearestNode = nodes.get(0);
-            double nearestDistance = zeroZero.distance(engine.getSceneLayoutBounds(nodes.get(0)).getMinX(),
-                    engine.getSceneLayoutBounds(nodes.get(0)).getMinY());
+            double nearestDistance = zeroZero.distance(context.getSceneLayoutBounds(nodes.get(0)).getMinX(),
+                    context.getSceneLayoutBounds(nodes.get(0)).getMinY());
             double distance;
 
             for (nodeIndex = 1; nodeIndex < nodes.size(); nodeIndex++) {
-                distance = zeroZero.distance(engine.getSceneLayoutBounds(nodes.get(nodeIndex)).getMinX(),
-                        engine.getSceneLayoutBounds(nodes.get(nodeIndex)).getMinY());
+                distance = zeroZero.distance(context.getSceneLayoutBounds(nodes.get(nodeIndex)).getMinX(),
+                        context.getSceneLayoutBounds(nodes.get(nodeIndex)).getMinY());
                 if (nearestDistance > distance) {
                     nearestDistance = distance;
                     nearestNode = nodes.get(nodeIndex);
@@ -201,31 +198,31 @@ public class WeightedClosestCorner implements Algorithm {
     }
 
     @Override
-    public Node selectLast(TraversalEngine engine) {
+    public Node selectLast(TraversalContext context) {
         return null;
     }
 
-    public int traverse(Bounds origin, Direction dir, List<Node> targets, TraversalEngine engine) {
+    public int traverse(Bounds origin, Direction dir, List<Node> targets, TraversalContext context) {
 
         final int target;
 
-        if (dir == NEXT || dir == PREVIOUS) {
-            target = trav1D(origin, dir, targets, engine);
+        if (dir == NEXT || dir == NEXT_IN_LINE || dir == PREVIOUS) {
+            target = trav1D(origin, dir, targets, context);
         } else {
-            target = trav2D(origin, dir, targets, engine);
+            target = trav2D(origin, dir, targets, context);
         }
 
         return target;
     }
 
-    private int trav2D(Bounds origin, Direction dir, List<Node> targets, TraversalEngine engine) {
+    private int trav2D(Bounds origin, Direction dir, List<Node> targets, TraversalContext context) {
 
         Bounds bestBounds = null;
         double bestMetric = 0.0;
         int bestIndex = -1;
 
         for (int i = 0; i < targets.size(); i++) {
-            final Bounds targetBounds = engine.getSceneLayoutBounds(targets.get(i));
+            final Bounds targetBounds = context.getSceneLayoutBounds(targets.get(i));
             final double outd = outDistance(dir, origin, targetBounds);
             final double metric;
 
@@ -291,26 +288,26 @@ public class WeightedClosestCorner implements Algorithm {
 
 
     private int compare1D(Bounds a, Bounds b, Direction dir) {
-        return (dir == NEXT) ? compare1D(a, b) : -compare1D(a, b);
+        return (dir != PREVIOUS) ? -compare1D(a, b) : compare1D(a, b);
     }
 
-    private int trav1D(Bounds origin, Direction dir, List<Node> targets, TraversalEngine engine) {
+    private int trav1D(Bounds origin, Direction dir, List<Node> targets, TraversalContext context) {
         int bestSoFar = -1;
         int leastSoFar = -1;
 
         for (int i = 0; i < targets.size(); i++) {
             if (leastSoFar == -1 ||
-                    compare1D(engine.getSceneLayoutBounds(targets.get(i)),
-                            engine.getSceneLayoutBounds(targets.get(leastSoFar)), dir) < 0) {
+                    compare1D(context.getSceneLayoutBounds(targets.get(i)),
+                            context.getSceneLayoutBounds(targets.get(leastSoFar)), dir) < 0) {
                 leastSoFar = i;
             }
 
-            if (compare1D(engine.getSceneLayoutBounds(targets.get(i)), origin, dir) < 0) {
+            if (compare1D(context.getSceneLayoutBounds(targets.get(i)), origin, dir) < 0) {
                 continue;
             }
 
             if (bestSoFar == -1 ||
-                    compare1D(engine.getSceneLayoutBounds(targets.get(i)), engine.getSceneLayoutBounds(targets.get(bestSoFar)), dir) < 0) {
+                    compare1D(context.getSceneLayoutBounds(targets.get(i)), context.getSceneLayoutBounds(targets.get(bestSoFar)), dir) < 0) {
                 bestSoFar = i;
             }
         }

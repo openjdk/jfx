@@ -34,6 +34,7 @@ public enum Direction {
     LEFT(false),
     RIGHT(true),
     NEXT(true),
+    NEXT_IN_LINE(true), // Like NEXT, but does not traverse into the current parent
     PREVIOUS(false);
     private final boolean forward;
 
@@ -43,18 +44,5 @@ public enum Direction {
 
     public boolean isForward() {
         return forward;
-    }
-
-    public boolean isForward(NodeOrientation orientation) {
-        switch(this) {
-            case LEFT:
-            case RIGHT:
-            case NEXT:
-            case PREVIOUS:
-                return forward ^ (orientation == NodeOrientation.RIGHT_TO_LEFT);
-            default:
-                return forward;
-        }
-
     }
 }
