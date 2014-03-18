@@ -343,7 +343,7 @@ defineProperty("FULL_TEST", "false")
 ext.IS_FULL_TEST = Boolean.parseBoolean(FULL_TEST);
 
 // Specifies whether to run robot-based visual tests (only used when FULL_TEST is also enabled)
-defineProperty("USE_ROBOT", "true")
+defineProperty("USE_ROBOT", "false")
 ext.IS_USE_ROBOT = Boolean.parseBoolean(USE_ROBOT);
 
 // Specified whether to run tests in headless mode
