@@ -25,9 +25,15 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.skin.VirtualContainerBase;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.collections.FXCollections;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.TreeTableRowSkin;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -39,6 +45,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 
@@ -515,5 +525,127 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new TreeTableRowSkin<T>(this);
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        TreeItem<T> treeItem = getTreeItem();
+        TreeTableView<T> treeTableView = getTreeTableView();
+
+        switch (attribute) {
+            case ROLE: return Role.TREE_TABLE_ITEM;
+            case TREE_ITEM_PARENT: {
+                if (treeItem == null) return null;
+                TreeItem parent = treeItem.getParent();
+                return parent == null ? treeTableView : getTreeTableRow(getVirtualFlow(), parent);
+            }
+            case TREE_ITEM_COUNT: {
+                // response is relative to this tree cell
+                return treeItem == null        ? 0 :
+                       treeItem.isLeaf()       ? 0 :
+                       ! treeItem.isExpanded() ? 0 :
+                       treeItem.getChildren().size();
+            }
+            case TREE_ITEM_AT_INDEX: {
+                // index is relative to this tree cell
+                final int offset = (Integer)parameters[0];
+                final int p = offset + getIndex();
+                return treeItem == null                  ? null :
+                       p > treeItem.getChildren().size() ? null :
+                       getVirtualFlow().getCell(p);
+            }
+            case PREVIOUS_SIBLING: {
+                return treeItem == null ? null : getTreeTableRow(getVirtualFlow(), treeItem.previousSibling());
+            }
+            case NEXT_SIBLING: {
+                return treeItem == null ? null : getTreeTableRow(getVirtualFlow(), treeItem.nextSibling());
+            }
+            case TITLE: {
+                Object value = treeItem == null ? null : treeItem.getValue();
+                return value == null ? "" : value.toString();
+            }
+            case LEAF: return treeItem == null ? true : treeItem.isLeaf();
+            case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
+            case INDEX: return getIndex();
+            case SELECTED: return isSelected();
+            case DISCLOSURE_LEVEL: {
+                // FIXME replace with treeTableView.getTreeItemLevel(treeItem) when we sync up with 8u20
+                return treeTableView == null ? 0 : TreeTableView.getNodeLevel(treeItem);
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public void accExecuteAction(Action action, Object... parameters) {
+        final TreeTableView<T> treeTableView = getTreeTableView();
+        final TreeTableView.TreeTableViewSelectionModel<T> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
+
+        switch (action) {
+            case SELECT: {
+                if (sm != null) sm.clearAndSelect(getIndex());
+                break;
+            }
+            case ADD_TO_SELECTION: {
+                if (sm != null) sm.select(getIndex());
+                break;
+            }
+            case REMOVE_FROM_SELECTION: {
+                if (sm != null) sm.clearSelection(getIndex());
+                break;
+            }
+            default: super.accExecuteAction(action);
+        }
+    }
+
+    // returns the TreeTableRow instances used to represent the children of the
+    // given TreeItem
+    private List<Node> getTreeItemChildren(TreeItem<T> treeItem) {
+        List<Node> children = new ArrayList<>();
+        final VirtualFlow<TreeTableRow<T>> flow = getVirtualFlow();
+        for (TreeItem childItem : treeItem.getChildren()) {
+            TreeTableRow<T> row = getTreeTableRow(flow, childItem);
+
+            // We should never, ever get row == null. If we do then
+            // something is very wrong.
+            assert row != null;
+
+            // VirtualFlow should never return duplicates for different
+            // indices, but I did see this happening. I don't want to
+            // slow down normal use cases, but during development this
+            // should be tested for.
+            assert ! children.contains(row);
+
+            if (row != null) children.add(row);
+        }
+        return children;
+    }
+
+    private VirtualFlow getVirtualFlow() {
+        // FIXME Ugly hack! Clean this up once everything is understood
+        Parent p = getParent();
+        while (p != null && ! (p instanceof VirtualFlow)) {
+            p = p.getParent();
+        }
+
+        if (p == null) {
+            return null;
+        }
+
+        return (VirtualFlow) p;
+    }
+
+    private TreeTableRow<T> getTreeTableRow(VirtualFlow<TreeTableRow<T>> flow, TreeItem treeItem) {
+        // FIXME Ugly hack! Clean this up once everything is understood
+        final int treeItemIndex = getTreeTableView().getRow(treeItem);
+        TreeTableRow<T> cell = null;
+
+        if (flow != null) {
+            cell = flow.getVisibleCell(treeItemIndex);
+        }
+
+        return cell;
     }
 }

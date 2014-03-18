@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
 
+import javafx.scene.accessibility.Accessible;
+
 public abstract class Application {
 
     private final static String DEFAULT_NAME = "java";
@@ -654,6 +656,8 @@ public abstract class Application {
     public final EventLoop createEventLoop() {
         return new EventLoop();
     }
+
+    public PlatformAccessible createAccessible(Accessible accessible) { return null; }
 
     protected abstract FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,
                                                      boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex);

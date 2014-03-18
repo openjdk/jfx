@@ -32,6 +32,9 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Orientation;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 import com.sun.javafx.Utils;
 import javafx.css.CssMetaData;
@@ -470,5 +473,30 @@ public class ScrollBar extends Control {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
     }
-    
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.SCROLL_BAR;
+            case VALUE: return getValue();
+            case MAX_VALUE: return getMax();
+            case MIN_VALUE: return getMin();
+            case ORIENTATION: return getOrientation();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case INCREMENT: increment(); break;
+            case DECREMENT: decrement(); break;
+            case SET_VALUE: {
+                Double value = (Double) parameters[0];
+                if (value != null) setValue(value);
+                break;
+            }
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
 }

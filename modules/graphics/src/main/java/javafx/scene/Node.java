@@ -75,6 +75,10 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.accessibility.Accessible;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
@@ -99,6 +103,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.stage.Window;
 import javafx.util.Callback;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -106,10 +111,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.binding.ExpressionHelper;
@@ -152,6 +157,7 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.impl.PrismSettings;
+
 import javafx.scene.shape.Shape3D;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
@@ -847,6 +853,35 @@ public abstract class Node implements EventTarget, Styleable {
         }
 
         if (sceneChanged) { scene.fireSuperValueChangedEvent(); }
+
+        /* Dispose the accessible peer, if any. If AT ever needs this node again
+         * a new accessible peer is created. */
+        if (accessible != null) {
+            /* Generally accessibility does not retain any state, therefore deleting objects
+             * generally does not cause problems (AT just asks everything back).
+             * The exception to this rule is when the object sends a notifications to the AT, 
+             * in which case it is expected to be around to answer request for the new values. 
+             * It is possible that a object is reparented (within the scene) in the middle of
+             * this process. For example, when a tree item is expanded, the notification is 
+             * sent to the AT by the cell. But when the TreeView relayouts the cell can be 
+             * reparented before AT can query the relevant information about the expand event.
+             * If the accessible was disposed, AT can't properly report the event.
+             * 
+             * The fix is to defer the disposal of the accessible to the next pulse.
+             * If at that time the node is placed back to the scene, then the accessible is hooked
+             * to Node and AT requests are processed. Otherwise the accessible is disposed.
+             */
+            if (oldScene != null && oldScene != newScene && newScene == null) {
+                // Strictly speaking we need some type of accessible.thaw() at this point.
+                oldScene.addAccessible(Node.this, accessible);
+            } else {
+                accessible.dispose();
+            }
+            /* Always set to null to ensure this accessible is never on more than one 
+             * Scene#accMap at the same time (At lest not with the same accessible). 
+             */
+            accessible = null;
+        }
     }
 
     final void setScenes(Scene newScene, SubScene newSubScene) {
@@ -7516,6 +7551,8 @@ public abstract class Node implements EventTarget, Styleable {
                 }
 
                 needsChangeEvent = true;
+
+                accSendNotification(Attribute.FOCUSED);
             }
         }
 
@@ -7951,7 +7988,11 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
 
-
+    /**
+     * References a node that is a labelFor this node.
+     * Accessible via a NodeAccessor. See Label.labelFor for details.
+     */
+    private Node labeledBy = null;
 
 
     /***************************************************************************
@@ -9074,15 +9115,94 @@ public abstract class Node implements EventTarget, Styleable {
             public SubScene getSubScene(Node node) {
                 return node.getSubScene();
             }
+
+            @Override public void setLabeledBy(Node node, Node labeledBy) {
+                node.labeledBy = labeledBy;
+            }
         });
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
      */
-    @Deprecated public AccessibleProvider impl_getAccessible() {
-        return null; // return a valid value for specific controls accessible objects
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.NODE;
+            case PARENT: return getParent();
+            case SCENE: return getScene();
+            case BOUNDS: return localToScreen(getBoundsInLocal());
+            case ENABLED: return !isDisabled();
+            case FOCUSED: return isFocused();
+            case VISIBLE: return isVisible();
+            case LABELED_BY: return labeledBy;
+            default: return null;
+        }
+    }
+
+    /**
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
+     */
+    public void accExecuteAction(Action action, Object... parameters) {
+    }
+
+    /**
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
+     */
+    public final void accSendNotification(Attribute attributes) {
+        if (accessible == null) {
+            Scene scene = getScene();
+            if (scene != null) {
+                accessible = scene.removeAccessible(this);
+            }
+        }
+        if (accessible != null) {
+            accessible.sendNotification(attributes);
+        }
+    }
+
+    Accessible accessible;
+
+    /**
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
+     */
+    public final Accessible getAccessible() {
+        if (accessible == null) {
+            Scene scene = getScene();
+            /* It is possible the node was reparented and getAccessible() 
+             * is called before the pulse. Try to recycle the accessible
+             * before creating a new one.
+             * Note: this code relies that an accessible can never be on
+             * more than one Scene#accMap. Thus, the only way
+             * scene#removeAccessible() returns non-null is if the node
+             * old scene and new scene are the same object.
+             */
+            if (scene != null) {
+                accessible = scene.removeAccessible(this);
+            }
+        }
+        if (accessible == null) {
+            accessible = new Accessible() {
+                @Override public Object getAttribute(Attribute attribute, Object... parameters) {
+                    return accGetAttribute(attribute, parameters);
+                }
+                @Override public void executeAction(Action action, Object... parameters) {
+                    accExecuteAction(action, parameters);
+                }
+                @Override public String toString() {
+                    String klassName = Node.this.getClass().getName();
+                    return klassName.substring(klassName.lastIndexOf('.')+1);
+                }
+            };
+        }
+        return accessible;
     }
 }
 

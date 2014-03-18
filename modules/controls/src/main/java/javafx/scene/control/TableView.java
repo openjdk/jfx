@@ -61,6 +61,8 @@ import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
@@ -2615,6 +2617,9 @@ public class TableView<S> extends Control {
         private void updateSelectedIndex(int row) {
             setSelectedIndex(row);
             setSelectedItem(getModelItem(row));
+
+            /* Does this get all the change events ? */
+            getTableView().accSendNotification(Attribute.SELECTED_CELLS);
         }
         
         /** {@inheritDoc} */
@@ -2985,4 +2990,37 @@ public class TableView<S> extends Control {
         }
     }
 
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TABLE_VIEW;
+            case COLUMN_COUNT: return getVisibleLeafColumns().size();
+            case ROW_COUNT: return getItems().size();
+            case SELECTED_CELLS: {
+                // TableViewSkin returns TableRows back to TableView.
+                // TableRowSkin returns TableCells back to TableRow.
+                ObservableList<TableRow<S>> rows = (ObservableList<TableRow<S>>)super.accGetAttribute(attribute, parameters);
+                List<Node> selection = new ArrayList<>();
+                for (TableRow<S> row : rows) {
+                    ObservableList<Node> cells = (ObservableList<Node>)row.accGetAttribute(attribute, parameters);
+                    if (cells != null) selection.addAll(cells);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            case FOCUS_ITEM:
+            case CELL_AT_ROWCOLUMN: {
+                TableRow<S> row = (TableRow<S>)super.accGetAttribute(attribute, parameters);
+                return row != null ? row.accGetAttribute(attribute, parameters) : null;
+            }
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case COLUMN_AT_INDEX: //Skin
+            case COLUMN_INDEX: //Skin
+            case HEADER: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

@@ -34,8 +34,6 @@ import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKStageListener;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 
 /**
  * @author Richard Bair
@@ -271,80 +269,6 @@ public class StubStage implements TKStage {
     @Override
     public void releaseInput() {
         throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    /**
-     *
-     * Accessibility glue for native
-     *
-     */
-
-    /**
-     * Initialize Accessiblility
-     *
-     * @param ac    the Glass accessible root object.
-     */
-    @Override public void setAccessibilityInitIsComplete(Object ac) {
-        // TODO: Add code later
-    }
-
-    /**
-     * Create accessible Glass object corresponding to stage
-     *
-     * @param ac    the FX accessible root/stage node.
-     *
-     * @return the Glass AccessibleRoot object.
-     */
-    @Override
-    public Object accessibleCreateStageProvider(AccessibleStageProvider ac) {
-        // TODO: Add code later
-        return null ;
-    }
-
-    /**
-     * Create accessible native object corresponding to controls
-     *
-     * @param ac
-     * returns native Object
-     */
-    @Override public Object accessibleCreateBasicProvider(AccessibleProvider ac) {
-        // TODO: Add code later
-        return null;
-    }
-
-    /**
-     * Delete accessible native object corresponding to controls
-     *
-     * @param nativeAcc
-     * returns native Object
-     */
-    @Override public void accessibleDestroyBasicProvider(Object nativeAcc) {
-        // TODO: Add code later
-    }
-
-    /**
-     * Fire accessible event
-     *
-     * @param eventID   identifies the event.
-     */
-    @Override public void accessibleFireEvent(Object nativeAcc, int eventID) {
-        // TODO: Add code later
-    }
-
-    /** Fire accessible property change event
-     *
-     * @param propertyId    identifies the property
-     * @param oldProperty   the old value of the property
-     * @param newProperty   the new value of the property
-     */
-    @Override public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, int oldProperty,
-                                             int newProperty ) {
-        // TODO: Add code later
-    }
-
-    @Override public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, boolean oldProperty,
-                                             boolean newProperty ) {
-        // TODO: Add code later
     }
 
     private interface Notification {

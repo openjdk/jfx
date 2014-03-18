@@ -42,6 +42,8 @@ import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
@@ -757,5 +759,17 @@ public class ScrollPane extends Control {
          * Indicates that a scroll bar should be shown when required.
          */
         AS_NEEDED
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.SCROLL_PANE;
+            case CONTENTS: return getContent();
+            case VERTICAL_SCROLLBAR: //Skin
+            case HORIZONTAL_SCROLLBAR: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

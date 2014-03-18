@@ -32,6 +32,8 @@ import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.css.StyleableProperty;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 
 /**
@@ -232,6 +234,18 @@ public class ProgressIndicator extends Control {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
     }
-    
+
+    /** @treatAsPrivate */
+    @Override 
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.PROGRESS_INDICATOR;
+            case VALUE: return getProgress();
+            case MAX_VALUE: return 1.0;
+            case MIN_VALUE: return 0.0;
+            case INDETERMINATE: return isIndeterminate();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 
 }

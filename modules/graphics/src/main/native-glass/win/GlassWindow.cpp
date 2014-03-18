@@ -33,7 +33,6 @@
 #include "GlassView.h"
 #include "GlassDnD.h"
 #include "Pixels.h"
-#include "AccessibleRoot.h"
 #include "GlassCursor.h"
 #include "GlassScreen.h"
 
@@ -80,9 +79,6 @@ GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated,
     m_beforeFullScreenStyle(0),
     m_beforeFullScreenExStyle(0),
     m_beforeFullScreenMenu(NULL),
-    m_pProvider(NULL),
-    m_a11yInitRequested(false),
-    m_a11yTreeIsReady(false),
     m_hIcon(NULL)
 {
     m_grefThis = GetEnv()->NewGlobalRef(jrefThis);
@@ -490,22 +486,11 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_TIMER:
             HandleViewTimerEvent(GetHWND(), wParam);
             return 0;
-        case WM_GETOBJECT:
-            //setvbuf(stdout, NULL, _IONBF, 0);  // turn off stdout buffering
-            if (!m_a11yInitRequested) {
-                m_a11yInitRequested = true;  // only call once
-                HandleAccessibilityInitEvent();  // initialize
-            } else if (m_a11yTreeIsReady) {
-                //TODO: From spec: When a window that previously returned providers has been destroyed,
-                // you should notify UI Automation by calling UiaReturnRawElementProvider(hwnd, 0, 0, NULL)
-                // Do this from WM_DESTROY?
-                LRESULT lr = UiaReturnRawElementProvider(GetHWND(), wParam, lParam, m_pProvider);
-                //TODO: It's not clear that Release() is needed.  Some examples use it; some don't.
-                // I'm getting a premature call to the d'tor so I'm removing it at least for now
-                //m_pProvider->Release();
-                return lr;
-            }
+        case WM_GETOBJECT: {
+            LRESULT lr = HandleViewGetAccessible(GetHWND(), wParam, lParam);
+            if (lr) return lr;
             break;
+        }
     }
 
     return ::DefWindowProc(GetHWND(), msg, wParam, lParam);
@@ -591,18 +576,6 @@ void GlassWindow::HandleFocusDisabledEvent()
 
     env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyFocusDisabled);
     CheckAndClearException(env);
-}
-
-void GlassWindow::HandleAccessibilityInitEvent() {
-
-    JNIEnv* env = GetEnv();
-    env->CallVoidMethod(m_grefThis, javaIDs.Window.notifyInitAccessibility);
-    CheckAndClearException(env);
-}
-
-void GlassWindow::SetAccessibilityInitIsComplete(AccessibleRoot* pAcc) {
-    m_pProvider = pAcc;
-    m_a11yTreeIsReady = true;
 }
 
 bool GlassWindow::HandleCommand(WORD cmdID) {
@@ -999,9 +972,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
 
     javaIDs.Window.notifyDelegatePtr = env->GetMethodID(cls, "notifyDelegatePtr", "(J)V");
     ASSERT(javaIDs.Window.notifyDelegatePtr);
-
-    javaIDs.Window.notifyInitAccessibility = env->GetMethodID(cls, "notifyInitAccessibility", "()V");
-    ASSERT(javaIDs.Window.notifyInitAccessibility);
 }
 
 /*

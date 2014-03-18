@@ -26,7 +26,6 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
-import com.sun.glass.ui.accessible.AccessibleRoot;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -1232,10 +1231,6 @@ public abstract class Window {
         this.delegatePtr = ptr;
     }
 
-    protected void notifyInitAccessibility() {
-        handleWindowEvent(System.nanoTime(), WindowEvent.INIT_ACCESSIBILITY);
-    }
-    
     // *****************************************************
     // window event handlers
     // *****************************************************
@@ -1243,17 +1238,6 @@ public abstract class Window {
         if (this.eventHandler != null) {
             this.eventHandler.handleWindowEvent(this, time, type);
         }
-    }
-
-    /*
-     * Notify the native code that the accessibilty tree has been built and is
-     * ready for use.
-     * 
-     * @param accRoot   the Java side accessible root object.
-     */
-    public void setAccessibilityInitIsComplete(AccessibleRoot accRoot) {
-        Application.checkEventThread();
-        accRoot.setAccessibilityInitIsComplete();
     }
 
     // *****************************************************

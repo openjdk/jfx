@@ -808,6 +808,7 @@ void addNative(Project project, String name, List<String> includeTargets) {
             }
             if (properties.javahClasspath == null) {
                 classpath = project.files(project.sourceSets.main.output.classesDir)
+                classpath += project.sourceSets.main.compileClasspath
             } else {
                 classpath = project.files(properties.javahClasspath)
             }
@@ -1111,7 +1112,7 @@ allprojects {
     // entire SDK, a different javadoc command is used (see the javadoc task on the top level)
     javadoc {
         enabled = IS_BUILD_JAVADOC
-        exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
+        exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
         executable = JAVADOC;
         options.windowTitle("JavaFX Project ${project.name} ${RELEASE_NAME}")
         options.links(JDK_DOCS);
@@ -2388,7 +2389,7 @@ task javadoc(type: Javadoc) {
     classpath += files(projectsToDocument.collect { project ->
         project.sourceSets.main.output
     });
-    exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*");
+    exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
     options.bottom("${javadocBottom}")

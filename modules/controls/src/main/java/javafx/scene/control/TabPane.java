@@ -28,6 +28,7 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -38,12 +39,15 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
-
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
+
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -673,6 +677,9 @@ public class TabPane extends Control {
             if (getSelectedIndex() >= 0 && getSelectedIndex() < tabPane.getTabs().size()) {
                 tabPane.getTabs().get(getSelectedIndex()).setSelected(true);
             }
+
+            /* Does this get all the change events */
+            tabPane.accSendNotification(Attribute.SELECTED_TAB);
         }
 
         @Override public void select(Tab tab) {
@@ -736,5 +743,16 @@ public class TabPane extends Control {
          * Tabs can not be closed by the user.
          */
         UNAVAILABLE
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TAB_PANE;
+            case TABS: //Skin 
+            case SELECTED_TAB: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

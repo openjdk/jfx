@@ -25,7 +25,6 @@
 
 package com.sun.javafx.stage;
 
-import com.sun.javafx.accessible.AccessibleStage;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import javafx.stage.Stage;
@@ -34,15 +33,7 @@ import javafx.stage.Stage;
 public class StagePeerListener extends WindowPeerListener {
     private final Stage stage;
     private final StageAccessor stageAccessor;
-    private AccessibleStage accessibleController ;
 
-    private static boolean ACCESSIBILITY_ENABLED = AccessController.doPrivileged(
-        new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("com.sun.javafx.accessibility.enabled");
-            }
-        });
-    
     public static interface StageAccessor {
         public void setIconified(Stage stage, boolean iconified);
         public void setMaximized(Stage stage, boolean maximized);
@@ -83,17 +74,5 @@ public class StagePeerListener extends WindowPeerListener {
         stageAccessor.setAlwaysOnTop(stage, aot);
     }
     
-
-    /**
-     * Initialize accessibility
-     */
-    @Override 
-    public void initAccessibleTKStageListener() {
-        // For 8.0 release accessibility is not enabled by default. 
-        if (ACCESSIBILITY_ENABLED) {
-            accessibleController = new AccessibleStage(stage);
-            stage.impl_getPeer().setAccessibilityInitIsComplete(accessibleController.getStageAccessible());
-        }
-    }
 
 }

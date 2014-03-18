@@ -28,10 +28,14 @@ package com.sun.javafx.scene.control.skin;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.input.MouseEvent;
@@ -41,6 +45,8 @@ import javafx.util.Callback;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 
@@ -240,6 +246,21 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         // If there is no disclosure node, then add one of my own
         if (cell.getDisclosureNode() == null) {
             final StackPane disclosureNode = new StackPane();
+
+            /* This code is intentionally commented.
+             * Currently as it stands it does provided any functionality and interferes
+             * with TreeView. The VO cursor move over the DISCLOSURE_NODE instead of the 
+             * tree item itself. This is possibly caused by the order of item's children 
+             * (the Labeled and the disclosure node).
+             */
+//            final StackPane disclosureNode = new StackPane() {
+//                @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+//                    switch (attribute) {
+//                        case ROLE: return Role.DISCLOSURE_NODE;
+//                        default: return super.accGetAttribute(attribute, parameters);
+//                    }
+//                }
+//            };
             disclosureNode.getStyleClass().setAll("tree-disclosure-node");
 
             final StackPane disclosureNodeArrow = new StackPane();
@@ -485,5 +506,36 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.show(firstVisibleCell);
         return newSelectionIndex;
+    }
+
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: {
+                FocusModel<?> fm = getSkinnable().getFocusModel();
+                int focusedIndex = fm.getFocusedIndex();
+                return flow.getCell(focusedIndex);
+            }
+            case ROW_AT_INDEX: {
+                final int rowIndex = (Integer)parameters[0];
+                return rowIndex < 0 ? null : flow.getCell(rowIndex);
+            }
+            case SELECTED_ROWS: {
+                MultipleSelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
+                ObservableList<Integer> indices = sm.getSelectedIndices();
+                List<Node> selection = new ArrayList<>(indices.size());
+                for (int i : indices) {
+                    TreeCell<T> row = flow.getCell(i);
+
+                    // We should never, ever get row == null. If we do then
+                    // something is very wrong.
+                    assert row != null;
+
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

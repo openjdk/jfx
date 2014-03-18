@@ -40,6 +40,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javafx.scene.accessibility.Accessible;
+
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
     private native static void _initIDs();
@@ -257,6 +259,10 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override protected int staticTimer_getMaxPeriod() {
         return MacTimer.getMaxPeriod_impl();
+    }
+
+    @Override public PlatformAccessible createAccessible(Accessible accessible) {
+        return MacAccessible.createAccessible(accessible);
     }
 
     @Override protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,

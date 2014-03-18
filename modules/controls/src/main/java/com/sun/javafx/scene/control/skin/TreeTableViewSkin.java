@@ -29,12 +29,14 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 
 import javafx.event.WeakEventHandler;
-import javafx.scene.control.TreeTableRow;
-import javafx.scene.control.TreeTableView;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
+import javafx.scene.control.*;
 
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
@@ -45,13 +47,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.control.ResizeFeaturesBase;
-import javafx.scene.control.TableSelectionModel;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
-import javafx.scene.control.TreeTableCell;
-import javafx.scene.control.TreeTableColumn;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -382,7 +378,14 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
 
         // If there is no disclosure node, then add one of my own
         if (cell.getDisclosureNode() == null) {
-            final StackPane disclosureNode = new StackPane();
+            final StackPane disclosureNode = new StackPane() {
+                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                    switch (attribute) {
+                        case ROLE: return Role.DISCLOSURE_NODE;
+                        default: return super.accGetAttribute(attribute, parameters);
+                    }
+                }
+            };
             disclosureNode.getStyleClass().setAll("tree-disclosure-node");
             disclosureNode.setMouseTransparent(true);
 
@@ -401,6 +404,56 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
         super.horizontalScroll();
         if (getSkinnable().getFixedCellSize() > 0) {
             flow.requestCellLayout();
+        }
+    }
+
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            // --- TableView-specific attributes
+            case SELECTED_CELLS: {
+                List<Node> selection = new ArrayList<>();
+                TreeTableView.TreeTableViewSelectionModel<S> sm = getSkinnable().getSelectionModel();
+                for (TreeTablePosition pos : sm.getSelectedCells()) {
+                    TreeTableRow<S> row = flow.getCell(pos.getRow());
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+
+            // TreeView-specific attributes
+            case TREE_ITEM_AT_INDEX: {
+                final int rowIndex = (Integer)parameters[0];
+                return rowIndex < 0 ? null : flow.getCell(rowIndex);
+            }
+//            case CHILDREN: {
+//                return FXCollections.observableArrayList(flow.getCell(0));
+//            }
+//            case ROW_AT_INDEX: {
+//                int rowIndex = (Integer)parameters[0];
+//                return flow.getCell(rowIndex);
+//            }
+//            case SELECTED_ROWS: {
+//                MultipleSelectionModel sm = getSkinnable().getSelectionModel();
+//                ObservableList<Integer> indices = sm.getSelectedIndices();
+//                List<Node> selection = new ArrayList<>(indices.size());
+//                for (int i : indices) {
+//                    TreeTableCell<S> row = flow.getCell(i);
+//
+//                    // We should never, ever get row == null. If we do then
+//                    // something is very wrong.
+//                    assert row != null;
+//
+//                    if (row != null) selection.add(row);
+//                }
+//                return FXCollections.observableArrayList(selection);
+//            }
+
+            case FOCUS_ITEM: // TableViewSkinBase
+            case CELL_AT_ROWCOLUMN: // TableViewSkinBase
+            case COLUMN_AT_INDEX: // TableViewSkinBase
+            case HEADER: // TableViewSkinBase
+            default: return super.accGetAttribute(attribute, parameters);
         }
     }
     

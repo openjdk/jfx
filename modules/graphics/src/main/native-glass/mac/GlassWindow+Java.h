@@ -48,7 +48,6 @@
 - (void)_restorePreZoomedRect;
 - (NSScreen*)_getScreen;
 
-- (void)_initAccessibility;
 - (void)_setFlipFrame:(NSRect)frameRect display:(BOOL)displayFlag animate:(BOOL)animateFlag;
 - (NSRect)_flipFrame;
 

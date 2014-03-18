@@ -28,7 +28,11 @@ package com.sun.javafx.scene.control.skin;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.ScrollBar;
+import javafx.scene.control.Slider;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
@@ -91,13 +95,59 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         trackBackground = new StackPane();
         trackBackground.getStyleClass().setAll("track-background");
 
-        thumb = new StackPane();
+        thumb = new StackPane() {
+            @Override
+            public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                switch (attribute) {
+                    case ROLE: return Role.THUMB;
+                    case VALUE: return getSkinnable().getValue();
+                    case MAX_VALUE: {
+                        // This is required for mac-support, to convert from pixel to percent
+                        return getSkinnable().getMax();
+                    }
+                    default: return super.accGetAttribute(attribute, parameters);
+                }
+            }
+
+            @Override
+            public void accExecuteAction(Action action, Object... parameters) {
+                switch (action) {
+                    case MOVE: {
+                        // FIXME for now we just take the x/y values as value, rather than pixel value
+                        final ScrollBar scrollBar = getSkinnable();
+                        final Orientation o = scrollBar.getOrientation();
+                        double value = (double) (o == Orientation.VERTICAL ? parameters[1] : parameters[0]);
+                        scrollBar.setValue(scrollBar.getValue() + value);
+                        break;
+                    }
+                    default: super.accExecuteAction(action, parameters);
+                }
+            }
+        };
         thumb.getStyleClass().setAll("thumb");
 
 
         if (!IS_TOUCH_SUPPORTED) {
             
-            incButton = new EndButton("increment-button", "increment-arrow");
+            incButton = new EndButton("increment-button", "increment-arrow") {
+                @Override
+                public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                    switch (attribute) {
+                        case ROLE: return Role.INCREMENT_BUTTON;
+                        default: return super.accGetAttribute(attribute, parameters);
+                    }
+                }
+
+                @Override
+                public void accExecuteAction(Action action, Object... parameters) {
+                    switch (action) {
+                        case FIRE: 
+                            getSkinnable().increment();
+                            break;
+                        default: super.accExecuteAction(action, parameters);
+                    }
+                }
+            };
             incButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
                @Override public void handle(javafx.scene.input.MouseEvent me) {
                    /*
@@ -121,7 +171,25 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                }
             });
 
-            decButton = new EndButton("decrement-button", "decrement-arrow");
+            decButton = new EndButton("decrement-button", "decrement-arrow") {
+                @Override
+                public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                    switch (attribute) {
+                        case ROLE: return Role.DECREMENT_BUTTON;
+                        default: return super.accGetAttribute(attribute, parameters);
+                    }
+                }
+
+                @Override
+                public void accExecuteAction(Action action, Object... parameters) {
+                    switch (action) {
+                        case FIRE:
+                            getSkinnable().decrement();
+                            break;
+                        default: super.accExecuteAction(action, parameters);
+                    }
+                }
+            };
             decButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
                @Override public void handle(javafx.scene.input.MouseEvent me) {
                    /*

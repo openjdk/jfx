@@ -40,7 +40,6 @@ WIN.libDest = "bin"
 WIN.jfxrtJarExcludes = [
     "com/sun/glass/events/mac",
     "com/sun/glass/ui/mac",
-    "com/sun/glass/ui/accessible/mac",
     "com/sun/prism/es2/gl/mac",
     //"com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
 
@@ -156,8 +155,7 @@ WIN.glass = [:]
 WIN.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
-    "com/sun/glass/ui/win/*",
-    "com/sun/glass/ui/accessible/win/*"]
+    "com/sun/glass/ui/win/*"]
 WIN.glass.nativeSource = file("modules/graphics/src/main/native-glass/win")
 WIN.glass.compiler = compiler
 WIN.glass.rcCompiler = rcCompiler;

@@ -35,7 +35,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
-
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -262,4 +263,13 @@ public class ToolBar extends Control {
         return Boolean.FALSE;
     }
 
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TOOLBAR;
+            case OVERFLOW_BUTTON: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

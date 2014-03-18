@@ -27,6 +27,8 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.skin.ProgressBarSkin;
 import javafx.css.StyleableProperty;
+import javafx.scene.accessibility.Attribute;
+import javafx.geometry.Orientation;
 
 /**
  * A specialization of the ProgressIndicator which is represented as a
@@ -118,5 +120,13 @@ public class ProgressBar extends ProgressIndicator {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
     }
-    
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ORIENTATION: return Orientation.HORIZONTAL;
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }    
 }

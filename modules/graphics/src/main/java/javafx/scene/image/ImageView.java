@@ -46,6 +46,8 @@ import javafx.css.StyleableStringProperty;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -881,5 +883,13 @@ public class ImageView extends Node {
     @Deprecated
     @Override public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return alg.processLeafNode(this, ctx);
+    }
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.IMAGE;
+            default: return super.accGetAttribute(attribute, parameters); 
+        }
     }
 }

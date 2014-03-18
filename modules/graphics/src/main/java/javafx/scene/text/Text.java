@@ -25,9 +25,6 @@
 
 package javafx.scene.text;
 
-import com.sun.javafx.accessible.AccessibleNode;
-import com.sun.javafx.accessible.AccessibleText;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -50,6 +47,8 @@ import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
 import javafx.css.*;
 import javafx.geometry.*;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.PathElement;
@@ -407,6 +406,7 @@ public class Text extends Shape {
                     if ((value == null) && !isBound()) {
                         set("");
                     }
+                    accSendNotification(Attribute.TITLE);
                 }
             };
         }
@@ -1506,17 +1506,6 @@ public class Text extends Shape {
         updatePGText();
     }
 
-    private AccessibleNode accText ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated public AccessibleProvider impl_getAccessible() {
-        if( accText == null)
-            accText = new AccessibleText(this);
-        return (AccessibleProvider)accText ;
-    }
-
     /***************************************************************************
      *                                                                         *
      *                       Seldom Used Properties                            *
@@ -1753,6 +1742,7 @@ public class Text extends Shape {
                         @Override public String getName() { return "impl_selectionStart"; }
                         @Override protected void invalidated() {
                             impl_markDirty(DirtyBits.TEXT_SELECTION);
+                            accSendNotification(Attribute.SELECTION_START);
                         }
                 };
             }
@@ -1776,6 +1766,7 @@ public class Text extends Shape {
                         @Override public String getName() { return "impl_selectionEnd"; }
                         @Override protected void invalidated() {
                             impl_markDirty(DirtyBits.TEXT_SELECTION);
+                            accSendNotification(Attribute.SELECTION_END);
                         }
                     };
             }
@@ -1822,7 +1813,13 @@ public class Text extends Shape {
         public final IntegerProperty impl_caretPositionProperty() {
             if (impl_caretPosition == null) {
                 impl_caretPosition =
-                        new SimpleIntegerProperty(Text.this, "impl_caretPosition", DEFAULT_CARET_POSITION);
+                    new IntegerPropertyBase(DEFAULT_CARET_POSITION) {
+                        @Override public Object getBean() { return Text.this; }
+                        @Override public String getName() { return "impl_caretPosition"; }
+                        @Override protected void invalidated() {
+                            accSendNotification(Attribute.SELECTION_END);
+                        }
+                    };
             }
             return impl_caretPosition;
         }
@@ -1894,5 +1891,29 @@ public class Text extends Shape {
         }
 
         return sb.append("]").toString();
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TEXT;
+            case TITLE: return getText();
+            case SELECTION_START: {
+                int sel = getImpl_selectionStart();
+                if (sel >=  0) return sel;
+                sel = getImpl_caretPosition();
+                if (sel >=  0) return sel;
+                return getText().length();
+            }
+            case SELECTION_END:  {
+                int sel = getImpl_selectionEnd();
+                if (sel >=  0) return sel;
+                sel = getImpl_caretPosition();
+                if (sel >=  0) return sel;
+                return getText().length();
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

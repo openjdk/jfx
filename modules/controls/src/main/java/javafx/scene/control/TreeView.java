@@ -35,6 +35,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
@@ -42,6 +43,8 @@ import javafx.css.StyleableProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
@@ -1386,6 +1389,9 @@ public class TreeView<T> extends Control {
             if (treeView.getFocusModel() != null) {
                 treeView.getFocusModel().focus(itemIndex);
             }
+
+            // FIXME this is not the correct location for fire selection events (and does not take into account multiple selection)
+            treeView.accSendNotification(Attribute.SELECTED_ROWS);
         }
 
         /** {@inheritDoc} */
@@ -1525,7 +1531,21 @@ public class TreeView<T> extends Control {
             
             super.focus(index);
         }
-        
-        
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TREE_VIEW;
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case ROW_COUNT: return getExpandedItemCount();
+            case ROW_AT_INDEX: //Skin
+            case SELECTED_ROWS: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

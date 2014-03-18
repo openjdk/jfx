@@ -31,8 +31,6 @@ import com.sun.glass.ui.MenuBar;
 import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.PlatformFactory;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.accessible.AccessibleBaseProvider;
-import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
@@ -43,16 +41,6 @@ public class MonoclePlatformFactory extends PlatformFactory {
     @Override
     public Application createApplication() {
         return new MonocleApplication();
-    }
-
-    @Override
-    public AccessibleRoot createAccessibleRoot(Object node, Window window) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public AccessibleBaseProvider createAccessibleProvider(Object node) {
-        throw new UnsupportedOperationException();
     }
 
     @Override

@@ -64,7 +64,6 @@ IOS.libDest = "lib"
 IOS.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
-    "com/sun/glass/ui/accessible/win",
     "com/sun/prism/d3d",
     "com/sun/prism/es2/gl/win",
     "com/sun/prism/null3d",
@@ -72,7 +71,6 @@ IOS.jfxrtJarExcludes = [
     
     "com/sun/glass/events/mac",
     "com/sun/glass/ui/mac",
-    "com/sun/glass/ui/accessible/mac",
     "com/sun/prism/es2/gl/mac",
     "com/sun/glass/ui/android",
     "com/sun/glass/ui/gtk",

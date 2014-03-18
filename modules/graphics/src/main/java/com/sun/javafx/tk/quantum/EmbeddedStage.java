@@ -35,8 +35,6 @@ import com.sun.javafx.embed.EmbeddedStageInterface;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 import javafx.application.Platform;
 
 final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
@@ -291,90 +289,6 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     }
 
     @Override public void setRTL(boolean b) {
-    }
-
-    /**
-     * 
-     * Accessibility glue for native
-     * 
-     */
-    
-    /**
-     * Initialize Accessibility
-     * 
-     * @param ac    the Glass accessible root object.
-     */
-    @Override public void setAccessibilityInitIsComplete(Object ac) {
-        // TODO: not yet supported, RT-28492
-    } 
-
-    /**
-     * Create accessible Glass object corresponding to stage
-     * 
-     * @param ac    the FX accessible root/stage node.
-     * 
-     * @return the Glass AccessibleRoot object.
-     */
-    @Override public Object accessibleCreateStageProvider(AccessibleStageProvider ac) {
-        // TODO: not yet supported, RT-28492
-        return null ;
-    }
-
-    /**
-     * Create Glass accessible object corresponding to controls
-     * 
-     * @param ac    the FX accessible node
-     *
-     * @return the Glass accessible Object
-     */
-    @Override public Object accessibleCreateBasicProvider(AccessibleProvider ac) {
-        // TODO: not yet supported, RT-28492
-        return null;
-    }
-
-    /**
-     * Delete Glass accessible object corresponding to controls
-     * 
-     * @param glassAcc the Glass accessible
-     */
-    @Override public void accessibleDestroyBasicProvider(Object glassAcc) {
-        // TODO: not yet supported, RT-28492
-    }
-
-    /**
-     * Fire accessible event
-     * 
-     * @param glassAcc  the Glass accessible
-     */
-    @Override public void accessibleFireEvent(Object glassAcc, int eventID) {
-        // TODO: not yet supported, RT-28492
-    }
-    
-    /**
-     * Fire accessible property change event when an int property has changed
-     *
-     * @param glassAcc      the Glass accessible 
-     * @param propertyId    identifies the property
-     * @param oldProperty   the old value of the property
-     * @param newProperty   the new value of the property
-     */
-    @Override public void accessibleFirePropertyChange( Object glassAcc, int propertyId,
-                                                        int oldProperty, int newProperty ) {
-        // TODO: not yet supported, RT-28492
-    }
-    
-    /**
-     * Fire accessible property change event when a boolean property has changed 
-     *
-     * @param glassAcc      the Glass accessible
-     * @param propertyId    identifies the property
-     * @param oldProperty   the old value of the property
-     * @param newProperty   the new value of the property
-     */
-    @Override public void accessibleFirePropertyChange( Object glassAcc, int propertyId,
-                                                        boolean oldProperty,
-                                                        boolean newProperty ) {
-        // TODO: not yet supported, RT-28492
     }
     
 }

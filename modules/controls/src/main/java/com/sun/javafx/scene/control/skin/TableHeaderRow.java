@@ -25,10 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -416,6 +413,45 @@ public class TableHeaderRow extends StackPane {
         clip.setWidth(tableWidth);
     }
 
+    public TableColumnHeader getColumnHeaderFor(final TableColumnBase<?,?> col) {
+        if (col == null) return null;
+        List<TableColumnBase<?,?>> columnChain = new ArrayList<>();
+        columnChain.add(col);
+
+        TableColumnBase<?,?> parent = col.getParentColumn();
+        while (parent != null) {
+            columnChain.add(0, parent);
+            parent = parent.getParentColumn();
+        }
+
+        // we now have a list from top to bottom of a nested column hierarchy,
+        // and we can now navigate down to retrieve the header with ease
+        TableColumnHeader currentHeader = getRootHeader();
+        for (int depth = 0; depth < columnChain.size(); depth++) {
+            // this is the column we are looking for at this depth
+            TableColumnBase<?,?> column = columnChain.get(depth);
+
+            // and now we iterate through the nested table column header at this
+            // level to get the header
+            currentHeader = getColumnHeaderFor(column, currentHeader);
+        }
+        return currentHeader;
+    }
+
+    public TableColumnHeader getColumnHeaderFor(final TableColumnBase<?,?> col, TableColumnHeader currentHeader) {
+        if (currentHeader instanceof NestedTableColumnHeader) {
+            List<TableColumnHeader> headers = ((NestedTableColumnHeader)currentHeader).getColumnHeaders();
+
+            for (int i = 0; i < headers.size(); i++) {
+                TableColumnHeader header = headers.get(i);
+                if (header.getTableColumn() == col) {
+                    return header;
+                }
+            }
+        }
+
+        return null;
+    }
 
 
     /***************************************************************************

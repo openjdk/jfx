@@ -39,6 +39,7 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
@@ -900,5 +901,21 @@ public abstract class Control extends Region implements Skinnable {
     @Deprecated @Override
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.TRUE;
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TOOLTIP:
+                Tooltip tooltip = getTooltip();
+                return tooltip == null ? "" : tooltip.getText();
+            default:
+        }
+        if (skinBase != null) {
+            Object result = skinBase.accGetAttribute(attribute, parameters);
+            if (result != null) return result;
+        }
+        return super.accGetAttribute(attribute, parameters);
     }
 }

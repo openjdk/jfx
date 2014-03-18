@@ -29,6 +29,7 @@
 #import "GlassHostView.h"
 #import "GlassFullscreenWindow.h"
 #import "GlassDragSource.h"
+#import "GlassAccessible.h"
 
 // helper class that implements the custom GlassView functionality
 @interface GlassViewDelegate : NSObject <GlassDragSourceDelegate>
@@ -95,5 +96,7 @@
 - (void)setFrameOrigin:(NSPoint)newOrigin;
 
 - (jobject)jView;
+
+- (GlassAccessible*)getAccessible;
 
 @end
