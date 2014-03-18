@@ -517,8 +517,12 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 return flow.getCell(focusedIndex);
             }
             case ROW_AT_INDEX: {
+            	/* Note: Using getVisibleCell() is safer than getCell() for this case.
+            	 * getCell() frequently recycles cells for hidden items which can cause 
+            	 * next sibling traversal to infinite loop.
+            	 */
                 final int rowIndex = (Integer)parameters[0];
-                return rowIndex < 0 ? null : flow.getCell(rowIndex);
+                return rowIndex < 0 ? null : flow.getVisibleCell(rowIndex);
             }
             case SELECTED_ROWS: {
                 MultipleSelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
@@ -526,11 +530,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 List<Node> selection = new ArrayList<>(indices.size());
                 for (int i : indices) {
                     TreeCell<T> row = flow.getCell(i);
-
-                    // We should never, ever get row == null. If we do then
-                    // something is very wrong.
-                    assert row != null;
-
                     if (row != null) selection.add(row);
                 }
                 return FXCollections.observableArrayList(selection);

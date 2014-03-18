@@ -93,6 +93,7 @@ final class WinAccessible extends PlatformAccessible {
     private static final int UIA_FrameworkIdPropertyId           = 30024;
     private static final int UIA_ValueValuePropertyId            = 30045;
     private static final int UIA_RangeValueValuePropertyId       = 30047;
+    private static final int UIA_ExpandCollapseExpandCollapseStatePropertyId = 30070;
     private static final int UIA_ToggleToggleStatePropertyId     = 30086;
     private static final int UIA_AriaRolePropertyId              = 30101;
     private static final int UIA_ProviderDescriptionPropertyId   = 30107;
@@ -335,6 +336,19 @@ final class WinAccessible extends PlatformAccessible {
                     vn.vt = WinVariant.VT_I4;
                     vn.lVal = (Integer)state;
                     UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ToggleToggleStatePropertyId, vo, vn);
+                }
+                break;
+            }
+            case EXPANDED: {
+                Boolean expanded = (Boolean)getAttribute(EXPANDED); 
+                if (expanded != null) {
+                    WinVariant vo = new WinVariant();
+                    vo.vt = WinVariant.VT_I4;
+                    vo.lVal = expanded ? ExpandCollapseState_Collapsed : ExpandCollapseState_Expanded;
+                    WinVariant vn = new WinVariant();
+                    vn.vt = WinVariant.VT_I4;
+                    vn.lVal = expanded ? ExpandCollapseState_Expanded : ExpandCollapseState_Collapsed;
+                    UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ExpandCollapseExpandCollapseStatePropertyId, vo, vn);
                 }
                 break;
             }
@@ -689,53 +703,72 @@ final class WinAccessible extends PlatformAccessible {
 
     long Navigate(int direction) {
         if (isDisposed()) return 0;
-        Accessible acc = null;
+        Role role = (Role)getAttribute(ROLE);
+        /* special case for the tree item hierarchy, as expected by Windows */
+        boolean treeCell = role == Role.TREE_ITEM || role == Role.TREE_TABLE_ITEM;
+        Node node = null;
         switch (direction) {
             case NavigateDirection_Parent: {
                 /* Return null for the top level node */
                 if (getView() != null) return 0L;
     
-                /* special case for the tree item hierarchy, as expected by Windows */
-                Parent parent = (Parent)getAttribute(TREE_ITEM_PARENT);
-    
-                if (parent == null) {
-                    parent = (Parent)getAttribute(PARENT);
-                }
-                if (parent != null) {
-                    acc = parent.getAccessible();
+                if (treeCell) {
+                    node = (Node)getAttribute(TREE_ITEM_PARENT);
+                    if (node == null) {
+                        /* root tree item case*/
+                        if (role == Role.TREE_ITEM) {
+                            return getContainer(Role.TREE_VIEW);
+                        } else {
+                            return getContainer(Role.TREE_TABLE_VIEW);
+                        }
+                    }
                 } else {
-                    Scene scene = (Scene)getAttribute(SCENE);
-                    if (scene != null) {
-                        acc = scene.getAccessible();
+                    node = (Node)getAttribute(PARENT);
+                    if (node == null) {
+                        /* scene root node case */
+                        Scene scene = (Scene)getAttribute(SCENE);
+                        if (scene != null) {
+                            Accessible acc = scene.getAccessible();
+                            WinAccessible winAcc = (WinAccessible)acc.impl_getDelegate();
+                            return winAcc.getNativeAccessible();
+                        }
                     }
                 }
                 break;
             }
             case NavigateDirection_NextSibling:
             case NavigateDirection_PreviousSibling: {
-                Role role = (Role)getAttribute(ROLE);
-                if (role == Role.TREE_ITEM || role == Role.TREE_TABLE_ITEM) {
-                    Node n = null;
-                    if (direction == NavigateDirection_PreviousSibling) {
-                        n = (Node) getAttribute(PREVIOUS_SIBLING);
-                    } else if (direction == NavigateDirection_NextSibling) {
-                        n = (Node) getAttribute(NEXT_SIBLING);
-                    }
-                    acc = n != null ? n.getAccessible() : null;
-                } else {
-                    Parent parent = (Parent)getAttribute(PARENT);
-                    if (parent != null) {
-                        //Note: parent == null -> root node (which has not siblings)
-                        Accessible parentAccessible = parent.getAccessible();
+                Node parent = (Node)getAttribute(treeCell ? TREE_ITEM_PARENT : PARENT);
+                /* When the parent is NULL is indicates either the root node for the scene
+                 * or the root tree item in a tree view. Either way, there is no siblings. 
+                 */
+                if (parent != null) {
+                    Accessible parentAccessible = parent.getAccessible();
+                    if (treeCell) {
+                        Integer result = (Integer)parentAccessible.getAttribute(TREE_ITEM_COUNT);
+                        int count = result != null ? result : 0;
+                        for (int i = 0; i < count; i++) {
+                            Node item = (Node)parentAccessible.getAttribute(Attribute.TREE_ITEM_AT_INDEX, i);
+                            if (getAccessible(item) == peer) {
+                                if (direction == NavigateDirection_NextSibling && i + 1 < count) {
+                                    node = (Node)parentAccessible.getAttribute(TREE_ITEM_AT_INDEX, i + 1);
+                                }
+                                if (direction == NavigateDirection_PreviousSibling && i > 0) {
+                                    node = (Node)parentAccessible.getAttribute(TREE_ITEM_AT_INDEX, i - 1);
+                                }
+                                break;
+                            }
+                        }
+                    } else {
                         ObservableList<Node> children = (ObservableList<Node>)parentAccessible.getAttribute(CHILDREN);
                         int size = children != null ? children.size() : 0;
                         for (int i = 0; i < size; i++) {
                             if (getAccessible(children.get(i)) == peer) {
                                 if (direction == NavigateDirection_NextSibling && i + 1 < size) {
-                                    acc = children.get(i + 1).getAccessible();
+                                   node = children.get(i + 1);
                                 }
                                 if (direction == NavigateDirection_PreviousSibling && i > 0) {
-                                    acc = children.get(i - 1).getAccessible();
+                                   node = children.get(i - 1);
                                 }
                                 break;
                             }
@@ -746,41 +779,33 @@ final class WinAccessible extends PlatformAccessible {
             }
             case NavigateDirection_FirstChild:
             case NavigateDirection_LastChild: {
-                Role role = (Role)getAttribute(ROLE);
                 if (role == Role.TREE_VIEW || role == Role.TREE_TABLE_VIEW) {
                     /* The TreeView only returns the root node as child */
-                    Node n = (Node)getAttribute(ROW_AT_INDEX, 0);
-                    acc = n != null ? n.getAccessible() : null;
-                } else if (role == Role.TREE_ITEM || role == Role.TREE_TABLE_ITEM) {
-                    int rowCount = (int) getAttribute(TREE_ITEM_COUNT);
-                    Node n = null;
-                    if (rowCount > 0) {
+                    node = (Node)getAttribute(ROW_AT_INDEX, 0);
+                } else if (treeCell) {
+                    Integer count = (Integer)getAttribute(TREE_ITEM_COUNT);
+                    if (count != null && count > 0) {
                         if (direction == NavigateDirection_FirstChild) {
-                            n = (Node) getAttribute(TREE_ITEM_AT_INDEX, 1);
+                            node = (Node)getAttribute(TREE_ITEM_AT_INDEX, 0);
                         } else if (direction == NavigateDirection_LastChild) {
-                            n = (Node) getAttribute(TREE_ITEM_AT_INDEX, rowCount - 1);
+                            node = (Node)getAttribute(TREE_ITEM_AT_INDEX, count - 1);
                         }
                     }
-                    acc = n != null ? n.getAccessible() : null;
                 } else {
                     ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
                     int size = children != null ? children.size() : 0;
                     if (size > 0) {
                         if (direction == NavigateDirection_FirstChild) {
-                            acc = children.get(0).getAccessible();
+                            node = children.get(0);
                         } else {
-                            acc = children.get(size - 1).getAccessible();
+                            node = children.get(size - 1);
                         }
                     }
                 }
                 break;
             }
         }
-        if (acc != null) {
-            WinAccessible winAcc = (WinAccessible)acc.impl_getDelegate();
-            return winAcc.getNativeAccessible();
-        }
-        return 0l;
+        return getAccessible(node);
     }
 
     void SetFocus() {

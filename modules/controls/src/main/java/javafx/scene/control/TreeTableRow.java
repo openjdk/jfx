@@ -555,12 +555,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                        p > treeItem.getChildren().size() ? null :
                        getVirtualFlow().getCell(p);
             }
-            case PREVIOUS_SIBLING: {
-                return treeItem == null ? null : getTreeTableRow(getVirtualFlow(), treeItem.previousSibling());
-            }
-            case NEXT_SIBLING: {
-                return treeItem == null ? null : getTreeTableRow(getVirtualFlow(), treeItem.nextSibling());
-            }
             case TITLE: {
                 Object value = treeItem == null ? null : treeItem.getValue();
                 return value == null ? "" : value.toString();

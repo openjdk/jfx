@@ -645,34 +645,27 @@ public class TreeCell<T> extends IndexedCell<T> {
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
         TreeItem<T> treeItem = getTreeItem();
         TreeView<T> treeView = getTreeView();
-
         switch (attribute) {
             case ROLE: return Role.TREE_ITEM;
             case TREE_ITEM_PARENT: {
-                if (treeItem == null) {
-                    return null;
-                }
-                TreeItem parent = treeItem.getParent();
-                return parent == null ? treeView : getTreeCell(getVirtualFlow(), parent);
+                if (treeView == null) return null;
+                if (treeItem == null) return null;
+                TreeItem<T> parent = treeItem.getParent();
+                if (parent == null) return null;
+                int parentIndex = treeView.getRow(parent);
+                return treeView.accGetAttribute(Attribute.ROW_AT_INDEX, parentIndex);
             }
             case TREE_ITEM_COUNT: {
-                // response is relative to this tree cell
                 return treeItem == null  ? 0 : treeItem.getChildren().size();
             }
-            case TREE_ITEM_AT_INDEX: {
-                // index is relative to this tree cell
-                final int offset = (Integer)parameters[0];
-                final int p = offset + getIndex();
-                return treeItem == null                  ? null :
-                       p > treeItem.getChildren().size() ? null :
-                       getVirtualFlow().getCell(p);
-            }
-            case PREVIOUS_SIBLING: {
-                return treeItem == null ? null : getTreeCell(getVirtualFlow(), treeItem.previousSibling());
-            }
-            case NEXT_SIBLING: {
-                return treeItem == null ? null : getTreeCell(getVirtualFlow(), treeItem.nextSibling());
-            }
+            case TREE_ITEM_AT_INDEX:
+                if (treeItem == null) return null;
+                int index = (Integer)parameters[0];
+                if (index >= treeItem.getChildren().size()) return null;
+                TreeItem<T> child = treeItem.getChildren().get(index);
+                if (child == null) return null;
+                int childIndex = treeView.getRow(child);
+                return treeView.accGetAttribute(Attribute.ROW_AT_INDEX, childIndex);
             case TITLE: {
                 Object value = treeItem == null ? null : treeItem.getValue();
                 return value == null ? "" : value.toString();
@@ -682,8 +675,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             case INDEX: return getIndex();
             case SELECTED: return isSelected();
             case DISCLOSURE_LEVEL: {
-                // FIXME replace with treeView.getTreeItemLevel(treeItem) when we sync up with 8u20
-                return treeView == null ? 0 : TreeView.getNodeLevel(treeItem);
+                return treeView == null ? 0 : treeView.getTreeItemLevel(treeItem);
             }
             default: return super.accGetAttribute(attribute, parameters);
         }
@@ -719,33 +711,5 @@ public class TreeCell<T> extends IndexedCell<T> {
             }
             default: super.accExecuteAction(action);
         }
-    }
-
-    private VirtualFlow getVirtualFlow() {
-        // FIXME Ugly hack! Clean this up once everything is understood
-        Parent p = getParent();
-        while (p != null && ! (p instanceof VirtualFlow)) {
-            p = p.getParent();
-        }
-
-        if (p == null) {
-            return null;
-        }
-
-        return (VirtualFlow) p;
-    }
-
-    private TreeCell<T> getTreeCell(VirtualFlow<TreeCell<T>> flow, TreeItem treeItem) {
-        // FIXME Ugly hack! Clean this up once everything is understood
-        if (treeItem == null) return null;
-
-        final int treeItemIndex = getTreeView().getRow(treeItem);
-        TreeCell<T> cell = null;
-
-        if (flow != null) {
-            cell = flow.getVisibleCell(treeItemIndex);
-        }
-
-        return cell;
     }
 }

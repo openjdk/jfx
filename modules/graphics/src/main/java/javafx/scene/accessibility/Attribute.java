@@ -192,12 +192,6 @@ public enum Attribute {
     NODE_AT_POINT("NodeAtPoint", Node.class),
 
     /**
-     * Used exclusively in relation to TreeView / TreeTableView, to return
-     * siblings of a given TreeItem.
-     */
-    NEXT_SIBLING("NextSibling", Node.class),
-
-    /**
      * Returns the orientation of a node
      * Type: Orientation
      */
@@ -220,12 +214,6 @@ public enum Attribute {
      * Type: Parent
      */
     PARENT("Parent", Parent.class),
-
-    /**
-     * Used exclusively in relation to TreeView / TreeTableView, to return
-     * siblings of a given TreeItem.
-     */
-    PREVIOUS_SIBLING("PreviousSibling", Node.class),
 
     /**
      * Returns the role for the Node.

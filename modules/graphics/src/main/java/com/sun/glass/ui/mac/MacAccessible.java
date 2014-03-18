@@ -1016,10 +1016,6 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityDisclosedByRowAttribute:
-                Integer level = (Integer)getAttribute(DISCLOSURE_LEVEL);
-                if (level != null && level == 0) return null;
-                result = getAccessible((Node)result);
-                break;
             case NSAccessibilityOverflowButtonAttribute:
             case NSAccessibilityTitleUIElementAttribute:
             case NSAccessibilityHeaderAttribute:
