@@ -33,6 +33,7 @@ public class AcceleratedScreen {
     private static long eglLibraryHandle;
     protected static boolean initialized = false;
     long eglSurface, eglContext, eglDisplay;
+    protected static LinuxSystem ls = LinuxSystem.getLinuxSystem();
 
     protected long platformGetNativeDisplay() {
         return 0L;
@@ -74,7 +75,6 @@ public class AcceleratedScreen {
 
     protected boolean initPlatformLibraries() {
         if (!initialized) {
-            LinuxSystem ls = LinuxSystem.getLinuxSystem();
             glesLibraryHandle = ls.dlopen("libGLESv2.so",
                     LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
             eglLibraryHandle = ls.dlopen("libEGL.so",

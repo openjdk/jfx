@@ -1,5 +1,4 @@
-/*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,25 +22,32 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle.mx6;
+#include "com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen.h"
+#include <EGL/egl.h>
 
-import com.sun.glass.ui.monocle.NativePlatform;
-import com.sun.glass.ui.monocle.NativePlatformFactory;
+#include <fcntl.h>
+#include "Monocle.h"
 
-import java.io.File;
+//Vivante specials
+static EGLNativeDisplayType (*wr_fbGetDisplayByIndex)(int DisplayIndex);
+static EGLNativeWindowType (*wr_fbCreateWindow)(EGLNativeDisplayType Display, int X, int Y, int Width, int Height);
+EGLNativeDisplayType cachedDisplay = NULL;
 
-public class MX6PlatformFactory extends NativePlatformFactory {
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen__1platformGetNativeDisplay
+    (JNIEnv *env, jobject obj, jlong methodHandle) {
 
-    @Override
-    protected boolean matches() {
-        boolean retval = new File("/sys/devices/platform/Vivante GCCore:00").exists() ||
-                         new File("/sys/devices/platform/Vivante GCCore").exists();
-        return retval;
+    if (cachedDisplay == NULL) {
+        wr_fbGetDisplayByIndex = asPtr(methodHandle);
+        cachedDisplay = wr_fbGetDisplayByIndex(0);
     }
+    return asJLong(cachedDisplay);
+}
 
-    @Override
-    protected NativePlatform createNativePlatform() {
-        return new MX6Platform();
-    }
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen__1platformGetNativeWindow
+    (JNIEnv *env, jobject obj, jlong methodHandle) {
+    NativeWindowType retval;
 
+    wr_fbCreateWindow = asPtr(methodHandle);
+    retval = wr_fbCreateWindow(cachedDisplay, 0, 0, 0, 0);
+    return asJLong(retval);
 }

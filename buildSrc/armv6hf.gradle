@@ -345,6 +345,7 @@ ARMV6HF.glass.javahInclude = [
     "com/sun/glass/ui/lens/*",
     "com/sun/glass/ui/monocle/*",
     "com/sun/glass/ui/monocle/dispman/*",
+    "com/sun/glass/ui/monocle/mx6/*",
     "com/sun/glass/ui/monocle/linux/*",
     "com/sun/glass/ui/monocle/util/*",
     "com/sun/glass/ui/monocle/x11/*",
@@ -366,6 +367,7 @@ ARMV6HF.glass.monocle = [:]
 ARMV6HF.glass.monocle.nativeSource = [
         file("modules/graphics/src/main/native-glass/monocle"),
         file("modules/graphics/src/main/native-glass/monocle/dispman"),
+        file("modules/graphics/src/main/native-glass/monocle/mx6"),
         file("modules/graphics/src/main/native-glass/monocle/linux"),
         file("modules/graphics/src/main/native-glass/monocle/util") ]
 ARMV6HF.glass.monocle.compiler = compiler

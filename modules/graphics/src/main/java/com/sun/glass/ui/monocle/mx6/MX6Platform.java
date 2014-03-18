@@ -25,15 +25,23 @@
 
 package com.sun.glass.ui.monocle.mx6;
 
+import com.sun.glass.ui.monocle.AcceleratedScreen;
 import com.sun.glass.ui.monocle.NativeCursor;
 import com.sun.glass.ui.monocle.linux.LinuxPlatform;
-import com.sun.glass.ui.monocle.mx6.MX6Cursor;
 
 public class MX6Platform extends LinuxPlatform {
 
     @Override
     protected NativeCursor createCursor() {
         return new MX6Cursor();
+    }
+
+    @Override
+    public synchronized AcceleratedScreen getAcceleratedScreen(int[] attributes) {
+        if (accScreen == null) {
+            accScreen = new MX6AcceleratedScreen(attributes);
+        }
+        return accScreen;
     }
 
 }

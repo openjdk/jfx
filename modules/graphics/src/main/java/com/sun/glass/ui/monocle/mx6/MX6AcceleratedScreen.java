@@ -25,23 +25,30 @@
 
 package com.sun.glass.ui.monocle.mx6;
 
-import com.sun.glass.ui.monocle.NativePlatform;
-import com.sun.glass.ui.monocle.NativePlatformFactory;
+import com.sun.glass.ui.monocle.AcceleratedScreen;
+import com.sun.glass.ui.monocle.linux.LinuxSystem;
 
-import java.io.File;
+public class MX6AcceleratedScreen extends AcceleratedScreen {
 
-public class MX6PlatformFactory extends NativePlatformFactory {
+    private long fbGetDisplayByIndexHandle, fbCreateWindowHandle;
 
-    @Override
-    protected boolean matches() {
-        boolean retval = new File("/sys/devices/platform/Vivante GCCore:00").exists() ||
-                         new File("/sys/devices/platform/Vivante GCCore").exists();
-        return retval;
+    private native long _platformGetNativeWindow(long methodHandle);
+
+    private native long _platformGetNativeDisplay(long methodHandle);
+
+    public MX6AcceleratedScreen(int[] attributes) {
+        super(attributes);
     }
 
     @Override
-    protected NativePlatform createNativePlatform() {
-        return new MX6Platform();
+    protected long platformGetNativeWindow() {
+        fbCreateWindowHandle = ls.dlsym(getEGLHandle(), "fbCreateWindow");
+        return _platformGetNativeWindow(fbCreateWindowHandle);
     }
 
+    @Override
+    protected long platformGetNativeDisplay() {
+        fbGetDisplayByIndexHandle = ls.dlsym(getEGLHandle(), "fbGetDisplayByIndex");
+        return _platformGetNativeDisplay(fbGetDisplayByIndexHandle);
+    }
 }
