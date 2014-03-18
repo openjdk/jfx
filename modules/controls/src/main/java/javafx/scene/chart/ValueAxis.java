@@ -56,9 +56,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
     private final Path minorTickPath  = new Path();
 
-    private boolean saveMinorTickVisible = false;
-    private boolean restoreMinorTickVisiblity = false;
-    
     private double offset;
     /** This is the minimum current data value and it is used while auto ranging. */
     private double dataMinValue;
@@ -359,21 +356,11 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         super.layoutChildren();
         int numMinorTicks = (getTickMarks().size() - 1)*(getMinorTickCount() - 1);
         double neededLength = (getTickMarks().size()+numMinorTicks)*2;
-        if (length < neededLength) {
-            if (!restoreMinorTickVisiblity) {
-                restoreMinorTickVisiblity = true;
-                saveMinorTickVisible = isMinorTickVisible();
-                setMinorTickVisible(false);
-            }
-        } else {
-            if (restoreMinorTickVisiblity) {
-                setMinorTickVisible(saveMinorTickVisible);
-                restoreMinorTickVisiblity = false;
-            }
-        }
+
         // Update minor tickmarks
         minorTickPath.getElements().clear();
-        if (getMinorTickLength() > 0) {
+        // Don't draw minor tick marks if there isn't enough space for them!
+        if ((neededLength < length) && (0 < getMinorTickLength())) {
             if (Side.LEFT.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(-0.5);
