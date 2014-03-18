@@ -768,6 +768,19 @@ public final class SWTApplication extends Application {
         return 0;
     }
 
+    static long getHandleCocoa(Shell control) {
+        try {
+            Field field = control.getClass().getDeclaredField("window");
+            field.setAccessible(true);
+            Object view = field.get(control);
+            Class clazz = Class.forName("org.eclipse.swt.internal.cocoa.id");
+            return getHandle(clazz, view, "id");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
     static void invokeLock(Control control, String name) {
         try {
             Field field = control.getClass().getField("view");
