@@ -90,6 +90,17 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
 
     /***************************************************************************
      *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/
+
+    // package for testing
+    boolean lockItemOnEdit = false;
+
+
+
+    /***************************************************************************
+     *                                                                         *
      * Callbacks and Events                                                    *
      *                                                                         *
      **************************************************************************/
@@ -291,20 +302,22 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             return;
         }
 
-        updateItem();
+        // We check the boolean lockItemOnEdit field here, as whilst we want to
+        // updateItem normally, when it comes to unit tests we can't have the
+        // item change in all circumstances.
+        if (! lockItemOnEdit) {
+            updateItem();
+        }
 
         // it makes sense to get the cell into its editing state before firing
         // the event to listeners below, so that's what we're doing here
         // by calling super.startEdit().
         super.startEdit();
         
-        @SuppressWarnings("unchecked")
-        TreeTablePosition<S,T> editingCell = (TreeTablePosition<S,T>) table.getEditingCell();
-        
         if (column != null) {
-            CellEditEvent<S,T> editEvent = new CellEditEvent<S,T>(
+            CellEditEvent editEvent = new CellEditEvent(
                 table,
-                editingCell,
+                table.getEditingCell(),
                 TreeTableColumn.<S,T>editStartEvent(),
                 null
             );
