@@ -26,12 +26,14 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
+import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
@@ -58,15 +60,30 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         arrow = new Region();
         arrow.setFocusTraversable(false);
         arrow.getStyleClass().setAll("arrow");
+        arrow.setId("arrow");
         arrow.setMaxWidth(Region.USE_PREF_SIZE);
         arrow.setMaxHeight(Region.USE_PREF_SIZE);
+        arrow.setMouseTransparent(true);
+
         arrowButton = new StackPane();
         arrowButton.setFocusTraversable(false);
         arrowButton.setId("arrow-button");
         arrowButton.getStyleClass().setAll("arrow-button");
         arrowButton.getChildren().add(arrow);
+
+        if (comboBox.isEditable()) {
+            //
+            // arrowButton behaves like a button.
+            // This is strongly tied to the implementation in ComboBoxBaseBehavior.
+            //
+            arrowButton.addEventHandler(MouseEvent.MOUSE_ENTERED,  (e) -> getBehavior().mouseEntered(e));
+            arrowButton.addEventHandler(MouseEvent.MOUSE_PRESSED,  (e) -> { getBehavior().mousePressed(e);  e.consume(); });
+            arrowButton.addEventHandler(MouseEvent.MOUSE_RELEASED, (e) -> { getBehavior().mouseReleased(e); e.consume();});
+            arrowButton.addEventHandler(MouseEvent.MOUSE_EXITED, (e) -> getBehavior().mouseExited(e));
+
+        }
         getChildren().add(arrowButton);
-        
+
         // When ComboBoxBase focus shifts to another node, it should hide.
         getSkinnable().focusedProperty().addListener(new ChangeListener<Boolean>() {
             @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
