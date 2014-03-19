@@ -125,6 +125,18 @@ public class Legend extends TilePane {
 
     // -------------- METHODS ---------------------------------------------------
 
+    @Override
+    protected double computePrefWidth(double forHeight) {
+        // Legend prefWidth is zero if there are no legend items
+        return (getItems().size() > 0) ? super.computePrefWidth(forHeight) : 0;
+    }
+
+    @Override
+    protected double computePrefHeight(double forWidth) {
+        // Legend prefHeight is zero if there are no legend items
+        return (getItems().size() > 0) ? super.computePrefHeight(forWidth) : 0;
+    }
+
     /** A item to be displayed on a Legend */
     public static class LegendItem {
 
