@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -85,6 +85,10 @@ final class J2DFontFactory implements FontFactory {
         return prismFontFactory.isPlatformFont(name);
     }
 
+    public final boolean hasPermission() {
+        return prismFontFactory.hasPermission();
+    }
+
     /* This is an important but tricky one. We need to copy the
      * stream. I don't want to have to manage the temp file deletion here,
      * so although its non-optimal I will create a temp file, provide
@@ -93,6 +97,10 @@ final class J2DFontFactory implements FontFactory {
      */
     public PGFont loadEmbeddedFont(String name, InputStream fontStream,
                                    float size, boolean register) {
+
+        if (!hasPermission()) {
+            return createFont(DEFAULT_FULLNAME, size);
+        }
 
         PGFont font = prismFontFactory.loadEmbeddedFont(name, fontStream, 
                                                         size, register);
@@ -135,6 +143,10 @@ final class J2DFontFactory implements FontFactory {
 
     public PGFont loadEmbeddedFont(String name, String path, 
                                    float size, boolean register) {
+
+        if (!hasPermission()) {
+            return createFont(DEFAULT_FULLNAME, size);
+        }
 
         PGFont font = prismFontFactory.loadEmbeddedFont(name, path, 
                                                         size, register);
