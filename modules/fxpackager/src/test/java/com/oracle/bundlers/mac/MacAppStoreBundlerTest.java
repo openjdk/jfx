@@ -57,6 +57,8 @@ public class MacAppStoreBundlerTest {
 
     @BeforeClass
     public static void prepareApp() throws IOException {
+        Assume.assumeTrue(false);
+
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
