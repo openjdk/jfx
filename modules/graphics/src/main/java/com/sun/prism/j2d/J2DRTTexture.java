@@ -99,7 +99,7 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
         BufferedImage bimg = getBufferedImage();
         J2DPresentable presentable = J2DPresentable.create(bimg, factory);
         java.awt.Graphics2D g2d = bimg.createGraphics();
-        return new J2DPrismGraphics(presentable, g2d);
+        return factory.createJ2DPrismGraphics(presentable, g2d);
     }
 
     java.awt.Graphics2D createAWTGraphics2D() {
