@@ -41,6 +41,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -579,6 +580,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             @Override protected double computePrefHeight(double width) {
                 return getListViewPrefHeight();
             }
+
+            @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                switch (attribute) {
+                    case PARENT: return comboBox;
+                    default: return super.accGetAttribute(attribute, parameters);
+                }
+            }
         };
 
         _listView.setId("list-view");
@@ -592,6 +600,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                  int index = listView.getSelectionModel().getSelectedIndex();
                  comboBox.getSelectionModel().select(index);
                  updateDisplayNode();
+                 comboBox.accSendNotification(Attribute.TITLE);
              }
          });
          
@@ -696,4 +705,37 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             setFocused(b);
         }
     }
+
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case CHILDREN: {
+                ObservableList<Node> children = comboBox.getChildrenUnmodifiable();
+                ObservableList<Node> list =  FXCollections.observableArrayList();
+                list.addAll(children);
+                if (!list.contains(listView)) list.add(listView);
+                return list;
+            }
+            case TITLE: {
+                String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();
+                if (title == null || title.isEmpty()) {
+                    title = comboBox.getPromptText();
+                }
+                return title;
+            }
+            case FOCUS_ITEM: if (!comboBox.isShowing()) return super.accGetAttribute(attribute, parameters);
+            //fall through
+            case ROW_COUNT:
+            case MULTIPLE_SELECTION:
+            case ROW_AT_INDEX:
+            case LEAF:
+            case SELECTED_ROWS: {
+                Object o = listView.accGetAttribute(attribute, parameters);
+                //if (o != null) return o;
+                return o;
+            }
+            //fall through
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }
+

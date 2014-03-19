@@ -75,7 +75,6 @@ ARMV6SF.libDest = "lib/arm"
 ARMV6SF.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
-    "com/sun/glass/ui/accessible/win",
     "com/sun/prism/d3d",
     "com/sun/prism/es2/gl/win",
     //"com/sun/prism/null3d",
@@ -83,7 +82,6 @@ ARMV6SF.jfxrtJarExcludes = [
     
     "com/sun/glass/events/mac",
     "com/sun/glass/ui/mac",
-    "com/sun/glass/ui/accessible/mac",
     "com/sun/prism/es2/gl/mac",
         
     "com/sun/glass/ui/android",
@@ -353,8 +351,7 @@ ARMV6SF.glass.javahInclude = [
     "com/sun/glass/ui/monocle/linux/*",
     "com/sun/glass/ui/monocle/util/*",
     "com/sun/glass/ui/monocle/x11/*",
-    "com/sun/glass/ui/gtk/*",
-    "com/sun/glass/ui/accessible/gtk/*"]
+    "com/sun/glass/ui/gtk/*"]
 ARMV6SF.glass.lib = "glass"
 
 ARMV6SF.glass.lensport = [:]

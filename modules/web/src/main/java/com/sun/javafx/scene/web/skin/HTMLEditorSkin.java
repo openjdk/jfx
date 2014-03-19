@@ -824,15 +824,6 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
             htmlDocumentElement.setAttribute("dir", (orientation == RIGHT_TO_LEFT) ? "rtl" : "ltr");
         }
 
-        if (orientation == RIGHT_TO_LEFT) {
-            try {
-                final String iconName = resources.getString("numbersIcon-rtl");
-                Image icon = AccessController.doPrivileged((PrivilegedAction<Image>) () -> new Image(HTMLEditorSkin.class.getResource(iconName).toString()));
-                numbersButton.setGraphic(new ImageView(icon));
-            } catch (java.util.MissingResourceException ex) {
-                // ignore
-            }
-        }
     }
 
     private void updateToolbarState(final boolean updateAlignment) {

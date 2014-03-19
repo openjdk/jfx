@@ -37,6 +37,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 public class DeployParams extends CommonParams {
     public enum RunMode {
@@ -534,6 +535,14 @@ public class DeployParams extends CommonParams {
             }
 
             bundleParams.setIcon(appIcon);
+
+            // check for collisions
+            TreeSet<String> keys = new TreeSet<>(bundlerArguments.keySet());
+            keys.retainAll(bundleParams.getBundleParamsAsMap().keySet());
+
+            if (!keys.isEmpty()) {
+                throw new RuntimeException("Deploy Params and Bundler Arguments overlap in the following values:" + keys.toString());
+            }
             
             bundleParams.addAllBundleParams(bundlerArguments);
             

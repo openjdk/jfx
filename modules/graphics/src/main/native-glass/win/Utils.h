@@ -435,7 +435,6 @@ typedef struct _tagJavaIDs {
         jmethodID notifyFocusUngrab;
         jmethodID notifyDestroy;
         jmethodID notifyDelegatePtr;
-        jmethodID notifyInitAccessibility;
     } Window;
     struct {
         jmethodID notifyResize;
@@ -456,6 +455,7 @@ typedef struct _tagJavaIDs {
 
         jmethodID getWidth;
         jmethodID getHeight;
+        jmethodID getAccessible;
 
         jfieldID  ptr;
     } View;

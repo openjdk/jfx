@@ -33,6 +33,8 @@ import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.control.skin.AccordionSkin;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.css.StyleableProperty;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 /**
  * <p>An accordion is a group of {@link TitledPane TitlePanes}.  Only one TitledPane can be opened at
@@ -206,4 +208,12 @@ public class Accordion extends Control {
         return Boolean.FALSE;
     }
 
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.ACCORDION;
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

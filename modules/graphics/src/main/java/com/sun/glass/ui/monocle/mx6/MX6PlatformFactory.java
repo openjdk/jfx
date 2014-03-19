@@ -34,7 +34,9 @@ public class MX6PlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
-        return new File("/sys/devices/platform/Vivante GCCore").exists();
+        boolean retval = new File("/sys/devices/platform/Vivante GCCore:00").exists() ||
+                         new File("/sys/devices/platform/Vivante GCCore").exists();
+        return retval;
     }
 
     @Override

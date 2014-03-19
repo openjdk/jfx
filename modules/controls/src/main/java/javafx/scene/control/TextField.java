@@ -40,6 +40,9 @@ import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -328,5 +331,17 @@ public class TextField extends TextInputControl {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute,
+                                     Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TEXT_FIELD;
+            case SELECTION_START: return getSelection().getStart();
+            case SELECTION_END: return getSelection().getEnd();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

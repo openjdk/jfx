@@ -26,7 +26,6 @@
 package com.oracle.bundlers.linux;
 
 import com.oracle.bundlers.Bundler;
-import com.oracle.bundlers.StandardBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.LinuxRPMBundler;
@@ -43,7 +42,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 
+import static com.oracle.bundlers.StandardBundlerParam.*;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class LinuxRpmBundlerTest {
 
@@ -65,7 +66,7 @@ public class LinuxRpmBundlerTest {
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
-        workDir = new File("build/tmp/tests", "linuxrrpm");
+        workDir = new File("build/tmp/tests", "linuxrpm");
         appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
@@ -115,8 +116,7 @@ public class LinuxRpmBundlerTest {
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new LinuxRPMBundler();
-        ((LinuxRPMBundler)bundler).setVerbose(true);
-        
+
         assertNotNull(bundler.getName());
         assertNotNull(bundler.getID());
         assertNotNull(bundler.getDescription());
@@ -124,14 +124,18 @@ public class LinuxRpmBundlerTest {
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(StandardBundlerParam.NAME.getID(), "Smoke");
-        bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.TestPackager");
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
 
         bundler.validate(bundleParams);
-        bundler.execute(bundleParams, new File(workDir, "smoke"));
+        File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
     }
 
     /**
@@ -146,18 +150,18 @@ public class LinuxRpmBundlerTest {
     @Test
     public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new LinuxRPMBundler();
-        ((LinuxRPMBundler)bundler).setVerbose(true);
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         bundler.validate(bundleParams);
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
-        System.err.println("Bundle written to " + output);
-        Assume.assumeTrue(output.isFile());
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
     }
 
 }

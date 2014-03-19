@@ -32,6 +32,9 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 /**
  * Abstract base class for ComboBox-like controls. A ComboBox typically has
@@ -208,6 +211,7 @@ public abstract class ComboBoxBase<T> extends Control {
             showing = new ReadOnlyBooleanWrapper(false) {
                 @Override protected void invalidated() {
                     pseudoClassStateChanged(PSEUDO_CLASS_SHOWING, get());
+                    accSendNotification(Attribute.EXPANDED);
                 }
 
                 @Override
@@ -459,4 +463,25 @@ public abstract class ComboBoxBase<T> extends Control {
     private static final PseudoClass PSEUDO_CLASS_ARMED =
             PseudoClass.getPseudoClass("armed");
     
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.COMBOBOX;
+            case EXPANDED: return isShowing();
+            /* list attributes handled by the skin */
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override 
+    public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case EXPAND: show(); break;
+            case COLLAPSE: hide(); break;
+            default: super.accExecuteAction(action); break;
+        }
+    }
 }
+

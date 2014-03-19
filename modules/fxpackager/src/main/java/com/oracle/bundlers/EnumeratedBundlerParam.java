@@ -26,6 +26,7 @@
 package com.oracle.bundlers;
 
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
@@ -49,7 +50,7 @@ public class EnumeratedBundlerParam<T> extends BundlerParamInfo<T> {
                                   String[] fallbackIDs,
                                   Function<Map<String, ? super Object>, T> defaultValueFunction,
                                   boolean requiresUserSetting,
-                                  Function<String, T> stringConverter,
+                                  BiFunction<String, Map<String, ? super Object>, T> stringConverter,
                                   Map<String, T> possibleValues,
                                   boolean strict) {
         this.name = name;

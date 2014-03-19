@@ -37,6 +37,7 @@ import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import javafx.animation.FadeTransition;
@@ -646,32 +647,11 @@ public abstract class Axis<T> extends Region {
                     maxWidth = Math.round(Math.max(maxWidth, measureTickMarkSize(value, range).getWidth()));
                 }
             }
-            // we have to work out what new or removed tick marks there are, then create new tick marks and their
-            // text nodes where needed
-            // find everything added or removed
-            List<T> added = new ArrayList<T>();
-            List<TickMark<T>> removed = new ArrayList<TickMark<T>>();
-            if(tickMarks.isEmpty()) {
-                added.addAll(newTickValues);
-            } else {
-                // find removed
-                for (TickMark<T> tick: tickMarks) {
-                    if(!newTickValues.contains(tick.getValue())) removed.add(tick);
-                }
-                // find added
-                for(T newValue: newTickValues) {
-                    boolean found = false;
-                    for (TickMark<T> tick: tickMarks) {
-                        if(tick.getValue().equals(newValue)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if(!found) added.add(newValue);
-                }
-            }
-            // remove everything that needs to go
-            for(TickMark<T> tick: removed) {
+
+            // remove everything
+            Iterator<TickMark<T>> tickMarkIterator = tickMarks.iterator();
+            while (tickMarkIterator.hasNext()) {
+                TickMark<T> tick = tickMarkIterator.next();
                 final TickMark<T> tm = tick;
                 if (shouldAnimate()) {
                     FadeTransition ft = new FadeTransition(Duration.millis(250),tick.textNode);
@@ -686,10 +666,11 @@ public abstract class Axis<T> extends Region {
                     getChildren().remove(tm.textNode);
                 }
                 // we have to remove the tick mark immediately so we don't draw tick line for it or grid lines and fills
-                tickMarks.remove(tm);
+                tickMarkIterator.remove();
             }
+
             // add new tick marks for new values
-            for(T newValue: added) {
+            for(T newValue: newTickValues) {
                 final TickMark<T> tick = new TickMark<T>();
                 tick.setValue(newValue);
                 tick.textNode.setText(getTickMarkLabel(newValue));

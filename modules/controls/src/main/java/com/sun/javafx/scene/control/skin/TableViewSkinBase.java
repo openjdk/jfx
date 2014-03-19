@@ -37,6 +37,7 @@ import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 
 import javafx.scene.layout.Region;
@@ -45,6 +46,8 @@ import javafx.util.Callback;
 
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
+
+import java.util.ArrayList;
 import java.util.List;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
@@ -953,5 +956,32 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         }
         
         return false;
+    }
+
+
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: {
+                TableFocusModel<S,?> fm = getFocusModel();
+                int focusedIndex = fm.getFocusedIndex();
+                return flow.getCell(focusedIndex);
+            }
+            case CELL_AT_ROWCOLUMN: {
+                int rowIndex = (Integer)parameters[0];
+                return flow.getCell(rowIndex);
+            }
+            case COLUMN_AT_INDEX: {
+                int index = (Integer)parameters[0];
+                TableColumnBase column = getVisibleLeafColumn(index);
+                return getTableHeaderRow().getColumnHeaderFor(column);
+            }
+            case HEADER: {
+                /* Not sure how this is used by Accessibility, but without this VoiceOver will not
+                 * look for column headers */
+                return getTableHeaderRow();
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

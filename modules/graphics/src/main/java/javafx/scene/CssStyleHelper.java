@@ -1236,19 +1236,30 @@ final class CssStyleHelper {
         return null;
     }
 
-    private String formatUnresolvedLookupMessage(Styleable styleable, CssMetaData cssMetaData, Style style, ParsedValueImpl resolved) {
+    private String formatUnresolvedLookupMessage(Styleable styleable, CssMetaData cssMetaData, Style style, ParsedValueImpl resolved, ClassCastException cce) {
 
-        // find value that could not be looked up
-        String missingLookup = resolved != null ? getUnresolvedLookup(resolved) : null;
-        if (missingLookup == null) missingLookup = "a lookup value";
+        // Find value that could not be looked up. If the resolved value does not contain lookups, then the
+        // ClassCastException is not because of trying to convert a String (which is the missing lookup)
+        // to some value, but is because the convert method got some wrong value - like a paint when it should be a color.
+        // See RT-33319 for an example of this.
+        String missingLookup = resolved != null && resolved.isContainsLookups() ? getUnresolvedLookup(resolved) : null;
 
         StringBuilder sbuf = new StringBuilder();
-        sbuf.append("Could not resolve '")
-            .append(missingLookup)
-            .append("'")
-            .append(" while resolving lookups for '")
-            .append(cssMetaData.getProperty())
-            .append("'");
+        if (missingLookup != null) {
+            sbuf.append("Could not resolve '")
+                    .append(missingLookup)
+                    .append("'")
+                    .append(" while resolving lookups for '")
+                    .append(cssMetaData.getProperty())
+                    .append("'");
+        } else {
+            sbuf.append("Caught '")
+                    .append(cce)
+                    .append("'")
+                    .append(" while converting value for '")
+                    .append(cssMetaData.getProperty())
+                    .append("'");
+        }
 
         final Rule rule = style != null ? style.getDeclaration().getRule(): null;
         final Stylesheet stylesheet = rule != null ? rule.getStylesheet() : null;
@@ -1398,7 +1409,7 @@ final class CssStyleHelper {
                 return new CalculatedValue(val, origin, isRelative);
 
             } catch (ClassCastException cce) {
-                final String msg = formatUnresolvedLookupMessage(styleable, cssMetaData, style.getStyle(),resolved);
+                final String msg = formatUnresolvedLookupMessage(styleable, cssMetaData, style.getStyle(),resolved, cce);
                 List<CssError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
                     final CssError error = new CssError.PropertySetError(cssMetaData, styleable, msg);

@@ -2691,6 +2691,37 @@ public class TableViewTest {
         assertEquals("C", fxList.get(1));
     }
 
+    @Test public void test_getColumnHeaderForColumn() {
+        TableView<Person> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList(
+                new Person("John", "Smith", "jacob.smith@example.com")
+        ));
+
+        TableColumn<Person,String> first = new TableColumn<Person,String>("first");
+        first.setCellValueFactory(new PropertyValueFactory("firstName"));
+        TableColumn<Person,String> last = new TableColumn<Person,String>("last");
+        first.setCellValueFactory(new PropertyValueFactory("lastName"));
+
+        TableColumn name = new TableColumn("Name");
+        name.getColumns().addAll(first, last);
+
+        table.getColumns().setAll(name);
+
+        new StageLoader(table);
+
+        TableHeaderRow headerRow = VirtualFlowTestUtils.getTableHeaderRow(table);
+
+        TableColumnHeader nameHeader = headerRow.getColumnHeaderFor(name);
+        TableColumnHeader firstHeader = headerRow.getColumnHeaderFor(first);
+        TableColumnHeader lastHeader = headerRow.getColumnHeaderFor(last);
+        assertNotNull(nameHeader);
+        assertEquals(name, nameHeader.getTableColumn());
+        assertNotNull(firstHeader);
+        assertEquals(first, firstHeader.getTableColumn());
+        assertNotNull(lastHeader);
+        assertEquals(last, lastHeader.getTableColumn());
+    }
+
     @Test public void test_rt36220() {
         ObservableList<AtomicLong> tableItems = FXCollections.observableArrayList();
         tableItems.add(new AtomicLong(0L));

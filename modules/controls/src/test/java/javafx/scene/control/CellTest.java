@@ -55,8 +55,8 @@ public class CellTest {
                 {TableRow.class},
                 {TableCell.class},
                 {TreeCell.class},
-//                {TreeTableRow.class},
-//                {TreeTableCell.class}
+                {TreeTableRow.class},
+                {TreeTableCell.class}
         });
     }
 
@@ -82,7 +82,7 @@ public class CellTest {
             TreeTableRow tableRow = new TreeTableRow();
             tableRow.updateItem("TableRow", false);
             ((TreeTableCell)cell).updateTreeTableRow(tableRow);
-//            ((TreeTableCell)cell).lockItemOnEdit = true;
+            ((TreeTableCell)cell).lockItemOnEdit = true;
         }
     }
 

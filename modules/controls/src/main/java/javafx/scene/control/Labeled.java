@@ -53,6 +53,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Region;
@@ -1064,4 +1065,12 @@ public abstract class Labeled extends Control {
         return getClassCssMetaData();
     }
 
+    /** @treatAsPrivate */
+    @Override 
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TITLE: return getText();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
  }

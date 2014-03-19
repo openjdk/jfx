@@ -61,7 +61,7 @@
 # Specifies whether to enable robot-based visual tests when running a full test.
 # This flag is ignored if FULL_TEST is false.
 
-#USE_ROBOT = false
+#USE_ROBOT = true
 
 # Specifies whether to run system tests that depend on AWT.
 # This flag is ignored if FULL_TEST is false.

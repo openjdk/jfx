@@ -27,7 +27,6 @@ package com.oracle.bundlers.mac;
 
 import com.oracle.bundlers.AbstractBundler;
 import com.oracle.bundlers.Bundler;
-import com.oracle.bundlers.StandardBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.bundlers.*;
 import org.junit.After;
@@ -41,6 +40,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 
+import static com.oracle.bundlers.StandardBundlerParam.*;
+import static com.sun.javafx.tools.packager.bundlers.MacAppBundler.MAC_CF_BUNDLE_NAME;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -112,7 +113,6 @@ public class MacAppBundlerTest {
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
         AbstractBundler bundler = new MacAppBundler();
-        bundler.setVerbose(true);
 
         assertNotNull(bundler.getName());
         assertNotNull(bundler.getID());
@@ -121,19 +121,21 @@ public class MacAppBundlerTest {
 
         Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(StandardBundlerParam.NAME.getID(), "Smoke");
-        bundleParams.put(StandardBundlerParam.MAIN_CLASS.getID(), "hello.TestPackager");
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-//        bundleParams.put(StandardBundlerParam.MAIN_JAR.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(APP_NAME.getID(), "Smoke Test App");
+        bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Smoke");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
 
-        bundleParams.put(StandardBundlerParam.RUNTIME.getID(),
-                StandardBundlerParam.extractJreAsRelativeFileSet("~/tools/jdk1.8.0.jdk/Contents/Home/jre"));
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
-        bundler.execute(bundleParams, new File(workDir, "smoke"));
+        File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
     }
 
     /**
@@ -148,18 +150,17 @@ public class MacAppBundlerTest {
     @Test
     public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
         Bundler bundler = new MacAppBundler();
-        ((AbstractBundler)bundler).setVerbose(true);
 
         Map<String, Object> bundleParams = new HashMap<>();
 
         // not part of the typical setup, for testing
-        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(StandardBundlerParam.NAME.getID(), "Smoke");
-        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
-        assertTrue(output.isDirectory());
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
     }
 }

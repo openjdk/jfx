@@ -201,17 +201,17 @@ final public class SimpleSelector extends Selector {
         // handle functional pseudo-class :dir()
         // INHERIT applies to both :dir(rtl) and :dir(ltr)
         if (nodeOrientation != INHERIT && styleable instanceof Node) {
-            
-            final Scene scene = ((Node)styleable).getScene();
-            final NodeOrientation effectiveNodeOrientation =
-                    scene.getEffectiveNodeOrientation();
-            
-            if (effectiveNodeOrientation != INHERIT &&
-                    effectiveNodeOrientation != nodeOrientation) {
+            final Node node = (Node)styleable;
+            final NodeOrientation orientation = node.getNodeOrientation();
+
+            if (orientation == INHERIT
+                    ? node.getEffectiveNodeOrientation() != nodeOrientation
+                    : orientation != nodeOrientation)
+            {
                 return false;
             }
         }
-        
+
         // if the selector has an id,
         // then bail if it doesn't match the node's id
         // (do this first since it is potentially the cheapest check)

@@ -24,6 +24,7 @@
  */
 
 #include "common.h"
+#include <UIAutomation.h>
 
 #include "GlassApplication.h"
 #include "ViewContainer.h"
@@ -219,6 +220,28 @@ void ViewContainer::HandleViewPaintEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
             r.left, r.top, r.right-r.left, r.bottom-r.top);
     CheckAndClearException(env);
 }
+
+
+LRESULT ViewContainer::HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM lParam)
+{
+    if (!GetGlassView()) {
+        return NULL;
+    }
+
+    LRESULT lr = NULL;
+    /* WM_GETOBJECT  is sent to request different object types. Make sure the
+     * request is for 'UI Automation provider' before calling getAccessible() */
+    if (static_cast<long>(lParam) == static_cast<long>(UiaRootObjectId)) {
+        JNIEnv* env = GetEnv();
+        jlong pProvider = env->CallLongMethod(GetView(), javaIDs.View.getAccessible);
+        CheckAndClearException(env);
+        if (pProvider) {
+            lr = UiaReturnRawElementProvider(hwnd, wParam, lParam, reinterpret_cast<IRawElementProviderSimple*>(pProvider));
+        }
+    }
+    return lr;
+}
+
 
 void ViewContainer::HandleViewSizeEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {

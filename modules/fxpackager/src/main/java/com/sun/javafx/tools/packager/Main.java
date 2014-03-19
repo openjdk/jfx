@@ -120,13 +120,11 @@ public class Main {
 
         List<Param> parameters = new ArrayList<>(properties.size());
 
-        if (properties != null) {
-            for (Map.Entry en : properties.entrySet()) {
-                Param p = new Param();
-                p.setName((String)en.getKey());
-                p.setValue((String)en.getValue());
-                parameters.add(p);
-            }
+        for (Map.Entry en : properties.entrySet()) {
+            Param p = new Param();
+            p.setName((String)en.getKey());
+            p.setValue((String)en.getValue());
+            parameters.add(p);
         }
         return parameters;
     }
@@ -140,13 +138,11 @@ public class Main {
 
         List<HtmlParam> parameters = new ArrayList<>(properties.size());
 
-        if (properties != null) {
-            for (Map.Entry en : properties.entrySet()) {
-                HtmlParam p = new HtmlParam();
-                p.setName((String)en.getKey());
-                p.setValue((String)en.getValue());
-                parameters.add(p);
-            }
+        for (Map.Entry en : properties.entrySet()) {
+            HtmlParam p = new HtmlParam();
+            p.setName((String)en.getKey());
+            p.setValue((String)en.getValue());
+            parameters.add(p);
         }
         return parameters;
     }
@@ -165,7 +161,7 @@ public class Main {
     }
 
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String... args) throws Exception {
         if (args.length == 0 || args.length == 1 && args[0].equals("-help")) {
             System.out.println(help);
         } else if (args.length == 1 && args[0].equals("-version")) {
@@ -464,6 +460,9 @@ public class Main {
                     throw e;
                 } else {
                     System.err.println(e.getMessage());
+                    if (e.getCause() != null && e.getCause() != e) {
+                        System.err.println(e.getCause().getMessage());
+                    }
                     System.exit(-1);
                 }
             }

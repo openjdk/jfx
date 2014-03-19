@@ -176,48 +176,12 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     public ColorPickerSkin(final ColorPicker colorPicker) {
         super(colorPicker, new ColorPickerBehavior(colorPicker));
         updateComboBoxMode();
-        if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
-             if (arrowButton.getOnMouseReleased() == null) {
-                arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent e) {
-                        ((ColorPickerBehavior)getBehavior()).mouseReleased(e, true);
-                        e.consume();
-                    }
-                });
-            }
-        } else if (getMode() == ComboBoxMode.SPLITBUTTON) {
-            if (arrowButton.getOnMouseReleased() == null) {
-                arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent e) {
-                        ((ColorPickerBehavior)getBehavior()).mouseReleased(e, true);
-                        e.consume();
-                    }
-                });
-            }
-        }
         registerChangeListener(colorPicker.valueProperty(), "VALUE");
 
         // create displayNode
         displayNode = new Label();
         displayNode.getStyleClass().add("color-picker-label");
-        if (getMode() == ComboBoxMode.BUTTON || getMode() == ComboBoxMode.COMBOBOX) {
-            if (displayNode.getOnMouseReleased() == null) {
-                displayNode.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent e) {
-                        ((ColorPickerBehavior)getBehavior()).mouseReleased(e, true);
-                    }
-                });
-            }
-        } else {
-            if (displayNode.getOnMouseReleased() == null) {
-                displayNode.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent e) {
-                        ((ColorPickerBehavior)getBehavior()).mouseReleased(e, false);
-                        e.consume();
-                    }
-                });
-            }
-        }
+
         // label graphic
         pickerColorBox = new PickerColorBox();
         pickerColorBox.getStyleClass().add("picker-color");
@@ -234,15 +198,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
 
         pickerColorBox.getChildren().add(colorRect);
         displayNode.setGraphic(pickerColorBox);
-        if (displayNode.getOnMouseReleased() == null) {
-            displayNode.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    ((ColorPickerBehavior)getBehavior()).mouseReleased(e, false);
-                    e.consume();
-                }
-            });
-        }
     }
 
 

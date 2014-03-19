@@ -36,6 +36,7 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
@@ -46,7 +47,11 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle("com.oracle.bundlers.StandardBundlerParam");
 
-    public StandardBundlerParam(String name, String description, String id, Class<T> valueType, String[] fallbackIDs, Function<Map<String, ? super Object>, T> defaultValueFunction, boolean requiresUserSetting, Function<String, T> stringConverter) {
+    public StandardBundlerParam(String name, String description, String id,
+                                Class<T> valueType, String[] fallbackIDs,
+                                Function<Map<String, ? super Object>, T> defaultValueFunction,
+                                boolean requiresUserSetting,
+                                BiFunction<String, Map<String, ? super Object>, T> stringConverter) {
         this.name = name;
         this.description = description;
         this.id = id;
@@ -58,45 +63,16 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
     }
 
     public static final StandardBundlerParam<RelativeFileSet> RUNTIME =
-        new StandardBundlerParam<>(
-                I18N.getString("param.runtime.name"),
-                I18N.getString("param.runtime.description"),
-                BundleParams.PARAM_RUNTIME,
-                RelativeFileSet.class,
-                null,
-                params -> extractJreAsRelativeFileSet(System.getProperty("java.home")),
-                false,
-                StandardBundlerParam::extractJreAsRelativeFileSet
-        );
-
-    public static RelativeFileSet extractJreAsRelativeFileSet(String root) {
-        File baseDir = new File(root);
-
-        boolean isMac = System.getProperty("os.name").toLowerCase().contains("os x");
-
-        //Normalization: on MacOS we need to point to the top of JDK dir
-        // (other platforms are fine)
-        if (isMac) {
-            //On Mac we need Bundle root, not jdk/Contents/Home
-            baseDir = baseDir.getParentFile().getParentFile().getParentFile();
-        }
-
-        Set<File> lst = new HashSet<>();
-
-        BundleParams.Rule ruleset[];
-        if (System.getProperty("os.name").startsWith("Mac")) {
-            ruleset = BundleParams.macRules;
-        } else if (System.getProperty("os.name").startsWith("Win")) {
-            ruleset = BundleParams.winRules;
-        } else {
-            //must be linux
-            ruleset = BundleParams.linuxRules;
-        }
-
-        BundleParams.walk(baseDir, baseDir, ruleset, lst);
-
-        return new RelativeFileSet(baseDir, lst);
-    }
+            new StandardBundlerParam<>(
+                    I18N.getString("param.runtime.name"),
+                    I18N.getString("param.runtime.description"),
+                    BundleParams.PARAM_RUNTIME,
+                    RelativeFileSet.class,
+                    null,
+                    params -> null,
+                    false,
+                    (s, p) -> null
+            );
 
     public static final StandardBundlerParam<RelativeFileSet> APP_RESOURCES =
             new StandardBundlerParam<>(
@@ -107,10 +83,10 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     null,
                     null, // no default.  Required parameter
                     false,
-                    null // no string translation, tool must provide compelx type
+                    null // no string translation, tool must provide complex type
             );
 
-    public static final StandardBundlerParam<File> ICON  =
+    public static final StandardBundlerParam<File> ICON =
             new StandardBundlerParam<>(
                     I18N.getString("param.icon-file.name"),
                     I18N.getString("param.icon-file.description"),
@@ -119,70 +95,11 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     null,
                     params -> null,
                     false,
-                    File::new
+                    (s, p) -> new File(s)
             );
 
-    public static final StandardBundlerParam<String> NAME  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.name.name"),
-                    I18N.getString("param.name.description"),
-                    BundleParams.PARAM_NAME,
-                    String.class,
-                    null,
-                    params -> {throw new IllegalArgumentException(MessageFormat.format(I18N.getString("error.required-parameter"), BundleParams.PARAM_NAME));},
-                    true,
-                    s -> s
-            );
 
-    public static final StandardBundlerParam<String> VENDOR  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.vendor.name"),
-                    I18N.getString("param.vendor.description"),
-                    BundleParams.PARAM_VENDOR,
-                    String.class,
-                    null,
-                    params -> I18N.getString("param.vendor.default"),
-                    false,
-                    s -> s
-            );
-
-    public static final StandardBundlerParam<String> CATEGORY  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.category.name"),
-                    I18N.getString("param.category.description"),
-                    BundleParams.PARAM_CATEGORY,
-                    String.class,
-                    null,
-                    params -> I18N.getString("param.category.default"),
-                    false,
-                    s -> s
-            );
-
-    public static final StandardBundlerParam<String> DESCRIPTION  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.description.name"),
-                    I18N.getString("param.description.description"),
-                    BundleParams.PARAM_DESCRIPTION,
-                    String.class,
-                    new String[] {NAME.getID()},
-                    params -> I18N.getString("param.description.default"),
-                    false,
-                    s -> s
-            );
-
-    public static final StandardBundlerParam<String> COPYRIGHT  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.copyright.name"),
-                    "The copyright for the application.",
-                    BundleParams.PARAM_COPYRIGHT,
-                    String.class,
-                    null,
-                    params -> MessageFormat.format(I18N.getString("param.copyright.default"), Calendar.getInstance().get(Calendar.YEAR)),
-                    false,
-                    s -> s
-            );
-
-    public static final StandardBundlerParam<String> MAIN_CLASS  =
+    public static final StandardBundlerParam<String> MAIN_CLASS =
             new StandardBundlerParam<>(
                     I18N.getString("param.main-class.name"),
                     I18N.getString("param.main-class.description"),
@@ -194,131 +111,16 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         return (String) params.get(BundleParams.PARAM_APPLICATION_CLASS);
                     },
                     false,
-                    s -> s
+                    (s, p) -> s
             );
 
-    // note that each bundler is likely to replace this one with their own converter
-    public static final StandardBundlerParam<RelativeFileSet> MAIN_JAR  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.main-jar.name"),
-                    I18N.getString("param.main-jar.description"),
-                    "mainJar", //KEY
-                    RelativeFileSet.class,
-                    null,
-                    params -> {
-                        extractParamsFromAppResources(params);
-                        return (RelativeFileSet) params.get("mainJar");
-                    },
-                    false,
-                    s -> {
-                        File f  = new File(s);
-                        return new RelativeFileSet(f.getParentFile(), new LinkedHashSet<>(Arrays.asList(f)));
-                    }
-            );
-
-    public static final StandardBundlerParam<String> MAIN_JAR_CLASSPATH  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.main-jar-classpath.name"),
-                    I18N.getString("param.main-jar-classpath.description"),
-                    "mainJarClasspath", //KEY
-                    String.class,
-                    null,
-                    params -> {
-                        extractParamsFromAppResources(params);
-                        String cp = (String) params.get("mainJarClasspath");
-                        return cp == null ? "" : cp;
-                    },
-                    false,
-                    s -> s
-            );
-
-    public static final StandardBundlerParam<Boolean> USE_FX_PACKAGING  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.use-javafx-packaging.name"),
-                    I18N.getString("param.use-javafx-packaging.description"),
-                    "fxPackaging", //KEY
-                    Boolean.class,
-                    null,
-                    params -> {
-                        extractParamsFromAppResources(params);
-                        return (Boolean) params.get("fxPackaging");
-                    },
-                    false,
-                    Boolean::valueOf
-            );
-
-    @SuppressWarnings("unchecked")
-    public static final StandardBundlerParam<List<String>> JVM_OPTIONS  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.jvm-options.name"),
-                    I18N.getString("param.jvm-options.description"),
-                    "jvmOptions", //KEY
-                    (Class<List<String>>) (Object) List.class,
-                    null,
-                    params -> Collections.emptyList(),
-                    false,
-                    s -> Arrays.<String>asList(s.split("\\s+"))
-            );
-
-    @SuppressWarnings("unchecked")
-    public static final StandardBundlerParam<Map<String, String>> JVM_PROPERTIES  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.jvm-system-properties.name"),
-                    I18N.getString("param.jvm-system-properties.description"),
-                    "jvmProperties", //KEY
-                    (Class<Map<String, String>>) (Object) Map.class,
-                    null,
-                    params -> Collections.emptyMap(),
-                    false,
-                    s -> {
-                        Map<String, String> map = new HashMap<>();
-                        try {
-                            Properties p = new Properties();
-                            p.load(new StringReader(s));
-                            for (Map.Entry<Object, Object> entry : p.entrySet()) {
-                                map.put((String)entry.getKey(), (String)entry.getValue());
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        return map;
-                    }
-            );
-
-    @SuppressWarnings("unchecked")
-    public static final StandardBundlerParam<Map<String, String>> USER_JVM_OPTIONS  =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.user-jvm-options.name"),
-                    I18N.getString("param.user-jvm-options.description"),
-                    "userJvmOptions", //KEY
-                    (Class<Map<String, String>>) (Object) Map.class,
-                    null,
-                    params -> Collections.emptyMap(),
-                    false,
-                    s -> {
-                        Map<String, String> map = new HashMap<>();
-                        try {
-                            Properties p = new Properties();
-                            p.load(new StringReader(s));
-                            for (Map.Entry<Object, Object> entry : p.entrySet()) {
-                                map.put((String)entry.getKey(), (String)entry.getValue());
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        return map;
-                    }
-            );
-
-
-
-    public static final StandardBundlerParam<String> APP_NAME  =
+    public static final StandardBundlerParam<String> APP_NAME =
             new StandardBundlerParam<>(
                     I18N.getString("param.app-name.name"),
                     I18N.getString("param.app-name.description"),
-                    BundleParams.PARAM_APP_NAME, //KEY
+                    BundleParams.PARAM_NAME,
                     String.class,
-                    new String[] {BundleParams.PARAM_NAME},
+                    null,
                     params -> {
                         String s = MAIN_CLASS.fetchFrom(params);
                         if (s == null) return null;
@@ -330,24 +132,185 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         return s;
                     },
                     true,
-                    s -> s
+                    (s, p) -> s
             );
 
-    public static final StandardBundlerParam<String> TITLE  =
+    public static final StandardBundlerParam<String> VENDOR =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.vendor.name"),
+                    I18N.getString("param.vendor.description"),
+                    BundleParams.PARAM_VENDOR,
+                    String.class,
+                    null,
+                    params -> I18N.getString("param.vendor.default"),
+                    false,
+                    (s, p) -> s
+            );
+
+    public static final StandardBundlerParam<String> CATEGORY =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.category.name"),
+                    I18N.getString("param.category.description"),
+                    BundleParams.PARAM_CATEGORY,
+                    String.class,
+                    null,
+                    params -> I18N.getString("param.category.default"),
+                    false,
+                    (s, p) -> s
+            );
+
+    public static final StandardBundlerParam<String> DESCRIPTION =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.description.name"),
+                    I18N.getString("param.description.description"),
+                    BundleParams.PARAM_DESCRIPTION,
+                    String.class,
+                    new String[] {APP_NAME.getID()},
+                    params -> I18N.getString("param.description.default"),
+                    false,
+                    (s, p) -> s
+            );
+
+    public static final StandardBundlerParam<String> COPYRIGHT =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.copyright.name"),
+                    I18N.getString("param.copyright.description"),
+                    BundleParams.PARAM_COPYRIGHT,
+                    String.class,
+                    null,
+                    params -> MessageFormat.format(I18N.getString("param.copyright.default"), new Date()),
+                    false,
+                    (s, p) -> s
+            );
+
+    // note that each bundler is likely to replace this one with their own converter
+    public static final StandardBundlerParam<RelativeFileSet> MAIN_JAR =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.main-jar.name"),
+                    I18N.getString("param.main-jar.description"),
+                    "mainJar",
+                    RelativeFileSet.class,
+                    null,
+                    params -> {
+                        extractParamsFromAppResources(params);
+                        return (RelativeFileSet) params.get("mainJar");
+                    },
+                    false,
+                    (s, p) -> {
+                        File f = new File(s);
+                        return new RelativeFileSet(f.getParentFile(), new LinkedHashSet<>(Arrays.asList(f)));
+                    }
+            );
+
+    public static final StandardBundlerParam<String> MAIN_JAR_CLASSPATH =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.main-jar-classpath.name"),
+                    I18N.getString("param.main-jar-classpath.description"),
+                    "classpath",
+                    String.class,
+                    null,
+                    params -> {
+                        extractParamsFromAppResources(params);
+                        String cp = (String) params.get("classpath");
+                        return cp == null ? "" : cp;
+                    },
+                    false,
+                    (s, p) -> s
+            );
+
+    public static final StandardBundlerParam<Boolean> USE_FX_PACKAGING =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.use-javafx-packaging.name"),
+                    I18N.getString("param.use-javafx-packaging.description"),
+                    "fxPackaging",
+                    Boolean.class,
+                    null,
+                    params -> {
+                        extractParamsFromAppResources(params);
+                        return (Boolean) params.get("fxPackaging");
+                    },
+                    false,
+                    (s, p) -> Boolean.valueOf(s)
+            );
+
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<List<String>> JVM_OPTIONS =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.jvm-options.name"),
+                    I18N.getString("param.jvm-options.description"),
+                    "jvmOptions",
+                    (Class<List<String>>) (Object) List.class,
+                    null,
+                    params -> Collections.emptyList(),
+                    false,
+                    (s, p) -> Arrays.asList(s.split("\\s+"))
+            );
+
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<Map<String, String>> JVM_PROPERTIES =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.jvm-system-properties.name"),
+                    I18N.getString("param.jvm-system-properties.description"),
+                    "jvmProperties",
+                    (Class<Map<String, String>>) (Object) Map.class,
+                    null,
+                    params -> Collections.emptyMap(),
+                    false,
+                    (s, params) -> {
+                        Map<String, String> map = new HashMap<>();
+                        try {
+                            Properties p = new Properties();
+                            p.load(new StringReader(s));
+                            for (Map.Entry<Object, Object> entry : p.entrySet()) {
+                                map.put((String)entry.getKey(), (String)entry.getValue());
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        return map;
+                    }
+            );
+
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<Map<String, String>> USER_JVM_OPTIONS =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.user-jvm-options.name"),
+                    I18N.getString("param.user-jvm-options.description"),
+                    "userJvmOptions",
+                    (Class<Map<String, String>>) (Object) Map.class,
+                    null,
+                    params -> Collections.emptyMap(),
+                    false,
+                    (s, params) -> {
+                        Map<String, String> map = new HashMap<>();
+                        try {
+                            Properties p = new Properties();
+                            p.load(new StringReader(s));
+                            for (Map.Entry<Object, Object> entry : p.entrySet()) {
+                                map.put((String)entry.getKey(), (String)entry.getValue());
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        return map;
+                    }
+            );
+
+    public static final StandardBundlerParam<String> TITLE =
             new StandardBundlerParam<>(
                     I18N.getString("param.title.name"),
                     I18N.getString("param.title.description"), //?? but what does it do?
                     BundleParams.PARAM_TITLE,
                     String.class,
-                    new String[] {NAME.getID()},
+                    new String[] {APP_NAME.getID()},
                     APP_NAME::fetchFrom,
                     false,
-                    s -> s
+                    (s, p) -> s
             );
 
 
     // note that each bundler is likely to replace this one with their own converter
-    public static final StandardBundlerParam<String> VERSION  =
+    public static final StandardBundlerParam<String> VERSION =
             new StandardBundlerParam<>(
                     I18N.getString("param.version.name"),
                     I18N.getString("param.version.description"),
@@ -356,36 +319,88 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     null,
                     params -> I18N.getString("param.version.default"),
                     false,
-                    s -> s
+                    (s, p) -> s
             );
 
-    public static final StandardBundlerParam<Boolean> SYSTEM_WIDE  =
+    public static final StandardBundlerParam<Boolean> SYSTEM_WIDE =
             new StandardBundlerParam<>(
                     I18N.getString("param.system-wide.name"),
                     I18N.getString("param.system-wide.description"),
-                    BundleParams.PARAM_SYSTEM_WIDE, //KEY
+                    BundleParams.PARAM_SYSTEM_WIDE,
                     Boolean.class,
                     null,
                     params -> null,
                     false,
                     // valueOf(null) is false, and we actually do want null in some cases
-                    s -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s)
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s)
             );
 
-    public static final StandardBundlerParam<Boolean> SHORTCUT_HINT  =
+    public static final StandardBundlerParam<Boolean> SERVICE_HINT  =
             new StandardBundlerParam<>(
-                    I18N.getString("param.desktop-shortcut-hint.name"),
-                    I18N.getString("param.desktop-shortcut-hint.description"),
-                    BundleParams.PARAM_SHORTCUT, //KEY
+                    I18N.getString("param.service-hint.name"),
+                    I18N.getString("param.service-hint.description"),
+                    "serviceHint",
                     Boolean.class,
                     null,
                     params -> false,
                     false,
                     // valueOf(null) is false, and we actually do want null in some cases
-                    s -> (s == null || "null".equalsIgnoreCase(s))? false : Boolean.valueOf(s)
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
 
-    public static final StandardBundlerParam<Boolean> MENU_HINT  =
+    public static final StandardBundlerParam<Boolean> START_ON_INSTALL  =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.start-on-install.name"),
+                    I18N.getString("param.start-on-install.description"),
+                    "startOnInstall",
+                    Boolean.class,
+                    null,
+                    params -> false,
+                    false,
+                    // valueOf(null) is false, and we actually do want null in some cases
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
+            );
+
+    public static final StandardBundlerParam<Boolean> STOP_ON_UNINSTALL  =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.stop-on-uninstall.name"),
+                    I18N.getString("param.stop-on-uninstall.description"),
+                    "stopOnUninstall",
+                    Boolean.class,
+                    null,
+                    params -> false,
+                    false,
+                    // valueOf(null) is false, and we actually do want null in some cases
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
+            );
+
+    public static final StandardBundlerParam<Boolean> RUN_AT_STARTUP  =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.run-at-startup.name"),
+                    I18N.getString("param.run-at-startup.description"),
+                    "runAtStartup",
+                    Boolean.class,
+                    null,
+                    params -> false,
+                    false,
+                    // valueOf(null) is false, and we actually do want null in some cases
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
+            );
+
+    public static final StandardBundlerParam<Boolean> SHORTCUT_HINT =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.desktop-shortcut-hint.name"),
+                    I18N.getString("param.desktop-shortcut-hint.description"),
+                    BundleParams.PARAM_SHORTCUT,
+                    Boolean.class,
+                    null,
+                    params -> false,
+                    false,
+                    // valueOf(null) is false, and we actually do want null in some cases
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? false : Boolean.valueOf(s)
+            );
+
+    public static final StandardBundlerParam<Boolean> MENU_HINT =
             new StandardBundlerParam<>(
                     I18N.getString("param.menu-shortcut-hint.name"),
                     I18N.getString("param.menu-shortcut-hint.description"),
@@ -395,7 +410,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     params -> true,
                     false,
                     // valueOf(null) is false, and we actually do want null in some cases
-                    s -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
 
     @SuppressWarnings("unchecked")
@@ -408,24 +423,24 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     null,
                     params -> Collections.<String>emptyList(),
                     false,
-                    s -> Arrays.asList(s.split(","))
+                    (s, p) -> Arrays.asList(s.split(","))
             );
 
-    public static final BundlerParamInfo<String> LICENSE_TYPE = 
+    public static final BundlerParamInfo<String> LICENSE_TYPE =
             new StandardBundlerParam<> (
                     I18N.getString("param.license-type.name"),
                     I18N.getString("param.license-type.description"),
                     BundleParams.PARAM_LICENSE_TYPE,
                     String.class, null,
                     params -> I18N.getString("param.license-type.default"),
-                    false, s -> s
+                    false, (s, p) -> s
             );
 
     public static final StandardBundlerParam<File> BUILD_ROOT =
             new StandardBundlerParam<>(
                     I18N.getString("param.build-root.name"),
                     I18N.getString("param.build-root.description"),
-                    "buildRoot", //KEY
+                    "buildRoot",
                     File.class,
                     null,
                     params -> {
@@ -436,10 +451,10 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         }
                     },
                     false,
-                    File::new
+                    (s, p) -> new File(s)
             );
 
-    public static final StandardBundlerParam<String> IDENTIFIER  =
+    public static final StandardBundlerParam<String> IDENTIFIER =
             new StandardBundlerParam<>(
                     I18N.getString("param.identifier.name"),
                     I18N.getString("param.identifier.description"),
@@ -457,10 +472,10 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         return s;
                     },
                     false,
-                    s -> s
+                    (s, p) -> s
             );
 
-    public static final StandardBundlerParam<String> PREFERENCES_ID  =
+    public static final StandardBundlerParam<String> PREFERENCES_ID =
             new StandardBundlerParam<>(
                     I18N.getString("param.preferences-id.name"),
                     I18N.getString("param.preferences-id.description"),
@@ -469,7 +484,20 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     new String[] {IDENTIFIER.getID()},
                     params -> null, // todo take the package of the main app class
                     false,
-                    s -> s
+                    (s, p) -> s
+            );
+
+    public static final StandardBundlerParam<Boolean> VERBOSE  =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.verbose.name"),
+                    I18N.getString("param.verbose.description"),
+                    "verbose",
+                    Boolean.class,
+                    null,
+                    params -> false,
+                    false,
+                    // valueOf(null) is false, and we actually do want null in some cases
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
 
     public static void extractParamsFromAppResources(Map<String, ? super Object> params) {

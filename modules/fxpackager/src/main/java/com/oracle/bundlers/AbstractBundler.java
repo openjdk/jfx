@@ -26,7 +26,6 @@
 package com.oracle.bundlers;
 
 import com.oracle.bundlers.windows.WindowsBundlerParam;
-import com.sun.javafx.tools.ant.DeployFXTask;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.IOUtils;
@@ -40,44 +39,32 @@ import java.net.URL;
 import java.text.MessageFormat;
 import java.util.*;
 
+import static com.oracle.bundlers.StandardBundlerParam.*;
+
 public abstract class AbstractBundler implements Bundler {
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle("com.oracle.bundlers.AbstractBundler");
 
-    protected boolean verbose = false;
-
     public static final BundlerParamInfo<File> IMAGES_ROOT = new WindowsBundlerParam<>(
             I18N.getString("param.images-root.name"),
             I18N.getString("param.images-root.description"),
-            "imagesRoot", //KEY
+            "imagesRoot",
             File.class, null,
-            params -> {
-                File imagesRoot = new File(StandardBundlerParam.BUILD_ROOT.fetchFrom(params), "images");
-                imagesRoot.mkdirs();
-                return imagesRoot;
-            },
-            false, s -> null);
+            params -> new File(BUILD_ROOT.fetchFrom(params), "images"),
+            false, (s, p) -> null);
 
     //do not use file separator -
-    // we use it for classpath lookup and there / are not platfrom specific
+    // we use it for classpath lookup and there / are not platform specific
     public final static String BUNDLER_PREFIX = "package/";
 
     protected static final String JAVAFX_LAUNCHER_CLASS = "com.javafx.main.Main";
 
     protected Class baseResourceLoader = null;
-
-    public boolean isVerbose() {
-        return verbose;
-    }
-
-    public void setVerbose(boolean verbose) {
-        this.verbose = verbose;
-    }
-
+    
     //helper method to test if required files are present in the runtime
     public void testRuntime(Map<String, ? super Object> p, String[] file) throws ConfigException {
-        RelativeFileSet runtime = StandardBundlerParam.RUNTIME.fetchFrom(p);
+        RelativeFileSet runtime = RUNTIME.fetchFrom(p);
         if (runtime == null) {
             return; //null runtime is ok (request to use system)
         }
@@ -94,9 +81,9 @@ public abstract class AbstractBundler implements Bundler {
 
     protected void fetchResource(
             String publicName, String category,
-            String defaultName, File result)
+            String defaultName, File result, boolean verbose)
             throws IOException {
-        URL u = locateResource(publicName, category, defaultName);
+        URL u = locateResource(publicName, category, defaultName, verbose);
         if (u != null) {
             IOUtils.copyFromURL(u, result);
         } else {
@@ -108,9 +95,9 @@ public abstract class AbstractBundler implements Bundler {
 
     protected void fetchResource(
             String publicName, String category,
-            File defaultFile, File result)
+            File defaultFile, File result, boolean verbose)
             throws IOException {
-        URL u = locateResource(publicName, category, null);
+        URL u = locateResource(publicName, category, null, verbose);
         if (u != null) {
             IOUtils.copyFromURL(u, result);
         } else {
@@ -122,7 +109,7 @@ public abstract class AbstractBundler implements Bundler {
     }
 
     private URL locateResource(String publicName, String category,
-                               String defaultName) throws IOException {
+                               String defaultName, boolean verbose) throws IOException {
         URL u = null;
         boolean custom = false;
         if (publicName != null) {
@@ -145,8 +132,9 @@ public abstract class AbstractBundler implements Bundler {
     }
 
     protected String preprocessTextResource(String publicName, String category,
-                                            String defaultName, Map<String, String> pairs) throws IOException {
-        URL u = locateResource(publicName, category, defaultName);
+                                            String defaultName, Map<String, String> pairs,
+                                            boolean verbose) throws IOException {
+        URL u = locateResource(publicName, category, defaultName, verbose);
         InputStream inp = u.openStream();
         if (inp == null) {
             throw new RuntimeException("Jar corrupt? No "+defaultName+" resource!");
@@ -175,12 +163,6 @@ public abstract class AbstractBundler implements Bundler {
         Log.info("###### Parameters for " + getName());
         for(Map.Entry<String, ? super Object> e: p.entrySet()) {
             Log.info("    id: " + e.getKey() + " value: " + e.getValue());
-        }
-    }
-
-    public void validateDynamicArguments(List<DeployFXTask.BundleArgument> dynamicArgs) {
-        for(BundlerParamInfo info: getBundleParameters()) {
-            //TODO
         }
     }
 }

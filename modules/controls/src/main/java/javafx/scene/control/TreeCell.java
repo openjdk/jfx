@@ -25,6 +25,9 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.skin.VirtualContainerBase;
+import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.collections.FXCollections;
 import javafx.css.PseudoClass;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -36,12 +39,19 @@ import javafx.scene.Node;
 import com.sun.javafx.scene.control.skin.TreeCellSkin;
 import javafx.collections.WeakListChangeListener;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
+import javafx.scene.Parent;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 /**
  * The {@link Cell} type used with the {@link TreeView} control. In addition to 
@@ -157,11 +167,16 @@ public class TreeCell<T> extends IndexedCell<T> {
     };
     
     /* proxy pseudo-class state change from treeItem's expandedProperty */
+    private boolean oldIsExpanded;
     private final InvalidationListener treeItemExpandedInvalidationListener = new InvalidationListener() {
         @Override public void invalidated(Observable o) {
             boolean isExpanded = ((BooleanProperty)o).get();
             pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   isExpanded);
             pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !isExpanded);
+            if (isExpanded != oldIsExpanded) {
+                accSendNotification(Attribute.EXPANDED);
+            }
+            oldIsExpanded = isExpanded;
         }
     };
 
@@ -204,6 +219,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                 oldValue = get(); 
                 
                 if (oldValue != null) {
+                    oldIsExpanded = oldValue.isExpanded();
                     oldValue.expandedProperty().addListener(weakTreeItemExpandedInvalidationListener);
                     // fake an invalidation to ensure updated pseudo-class state
                     weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
@@ -624,4 +640,76 @@ public class TreeCell<T> extends IndexedCell<T> {
     private static final PseudoClass EXPANDED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("expanded");
     private static final PseudoClass COLLAPSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("collapsed");
 
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        TreeItem<T> treeItem = getTreeItem();
+        TreeView<T> treeView = getTreeView();
+        switch (attribute) {
+            case ROLE: return Role.TREE_ITEM;
+            case TREE_ITEM_PARENT: {
+                if (treeView == null) return null;
+                if (treeItem == null) return null;
+                TreeItem<T> parent = treeItem.getParent();
+                if (parent == null) return null;
+                int parentIndex = treeView.getRow(parent);
+                return treeView.accGetAttribute(Attribute.ROW_AT_INDEX, parentIndex);
+            }
+            case TREE_ITEM_COUNT: {
+                return treeItem == null  ? 0 : treeItem.getChildren().size();
+            }
+            case TREE_ITEM_AT_INDEX:
+                if (treeItem == null) return null;
+                int index = (Integer)parameters[0];
+                if (index >= treeItem.getChildren().size()) return null;
+                TreeItem<T> child = treeItem.getChildren().get(index);
+                if (child == null) return null;
+                int childIndex = treeView.getRow(child);
+                return treeView.accGetAttribute(Attribute.ROW_AT_INDEX, childIndex);
+            case TITLE: {
+                Object value = treeItem == null ? null : treeItem.getValue();
+                return value == null ? "" : value.toString();
+            }
+            case LEAF: return treeItem == null ? true : treeItem.isLeaf();
+            case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
+            case INDEX: return getIndex();
+            case SELECTED: return isSelected();
+            case DISCLOSURE_LEVEL: {
+                return treeView == null ? 0 : treeView.getTreeItemLevel(treeItem);
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public void accExecuteAction(Action action, Object... parameters) {
+        final TreeView<T> treeView = getTreeView();
+        final TreeItem<T> treeItem = getTreeItem();
+        final MultipleSelectionModel<TreeItem<T>> sm = treeView == null ? null : treeView.getSelectionModel();
+
+        switch (action) {
+            case EXPAND: {
+                if (treeItem != null) treeItem.setExpanded(true);
+                break;
+            }
+            case COLLAPSE: {
+                if (treeItem != null) treeItem.setExpanded(false);
+                break;
+            }
+            case SELECT: {
+                if (sm != null) sm.clearAndSelect(getIndex());
+                break;
+            }
+            case ADD_TO_SELECTION: {
+                if (sm != null) sm.select(getIndex());
+                break;
+            }
+            case REMOVE_FROM_SELECTION: {
+                if (sm != null) sm.clearSelection(getIndex());
+                break;
+            }
+            default: super.accExecuteAction(action);
+        }
+    }
 }

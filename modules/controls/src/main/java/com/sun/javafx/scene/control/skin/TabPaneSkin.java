@@ -53,6 +53,8 @@ import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
@@ -756,6 +758,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         }
                     }
                 }
+
             };
             headersRegion.getStyleClass().setAll("headers-region");
             headersRegion.setClip(headerClip);
@@ -1068,6 +1071,13 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 }
                 @Override protected double computePrefHeight(double w) {
                     return CLOSE_BTN_SIZE;
+                }
+                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                    switch (attribute) {
+                        case ROLE: return Role.BUTTON;
+                        case TITLE: return "Close";
+                        default: return super.accGetAttribute(attribute, parameters);
+                    }
                 }
             };
             closeBtn.getStyleClass().setAll("tab-close-button");
@@ -1403,6 +1413,14 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             clip.setHeight(value);
         }
     
+        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            switch (attribute) {
+                case ROLE: return Role.TAB_ITEM;
+                case TITLE: return getTab().getText();
+                case SELECTED: return selectedTab == getTab();
+                default: return super.accGetAttribute(attribute, parameters);
+            }
+        }
     } /* End TabHeaderSkin */
 
     private static final PseudoClass SELECTED_PSEUDOCLASS_STATE =
@@ -1805,6 +1823,16 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         public void dispose() {
             tab.disableProperty().removeListener(weakDisableListener);
+        }
+    }
+
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: return tabHeaderArea.getTabHeaderSkin(selectedTab);
+            case SELECTED_TAB: return tabHeaderArea.getTabHeaderSkin(selectedTab);
+            case TABS: return tabHeaderArea.headersRegion.getChildren();
+            default: return super.accGetAttribute(attribute, parameters);
         }
     }
 }

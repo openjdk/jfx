@@ -727,6 +727,7 @@ public class CustomColorDialog extends HBox {
             } 
             sliders[row].setMax(maxValue);
             sliders[row].valueProperty().bindBidirectional(prop);
+            labels[row].setLabelFor(sliders[row]);
             fields[row].setMaxValue(maxValue);
             fields[row].valueProperty().bindBidirectional(prop);
             bindedProperties[row] = prop;

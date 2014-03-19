@@ -233,8 +233,8 @@ public abstract class J2DPresentable implements Presentable {
             ib = IntBuffer.wrap(pixels, db.getOffset(), db.getSize());
             needsResize = false;
         }
-        Graphics2D g2d = (Graphics2D) buffer.getGraphics();
-        return new J2DPrismGraphics(this, g2d);
+        Graphics2D g2d = buffer.createGraphics();
+        return factory.createJ2DPrismGraphics(this, g2d);
     }
 
     J2DRTTexture getReadbackBuffer() {

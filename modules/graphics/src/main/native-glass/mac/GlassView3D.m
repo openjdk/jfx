@@ -781,4 +781,69 @@
     [layer notifyScaleFactorChanged:scale];
 }
 
+/* Accessibility support */
+
+- (NSArray *)accessibilityAttributeNames
+{
+    NSArray *names = NULL;
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        names = [accessible accessibilityAttributeNames];
+    }
+    if (names == NULL) {
+        names = [super accessibilityAttributeNames];
+    }
+    return names;
+}
+
+- (id)accessibilityAttributeValue:(NSString *)attribute
+{
+    id value = NULL;
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        value = [accessible accessibilityAttributeValue: attribute];
+    }
+    if (value == NULL) {
+        value = [super accessibilityAttributeValue: attribute];
+    }
+    return value;
+}
+
+- (BOOL)accessibilityIsIgnored
+{
+    BOOL value = TRUE; /* This default value in the OS */
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        value = [accessible accessibilityIsIgnored];
+    }
+    return value;
+}
+
+- (id)accessibilityHitTest:(NSPoint)point
+{
+    id value = NULL;
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        value = [accessible accessibilityHitTest: point];
+    }
+    if (value == NULL) {
+        value = [super accessibilityHitTest: point];
+    }
+    return value;
+}
+
+- (id)accessibilityFocusedUIElement
+{
+    id value = NULL;
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        value = [accessible accessibilityFocusedUIElement];
+    }
+    if (value == NULL) {
+        value = [super accessibilityFocusedUIElement];
+    }
+    return value;
+}
+
+
 @end

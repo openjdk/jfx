@@ -62,6 +62,7 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.NamedArg;
 import javafx.beans.Observable;
 import javafx.beans.property.*;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -69,6 +70,9 @@ import javafx.css.CssMetaData;
 import javafx.css.StyleableObjectProperty;
 import javafx.event.*;
 import javafx.geometry.*;
+import javafx.scene.accessibility.Accessible;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
 import javafx.scene.paint.Color;
@@ -706,6 +710,10 @@ public class Scene implements EventTarget {
         tk.removeSceneTkPulseListener(scenePulseListener);
         impl_peer.dispose();
         impl_peer = null;
+        if (accessible != null) {
+            accessible.dispose();
+            accessible = null;
+        }
 
         PerformanceTracker.logEvent("Scene.disposePeer finished");
     }
@@ -1988,6 +1996,9 @@ public class Scene implements EventTarget {
                             + " canceled by nested requestFocus");
                 }
             }
+            if (accessible != null) {
+                accessible.sendNotification(Attribute.FOCUS_NODE);
+            }
         }
     };
 
@@ -2278,6 +2289,8 @@ public class Scene implements EventTarget {
             }
 
             focusCleanup();
+
+            disposeAccessibles();
 
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newPhase("CSS Pass");
@@ -2660,6 +2673,11 @@ public class Scene implements EventTarget {
                 // gesture finished
                 touchEventSetId = 0;
             }
+        }
+
+        @Override
+        public Accessible getSceneAccessible() {
+            return getAccessible();
         }
     }
 
@@ -6081,5 +6099,98 @@ public class Scene implements EventTarget {
         public void invalidate() {
             fireValueChangedEvent();
         }
+    }
+
+    private Map<Node, Accessible> accMap;
+    Accessible removeAccessible(Node node) {
+        if (accMap == null) return null;
+        return accMap.remove(node);
+    }
+
+    void addAccessible(Node node, Accessible acc) {
+        if (accMap == null) {
+            accMap = new HashMap<Node, Accessible>();
+        }
+        accMap.put(node, acc);
+    }
+
+    private void disposeAccessibles() {
+        if (accMap != null) {
+            for (Map.Entry<Node, Accessible> entry : accMap.entrySet()) {
+                Node node = entry.getKey();
+                Accessible acc = entry.getValue();
+                if (node.accessible != null) {
+                    /* This node has already been initialized to another scene.
+                     * Note an accessible can be returned to the node before the
+                     * pulse if getAccessible() is called. In which case it must 
+                     * already being removed from accMap.
+                     */
+                    if (node.accessible == acc) {
+                        System.err.println("[A11y] 'node.accessible == acc' should never happen.");
+                    }
+                    if (node.getScene() == this) {
+                        System.err.println("[A11y] 'node.getScene() == this' should never happen.");
+                    }
+                    acc.dispose();
+                } else {
+                    if (node.getScene() == this) {
+                        node.accessible = acc;
+                    } else {
+                        acc.dispose();
+                    }
+                }
+            }
+            accMap.clear();
+        }
+    }
+    
+    private Accessible accessible;
+
+    /**
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
+     */
+    public Accessible getAccessible() {
+        if (accessible == null) {
+            accessible = new Accessible() {
+                @Override public Object getAttribute(Attribute attribute,
+                                                     Object... parameters) {
+                    switch (attribute) {
+                        case CHILDREN: {
+                            Parent root = getRoot();
+                            if (root != null) {
+                                return FXCollections.observableArrayList(root);
+                            }
+                            break;
+                        }
+                        case TITLE: {
+                            Window w = getWindow();
+                            if (w instanceof Stage) {
+                                return ((Stage)w).getTitle();
+                            }
+                            break;
+                        }
+                        case NODE_AT_POINT: {
+                            Window window = getWindow();
+                            /* is this screen to scene translation correct ? not considering camera ? */
+                            Point2D pt = (Point2D)parameters[0];
+                            PickResult res = pick(pt.getX() - getX() - window.getX(), pt.getY() - getY() - window.getY());
+                            if (res != null) {
+                                Node node = res.getIntersectedNode();
+                                if (node != null) return node;
+                            }
+                            return getRoot();//not sure
+                        }
+                        case ROLE: return Role.PARENT;
+                        case SCENE: return Scene.this;
+                        case FOCUS_NODE: return getFocusOwner();
+                        default:
+                    }
+                    return super.getAttribute(attribute, parameters);
+                }
+            };
+        }
+        return accessible;
     }
 }

@@ -41,6 +41,7 @@ import java.net.URL;
 import java.text.MessageFormat;
 import java.util.*;
 
+import static com.oracle.bundlers.JreUtils.*;
 import static com.oracle.bundlers.StandardBundlerParam.*;
 import static com.oracle.bundlers.windows.WindowsBundlerParam.BIT_ARCH_64;
 import static com.oracle.bundlers.windows.WindowsBundlerParam.BIT_ARCH_64_RUNTIME;
@@ -53,22 +54,74 @@ public class WinAppBundler extends AbstractBundler {
     public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"), 
-            "configRoot", //KEY 
+            "configRoot",
             File.class, null, params -> {
-                File imagesRoot = new File(StandardBundlerParam.BUILD_ROOT.fetchFrom(params), "windows");
+                File imagesRoot = new File(BUILD_ROOT.fetchFrom(params), "windows");
                 imagesRoot.mkdirs();
                 return imagesRoot;
-            }, false, s -> null);
+            }, false, (s, p) -> null);
+
+    //Subsetting of JRE is restricted.
+    //JRE README defines what is allowed to strip:
+    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
+    public static final BundlerParamInfo<Rule[]> WIN_JRE_RULES = new StandardBundlerParam<>(
+            "",
+            "",
+            ".win.runtime.rules",
+            Rule[].class,
+            null,
+            params -> new Rule[]{
+                Rule.prefixNeg("\\bin\\new_plugin"),
+                Rule.prefixNeg("\\lib\\deploy"),
+                Rule.suffixNeg(".pdb"),
+                Rule.suffixNeg(".map"),
+                Rule.suffixNeg("axbridge.dll"),
+                Rule.suffixNeg("eula.dll"),
+                Rule.substrNeg("javacpl"),
+                Rule.suffixNeg("wsdetect.dll"),
+                Rule.substrNeg("eployjava1.dll"), //NP and IE versions
+                Rule.substrNeg("bin\\jp2"),
+                Rule.substrNeg("bin\\jpi"),
+                //Rule.suffixNeg("lib\\ext"), //need some of jars there for https to work
+                Rule.suffixNeg("ssv.dll"),
+                Rule.substrNeg("npjpi"),
+                Rule.substrNeg("npoji"),
+                Rule.suffixNeg(".exe"),
+                //keep core deploy files as JavaFX APIs use them
+                //Rule.suffixNeg("deploy.dll"),
+                Rule.suffixNeg("deploy.jar"),
+                //Rule.suffixNeg("javaws.jar"),
+                //Rule.suffixNeg("plugin.jar"),
+                Rule.suffix(".jar")
+            },
+            false,
+            (s, p) -> null
+    );
+
+    public static final BundlerParamInfo<RelativeFileSet> WIN_RUNTIME = new StandardBundlerParam<>(
+            RUNTIME.getName(),
+            RUNTIME.getDescription(),
+            RUNTIME.getID(),
+            RelativeFileSet.class,
+            null,
+            params -> extractJreAsRelativeFileSet(System.getProperty("java.home"),
+                    WIN_JRE_RULES.fetchFrom(params)),
+            false,
+            (s, p) -> extractJreAsRelativeFileSet(s,
+                    WIN_JRE_RULES.fetchFrom(p))
+    );
 
     private final static String EXECUTABLE_NAME = "WinLauncher.exe";
+    private final static String EXECUTABLE_SVC_NAME = "WinLauncherSvc.exe";
+
     private static final String TOOL_ICON_SWAP="IconSwap.exe";
 
     public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new WindowsBundlerParam<>(
             I18N.getString("param.raw-executable-url.name"),
             I18N.getString("param.raw-executable-url.description"),
-            "win.launcher.url", //KEY
+            "win.launcher.url",
             URL.class, null, params -> WinResources.class.getResource(EXECUTABLE_NAME), 
-            false, s -> {
+            false, (s, p) -> {
                 try {
                     return new URL(s);
                 } catch (MalformedURLException e) {
@@ -80,9 +133,9 @@ public class WinAppBundler extends AbstractBundler {
     public static final BundlerParamInfo<Boolean> REBRAND_EXECUTABLE = new WindowsBundlerParam<>(
             I18N.getString("param.rebrand-executable.name"),
             I18N.getString("param.rebrand-executable.description"),
-            "win.launcher.rebrand", //KEY
+            "win.launcher.rebrand",
             Boolean.class, null, params -> Boolean.TRUE, 
-            false, Boolean::valueOf);
+            false, (s, p) -> Boolean.valueOf(s));
 
     public WinAppBundler() {
         super();
@@ -98,11 +151,15 @@ public class WinAppBundler extends AbstractBundler {
 
     @Override
     public boolean validate(Map<String, ? super Object> params) throws UnsupportedPlatformException, ConfigException {
-        if (params == null) throw new ConfigException(
-                I18N.getString("error.parameters-null"),
-                I18N.getString("error.parameters-null.advice"));
+        try {
+            if (params == null) throw new ConfigException(
+                    I18N.getString("error.parameters-null"),
+                    I18N.getString("error.parameters-null.advice"));
 
-        return doValidate(params);
+            return doValidate(params);
+        } catch (RuntimeException re) {
+            throw new ConfigException(re);
+        }
     }
 
     //to be used by chained bundlers, e.g. by EXE bundler to avoid
@@ -118,7 +175,13 @@ public class WinAppBundler extends AbstractBundler {
                     I18N.getString("error.no-windows-resources.advice"));
         }
 
-        if (StandardBundlerParam.MAIN_JAR.fetchFrom(p) == null) {
+        if (SERVICE_HINT.fetchFrom(p) && WinResources.class.getResource(EXECUTABLE_SVC_NAME) == null) {
+            throw new ConfigException(
+                    I18N.getString("error.no-windows-resources"),
+                    I18N.getString("error.no-windows-resources.advice"));
+        }
+
+        if (MAIN_JAR.fetchFrom(p) == null) {
             throw new ConfigException(
                     I18N.getString("error.no-application-jar"),
                     I18N.getString("error.no-application-jar.advice"));
@@ -149,7 +212,11 @@ public class WinAppBundler extends AbstractBundler {
     }
 
     static String getAppName(Map<String, ? super Object>  p) {
-        return StandardBundlerParam.APP_NAME.fetchFrom(p);
+        return APP_NAME.fetchFrom(p);
+    }
+
+    static String getAppSvcName(Map<String, ? super Object>  p) {
+        return APP_NAME.fetchFrom(p) + "Svc";
     }
 
     //it is static for the sake of sharing with "Exe" bundles
@@ -160,6 +227,10 @@ public class WinAppBundler extends AbstractBundler {
 
     public static File getLauncher(File outDir, Map<String, ? super Object> p) {
         return new File(getRootDir(outDir, p), getAppName(p)+".exe");
+    }
+
+    public static File getLauncherSvc(File outDir, Map<String, ? super Object> p) {
+        return new File(getRootDir(outDir, p), getAppName(p)+"Svc.exe");
     }
 
     private File getConfig_AppIcon(Map<String, ? super Object> params) {
@@ -183,12 +254,14 @@ public class WinAppBundler extends AbstractBundler {
             fetchResource(WIN_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.application-icon"),
                     icon,
-                    iconTarget);
+                    iconTarget,
+                    VERBOSE.fetchFrom(params));
         } else {
             fetchResource(WIN_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.application-icon"),
                     WinAppBundler.TEMPLATE_APP_ICON,
-                    iconTarget);
+                    iconTarget,
+                    VERBOSE.fetchFrom(params));
         }
     }
 
@@ -227,6 +300,15 @@ public class WinAppBundler extends AbstractBundler {
                     executableFile);
             executableFile.setExecutable(true, false);
 
+            // Copy executable to install application as service
+            if (SERVICE_HINT.fetchFrom(p)) {
+                File executableSvcFile = getLauncherSvc(outputDirectory, p);
+                IOUtils.copyFromURL(
+                        WinResources.class.getResource(EXECUTABLE_SVC_NAME),
+                        executableSvcFile);
+                executableSvcFile.setExecutable(true, false);
+            }
+
             //Update branding of exe file
             if (REBRAND_EXECUTABLE.fetchFrom(p) && getConfig_AppIcon(p).exists()) {
                 //extract helper tool
@@ -244,7 +326,7 @@ public class WinAppBundler extends AbstractBundler {
                         iconSwapTool.getAbsolutePath(),
                         getConfig_AppIcon(p).getAbsolutePath(),
                         executableFile.getAbsolutePath());
-                IOUtils.exec(pb, verbose);
+                IOUtils.exec(pb, VERBOSE.fetchFrom(p));
                 executableFile.setReadOnly();
                 iconSwapTool.delete();
             }
@@ -266,7 +348,7 @@ public class WinAppBundler extends AbstractBundler {
             ex.printStackTrace();
             return null;
         } finally {
-            if (verbose) {
+            if (VERBOSE.fetchFrom(p)) {
                 Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), getConfigRoot(p).getAbsolutePath()));
             } else {
                 cleanupConfigFiles(p);
@@ -341,7 +423,7 @@ public class WinAppBundler extends AbstractBundler {
     }
 
     private void copyRuntime(Map<String, ? super Object> params, File runtimeDirectory) throws IOException {
-        RelativeFileSet runtime = RUNTIME.fetchFrom(params);
+        RelativeFileSet runtime = WIN_RUNTIME.fetchFrom(params);
         if (runtime == null) {
             //its ok, request to use system JRE
             return;
@@ -369,7 +451,7 @@ public class WinAppBundler extends AbstractBundler {
 
     @Override
     public String getID() {
-        return "windows.app"; //KEY
+        return "windows.app";
     }
 
     @Override
@@ -397,7 +479,7 @@ public class WinAppBundler extends AbstractBundler {
                 MAIN_JAR_CLASSPATH,
                 PREFERENCES_ID,
                 RAW_EXECUTABLE_URL,
-                RUNTIME,
+                WIN_RUNTIME,
                 USE_FX_PACKAGING,
                 USER_JVM_OPTIONS,
                 VERSION

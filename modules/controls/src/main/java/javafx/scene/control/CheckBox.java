@@ -31,9 +31,9 @@ import javafx.beans.property.SimpleBooleanProperty;
 
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
-import com.sun.javafx.scene.control.accessible.AccessibleCheckBox;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import com.sun.javafx.scene.control.skin.CheckBoxSkin;
 
 /**
@@ -131,6 +131,7 @@ public class CheckBox extends ButtonBase {
                     final boolean active = get();
                     pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE,  !active);
                     pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE, active);
+                    accSendNotification(Attribute.TOGGLE_STATE);
                 }
 
                 @Override
@@ -162,7 +163,9 @@ public class CheckBox extends ButtonBase {
         if (selected == null) {
             selected = new BooleanPropertyBase() {
                 @Override protected void invalidated() {
-                    pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, get());
+                    final Boolean v = get();
+                    pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, v);
+                    accSendNotification(Attribute.TOGGLE_STATE);
                 }
 
                 @Override
@@ -256,15 +259,13 @@ public class CheckBox extends ButtonBase {
     private static final PseudoClass PSEUDO_CLASS_SELECTED = 
             PseudoClass.getPseudoClass("selected");
 
-    private AccessibleCheckBox accCheckBox ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
-        if( accCheckBox == null)
-            accCheckBox = new AccessibleCheckBox(this);
-        return (AccessibleProvider)accCheckBox ;
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.CHECKBOX;
+            case TOGGLE_STATE: return isIndeterminate() ? 2 : (isSelected() ? 1 : 0);
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
-
 }

@@ -110,13 +110,16 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     @Override public void dispose() { }
                 });
             }
+
         };
         popup.getStyleClass().add(COMBO_BOX_STYLE_CLASS);
+        popup.setConsumeAutoHidingEvents(false);
         popup.setAutoHide(true);
         popup.setAutoFix(true);
         popup.setHideOnEscape(true);
         popup.setOnAutoHide(new EventHandler<Event>() {
-            @Override public void handle(Event e) {
+            @Override
+            public void handle(Event e) {
                 getBehavior().onAutoHide();
             }
         });

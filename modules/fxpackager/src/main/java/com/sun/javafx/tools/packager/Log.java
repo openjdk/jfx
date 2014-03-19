@@ -97,9 +97,13 @@ public class Log {
     }
 
     public static void debug(RuntimeException re) {
+        debug((Throwable) re);
+    }
+
+    public static void debug(Throwable t) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             try (PrintStream ps = new PrintStream(baos)) {
-                re.printStackTrace(ps);
+                t.printStackTrace(ps);
             }
             debug(baos.toString());
         } catch (IOException e) {

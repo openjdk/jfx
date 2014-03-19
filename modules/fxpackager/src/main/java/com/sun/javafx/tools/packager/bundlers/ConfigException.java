@@ -26,11 +26,16 @@
 package com.sun.javafx.tools.packager.bundlers;
 
 public class ConfigException extends Exception {
-    String advice = null;
+    final String advice;
 
     public ConfigException(String msg, String advice) {
         super(msg);
         this.advice = advice;
+    }
+
+    public ConfigException(Exception cause) {
+        super(cause);
+        this.advice = null;
     }
 
     public String getAdvice() {

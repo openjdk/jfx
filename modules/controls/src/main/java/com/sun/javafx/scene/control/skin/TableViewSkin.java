@@ -25,13 +25,18 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -40,6 +45,7 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewFocusModel;
+import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
@@ -112,6 +118,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         });
 
         registerChangeListener(tableView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
+
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -294,7 +301,26 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         }
     }
     
-    
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case SELECTED_CELLS: {
+                List<Node> selection = new ArrayList<>();
+                TableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                for (TablePosition pos : sm.getSelectedCells()) {
+                    TableRow<T> row = flow.getCell(pos.getRow());
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            case FOCUS_ITEM: // TableViewSkinBase
+            case CELL_AT_ROWCOLUMN: // TableViewSkinBase
+            case COLUMN_AT_INDEX: // TableViewSkinBase
+            case HEADER: // TableViewSkinBase
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
     /***************************************************************************
      *                                                                         *
      * Layout                                                                  *

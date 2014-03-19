@@ -47,6 +47,9 @@ import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.CustomMenuItem;
@@ -572,19 +575,13 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
             downArrow = new StackPane();
             downArrow.getStyleClass().setAll("arrow");
             downArrow.setOnMousePressed(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent me) {                    
-                    if (popup.isShowing()) {
-                        popup.hide();
-                    } else {
-                        popup.getItems().clear();
-                        popup.getItems().addAll(menuItems);
-                        popup.show(downArrow, Side.BOTTOM, 0, 0);
-                    }
+                @Override public void handle(MouseEvent me) {
+                    fire();
                 }
             });
 
             setOnKeyPressed(new EventHandler<KeyEvent>() {
-                @Override public void handle(KeyEvent ke) {                    
+                @Override public void handle(KeyEvent ke) {
                     if (KeyCode.SPACE.equals(ke.getCode())) {
                         if (!popup.isShowing()) {
                             popup.getItems().clear();
@@ -598,13 +595,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
                         }
                         ke.consume();
                     } else if (KeyCode.ENTER.equals(ke.getCode())) {
-                        if (popup.isShowing()) {
-                            popup.hide();
-                        } else {
-                            popup.getItems().clear();
-                            popup.getItems().addAll(menuItems);
-                            popup.show(downArrow, Side.BOTTOM, 0, 0);
-                        }
+                        fire();
                         ke.consume();
                     }
                 }
@@ -647,6 +638,16 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
             getChildren().add(downArrow);            
         }
 
+        private void fire() {
+            if (popup.isShowing()) {
+                popup.hide();
+            } else {
+                popup.getItems().clear();
+                popup.getItems().addAll(menuItems);
+                popup.show(downArrow, Side.BOTTOM, 0, 0);
+            }
+        }
+
         @Override protected double computePrefWidth(double height) {
             return snappedLeftInset() + snappedRightInset();
         }
@@ -670,6 +671,21 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
             downArrow.resize(w, h);
             positionInArea(downArrow, x, y, w, h,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
+        }
+
+        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            switch (attribute) {
+                case ROLE: return Role.BUTTON;
+                case TITLE: return "Overflow button";
+                default: return super.accGetAttribute(attribute, parameters);
+            }
+        }
+
+        @Override public void accExecuteAction(Action action, Object... parameters) {
+            switch (action) {
+                case FIRE: fire(); break;
+                default: super.accExecuteAction(action); break;
+            }
         }
     }
 
@@ -757,4 +773,10 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
         return getClassCssMetaData();
     }
 
+    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case OVERFLOW_BUTTON: return overflowMenu;
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

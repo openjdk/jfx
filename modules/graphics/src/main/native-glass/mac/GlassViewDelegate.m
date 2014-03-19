@@ -1219,4 +1219,12 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     [self sendJavaFullScreenEvent:NO withNativeWidget:NO];
 }
 
+- (GlassAccessible*)getAccessible
+{
+    GET_MAIN_JENV;
+    jlong accessible = (*env)->CallLongMethod(env, self->jView, jViewGetAccessible);
+    GLASS_CHECK_EXCEPTION(env);
+    return (GlassAccessible*)jlong_to_ptr(accessible);
+}
+
 @end

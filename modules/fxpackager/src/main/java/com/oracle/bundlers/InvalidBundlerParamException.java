@@ -25,7 +25,7 @@
 
 package com.oracle.bundlers;
 
-public class InvalidBundlerParamException extends Exception {
+public class InvalidBundlerParamException extends RuntimeException {
     public InvalidBundlerParamException(String message) {
         super(message);
     }

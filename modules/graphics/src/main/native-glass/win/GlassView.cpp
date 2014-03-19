@@ -205,6 +205,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1initIDs
     javaIDs.View.getHeight = env->GetMethodID(cls, "getHeight", "()I");
     ASSERT(javaIDs.View.getHeight);
 
+    javaIDs.View.getAccessible = env->GetMethodID(cls, "getAccessible", "()J");
+    ASSERT(javaIDs.View.getAccessible);
+
     javaIDs.View.notifyInputMethodCandidatePosRequest = env->GetMethodID(cls, "notifyInputMethodCandidatePosRequest", "(I)[D");
     ASSERT(javaIDs.View.notifyInputMethodCandidatePosRequest);
 

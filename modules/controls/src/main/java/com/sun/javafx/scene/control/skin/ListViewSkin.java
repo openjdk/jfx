@@ -25,17 +25,22 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.util.ArrayList;
+import java.util.List;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.SelectionModel;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
@@ -497,5 +502,36 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.show(firstVisibleCell);
         return newSelectionIndex;
+    }
+
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: {
+                FocusModel<?> fm = getSkinnable().getFocusModel();
+                int focusedIndex = fm.getFocusedIndex();
+                return flow.getCell(focusedIndex);
+            }
+            case ROW_AT_INDEX: {
+                int rowIndex = (Integer)parameters[0];
+                return flow.getCell(rowIndex);
+            }
+            case SELECTED_ROWS: {
+                MultipleSelectionModel sm = getSkinnable().getSelectionModel();
+                ObservableList<Integer> indices = sm.getSelectedIndices();
+                List<Node> selection = new ArrayList<>(indices.size());
+                for (int i : indices) {
+                    ListCell<T> row = flow.getCell(i);
+
+                    // We should never, ever get row == null. If we do then
+                    // something is very wrong.
+                    assert row != null;
+
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

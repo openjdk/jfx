@@ -50,6 +50,8 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
@@ -58,10 +60,8 @@ import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.accessible.AccessibleList;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import java.lang.ref.WeakReference;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
@@ -939,17 +939,6 @@ public class ListView<T> extends Control {
         return onScrollTo;
     }
 
-    private AccessibleList accListView ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
-        if( accListView == null)
-            accListView = new AccessibleList(this);
-        return (AccessibleProvider)accListView ;
-    }
-
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new ListViewSkin<T>(this);
@@ -1370,6 +1359,8 @@ public class ListView<T> extends Control {
         @Override protected void focus(int row) {
             if (listView.getFocusModel() == null) return;
             listView.getFocusModel().focus(row);
+
+            listView.accSendNotification(Attribute.SELECTED_ROWS);
         }
 
         /** {@inheritDoc} */
@@ -1501,5 +1492,21 @@ public class ListView<T> extends Control {
                 itemCount = items == null ? -1 : items.size();
             }
         } 
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.LIST_VIEW;
+            case ROW_COUNT: return getItems().size();
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case ROW_AT_INDEX: //Skin
+            case SELECTED_ROWS: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

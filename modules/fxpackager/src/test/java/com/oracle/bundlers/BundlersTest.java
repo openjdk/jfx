@@ -27,6 +27,8 @@ package com.oracle.bundlers;
 
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
+import com.sun.javafx.tools.packager.bundlers.WinExeBundler;
+import com.sun.javafx.tools.packager.bundlers.WinMsiBundler;
 import org.junit.AfterClass;
 import org.junit.Test;
 
@@ -235,5 +237,24 @@ public class BundlersTest {
 
         return Arrays.<String>asList(
                 bundlers.stream().map(Bundler::getID).toArray(String[]::new));
+    }
+
+    @Test
+    public void customParamFallbackTests() {
+        Map<String, ? super Object> params;
+
+        params = new TreeMap<>();
+        assertTrue(WinMsiBundler.MSI_SYSTEM_WIDE.fetchFrom(params));
+        assertFalse(WinExeBundler.EXE_SYSTEM_WIDE.fetchFrom(params));
+
+        params = new TreeMap<>();
+        params.put(StandardBundlerParam.SYSTEM_WIDE.getID(), "false");
+        assertFalse(WinMsiBundler.MSI_SYSTEM_WIDE.fetchFrom(params));
+        assertFalse(WinExeBundler.EXE_SYSTEM_WIDE.fetchFrom(params));
+
+        params = new TreeMap<>();
+        params.put(StandardBundlerParam.SYSTEM_WIDE.getID(), "true");
+        assertTrue(WinMsiBundler.MSI_SYSTEM_WIDE.fetchFrom(params));
+        assertTrue(WinExeBundler.EXE_SYSTEM_WIDE.fetchFrom(params));
     }
 }

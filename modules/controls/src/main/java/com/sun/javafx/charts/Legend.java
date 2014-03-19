@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,17 +34,18 @@ import javafx.beans.property.StringPropertyBase;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.geometry.Dimension2D;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.TilePane;
 
 /**
  * A chart legend that displays a list of items with symbols in a box
  */
-public class Legend extends Region {
+public class Legend extends TilePane {
 
     private static final int GAP = 5;
 
@@ -65,7 +66,7 @@ public class Legend extends Region {
      */
     private BooleanProperty vertical = new BooleanPropertyBase(false) {
         @Override protected void invalidated() {
-            requestLayout();
+            setOrientation(get() ? Orientation.VERTICAL : Orientation.HORIZONTAL);
         }
 
         @Override
@@ -116,78 +117,13 @@ public class Legend extends Region {
     // -------------- CONSTRUCTORS ----------------------------------------------
 
     public Legend() {
+        super(GAP, GAP);
+        setTileAlignment(Pos.CENTER_LEFT);
         setItems(FXCollections.<LegendItem>observableArrayList());
         getStyleClass().setAll("chart-legend");
     }
 
     // -------------- METHODS ---------------------------------------------------
-
-    private Dimension2D getTileSize(){
-        double maxWidth = 0;
-        double maxHeight = 0;
-        for(LegendItem item: getItems()) {
-            maxWidth = Math.max(maxWidth, item.label.prefWidth(-1));
-            maxHeight = Math.max(maxHeight, item.label.prefHeight(-1));
-        }
-        return new Dimension2D(Math.ceil(maxWidth), Math.ceil(maxHeight));
-    }
-
-    @Override protected double computePrefWidth(double height) {
-        if (getItems().isEmpty()) return 0; // RT-31157 : no data - dont show legend
-        final double contentHeight = height - snappedTopInset() - snappedBottomInset();
-        Dimension2D tileSize = getTileSize();
-        if(height == -1) {
-            if(columns <= 1) return tileSize.getWidth() + snappedLeftInset() + snappedRightInset();
-        } else {
-            rows = (int) Math.max(1, Math.floor( contentHeight / (tileSize.getHeight() + GAP) ));
-            columns = (int)Math.ceil(getItems().size() / (double)rows);
-        }
-        if(columns == 1) rows = Math.min(rows, getItems().size());
-        return (columns*(tileSize.getWidth()+GAP)) - GAP + snappedLeftInset() + snappedRightInset();
-    }
-
-    @Override protected double computePrefHeight(double width) {
-        if (getItems().isEmpty()) return 0; // RT-31157 : no data - dont show legend
-        final double contentWidth = width - snappedLeftInset() - snappedRightInset();
-        Dimension2D tileSize = getTileSize();
-        if(width == -1) {
-            if(rows <= 1) return tileSize.getHeight() + snappedTopInset() + snappedBottomInset();
-        } else {
-            columns = (int) Math.max(1, Math.floor( contentWidth / (tileSize.getWidth() + GAP) ));
-            rows = (int)Math.ceil(getItems().size() / (double)columns);
-        }
-        if(rows == 1) columns = Math.min(columns, getItems().size());
-        return (rows*(tileSize.getHeight()+GAP)) - GAP + snappedTopInset() + snappedBottomInset();
-    }
-
-    @Override protected void layoutChildren() {
-        Dimension2D tileSize = getTileSize();
-        if(isVertical()) {
-            double left = snappedLeftInset();
-            outer: for (int col=0; col < columns; col++) {
-                double top = snappedTopInset();
-                for (int row=0; row < rows; row++) {
-                    int itemIndex = (col*rows) + row;
-                    if(itemIndex >= getItems().size()) break outer;
-                    getItems().get(itemIndex).label.resizeRelocate(left,top,tileSize.getWidth(),tileSize.getHeight());
-                    top += tileSize.getHeight() + GAP;
-                }
-                left += tileSize.getWidth() + GAP;
-            }
-        } else {
-            double top = snappedTopInset();
-            outer: for (int row=0; row < rows; row++) {
-                double left = snappedLeftInset();
-                for (int col=0; col < columns; col++) {
-                    int itemIndex = (row*columns) + col;
-                    if(itemIndex >= getItems().size()) break outer;
-                    getItems().get(itemIndex).label.resizeRelocate(left,top,tileSize.getWidth(),tileSize.getHeight());
-                    left += tileSize.getWidth() + GAP;
-                }
-                top += tileSize.getHeight() + GAP;
-            }
-        }
-    }
 
     /** A item to be displayed on a Legend */
     public static class LegendItem {

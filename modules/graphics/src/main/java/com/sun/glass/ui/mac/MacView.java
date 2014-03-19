@@ -24,15 +24,11 @@
  */
 package com.sun.glass.ui.mac;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
-
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Map;
 
 /**
@@ -137,3 +133,4 @@ final class MacView extends View {
         }
     }
 }
+

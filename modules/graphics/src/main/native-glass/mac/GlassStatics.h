@@ -56,7 +56,6 @@ extern jmethodID jWindowNotifyFocusUngrab;
 extern jmethodID jWindowNotifyFocusDisabled;
 extern jmethodID jWindowNotifyDestroy;
 extern jmethodID jWindowNotifyDelegatePtr;
-extern jmethodID jWindowNotifyInitAccessibilityPtr;
 
 extern jmethodID jViewNotifyEvent;
 extern jmethodID jViewNotifyRepaint;
@@ -72,6 +71,7 @@ extern jmethodID jViewNotifyDragOver;
 extern jmethodID jViewNotifyDragLeave;
 extern jmethodID jViewNotifyDragDrop;
 extern jmethodID jViewNotifyDragEnd;
+extern jmethodID jViewGetAccessible;
 
 extern jmethodID jScreenNotifySettingsChanged;
 

@@ -45,6 +45,7 @@ import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 import javafx.scene.input.*;
+import javafx.scene.layout.Region;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.scene.control.behavior.DatePickerBehavior;
@@ -69,14 +70,6 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             getChildren().add(textField);
         }
 
-        if (arrowButton.getOnMouseReleased() == null) {
-            arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    ((DatePickerBehavior)getBehavior()).mouseReleased(e, true);
-                    e.consume();
-                }
-            });
-        }
 
         // The "arrow" is actually a rectangular svg icon resembling a calendar.
         // Round the size of the icon to whole integers to get sharp edges.
