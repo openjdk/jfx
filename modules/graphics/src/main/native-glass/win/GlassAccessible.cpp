@@ -162,9 +162,12 @@ static jfieldID fid_pDblVal;
             if (str != NULL) {
                 UINT length = env->GetStringLength(str);
                 const jchar* ptr = env->GetStringCritical(str, NULL);
-                pRetVal->bstrVal = SysAllocStringLen(reinterpret_cast<const OLECHAR *>(ptr), length);
-                env->ReleaseStringCritical(str, ptr);
-            } else {
+                if (ptr != NULL) {
+					pRetVal->bstrVal = SysAllocStringLen(reinterpret_cast<const OLECHAR *>(ptr), length);
+					env->ReleaseStringCritical(str, ptr);
+                }
+            }
+            if (pRetVal->parray == NULL) {
                 pRetVal->vt = VT_EMPTY;
             }
             break;
@@ -177,11 +180,13 @@ static jfieldID fid_pDblVal;
                 SAFEARRAY *psa = SafeArrayCreateVector(VT_R8, 0, size);
                 if (psa) {
                     jdouble* listPtr = (jdouble*)env->GetPrimitiveArrayCritical(list, 0);
-                    for (LONG i = 0; i < size; i++) {
-                        SafeArrayPutElement(psa, &i, (void*)&(listPtr[i]));
+                    if (listPtr != NULL) {
+						for (LONG i = 0; i < size; i++) {
+							SafeArrayPutElement(psa, &i, (void*)&(listPtr[i]));
+						}
+						env->ReleasePrimitiveArrayCritical(list, listPtr, 0);
+						pRetVal->parray = psa;
                     }
-                    env->ReleasePrimitiveArrayCritical(list, listPtr, 0);
-                    pRetVal->parray = psa;
                 }
             }
             if (pRetVal->parray == NULL) {
@@ -586,8 +591,10 @@ IFACEMETHODIMP GlassAccessible::SetValue(LPCWSTR val)
     size_t size = wcslen(val);
     JNIEnv* env = GetEnv();
     jstring str = env->NewString((const jchar *)val, (jsize)size);
-    env->CallVoidMethod(m_jAccessible, mid_SetValueString, str);
-    CheckAndClearException(env);
+    if (!CheckAndClearException(env)) {
+    	env->CallVoidMethod(m_jAccessible, mid_SetValueString, str);
+    	CheckAndClearException(env);
+    }
     return S_OK;
 }
 
@@ -599,8 +606,10 @@ IFACEMETHODIMP GlassAccessible::get_Value(BSTR *pRetVal)
     if (str) {
         UINT length = env->GetStringLength(str);
         const jchar* ptr = env->GetStringCritical(str, NULL);
-        *pRetVal = SysAllocStringLen(reinterpret_cast<const OLECHAR *>(ptr), length);
-        env->ReleaseStringCritical(str, ptr);
+        if (ptr != NULL) {
+        	*pRetVal = SysAllocStringLen(reinterpret_cast<const OLECHAR *>(ptr), length);
+        	env->ReleaseStringCritical(str, ptr);
+        }
     } else {
         *pRetVal = NULL;
     }
@@ -935,115 +944,191 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinAccessible__1initIDs
 {
     /* IRawElementProviderSimple */
     mid_GetPatternProvider = env->GetMethodID(jClass, "GetPatternProvider", "(I)J");
+    if (env->ExceptionCheck()) return;
     mid_get_HostRawElementProvider = env->GetMethodID(jClass, "get_HostRawElementProvider", "()J");
+    if (env->ExceptionCheck()) return;
     mid_GetPropertyValue = env->GetMethodID(jClass, "GetPropertyValue", "(I)Lcom/sun/glass/ui/win/WinVariant;");
+    if (env->ExceptionCheck()) return;
 
     /* IRawElementProviderFragment */
     mid_get_BoundingRectangle = env->GetMethodID(jClass, "get_BoundingRectangle", "()[F");
+    if (env->ExceptionCheck()) return;
     mid_get_FragmentRoot = env->GetMethodID(jClass, "get_FragmentRoot", "()J");
+    if (env->ExceptionCheck()) return;
     mid_GetEmbeddedFragmentRoots = env->GetMethodID(jClass, "GetEmbeddedFragmentRoots", "()[J");
+    if (env->ExceptionCheck()) return;
     mid_GetRuntimeId = env->GetMethodID(jClass, "GetRuntimeId", "()[I");
+    if (env->ExceptionCheck()) return;
     mid_Navigate = env->GetMethodID(jClass, "Navigate", "(I)J");
+    if (env->ExceptionCheck()) return;
     mid_SetFocus = env->GetMethodID(jClass, "SetFocus", "()V");
+    if (env->ExceptionCheck()) return;
 
     /* IRawElementProviderFragmentRoot */
     mid_ElementProviderFromPoint = env->GetMethodID(jClass, "ElementProviderFromPoint", "(DD)J");
+    if (env->ExceptionCheck()) return;
     mid_GetFocus = env->GetMethodID(jClass, "GetFocus", "()J");
+    if (env->ExceptionCheck()) return;
 
     /* IInvokeProvider */
     mid_Invoke = env->GetMethodID(jClass, "Invoke", "()V");
+    if (env->ExceptionCheck()) return;
 
     /* ISelectionProvider */
     mid_GetSelection = env->GetMethodID(jClass, "GetSelection", "()[J");
+    if (env->ExceptionCheck()) return;
     mid_get_CanSelectMultiple = env->GetMethodID(jClass, "get_CanSelectMultiple", "()Z");
+    if (env->ExceptionCheck()) return;
     mid_get_IsSelectionRequired = env->GetMethodID(jClass, "get_IsSelectionRequired", "()Z");
+    if (env->ExceptionCheck()) return;
 
     /* ISelectionItemProvider */
     mid_Select = env->GetMethodID(jClass, "Select", "()V");
+    if (env->ExceptionCheck()) return;
     mid_AddToSelection = env->GetMethodID(jClass, "AddToSelection", "()V");
+    if (env->ExceptionCheck()) return;
     mid_RemoveFromSelection = env->GetMethodID(jClass, "RemoveFromSelection", "()V");
+    if (env->ExceptionCheck()) return;
     mid_get_IsSelected = env->GetMethodID(jClass, "get_IsSelected", "()Z");
+    if (env->ExceptionCheck()) return;
     mid_get_SelectionContainer = env->GetMethodID(jClass, "get_SelectionContainer", "()J");
+    if (env->ExceptionCheck()) return;
 
     /* IRangeValueProvider */
     mid_SetValue = env->GetMethodID(jClass, "SetValue", "(D)V");
+    if (env->ExceptionCheck()) return;
     mid_get_Value = env->GetMethodID(jClass, "get_Value", "()D");
+    if (env->ExceptionCheck()) return;
     mid_get_IsReadOnly = env->GetMethodID(jClass, "get_IsReadOnly", "()Z");
+    if (env->ExceptionCheck()) return;
     mid_get_Maximum = env->GetMethodID(jClass, "get_Maximum", "()D");
+    if (env->ExceptionCheck()) return;
     mid_get_Minimum = env->GetMethodID(jClass, "get_Minimum", "()D");
+    if (env->ExceptionCheck()) return;
     mid_get_LargeChange = env->GetMethodID(jClass, "get_LargeChange", "()D");
+    if (env->ExceptionCheck()) return;
     mid_get_SmallChange = env->GetMethodID(jClass, "get_SmallChange", "()D");
+    if (env->ExceptionCheck()) return;
 
     /* IValueProvider */
     mid_SetValueString = env->GetMethodID(jClass, "SetValueString", "(Ljava/lang/String;)V");
+    if (env->ExceptionCheck()) return;
     mid_get_ValueString = env->GetMethodID(jClass, "get_ValueString", "()Ljava/lang/String;");
+    if (env->ExceptionCheck()) return;
 
     /* IValueProvider */
     mid_GetVisibleRanges = env->GetMethodID(jClass, "GetVisibleRanges", "()[J");
+    if (env->ExceptionCheck()) return;
     mid_RangeFromChild = env->GetMethodID(jClass, "RangeFromChild", "(J)J");
+    if (env->ExceptionCheck()) return;
     mid_RangeFromPoint = env->GetMethodID(jClass, "RangeFromPoint", "(DD)J");
+    if (env->ExceptionCheck()) return;
     mid_get_DocumentRange = env->GetMethodID(jClass, "get_DocumentRange", "()J");
+    if (env->ExceptionCheck()) return;
     mid_get_SupportedTextSelection = env->GetMethodID(jClass, "get_SupportedTextSelection", "()I");
+    if (env->ExceptionCheck()) return;
 
     /* IGridProvider */
     mid_get_ColumnCount = env->GetMethodID(jClass, "get_ColumnCount", "()I");
+    if (env->ExceptionCheck()) return;
     mid_get_RowCount = env->GetMethodID(jClass, "get_RowCount", "()I");
+    if (env->ExceptionCheck()) return;
     mid_GetItem = env->GetMethodID(jClass, "GetItem", "(II)J");
+    if (env->ExceptionCheck()) return;
 
     /* IGridItemProvider */
     mid_get_Column = env->GetMethodID(jClass, "get_Column", "()I");
+    if (env->ExceptionCheck()) return;
     mid_get_ColumnSpan = env->GetMethodID(jClass, "get_ColumnSpan", "()I");
+    if (env->ExceptionCheck()) return;
     mid_get_ContainingGrid = env->GetMethodID(jClass, "get_ContainingGrid", "()J");
+    if (env->ExceptionCheck()) return;
     mid_get_Row = env->GetMethodID(jClass, "get_Row", "()I");
+    if (env->ExceptionCheck()) return;
     mid_get_RowSpan = env->GetMethodID(jClass, "get_RowSpan", "()I");
+    if (env->ExceptionCheck()) return;
 
     /* ITableProvider */
     mid_GetColumnHeaders = env->GetMethodID(jClass, "GetColumnHeaders", "()[J");
+    if (env->ExceptionCheck()) return;
     mid_GetRowHeaders = env->GetMethodID(jClass, "GetRowHeaders", "()[J");
+    if (env->ExceptionCheck()) return;
     mid_get_RowOrColumnMajor = env->GetMethodID(jClass, "get_RowOrColumnMajor", "()I");
+    if (env->ExceptionCheck()) return;
 
     /* ITableItemProvider */
     mid_GetColumnHeaderItems = env->GetMethodID(jClass, "GetColumnHeaderItems", "()[J");
+    if (env->ExceptionCheck()) return;
     mid_GetRowHeaderItems = env->GetMethodID(jClass, "GetRowHeaderItems", "()[J");
+    if (env->ExceptionCheck()) return;
 
     /* IToggleProvider */
     mid_Toggle = env->GetMethodID(jClass, "Toggle", "()V");
+    if (env->ExceptionCheck()) return;
     mid_get_ToggleState = env->GetMethodID(jClass, "get_ToggleState", "()I");
+    if (env->ExceptionCheck()) return;
 
     /* IExpandCollapseProvider */
     mid_Collapse= env->GetMethodID(jClass, "Collapse", "()V");
+    if (env->ExceptionCheck()) return;
     mid_Expand = env->GetMethodID(jClass, "Expand", "()V");
+    if (env->ExceptionCheck()) return;
     mid_get_ExpandCollapseState = env->GetMethodID(jClass, "get_ExpandCollapseState", "()I");
+    if (env->ExceptionCheck()) return;
 
     /* ITransformProvider */
     mid_get_CanMove = env->GetMethodID(jClass, "get_CanMove", "()Z");
+    if (env->ExceptionCheck()) return;
     mid_get_CanResize = env->GetMethodID(jClass, "get_CanResize", "()Z");
+    if (env->ExceptionCheck()) return;
     mid_get_CanRotate = env->GetMethodID(jClass, "get_CanRotate", "()Z");
+    if (env->ExceptionCheck()) return;
     mid_Move = env->GetMethodID(jClass, "Move", "(DD)V");
+    if (env->ExceptionCheck()) return;
     mid_Resize = env->GetMethodID(jClass, "Resize", "(DD)V");
+    if (env->ExceptionCheck()) return;
     mid_Rotate = env->GetMethodID(jClass, "Rotate", "(D)V");
+    if (env->ExceptionCheck()) return;
 
     /* IScrollProvider */
     mid_Scroll = env->GetMethodID(jClass, "Scroll", "(II)V");
+    if (env->ExceptionCheck()) return;
     mid_SetScrollPercent = env->GetMethodID(jClass, "SetScrollPercent", "(DD)V");
+    if (env->ExceptionCheck()) return;
     mid_get_HorizontallyScrollable = env->GetMethodID(jClass, "get_HorizontallyScrollable", "()Z");
+    if (env->ExceptionCheck()) return;
     mid_get_HorizontalScrollPercent = env->GetMethodID(jClass, "get_HorizontalScrollPercent", "()D");
+    if (env->ExceptionCheck()) return;
     mid_get_HorizontalViewSize = env->GetMethodID(jClass, "get_HorizontalViewSize", "()D");
+    if (env->ExceptionCheck()) return;
     mid_get_VerticallyScrollable = env->GetMethodID(jClass, "get_VerticallyScrollable", "()Z");
+    if (env->ExceptionCheck()) return;
     mid_get_VerticalScrollPercent = env->GetMethodID(jClass, "get_VerticalScrollPercent", "()D");
+    if (env->ExceptionCheck()) return;
     mid_get_VerticalViewSize = env->GetMethodID(jClass, "get_VerticalViewSize", "()D");
+    if (env->ExceptionCheck()) return;
 
     /* Variant */
     jclass jVariantClass = env->FindClass("com/sun/glass/ui/win/WinVariant");
+    if (env->ExceptionCheck()) return;
     fid_vt = env->GetFieldID(jVariantClass, "vt", "S");
+    if (env->ExceptionCheck()) return;
     fid_iVal= env->GetFieldID(jVariantClass, "iVal", "S");
+    if (env->ExceptionCheck()) return;
     fid_lVal= env->GetFieldID(jVariantClass, "lVal", "I");
+    if (env->ExceptionCheck()) return;
     fid_punkVal= env->GetFieldID(jVariantClass, "punkVal", "J");
+    if (env->ExceptionCheck()) return;
     fid_fltVal= env->GetFieldID(jVariantClass, "fltVal", "F");
+    if (env->ExceptionCheck()) return;
     fid_dblVal= env->GetFieldID(jVariantClass, "dblVal", "D");
+    if (env->ExceptionCheck()) return;
     fid_boolVal= env->GetFieldID(jVariantClass, "boolVal", "Z");
+    if (env->ExceptionCheck()) return;
     fid_bstrVal= env->GetFieldID(jVariantClass, "bstrVal", "Ljava/lang/String;");
+    if (env->ExceptionCheck()) return;
     fid_pDblVal= env->GetFieldID(jVariantClass, "pDblVal", "[D");
+    if (env->ExceptionCheck()) return;
 }
 
 /*

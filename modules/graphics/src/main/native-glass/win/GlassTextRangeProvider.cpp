@@ -114,8 +114,6 @@ IFACEMETHODIMP GlassTextRangeProvider::Compare(ITextRangeProvider *range, BOOL *
 {
     GlassTextRangeProvider* glassRange = reinterpret_cast<GlassTextRangeProvider*>(range);
     if (glassRange == NULL ||  glassRange->m_jTextRangeProvider == NULL) {
-        fprintf(stdout, "GlassTextRangeProvider::Compare() failed to map range\n");
-        fflush(stdout);
         *pRetVal = FALSE; /* Can't compare against an unknown object */
         return S_OK;
     }
@@ -130,8 +128,6 @@ IFACEMETHODIMP GlassTextRangeProvider::CompareEndpoints(TextPatternRangeEndpoint
 {
     GlassTextRangeProvider* glassRange = reinterpret_cast<GlassTextRangeProvider*>(targetRange);
     if (glassRange == NULL ||  glassRange->m_jTextRangeProvider == NULL) {
-        fprintf(stdout, "GlassTextRangeProvider::CompareEndpoints() failed to map range\n");
-        fflush(stdout);
         *pRetVal = FALSE; /* Can't compare against an unknown object */
         return S_OK;
     }
@@ -298,23 +294,41 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinTextRangeProvider__1initIDs
   (JNIEnv *env, jclass jClass)
 {
     mid_Clone = env->GetMethodID(jClass, "Clone", "()J");
+    if (env->ExceptionCheck()) return;
     mid_Compare = env->GetMethodID(jClass, "Compare", "(Lcom/sun/glass/ui/win/WinTextRangeProvider;)Z");
+    if (env->ExceptionCheck()) return;
     mid_CompareEndpoints = env->GetMethodID(jClass, "CompareEndpoints", "(ILcom/sun/glass/ui/win/WinTextRangeProvider;I)I");
+    if (env->ExceptionCheck()) return;
     mid_ExpandToEnclosingUnit = env->GetMethodID(jClass, "ExpandToEnclosingUnit", "(I)V");
+    if (env->ExceptionCheck()) return;
     mid_FindAttribute = env->GetMethodID(jClass, "FindAttribute", "(ILcom/sun/glass/ui/win/WinVariant;Z)J");
+    if (env->ExceptionCheck()) return;
     mid_FindText = env->GetMethodID(jClass, "FindText", "(Ljava/lang/String;ZZ)J");
+    if (env->ExceptionCheck()) return;
     mid_GetAttributeValue = env->GetMethodID(jClass, "GetAttributeValue", "(I)Lcom/sun/glass/ui/win/WinVariant;");
+    if (env->ExceptionCheck()) return;
     mid_GetBoundingRectangles = env->GetMethodID(jClass, "GetBoundingRectangles", "()[D");
+    if (env->ExceptionCheck()) return;
     mid_GetEnclosingElement = env->GetMethodID(jClass, "GetEnclosingElement", "()J");
+    if (env->ExceptionCheck()) return;
     mid_GetText = env->GetMethodID(jClass, "GetText", "(I)Ljava/lang/String;");
+    if (env->ExceptionCheck()) return;
     mid_Move = env->GetMethodID(jClass, "Move", "(II)I");
+    if (env->ExceptionCheck()) return;
     mid_MoveEndpointByUnit = env->GetMethodID(jClass, "MoveEndpointByUnit", "(III)I");
+    if (env->ExceptionCheck()) return;
     mid_MoveEndpointByRange = env->GetMethodID(jClass, "MoveEndpointByRange", "(ILcom/sun/glass/ui/win/WinTextRangeProvider;I)V");
+    if (env->ExceptionCheck()) return;
     mid_Select = env->GetMethodID(jClass, "Select", "()V");
+    if (env->ExceptionCheck()) return;
     mid_AddToSelection = env->GetMethodID(jClass, "AddToSelection", "()V");
+    if (env->ExceptionCheck()) return;
     mid_RemoveFromSelection = env->GetMethodID(jClass, "RemoveFromSelection", "()V");
+    if (env->ExceptionCheck()) return;
     mid_ScrollIntoView = env->GetMethodID(jClass, "ScrollIntoView", "(Z)V");
+    if (env->ExceptionCheck()) return;
     mid_GetChildren = env->GetMethodID(jClass, "GetChildren", "()[J");
+    if (env->ExceptionCheck()) return;
 }
 
 /*
