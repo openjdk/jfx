@@ -60,6 +60,7 @@ import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
@@ -736,6 +737,12 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
         public NavigationControl() {
             getStyleClass().setAll("pagination-control");
+
+            // redirect mouse events to behavior
+            addEventHandler(MouseEvent.MOUSE_PRESSED,  (e) -> getBehavior().mousePressed(e));
+            addEventHandler(MouseEvent.MOUSE_RELEASED, (e) -> getBehavior().mouseReleased(e));
+            addEventHandler(MouseEvent.MOUSE_ENTERED,  (e) -> getBehavior().mouseEntered(e));
+            addEventHandler(MouseEvent.MOUSE_EXITED,   (e) -> getBehavior().mouseExited(e));
 
             controlBox = new HBox();
             controlBox.getStyleClass().add("control-box");
