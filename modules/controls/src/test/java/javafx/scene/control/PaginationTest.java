@@ -115,12 +115,9 @@ public class PaginationTest {
         assertEquals("number of visible pages cannot be bound", pagination.maxPageIndicatorCountProperty().getValue(), 105, 0);
     }
 
-    @Test public void checkPageIndexPropertyBind() {
+    @Test(expected = java.lang.UnsupportedOperationException.class) public void checkPageIndexPropertyBind() {
         IntegerProperty intPr = new SimpleIntegerProperty(10);
         pagination.currentPageIndexProperty().bind(intPr);
-        assertEquals("page index cannot be bound", pagination.currentPageIndexProperty().getValue(), 10, 0);
-        intPr.setValue(20);
-        assertEquals("page index cannot be bound", pagination.currentPageIndexProperty().getValue(), 20, 0);
     }
 
     @Test public void checkPageFactoryPropertyBind() {

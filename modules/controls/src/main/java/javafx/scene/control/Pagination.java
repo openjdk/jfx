@@ -33,6 +33,7 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.Styleable;
@@ -255,6 +256,11 @@ public class Pagination extends Control {
                 accSendNotification(Attribute.SELECTED_PAGE);
             }
         }
+
+        @Override
+        public void bind(ObservableValue<? extends Number> rawObservable) {
+            throw new UnsupportedOperationException("currentPageIndex supports only bidirectional binding");
+        }
     };
 
     /**
@@ -274,6 +280,12 @@ public class Pagination extends Control {
      * will be the current page if the value is greater than the {@link #pageCount}
      *
      * The default is 0 for the first page.
+     * <p>
+     * Because the page indicators set the current page index, the currentPageIndex property permits only
+     * bidirectional binding.
+     * The {@link javafx.beans.property.IntegerProperty#bind(javafx.beans.value.ObservableValue) bind} method
+     * throws an UnsupportedOperationException.
+     * </p>
      */
     public final IntegerProperty currentPageIndexProperty() { return currentPageIndex; }
 
