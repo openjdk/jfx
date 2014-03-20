@@ -252,9 +252,9 @@ public class Pagination extends Control {
                 } else if (getCurrentPageIndex() > getPageCount() - 1) {
                     setCurrentPageIndex(getPageCount() - 1);
                 }
-
-                accSendNotification(Attribute.SELECTED_PAGE);
             }
+
+            accSendNotification(Attribute.SELECTED_PAGE);
         }
 
         @Override
