@@ -1177,8 +1177,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinAccessible_UiaRaiseAutomati
   (JNIEnv *env, jclass jClass, jlong jAccessible, jint id, jobject oldV, jobject newV)
 {
     IRawElementProviderSimple* pProvider = reinterpret_cast<IRawElementProviderSimple*>(jAccessible);
-    VARIANT ov, nv;
-    
+    VARIANT ov = {0}, nv = {0};
+
     GlassAccessible::copyVariant(env, oldV, &ov);
     GlassAccessible::copyVariant(env, newV, &nv);
 
