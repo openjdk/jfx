@@ -44,28 +44,28 @@ public class HelloButton extends Application {
     @Override public void start(Stage stage) {
         stage.setTitle("Hello Button");
         Scene scene = new Scene(new Group(), 600, 450);
-        Button button = new Button();
-        button.setText("Click Me");
-        button.setLayoutX(25);
-        button.setLayoutY(40);
+        Button button1 = new Button();
+        button1.setText("Click Me");
+        button1.setLayoutX(25);
+        button1.setLayoutY(40);
 
-        button.setOnAction(e -> System.out.println("Event: " + e));
+        button1.setOnAction(e -> System.out.println("Event: " + e));
 
-        button.addEventHandler(KeyEvent.KEY_RELEASED, e -> System.out.println("Event: " + e));
+        button1.addEventHandler(KeyEvent.KEY_RELEASED, e -> System.out.println("Event: " + e));
 
-        ((Group)scene.getRoot()).getChildren().add(button);
+        ((Group)scene.getRoot()).getChildren().add(button1);
 
-        button = new Button();
-        button.setText("Click Me Too");
-        button.setLayoutX(25);
-        button.setLayoutY(70);
-        ((Group)scene.getRoot()).getChildren().add(button);
+        Button button2 = new Button();
+        button2.setText("Click Me Too");
+        button2.setLayoutX(25);
+        button2.layoutYProperty().bind(button1.heightProperty().add(button1.layoutYProperty()));
+        ((Group)scene.getRoot()).getChildren().add(button2);
 
-        button = new Button();
-        button.setText("Click Me Three");
-        button.setLayoutX(25);
-        button.setLayoutY(100);
-        ((Group)scene.getRoot()).getChildren().add(button);
+        Button button3 = new Button();
+        button3.setText("Click Me Three");
+        button3.setLayoutX(25);
+        button3.layoutYProperty().bind(button2.heightProperty().add(button2.layoutYProperty()));
+        ((Group)scene.getRoot()).getChildren().add(button3);
 
         stage.setScene(scene);
         stage.show();
