@@ -218,6 +218,7 @@ public final class QuantumToolkit extends Toolkit {
     private AtomicBoolean           animationRunning = new AtomicBoolean(false);
     private AtomicBoolean           nextPulseRequested = new AtomicBoolean(false);
     private AtomicBoolean           pulseRunning = new AtomicBoolean(false);
+    private boolean                 inPulse = false;
     private CountDownLatch          launchLatch = new CountDownLatch(1);
 
     final int                       PULSE_INTERVAL = (int)(TimeUnit.SECONDS.toMillis(1L) / getRefreshRate());
@@ -472,6 +473,7 @@ public final class QuantumToolkit extends Toolkit {
                 return;
             }
             nextPulseRequested.set(false);
+            inPulse = true;
             if (animationRunnable != null) {
                 animationRunning.set(true);
                 animationRunnable.run();
@@ -481,6 +483,7 @@ public final class QuantumToolkit extends Toolkit {
             firePulse();
             if (collect) collector.renderAll();
         } finally {
+            inPulse = false;
             endPulseRunning();
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.pulseEnd();
@@ -532,6 +535,10 @@ public final class QuantumToolkit extends Toolkit {
         if (key == null) {
             throw new NullPointerException();
         }
+        if (inPulse) {
+            throw new IllegalStateException("Nested event loops are allowed only while handling system events");
+        }
+
         if (eventLoopMap == null) {
             eventLoopMap = new HashMap<>();
         }

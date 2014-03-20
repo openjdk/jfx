@@ -393,6 +393,8 @@ public class Stage extends Window {
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
+     * @throws java.lang.IllegalStateException if this method is called outside of
+     *     event handler. This includes animation callbacks, properties handlers and layout processing.
      * @throws IllegalStateException if this method is called on the
      *     primary stage.
      * @throws IllegalStateException if this stage is already showing.
