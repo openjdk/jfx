@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -229,10 +229,13 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             }
             if (animate) {
                 animate(
-                    new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
-                                        item.getCurrentY()),
-                                        new KeyValue(item.currentXProperty(),
-                                        item.getCurrentX())),
+                    new KeyFrame(Duration.ZERO,
+                            (e) -> { if (!getPlotChildren().contains(symbol)) getPlotChildren().add(symbol); },
+                            new KeyValue(item.currentYProperty(),
+                                    item.getCurrentY()),
+                            new KeyValue(item.currentXProperty(),
+                                    item.getCurrentX())
+                    ),
                     new KeyFrame(Duration.millis(800), new KeyValue(item.currentYProperty(),
                                         item.getYValue(), Interpolator.EASE_BOTH),
                                         new KeyValue(item.currentXProperty(),

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -143,9 +143,9 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     @Override protected void dataItemAdded(Series<X,Y> series, int itemIndex, Data<X,Y> item) {
         Node bubble = createBubble(series, getData().indexOf(series), item, itemIndex);
         if (shouldAnimate()) {
+            // fade in new bubble
             bubble.setOpacity(0);
             getPlotChildren().add(bubble);
-            // fade in new bubble
             FadeTransition ft = new FadeTransition(Duration.millis(500),bubble);
             ft.setToValue(1);
             ft.play();

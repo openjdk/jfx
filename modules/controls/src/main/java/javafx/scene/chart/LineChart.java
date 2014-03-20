@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -230,16 +230,17 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 item.setCurrentY(series.getData().get(last).getYValue());
             } else if(symbol != null) {
                 // fade in new symbol
+                symbol.setOpacity(0);
+                getPlotChildren().add(symbol);
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
                 ft.setToValue(1);
                 ft.play();
             }
-            if(symbol != null) {
-                    getPlotChildren().add(symbol);
-            }
             if (animate) {
                 animate(
-                    new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
+                    new KeyFrame(Duration.ZERO,
+                            (e) -> { if (!getPlotChildren().contains(symbol)) getPlotChildren().add(symbol); },
+                                   new KeyValue(item.currentYProperty(),
                                         item.getCurrentY()),
                                         new KeyValue(item.currentXProperty(),
                                         item.getCurrentX())),

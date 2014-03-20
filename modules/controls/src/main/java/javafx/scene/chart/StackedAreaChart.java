@@ -28,6 +28,7 @@ package javafx.scene.chart;
 
 import java.util.*;
 import javafx.animation.*;
+import javafx.beans.InvalidationListener;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -192,16 +193,21 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 item.setCurrentY(series.getData().get(last).getYValue());
             } else if (symbol != null) {
                 // fade in new symbol
+                symbol.setOpacity(0);
+                getPlotChildren().add(symbol);
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
                 ft.setToValue(1);
                 ft.play();
             }
             if (animate) {
                 animate(
-                    new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
-                                        item.getCurrentY()),
-                                        new KeyValue(item.currentXProperty(),
-                                        item.getCurrentX())),
+                    new KeyFrame(Duration.ZERO,
+                            (e) -> { if (!getPlotChildren().contains(symbol)) getPlotChildren().add(symbol); },
+                            new KeyValue(item.currentYProperty(),
+                                    item.getCurrentY()),
+                            new KeyValue(item.currentXProperty(),
+                                    item.getCurrentX())
+                    ),
                     new KeyFrame(Duration.millis(800), new KeyValue(item.currentYProperty(),
                                         item.getYValue(), Interpolator.EASE_BOTH),
                                         new KeyValue(item.currentXProperty(),
