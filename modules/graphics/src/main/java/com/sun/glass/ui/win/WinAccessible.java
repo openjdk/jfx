@@ -550,16 +550,28 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             }
             case UIA_NamePropertyId: {
-               /* The name for ComboBox is provided in get_ValueString()
-                * Returning the title in the two places will cause Narrator
-                * to read the same name twice.
-                * 
-                * Note this needs means LABELED_BY no longer works for 
-                * ComboBox.
-                */
-                if (Role.COMBOBOX == getAttribute(ROLE)) break;
+                String name;
 
-                String name = (String)getAttribute(TITLE);
+                Role role = (Role)getAttribute(ROLE);
+                if (role == null) role = Role.NODE; // to prevent NPE
+                switch (role) {
+                    case COMBOBOX:
+                        // These controls use TITLE to answer get_ValueString().
+                        // Only LABELED_BY can be used to specify a name for them.
+                        name = null;
+                        break;
+                    case TEXT_FIELD:
+                    case TEXT_AREA:
+                        // Note that this results in ignoring the LabeledBy for text
+                        // controls because they return their text as the TITLE.
+                        // However, otherwise they don't work, i.e. Narrator won't read
+                        // the text. Or we should implement more advanced patterns
+                        // available on Windows 8 to support text controls properly.
+                    default:
+                        name = (String)getAttribute(TITLE);
+                        break;
+                }
+
                 if (name == null || name.length() == 0) {
                     Node label = (Node)getAttribute(LABELED_BY);
                     if (label != null) {

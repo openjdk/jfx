@@ -296,6 +296,12 @@ public enum Attribute {
 
     /**
      * Returns the title for the Node.
+     * E.g.
+     * <ul>
+     * <li>ComboBox returns a string representation of its
+     * currently selected item.
+     * <li>TextField returns the text currently entered into it.
+     * </ul>
      * Type: String
      */
     TITLE("Title", String.class),
