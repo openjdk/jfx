@@ -297,6 +297,11 @@ if (BUILD_CLOSED) {
     apply from: supplementalPreBuildFile
 }
 
+// GRADLE_VERSION_CHECK specifies whether to fail the build if the
+// gradle version check fails
+defineProperty("GRADLE_VERSION_CHECK", "true")
+ext.IS_GRADLE_VERSION_CHECK = Boolean.parseBoolean(GRADLE_VERSION_CHECK)
+
 // COMPILE_WEBKIT specifies whether to build all of webkit.
 defineProperty("COMPILE_WEBKIT", "false")
 ext.IS_COMPILE_WEBKIT = Boolean.parseBoolean(COMPILE_WEBKIT)
@@ -687,7 +692,32 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
 
 // Check that Gradle 1.8 is in use.
 if (gradle.gradleVersion != "1.8") {
-    logger.warn("Unsupported gradle version $gradle.gradleVersion in use. Only 1.8 is supported")
+    def ver = gradle.gradleVersion.split("[\\.]");
+    def gradleMajor = Integer.parseInt(ver[0]);
+    def gradleMinor = Integer.parseInt(ver[1]);
+    def err = "";
+    if (gradleMajor != 1) {
+        err = "Gradle major version is incompatible: ${gradle.gradleVersion}; expected 1.8";
+    } else {
+        if (gradleMinor < 8) {
+            err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 1.8"
+        }
+
+        // Blacklisted versions of gradle
+        if (gradleMinor == 11) {
+            err = "JavaFX fails to build with Gradle ${gradle.gradleVersion}"
+        }
+    }
+
+    if (IS_GRADLE_VERSION_CHECK && err != "") {
+        fail(err);
+    }
+
+    logger.warn("*****************************************************************");
+    logger.warn("Unsupported gradle version $gradle.gradleVersion in use.");
+    logger.warn("Only version 1.8 is supported. Use this version at your own risk");
+    if ( err != "") logger.warn(err);
+    logger.warn("*****************************************************************");
 }
 
 /******************************************************************************
