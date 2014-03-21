@@ -238,9 +238,11 @@ final class WinAccessible extends PlatformAccessible {
                 }
                 break;
             case SELECTED_PAGE: {
-                /* Use the notification in the parent to poke the children.
+                /* 
+                 * Use the notification in the parent to poke the children.
                  * Note: FOCUS_NODE does not see this case because as for as the scene graph
-                 * is concerned the focus is still on the parent. I.e Pagination */
+                 * is concerned the focus is still on the parent. I.e Pagination.
+                 */
                 Node node = (Node)getAttribute(SELECTED_PAGE);
                 if (node != null) {
                     UiaRaiseAutomationEvent(getAccessible(node), UIA_AutomationFocusChangedEventId);
@@ -248,9 +250,11 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             }
             case SELECTED_TAB: {
-                /* Use the notification in the parent to poke the children.
+                /* 
+                 * Use the notification in the parent to poke the children.
                  * Note: FOCUS_NODE does not see this case because as for as the scene graph
-                 * is concerned the focus is still on the parent. I.e TabPane */
+                 * is concerned the focus is still on the parent. I.e TabPane.
+                 */
                 Node node = (Node)getAttribute(SELECTED_TAB);
                 if (node != null) {
                     UiaRaiseAutomationEvent(getAccessible(node), UIA_AutomationFocusChangedEventId);
@@ -258,9 +262,11 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             }
             case SELECTED_CELLS: {
-                /* Use the notification in the parent to poke the children.
+                /* 
+                 * Use the notification in the parent to poke the children.
                  * Note: FOCUS_NODE does not see this case because as for as the scene graph
-                 * is concerned the focus is still on the parent. I.e TableView, ListView */
+                 * is concerned the focus is still on the parent. I.e TableView, ListView.
+                 */
                 ObservableList<Node> selection = (ObservableList<Node>)getAttribute(SELECTED_CELLS);
                 if (selection != null) {
                     selection.stream().forEach(n -> UiaRaiseAutomationEvent(getAccessible(n), UIA_AutomationFocusChangedEventId));
@@ -268,9 +274,11 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             }
             case SELECTED_ROWS: {
-                /* Use the notification in the parent to poke the children.
+                /* 
+                 * Use the notification in the parent to poke the children.
                  * Note: FOCUS_NODE does not see this case because as for as the scene graph
-                 * is concerned the focus is still on the parent. I.e TableView, ListView */
+                 * is concerned the focus is still on the parent. I.e TableView, ListView.
+                 */
                 ObservableList<Node> selection = (ObservableList<Node>)getAttribute(SELECTED_ROWS);
                 if (selection != null) {
                     selection.stream().forEach(n -> UiaRaiseAutomationEvent(getAccessible(n), UIA_AutomationFocusChangedEventId));
@@ -478,7 +486,8 @@ final class WinAccessible extends PlatformAccessible {
                        patternId == UIA_TableItemPatternId;
                 break;
 
-            /* MSDN doc is confusing if text elements should implement
+            /* 
+             * MSDN doc is confusing if text elements should implement
              * UIA_ValuePatternId. The article 'Text and TextRange Control
              * Patterns' says to implement for backward compatibility (MSAA).
              * The article 'Text Control Type' says to never implement it,
@@ -529,7 +538,8 @@ final class WinAccessible extends PlatformAccessible {
 
     long get_HostRawElementProvider() {
         if (isDisposed()) return 0;
-        /* Returning NULL makes this accessible 'lightweight',
+        /* 
+         * Returning NULL makes this accessible 'lightweight',
          * GetRuntimeID() will be called for it.
          */
         View view = getView();
@@ -556,17 +566,21 @@ final class WinAccessible extends PlatformAccessible {
                 if (role == null) role = Role.NODE; // to prevent NPE
                 switch (role) {
                     case COMBOBOX:
-                        // These controls use TITLE to answer get_ValueString().
-                        // Only LABELED_BY can be used to specify a name for them.
+                        /*
+                         *  These controls use TITLE to answer get_ValueString().
+                         *  Only LABELED_BY can be used to specify a name for them.
+                         */
                         name = null;
                         break;
                     case TEXT_FIELD:
                     case TEXT_AREA:
-                        // Note that this results in ignoring the LabeledBy for text
-                        // controls because they return their text as the TITLE.
-                        // However, otherwise they don't work, i.e. Narrator won't read
-                        // the text. Or we should implement more advanced patterns
-                        // available on Windows 8 to support text controls properly.
+                        /*
+                         * Note that this results in ignoring the LabeledBy for text
+                         * controls because they return their text as the TITLE.
+                         * However, otherwise they don't work, i.e. Narrator won't read
+                         * the text. Or we should implement more advanced patterns
+                         * available on Windows 8 to support text controls properly.
+                         */
                     default:
                         name = (String)getAttribute(TITLE);
                         break;
@@ -603,7 +617,8 @@ final class WinAccessible extends PlatformAccessible {
             }
             case UIA_HasKeyboardFocusPropertyId: {
                 Boolean focus = (Boolean)getAttribute(FOCUSED);
-                /* Note that accessibility focus and scene focus are not the same.
+                /* 
+                 * Note that accessibility focus and scene focus are not the same.
                  * Windows won't work correctly unless the accessible returned in GetFocus() 
                  * answer TRUE in UIA_HasKeyboardFocusPropertyId.
                  * Note that UIA_HasKeyboardFocusPropertyId reports true for the main parent
@@ -750,7 +765,8 @@ final class WinAccessible extends PlatformAccessible {
             case NavigateDirection_NextSibling:
             case NavigateDirection_PreviousSibling: {
                 Node parent = (Node)getAttribute(treeCell ? TREE_ITEM_PARENT : PARENT);
-                /* When the parent is NULL is indicates either the root node for the scene
+                /* 
+                 * When the parent is NULL is indicates either the root node for the scene
                  * or the root tree item in a tree view. Either way, there is no siblings. 
                  */
                 if (parent != null) {
@@ -853,7 +869,9 @@ final class WinAccessible extends PlatformAccessible {
     /***********************************************/
     long[] GetSelection() {
         if (isDisposed()) return null;
-        /* GetSelection() is sent by ISelectionProvider and ITextProvider.
+
+        /* 
+         * GetSelection() is sent by ISelectionProvider and ITextProvider.
          * Check the role before processing message.
          */
         Role role = (Role)getAttribute(ROLE);
@@ -1123,7 +1141,9 @@ final class WinAccessible extends PlatformAccessible {
     int get_ColumnCount() {
         if (isDisposed()) return 0;
         Integer count = (Integer)getAttribute(COLUMN_COUNT);
-        /* JFX does not require ListView to report column count == 1
+
+        /* 
+         * JFX does not require ListView to report column count == 1
          * But Windows wants a column count of (at least) 1.
          */
         return count != null ? count : 1;
@@ -1295,11 +1315,13 @@ final class WinAccessible extends PlatformAccessible {
             }
         }
 
-        // we ask if the accessible is a leaf for the TreeItem case where
-        // we want to return that it is a leaf node. In other cases
-        // (e.g. ComboBox) this will return false which means the ComboBox is
-        // not a leaf and the final return statement falls through to returning
-        // either expanded or collapsed, as expected
+        /* 
+         * We ask if the accessible is a leaf for the TreeItem case where
+         * we want to return that it is a leaf node. In other cases
+         * (e.g. ComboBox) this will return false which means the ComboBox is
+         * not a leaf and the final return statement falls through to returning
+         * either expanded or collapsed, as expected.
+         */
         Object o = getAttribute(LEAF);
         if (Boolean.TRUE.equals(o)) return ExpandCollapseState_LeafNode;
 

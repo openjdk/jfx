@@ -176,7 +176,8 @@ final class MacAccessible extends PlatformAccessible {
         }
     }
 
-    /* The Attribute and Action for roles are defined in
+    /* 
+     * The Attribute and Action for roles are defined in
      * https://developer.apple.com/library/mac/documentation/UserExperience/Reference/Accessibility_RoleAttribute_Ref/Introduction.html
      */
     enum MacRoles {
@@ -241,7 +242,8 @@ final class MacAccessible extends PlatformAccessible {
             },
             null
         ),
-        /* ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole.
+        /* 
+         * ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole.
          * Depending on the state of the indeterminate property.
          * Only in NSAccessibilityRoleAttribute and NSAccessibilityRoleDescriptionAttribute
          * the correct adjustments are made, on all other method BusyIndicatorRole reply 
@@ -684,7 +686,7 @@ final class MacAccessible extends PlatformAccessible {
                 attrs = Stream.concat(attrs, Stream.of(macRole.macAttributes));
             }
 
-            /** Look to see if there is a subrole that we should also get the attributes of */
+            /* Look to see if there is a subrole that we should also get the attributes of */
             MacSubroles macSubrole = MacSubroles.getRole(role);
             if (macSubrole != null && macSubrole.macAttributes != null) {
                 attrs = Stream.concat(attrs, Stream.of(macSubrole.macAttributes));
@@ -711,7 +713,9 @@ final class MacAccessible extends PlatformAccessible {
             }
             case NSAccessibilityColumnsAttribute: {
                 Integer count = (Integer)getAttribute(COLUMN_COUNT);
-                /* JFX does not require ListView to report column count == 1
+
+                /* 
+                 * JFX does not require ListView to report column count == 1
                  * But Mac needs NSAccessibilityColumnCountAttribute == 1 to work
                  */
                 return count != null ? count : 1;
@@ -843,7 +847,8 @@ final class MacAccessible extends PlatformAccessible {
             switch (attr) {
                 case NSAccessibilityParentAttribute: break;
                 case NSAccessibilityColumnCountAttribute:
-                    /* JFX does not require ListView to report column count == 1
+                    /* 
+                     * JFX does not require ListView to report column count == 1
                      * But Mac needs NSAccessibilityColumnCountAttribute == 1 to work
                      */
                     result = 1; break;
@@ -932,8 +937,10 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityPositionAttribute: {
-                /* NSAccessibilityPositionAttribute requires the point relative
-                 * to the lower-left corner in screen */
+                /* 
+                 * NSAccessibilityPositionAttribute requires the point relative
+                 * to the lower-left corner in screen.
+                 */
                 Scene scene = (Scene)getAttribute(SCENE);
                 if (scene != null) {
                     PlatformAccessible sceneAcc = scene.getAccessible().impl_getDelegate();
@@ -949,10 +956,11 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityTitleAttribute: {
-                //Role role = (Role)getAttribute(ROLE);
-                /* Voice over sends title attributes in unexpected cases.
+                /* 
+                 * Voice over sends title attributes in unexpected cases.
                  * For text roles, where the title is reported in AXValue, reporting 
-                 * the value again in AXTitle will cause voice over to read the text twice */
+                 * the value again in AXTitle will cause voice over to read the text twice. 
+                 */
                 Role role = (Role)getAttribute(ROLE);
                 switch (role) {
                     case TEXT:
