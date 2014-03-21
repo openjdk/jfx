@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -275,7 +275,7 @@ defineProperty("JAVA", cygpath("$JDK_HOME/bin/java${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"))
-defineProperty("JDK_DOCS", "http://download.oracle.com/javase/7/docs/api")
+defineProperty("JDK_DOCS", "http://docs.oracle.com/javase/8/docs/api/")
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
 defineProperty("javaVersion", javaRuntimeVersion.split("-")[0])
@@ -1115,7 +1115,11 @@ allprojects {
         exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
         executable = JAVADOC;
         options.windowTitle("JavaFX Project ${project.name} ${RELEASE_NAME}")
-        options.links(JDK_DOCS);
+        if (BUILD_CLOSED) {
+            options.linksOffline(JDK_DOCS, JDK_DOCS_CLOSED);
+        } else {
+            options.links(JDK_DOCS);
+        }
         options.addBooleanOption("XDignore.symbol.file").setValue(true);
         options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
         options.addBooleanOption("javafx").setValue(true);
@@ -2393,7 +2397,11 @@ task javadoc(type: Javadoc) {
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
     options.bottom("${javadocBottom}")
-    options.links(JDK_DOCS);
+    if (BUILD_CLOSED) {
+        options.linksOffline(JDK_DOCS, JDK_DOCS_CLOSED);
+    } else {
+        options.links(JDK_DOCS);
+    }
     options.addBooleanOption("XDignore.symbol.file").setValue(true);
     options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
     options.addBooleanOption("javafx").setValue(true);
