@@ -118,6 +118,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     protected abstract void deleteChar(boolean previous);
     protected abstract void replaceText(int start, int end, String txt);
     protected abstract void setCaretAnimating(boolean play);
+    protected abstract void deleteFromLineStart();
 
     protected void scrollCharacterToVisible(int index) {
         // TODO this method should be removed when TextAreaSkin
@@ -149,6 +150,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             if ("InputCharacter".equals(name)) defaultKeyTyped(lastEvent);
             else if ("Cut".equals(name)) cut();
             else if ("Paste".equals(name)) paste();
+            else if ("DeleteFromLineStart".equals(name)) deleteFromLineStart();
             else if ("DeletePreviousChar".equals(name)) deletePreviousChar();
             else if ("DeleteNextChar".equals(name)) deleteNextChar();
             else if ("DeletePreviousWord".equals(name)) deletePreviousWord();

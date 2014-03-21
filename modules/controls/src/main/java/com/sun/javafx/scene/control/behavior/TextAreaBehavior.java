@@ -280,6 +280,20 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         skin.deleteChar(previous);
     }
 
+    @Override protected void deleteFromLineStart() {
+        TextArea textArea = getControl();
+        int end = textArea.getCaretPosition();
+
+        if (end > 0) {
+            lineStart(false, false);
+            int start = textArea.getCaretPosition();
+            if (end > start) {
+                getUndoManager().addChange(start, textArea.textProperty().getValueSafe().substring(start, end), null);
+                replaceText(start, end, "");
+            }
+        }
+    }
+
     private void lineStart(boolean select, boolean extendSelection) {
         skin.lineStart(select, extendSelection);
     }

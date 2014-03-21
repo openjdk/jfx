@@ -200,6 +200,16 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         skin.replaceText(start, end, txt);
     }
 
+    @Override protected void deleteFromLineStart() {
+        TextField textField = getControl();
+        int end = textField.getCaretPosition();
+
+        if (end > 0) {
+            getUndoManager().addChange(0, textField.textProperty().getValueSafe().substring(0, end), null);
+            replaceText(0, end, "");
+        }
+    }
+
     @Override protected void setCaretAnimating(boolean play) {
         if (skin != null) {
             skin.setCaretAnimating(play);
