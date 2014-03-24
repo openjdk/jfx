@@ -1705,4 +1705,26 @@ public class TreeViewTest {
 
         assertEquals(0, rt_35889_cancel_count);
     }
+
+    @Test public void test_rt36255_selection_does_not_expand_item() {
+        TreeItem a = new TreeItem("a");
+        TreeItem b = new TreeItem("b");
+        b.getChildren().add(new TreeItem("bb"));
+
+        final TreeItem<String> root = new TreeItem<>();
+        root.getChildren().addAll(a, b);
+        root.setExpanded(true);
+        TreeView<String> view = new TreeView<>(root);
+        view.setCellFactory(TextFieldTreeCell.forTreeView());
+
+        view.getSelectionModel().select(a);
+
+        assertEquals(Arrays.asList(a), view.getSelectionModel().getSelectedItems());
+        assertFalse(b.isExpanded());
+
+        view.getSelectionModel().select(b);
+        assertEquals(Arrays.asList(b), view.getSelectionModel().getSelectedItems());
+        assertFalse(b.isExpanded());
+
+    }
 }

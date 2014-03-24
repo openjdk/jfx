@@ -1349,10 +1349,13 @@ public class TreeView<T> extends Control {
             // we firstly expand the path down such that the given object is
             // visible. This fixes RT-14456, where selection was not happening
             // correctly on TreeItems that are not visible.
-            TreeItem<?> item = obj;
-            while (item != null) {
-                item.setExpanded(true);
-                item = item.getParent();
+
+            if (obj != null) {
+                TreeItem<?> item = obj.getParent();
+                while (item != null) {
+                    item.setExpanded(true);
+                    item = item.getParent();
+                }
             }
             
             // Fix for RT-15419. We eagerly update the tree item count, such that
