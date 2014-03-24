@@ -9,6 +9,7 @@
 ^\.ant-targets.*$
 ^.idea/tasks.xml$
 ^.idea/workspace.xml$
+^.idea/inspectionProfiles/*
 ^\.gradle/
 ^buildSrc/\.gradle/
 ^.idea/out/
