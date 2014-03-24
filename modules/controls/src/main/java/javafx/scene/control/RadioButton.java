@@ -135,9 +135,15 @@ import javafx.scene.accessibility.Role;
         return Pos.CENTER_LEFT;
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.RADIO_BUTTON;
             case SELECTED: return isSelected();

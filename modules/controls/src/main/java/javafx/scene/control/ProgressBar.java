@@ -121,9 +121,15 @@ public class ProgressBar extends ProgressIndicator {
         return Boolean.FALSE;
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ORIENTATION: return Orientation.HORIZONTAL;
             default: return super.accGetAttribute(attribute, parameters);

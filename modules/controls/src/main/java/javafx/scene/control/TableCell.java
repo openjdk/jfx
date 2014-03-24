@@ -711,9 +711,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
     private static final PseudoClass PSEUDO_CLASS_LAST_VISIBLE = 
             PseudoClass.getPseudoClass("last-visible");
 
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.TABLE_CELL;
             case TITLE: return getText();
@@ -725,8 +732,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     }
 
     /** @treatAsPrivate */
-    @Override
-    public void accExecuteAction(Action action, Object... parameters) {
+    @Override public void accExecuteAction(Action action, Object... parameters) {
         final TableView<S> tableView = getTableView();
         final TableSelectionModel<S> sm = tableView == null ? null : tableView.getSelectionModel();
 

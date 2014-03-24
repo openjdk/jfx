@@ -261,9 +261,15 @@ import javafx.css.StyleableProperty;
         return Pos.CENTER;
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.TOGGLE_BUTTON;
             case TOGGLE_STATE: return isSelected() ? 1 : 0;

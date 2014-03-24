@@ -527,9 +527,15 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         return new TreeTableRowSkin<T>(this);
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         TreeItem<T> treeItem = getTreeItem();
         TreeTableView<T> treeTableView = getTreeTableView();
 
@@ -572,8 +578,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     }
 
     /** @treatAsPrivate */
-    @Override
-    public void accExecuteAction(Action action, Object... parameters) {
+    @Override public void accExecuteAction(Action action, Object... parameters) {
         final TreeTableView<T> treeTableView = getTreeTableView();
         final TreeTableView.TreeTableViewSelectionModel<T> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
 

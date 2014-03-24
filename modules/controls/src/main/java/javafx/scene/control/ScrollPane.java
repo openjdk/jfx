@@ -725,7 +725,32 @@ public class ScrollPane extends Control {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
     }
-    
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.SCROLL_PANE;
+            case CONTENTS: return getContent();
+            case VERTICAL_SCROLLBAR: //Skin
+            case HORIZONTAL_SCROLLBAR: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Support classes                                                         *
+     *                                                                         *
+     **************************************************************************/
+
     /**
      * An enumeration denoting the policy to be used by a scrollable
      * Control in deciding whether to show a scroll bar.
@@ -746,15 +771,6 @@ public class ScrollPane extends Control {
         AS_NEEDED
     }
 
-    /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.SCROLL_PANE;
-            case CONTENTS: return getContent();
-            case VERTICAL_SCROLLBAR: //Skin
-            case HORIZONTAL_SCROLLBAR: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+
+
 }

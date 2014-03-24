@@ -191,6 +191,7 @@ public class Button extends ButtonBase {
         return new ButtonSkin(this);
     }
 
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -210,9 +211,15 @@ public class Button extends ButtonBase {
     private static final PseudoClass PSEUDO_CLASS_CANCEL
             = PseudoClass.getPseudoClass("cancel");
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.BUTTON;
             default: return super.accGetAttribute(attribute, parameters);

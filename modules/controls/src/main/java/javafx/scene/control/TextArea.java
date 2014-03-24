@@ -596,6 +596,7 @@ public class TextArea extends TextInputControl {
     public final double getScrollLeft() { return scrollLeft.getValue(); }
     public final void setScrollLeft(double value) { scrollLeft.setValue(value); }
 
+
     /***************************************************************************
      *                                                                         *
      * Methods                                                                 *
@@ -606,6 +607,7 @@ public class TextArea extends TextInputControl {
     @Override protected Skin<?> createDefaultSkin() {
         return new TextAreaSkin(this);
     }
+
 
     /***************************************************************************
      *                                                                         *
@@ -691,10 +693,15 @@ public class TextArea extends TextInputControl {
         return getClassCssMetaData();
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute,
-                                     Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.TEXT_AREA;
             case SELECTION_START: return getSelection().getStart();

@@ -1208,9 +1208,15 @@ public abstract class TextInputControl extends Control {
         return getClassCssMetaData();
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case TITLE: {
                 String text = getText();
@@ -1224,8 +1230,7 @@ public abstract class TextInputControl extends Control {
     }
 
     /** @treatAsPrivate */
-    @Override 
-    public void accExecuteAction(Action action, Object... parameters) {
+    @Override public void accExecuteAction(Action action, Object... parameters) {
         switch (action) {
             case SET_TITLE: {
                 String value = (String) parameters[0];

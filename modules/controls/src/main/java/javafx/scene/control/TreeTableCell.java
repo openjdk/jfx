@@ -718,9 +718,15 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         return new TreeTableCellSkin<S,T>(this);
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.TREE_TABLE_CELL;
             case TITLE: return getText();
@@ -732,8 +738,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     }
 
     /** @treatAsPrivate */
-    @Override
-    public void accExecuteAction(Action action, Object... parameters) {
+    @Override public void accExecuteAction(Action action, Object... parameters) {
         final TreeTableView<S> treeTableView = getTreeTableView();
         final TreeTableView.TreeTableViewSelectionModel<S> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
 

@@ -76,7 +76,8 @@ public abstract class ButtonBase extends Labeled {
     public ButtonBase(String text, Node graphic) {
         super(text, graphic);
     }
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -135,6 +136,7 @@ public abstract class ButtonBase extends Labeled {
         }
     };
 
+
     /***************************************************************************
      *                                                                         *
      * Methods                                                                 *
@@ -176,6 +178,7 @@ public abstract class ButtonBase extends Labeled {
      */
     public abstract void fire();
 
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -184,9 +187,15 @@ public abstract class ButtonBase extends Labeled {
 
     private static final PseudoClass ARMED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("armed");
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override 
-    public void accExecuteAction(Action action, Object... parameters) {
+    @Override public void accExecuteAction(Action action, Object... parameters) {
         switch (action) {
             case FIRE: 
                 fire();
