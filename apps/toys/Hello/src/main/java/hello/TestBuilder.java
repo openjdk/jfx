@@ -393,13 +393,13 @@ public class TestBuilder {
         menu23.setDisable(true);
         // menu separator
         MenuItem menu24 = new MenuItem("Copy");
-        menu24.setAccelerator(KeyCombination.keyCombination("shortcut=C"));
+        menu24.setAccelerator(KeyCombination.keyCombination("shortcut+C"));
         menu24.setOnAction(actionHandler);
         MenuItem menu25 = new MenuItem("Paste");
         menu25.setAccelerator(KeyCombination.keyCombination("shortcut+V"));
         menu25.setOnAction(actionHandler);
         MenuItem menu26 = new MenuItem("Delete");
-        menu26.setAccelerator(KeyCombination.keyCombination("Alt+D"));
+        menu26.setAccelerator(KeyCombination.keyCombination("shortcut+D"));
         MenuItem menu27 = new MenuItem("Help");
         menu27.setAccelerator(new KeyCodeCombination(KeyCode.F1));
         menu27.setOnAction(actionHandler);
@@ -732,10 +732,10 @@ public class TestBuilder {
 
     private Menu makeMenu(String text, Node graphic) {
         Menu menu = new Menu(text, graphic);
-        menu.setOnShowing(showHideHandler);
-        menu.setOnShown(showHideHandler);
-        menu.setOnHiding(showHideHandler);
-        menu.setOnHidden(showHideHandler);
+//        menu.setOnShowing(showHideHandler);
+//        menu.setOnShown(showHideHandler);
+//        menu.setOnHiding(showHideHandler);
+//        menu.setOnHidden(showHideHandler);
         return menu;
     }
 
