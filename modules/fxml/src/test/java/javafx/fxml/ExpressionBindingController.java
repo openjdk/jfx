@@ -25,27 +25,40 @@
 
 package javafx.fxml;
 
-import java.io.IOException;
-import org.junit.Test;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 
-import static org.junit.Assert.*;
+public class ExpressionBindingController {
+    private StringProperty nameProperty = new SimpleStringProperty(this, "name");
+    private DoubleProperty percentageProperty = new SimpleDoubleProperty(this, "percentage");
 
-public class RT_18680Test {
-    @Test
-    public void testEscapeSequences() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_18680.fxml"));
-        fxmlLoader.load();
+    public ExpressionBindingController() {
+        setPercentage(0.5);
+    }
 
-        Widget widget1 = (Widget)fxmlLoader.getNamespace().get("widget1");
-        assertEquals(widget1.getName(), fxmlLoader.getNamespace().get("abc"));
+    public String getName() {
+        return nameProperty.get();
+    }
 
-        Widget widget2 = (Widget)fxmlLoader.getNamespace().get("widget2");
-        assertEquals(widget2.getName(), "$abc");
+    public void setName(String value) {
+        nameProperty.set(value);
+    }
 
-        Widget widget3 = (Widget)fxmlLoader.getNamespace().get("widget3");
-        assertEquals(widget3.getName(), "$abc");
+    public StringProperty nameProperty() {
+        return nameProperty;
+    }
 
-        Widget widget4 = (Widget)fxmlLoader.getNamespace().get("widget4");
-        assertEquals(widget4.getName(), "\\abc");
+    public Double getPercentage() {
+        return percentageProperty.get();
+    }
+
+    public void setPercentage(Double value) {
+        percentageProperty.set(value);
+    }
+
+    public DoubleProperty percentageProperty() {
+        return percentageProperty;
     }
 }

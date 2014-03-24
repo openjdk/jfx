@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,28 @@
 
 package javafx.fxml;
 
+import com.sun.javafx.fxml.expression.Expression;
+import com.sun.javafx.fxml.expression.KeyPath;
+import javafx.collections.ObservableList;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.HashMap;
 
-import org.junit.Test;
-
-import com.sun.javafx.fxml.expression.Expression;
-import com.sun.javafx.fxml.expression.KeyPath;
-
 import static com.sun.javafx.fxml.expression.Expression.*;
-import static org.junit.Assert.*;
+import static com.sun.javafx.fxml.expression.Expression.set;
+import static com.sun.javafx.fxml.expression.Expression.valueOf;
+import static org.junit.Assert.assertEquals;
 
-public class RT_14880Test {
+public class FXMLLoader_ExpressionTest {
+
+    @Test
+    public void testIncompletePropertyOnPath() throws IOException {
+        ObservableList<IncompletePropertyContainer> list = FXMLLoader.load(getClass().getResource("expression_incomplete_property.fxml"));
+        list.get(0).setProp("12345");
+        assertEquals("12345", list.get(1).getProp());
+    }
+
     @Test
     public void testExpression() {
         Expression add = add(3, 4);
@@ -239,10 +249,10 @@ public class RT_14880Test {
 
     @Test
     public void testMarkup() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("rt_14880.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("expression_binding.fxml"));
         fxmlLoader.load();
 
-        RT_14880Controller controller = (RT_14880Controller)fxmlLoader.getController();
+        ExpressionBindingController controller = (ExpressionBindingController)fxmlLoader.getController();
 
         Widget childWidget1 = (Widget)fxmlLoader.getNamespace().get("childWidget1");
         assertEquals(childWidget1.isEnabled(), false);
@@ -250,4 +260,24 @@ public class RT_14880Test {
         controller.setPercentage(0.85);
         assertEquals(childWidget1.isEnabled(), true);
     }
+
+    @Test
+    public void testEscapeSequences() throws IOException {
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("expression_escapechars.fxml"));
+        fxmlLoader.load();
+
+        Widget widget1 = (Widget)fxmlLoader.getNamespace().get("widget1");
+        assertEquals(widget1.getName(), fxmlLoader.getNamespace().get("abc"));
+
+        Widget widget2 = (Widget)fxmlLoader.getNamespace().get("widget2");
+        assertEquals(widget2.getName(), "$abc");
+
+        Widget widget3 = (Widget)fxmlLoader.getNamespace().get("widget3");
+        assertEquals(widget3.getName(), "$abc");
+
+        Widget widget4 = (Widget)fxmlLoader.getNamespace().get("widget4");
+        assertEquals(widget4.getName(), "\\abc");
+    }
+
+
 }
