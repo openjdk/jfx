@@ -953,6 +953,10 @@ public class TableColumnHeader extends Region {
     private static final PseudoClass PSEUDO_CLASS_LAST_VISIBLE = 
             PseudoClass.getPseudoClass("last-visible");
 
+    double getDragRectHeight() {
+        return getHeight();
+    }
+
     /**
       * Super-lazy instantiation pattern from Bill Pugh.
       * @treatAsPrivate implementation detail

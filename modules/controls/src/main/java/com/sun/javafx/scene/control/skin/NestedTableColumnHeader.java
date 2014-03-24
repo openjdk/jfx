@@ -377,10 +377,15 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             // position drag overlay to intercept column resize requests
             Rectangle dragRect = dragRects.get(n.getTableColumn());
             if (dragRect != null) {
-                dragRect.setHeight(getHeight() - label.getHeight());
+                dragRect.setHeight(n.getDragRectHeight());
                 dragRect.relocate(x - DRAG_RECT_WIDTH / 2, snappedTopInset() + labelHeight);
             }
         }
+    }
+
+    @Override
+    double getDragRectHeight() {
+        return label.prefHeight(-1);
     }
 
     // sum up all children columns
