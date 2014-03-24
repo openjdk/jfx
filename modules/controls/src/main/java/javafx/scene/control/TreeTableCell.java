@@ -248,7 +248,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                         }
                     }
 
-                    TreeTableView newTreeTableView = get();
+                    TreeTableView<S> newTreeTableView = get();
                     if (newTreeTableView != null) {
                         sm = newTreeTableView.getSelectionModel();
                         if (sm != null) {
@@ -518,7 +518,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         final TreeTableView<S> tv = getTreeTableView();
         if (getIndex() == -1 || tv == null) return;
 
-        TreeTableView.TreeTableViewFocusModel fm = tv.getFocusModel();
+        TreeTableView.TreeTableViewFocusModel<S> fm = tv.getFocusModel();
         if (fm == null) return;
 
         boolean isFocusedNow = fm != null &&

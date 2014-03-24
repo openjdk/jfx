@@ -229,9 +229,6 @@ public class Separator extends Control {
 
     private static final String DEFAULT_STYLE_CLASS = "separator";
 
-    private static final String PSEUDO_CLASS_VERTICAL = "vertical";
-    private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
-
     private static class StyleableProperties {
         private static final CssMetaData<Separator,Orientation> ORIENTATION = 
                 new CssMetaData<Separator,Orientation>("-fx-orientation",

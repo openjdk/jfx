@@ -460,7 +460,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TreeCellSkin(this);
+        return new TreeCellSkin<T>(this);
     }
 
     /***************************************************************************

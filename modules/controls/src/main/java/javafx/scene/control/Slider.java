@@ -648,8 +648,6 @@ public class Slider extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "slider";
-    private static final String PSEUDO_CLASS_VERTICAL = "vertical";
-    private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
         private static final CssMetaData<Slider,Number> BLOCK_INCREMENT =

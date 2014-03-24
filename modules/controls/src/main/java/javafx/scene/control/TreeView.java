@@ -213,7 +213,7 @@ public class TreeView<T> extends Control {
         return (EventType<EditEvent<T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType(Event.ANY, "TREE_VIEW_EDIT");
+            new EventType<>(Event.ANY, "TREE_VIEW_EDIT");
 
     /**
      * An EventType used to indicate that an edit event has started within the
@@ -226,7 +226,7 @@ public class TreeView<T> extends Control {
         return (EventType<EditEvent<T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            new EventType(editAnyEvent(), "EDIT_START");
+            new EventType<>(editAnyEvent(), "EDIT_START");
 
     /**
      * An EventType used to indicate that an edit event has just been canceled
@@ -240,7 +240,7 @@ public class TreeView<T> extends Control {
         return (EventType<EditEvent<T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            new EventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType<>(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * An EventType that is used to indicate that an edit in a TreeView has been
@@ -255,7 +255,7 @@ public class TreeView<T> extends Control {
         return (EventType<EditEvent<T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            new EventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType<>(editAnyEvent(), "EDIT_COMMIT");
     
     /**
      * Returns the number of levels of 'indentation' of the given TreeItem, 

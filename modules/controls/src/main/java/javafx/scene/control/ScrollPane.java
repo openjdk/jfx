@@ -596,21 +596,6 @@ public class ScrollPane extends Control {
     private static final String DEFAULT_STYLE_CLASS = "scroll-pane";
 
     /**
-     * Pseudoclass indicating the fitToWidth property is {@code true}
-     */
-    private static final String PSEUDO_CLASS_FIT_TO_WIDTH = "fitToWidth";
-
-    /**
-     * Pseudoclass indicating the fitToHeight property is {@code true}
-     */
-    private static final String PSEUDO_CLASS_FIT_TO_HEIGHT = "fitToHeight";
-
-    /**
-     * Pseudoclass indicating the pannable property is {@code true}
-     */
-    private static final String PSEUDO_CLASS_PANNABLE = "pannable";
-
-    /**
      * @treatAsPrivate
      */
     private static class StyleableProperties {

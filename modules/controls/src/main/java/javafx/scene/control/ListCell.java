@@ -25,7 +25,9 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.ListCellSkin;
+import java.lang.ref.WeakReference;
+import java.util.List;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -37,16 +39,11 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 
-import java.lang.ref.WeakReference;
-import java.util.List;
-
+import com.sun.javafx.scene.control.skin.ListCellSkin;
 
 /**
  * <p>The {@link Cell} type used within {@link ListView} instances. In addition 

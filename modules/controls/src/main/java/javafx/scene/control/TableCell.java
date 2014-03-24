@@ -289,8 +289,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override public void startEdit() {
-        final TableView table = getTableView();
-        final TableColumn column = getTableColumn();
+        final TableView<S> table = getTableView();
+        final TableColumn<S,T> column = getTableColumn();
         if (! isEditable() ||
                 (table != null && ! table.isEditable()) ||
                 (column != null && ! getTableColumn().isEditable())) {
@@ -310,7 +310,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         super.startEdit();
         
         if (column != null) {
-            CellEditEvent editEvent = new CellEditEvent(
+            CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
                 table.getEditingCell(),
                 TableColumn.editStartEvent(),
@@ -325,7 +325,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     @Override public void commitEdit(T newValue) {
         if (! isEditing()) return;
         
-        final TableView table = getTableView();
+        final TableView<S> table = getTableView();
         if (table != null) {
             // Inform the TableView of the edit being ready to be committed.
             CellEditEvent editEvent = new CellEditEvent(
@@ -364,13 +364,13 @@ public class TableCell<S,T> extends IndexedCell<T> {
     @Override public void cancelEdit() {
         if (! isEditing()) return;
 
-        final TableView table = getTableView();
+        final TableView<S> table = getTableView();
 
         super.cancelEdit();
 
         // reset the editing index on the TableView
         if (table != null) {
-            TablePosition editingCell = table.getEditingCell();
+            TablePosition<S,?> editingCell = table.getEditingCell();
             if (updateEditingIndex) table.edit(-1, null);
 
             // request focus back onto the table, only if the current focus
@@ -379,7 +379,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(table);
 
-            CellEditEvent editEvent = new CellEditEvent(
+            CellEditEvent<S,?> editEvent = new CellEditEvent<>(
                 table,
                 editingCell,
                 TableColumn.editCancelEvent(),
@@ -410,7 +410,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TableCellSkin(this);
+        return new TableCellSkin<S,T>(this);
     }
     
 //    @Override public void dispose() {
@@ -431,12 +431,12 @@ public class TableCell<S,T> extends IndexedCell<T> {
     
     private void cleanUpTableViewListeners(TableView<S> tableView) {
         if (tableView != null) {
-            TableView.TableViewSelectionModel sm = tableView.getSelectionModel();
+            TableView.TableViewSelectionModel<S> sm = tableView.getSelectionModel();
             if (sm != null) {
                 sm.getSelectedCells().removeListener(weakSelectedListener);
             }
 
-            TableViewFocusModel fm = tableView.getFocusModel();
+            TableViewFocusModel<S> fm = tableView.getFocusModel();
             if (fm != null) {
                 fm.focusedCellProperty().removeListener(weakFocusedListener);
             }
@@ -462,8 +462,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
     private int columnIndex = -1;
     
     private void updateColumnIndex() {
-        TableView tv = getTableView();
-        TableColumn tc = getTableColumn();
+        TableView<S> tv = getTableView();
+        TableColumn<S,T> tc = getTableColumn();
         columnIndex = tv == null || tc == null ? -1 : tv.getVisibleLeafIndex(tc);
         
         // update the pseudo class state regarding whether this is the last
@@ -530,7 +530,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     private void updateEditing() {
         if (getIndex() == -1 || getTableView() == null) return;
 
-        TablePosition editCell = getTableView().getEditingCell();
+        TablePosition<S,?> editCell = getTableView().getEditingCell();
         boolean match = match(editCell);
         
         if (match && ! isEditing()) {
@@ -549,7 +549,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     }
     private boolean updateEditingIndex = true;
 
-    private boolean match(TablePosition pos) {
+    private boolean match(TablePosition<S,?> pos) {
         return pos != null && pos.getRow() == getIndex() && pos.getTableColumn() == getTableColumn();
     }
 
@@ -582,9 +582,9 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
         
         // get the total number of items in the data model
-        final TableView tableView = getTableView();
-        final List<T> items = tableView == null ? FXCollections.<T>emptyObservableList() : tableView.getItems();
-        final TableColumn tableColumn = getTableColumn();
+        final TableView<S> tableView = getTableView();
+        final List<S> items = tableView == null ? FXCollections.<S>emptyObservableList() : tableView.getItems();
+        final TableColumn<S,T> tableColumn = getTableColumn();
         final int itemCount = items == null ? -1 : items.size();
         final int index = getIndex();
         final boolean isEmpty = isEmpty();

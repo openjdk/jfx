@@ -2248,7 +2248,7 @@ public class TreeTableView<S> extends Control {
             }
             
             if (newRoot != null) {
-                weakTreeItemListener = new WeakEventHandler(treeItemListener);
+                weakTreeItemListener = new WeakEventHandler<>(treeItemListener);
                 newRoot.addEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakTreeItemListener);
             }
         }
@@ -2386,7 +2386,7 @@ public class TreeTableView<S> extends Control {
                 shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
                     @Override public Void call(ShiftParams param) {
                         final int clearIndex = param.getClearIndex();
-                        TreeTablePosition oldTP = null;
+                        TreeTablePosition<S,?> oldTP = null;
                         if (clearIndex > -1) {
                             for (int i = 0; i < selectedCellsMap.size(); i++) {
                                 TreeTablePosition<S,?> tp = selectedCellsMap.get(i);
@@ -2399,7 +2399,7 @@ public class TreeTableView<S> extends Control {
                         }
                         
                         if (oldTP != null && param.isSelected()) {
-                            TreeTablePosition<S,?> newTP = new TreeTablePosition<S,Object>(
+                            TreeTablePosition<S,?> newTP = new TreeTablePosition<>(
                                     treeTableView, param.getSetIndex(), oldTP.getTableColumn());
 
                             selectedCellsMap.add(newTP);
@@ -2719,8 +2719,8 @@ public class TreeTableView<S> extends Control {
             updateSelectedIndex(maxRow);
             focus(maxRow, (TreeTableColumn<S,?>)maxColumn);
 
-            final int startChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition(treeTableView, minRow, (TreeTableColumn<S,?>)minColumn));
-            final int endChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition(treeTableView, maxRow, (TreeTableColumn<S,?>)maxColumn));
+            final int startChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition<>(treeTableView, minRow, (TreeTableColumn<S,?>)minColumn));
+            final int endChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition<>(treeTableView, maxRow, (TreeTableColumn<S,?>)maxColumn));
             handleSelectedCellsListChangeEvent(new NonIterableChange.SimpleAddChange<>(startChangeIndex, endChangeIndex + 1, selectedCellsSeq));
         }
 
