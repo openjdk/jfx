@@ -101,8 +101,9 @@ public enum Role {
 
     /**
      * ListView
-     * Attributes: ROW_AT_INDEX, ROW_COUNT, SELECTED_ROWS, MULTIPLE_SELECTION
-     * Actions: (none)
+     * Attributes: ROW_AT_INDEX, ROW_COUNT, SELECTED_ROWS, MULTIPLE_SELECTION,
+     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
+     * Actions: SCROLL_TO_INDEX
      */
     LIST_VIEW,
 
@@ -200,7 +201,7 @@ public enum Role {
     /**
      * ScrollBar
      * Attributes: VALUE, MAX_VALUE, MIN_VALUE, ORIENTATION
-     * Actions: INCREMENT, DECREMENT, SET_VALUE
+     * Actions: BLOCK_INCREMENT, INCREMENT, DECREMENT, BLOCK_DECREMENT, SET_VALUE
      */
     SCROLL_BAR,
 
@@ -248,9 +249,10 @@ public enum Role {
 
     /**
      * Table View
-     * Attributes: ROW_COUNT, COLUMN_COUNT, SELECTED_CELLS, CELL_AT_ROWCOLUMN, MULTIPLE_SELECTION
+     * Attributes: ROW_COUNT, COLUMN_COUNT, SELECTED_CELLS, CELL_AT_ROWCOLUMN, MULTIPLE_SELECTION,
+     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
      * Attributes for header support: COLUMN_AT_INDEX, HEADER
-     * Actions: (none)
+     * Actions: SCROLL_TO_INDEX
      */
     TABLE_VIEW,
 
@@ -301,17 +303,19 @@ public enum Role {
 
     /**
      * Table View
-     * Attributes: TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, COLUMN_COUNT,
+     * Attributes: ROW_COUNT, TREE_ITEM_AT_INDEX, COLUMN_COUNT,
      *             SELECTED_CELLS, CELL_AT_ROWCOLUMN, MULTIPLE_SELECTION,
+     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
      * Attributes for header support: COLUMN_AT_INDEX, HEADER
-     * Actions: (none)
+     * Actions: SCROLL_TO_INDEX
      */
     TREE_TABLE_VIEW,
 
     /**
      * TreeView
-     * Attributes: TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, SELECTED_ROWS, MULTIPLE_SELECTION
-     * Actions: (none)
+     * Attributes: ROW_COUNT, TREE_ITEM_AT_INDEX, SELECTED_ROWS, MULTIPLE_SELECTION,
+     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
+     * Actions: SCROLL_TO_INDEX
      */
     TREE_VIEW,
 }

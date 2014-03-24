@@ -50,6 +50,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
+import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
@@ -1036,6 +1037,44 @@ public class ListView<T> extends Control {
     private static final PseudoClass PSEUDO_CLASS_HORIZONTAL =
             PseudoClass.getPseudoClass("horizontal");
 
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.LIST_VIEW;
+            case ROW_COUNT: return getItems().size();
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case ROW_AT_INDEX: //Skin
+            case SELECTED_ROWS: //Skin
+            case VERTICAL_SCROLLBAR: //Skin
+            case HORIZONTAL_SCROLLBAR: // Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                int index = (int) parameters[0];
+                scrollTo(index);
+                break;
+            }
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
+
+
     /***************************************************************************
      *                                                                         *
      * Support Interfaces                                                      *
@@ -1492,21 +1531,5 @@ public class ListView<T> extends Control {
                 itemCount = items == null ? -1 : items.size();
             }
         } 
-    }
-
-    /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.LIST_VIEW;
-            case ROW_COUNT: return getItems().size();
-            case MULTIPLE_SELECTION: {
-                MultipleSelectionModel sm = getSelectionModel();
-                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
-            }
-            case ROW_AT_INDEX: //Skin
-            case SELECTED_ROWS: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
-        }
     }
 }

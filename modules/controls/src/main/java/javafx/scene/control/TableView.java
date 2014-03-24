@@ -61,6 +61,7 @@ import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
@@ -1591,7 +1592,62 @@ public class TableView<S> extends Control {
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
-    
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TABLE_VIEW;
+            case COLUMN_COUNT: return getVisibleLeafColumns().size();
+            case ROW_COUNT: return getItems().size();
+            case SELECTED_CELLS: {
+                // TableViewSkin returns TableRows back to TableView.
+                // TableRowSkin returns TableCells back to TableRow.
+                ObservableList<TableRow<S>> rows = (ObservableList<TableRow<S>>)super.accGetAttribute(attribute, parameters);
+                List<Node> selection = new ArrayList<>();
+                for (TableRow<S> row : rows) {
+                    ObservableList<Node> cells = (ObservableList<Node>)row.accGetAttribute(attribute, parameters);
+                    if (cells != null) selection.addAll(cells);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            case FOCUS_ITEM:
+            case CELL_AT_ROWCOLUMN: {
+                TableRow<S> row = (TableRow<S>)super.accGetAttribute(attribute, parameters);
+                return row != null ? row.accGetAttribute(attribute, parameters) : null;
+            }
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case COLUMN_AT_INDEX: //Skin
+            case COLUMN_INDEX: //Skin
+            case HEADER: //Skin
+            case VERTICAL_SCROLLBAR: //Skin
+            case HORIZONTAL_SCROLLBAR: // Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                int index = (int) parameters[0];
+                scrollTo(index);
+                break;
+            }
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
+
 
 
     /***************************************************************************
@@ -2987,40 +3043,6 @@ public class TableView<S> extends Control {
             int columnIndex = tableView.getVisibleLeafIndex(column);
             int newColumnIndex = columnIndex + offset;
             return tableView.getVisibleLeafColumn(newColumnIndex);
-        }
-    }
-
-    /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TABLE_VIEW;
-            case COLUMN_COUNT: return getVisibleLeafColumns().size();
-            case ROW_COUNT: return getItems().size();
-            case SELECTED_CELLS: {
-                // TableViewSkin returns TableRows back to TableView.
-                // TableRowSkin returns TableCells back to TableRow.
-                ObservableList<TableRow<S>> rows = (ObservableList<TableRow<S>>)super.accGetAttribute(attribute, parameters);
-                List<Node> selection = new ArrayList<>();
-                for (TableRow<S> row : rows) {
-                    ObservableList<Node> cells = (ObservableList<Node>)row.accGetAttribute(attribute, parameters);
-                    if (cells != null) selection.addAll(cells);
-                }
-                return FXCollections.observableArrayList(selection);
-            }
-            case FOCUS_ITEM:
-            case CELL_AT_ROWCOLUMN: {
-                TableRow<S> row = (TableRow<S>)super.accGetAttribute(attribute, parameters);
-                return row != null ? row.accGetAttribute(attribute, parameters) : null;
-            }
-            case MULTIPLE_SELECTION: {
-                MultipleSelectionModel sm = getSelectionModel();
-                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
-            }
-            case COLUMN_AT_INDEX: //Skin
-            case COLUMN_INDEX: //Skin
-            case HEADER: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
         }
     }
 }

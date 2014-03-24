@@ -25,17 +25,23 @@
 
 package javafx.scene.control;
 
-import java.lang.ref.SoftReference;
-import java.util.*;
-
+import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.skin.TreeViewSkin;
+import javafx.application.Platform;
+import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyIntegerProperty;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.collections.FXCollections;
+import javafx.beans.value.WeakChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
@@ -43,25 +49,21 @@ import javafx.css.StyleableProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.event.WeakEventHandler;
+import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
-import javafx.event.WeakEventHandler;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.TreeViewSkin;
+import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
-
-import javafx.application.Platform;
-import javafx.beans.DefaultProperty;
-import javafx.beans.property.ReadOnlyIntegerProperty;
-import javafx.beans.property.ReadOnlyIntegerWrapper;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.WeakChangeListener;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * The TreeView control provides a view on to a tree root (of type 
@@ -1089,6 +1091,43 @@ public class TreeView<T> extends Control {
 
     /***************************************************************************
      *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TREE_VIEW;
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case ROW_COUNT: return getExpandedItemCount();
+            case ROW_AT_INDEX: //Skin
+            case SELECTED_ROWS: //Skin
+            case VERTICAL_SCROLLBAR: //Skin
+            case HORIZONTAL_SCROLLBAR: // Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                int index = (int) parameters[0];
+                scrollTo(index);
+                break;
+            }
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
      * Support Interfaces                                                      *
      *                                                                         *
      **************************************************************************/
@@ -1533,22 +1572,6 @@ public class TreeView<T> extends Control {
             }
             
             super.focus(index);
-        }
-    }
-
-    /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TREE_VIEW;
-            case MULTIPLE_SELECTION: {
-                MultipleSelectionModel sm = getSelectionModel();
-                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
-            }
-            case ROW_COUNT: return getExpandedItemCount();
-            case ROW_AT_INDEX: //Skin
-            case SELECTED_ROWS: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
         }
     }
 }

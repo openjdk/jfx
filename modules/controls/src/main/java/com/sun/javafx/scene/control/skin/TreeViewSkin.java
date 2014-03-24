@@ -534,6 +534,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 }
                 return FXCollections.observableArrayList(selection);
             }
+            case VERTICAL_SCROLLBAR: return flow.getVbar();
+            case HORIZONTAL_SCROLLBAR: return flow.getHbar();
             default: return super.accGetAttribute(attribute, parameters);
         }
     }

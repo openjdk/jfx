@@ -76,6 +76,7 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import javafx.scene.layout.GridPane;
@@ -1858,7 +1859,74 @@ public class TreeTableView<S> extends Control {
         return new TreeTableViewSkin<S>(this);
     }
 
-    
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TREE_TABLE_VIEW;
+
+            case TREE_ITEM_COUNT:
+            case ROW_COUNT: return getExpandedItemCount();
+
+            // --- TableView-specific attributes
+            case COLUMN_COUNT: return getVisibleLeafColumns().size();
+            /*
+             * TreeTableViewSkin returns TreeTableRows back to TreeTableView.
+             * TreeTableRowSkin returns TreeTableCells back to TreeTableRow.
+             */
+            case SELECTED_CELLS: {
+                ObservableList<TreeTableRow<S>> rows = (ObservableList<TreeTableRow<S>>)super.accGetAttribute(attribute, parameters);
+                List<Node> selection = new ArrayList<>();
+                for (TreeTableRow<S> row : rows) {
+                    ObservableList<Node> cells = (ObservableList<Node>)row.accGetAttribute(attribute, parameters);
+                    if (cells != null) selection.addAll(cells);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            case FOCUS_ITEM:
+            case CELL_AT_ROWCOLUMN: {
+                TreeTableRow<S> row = (TreeTableRow<S>)super.accGetAttribute(attribute, parameters);
+                return row != null ? row.accGetAttribute(attribute, parameters) : null;
+            }
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case COLUMN_INDEX: //Skin
+            case HEADER: //Skin
+
+                // --- TreeView-specific attributes
+            case ROW_AT_INDEX: //Skin
+            case SELECTED_ROWS: //Skin
+            case TREE_ITEM_AT_INDEX: //Skin
+
+            case VERTICAL_SCROLLBAR: //Skin
+            case HORIZONTAL_SCROLLBAR: // Skin
+
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                int index = (int) parameters[0];
+                scrollTo(index);
+                break;
+            }
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -3272,51 +3340,6 @@ public class TreeTableView<S> extends Control {
             int columnIndex = treeTableView.getVisibleLeafIndex(column);
             int newColumnIndex = columnIndex + offset;
             return treeTableView.getVisibleLeafColumn(newColumnIndex);
-        }
-    }
-
-    /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TREE_TABLE_VIEW;
-
-            case TREE_ITEM_COUNT:
-            case ROW_COUNT: return getExpandedItemCount();
-
-            // --- TableView-specific attributes
-            case COLUMN_COUNT: return getVisibleLeafColumns().size();
-            /*
-             * TreeTableViewSkin returns TreeTableRows back to TreeTableView.
-             * TreeTableRowSkin returns TreeTableCells back to TreeTableRow.
-             */
-            case SELECTED_CELLS: {
-                ObservableList<TreeTableRow<S>> rows = (ObservableList<TreeTableRow<S>>)super.accGetAttribute(attribute, parameters);
-                List<Node> selection = new ArrayList<>();
-                for (TreeTableRow<S> row : rows) {
-                    ObservableList<Node> cells = (ObservableList<Node>)row.accGetAttribute(attribute, parameters);
-                    if (cells != null) selection.addAll(cells);
-                }
-                return FXCollections.observableArrayList(selection);
-            }
-            case FOCUS_ITEM:
-            case CELL_AT_ROWCOLUMN: {
-                TreeTableRow<S> row = (TreeTableRow<S>)super.accGetAttribute(attribute, parameters);
-                return row != null ? row.accGetAttribute(attribute, parameters) : null;
-            }
-            case MULTIPLE_SELECTION: {
-                MultipleSelectionModel sm = getSelectionModel();
-                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
-            }
-            case COLUMN_INDEX: //Skin
-            case HEADER: //Skin
-
-            // --- TreeView-specific attributes
-            case ROW_AT_INDEX: //Skin
-            case SELECTED_ROWS: //Skin
-            case TREE_ITEM_AT_INDEX: //Skin
-
-            default: return super.accGetAttribute(attribute, parameters);
         }
     }
 }

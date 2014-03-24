@@ -44,7 +44,8 @@ class GlassAccessible : public IRawElementProviderSimple,
                         public IToggleProvider,
                         public IExpandCollapseProvider,
                         public ITransformProvider,
-                        public IScrollProvider
+                        public IScrollProvider,
+                        public IScrollItemProvider
 {
 
 public:
@@ -157,6 +158,9 @@ public:
     IFACEMETHODIMP get_VerticallyScrollable(BOOL *pRetVal);
     IFACEMETHODIMP get_VerticalScrollPercent(double *pRetVal);
     IFACEMETHODIMP get_VerticalViewSize(double *pRetVal);
+
+    // IScrollItemProvider
+    IFACEMETHODIMP ScrollIntoView();
 
     static void copyVariant(JNIEnv *env, jobject jVariant, VARIANT* pRetVal);
 
