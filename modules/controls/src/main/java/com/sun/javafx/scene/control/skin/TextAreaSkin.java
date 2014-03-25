@@ -1312,21 +1312,30 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         }
     }
 
-    public void paragraphEnd(boolean nextIfAtEnd, boolean select) {
+    public void paragraphEnd(boolean goPastInitialNewline, boolean goPastTrailingNewline, boolean select) {
         TextArea textArea = getSkinnable();
         String text = textArea.textProperty().getValueSafe();
         int pos = textArea.getCaretPosition();
         int len = text.length();
+        boolean wentPastInitialNewline = false;
 
         if (pos < len) {
-            if (nextIfAtEnd && text.codePointAt(pos) == 0x0a) {
-                // We are at the end of a paragraph.
-                // Move to the next paragraph.
+            if (goPastInitialNewline && text.codePointAt(pos) == 0x0a) {
+                // We are at the end of a paragraph, start by moving to the
+                // next paragraph.
                 pos++;
+                wentPastInitialNewline = true;
             }
-            // Go to the end of this paragraph
-            while (pos < len && text.codePointAt(pos) != 0x0a) {
-                pos++;
+            if (!(goPastTrailingNewline && wentPastInitialNewline)) {
+                // Go to the end of this paragraph
+                while (pos < len && text.codePointAt(pos) != 0x0a) {
+                    pos++;
+                }
+                if (goPastTrailingNewline && pos < len) {
+                    // We are at the end of a paragraph, finish by moving to
+                    // the beginning of the next paragraph (Windows behavior).
+                    pos++;
+                }
             }
             if (select) {
                 textArea.selectPositionCaret(pos);
