@@ -693,17 +693,16 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         // made by the ellipsis "...", and then by checking the width of the
         // string made up by labeled.text. We want the smaller of the two.
         final Labeled labeled = getSkinnable();
+        final ContentDisplay contentDisplay = labeled.getContentDisplay();
+        final double gap = labeled.getGraphicTextGap();
+        double minTextWidth = 0;
+
         final Font font = text.getFont();
         OverrunStyle truncationStyle = labeled.getTextOverrun();
         String ellipsisString = labeled.getEllipsisString();
         final String string = labeled.getText();
         final boolean emptyText = string == null || string.isEmpty();
-        final ContentDisplay contentDisplay = labeled.getContentDisplay();
-        final double gap = labeled.getGraphicTextGap();
-        final double widthPadding = leftInset + leftLabelPadding() +
-                                    rightInset + rightLabelPadding();
 
-        double minTextWidth = 0;
         if (!emptyText) {
             // We only want to recompute the full text width if the font or text changed
             if (truncationStyle == CLIP) {
@@ -737,7 +736,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             width = Math.max(minTextWidth, graphic.minWidth(-1));
         }
 
-        return width + widthPadding;
+        return width + leftInset + leftLabelPadding() +
+                rightInset + rightLabelPadding();
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -768,9 +768,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             final Node graphic = labeled.getGraphic();
             if (labeled.getContentDisplay() == ContentDisplay.TOP
                 || labeled.getContentDisplay() == ContentDisplay.BOTTOM) {
-                h = graphic.minHeight(-1) + labeled.getGraphicTextGap() + textHeight;
+                h = graphic.minHeight(width) + labeled.getGraphicTextGap() + textHeight;
             } else {
-                h = Math.max(textHeight, graphic.minHeight(-1));
+                h = Math.max(textHeight, graphic.minHeight(width));
             }
         }
 
@@ -807,8 +807,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         final Font font = text.getFont();
         final ContentDisplay contentDisplay = labeled.getContentDisplay();
         final double gap = labeled.getGraphicTextGap();
-        double widthPadding = leftInset + leftLabelPadding() +
-                              rightInset + rightLabelPadding();
+        width -= leftInset + leftLabelPadding() +
+                rightInset + rightLabelPadding();
 
         String str = labeled.getText();
         if (str != null && str.endsWith("\n")) {
@@ -816,16 +816,15 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             str = str.substring(0, str.length() - 1);
         }
 
+        double textWidth = width;
         if (!isIgnoreGraphic() &&
             (contentDisplay == LEFT || contentDisplay == RIGHT)) {
-            width -= (graphic.prefWidth(-1) + gap);
+            textWidth -= (graphic.prefWidth(-1) + gap);
         }
-
-        width -= widthPadding;
 
         // TODO figure out how to cache this effectively.
         final double textHeight = Utils.computeTextHeight(font, str,
-                                                          labeled.isWrapText() ? width : 0,
+                                                          labeled.isWrapText() ? textWidth : 0,
                                                           labeled.getLineSpacing(), text.getBoundsType());
 
         // Now we want to add on the graphic if necessary!
@@ -833,9 +832,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         if (!isIgnoreGraphic()) {
             final Node graphic = labeled.getGraphic();
             if (contentDisplay == TOP || contentDisplay == BOTTOM) {
-                h = graphic.prefHeight(-1) + gap + textHeight;
+                h = graphic.prefHeight(width) + gap + textHeight;
             } else {
-                h = Math.max(textHeight, graphic.prefHeight(-1));
+                h = Math.max(textHeight, graphic.prefHeight(width));
             }
         }
 
