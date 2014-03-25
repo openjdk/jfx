@@ -73,10 +73,6 @@ public class SwingInteropApp extends Application {
 
     @Override
     public void stop() {
-        Process proc = service.procObj.getValue();
-        if (proc != null) {
-            proc.destroy();
-        }
         if (service.isRunning()) {
             service.cancel();
         }
