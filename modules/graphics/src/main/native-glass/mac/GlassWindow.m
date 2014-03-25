@@ -821,6 +821,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
 
         if (window->view != nil)
         {
+            CALayer *layer = [window->view layer];
+            if ([layer isKindOfClass:[CAOpenGLLayer class]] == YES)
+            {
+                [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
+            }
+            
             window->suppressWindowMoveEvent = YES; // RT-11215
             {
                 NSRect viewFrame = [window->view frame];
