@@ -31,8 +31,10 @@ import com.sun.glass.ui.monocle.linux.LinuxSystem;
 public class MX6AcceleratedScreen extends AcceleratedScreen {
 
     private long fbGetDisplayByIndexHandle, fbCreateWindowHandle;
+    private long cachedNativeDisplay = 0l;
 
-    private native long _platformGetNativeWindow(long methodHandle);
+    private native long _platformGetNativeWindow(long methodHandle,
+                                                 long display);
 
     private native long _platformGetNativeDisplay(long methodHandle);
 
@@ -43,12 +45,13 @@ public class MX6AcceleratedScreen extends AcceleratedScreen {
     @Override
     protected long platformGetNativeWindow() {
         fbCreateWindowHandle = ls.dlsym(getEGLHandle(), "fbCreateWindow");
-        return _platformGetNativeWindow(fbCreateWindowHandle);
+        return _platformGetNativeWindow(fbCreateWindowHandle, cachedNativeDisplay);
     }
 
     @Override
     protected long platformGetNativeDisplay() {
         fbGetDisplayByIndexHandle = ls.dlsym(getEGLHandle(), "fbGetDisplayByIndex");
-        return _platformGetNativeDisplay(fbGetDisplayByIndexHandle);
+        cachedNativeDisplay = _platformGetNativeDisplay(fbGetDisplayByIndexHandle);
+        return cachedNativeDisplay;
     }
 }

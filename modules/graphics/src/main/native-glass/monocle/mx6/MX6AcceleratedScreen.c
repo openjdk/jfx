@@ -31,10 +31,10 @@
 //Vivante specials
 static EGLNativeDisplayType (*wr_fbGetDisplayByIndex)(int DisplayIndex);
 static EGLNativeWindowType (*wr_fbCreateWindow)(EGLNativeDisplayType Display, int X, int Y, int Width, int Height);
-EGLNativeDisplayType cachedDisplay = NULL;
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen__1platformGetNativeDisplay
     (JNIEnv *env, jobject obj, jlong methodHandle) {
+    EGLNativeDisplayType cachedDisplay = NULL;
 
     if (cachedDisplay == NULL) {
         wr_fbGetDisplayByIndex = asPtr(methodHandle);
@@ -44,10 +44,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen__
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen__1platformGetNativeWindow
-    (JNIEnv *env, jobject obj, jlong methodHandle) {
+    (JNIEnv *env, jobject obj, jlong methodHandle, jlong nativeDisplay) {
     NativeWindowType retval;
 
     wr_fbCreateWindow = asPtr(methodHandle);
-    retval = wr_fbCreateWindow(cachedDisplay, 0, 0, 0, 0);
+    retval = wr_fbCreateWindow(asPtr(nativeDisplay), 0, 0, 0, 0);
     return asJLong(retval);
 }
