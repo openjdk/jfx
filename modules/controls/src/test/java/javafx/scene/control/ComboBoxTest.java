@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.PseudoClass;
 
@@ -1260,5 +1261,260 @@ public class ComboBoxTest {
         assertNull(cb.getValue());
         keyboard.doKeyPress(KeyCode.ENTER);
         assertEquals("TEST", cb.getValue());
+    }
+
+    @Test public void test_rt36280_nonEditable_F4ShowsPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_nonEditable_altUpShowsPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.UP, KeyModifier.ALT);  // show the popup
+        assertTrue(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_nonEditable_altDownShowsPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        new StageLoader(cb);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
+        assertTrue(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_nonEditable_enterHidesShowingPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        assertNotNull(listView);
+
+        KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+        lvKeyboard.doKeyPress(KeyCode.ENTER);  // hide the popup
+        assertFalse(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_nonEditable_spaceHidesShowingPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        assertNotNull(listView);
+
+        KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+        lvKeyboard.doKeyPress(KeyCode.SPACE);  // hide the popup
+        assertFalse(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_nonEditable_escapeHidesShowingPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        assertNotNull(listView);
+
+        KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+        lvKeyboard.doKeyPress(KeyCode.ESCAPE);  // hide the popup
+        assertFalse(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_nonEditable_F4HidesShowingPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // hide the popup
+        assertFalse(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_nonEditable_arrowKeysChangeSelection() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+
+        assertNull(cb.getSelectionModel().getSelectedItem());
+
+        cbKeyboard.doDownArrowPress();
+        assertEquals("a", cb.getSelectionModel().getSelectedItem());
+
+        cbKeyboard.doDownArrowPress();
+        assertEquals("b", cb.getSelectionModel().getSelectedItem());
+
+        cbKeyboard.doUpArrowPress();
+        assertEquals("a", cb.getSelectionModel().getSelectedItem());
+    }
+
+
+
+    @Test public void test_rt36280_editable_F4ShowsPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_editable_altUpShowsPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.UP, KeyModifier.ALT);  // show the popup
+        assertTrue(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_editable_altDownShowsPopup_onComboBox() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        assertFalse(cb.isShowing());
+        assertTrue(cb.getEditor().getText().isEmpty());
+        cbKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
+        assertTrue(cb.isShowing());
+        assertTrue(cb.getEditor().getText().isEmpty());
+    }
+
+    @Test public void test_rt36280_editable_altDownShowsPopup_onTextField() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        new StageLoader(cb);
+
+        KeyEventFirer tfKeyboard = new KeyEventFirer(cb.getEditor());
+        assertFalse(cb.isShowing());
+        assertTrue(cb.getEditor().getText().isEmpty());
+        tfKeyboard.doKeyPress(KeyCode.DOWN, KeyModifier.ALT);  // show the popup
+        assertTrue(cb.isShowing());
+        assertTrue(cb.getEditor().getText().isEmpty());
+    }
+
+    @Test public void test_rt36280_editable_enterHidesShowingPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        assertNotNull(listView);
+
+        KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+        lvKeyboard.doKeyPress(KeyCode.ENTER);  // hide the popup
+        assertFalse(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_editable_spaceHidesShowingPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        assertNotNull(listView);
+
+        KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+        lvKeyboard.doKeyPress(KeyCode.SPACE);  // hide the popup
+        assertFalse(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_editable_escapeHidesShowingPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        ListView listView = ((ComboBoxListViewSkin)cb.getSkin()).getListView();
+        assertNotNull(listView);
+
+        KeyEventFirer lvKeyboard = new KeyEventFirer(listView);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+        lvKeyboard.doKeyPress(KeyCode.ESCAPE);  // hide the popup
+        assertFalse(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_editable_F4HidesShowingPopup() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // hide the popup
+        assertFalse(cb.isShowing());
+    }
+
+    @Test public void test_rt36280_editable_arrowKeysChangeSelection() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        new StageLoader(cb);
+        KeyEventFirer cbKeyboard = new KeyEventFirer(cb);
+
+        assertFalse(cb.isShowing());
+        cbKeyboard.doKeyPress(KeyCode.F4);  // show the popup
+        assertTrue(cb.isShowing());
+
+        assertNull(cb.getSelectionModel().getSelectedItem());
+
+        cbKeyboard.doDownArrowPress();
+        assertEquals("a", cb.getSelectionModel().getSelectedItem());
+
+        cbKeyboard.doDownArrowPress();
+        assertEquals("b", cb.getSelectionModel().getSelectedItem());
+
+        cbKeyboard.doUpArrowPress();
+        assertEquals("a", cb.getSelectionModel().getSelectedItem());
     }
 }
