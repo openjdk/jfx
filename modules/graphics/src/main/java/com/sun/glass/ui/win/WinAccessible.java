@@ -388,17 +388,6 @@ final class WinAccessible extends PlatformAccessible {
         return node == null ? 0 : getAccessible(node);
     }
 
-    private Node getContainerNode(Role targetRole) {
-        Node node = (Node)getAttribute(PARENT);
-        while (node != null) {
-            Accessible acc = node.getAccessible();
-            Role role = (Role)acc.getAttribute(ROLE);
-            if (role == targetRole) return node;
-            node = (Node)acc.getAttribute(PARENT);
-        }
-        return null;
-    }
-
     private Node getContainerNode() {
         if (isDisposed()) return null;
         Role role = (Role) getAttribute(ROLE);
@@ -624,7 +613,6 @@ final class WinAccessible extends PlatformAccessible {
                          */
                     default:
                         name = (String)getAttribute(TITLE);
-                        break;
                 }
 
                 if (name == null || name.length() == 0) {
@@ -1036,7 +1024,6 @@ final class WinAccessible extends PlatformAccessible {
                 case SCROLL_BAR:
                 case TEXT_FIELD:
                 case TEXT_AREA: return false;
-                case PROGRESS_INDICATOR:
                 default:
             }
         }
@@ -1366,7 +1353,7 @@ final class WinAccessible extends PlatformAccessible {
         Role role = (Role)getAttribute(ROLE);
         switch (role) {
             case THUMB: return true;
-            default:return false;
+            default: return false;
         }
     }
 
@@ -1396,27 +1383,43 @@ final class WinAccessible extends PlatformAccessible {
 
         /* dealing with vertical scroll first */
         if (get_VerticallyScrollable()) {
-            Node vsb = (Node) getAttribute(VERTICAL_SCROLLBAR);
-            Accessible vsbAccessible = vsb.getAccessible();
+            Node vsb = (Node)getAttribute(VERTICAL_SCROLLBAR);
+            Accessible vsba = vsb.getAccessible();
             switch (verticalAmount) {
-                case ScrollAmount_LargeIncrement: vsbAccessible.executeAction(Action.BLOCK_INCREMENT); break;
-                case ScrollAmount_SmallIncrement: vsbAccessible.executeAction(Action.INCREMENT); break;
-                case ScrollAmount_LargeDecrement: vsbAccessible.executeAction(Action.BLOCK_DECREMENT); break;
-                case ScrollAmount_SmallDecrement: vsbAccessible.executeAction(Action.DECREMENT); break;
-                default: break;
+                case ScrollAmount_LargeIncrement:
+                    vsba.executeAction(Action.BLOCK_INCREMENT);
+                    break;
+                case ScrollAmount_SmallIncrement:
+                    vsba.executeAction(Action.INCREMENT);
+                    break;
+                case ScrollAmount_LargeDecrement:
+                    vsba.executeAction(Action.BLOCK_DECREMENT);
+                    break;
+                case ScrollAmount_SmallDecrement:
+                    vsba.executeAction(Action.DECREMENT);
+                    break;
+                default:
             }
         }
 
         /* now dealing with horizontal scroll */
         if (get_HorizontallyScrollable()) {
-            Node hsb = (Node) getAttribute(HORIZONTAL_SCROLLBAR);
-            Accessible hsbAccessible = hsb.getAccessible();
+            Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
+            Accessible hsba = hsb.getAccessible();
             switch (horizontalAmount) {
-                case ScrollAmount_LargeIncrement: hsbAccessible.executeAction(Action.BLOCK_INCREMENT); break;
-                case ScrollAmount_SmallIncrement: hsbAccessible.executeAction(Action.INCREMENT); break;
-                case ScrollAmount_LargeDecrement: hsbAccessible.executeAction(Action.BLOCK_DECREMENT); break;
-                case ScrollAmount_SmallDecrement: hsbAccessible.executeAction(Action.DECREMENT); break;
-                default: break;
+                case ScrollAmount_LargeIncrement:
+                    hsba.executeAction(Action.BLOCK_INCREMENT);
+                    break;
+                case ScrollAmount_SmallIncrement:
+                    hsba.executeAction(Action.INCREMENT);
+                    break;
+                case ScrollAmount_LargeDecrement:
+                    hsba.executeAction(Action.BLOCK_DECREMENT);
+                    break;
+                case ScrollAmount_SmallDecrement:
+                    hsba.executeAction(Action.DECREMENT);
+                    break;
+                default:
             }
         }
     }
@@ -1426,7 +1429,7 @@ final class WinAccessible extends PlatformAccessible {
 
         /* dealing with vertical scroll first */
         if (verticalPercent != UIA_ScrollPatternNoScroll && get_VerticallyScrollable()) {
-            Node vsb = (Node) getAttribute(VERTICAL_SCROLLBAR);
+            Node vsb = (Node)getAttribute(VERTICAL_SCROLLBAR);
             Double min = (Double)vsb.getAccessible().getAttribute(MIN_VALUE);
             Double max = (Double)vsb.getAccessible().getAttribute(MAX_VALUE);
             if (min != null && max != null) {
@@ -1436,7 +1439,7 @@ final class WinAccessible extends PlatformAccessible {
 
         /* now dealing with horizontal scroll */
         if (horizontalPercent != UIA_ScrollPatternNoScroll && get_HorizontallyScrollable()) {
-            Node hsb = (Node) getAttribute(HORIZONTAL_SCROLLBAR);
+            Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
             Double min = (Double)hsb.getAccessible().getAttribute(MIN_VALUE);
             Double max = (Double)hsb.getAccessible().getAttribute(MAX_VALUE);
             if (min != null && max != null) {
@@ -1448,8 +1451,8 @@ final class WinAccessible extends PlatformAccessible {
     boolean get_HorizontallyScrollable() {
         if (isDisposed()) return false;
 
-        Node hsb = (Node) getAttribute(HORIZONTAL_SCROLLBAR);
-        if(hsb == null) return false;
+        Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
+        if (hsb == null) return false;
 
         Boolean visible = (Boolean)hsb.getAccessible().getAttribute(VISIBLE);
         return Boolean.TRUE.equals(visible);
@@ -1458,7 +1461,7 @@ final class WinAccessible extends PlatformAccessible {
     double get_HorizontalScrollPercent() {
         if (isDisposed()) return 0;
 
-        if (! get_HorizontallyScrollable()) {
+        if (!get_HorizontallyScrollable()) {
             return UIA_ScrollPatternNoScroll;
         }
 
@@ -1494,7 +1497,7 @@ final class WinAccessible extends PlatformAccessible {
         if (isDisposed()) return false;
 
         Node vsb = (Node) getAttribute(VERTICAL_SCROLLBAR);
-        if(vsb == null) return false;
+        if (vsb == null) return false;
 
         Boolean visible = (Boolean)vsb.getAccessible().getAttribute(VISIBLE);
         return Boolean.TRUE.equals(visible);
@@ -1503,7 +1506,7 @@ final class WinAccessible extends PlatformAccessible {
     double get_VerticalScrollPercent() {
         if (isDisposed()) return 0;
 
-        if (! get_VerticallyScrollable()) {
+        if (!get_VerticallyScrollable()) {
             return UIA_ScrollPatternNoScroll;
         }
 
@@ -1531,7 +1534,7 @@ final class WinAccessible extends PlatformAccessible {
 
         Bounds scrollPaneBounds = (Bounds) getAttribute(BOUNDS);
         if (scrollPaneBounds == null) return 0;
-        final double scrollPaneHeight = scrollPaneBounds.getHeight();
+        double scrollPaneHeight = scrollPaneBounds.getHeight();
 
         Role role = (Role) getAttribute(ROLE);
         if (role == Role.SCROLL_PANE) {
@@ -1542,7 +1545,6 @@ final class WinAccessible extends PlatformAccessible {
             }
         } else {
             Integer itemCount = 0;
-
             switch (role) {
                 case LIST_VIEW:
                 case TABLE_VIEW:
@@ -1550,7 +1552,7 @@ final class WinAccessible extends PlatformAccessible {
                 case TREE_TABLE_VIEW:
                     itemCount = (Integer) getAttribute(ROW_COUNT);
                     break;
-                default: break;
+                default:
             }
 
             /*
@@ -1571,8 +1573,8 @@ final class WinAccessible extends PlatformAccessible {
     void ScrollIntoView() {
         if (isDisposed()) return;
 
-        final Integer cellIndex = (Integer) getAttribute(INDEX);
-        final Node container = getContainerNode();
+        Integer cellIndex = (Integer)getAttribute(INDEX);
+        Node container = getContainerNode();
         if (cellIndex != null && container != null) {
             container.getAccessible().executeAction(Action.SCROLL_TO_INDEX, cellIndex);
         }

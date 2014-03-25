@@ -25,7 +25,9 @@
 
 package com.sun.glass.ui;
 
+import static javafx.scene.accessibility.Attribute.PARENT;
 import static javafx.scene.accessibility.Attribute.ROLE;
+import javafx.scene.Node;
 import javafx.scene.accessibility.Accessible;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
@@ -65,6 +67,17 @@ public abstract class PlatformAccessible {
         Role role = (Role)getAttribute(ROLE);
         if (role == null) return true;
         return role == Role.NODE || role == Role.PARENT;
+    }
+
+    protected Node getContainerNode(Role targetRole) {
+        Node node = (Node)getAttribute(PARENT);
+        while (node != null) {
+            Accessible acc = node.getAccessible();
+            Role role = (Role)acc.getAttribute(ROLE);
+            if (role == targetRole) return node;
+            node = (Node)acc.getAttribute(PARENT);
+        }
+        return null;
     }
 
     protected Object getAttribute(Attribute attribute, Object... parameters) {

@@ -602,16 +602,6 @@ final class MacAccessible extends PlatformAccessible {
         super.dispose();
     }
 
-    private long getContainer(Node node, Role targetRole) {
-        while (node != null) {
-            Accessible acc = node.getAccessible();
-            Role role = (Role)acc.getAttribute(ROLE);
-            if (role == targetRole) return getAccessible(node);
-            node = (Node)acc.getAttribute(PARENT);
-        }
-        return 0;
-    }
-
     @Override
     public void sendNotification(Attribute notification) {
         MacNotifications macNotification;
@@ -648,7 +638,7 @@ final class MacAccessible extends PlatformAccessible {
                 }
 
                 if (getAttribute(ROLE) == Role.TREE_ITEM) {
-                    long treeView = getContainer((Node)getAttribute(PARENT), Role.TREE_VIEW);
+                    long treeView = getAccessible(getContainerNode(Role.TREE_VIEW));
                     if (treeView != 0) {
                         NSAccessibilityPostNotification(treeView, MacNotifications.NSAccessibilityRowCountChangedNotification.ptr);
                     }
