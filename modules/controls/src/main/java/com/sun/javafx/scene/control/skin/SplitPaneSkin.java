@@ -1096,7 +1096,6 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             setClip(clipRect);
             this.content = n;
             if (n != null) {
-                this.setId(n.getId());
                 getChildren().add(n);
             }
             this.x = 0;

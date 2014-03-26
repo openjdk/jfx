@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.css.CssMetaData;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
@@ -39,7 +40,9 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import static org.junit.Assert.*;
 
@@ -1302,5 +1305,25 @@ public class SplitPaneTest {
         double pos[] = sp.getDividerPositions();
         double p0 = convertDividerPostionToAbsolutePostion(pos[0], 398);
         assertEquals(196, p0, 1e-100);        
-    }    
+    }
+
+    @Test public void test_rt_36392() {
+        AnchorPane item0 = new AnchorPane();
+        item0.setId("xxx");
+
+        VBox item1 = new VBox();
+        item1.setId("myvbox");
+
+        SplitPane splitPane = new SplitPane();
+        splitPane.getItems().addAll(item0, item1);
+
+        AnchorPane page = new AnchorPane();
+        page.setId("AnchorPane");
+        page.getChildren().add(splitPane);
+
+        new StageLoader(page);
+
+        VBox myvbox = (VBox) page.lookup("#myvbox");
+        myvbox.getChildren().add(new Button("Hello world !!!"));
+    }
 }
