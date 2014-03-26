@@ -252,9 +252,9 @@ public class Pagination extends Control {
                 } else if (getCurrentPageIndex() > getPageCount() - 1) {
                     setCurrentPageIndex(getPageCount() - 1);
                 }
-
-                accSendNotification(Attribute.SELECTED_PAGE);
             }
+
+            accSendNotification(Attribute.SELECTED_PAGE);
         }
 
         @Override
@@ -377,9 +377,15 @@ public class Pagination extends Control {
         return getClassCssMetaData();
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.PAGINATION;
             case PAGES: // Skin

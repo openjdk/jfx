@@ -602,7 +602,32 @@ public class TabPane extends Control {
     private static final PseudoClass LEFT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("left");
     private static final PseudoClass RIGHT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("right");
 
-    
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TAB_PANE;
+            case TABS: //Skin
+            case SELECTED_TAB: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Support classes                                                         *
+     *                                                                         *
+     **************************************************************************/
+
     static class TabPaneSelectionModel extends SingleSelectionModel<Tab> {
         private final TabPane tabPane;
 
@@ -743,16 +768,5 @@ public class TabPane extends Control {
          * Tabs can not be closed by the user.
          */
         UNAVAILABLE
-    }
-
-    /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TAB_PANE;
-            case TABS: //Skin 
-            case SELECTED_TAB: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
-        }
     }
 }

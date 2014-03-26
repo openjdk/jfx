@@ -450,11 +450,13 @@ yearSpinner.setFillHeight(false);
         Chronology chrono = getPrimaryChronology();
         int firstOfMonthIdx = determineFirstOfMonthDayOfWeek();
         YearMonth curMonth = displayedYearMonth.get();
-        YearMonth prevMonth = curMonth.minusMonths(1);
-        YearMonth nextMonth = curMonth.plusMonths(1);
-        int daysInCurMonth = determineDaysInMonth(curMonth);
-        int daysInPrevMonth = determineDaysInMonth(prevMonth);
-        int daysInNextMonth = determineDaysInMonth(nextMonth);
+
+        // RT-31075: The following are now set in the try-catch block.
+        YearMonth prevMonth = null;
+        YearMonth nextMonth = null;
+        int daysInCurMonth = -1;
+        int daysInPrevMonth = -1;
+        int daysInNextMonth = -1;
 
         for (int i = 0; i < 6 * daysPerWeek; i++) {
             DateCell dayCell = dayCells.get(i);
@@ -465,14 +467,25 @@ yearSpinner.setFillHeight(false);
             dayCell.setTooltip(null);
 
             try {
+                if (daysInCurMonth == -1) {
+                    daysInCurMonth = curMonth.lengthOfMonth();
+                }
                 YearMonth month = curMonth;
                 int day = i - firstOfMonthIdx + 1;
                 //int index = firstOfMonthIdx + i - 1;
                 if (i < firstOfMonthIdx) {
+                    if (prevMonth == null) {
+                        prevMonth = curMonth.minusMonths(1);
+                        daysInPrevMonth = prevMonth.lengthOfMonth();
+                    }
                     month = prevMonth;
                     day = i + daysInPrevMonth - firstOfMonthIdx + 1;
                     dayCell.getStyleClass().add("previous-month");
                 } else if (i >= firstOfMonthIdx + daysInCurMonth) {
+                    if (nextMonth == null) {
+                        nextMonth = curMonth.plusMonths(1);
+                        daysInNextMonth = nextMonth.lengthOfMonth();
+                    }
                     month = nextMonth;
                     day = i - daysInCurMonth - firstOfMonthIdx + 1;
                     dayCell.getStyleClass().add("next-month");
@@ -549,10 +562,10 @@ yearSpinner.setFillHeight(false);
 
         Chronology chrono = datePicker.getChronology();
         LocalDate firstDayOfMonth = yearMonth.atDay(1);
-        backMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth.minusDays(1)));
-        forwardMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth.plusMonths(1)));
-        backYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth.minusYears(1)));
-        forwardYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth.plusYears(1)));
+        backMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth, -1, DAYS));
+        forwardMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth, +1, MONTHS));
+        backYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth, -1, YEARS));
+        forwardYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth, +1, YEARS));
     }
 
     private String formatMonth(YearMonth yearMonth) {
@@ -631,10 +644,6 @@ yearSpinner.setFillHeight(false);
             firstOfMonthIdx += daysPerWeek;
         }
         return firstOfMonthIdx;
-    }
-
-    private int determineDaysInMonth(YearMonth month) {
-        return month.atDay(1).plusMonths(1).minusDays(1).getDayOfMonth();
     }
 
     private boolean isToday(LocalDate localDate) {
@@ -755,6 +764,16 @@ yearSpinner.setFillHeight(false);
      */
     protected Chronology getPrimaryChronology() {
         return datePicker.getChronology();
+    }
+
+    protected boolean isValidDate(Chronology chrono, LocalDate date, int offset, ChronoUnit unit) {
+        if (date != null) {
+            try {
+                return isValidDate(chrono, date.plus(offset, unit));
+            } catch (DateTimeException ex) {
+            }
+        }
+        return false;
     }
 
     protected boolean isValidDate(Chronology chrono, LocalDate date) {

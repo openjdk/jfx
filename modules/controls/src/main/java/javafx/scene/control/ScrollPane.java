@@ -596,21 +596,6 @@ public class ScrollPane extends Control {
     private static final String DEFAULT_STYLE_CLASS = "scroll-pane";
 
     /**
-     * Pseudoclass indicating the fitToWidth property is {@code true}
-     */
-    private static final String PSEUDO_CLASS_FIT_TO_WIDTH = "fitToWidth";
-
-    /**
-     * Pseudoclass indicating the fitToHeight property is {@code true}
-     */
-    private static final String PSEUDO_CLASS_FIT_TO_HEIGHT = "fitToHeight";
-
-    /**
-     * Pseudoclass indicating the pannable property is {@code true}
-     */
-    private static final String PSEUDO_CLASS_PANNABLE = "pannable";
-
-    /**
      * @treatAsPrivate
      */
     private static class StyleableProperties {
@@ -740,7 +725,32 @@ public class ScrollPane extends Control {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
     }
-    
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.SCROLL_PANE;
+            case CONTENTS: return getContent();
+            case VERTICAL_SCROLLBAR: //Skin
+            case HORIZONTAL_SCROLLBAR: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Support classes                                                         *
+     *                                                                         *
+     **************************************************************************/
+
     /**
      * An enumeration denoting the policy to be used by a scrollable
      * Control in deciding whether to show a scroll bar.
@@ -761,15 +771,6 @@ public class ScrollPane extends Control {
         AS_NEEDED
     }
 
-    /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.SCROLL_PANE;
-            case CONTENTS: return getContent();
-            case VERTICAL_SCROLLBAR: //Skin
-            case HORIZONTAL_SCROLLBAR: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+
+
 }

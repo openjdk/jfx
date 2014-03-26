@@ -903,9 +903,15 @@ public abstract class Control extends Region implements Skinnable {
         return Boolean.TRUE;
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case TOOLTIP:
                 Tooltip tooltip = getTooltip();

@@ -648,8 +648,6 @@ public class Slider extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "slider";
-    private static final String PSEUDO_CLASS_VERTICAL = "vertical";
-    private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
         private static final CssMetaData<Slider,Number> BLOCK_INCREMENT =
@@ -805,9 +803,16 @@ public class Slider extends Control {
     private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("horizontal");
 
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.SLIDER;
             case VALUE: return getValue();
@@ -819,8 +824,7 @@ public class Slider extends Control {
     }
 
     /** @treatAsPrivate */
-    @Override
-    public void accExecuteAction(Action action, Object... parameters) {
+    @Override public void accExecuteAction(Action action, Object... parameters) {
         switch (action) {
             case INCREMENT: increment(); break;
             case DECREMENT: decrement(); break;
@@ -832,5 +836,4 @@ public class Slider extends Control {
             default: super.accExecuteAction(action, parameters);
         }
     }
-
 }

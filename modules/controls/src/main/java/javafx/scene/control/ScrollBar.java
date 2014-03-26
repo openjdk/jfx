@@ -25,27 +25,27 @@
 
 package javafx.scene.control;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import com.sun.javafx.Utils;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.skin.ScrollBarSkin;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 
-import com.sun.javafx.Utils;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.skin.ScrollBarSkin;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 /**
@@ -347,6 +347,14 @@ public class ScrollBar extends Control {
         setValue(Utils.clamp(getMin(), getValue() - getUnitIncrement(), getMax()));
     }
 
+    private void blockIncrement() {
+        adjustValue(getValue() + getBlockIncrement());
+    }
+
+    private void blockDecrement() {
+        adjustValue(getValue() - getBlockIncrement());
+    }
+
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new ScrollBarSkin(this);
@@ -474,6 +482,14 @@ public class ScrollBar extends Control {
         return Boolean.FALSE;
     }
 
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
@@ -491,6 +507,8 @@ public class ScrollBar extends Control {
         switch (action) {
             case INCREMENT: increment(); break;
             case DECREMENT: decrement(); break;
+            case BLOCK_INCREMENT: blockIncrement(); break;
+            case BLOCK_DECREMENT: blockDecrement(); break;
             case SET_VALUE: {
                 Double value = (Double) parameters[0];
                 if (value != null) setValue(value);

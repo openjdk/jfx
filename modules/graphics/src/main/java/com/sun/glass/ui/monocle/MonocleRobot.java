@@ -181,8 +181,8 @@ public class MonocleRobot extends Robot {
             IntBuffer selection = IntBuffer.allocate(width * height);
             for (int i = 0; i < height; i++) {
                 int srcPos = x + (y + i) * screen.getWidth();
-                buffer.position(srcPos);
                 buffer.limit(srcPos + width);
+                buffer.position(srcPos);
                 selection.put(buffer);
             }
             selection.clear();

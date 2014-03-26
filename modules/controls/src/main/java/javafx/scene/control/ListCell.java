@@ -25,7 +25,9 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.ListCellSkin;
+import java.lang.ref.WeakReference;
+import java.util.List;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -37,16 +39,11 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 
-import java.lang.ref.WeakReference;
-import java.util.List;
-
+import com.sun.javafx.scene.control.skin.ListCellSkin;
 
 /**
  * <p>The {@link Cell} type used within {@link ListView} instances. In addition 
@@ -547,9 +544,16 @@ public class ListCell<T> extends IndexedCell<T> {
 
     private static final String DEFAULT_STYLE_CLASS = "list-cell";
 
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.LIST_ITEM;
             case TITLE: {
@@ -573,8 +577,7 @@ public class ListCell<T> extends IndexedCell<T> {
     }
 
     /** @treatAsPrivate */
-    @Override
-    public void accExecuteAction(Action action, Object... parameters) {
+    @Override public void accExecuteAction(Action action, Object... parameters) {
         final ListView<T> listView = getListView();
         final MultipleSelectionModel<T> sm = listView == null ? null : listView.getSelectionModel();
         switch (action) {

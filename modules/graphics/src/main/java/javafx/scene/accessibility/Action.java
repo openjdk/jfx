@@ -38,14 +38,34 @@ public enum Action {
      */
     ADD_TO_SELECTION,
 
+    /**
+     * Decrements the node (if it support BLOCK_DECREMENT) by its larger block decrement
+     * value. A smaller decrement can be performed by using {@link #DECREMENT}.
+     */
+    BLOCK_DECREMENT,
+
+    /**
+     * Increments the node (if it support BLOCK_INCREMENT) by its larger block increment
+     * value. A smaller increment can be performed by using {@link #INCREMENT}.
+     */
+    BLOCK_INCREMENT,
+
     COLLAPSE,
 
+    /**
+     * Decrements the node (if it support DECREMENT) by its smaller unit decrement
+     * value. A larger decrement can be performed by using {@link #BLOCK_DECREMENT}.
+     */
     DECREMENT,
 
     EXPAND,
 
     FIRE,
 
+    /**
+     * Increments the node (if it support INCREMENT) by its smaller unit increment
+     * value. A larger increment can be performed by using {@link #BLOCK_INCREMENT}.
+     */
     INCREMENT,
 
     /**
@@ -58,6 +78,13 @@ public enum Action {
      * Deselects the node whilst retaining all other selection in the container.
      */
     REMOVE_FROM_SELECTION,
+
+    /**
+     * Requests that the given integer index is shown, if possible, by the
+     * container (e.g. ListView).
+     * Parameter: Integer
+     */
+    SCROLL_TO_INDEX,
 
     /**
      * Selects the node, clearing out all other selection in the container.

@@ -237,9 +237,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             else if ("SelectNextLine".equals(name)) skin.nextLine(true);
 
             else if ("ParagraphStart".equals(name)) skin.paragraphStart(true, false);
-            else if ("ParagraphEnd".equals(name)) skin.paragraphEnd(true, false);
+            else if ("ParagraphEnd".equals(name)) skin.paragraphEnd(true, isWindows(), false);
             else if ("SelectParagraphStart".equals(name)) skin.paragraphStart(true, true);
-            else if ("SelectParagraphEnd".equals(name)) skin.paragraphEnd(true, true);
+            else if ("SelectParagraphEnd".equals(name)) skin.paragraphEnd(true, isWindows(), true);
 
             else if ("PreviousPage".equals(name)) skin.previousPage(false);
             else if ("NextPage".equals(name)) skin.nextPage(false);
@@ -499,7 +499,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     protected void mouseTripleClick(HitInfo hit) {
         // select the line
         skin.paragraphStart(false, false);
-        skin.paragraphEnd(false, true);
+        skin.paragraphEnd(false, isWindows(), true);
     }
 
     //    public function mouseWheelMove(e:MouseEvent):Void {

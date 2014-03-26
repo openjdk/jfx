@@ -112,6 +112,8 @@ static jmethodID mid_get_VerticallyScrollable;
 static jmethodID mid_get_VerticalScrollPercent;
 static jmethodID mid_get_VerticalViewSize;
 
+static jmethodID mid_ScrollIntoView;
+
 /* Variant Field IDs */
 static jfieldID fid_vt;
 static jfieldID fid_iVal;
@@ -307,6 +309,8 @@ IFACEMETHODIMP GlassAccessible::QueryInterface(REFIID riid, void** ppInterface)
         *ppInterface = static_cast<ITransformProvider*>(this);
     } else if (riid == __uuidof(IScrollProvider)) {
         *ppInterface = static_cast<IScrollProvider*>(this);
+    } else if (riid == __uuidof(IScrollItemProvider)) {
+        *ppInterface = static_cast<IScrollItemProvider*>(this);
     } else {
         *ppInterface = NULL;
         return E_NOINTERFACE;
@@ -930,6 +934,17 @@ IFACEMETHODIMP GlassAccessible::get_VerticalViewSize(double *pRetVal)
     return S_OK;
 }
 
+ /***********************************************/
+/*         IScrollItemProvider                 */
+/***********************************************/
+IFACEMETHODIMP GlassAccessible::ScrollIntoView()
+{
+    JNIEnv* env = GetEnv();
+    env->CallVoidMethod(m_jAccessible, mid_ScrollIntoView);
+    CheckAndClearException(env);
+    return S_OK;
+}
+
 /***********************************************/
 /*                  JNI                        */
 /***********************************************/
@@ -1106,6 +1121,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinAccessible__1initIDs
     mid_get_VerticalScrollPercent = env->GetMethodID(jClass, "get_VerticalScrollPercent", "()D");
     if (env->ExceptionCheck()) return;
     mid_get_VerticalViewSize = env->GetMethodID(jClass, "get_VerticalViewSize", "()D");
+    if (env->ExceptionCheck()) return;
+    
+    /* IScrollItemProvider */
+    mid_ScrollIntoView = env->GetMethodID(jClass, "ScrollIntoView", "()V");
     if (env->ExceptionCheck()) return;
 
     /* Variant */

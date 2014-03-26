@@ -755,6 +755,13 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         }
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
     protected Object accGetAttribute(Attribute attribute, Object... parameters) {
         return null;

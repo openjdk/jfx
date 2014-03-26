@@ -460,7 +460,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
-        return new TreeCellSkin(this);
+        return new TreeCellSkin<T>(this);
     }
 
     /***************************************************************************
@@ -640,9 +640,15 @@ public class TreeCell<T> extends IndexedCell<T> {
     private static final PseudoClass EXPANDED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("expanded");
     private static final PseudoClass COLLAPSED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("collapsed");
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         TreeItem<T> treeItem = getTreeItem();
         TreeView<T> treeView = getTreeView();
         switch (attribute) {
@@ -682,8 +688,7 @@ public class TreeCell<T> extends IndexedCell<T> {
     }
 
     /** @treatAsPrivate */
-    @Override
-    public void accExecuteAction(Action action, Object... parameters) {
+    @Override public void accExecuteAction(Action action, Object... parameters) {
         final TreeView<T> treeView = getTreeView();
         final TreeItem<T> treeItem = getTreeItem();
         final MultipleSelectionModel<TreeItem<T>> sm = treeView == null ? null : treeView.getSelectionModel();

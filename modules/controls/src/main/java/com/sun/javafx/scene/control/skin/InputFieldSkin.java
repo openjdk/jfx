@@ -90,6 +90,7 @@ abstract class InputFieldSkin implements Skin<InputField> {
         };
 
         textField.setId("input-text-field");
+        textField.setFocusTraversable(false);
         control.getStyleClass().addAll(textField.getStyleClass());
         textField.getStyleClass().setAll(control.getStyleClass());
         control.getStyleClass().addListener(InputFieldStyleClassListener = new InvalidationListener() {

@@ -981,6 +981,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
                  * look for column headers */
                 return getTableHeaderRow();
             }
+            case VERTICAL_SCROLLBAR: return flow.getVbar();
+            case HORIZONTAL_SCROLLBAR: return flow.getHbar();
             default: return super.accGetAttribute(attribute, parameters);
         }
     }

@@ -25,9 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.geometry.Bounds;
-import javafx.scene.control.ColorPicker;
-import java.util.List;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -35,10 +32,18 @@ import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
-import javafx.scene.control.*;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.PopupControl;
+import javafx.scene.control.Separator;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -50,6 +55,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
 import javafx.stage.WindowEvent;
+
+import java.util.List;
 
 import static com.sun.javafx.scene.control.skin.ColorPickerSkin.getString;
 
@@ -236,6 +243,7 @@ public class ColorPalette extends Region {
                         } else {
                             processLeftKey(ke);
                         }
+                        ke.consume();
                         break;
                     case RIGHT:
                         if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
@@ -243,15 +251,20 @@ public class ColorPalette extends Region {
                         } else {
                             processRightKey(ke);
                         }
+                        ke.consume();
                         break;
                     case UP:
                         processUpKey(ke);
+                        ke.consume();
                         break;
                     case DOWN:
                         processDownKey(ke);
+                        ke.consume();
                         break;
+                    case SPACE:
                     case ENTER:
                         processSelectKey(ke);
+                        ke.consume();
                         break;
                     default: // no-op
                 }

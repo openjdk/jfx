@@ -112,6 +112,7 @@ final class WinAccessible extends PlatformAccessible {
     private static final int UIA_TextPatternId                   = 10014;
     private static final int UIA_TogglePatternId                 = 10015;
     private static final int UIA_TransformPatternId              = 10016;
+    private static final int UIA_ScrollItemPatternId             = 10017;
     private static final int UIA_ItemContainerPatternId          = 10019;
 
     /* UIA_ControlTypeIds */
@@ -124,6 +125,7 @@ final class WinAccessible extends PlatformAccessible {
     private static final int UIA_ListControlTypeId               = 50008;
     private static final int UIA_ProgressBarControlTypeId        = 50012;
     private static final int UIA_RadioButtonControlTypeId        = 50013;
+    private static final int UIA_ScrollBarControlTypeId          = 50014;
     private static final int UIA_SliderControlTypeId             = 50015;
     private static final int UIA_TabControlTypeId                = 50018;
     private static final int UIA_TabItemControlTypeId            = 50019;
@@ -163,7 +165,7 @@ final class WinAccessible extends PlatformAccessible {
     private static final int SupportedTextSelection_Multiple     = 2;
 
     /* ExpandCollapseState */
-    private static final int ExpandCollapseState_Collapsed          = 0; 
+    private static final int ExpandCollapseState_Collapsed          = 0;
     private static final int ExpandCollapseState_Expanded           = 1;
     private static final int ExpandCollapseState_PartiallyExpanded  = 2;
     private static final int ExpandCollapseState_LeafNode           = 3;
@@ -174,6 +176,9 @@ final class WinAccessible extends PlatformAccessible {
     private static final int ScrollAmount_NoAmount              = 2;
     private static final int ScrollAmount_LargeIncrement        = 3;
     private static final int ScrollAmount_SmallIncrement        = 4;
+
+    /* Scroll */
+    private static final int UIA_ScrollPatternNoScroll          = -1;
 
     /* Other constants */
     private static final int UiaAppendRuntimeId                  = 3;
@@ -192,8 +197,8 @@ final class WinAccessible extends PlatformAccessible {
     /* Releases the GlassAccessible and deletes the GlobalRef */
     private native void _destroyGlassAccessible(long accessible);
 
-    private native static long UiaRaiseAutomationEvent(long pProvider, int id); 
-    private native static long UiaRaiseAutomationPropertyChangedEvent(long pProvider, int id, WinVariant oldV, WinVariant newV); 
+    private native static long UiaRaiseAutomationEvent(long pProvider, int id);
+    private native static long UiaRaiseAutomationPropertyChangedEvent(long pProvider, int id, WinVariant oldV, WinVariant newV);
 
     private WinAccessible(Accessible accessible) {
         super(accessible);
@@ -347,7 +352,7 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             }
             case EXPANDED: {
-                Boolean expanded = (Boolean)getAttribute(EXPANDED); 
+                Boolean expanded = (Boolean)getAttribute(EXPANDED);
                 if (expanded != null) {
                     WinVariant vo = new WinVariant();
                     vo.vt = WinVariant.VT_I4;
@@ -379,22 +384,37 @@ final class WinAccessible extends PlatformAccessible {
     }
 
     private long getContainer(Role targetRole) {
-        Node node = (Node)getAttribute(PARENT);
-        while (node != null) {
-            Accessible acc = node.getAccessible();
-            Role role = (Role)acc.getAttribute(ROLE);
-            if (role == targetRole) return getAccessible(node);
-            node = (Node)acc.getAttribute(PARENT);
+        Node node = getContainerNode(targetRole);
+        return node == null ? 0 : getAccessible(node);
+    }
+
+    private Node getContainerNode() {
+        if (isDisposed()) return null;
+        Role role = (Role) getAttribute(ROLE);
+        if (role != null) {
+            switch(role) {
+                case TABLE_ROW:
+                case TABLE_CELL: return getContainerNode(Role.TABLE_VIEW);
+                case LIST_ITEM: return getContainerNode(Role.LIST_VIEW);
+                case TAB_ITEM: return getContainerNode(Role.TAB_PANE);
+                case PAGE: return getContainerNode(Role.PAGINATION);
+                case TREE_ITEM: return getContainerNode(Role.TREE_VIEW);
+                case TREE_TABLE_ITEM: return getContainerNode(Role.TREE_TABLE_VIEW);
+                case TREE_TABLE_CELL: return getContainerNode(Role.TREE_TABLE_VIEW);
+                default:
+            }
         }
-        return 0;
-    } 
+        return null;
+    }
 
     private int getControlType() {
         Role role = (Role)getAttribute(ROLE);
         if (role == null) return UIA_GroupControlTypeId;
         switch (role) {
-            case BUTTON: return UIA_ButtonControlTypeId;
-            case TOGGLE_BUTTON: return UIA_ButtonControlTypeId;
+            case BUTTON:
+            case TOGGLE_BUTTON:
+            case INCREMENT_BUTTON:
+            case DECREMENT_BUTTON: return UIA_ButtonControlTypeId;
             case PAGINATION:
             case TAB_PANE: return UIA_TabControlTypeId;
             case PAGE:
@@ -424,6 +444,7 @@ final class WinAccessible extends PlatformAccessible {
             case ACCORDION:
             case TITLED_PANE:
             case SCROLL_PANE: return UIA_PaneControlTypeId;
+            case SCROLL_BAR: return UIA_ScrollBarControlTypeId;
             case THUMB: return UIA_ThumbControlTypeId;
             default: return 0;
         }
@@ -438,11 +459,13 @@ final class WinAccessible extends PlatformAccessible {
         boolean impl = false;
         switch (role) {
             case HYPERLINK:
-            case BUTTON: 
+            case BUTTON:
+            case INCREMENT_BUTTON:
+            case DECREMENT_BUTTON:
                 impl = patternId == UIA_InvokePatternId;
                 break;
             case PAGE:
-            case TAB_ITEM: 
+            case TAB_ITEM:
                 impl = patternId == UIA_SelectionItemPatternId;
                 break;
             case PAGINATION:
@@ -456,34 +479,41 @@ final class WinAccessible extends PlatformAccessible {
             case TABLE_VIEW:
                 impl = patternId == UIA_SelectionPatternId ||
                        patternId == UIA_GridPatternId ||
-                       patternId == UIA_TablePatternId;
+                       patternId == UIA_TablePatternId ||
+                       patternId == UIA_ScrollPatternId;
                 break;
             case TREE_VIEW:
-                impl = patternId == UIA_SelectionPatternId;
+                impl = patternId == UIA_SelectionPatternId ||
+                       patternId == UIA_ScrollPatternId;
                 break;
             case LIST_VIEW:
                 impl = patternId == UIA_SelectionPatternId ||
-                       patternId == UIA_GridPatternId;
+                       patternId == UIA_GridPatternId ||
+                       patternId == UIA_ScrollPatternId;
                 break;
             case TREE_TABLE_CELL:
             case TABLE_CELL:
                 impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_GridItemPatternId ||
-                       patternId == UIA_TableItemPatternId;
+                       patternId == UIA_TableItemPatternId ||
+                       patternId == UIA_ScrollItemPatternId;
                 break;
             case LIST_ITEM:
                 impl = patternId == UIA_SelectionItemPatternId ||
-                       patternId == UIA_GridItemPatternId;
+                       patternId == UIA_GridItemPatternId ||
+                       patternId == UIA_ScrollItemPatternId;
                 break;
             case TREE_ITEM:
                 impl = patternId == UIA_SelectionItemPatternId ||
-                       patternId == UIA_ExpandCollapsePatternId;
+                       patternId == UIA_ExpandCollapsePatternId ||
+                       patternId == UIA_ScrollItemPatternId;
                 break;
             case TREE_TABLE_ITEM:
                 impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_ExpandCollapsePatternId ||
                        patternId == UIA_GridItemPatternId ||
-                       patternId == UIA_TableItemPatternId;
+                       patternId == UIA_TableItemPatternId ||
+                       patternId == UIA_ScrollItemPatternId;
                 break;
 
             /* 
@@ -508,7 +538,7 @@ final class WinAccessible extends PlatformAccessible {
             case RADIO_BUTTON:
                 impl = patternId == UIA_SelectionItemPatternId;
                 break;
-            case CHECKBOX: 
+            case CHECKBOX:
                 impl = patternId == UIA_TogglePatternId;
                 break;
             case TOGGLE_BUTTON:
@@ -583,7 +613,6 @@ final class WinAccessible extends PlatformAccessible {
                          */
                     default:
                         name = (String)getAttribute(TITLE);
-                        break;
                 }
 
                 if (name == null || name.length() == 0) {
@@ -737,7 +766,7 @@ final class WinAccessible extends PlatformAccessible {
             case NavigateDirection_Parent: {
                 /* Return null for the top level node */
                 if (getView() != null) return 0L;
-    
+
                 if (treeCell) {
                     node = (Node)getAttribute(TREE_ITEM_PARENT);
                     if (node == null) {
@@ -995,7 +1024,6 @@ final class WinAccessible extends PlatformAccessible {
                 case SCROLL_BAR:
                 case TEXT_FIELD:
                 case TEXT_AREA: return false;
-                case PROGRESS_INDICATOR:
                 default:
             }
         }
@@ -1057,6 +1085,8 @@ final class WinAccessible extends PlatformAccessible {
                 case RADIO_BUTTON:
                 case BUTTON:
                 case TOGGLE_BUTTON:
+                case INCREMENT_BUTTON:
+                case DECREMENT_BUTTON:
                     executeAction(Action.FIRE);
                     break;
                 default:
@@ -1081,22 +1111,8 @@ final class WinAccessible extends PlatformAccessible {
     }
 
     long get_SelectionContainer() {
-        if (isDisposed()) return 0;
-        Role role = (Role) getAttribute(ROLE);
-        if (role != null) {
-            switch(role) {
-                case TABLE_ROW:
-                case TABLE_CELL: return getContainer(Role.TABLE_VIEW);
-                case LIST_ITEM: return getContainer(Role.LIST_VIEW);
-                case TAB_ITEM: return getContainer(Role.TAB_PANE);
-                case PAGE: return getContainer(Role.PAGINATION);
-                case TREE_ITEM: return getContainer(Role.TREE_VIEW);
-                case TREE_TABLE_ITEM: return getContainer(Role.TREE_TABLE_VIEW);
-                case TREE_TABLE_CELL: return getContainer(Role.TREE_TABLE_VIEW);
-                default:
-            }
-        }
-        return 0;
+        Node node = getContainerNode();
+        return node == null ? 0 : getAccessible(node);
     }
 
     /***********************************************/
@@ -1337,7 +1353,7 @@ final class WinAccessible extends PlatformAccessible {
         Role role = (Role)getAttribute(ROLE);
         switch (role) {
             case THUMB: return true;
-            default:return false;
+            default: return false;
         }
     }
 
@@ -1364,39 +1380,203 @@ final class WinAccessible extends PlatformAccessible {
     /***********************************************/
     void Scroll(int horizontalAmount, int verticalAmount) {
         if (isDisposed()) return;
+
+        /* dealing with vertical scroll first */
+        if (get_VerticallyScrollable()) {
+            Node vsb = (Node)getAttribute(VERTICAL_SCROLLBAR);
+            Accessible vsba = vsb.getAccessible();
+            switch (verticalAmount) {
+                case ScrollAmount_LargeIncrement:
+                    vsba.executeAction(Action.BLOCK_INCREMENT);
+                    break;
+                case ScrollAmount_SmallIncrement:
+                    vsba.executeAction(Action.INCREMENT);
+                    break;
+                case ScrollAmount_LargeDecrement:
+                    vsba.executeAction(Action.BLOCK_DECREMENT);
+                    break;
+                case ScrollAmount_SmallDecrement:
+                    vsba.executeAction(Action.DECREMENT);
+                    break;
+                default:
+            }
+        }
+
+        /* now dealing with horizontal scroll */
+        if (get_HorizontallyScrollable()) {
+            Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
+            Accessible hsba = hsb.getAccessible();
+            switch (horizontalAmount) {
+                case ScrollAmount_LargeIncrement:
+                    hsba.executeAction(Action.BLOCK_INCREMENT);
+                    break;
+                case ScrollAmount_SmallIncrement:
+                    hsba.executeAction(Action.INCREMENT);
+                    break;
+                case ScrollAmount_LargeDecrement:
+                    hsba.executeAction(Action.BLOCK_DECREMENT);
+                    break;
+                case ScrollAmount_SmallDecrement:
+                    hsba.executeAction(Action.DECREMENT);
+                    break;
+                default:
+            }
+        }
     }
 
     void SetScrollPercent(double horizontalPercent, double verticalPercent) {
         if (isDisposed()) return;
+
+        /* dealing with vertical scroll first */
+        if (verticalPercent != UIA_ScrollPatternNoScroll && get_VerticallyScrollable()) {
+            Node vsb = (Node)getAttribute(VERTICAL_SCROLLBAR);
+            Double min = (Double)vsb.getAccessible().getAttribute(MIN_VALUE);
+            Double max = (Double)vsb.getAccessible().getAttribute(MAX_VALUE);
+            if (min != null && max != null) {
+                vsb.getAccessible().executeAction(Action.SET_VALUE, (max-min)*(verticalPercent/100)+min);
+            }
+        }
+
+        /* now dealing with horizontal scroll */
+        if (horizontalPercent != UIA_ScrollPatternNoScroll && get_HorizontallyScrollable()) {
+            Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
+            Double min = (Double)hsb.getAccessible().getAttribute(MIN_VALUE);
+            Double max = (Double)hsb.getAccessible().getAttribute(MAX_VALUE);
+            if (min != null && max != null) {
+                hsb.getAccessible().executeAction(Action.SET_VALUE, (max-min)*(horizontalPercent/100)+min);
+            }
+        }
     }
 
     boolean get_HorizontallyScrollable() {
         if (isDisposed()) return false;
-        return false;
+
+        Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
+        if (hsb == null) return false;
+
+        Boolean visible = (Boolean)hsb.getAccessible().getAttribute(VISIBLE);
+        return Boolean.TRUE.equals(visible);
     }
 
     double get_HorizontalScrollPercent() {
         if (isDisposed()) return 0;
+
+        if (!get_HorizontallyScrollable()) {
+            return UIA_ScrollPatternNoScroll;
+        }
+
+        Node hsb = (Node) getAttribute(HORIZONTAL_SCROLLBAR);
+        if (hsb != null) {
+            /* Windows expects a percentage between 0 and 100 */
+            Accessible hsba = hsb.getAccessible();
+            Double value = (Double)hsba.getAttribute(VALUE);
+            if (value == null) return 0;
+            Double max = (Double)hsba.getAttribute(MAX_VALUE);
+            if (max == null) return 0;
+            Double min = (Double)hsba.getAttribute(MIN_VALUE);
+            if (min == null) return 0;
+            return (100 * (value - min)) / (max - min);
+        }
+
         return 0;
     }
 
     double get_HorizontalViewSize() {
         if (isDisposed()) return 0;
-        return 0;
+        if (!get_HorizontallyScrollable()) return 100; /* MSDN spec */
+        Node content = (Node) getAttribute(CONTENTS);
+        if (content == null) return 100;
+        Bounds contentBounds = (Bounds) content.getAccessible().getAttribute(BOUNDS);
+        if (contentBounds == null) return 0;
+        Bounds scrollPaneBounds = (Bounds)getAttribute(BOUNDS);
+        if (scrollPaneBounds == null) return 0;
+        return scrollPaneBounds.getWidth() / contentBounds.getWidth() * 100;
     }
 
     boolean get_VerticallyScrollable() {
         if (isDisposed()) return false;
-        return false;
+
+        Node vsb = (Node) getAttribute(VERTICAL_SCROLLBAR);
+        if (vsb == null) return false;
+
+        Boolean visible = (Boolean)vsb.getAccessible().getAttribute(VISIBLE);
+        return Boolean.TRUE.equals(visible);
     }
 
     double get_VerticalScrollPercent() {
         if (isDisposed()) return 0;
+
+        if (!get_VerticallyScrollable()) {
+            return UIA_ScrollPatternNoScroll;
+        }
+
+        Node vsb = (Node) getAttribute(Attribute.VERTICAL_SCROLLBAR);
+        if (vsb != null) {
+            /* Windows expects a percentage between 0 and 100 */
+            Accessible vsba = vsb.getAccessible();
+            Double value = (Double)vsba.getAttribute(VALUE);
+            if (value == null) return 0;
+            Double max = (Double)vsba.getAttribute(MAX_VALUE);
+            if (max == null) return 0;
+            Double min = (Double)vsba.getAttribute(MIN_VALUE);
+            if (min == null) return 0;
+            return (100 * (value - min)) / (max - min);
+        }
+
         return 0;
     }
 
     double get_VerticalViewSize() {
         if (isDisposed()) return 0;
-        return 0;
+        if (!get_VerticallyScrollable()) return 100;
+
+        double contentHeight = 0;
+
+        Bounds scrollPaneBounds = (Bounds) getAttribute(BOUNDS);
+        if (scrollPaneBounds == null) return 0;
+        double scrollPaneHeight = scrollPaneBounds.getHeight();
+
+        Role role = (Role) getAttribute(ROLE);
+        if (role == Role.SCROLL_PANE) {
+            Node content = (Node) getAttribute(CONTENTS);
+            if (content != null) {
+                Bounds contentBounds = (Bounds) content.getAccessible().getAttribute(BOUNDS);
+                contentHeight = contentBounds == null ? 0 : contentBounds.getHeight();
+            }
+        } else {
+            Integer itemCount = 0;
+            switch (role) {
+                case LIST_VIEW:
+                case TABLE_VIEW:
+                case TREE_VIEW:
+                case TREE_TABLE_VIEW:
+                    itemCount = (Integer) getAttribute(ROW_COUNT);
+                    break;
+                default:
+            }
+
+            /*
+             * Do a quick calculation to approximate the height of the
+             * content area by assuming a fixed height multiplied by the number
+             * of items. The default height we use is 24px, which is the default
+             * height as specified in com.sun.javafx.scene.control.skin.CellSkinBase.
+             */
+            contentHeight = itemCount == null ? 0 : itemCount * 24;
+        }
+
+        return contentHeight == 0 ? 0 : scrollPaneHeight / contentHeight * 100;
+    }
+
+    /***********************************************/
+    /*             IScrollItemProvider             */
+    /***********************************************/
+    void ScrollIntoView() {
+        if (isDisposed()) return;
+
+        Integer cellIndex = (Integer)getAttribute(INDEX);
+        Node container = getContainerNode();
+        if (cellIndex != null && container != null) {
+            container.getAccessible().executeAction(Action.SCROLL_TO_INDEX, cellIndex);
+        }
     }
 }

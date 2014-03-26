@@ -259,9 +259,15 @@ public class CheckBox extends ButtonBase {
     private static final PseudoClass PSEUDO_CLASS_SELECTED = 
             PseudoClass.getPseudoClass("selected");
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.CHECKBOX;
             case TOGGLE_STATE: return isIndeterminate() ? 2 : (isSelected() ? 1 : 0);
