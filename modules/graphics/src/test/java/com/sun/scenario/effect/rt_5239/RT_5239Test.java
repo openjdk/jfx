@@ -25,7 +25,7 @@
 
 package com.sun.scenario.effect.rt_5239;
 
-import java.awt.Color;
+import com.sun.prism.paint.Color;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
