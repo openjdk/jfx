@@ -3000,4 +3000,32 @@ public class GridPaneTest {
         assertEquals(1, GridPane.getColumnIndex(node3), 1e-100);
         assertEquals(1, GridPane.getRowIndex(node3), 1e-100);
     }
+
+    @Test
+    public void testAllColumnsFixedButNotUpTo100() {
+        MockResizable child1 = new MockResizable(10,10, 20, 20, 300, 300);
+        MockResizable child2 = new MockResizable(10,10, 30, 30, 300, 300);
+        MockResizable child3 = new MockResizable(10,10, 40, 40, 300, 300);
+        gridpane.addRow(0, child1,child2,child3);
+
+        final ColumnConstraints cc = new ColumnConstraints();
+        cc.setPercentWidth(25);
+        gridpane.getColumnConstraints().addAll(cc, cc, cc);
+
+        assertEquals(160, gridpane.prefWidth(-1), 1e-100);
+    }
+
+    @Test
+    public void testAllRowsFixedButNotUpTo100() {
+        MockResizable child1 = new MockResizable(10,10, 20, 20, 300, 300);
+        MockResizable child2 = new MockResizable(10,10, 30, 30, 300, 300);
+        MockResizable child3 = new MockResizable(10,10, 40, 40, 300, 300);
+        gridpane.addColumn(0, child1, child2, child3);
+
+        final RowConstraints rc = new RowConstraints();
+        rc.setPercentHeight(25);
+        gridpane.getRowConstraints().addAll(rc, rc, rc);
+
+        assertEquals(160, gridpane.prefHeight(-1), 1e-100);
+    }
 }

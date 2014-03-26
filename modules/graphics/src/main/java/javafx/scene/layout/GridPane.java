@@ -2624,7 +2624,7 @@ public class GridPane extends Pane {
                 }
             }
             if (totalFixedPercent > 0) {
-                double totalFixed = 0;
+                double totalNotFixed = 0;
                 // First, remove the sizes that are fixed to be 0
                 for (int i = 0; i < fixedPercent.length; ++i) {
                     if (fixedPercent[i] == 0) {
@@ -2633,14 +2633,15 @@ public class GridPane extends Pane {
                 }
                 for (int i = 0; i < fixedPercent.length; ++i) {
                     if (fixedPercent[i] > 0) {
-                        totalFixed += singleSizes[i];
                         // Grow the total so that every size at it's value corresponds at least to it's fixedPercent of the total
                         // i.e. total * fixedPercent[i] >= singleSizes[i]
                         total = Math.max(total, singleSizes[i] * (100 / fixedPercent[i]));
+                    } else if (fixedPercent[i] < 0){
+                        totalNotFixed += singleSizes[i];
                     }
                 }
                 if (totalFixedPercent < 100) {
-                    total = Math.max(total, (total - totalFixed) * 100 / (100 - totalFixedPercent));
+                    total = Math.max(total, totalNotFixed * 100 / (100 - totalFixedPercent));
                 }
             }
             return total;
