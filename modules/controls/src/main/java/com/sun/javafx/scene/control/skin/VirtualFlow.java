@@ -864,6 +864,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
             cells.clear();
             pile.clear();
+            releaseAllPrivateCells();
         } else if (needsRebuildCells) {
             lastWidth = -1;
             lastHeight = -1;
@@ -872,6 +873,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 cells.get(i).updateIndex(-1);
             }
             addAllToPile();
+            releaseAllPrivateCells();
         } else if (needsReconfigureCells) {
             setMaxPrefBreadth(-1);
             lastWidth = -1;
@@ -1708,6 +1710,57 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     /**
+     * This method is an experts-only method - if the requested index is not
+     * already an existing visible cell, it will create a cell for the
+     * given index and insert it into the sheet. From that point on it will be
+     * unmanaged, and is up to the caller of this method to manage it.
+     */
+    T getPrivateCell(int index)  {
+        T cell = null;
+
+        // If there are cells, then we will attempt to get an existing cell
+        if (! cells.isEmpty()) {
+            // First check the cells that have already been created and are
+            // in use. If this call returns a value, then we can use it
+            cell = getVisibleCell(index);
+            if (cell != null) return cell;
+        }
+
+        // check the existing sheet children
+        if (cell == null) {
+            for (int i = 0; i < sheetChildren.size(); i++) {
+                T _cell = (T) sheetChildren.get(i);
+                if (getCellIndex(_cell) == index) {
+                    return _cell;
+                }
+            }
+        }
+
+        if (cell == null) {
+            Callback<VirtualFlow, T> createCell = getCreateCell();
+            if (createCell != null) {
+                cell = createCell.call(this);
+            }
+        }
+
+        if (cell != null) {
+            setCellIndex(cell, index);
+            resizeCellSize(cell);
+            cell.setVisible(false);
+            sheetChildren.add(cell);
+            privateCells.add(cell);
+        }
+
+        return cell;
+    }
+
+    private final List<T> privateCells = new ArrayList<>();
+
+    private void releaseAllPrivateCells() {
+        sheetChildren.removeAll(privateCells);
+    }
+
+    /**
      * Compute and return the length of the cell for the given index. This is
      * called both internally when adjusting by pixels, and also at times
      * by PositionMapper (see the getItemSize callback). When called by
@@ -1948,7 +2001,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         // if index is > firstIndex and < lastIndex then we can get the index
         if (index > firstIndex && index < lastIndex) {
-            return cells.get(index - firstIndex);
+            T cell = cells.get(index - firstIndex);
+            if (getCellIndex(cell) == index) return cell;
         }
 
         // there is no visible cell for the specified index

@@ -35,7 +35,6 @@ import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
 import javafx.scene.Node;
 import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.input.MouseEvent;
@@ -514,7 +513,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             case FOCUS_ITEM: {
                 FocusModel<?> fm = getSkinnable().getFocusModel();
                 int focusedIndex = fm.getFocusedIndex();
-                return flow.getCell(focusedIndex);
+                return flow.getPrivateCell(focusedIndex);
             }
             case ROW_AT_INDEX: {
             	/* Note: Using getVisibleCell() is safer than getCell() for this case.
@@ -522,14 +521,14 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             	 * next sibling traversal to infinite loop.
             	 */
                 final int rowIndex = (Integer)parameters[0];
-                return rowIndex < 0 ? null : flow.getVisibleCell(rowIndex);
+                return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
             }
             case SELECTED_ROWS: {
                 MultipleSelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
                 ObservableList<Integer> indices = sm.getSelectedIndices();
                 List<Node> selection = new ArrayList<>(indices.size());
                 for (int i : indices) {
-                    TreeCell<T> row = flow.getCell(i);
+                    TreeCell<T> row = flow.getPrivateCell(i);
                     if (row != null) selection.add(row);
                 }
                 return FXCollections.observableArrayList(selection);
