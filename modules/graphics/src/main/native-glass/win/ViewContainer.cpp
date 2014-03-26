@@ -34,6 +34,7 @@
 #include "GlassDnD.h"
 #include "GlassInputTextInfo.h"
 #include "ManipulationEvents.h"
+#include "BaseWnd.h"
 
 #include "com_sun_glass_events_ViewEvent.h"
 #include "com_sun_glass_events_KeyEvent.h"
@@ -652,6 +653,12 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
             // Mouse tracking will be canceled automatically upon receiving WM_MOUSELEAVE
             m_bTrackingMouse = TRUE;
         }
+
+        // Note that (ViewContainer*)this != (BaseWnd*)this. We could use
+        // dynamic_case<>() instead, but it would fail later if 'this' is
+        // already deleted. So we use FromHandle() which is safe.
+        const BaseWnd *origWnd = BaseWnd::FromHandle(hwnd);
+
         env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
                 com_sun_glass_events_MouseEvent_ENTER,
                 com_sun_glass_events_MouseEvent_BUTTON_NONE,
@@ -659,7 +666,11 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
                 jModifiers, JNI_FALSE, isSynthesized);
         CheckAndClearException(env);
 
-        if (!GetGlassView()) {
+        // At this point 'this' might have already been deleted if the app
+        // closed the window while processing the ENTER event. Hence the check:
+        if (!::IsWindow(hwnd) || BaseWnd::FromHandle(hwnd) != origWnd ||
+                !GetGlassView())
+        {
             return TRUE;
         }
     }
