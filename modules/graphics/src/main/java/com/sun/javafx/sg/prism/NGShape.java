@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -199,9 +199,14 @@ public abstract class NGShape extends NGNode {
                 final BaseTransform tx = g.getTransformNoClone();
                 final double scaleX = Math.hypot(tx.getMxx(), tx.getMyx());
                 final double scaleY = Math.hypot(tx.getMxy(), tx.getMyy());
-                cached3D = g.getResourceFactory().createRTTexture(
-                        (int) Math.ceil(contentBounds.getWidth() * scaleX),
-                        (int) Math.ceil(contentBounds.getHeight() * scaleY),
+                final int w = (int) Math.ceil(contentBounds.getWidth() * scaleX);
+                final int h = (int) Math.ceil(contentBounds.getHeight() * scaleY);
+                // Nothing to do if the scaled bounds is 0 in either dimension;
+                // attempting to allocate a texture would fail so we just return
+                if (w <= 0 || h <= 0) {
+                    return;
+                }
+                cached3D = g.getResourceFactory().createRTTexture(w, h,
                         Texture.WrapMode.CLAMP_TO_ZERO,
                         false);
                 cached3D.contentsUseful();
