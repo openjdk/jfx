@@ -25,9 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.VirtualContainerBase;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
-import javafx.collections.FXCollections;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.TreeTableRowSkin;
 import java.lang.ref.WeakReference;
@@ -285,10 +283,12 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      *                                                                         *
      * Public API                                                              *
      *                                                                         *
-     **************************************************************************/
+     *************************************************************************
+     * @param oldIndex
+     * @param newIndex*/
 
     
-    @Override void indexChanged() {
+    @Override void indexChanged(int oldIndex, int newIndex) {
         index = getIndex();
 
         // when the cell index changes, this may result in the cell

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -226,27 +226,17 @@ public class TableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    private int oldIndex = -1;
-    
     /** {@inheritDoc} */
-    @Override void indexChanged() {
-        int newIndex = getIndex();
-        
-        super.indexChanged();
-        
-        // Below we check if the index has changed, but we always call updateItem,
-        // as the value in the given index may have changed.
-        updateItem(newIndex);
-        
-        if (oldIndex == newIndex) return;
-        oldIndex = newIndex;
-        
+    @Override void indexChanged(int oldIndex, int newIndex) {
+        super.indexChanged(oldIndex, newIndex);
+
+        updateItem(oldIndex);
         updateSelection();
         updateFocus();
     }
 
     private boolean isFirstRun = true;
-    private void updateItem(int newIndex) {
+    private void updateItem(int oldIndex) {
         TableView<T> tv = getTableView();
         if (tv == null || tv.getItems() == null) return;
         
@@ -254,6 +244,7 @@ public class TableRow<T> extends IndexedCell<T> {
         final int itemCount = items == null ? -1 : items.size();
 
         // Compute whether the index for this cell is for a real item
+        final int newIndex = getIndex();
         boolean valid = newIndex >= 0 && newIndex < itemCount;
 
         final T oldValue = getItem();
@@ -263,11 +254,13 @@ public class TableRow<T> extends IndexedCell<T> {
         if (valid) {
             final T newValue = items.get(newIndex);
 
-            // There used to be conditional code here to prevent updateItem from
-            // being called when the value didn't change, but that led us to
-            // issues such as RT-33108, where the value didn't change but the item
-            // we needed to be listening to did. Without calling updateItem we
-            // were breaking things, so once again the conditionals are gone.
+            // RT-34566 - if the index didn't change, then avoid calling updateItem
+            // unless the item has changed.
+            if (oldIndex == newIndex) {
+                if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
+                    return;
+                }
+            }
             updateItem(newValue, false);
         } else {
             // RT-30484 We need to allow a first run to be special-cased to allow

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -301,7 +301,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
         // updateItem normally, when it comes to unit tests we can't have the
         // item change in all circumstances.
         if (! lockItemOnEdit) {
-            updateItem();
+            updateItem(-1);
         }
 
         // it makes sense to get the cell into its editing state before firing
@@ -445,15 +445,16 @@ public class TableCell<S,T> extends IndexedCell<T> {
             tableView.getVisibleLeafColumns().removeListener(weakVisibleLeafColumnsListener);
         }        
     }
-    
-    @Override void indexChanged() {
-        super.indexChanged();
+
+    @Override void indexChanged(int oldIndex, int newIndex) {
+        super.indexChanged(oldIndex, newIndex);
+
         // Ideally we would just use the following two lines of code, rather
         // than the updateItem() call beneath, but if we do this we end up with
         // RT-22428 where all the columns are collapsed.
         // itemDirty = true;
         // requestLayout();
-        updateItem();
+        updateItem(oldIndex);
         updateSelection();
         updateFocus();
     }
@@ -576,7 +577,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * changed. You'll note that this is a private function - it is only called
      * when one of the triggers above call it.
      */
-    private void updateItem() {
+    private void updateItem(int oldIndex) {
         if (currentObservableValue != null) {
             currentObservableValue.removeListener(weaktableRowUpdateObserver);
         }
@@ -620,11 +621,13 @@ public class TableCell<S,T> extends IndexedCell<T> {
             currentObservableValue = tableColumn.getCellObservableValue(index);
             final T newValue = currentObservableValue == null ? null : currentObservableValue.getValue();
 
-            // There used to be conditional code here to prevent updateItem from
-            // being called when the value didn't change, but that led us to
-            // issues such as RT-33108, where the value didn't change but the item
-            // we needed to be listening to did. Without calling updateItem we
-            // were breaking things, so once again the conditionals are gone.
+            // RT-34566 - if the index didn't change, then avoid calling updateItem
+            // unless the item has changed.
+            if (oldIndex == index) {
+                if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
+                    return;
+                }
+            }
             updateItem(newValue, false);
         }
         
@@ -638,7 +641,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     @Override protected void layoutChildren() {
         if (itemDirty) {
-            updateItem();
+            updateItem(-1);
             itemDirty = false;
         }
         super.layoutChildren();
