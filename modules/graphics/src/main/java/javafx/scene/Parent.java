@@ -1786,4 +1786,13 @@ public abstract class Parent extends Node {
             default: return super.accGetAttribute(attribute, parameters);
         }
     }
+
+    void releaseAccessible() {
+        super.releaseAccessible();
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node node = children.get(i);
+            node.releaseAccessible();
+        }
+    }
+
 }

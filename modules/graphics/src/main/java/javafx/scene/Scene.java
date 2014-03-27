@@ -713,6 +713,9 @@ public class Scene implements EventTarget {
         if (accessible != null) {
             accessible.dispose();
             accessible = null;
+            disposeAccessibles();
+            Node root = getRoot();
+            if (root != null) root.releaseAccessible();
         }
 
         PerformanceTracker.logEvent("Scene.disposePeer finished");
@@ -6152,6 +6155,15 @@ public class Scene implements EventTarget {
      * @treatAsPrivate
      */
     public Accessible getAccessible() {
+        /*
+         * The accessible for the Scene should never be
+         * requested when the peer is not set.
+         * This can only happen in a error case where a
+         * descender of this Scene was not disposed and 
+         * it still being used by the AT client and trying
+         * to reach to the top level window.
+         */
+        if (impl_peer == null) return null;
         if (accessible == null) {
             accessible = new Accessible() {
                 @Override public Object getAttribute(Attribute attribute,

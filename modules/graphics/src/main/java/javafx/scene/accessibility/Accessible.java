@@ -88,6 +88,8 @@ public abstract class Accessible {
      * @param notification the attribute which value has changed
      */
     public void sendNotification(Attribute notification) {
-        delegate.sendNotification(notification);
+        if (delegate != null) {
+            delegate.sendNotification(notification);
+        }
     }
 }

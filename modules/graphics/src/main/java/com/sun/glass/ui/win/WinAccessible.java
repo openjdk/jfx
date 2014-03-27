@@ -233,6 +233,8 @@ final class WinAccessible extends PlatformAccessible {
 
     @Override
     public void sendNotification(Attribute notification) {
+        if (isDisposed()) return;
+
         switch (notification) {
             case FOCUS_NODE:
                 if (getView() != null) {
@@ -656,11 +658,14 @@ final class WinAccessible extends PlatformAccessible {
                 if (Boolean.FALSE.equals(focus)) {
                     Scene scene = (Scene)getAttribute(SCENE);
                     if (scene != null) {
-                        Node node = (Node)scene.getAccessible().getAttribute(FOCUS_NODE);
-                        if (node != null) {
-                            Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
-                            if (getAccessible(item) == peer) {
-                                focus = true;
+                        Accessible acc = scene.getAccessible();
+                        if (acc != null) {
+                            Node node = (Node)acc.getAttribute(FOCUS_NODE);
+                            if (node != null) {
+                                Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
+                                if (getAccessible(item) == peer) {
+                                    focus = true;
+                                }
                             }
                         }
                     }
@@ -734,13 +739,14 @@ final class WinAccessible extends PlatformAccessible {
     }
 
     long get_FragmentRoot() {
-        if (isDisposed()) return 0;
+        if (isDisposed()) return 0L;
         Scene scene = (Scene)getAttribute(SCENE);
-        if (scene != null) {
-            Accessible acc = scene.getAccessible();
-            return ((WinAccessible)acc.impl_getDelegate()).getNativeAccessible();
-        }
-        return 0L;
+        if (scene == null) return 0L;
+        Accessible acc = scene.getAccessible();
+        if (acc == null) return 0L;
+        WinAccessible winAcc = (WinAccessible)acc.impl_getDelegate();
+        if (winAcc == null || winAcc.isDisposed()) return 0L;
+        return winAcc.getNativeAccessible();
     }
 
     long[] GetEmbeddedFragmentRoots() {
@@ -782,11 +788,12 @@ final class WinAccessible extends PlatformAccessible {
                     if (node == null) {
                         /* scene root node case */
                         Scene scene = (Scene)getAttribute(SCENE);
-                        if (scene != null) {
-                            Accessible acc = scene.getAccessible();
-                            WinAccessible winAcc = (WinAccessible)acc.impl_getDelegate();
-                            return winAcc.getNativeAccessible();
-                        }
+                        if (scene == null) return 0L;
+                        Accessible acc = scene.getAccessible();
+                        if (acc == null) return 0L;
+                        WinAccessible winAcc = (WinAccessible)acc.impl_getDelegate();
+                        if (winAcc == null || winAcc.isDisposed()) return 0L;
+                        return winAcc.getNativeAccessible();
                     }
                 }
                 break;

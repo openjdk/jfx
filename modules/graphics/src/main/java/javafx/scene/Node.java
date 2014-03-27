@@ -9203,5 +9203,14 @@ public abstract class Node implements EventTarget, Styleable {
         }
         return accessible;
     }
+
+    void releaseAccessible() {
+        Accessible acc = this.accessible;
+        if (acc != null) {
+            accessible = null;
+            acc.dispose();
+        }
+    }
+
 }
 

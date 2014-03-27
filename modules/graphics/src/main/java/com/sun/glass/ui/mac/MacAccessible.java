@@ -608,10 +608,9 @@ final class MacAccessible extends PlatformAccessible {
         switch (notification) {
             case SELECTED_TAB:
             case SELECTED_PAGE: {
-                Scene scene = (Scene)getAttribute(SCENE);
-                if (scene != null) {
-                    PlatformAccessible acc = scene.getAccessible().impl_getDelegate();
-                    long id = acc.getView().getNativeView();
+                View view = getRootView((Scene)getAttribute(SCENE));
+                if (view != null) {
+                    long id = view.getNativeView();
                     NSAccessibilityPostNotification(id, MacNotifications.NSAccessibilityFocusedUIElementChangedNotification.ptr);
                 }
                 return;
@@ -655,6 +654,18 @@ final class MacAccessible extends PlatformAccessible {
     @Override
     protected long getNativeAccessible() {
         return peer;
+    }
+
+    @SuppressWarnings("deprecation")
+    private View getRootView(Scene scene) {
+        if (scene == null) return null;
+        Accessible acc = scene.getAccessible();
+        if (acc == null) return null;
+        MacAccessible macAcc = (MacAccessible)acc.impl_getDelegate();
+        if (macAcc == null || macAcc.isDisposed()) return null;
+        View view = macAcc.getView();
+        if (view == null || view.isClosed()) return null;
+        return view;
     }
 
     static long getAccessible(Node node) {
@@ -857,8 +868,9 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilityWindowAttribute:
             case NSAccessibilityTopLevelUIElementAttribute: {
                 Scene scene = (Scene)result;
-                PlatformAccessible acc = scene.getAccessible().impl_getDelegate();
-                result = acc.getView().getWindow().getNativeWindow();
+                View view = getRootView(scene);
+                if (view == null) return null;
+                result = view.getWindow().getNativeWindow();
                 break;
             }
             case NSAccessibilitySubroleAttribute: {
@@ -912,10 +924,9 @@ final class MacAccessible extends PlatformAccessible {
                     result = getAccessible((Parent)result);
                 } else {
                     /* Root node: return the NSView (instead of acc.getNativeAccessible()) */
-                    Scene scene = (Scene)getAttribute(SCENE);
-                    if (scene == null) return null;
-                    MacAccessible acc = (MacAccessible)scene.getAccessible().impl_getDelegate();
-                    result = acc.getView().getNativeView();
+                    View view = getRootView((Scene)getAttribute(SCENE));
+                    if (view == null) return null;
+                    result = view.getNativeView();
                 }
                 result = NSAccessibilityUnignoredAncestor((long)result);
                 break;
@@ -931,10 +942,8 @@ final class MacAccessible extends PlatformAccessible {
                  * NSAccessibilityPositionAttribute requires the point relative
                  * to the lower-left corner in screen.
                  */
-                Scene scene = (Scene)getAttribute(SCENE);
-                if (scene != null) {
-                    PlatformAccessible sceneAcc = scene.getAccessible().impl_getDelegate();
-                    View view = sceneAcc.getView();
+                View view = getRootView((Scene)getAttribute(SCENE));
+                if (view != null) {
                     Screen screen = view.getWindow().getScreen();
                     float height = screen.getHeight();
                     Bounds bounds = (Bounds)result;
