@@ -382,7 +382,12 @@ defineProperty("JCOV", "false")
 ext.DO_JCOV = Boolean.parseBoolean(JCOV)
 
 // Define the number of threads to use when compiling (specifically for native compilation)
-defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
+// On Mac we limit it to 1 by default due to problems running gcc in parallel
+if (IS_MAC) {
+    defineProperty("NUM_COMPILE_THREADS", "1")
+} else {
+    defineProperty("NUM_COMPILE_THREADS", "${Runtime.runtime.availableProcessors()}")
+}
 
 //
 // The next three sections of properties are used to generate the
@@ -740,6 +745,7 @@ logger.quiet("jdk.runtime.version: ${jdkRuntimeVersion}")
 logger.quiet("jdk version: ${jdkVersion}")
 logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum java build number: ${jfxBuildJdkBuildnumMin}")
+logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
 logger.quiet("COMPILE_FLAGS_FILES: $COMPILE_FLAGS_FILES")
 logger.quiet("HUDSON_JOB_NAME: $HUDSON_JOB_NAME")
