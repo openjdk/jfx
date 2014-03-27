@@ -8887,8 +8887,6 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        assert cssFlag != CssFlags.REAPPLY;
-
         // update
         cssFlag = CssFlags.UPDATE;
 
@@ -8934,8 +8932,6 @@ public abstract class Node implements EventTarget, Styleable {
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
     protected void impl_processCSS(WritableValue<Boolean> unused) {
-
-        assert cssFlag != CssFlags.REAPPLY;
 
         // Nothing to do...
         if (cssFlag != CssFlags.UPDATE) return;
