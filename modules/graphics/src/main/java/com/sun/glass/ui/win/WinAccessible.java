@@ -376,15 +376,6 @@ final class WinAccessible extends PlatformAccessible {
         return peer;
     }
 
-    @SuppressWarnings("deprecation")
-    private long getAccessible(Node node) {
-        if (node == null) return 0L;
-        Accessible acc = node.getAccessible();
-        if (acc == null) return 0L;
-        WinAccessible winAcc = (WinAccessible)acc.impl_getDelegate();
-        return winAcc != null ? winAcc.getNativeAccessible() : 0;
-    }
-
     private long getContainer(Role targetRole) {
         Node node = getContainerNode(targetRole);
         return node == null ? 0 : getAccessible(node);

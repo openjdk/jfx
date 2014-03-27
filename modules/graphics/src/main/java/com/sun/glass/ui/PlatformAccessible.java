@@ -69,6 +69,15 @@ public abstract class PlatformAccessible {
         return role == Role.NODE || role == Role.PARENT;
     }
 
+    @SuppressWarnings("deprecation")
+    protected long getAccessible(Node node) {
+        if (node == null) return 0L;
+        Accessible acc = node.getAccessible();
+        if (acc == null) return 0L;
+        PlatformAccessible pAcc = acc.impl_getDelegate();
+        return pAcc != null ? pAcc.getNativeAccessible() : 0;
+    }
+
     protected Node getContainerNode(Role targetRole) {
         Node node = (Node)getAttribute(PARENT);
         while (node != null) {

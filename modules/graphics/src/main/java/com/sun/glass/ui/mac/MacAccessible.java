@@ -668,14 +668,6 @@ final class MacAccessible extends PlatformAccessible {
         return view;
     }
 
-    static long getAccessible(Node node) {
-        if (node == null) return 0L;
-        Accessible acc = node.getAccessible();
-        if (acc == null) return 0L;
-        MacAccessible macAcc = (MacAccessible)acc.impl_getDelegate();
-        return macAcc != null ? macAcc.getNativeAccessible() : 0;
-    }
-
     /* NSAccessibility Protocol - JNI entry points */
     long[] accessibilityAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
