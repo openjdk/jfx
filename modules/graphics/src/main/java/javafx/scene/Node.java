@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -829,7 +829,7 @@ public abstract class Node implements EventTarget, Styleable {
             focusSetDirty(newScene);
         }
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
-        impl_reapplyCSS();
+        if (sceneChanged) impl_reapplyCSS();
 
         if (sceneChanged && !impl_isDirtyEmpty()) {
             //Note: no need to remove from scene's dirty list
@@ -1077,15 +1077,9 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 protected void invalidated() {
-
-                    if (getScene() == null) return;
-
                     // If the style has changed, then styles of this node
                     // and child nodes might be affected.
-                    if (cssFlag != CssFlags.REAPPLY) {
-                        cssFlag = CssFlags.REAPPLY;
-                        notifyParentsOfInvalidatedCSS();
-                    }
+                    impl_reapplyCSS();
                 }
 
                 @Override
@@ -1760,7 +1754,7 @@ public abstract class Node implements EventTarget, Styleable {
             // TODO: is this the right thing to do?
             // this.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
 
-            this.processCSS(null);
+            this.processCSS();
         }
     }
 
@@ -8743,19 +8737,58 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
+    //
+    // Create a new CssStyleHelper for this node and all of its children.
+    // After this method call, styleHelper might be null and the cssFlag will
+    // either be CLEAN or UPDATE
+    private void createStyleHelper() {
+
+        if (cssFlag == CssFlags.REAPPLY) return;
+
+        // Hang on to current styleHelper so we can know whether
+        // createStyleHelper returned the same styleHelper
+        final CssStyleHelper oldStyleHelper = styleHelper;
+
+        // Hang on to current cssFlags in case we have to
+        // set the state back to what it was.
+        final CssFlags oldCssFlag = cssFlag;
+
+        // CSS state is "REAPPLY"
+        cssFlag = CssFlags.REAPPLY;
+
+        styleHelper = CssStyleHelper.createStyleHelper(this);
+
+        // REAPPLY to my children, too.
+        if (this instanceof Parent) {
+            List<Node> children = ((Parent)this).getChildren();
+            for(int n=0, nMax=children.size(); n<nMax; n++) {
+                Node child = children.get(n);
+                child.createStyleHelper();
+            }
+        } else if (styleHelper == null) {
+            //
+            // If this is not a Parent and there is no styleHelper, then the CSS state is "CLEAN"
+            // since there are no styles to apply or children to update.
+            //
+            cssFlag = CssFlags.CLEAN;
+            return;
+        }
+
+        // this branch needs update
+        cssFlag = CssFlags.UPDATE;
+
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
     public final void impl_reapplyCSS() {
-        // If there is no scene, then we cannot make it dirty, so we'll leave
-        // the flag alone
+
         if (getScene() == null) return;
-        // If the css flag is already "REAPPLY", then do nothing
-        if (cssFlag == CssFlags.REAPPLY) return;
-        // Update the flag
-        cssFlag = CssFlags.REAPPLY;
+
+        createStyleHelper();
 
         // One idiom employed by developers is to, during the layout pass,
         // add or remove nodes from the scene. For example, a ScrollPane
@@ -8764,14 +8797,17 @@ public abstract class Node implements EventTarget, Styleable {
         // it determines that it needs to. In such situations we must
         // apply the CSS immediately and not add it to the scene's queue
         // for deferred action.
-        if (getParent() != null && getParent().performingLayout) {
-            impl_processCSS(null);
-        } else if (getScene() != null) {
-            notifyParentsOfInvalidatedCSS();
+        if (cssFlag == CssFlags.UPDATE) {
+            if (getParent() != null && getParent().performingLayout) {
+                impl_processCSS(null);
+            } else {
+                notifyParentsOfInvalidatedCSS();
+            }
         }
+
     }
 
-    void processCSS(final WritableValue<Boolean> cacheHint) {
+    void processCSS() {
         switch (cssFlag) {
             case CLEAN:
                 break;
@@ -8783,27 +8819,24 @@ public abstract class Node implements EventTarget, Styleable {
                 me.cssFlag = CssFlags.CLEAN;
                 List<Node> children = me.getChildren();
                 for (int i=0, max=children.size(); i<max; i++) {
-                    children.get(i).processCSS(cacheHint);
+                    children.get(i).processCSS();
                 }
                 break;
             }
             case REAPPLY:
             case UPDATE:
             default:
-                impl_processCSS(cacheHint);
+                impl_processCSS(null);
         }
     }
 
     /**
+     * This method simply calls {@link #applyCss()}
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
      @Deprecated
     public final void impl_processCSS(boolean reapply) {
-
-         final boolean flag = (reapply || cssFlag == CssFlags.REAPPLY);
-         cssFlag = flag ? CssFlags.REAPPLY : CssFlags.UPDATE;
-
          applyCss();
      }
 
@@ -8854,10 +8887,10 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // If this flag is clean or dirty_branch, make it update
-        if (cssFlag != CssFlags.REAPPLY) {
-            cssFlag = CssFlags.UPDATE;
-        }
+        assert cssFlag != CssFlags.REAPPLY;
+
+        // update
+        cssFlag = CssFlags.UPDATE;
 
         //
         // RT-28394 - need to see if any ancestor has a flag other than clean
@@ -8883,7 +8916,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (topMost == getScene().getRoot()) {
             getScene().getRoot().impl_clearDirty(DirtyBits.NODE_CSS);
         }
-        topMost.processCSS(new SimpleBooleanProperty(false));
+        topMost.processCSS();
 
     }
 
@@ -8900,53 +8933,23 @@ public abstract class Node implements EventTarget, Styleable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
-    protected void impl_processCSS(final WritableValue<Boolean> cacheHint) {
+    protected void impl_processCSS(WritableValue<Boolean> unused) {
+
+        assert cssFlag != CssFlags.REAPPLY;
 
         // Nothing to do...
-        if (cssFlag == CssFlags.CLEAN) return;
-
-        final Scene scene = getScene();
-        if (scene == null) {
-            cssFlag = CssFlags.CLEAN;
-            return;
-        }
-
-        if (cssFlag == CssFlags.REAPPLY) {
-
-            // RT-24621 - If this node's parent's cssFlag is REAPPLY, then CSS should be applied to the parent first,
-            // otherwise the styles this node uses will be incomplete (missing lookups, missing inherited styles, etc).
-            // find the top-most parent whose flag is REAPPLY and start from there, if there is one.
-            Parent _parent = getParent();
-            Parent _topmostParent = null;
-            while(_parent != null) {
-                if (_parent.cssFlag == CssFlags.REAPPLY) {
-                    _topmostParent = _parent;
-                }
-                _parent = _parent.getParent();
-
-            }
-            // TODO: danger of infinite loop here!
-            if (_topmostParent != null) {
-                _topmostParent.impl_processCSS(cacheHint);
-                return;
-            }
-
-            // Match new styles if my own indicates I need to reapply
-            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint);
-
-        }
-
-        final CssFlags flag = cssFlag;
+        if (cssFlag != CssFlags.UPDATE) return;
 
         // Clear the flag first in case the flag is set to something
         // other than clean by downstream processing.
         cssFlag = CssFlags.CLEAN;
 
         // Transition to the new state and apply styles
-        if (styleHelper != null) {
-                styleHelper.transitionToState(this, flag);
+        if (styleHelper != null && getScene() != null) {
+            styleHelper.transitionToState(this);
         }
     }
+
 
     /**
      * A StyleHelper for this node.

@@ -85,7 +85,7 @@ final class CssStyleHelper {
     /**
      * Creates a new StyleHelper.
      */
-    static CssStyleHelper createStyleHelper(final Node node, WritableValue<Boolean> clearCacheOnReuse) {
+    static CssStyleHelper createStyleHelper(final Node node) {
 
         // need to know how far we are to root in order to init arrays.
         // TODO: should we hang onto depth to avoid this nonsense later?
@@ -126,11 +126,10 @@ final class CssStyleHelper {
             // trigger a REAPPLY. If the REAPPLY comes because of a change in font, then the fontSizeCache
             // needs to be invalidated (cleared) so that new values will be looked up for all transition states.
             //
-            if (node.styleHelper.cacheContainer != null &&
-                    (isTrue(clearCacheOnReuse) || isUserSetFont(node, node.styleHelper.cacheContainer.fontProp))) {
-                setTrue(clearCacheOnReuse);
+            if (node.styleHelper.cacheContainer != null && node.styleHelper.isUserSetFont(node)) {
                 node.styleHelper.cacheContainer.fontSizeCache.clear();
             }
+            node.styleHelper.cacheContainer.forceSlowpath = true;
             return node.styleHelper;
 
         }
@@ -213,9 +212,30 @@ final class CssStyleHelper {
     //
     // return true if the fontStyleableProperty's origin is USER
     //
-    private static boolean isUserSetFont(Styleable node, CssMetaData<Styleable, Font> fontCssMetaData) {
-        StyleableProperty<Font> fontStyleableProperty = fontCssMetaData != null ? fontCssMetaData.getStyleableProperty(node) : null;
-        return fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER;
+    private boolean isUserSetFont(Styleable node) {
+
+        if (node == null) return false; // should never happen, but just to be safe...
+
+        CssMetaData<Styleable, Font> fontCssMetaData = cacheContainer != null ? cacheContainer.fontProp : null;
+        if (fontCssMetaData != null) {
+            StyleableProperty<Font> fontStyleableProperty = fontCssMetaData != null ? fontCssMetaData.getStyleableProperty(node) : null;
+            if (fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER) return true;
+        }
+
+        CssStyleHelper parentStyleHelper = null;
+        Styleable styleableParent = node;
+        do {
+            styleableParent = styleableParent.getStyleableParent();
+            if (styleableParent instanceof Node) {
+                parentStyleHelper = ((Node)styleableParent).styleHelper;
+            }
+        } while (parentStyleHelper == null && styleableParent != null);
+
+        if (parentStyleHelper != null) {
+            return parentStyleHelper.isUserSetFont(styleableParent);
+        } else {
+            return false;
+        }
     }
 
     //
@@ -401,6 +421,8 @@ final class CssStyleHelper {
         // here so the property can be reset without expanding properties that
         // were not set by css.
         private Map<CssMetaData, CalculatedValue> cssSetProperties;
+
+        private boolean forceSlowpath = false;
     }
 
     private void resetToInitialValues(final Styleable styleable) {
@@ -533,7 +555,7 @@ final class CssStyleHelper {
      * is disabled until the new parser comes online with support for
      * animations and that support is detectable via the API.
      */
-    void transitionToState(final Node node, final CssFlags cssFlag) {
+    void transitionToState(final Node node) {
 
         if (cacheContainer == null) {
             return;
@@ -601,6 +623,9 @@ final class CssStyleHelper {
         // Used in the for loop below, and a convenient place to stop when debugging.
         final int max = styleables.size();
 
+        final boolean isForceSlowpath = cacheContainer.forceSlowpath;
+        cacheContainer.forceSlowpath = false;
+
         // RT-20643
         CssError.setCurrentScene(node.getScene());
 
@@ -628,7 +653,7 @@ final class CssStyleHelper {
             // If there is no calculatedValue and we're on the fast path,
             // take the slow path if cssFlags is REAPPLY (RT-31691)
             final boolean forceSlowpath =
-                    fastpath && calculatedValue == null && cssFlag == CssFlags.REAPPLY;
+                    fastpath && calculatedValue == null && isForceSlowpath;
 
             final boolean addToCache =
                     (!fastpath && calculatedValue == null) || forceSlowpath;
@@ -1935,7 +1960,7 @@ final class CssStyleHelper {
 
     /**
      * Called from Node impl_getMatchingStyles
-     * @param node
+     * @param styleable
      * @param styleableProperty
      * @return
      */
@@ -1944,7 +1969,7 @@ final class CssStyleHelper {
         if (!(styleable instanceof Node)) return Collections.<Style>emptyList();
 
         Node node = (Node)styleable;
-        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node, null);
+        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node);
 
         if (helper != null) {
             return helper.getMatchingStyles(node, styleableProperty, false);
@@ -1956,7 +1981,7 @@ final class CssStyleHelper {
 
     static Map<StyleableProperty<?>, List<Style>> getMatchingStyles(Map<StyleableProperty<?>, List<Style>> map, final Node node) {
 
-        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node, null);
+        final CssStyleHelper helper = (node.styleHelper != null) ? node.styleHelper : createStyleHelper(node);
         if (helper != null) {
             if (map == null) map = new HashMap<>();
             for (CssMetaData metaData : node.getCssMetaData()) {

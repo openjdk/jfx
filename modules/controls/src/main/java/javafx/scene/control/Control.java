@@ -861,8 +861,7 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
-
+    @Override protected void impl_processCSS(WritableValue<Boolean> unused) {
         // don't muck with this if block without first reading the comments in skin property's set method!
         if (skinClassNameProperty().get() == null) {
             // TODO: using skinClassName as a flag in skin property's set method is probably a bad idea
@@ -872,14 +871,14 @@ public abstract class Control extends Region implements Skinnable {
             }
         }
 
-        super.impl_processCSS(cacheHint);
+        super.impl_processCSS(unused);
 
         if (getSkin() == null) {
             // try to create default skin
             final Skin<?> defaultSkin = createDefaultSkin();
             if (defaultSkin != null) {
                 skinProperty().set(defaultSkin);
-                super.impl_processCSS(cacheHint);
+                super.impl_processCSS(unused);
             } else {
                 final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                                    " and createDefaultSkin() returned null.";

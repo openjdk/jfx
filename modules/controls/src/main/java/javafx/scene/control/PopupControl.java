@@ -1155,8 +1155,8 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
          * @deprecated This is an internal API that is not intended for use and will be removed in the next version
          */
         @Deprecated
-        @Override protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
-            super.impl_processCSS(cacheHint);
+        @Override protected void impl_processCSS(WritableValue<Boolean> unused) {
+            super.impl_processCSS(unused);
 
             if (getSkin() == null) {
                 // try to create default skin

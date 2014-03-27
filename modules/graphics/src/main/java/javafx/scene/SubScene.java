@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -557,25 +557,25 @@ public class SubScene extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override
-    protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
+    protected void impl_processCSS(WritableValue<Boolean> unused) {
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) { return; }
 
         if (getRoot().cssFlag == CssFlags.CLEAN) {
             getRoot().cssFlag = cssFlag;
         }
-        super.impl_processCSS(cacheHint);
-        getRoot().processCSS(cacheHint);
+        super.impl_processCSS(unused);
+        getRoot().processCSS();
     }
 
     @Override
-    void processCSS(WritableValue<Boolean> cacheHint) {
+    void processCSS() {
         Parent root = getRoot();
         if (root.impl_isDirty(DirtyBits.NODE_CSS)) {
             root.impl_clearDirty(DirtyBits.NODE_CSS);
             if (cssFlag == CssFlags.CLEAN) { cssFlag = CssFlags.UPDATE; }
         }
-        super.processCSS(cacheHint);
+        super.processCSS();
     }
 
     @Override void updateBounds() {

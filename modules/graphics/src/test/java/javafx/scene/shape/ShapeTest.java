@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -194,7 +194,7 @@ public class ShapeTest {
         shape.setStyle("-fx-stroke-dash-array: 5 7 1 3;");
 
         ((Group)scene.getRoot()).getChildren().add(shape);
-        shape.impl_processCSS(true);
+        shape.applyCss();
 
         final List<Double> expected = new ArrayList();
         Collections.addAll(expected, 5d, 7d, 1d, 3d);

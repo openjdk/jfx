@@ -409,7 +409,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     private void updateTabPosition() {
         tabHeaderArea.setScrollOffset(0.0F);
-        getSkinnable().impl_reapplyCSS();
+        getSkinnable().applyCss();
         getSkinnable().requestLayout();
     }
 

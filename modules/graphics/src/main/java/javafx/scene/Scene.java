@@ -510,7 +510,7 @@ public class Scene implements EventTarget {
             // The cssFlag is set to clean in either Node.processCSS or
             // Node.impl_processCSS(boolean)
             sceneRoot.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
-            sceneRoot.processCSS(null);
+            sceneRoot.processCSS();
         }
     }
 
@@ -5994,7 +5994,7 @@ public class Scene implements EventTarget {
                 @Override
                 protected void invalidated() {
                     sceneEffectiveOrientationInvalidated();
-                    getRoot().impl_reapplyCSS();
+                    getRoot().applyCss();
                 }
 
                 @Override
