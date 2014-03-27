@@ -57,8 +57,6 @@ public class MacAppStoreBundlerTest {
 
     @BeforeClass
     public static void prepareApp() throws IOException {
-        Assume.assumeTrue(false);
-
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
@@ -76,6 +74,9 @@ public class MacAppStoreBundlerTest {
             String commandOutput = baos.toString();
             Assume.assumeTrue(commandOutput.contains(signingKeyName));
             System.err.println("Valid certificate present");
+        } catch (Throwable t) {
+            System.err.println("Valid certificate not present, skipping test.");
+            Assume.assumeTrue(false);
         }
 
 
