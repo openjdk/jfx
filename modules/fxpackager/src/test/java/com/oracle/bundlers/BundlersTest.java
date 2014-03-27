@@ -230,7 +230,6 @@ public class BundlersTest {
         
         assertFalse("Bundlers have a duplicate ID", duplicateFound);
     }
-    
 
     public List<String> getBundlerIDs() {
         Collection<Bundler> bundlers = Bundlers.createBundlersInstance().getBundlers();

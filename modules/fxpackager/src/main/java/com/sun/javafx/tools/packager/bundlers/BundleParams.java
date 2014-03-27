@@ -90,6 +90,11 @@ public class BundleParams {
        null means "default" */
     public static final String PARAM_SYSTEM_WIDE            = "systemWide"; // Boolean
 
+    /* service/daemon install.
+       null means "default" */
+    public static final String PARAM_SERVICE_HINT           = "serviceHint"; // Boolean
+
+    
     /* Main application class. Not used directly but used to derive default values */
     public static final String PARAM_APPLICATION_CLASS      = "applicationClass"; // String
 
@@ -244,6 +249,10 @@ public class BundleParams {
         putUnlessNull(PARAM_SYSTEM_WIDE, b);
     }
 
+    public void setServiceHint(Boolean b) {
+        putUnlessNull(PARAM_SERVICE_HINT, b);
+    }
+    
     public RelativeFileSet getRuntime() {
         return fetchParam(RUNTIME);
     }

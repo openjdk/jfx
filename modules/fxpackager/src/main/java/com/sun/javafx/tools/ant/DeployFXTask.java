@@ -173,6 +173,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                     app.get().embeddedIntoSwing);
             deployParams.setVersion(app.get().version);
             deployParams.setId(app.get().id);
+            deployParams.setServiceHint(app.get().daemon);
         }
 
         if (appInfo != null) {

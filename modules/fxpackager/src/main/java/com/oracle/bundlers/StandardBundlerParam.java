@@ -339,7 +339,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             new StandardBundlerParam<>(
                     I18N.getString("param.service-hint.name"),
                     I18N.getString("param.service-hint.description"),
-                    "serviceHint",
+                    BundleParams.PARAM_SERVICE_HINT,
                     Boolean.class,
                     null,
                     params -> false,

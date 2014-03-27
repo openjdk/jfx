@@ -56,6 +56,7 @@ public class DeployParams extends CommonParams {
     String copyright;
     String version;
     Boolean systemWide;
+    Boolean serviceHint;
 
     String applicationClass;
     String preloader;
@@ -148,6 +149,10 @@ public class DeployParams extends CommonParams {
 
     public void setSystemWide(Boolean systemWide) {
         this.systemWide = systemWide;
+    }
+
+    public void setServiceHint(Boolean serviceHint) {
+        this.serviceHint = serviceHint;
     }
 
     public void setJRE(String v) {
@@ -507,6 +512,7 @@ public class DeployParams extends CommonParams {
             bundleParams.setShortcutHint(needShortcut);
             bundleParams.setMenuHint(needMenu);
             bundleParams.setSystemWide(systemWide);
+            bundleParams.setServiceHint(serviceHint);
             bundleParams.setCopyright(copyright);
             bundleParams.setApplicationCategory(category);
             bundleParams.setLicenseType(licenseType);
