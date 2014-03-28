@@ -759,4 +759,13 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
             default: return super.accGetAttribute(attribute, parameters);
         }
     }
+
+    @Override protected void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SHOW_MENU: 
+                overflowMenu.fire();
+                break;
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
 }

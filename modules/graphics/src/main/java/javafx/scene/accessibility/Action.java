@@ -103,4 +103,8 @@ public enum Action {
      */
     SET_VALUE,
 
+    /**
+     * Request the receiver to show its menu.
+     */
+    SHOW_MENU,
 }

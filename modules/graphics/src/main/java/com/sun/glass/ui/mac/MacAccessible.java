@@ -524,7 +524,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityPickAction,
         NSAccessibilityPressAction(Action.FIRE),
         NSAccessibilityRaiseAction,
-        NSAccessibilityShowMenuAction;
+        NSAccessibilityShowMenuAction(Action.SHOW_MENU);
 
         long ptr; /* Initialized natively - treat as final */
         Action jfxAction;
@@ -1220,17 +1220,6 @@ final class MacAccessible extends PlatformAccessible {
         MacActions macAction = MacActions.getAction(action);
         if (macAction != null && macAction.jfxAction != null) {
             executeAction(macAction.jfxAction);
-        }
-        /* Consider adding SHOW_MENU JFX public Action API */
-        if (macAction == MacActions.NSAccessibilityShowMenuAction) {
-            Role role = (Role)getAttribute(ROLE);
-            if (role == Role.TOOLBAR) {
-                Node button = (Node)getAttribute(OVERFLOW_BUTTON);
-                if (button != null) {
-                    button.getAccessible().executeAction(Action.FIRE);
-                }
-                return;
-            }
         }
     }
 
