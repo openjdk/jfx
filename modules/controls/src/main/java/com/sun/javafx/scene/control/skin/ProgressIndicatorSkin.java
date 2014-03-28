@@ -416,9 +416,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                     }
                 }
                 else if (isVisible) {
-                    indeterminateTimeline = new Timeline();
-                    indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
-                    indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
                     rebuildTimeline();
                 }
             });
@@ -430,14 +427,10 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
             pathsG = new IndicatorPaths();
             getChildren().add(pathsG);
-
-            indeterminateTimeline = new Timeline();
-            indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
-            indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+            rebuild();
 
             rebuildTimeline();
 
-            rebuild();
         }
 
         public void setFillOverride(Paint fillOverride) {
@@ -495,7 +488,15 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
     }
 
         private void rebuildTimeline() {
-            if (indeterminateTimeline != null) {
+            if (spinEnabled) {
+                if (indeterminateTimeline == null) {
+                    indeterminateTimeline = new Timeline();
+                    indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
+                    indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                } else {
+                    indeterminateTimeline.stop();
+                    indeterminateTimeline.getKeyFrames().clear();
+                }
                 final ObservableList<KeyFrame> keyFrames = FXCollections.<KeyFrame>observableArrayList();
                 keyFrames.add(
                   new KeyFrame(
@@ -523,10 +524,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                         }
                     }
                   ));
-                if(spinEnabled) {
-                    keyFrames.add(new KeyFrame(Duration.millis(1), new KeyValue(pathsG.rotateProperty(), 360)));
-                    keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
-                }
+
+                keyFrames.add(new KeyFrame(Duration.millis(1), new KeyValue(pathsG.rotateProperty(), 360)));
+                keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
 
                 for (int i = 100; i <= 3900; i += 100) {
                     keyFrames.add(
@@ -539,6 +539,12 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
                 indeterminateTimeline.getKeyFrames().setAll(keyFrames);
                 indeterminateTimeline.playFromStart();
+            } else {
+                if (indeterminateTimeline != null) {
+                    indeterminateTimeline.stop();
+                    indeterminateTimeline.getKeyFrames().clear();
+                    indeterminateTimeline = null;
+                }
             }
         }
 
@@ -756,8 +762,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                     }
                 };
         private static final CssMetaData<ProgressIndicator,Boolean> SPIN_ENABLED =
-                new CssMetaData<ProgressIndicator,Boolean>("-fx-spin-enabled",
-                                                           BooleanConverter.getInstance(), Boolean.FALSE) {
+                new CssMetaData<ProgressIndicator,Boolean>("-fx-spin-enabled", BooleanConverter.getInstance(), Boolean.FALSE) {
 
                     @Override public boolean isSettable(ProgressIndicator node) {
                         final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
