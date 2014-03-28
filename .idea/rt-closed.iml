@@ -111,7 +111,6 @@
       <excludeFolder url="file://$MODULE_DIR$/../rt-closed/javafx-android" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="deploy" exported="" />
     <orderEntry type="module" module-name="rt" exported="" />
     <orderEntry type="inheritedJdk" />
   </component>
