@@ -47,14 +47,12 @@ public class VirtualScrollBar extends ScrollBar {
     public VirtualScrollBar(final VirtualFlow flow) {
         this.flow = flow;
         
-        super.valueProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                if (isVirtual()/* && oldValue != newValue*/) {
-                    if (adjusting) {
-                        // no-op
-                    } else {
-                        flow.setPosition(getValue());
-                    }
+        super.valueProperty().addListener(valueModel -> {
+            if (isVirtual()/* && oldValue != newValue*/) {
+                if (adjusting) {
+                    // no-op
+                } else {
+                    flow.setPosition(getValue());
                 }
             }
         });

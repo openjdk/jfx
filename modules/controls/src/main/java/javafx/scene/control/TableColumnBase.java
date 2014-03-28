@@ -114,18 +114,16 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * method is called, otherwise this method will defer to
      * {@link Collator#compare(java.lang.String, java.lang.String)}.
      */
-    public static final Comparator DEFAULT_COMPARATOR = new Comparator() {
-        @Override public int compare(Object obj1, Object obj2) {
-            if (obj1 == null && obj2 == null) return 0;
-            if (obj1 == null) return -1;
-            if (obj2 == null) return 1;
-            
-            if (obj1 instanceof Comparable && (obj1.getClass() == obj2.getClass() || obj1.getClass().isAssignableFrom(obj2.getClass()))) {
-                return ((Comparable)obj1).compareTo(obj2);
-            }
+    public static final Comparator DEFAULT_COMPARATOR = (obj1, obj2) -> {
+        if (obj1 == null && obj2 == null) return 0;
+        if (obj1 == null) return -1;
+        if (obj2 == null) return 1;
 
-            return Collator.getInstance().compare(obj1.toString(), obj2.toString());
+        if (obj1 instanceof Comparable && (obj1.getClass() == obj2.getClass() || obj1.getClass().isAssignableFrom(obj2.getClass()))) {
+            return ((Comparable)obj1).compareTo(obj2);
         }
+
+        return Collator.getInstance().compare(obj1.toString(), obj2.toString());
     };
     
     

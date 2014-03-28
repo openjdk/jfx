@@ -112,13 +112,10 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
-        pagination.maxPageIndicatorCountProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable o) {
-                resetIndexes(false);
-                navigation.initializePageIndicators();
-                navigation.updatePageIndicators();
-            }
+        pagination.maxPageIndicatorCountProperty().addListener(o -> {
+            resetIndexes(false);
+            navigation.initializePageIndicators();
+            navigation.updatePageIndicators();
         });
 
         registerChangeListener(pagination.widthProperty(), "WIDTH");
@@ -155,139 +152,133 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
     private void initializeSwipeAndTouchHandlers() {
         final Pagination control = getSkinnable();
 
-        getSkinnable().setOnTouchPressed(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                if (touchEventId == -1) {
-                    touchEventId = e.getTouchPoint().getId();
-                }
-                if (touchEventId != e.getTouchPoint().getId()) {
-                    return;
-                }
-                lastTouchPos = startTouchPos = e.getTouchPoint().getX();
-                lastTouchTime = startTouchTime = System.currentTimeMillis();
-                touchThresholdBroken = false;
-                e.consume();
+        getSkinnable().setOnTouchPressed(e -> {
+            if (touchEventId == -1) {
+                touchEventId = e.getTouchPoint().getId();
             }
+            if (touchEventId != e.getTouchPoint().getId()) {
+                return;
+            }
+            lastTouchPos = startTouchPos = e.getTouchPoint().getX();
+            lastTouchTime = startTouchTime = System.currentTimeMillis();
+            touchThresholdBroken = false;
+            e.consume();
         });
 
-        getSkinnable().setOnTouchMoved(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                if (touchEventId != e.getTouchPoint().getId()) {
-                    return;
+        getSkinnable().setOnTouchMoved(e -> {
+            if (touchEventId != e.getTouchPoint().getId()) {
+                return;
+            }
+
+            double drag = e.getTouchPoint().getX() - lastTouchPos;
+            long time = System.currentTimeMillis() - lastTouchTime;
+            touchVelocity = drag/time;
+            lastTouchPos = e.getTouchPoint().getX();
+            lastTouchTime = System.currentTimeMillis();
+            double delta = e.getTouchPoint().getX() - startTouchPos;
+
+            if (!touchThresholdBroken && Math.abs(delta) > TOUCH_THRESHOLD) {
+                touchThresholdBroken = true;
+            }
+
+            if (touchThresholdBroken) {
+                double width = control.getWidth() - (snappedLeftInset() + snappedRightInset());
+                double currentPaneX;
+                double nextPaneX;
+
+                if (!setInitialDirection) {
+                    // Remember the direction travelled so we can
+                    // load the next or previous page if the touch is not released.
+                    setInitialDirection = true;
+                    direction = delta < 0 ? 1 : -1;
                 }
-
-                double drag = e.getTouchPoint().getX() - lastTouchPos;
-                long time = System.currentTimeMillis() - lastTouchTime;
-                touchVelocity = drag/time;
-                lastTouchPos = e.getTouchPoint().getX();
-                lastTouchTime = System.currentTimeMillis();
-                double delta = e.getTouchPoint().getX() - startTouchPos;
-
-                if (!touchThresholdBroken && Math.abs(delta) > TOUCH_THRESHOLD) {
-                    touchThresholdBroken = true;
-                }
-
-                if (touchThresholdBroken) {
-                    double width = control.getWidth() - (snappedLeftInset() + snappedRightInset());
-                    double currentPaneX;
-                    double nextPaneX;
-
-                    if (!setInitialDirection) {
-                        // Remember the direction travelled so we can
-                        // load the next or previous page if the touch is not released.
-                        setInitialDirection = true;
-                        direction = delta < 0 ? 1 : -1;
+                if (delta < 0) {
+                    if (direction == -1) {
+                        nextStackPane.getChildren().clear();
+                        direction = 1;
                     }
-                    if (delta < 0) {
-                        if (direction == -1) {
-                            nextStackPane.getChildren().clear();
-                            direction = 1;
-                        }
-                        // right to left
-                        if (Math.abs(delta) <= width) {
-                            currentPaneX = delta;
-                            nextPaneX = width + delta;
-                            nextPageReached = false;
-                        } else {
-                            currentPaneX = -width;
-                            nextPaneX = 0;
-                            nextPageReached = true;
-                        }
-                        currentStackPane.setTranslateX(currentPaneX);
-                        if (getCurrentPageIndex() < getPageCount() - 1) {
-                            createPage(nextStackPane, currentIndex + 1);
-                            nextStackPane.setVisible(true);
-                            nextStackPane.setTranslateX(nextPaneX);
-                        } else {
-                            currentStackPane.setTranslateX(0);
-                        }
+                    // right to left
+                    if (Math.abs(delta) <= width) {
+                        currentPaneX = delta;
+                        nextPaneX = width + delta;
+                        nextPageReached = false;
                     } else {
-                        // left to right
-                        if (direction == 1) {
-                            nextStackPane.getChildren().clear();
-                            direction = -1;
-                        }
-                        if (Math.abs(delta) <= width) {
-                            currentPaneX = delta;
-                            nextPaneX = -width + delta;
-                            nextPageReached = false;
-                        } else {
-                            currentPaneX = width;
-                            nextPaneX = 0;
-                            nextPageReached = true;
-                        }
-                        currentStackPane.setTranslateX(currentPaneX);
-                        if (getCurrentPageIndex() != 0) {
-                            createPage(nextStackPane, currentIndex - 1);
-                            nextStackPane.setVisible(true);
-                            nextStackPane.setTranslateX(nextPaneX);
-                        } else {
-                            currentStackPane.setTranslateX(0);
-                        }
+                        currentPaneX = -width;
+                        nextPaneX = 0;
+                        nextPageReached = true;
                     }
-                }
-                e.consume();
-            }
-        });
-
-        getSkinnable().setOnTouchReleased(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                if (touchEventId != e.getTouchPoint().getId()) {
-                    return;
+                    currentStackPane.setTranslateX(currentPaneX);
+                    if (getCurrentPageIndex() < getPageCount() - 1) {
+                        createPage(nextStackPane, currentIndex + 1);
+                        nextStackPane.setVisible(true);
+                        nextStackPane.setTranslateX(nextPaneX);
+                    } else {
+                        currentStackPane.setTranslateX(0);
+                    }
                 } else {
-                    touchEventId = -1;
-                    setInitialDirection = false;
-                }
-
-                if (touchThresholdBroken) {
-                    // determin if click or swipe
-                    final double drag = e.getTouchPoint().getX() - startTouchPos;
-                    // calculate complete time from start to end of drag
-                    final long time = System.currentTimeMillis() - startTouchTime;
-                    // if time is less than 300ms then considered a quick swipe and whole time is used
-                    final boolean quick = time < 300;
-                    // calculate velocity
-                    final double velocity = quick ? (double)drag / time : touchVelocity; // pixels/ms
-                    // calculate distance we would travel at this speed for 500ms of travel
-                    final double distance = (velocity * 500);
-                    final double width = control.getWidth() - (snappedLeftInset() + snappedRightInset());
-
-                    // The swipe distance travelled.
-                    final double threshold = Math.abs(distance/width);
-                    // The touch and dragged distance travelled.
-                    final double delta = Math.abs(drag/width);
-                    if (threshold > SWIPE_THRESHOLD || delta > SWIPE_THRESHOLD) {
-                        if (startTouchPos > e.getTouchPoint().getX()) {
-                            selectNext();
-                        } else {
-                            selectPrevious();
-                        }
+                    // left to right
+                    if (direction == 1) {
+                        nextStackPane.getChildren().clear();
+                        direction = -1;
+                    }
+                    if (Math.abs(delta) <= width) {
+                        currentPaneX = delta;
+                        nextPaneX = -width + delta;
+                        nextPageReached = false;
                     } else {
-                        animateClamping(startTouchPos > e.getTouchPoint().getSceneX());
+                        currentPaneX = width;
+                        nextPaneX = 0;
+                        nextPageReached = true;
+                    }
+                    currentStackPane.setTranslateX(currentPaneX);
+                    if (getCurrentPageIndex() != 0) {
+                        createPage(nextStackPane, currentIndex - 1);
+                        nextStackPane.setVisible(true);
+                        nextStackPane.setTranslateX(nextPaneX);
+                    } else {
+                        currentStackPane.setTranslateX(0);
                     }
                 }
-                e.consume();
             }
+            e.consume();
+        });
+
+        getSkinnable().setOnTouchReleased(e -> {
+            if (touchEventId != e.getTouchPoint().getId()) {
+                return;
+            } else {
+                touchEventId = -1;
+                setInitialDirection = false;
+            }
+
+            if (touchThresholdBroken) {
+                // determin if click or swipe
+                final double drag = e.getTouchPoint().getX() - startTouchPos;
+                // calculate complete time from start to end of drag
+                final long time = System.currentTimeMillis() - startTouchTime;
+                // if time is less than 300ms then considered a quick swipe and whole time is used
+                final boolean quick = time < 300;
+                // calculate velocity
+                final double velocity = quick ? (double)drag / time : touchVelocity; // pixels/ms
+                // calculate distance we would travel at this speed for 500ms of travel
+                final double distance = (velocity * 500);
+                final double width = control.getWidth() - (snappedLeftInset() + snappedRightInset());
+
+                // The swipe distance travelled.
+                final double threshold = Math.abs(distance/width);
+                // The touch and dragged distance travelled.
+                final double delta = Math.abs(drag/width);
+                if (threshold > SWIPE_THRESHOLD || delta > SWIPE_THRESHOLD) {
+                    if (startTouchPos > e.getTouchPoint().getX()) {
+                        selectNext();
+                    } else {
+                        selectPrevious();
+                    }
+                } else {
+                    animateClamping(startTouchPos > e.getTouchPoint().getSceneX());
+                }
+            }
+            e.consume();
         });
     }
 
@@ -405,49 +396,47 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         currentStackPane.setCache(true);
 
         // wait one pulse then animate
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                // We are handling a touch event if nextPane's translateX is not 0
-                boolean useTranslateX = nextStackPane.getTranslateX() != 0;
-                if (currentAnimatedIndex > previousIndex) {  // animate right to left
-                    if (!useTranslateX) {
-                        nextStackPane.setTranslateX(currentStackPane.getWidth());
-                    }
-                    nextStackPane.setVisible(true);
-                    timeline = new Timeline();
-                    KeyFrame k1 =  new KeyFrame(Duration.millis(0),
-                        new KeyValue(currentStackPane.translateXProperty(),
-                            useTranslateX ? currentStackPane.getTranslateX() : 0,
-                            interpolator),
-                        new KeyValue(nextStackPane.translateXProperty(),
-                            useTranslateX ?
-                                nextStackPane.getTranslateX() : currentStackPane.getWidth(), interpolator));
-                    KeyFrame k2 = new KeyFrame(DURATION,
-                        swipeAnimationEndEventHandler,
-                        new KeyValue(currentStackPane.translateXProperty(), -currentStackPane.getWidth(), interpolator),
-                        new KeyValue(nextStackPane.translateXProperty(), 0, interpolator));
-                    timeline.getKeyFrames().setAll(k1, k2);
-                    timeline.play();
-                } else { // animate left to right
-                    if (!useTranslateX) {
-                        nextStackPane.setTranslateX(-currentStackPane.getWidth());
-                    }
-                    nextStackPane.setVisible(true);
-                    timeline = new Timeline();
-                    KeyFrame k1 = new KeyFrame(Duration.millis(0),
-                        new KeyValue(currentStackPane.translateXProperty(),
-                            useTranslateX ? currentStackPane.getTranslateX() : 0,
-                            interpolator),
-                        new KeyValue(nextStackPane.translateXProperty(),
-                            useTranslateX ? nextStackPane.getTranslateX() : -currentStackPane.getWidth(),
-                            interpolator));
-                    KeyFrame k2 = new KeyFrame(DURATION,
-                        swipeAnimationEndEventHandler,
-                        new KeyValue(currentStackPane.translateXProperty(), currentStackPane.getWidth(), interpolator),
-                        new KeyValue(nextStackPane.translateXProperty(), 0, interpolator));
-                    timeline.getKeyFrames().setAll(k1, k2);
-                    timeline.play();
+        Platform.runLater(() -> {
+            // We are handling a touch event if nextPane's translateX is not 0
+            boolean useTranslateX = nextStackPane.getTranslateX() != 0;
+            if (currentAnimatedIndex > previousIndex) {  // animate right to left
+                if (!useTranslateX) {
+                    nextStackPane.setTranslateX(currentStackPane.getWidth());
                 }
+                nextStackPane.setVisible(true);
+                timeline = new Timeline();
+                KeyFrame k1 =  new KeyFrame(Duration.millis(0),
+                    new KeyValue(currentStackPane.translateXProperty(),
+                        useTranslateX ? currentStackPane.getTranslateX() : 0,
+                        interpolator),
+                    new KeyValue(nextStackPane.translateXProperty(),
+                        useTranslateX ?
+                            nextStackPane.getTranslateX() : currentStackPane.getWidth(), interpolator));
+                KeyFrame k2 = new KeyFrame(DURATION,
+                    swipeAnimationEndEventHandler,
+                    new KeyValue(currentStackPane.translateXProperty(), -currentStackPane.getWidth(), interpolator),
+                    new KeyValue(nextStackPane.translateXProperty(), 0, interpolator));
+                timeline.getKeyFrames().setAll(k1, k2);
+                timeline.play();
+            } else { // animate left to right
+                if (!useTranslateX) {
+                    nextStackPane.setTranslateX(-currentStackPane.getWidth());
+                }
+                nextStackPane.setVisible(true);
+                timeline = new Timeline();
+                KeyFrame k1 = new KeyFrame(Duration.millis(0),
+                    new KeyValue(currentStackPane.translateXProperty(),
+                        useTranslateX ? currentStackPane.getTranslateX() : 0,
+                        interpolator),
+                    new KeyValue(nextStackPane.translateXProperty(),
+                        useTranslateX ? nextStackPane.getTranslateX() : -currentStackPane.getWidth(),
+                        interpolator));
+                KeyFrame k2 = new KeyFrame(DURATION,
+                    swipeAnimationEndEventHandler,
+                    new KeyValue(currentStackPane.translateXProperty(), currentStackPane.getWidth(), interpolator),
+                    new KeyValue(nextStackPane.translateXProperty(), 0, interpolator));
+                timeline.getKeyFrames().setAll(k1, k2);
+                timeline.play();
             }
         });
     }
@@ -657,13 +646,10 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 // If we are in the middle of a page animation.
                 // Speedup and finish the animation then update the page factory.
                 timeline.setRate(8);
-                timeline.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent arg0) {
-                        resetIndexes(false);
-                        navigation.initializePageIndicators();
-                        navigation.updatePageIndicators();
-                    }
+                timeline.setOnFinished(arg0 -> {
+                    resetIndexes(false);
+                    navigation.initializePageIndicators();
+                    navigation.updatePageIndicators();
                 });
                 return;
             }
@@ -757,19 +743,17 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
             };
             minButtonSize = leftArrowButton.getFont().getSize() * 2;
-            leftArrowButton.fontProperty().addListener(new ChangeListener<Font>() {
-                @Override public void changed(ObservableValue<? extends Font> arg0, Font arg1, Font newFont) {
-                    minButtonSize = newFont.getSize() * 2;
-                    for(Node child: controlBox.getChildren()) {
-                        ((Control)child).setMinSize(minButtonSize, minButtonSize);
-                        // RT-33327 : min size is set on the toggle button but the
-                        // pref size does not match as computed by LabeledSkinBase#computePrefHeight 
-                        // so setting the prefSize ensures the desired size on the button.
-                        ((Control)child).setPrefSize(minButtonSize, minButtonSize);
-                    }
-                    // We want to relayout the indicator buttons because the size has changed.
-                    requestLayout();
+            leftArrowButton.fontProperty().addListener((arg0, arg1, newFont) -> {
+                minButtonSize = newFont.getSize() * 2;
+                for(Node child: controlBox.getChildren()) {
+                    ((Control)child).setMinSize(minButtonSize, minButtonSize);
+                    // RT-33327 : min size is set on the toggle button but the
+                    // pref size does not match as computed by LabeledSkinBase#computePrefHeight
+                    // so setting the prefSize ensures the desired size on the button.
+                    ((Control)child).setPrefSize(minButtonSize, minButtonSize);
                 }
+                // We want to relayout the indicator buttons because the size has changed.
+                requestLayout();
             });
             leftArrowButton.setMinSize(minButtonSize, minButtonSize);
             leftArrowButton.setPrefSize(minButtonSize, minButtonSize);
@@ -811,49 +795,38 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             updatePageIndex();
 
             // listen to changes to arrowButtonGap and update margins
-            arrowButtonGap.addListener(new ChangeListener<Number>() {
-                @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    if (newValue.doubleValue() == 0) {
-                        HBox.setMargin(leftArrowButton, null);
-                        HBox.setMargin(rightArrowButton, null);
+            arrowButtonGap.addListener((observable, oldValue, newValue) -> {
+                if (newValue.doubleValue() == 0) {
+                    HBox.setMargin(leftArrowButton, null);
+                    HBox.setMargin(rightArrowButton, null);
 
-                    } else {
-                        HBox.setMargin(leftArrowButton, new Insets(0, snapSize(newValue.doubleValue()), 0, 0));
-                        HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSize(newValue.doubleValue())));
-                    }
+                } else {
+                    HBox.setMargin(leftArrowButton, new Insets(0, snapSize(newValue.doubleValue()), 0, 0));
+                    HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSize(newValue.doubleValue())));
                 }
             });
         }
 
         private void initializeNavigationHandlers() {
-            leftArrowButton.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent arg0) {
-                    selectPrevious();
-                    requestLayout();
-                }
+            leftArrowButton.setOnAction(arg0 -> {
+                selectPrevious();
+                requestLayout();
             });
 
-            rightArrowButton.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent arg0) {
-                    selectNext();
-                    requestLayout();
-                }
+            rightArrowButton.setOnAction(arg0 -> {
+                selectNext();
+                requestLayout();
             });
 
-            pagination.currentPageIndexProperty().addListener(new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number arg2) {
-                    previousIndex = arg1.intValue();
-                    currentIndex = arg2.intValue();
-                    updatePageIndex();
-                    if (animate) {
-                        currentAnimatedIndex = currentIndex;
-                        animateSwitchPage();
-                    } else {
-                        createPage(currentStackPane, currentIndex);
-                    }
+            pagination.currentPageIndexProperty().addListener((arg0, arg1, arg2) -> {
+                previousIndex = arg1.intValue();
+                currentIndex = arg2.intValue();
+                updatePageIndex();
+                if (animate) {
+                    currentAnimatedIndex = currentIndex;
+                    animateSwitchPage();
+                } else {
+                    createPage(currentStackPane, currentIndex);
                 }
             });
         }
@@ -1220,11 +1193,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             setIndicatorType();
             setTooltipVisible(isTooltipVisible());
 
-            getSkinnable().getStyleClass().addListener(new ListChangeListener<String>() {
-                @Override
-                public void onChanged(Change<? extends String> change) {
-                    setIndicatorType();
-                }
+            getSkinnable().getStyleClass().addListener((ListChangeListener<String>) change -> {
+                setIndicatorType();
             });
 
             setOnAction(new EventHandler<ActionEvent>() {
@@ -1238,11 +1208,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
             });
 
-            tooltipVisibleProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                    setTooltipVisible(newValue);
-                }
+            tooltipVisibleProperty().addListener((ov, oldValue, newValue) -> {
+                setTooltipVisible(newValue);
             });
         }
 

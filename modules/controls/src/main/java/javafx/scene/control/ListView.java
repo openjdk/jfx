@@ -329,13 +329,11 @@ public class ListView<T> extends Control {
      *                                                                         *
      **************************************************************************/
     
-    private EventHandler<ListView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = new EventHandler<ListView.EditEvent<T>>() {
-        @Override public void handle(ListView.EditEvent<T> t) {
-            int index = t.getIndex();
-            List<T> list = getItems();
-            if (index < 0 || index >= list.size()) return;
-            list.set(index, t.getNewValue());
-        }
+    private EventHandler<ListView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
+        int index = t.getIndex();
+        List<T> list = getItems();
+        if (index < 0 || index >= list.size()) return;
+        list.set(index, t.getNewValue());
     };
     
     
@@ -1228,12 +1226,8 @@ public class ListView<T> extends Control {
         };
         
         // watching for changes to the items list
-        private final ChangeListener<ObservableList<T>> itemsObserver = new ChangeListener<ObservableList<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<T>> valueModel, 
-                ObservableList<T> oldList, ObservableList<T> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
+        private final ChangeListener<ObservableList<T>> itemsObserver = (valueModel, oldList, newList) -> {
+                updateItemsObserver(oldList, newList);
         };
         
         private WeakListChangeListener<T> weakItemsContentObserver =
@@ -1452,12 +1446,8 @@ public class ListView<T> extends Control {
             updateItemCount();
         }
 
-        private ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<ObservableList<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<T>> observable, 
-                ObservableList<T> oldList, ObservableList<T> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
+        private ChangeListener<ObservableList<T>> itemsListener = (observable, oldList, newList) -> {
+                updateItemsObserver(oldList, newList);
         };
         
         private WeakChangeListener<ObservableList<T>> weakItemsListener = 

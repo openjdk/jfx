@@ -169,18 +169,16 @@ public abstract class Control extends Region implements Skinnable {
      * classes which we'd otherwise have to create. When lambda expressions
      * are supported, we could do it that way instead (or use MethodHandles).
      */
-    private final static EventHandler<ContextMenuEvent> contextMenuHandler = new EventHandler<ContextMenuEvent>() {
-        @Override public void handle(ContextMenuEvent event) {
-            if (event.isConsumed()) return;
+    private final static EventHandler<ContextMenuEvent> contextMenuHandler = event -> {
+        if (event.isConsumed()) return;
 
-            // If a context menu was shown, consume the event to prevent multiple context menus
-            Object source = event.getSource();
-            if (source instanceof Control) {
-                Control c = (Control) source;
-                if (c.getContextMenu() != null) {
-                    c.getContextMenu().show(c, event.getScreenX(), event.getScreenY());
-                    event.consume();
-                }
+        // If a context menu was shown, consume the event to prevent multiple context menus
+        Object source = event.getSource();
+        if (source instanceof Control) {
+            Control c = (Control) source;
+            if (c.getContextMenu() != null) {
+                c.getContextMenu().show(c, event.getScreenX(), event.getScreenY());
+                event.consume();
             }
         }
     };

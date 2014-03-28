@@ -223,39 +223,37 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     private final SizeLimitedList<TablePositionBase> selectionHistory = new SizeLimitedList<>(10);
 
-    protected final ListChangeListener<TablePositionBase> selectedCellsListener = new ListChangeListener<TablePositionBase>() {
-        @Override public void onChanged(ListChangeListener.Change c) {
-            while (c.next()) {
-                TableSelectionModel sm = getSelectionModel();
-                if (sm == null) return;
-                
-                TablePositionBase anchor = getAnchor();
-                boolean cellSelectionEnabled = sm.isCellSelectionEnabled();
-                
-                int addedSize = c.getAddedSize();
-                List<TablePositionBase> addedSubList = (List<TablePositionBase>) c.getAddedSubList();
+    protected final ListChangeListener<TablePositionBase> selectedCellsListener = c -> {
+        while (c.next()) {
+            TableSelectionModel sm = getSelectionModel();
+            if (sm == null) return;
 
-                for (TablePositionBase tpb : addedSubList) {
-                    if (! selectionHistory.contains(tpb)) {
-                        selectionHistory.add(tpb);
-                    }
+            TablePositionBase anchor = getAnchor();
+            boolean cellSelectionEnabled = sm.isCellSelectionEnabled();
+
+            int addedSize = c.getAddedSize();
+            List<TablePositionBase> addedSubList = (List<TablePositionBase>) c.getAddedSubList();
+
+            for (TablePositionBase tpb : addedSubList) {
+                if (! selectionHistory.contains(tpb)) {
+                    selectionHistory.add(tpb);
                 }
-                
-                // newest selection
-                if (addedSize > 0 && ! hasAnchor()) {
-                    TablePositionBase tp = addedSubList.get(addedSize - 1);
-                    setAnchor(tp);
-                }
-                
-                if (anchor != null && cellSelectionEnabled && ! selectionPathDeviated) {
-                    // check if the selection is on the same row or column, 
-                    // otherwise set selectionPathDeviated to true
-                    for (int i = 0; i < addedSize; i++) {
-                        TablePositionBase tp = addedSubList.get(i);
-                        if (anchor.getRow() != -1 && tp.getRow() != anchor.getRow() && tp.getColumn() != anchor.getColumn()) {
-                            setSelectionPathDeviated(true);
-                            break;
-                        }
+            }
+
+            // newest selection
+            if (addedSize > 0 && ! hasAnchor()) {
+                TablePositionBase tp = addedSubList.get(addedSize - 1);
+                setAnchor(tp);
+            }
+
+            if (anchor != null && cellSelectionEnabled && ! selectionPathDeviated) {
+                // check if the selection is on the same row or column,
+                // otherwise set selectionPathDeviated to true
+                for (int i = 0; i < addedSize; i++) {
+                    TablePositionBase tp = addedSubList.get(i);
+                    if (anchor.getRow() != -1 && tp.getRow() != anchor.getRow() && tp.getColumn() != anchor.getColumn()) {
+                        setSelectionPathDeviated(true);
+                        break;
                     }
                 }
             }
@@ -628,10 +626,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (fm == null) return;
         
         if (sm.isCellSelectionEnabled()) {
-            updateCellVerticalSelection(-1, new Runnable() {
-                @Override public void run() {
-                    getSelectionModel().selectAboveCell();
-                }
+            updateCellVerticalSelection(-1, () -> {
+                getSelectionModel().selectAboveCell();
             });
         } else {
             if (isShiftDown && hasAnchor()) {
@@ -656,10 +652,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (fm == null) return;
 
         if (sm.isCellSelectionEnabled()) {
-            updateCellVerticalSelection(1, new Runnable() {
-                @Override public void run() {
-                    getSelectionModel().selectBelowCell();
-                }
+            updateCellVerticalSelection(1, () -> {
+                getSelectionModel().selectBelowCell();
             });
         } else {
             if (isShiftDown && hasAnchor()) {
@@ -672,20 +666,16 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
     
     protected void alsoSelectLeftCell() {
-        updateCellHorizontalSelection(-1, new Runnable() {
-            @Override public void run() { 
-                getSelectionModel().selectLeftCell();
-            }
+        updateCellHorizontalSelection(-1, () -> {
+            getSelectionModel().selectLeftCell();
         });
 
         onSelectLeftCell.run();
     }
 
     protected void alsoSelectRightCell() {
-        updateCellHorizontalSelection(1, new Runnable() {
-            @Override public void run() { 
-                getSelectionModel().selectRightCell();
-            }
+        updateCellHorizontalSelection(1, () -> {
+            getSelectionModel().selectRightCell();
         });
 
         onSelectRightCell.run();

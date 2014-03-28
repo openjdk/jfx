@@ -188,35 +188,29 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
         });
         getSkinnable().setImpl_traversalEngine(engine);
 
-        toolbar.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                if (newValue) {
-                    // TODO need to detect the focus direction
-                    // to selected the first control in the toolbar when TAB is pressed
-                    // or select the last control in the toolbar when SHIFT TAB is pressed.
-                    if (!box.getChildren().isEmpty()) {
-                        box.getChildren().get(0).requestFocus();
-                    } else {
-                        overflowMenu.requestFocus();
-                    }
+        toolbar.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                // TODO need to detect the focus direction
+                // to selected the first control in the toolbar when TAB is pressed
+                // or select the last control in the toolbar when SHIFT TAB is pressed.
+                if (!box.getChildren().isEmpty()) {
+                    box.getChildren().get(0).requestFocus();
+                } else {
+                    overflowMenu.requestFocus();
                 }
             }
         });
 
-        toolbar.getItems().addListener(new ListChangeListener<Node>() {
-            @Override
-            public void onChanged(Change<? extends Node> c) {
-                while (c.next()) {
-                    for (Node n: c.getRemoved()) {
-                        box.getChildren().remove(n);
-                    }
-                    box.getChildren().addAll(c.getAddedSubList());
+        toolbar.getItems().addListener((ListChangeListener<Node>) c -> {
+            while (c.next()) {
+                for (Node n: c.getRemoved()) {
+                    box.getChildren().remove(n);
                 }
-                needsUpdate = true;
-                getSkinnable().requestLayout();
+                box.getChildren().addAll(c.getAddedSubList());
             }
-        });        
+            needsUpdate = true;
+            getSkinnable().requestLayout();
+        });
     }
 
     private DoubleProperty spacing;
@@ -574,63 +568,49 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
             this.menuItems = items;
             downArrow = new StackPane();
             downArrow.getStyleClass().setAll("arrow");
-            downArrow.setOnMousePressed(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent me) {
+            downArrow.setOnMousePressed(me -> {
+                fire();
+            });
+
+            setOnKeyPressed(ke -> {
+                if (KeyCode.SPACE.equals(ke.getCode())) {
+                    if (!popup.isShowing()) {
+                        popup.getItems().clear();
+                        popup.getItems().addAll(menuItems);
+                        popup.show(downArrow, Side.BOTTOM, 0, 0);
+                    }
+                    ke.consume();
+                } else if (KeyCode.ESCAPE.equals(ke.getCode())) {
+                    if (popup.isShowing()) {
+                        popup.hide();
+                    }
+                    ke.consume();
+                } else if (KeyCode.ENTER.equals(ke.getCode())) {
                     fire();
+                    ke.consume();
                 }
             });
 
-            setOnKeyPressed(new EventHandler<KeyEvent>() {
-                @Override public void handle(KeyEvent ke) {
-                    if (KeyCode.SPACE.equals(ke.getCode())) {
-                        if (!popup.isShowing()) {
-                            popup.getItems().clear();
-                            popup.getItems().addAll(menuItems);
-                            popup.show(downArrow, Side.BOTTOM, 0, 0);
-                        }
-                        ke.consume();
-                    } else if (KeyCode.ESCAPE.equals(ke.getCode())) {
-                        if (popup.isShowing()) {
-                            popup.hide();
-                        }
-                        ke.consume();
-                    } else if (KeyCode.ENTER.equals(ke.getCode())) {
-                        fire();
-                        ke.consume();
+            focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    if (!popup.isShowing()) {
+                        popup.getItems().clear();
+                        popup.getItems().addAll(menuItems);
+                        popup.show(downArrow, Side.BOTTOM, 0, 0);
+                    }
+                } else {
+                    if (popup.isShowing()) {
+                        popup.hide();
                     }
                 }
             });
 
-            focusedProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(
-                        ObservableValue<? extends Boolean> observable,
-                        Boolean oldValue, Boolean newValue) {                    
+            visibleProperty().addListener((observable, oldValue, newValue) -> {
                     if (newValue) {
-                        if (!popup.isShowing()) {
-                            popup.getItems().clear();
-                            popup.getItems().addAll(menuItems);
-                            popup.show(downArrow, Side.BOTTOM, 0, 0);
+                        if (box.getChildren().isEmpty()) {
+                            setFocusTraversable(true);
                         }
-                    } else {
-                        if (popup.isShowing()) {
-                            popup.hide();
-                        } 
                     }
-                }
-            });
-
-            visibleProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(
-                        ObservableValue<? extends Boolean> observable,
-                        Boolean oldValue, Boolean newValue) {
-                        if (newValue) {
-                            if (box.getChildren().isEmpty()) {
-                                setFocusTraversable(true);
-                            }
-                        }
-                }
             });
             popup = new ContextMenu();
             setVisible(false);

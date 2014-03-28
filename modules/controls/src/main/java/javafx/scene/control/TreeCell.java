@@ -95,10 +95,8 @@ public class TreeCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     
-    private final ListChangeListener<Integer> selectedListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
-            updateSelection();
-        }
+    private final ListChangeListener<Integer> selectedListener = c -> {
+        updateSelection();
     };
     
     /**
@@ -119,10 +117,8 @@ public class TreeCell<T> extends IndexedCell<T> {
         }
     };    
 
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateFocus();
-        }
+    private final InvalidationListener focusedListener = valueModel -> {
+        updateFocus();
     };
     
     /**
@@ -143,10 +139,8 @@ public class TreeCell<T> extends IndexedCell<T> {
         }
     };
 
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateEditing();
-        }
+    private final InvalidationListener editingListener = valueModel -> {
+        updateEditing();
     };
     
     private final InvalidationListener leafListener = new InvalidationListener() {
@@ -174,10 +168,8 @@ public class TreeCell<T> extends IndexedCell<T> {
         }
     };
 
-    private final InvalidationListener rootPropertyListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            updateItem(-1);
-        }
+    private final InvalidationListener rootPropertyListener = observable -> {
+        updateItem(-1);
     };
     
     private final WeakListChangeListener<Integer> weakSelectedListener = new WeakListChangeListener<Integer>(selectedListener);

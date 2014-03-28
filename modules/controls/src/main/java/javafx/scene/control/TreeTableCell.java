@@ -116,57 +116,43 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      * be mutated, we create this observer here, and add/remove it from the
      * storeTableView method.
      */
-    private ListChangeListener<TreeTablePosition<S,?>> selectedListener = new ListChangeListener<TreeTablePosition<S,?>>() {
-        @Override public void onChanged(Change<? extends TreeTablePosition<S,?>> c) {
-            updateSelection();
-        }
+    private ListChangeListener<TreeTablePosition<S,?>> selectedListener = c -> {
+        updateSelection();
     };
 
     // same as above, but for focus
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(@SuppressWarnings("unused") Observable value) {
-            updateFocus();
-        }
+    private final InvalidationListener focusedListener = value -> {
+        updateFocus();
     };
 
     // same as above, but for for changes to the properties on TableRow
-    private final InvalidationListener tableRowUpdateObserver = new InvalidationListener() {
-        @Override public void invalidated(@SuppressWarnings("unused") Observable value) {
-            itemDirty = true;
-            requestLayout();
-        }
+    private final InvalidationListener tableRowUpdateObserver = value -> {
+        itemDirty = true;
+        requestLayout();
     };
     
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(@SuppressWarnings("unused") Observable value) {
-            updateEditing();
-        }
+    private final InvalidationListener editingListener = value -> {
+        updateEditing();
     };
     
-    private ListChangeListener<TreeTableColumn<S,?>> visibleLeafColumnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
-        @Override public void onChanged(Change<? extends TreeTableColumn<S,?>> c) {
-            updateColumnIndex();
-        }
+    private ListChangeListener<TreeTableColumn<S,?>> visibleLeafColumnsListener = c -> {
+        updateColumnIndex();
     };
     
-    private ListChangeListener<String> columnStyleClassListener = new ListChangeListener<String>() {
-        @Override public void onChanged(Change<? extends String> c) {
-            while (c.next()) {
-                if (c.wasRemoved()) {
-                    getStyleClass().removeAll(c.getRemoved());
-                }
-                
-                if (c.wasAdded()) {
-                    getStyleClass().addAll(c.getAddedSubList());
-                }
+    private ListChangeListener<String> columnStyleClassListener = c -> {
+        while (c.next()) {
+            if (c.wasRemoved()) {
+                getStyleClass().removeAll(c.getRemoved());
+            }
+
+            if (c.wasAdded()) {
+                getStyleClass().addAll(c.getAddedSubList());
             }
         }
     };
 
-    private final InvalidationListener rootPropertyListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            updateItem(-1);
-        }
+    private final InvalidationListener rootPropertyListener = observable -> {
+        updateItem(-1);
     };
     
     private final WeakListChangeListener<TreeTablePosition<S,?>> weakSelectedListener = 

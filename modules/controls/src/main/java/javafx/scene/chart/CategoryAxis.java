@@ -68,22 +68,20 @@ public final class CategoryAxis extends Axis<String> {
     private final DoubleProperty firstCategoryPos = new SimpleDoubleProperty(this, "firstCategoryPos", 0);
     private Object currentAnimationID;
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(this);
-    private ListChangeListener<String> itemsListener = new ListChangeListener<String>() {
-        @Override public void onChanged(Change<? extends String> c) {
-            while (c.next()) {
-                if(!c.getAddedSubList().isEmpty()) {
-                    // remove duplicates else they will get rendered on the chart.
-                    // Ideally we should be using a Set for categories.
-                    for (String addedStr : c.getAddedSubList())
-                        checkAndRemoveDuplicates(addedStr);
-                    }
-                if (!isAutoRanging()) {
-                    allDataCategories.clear();
-                    allDataCategories.addAll(getCategories());
-                    rangeValid = false;
+    private ListChangeListener<String> itemsListener = c -> {
+        while (c.next()) {
+            if(!c.getAddedSubList().isEmpty()) {
+                // remove duplicates else they will get rendered on the chart.
+                // Ideally we should be using a Set for categories.
+                for (String addedStr : c.getAddedSubList())
+                    checkAndRemoveDuplicates(addedStr);
                 }
-                requestAxisLayout();
+            if (!isAutoRanging()) {
+                allDataCategories.clear();
+                allDataCategories.addAll(getCategories());
+                rangeValid = false;
             }
+            requestAxisLayout();
         }
     };
     

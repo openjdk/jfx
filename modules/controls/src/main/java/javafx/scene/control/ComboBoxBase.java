@@ -122,13 +122,11 @@ public abstract class ComboBoxBase<T> extends Control {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
 
         // Fix for RT-29885
-        getProperties().addListener(new MapChangeListener<Object, Object>() {
-            @Override public void onChanged(Change<?,?> change) {
-                if (change.wasAdded()) {
-                    if (change.getKey() == "FOCUSED") {
-                        setFocused((Boolean)change.getValueAdded());
-                        getProperties().remove("FOCUSED");
-                    }
+        getProperties().addListener((MapChangeListener<Object, Object>) change -> {
+            if (change.wasAdded()) {
+                if (change.getKey() == "FOCUSED") {
+                    setFocused((Boolean)change.getValueAdded());
+                    getProperties().remove("FOCUSED");
                 }
             }
         });

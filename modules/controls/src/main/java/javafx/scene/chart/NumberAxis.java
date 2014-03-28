@@ -488,10 +488,8 @@ public final class NumberAxis extends ValueAxis<Number> {
          */
         public DefaultFormatter(final NumberAxis axis) {
             formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
-            final ChangeListener axisListener = new ChangeListener() {
-                @Override public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-                    formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
-                }
+            final ChangeListener axisListener = (observable, oldValue, newValue) -> {
+                formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
             };
             axis.currentRangeIndexProperty.addListener(axisListener);
             axis.autoRangingProperty().addListener(axisListener);

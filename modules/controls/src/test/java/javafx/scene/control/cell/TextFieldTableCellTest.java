@@ -392,11 +392,7 @@ public class TextFieldTableCellTest {
 
     @Test public void test_rt_32869() {
         TableColumn tc = new TableColumn();
-        tc.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-                        @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper("Dummy Text");
-            }
-        });
+        tc.setCellValueFactory(param -> new ReadOnlyStringWrapper("Dummy Text"));
 
         TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
         tableView.getColumns().add(tc);

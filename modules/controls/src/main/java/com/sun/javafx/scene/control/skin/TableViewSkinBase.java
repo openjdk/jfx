@@ -140,12 +140,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
     private static final boolean IS_PANNABLE =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return Boolean.getBoolean("com.sun.javafx.scene.control.skin.TableViewSkin.pannable");
-                }
-            });
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.scene.control.skin.TableViewSkin.pannable"));
 
     /***************************************************************************
      *                                                                         *
@@ -167,20 +162,14 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         // init the VirtualFlow
         flow.setPannable(IS_PANNABLE);
         flow.setFocusTraversable(control.isFocusTraversable());
-        flow.setCreateCell(new Callback<VirtualFlow, I>() {
-            @Override public I call(VirtualFlow flow) {
-                return TableViewSkinBase.this.createCell();
-            }
-        });
+        flow.setCreateCell(flow1 -> TableViewSkinBase.this.createCell());
         
         /*
          * Listening for scrolling along the X axis, but we need to be careful
          * to handle the situation appropriately when the hbar is invisible.
          */
-        final InvalidationListener hbarValueListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                horizontalScroll();
-            }
+        final InvalidationListener hbarValueListener = valueModel -> {
+            horizontalScroll();
         };
         flow.getHbar().valueProperty().addListener(hbarValueListener);
 
@@ -203,10 +192,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         updateVisibleColumnCount();
         updateVisibleLeafColumnWidthListeners(getVisibleLeafColumns(), FXCollections.<TC>emptyObservableList());
 
-        tableHeaderRow.reorderingProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                getSkinnable().requestLayout();
-            }
+        tableHeaderRow.reorderingProperty().addListener(valueModel -> {
+            getSkinnable().requestLayout();
         });
 
         getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
@@ -216,18 +203,14 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
 
         control.getProperties().addListener(propertiesMapListener);
         
-        control.addEventHandler(ScrollToEvent.<TC>scrollToColumn(), new EventHandler<ScrollToEvent<TC>>() {
-            @Override public void handle(ScrollToEvent<TC> event) {
-                scrollHorizontally(event.getScrollTarget());
-            }
-        });   
+        control.addEventHandler(ScrollToEvent.<TC>scrollToColumn(), event -> {
+            scrollHorizontally(event.getScrollTarget());
+        });
 
         // flow and flow.vbar width observer
-        InvalidationListener widthObserver = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                contentWidthDirty = true;
-                getSkinnable().requestLayout();
-            }
+        InvalidationListener widthObserver = valueModel -> {
+            contentWidthDirty = true;
+            getSkinnable().requestLayout();
         };
         flow.widthProperty().addListener(widthObserver);
         flow.getVbar().widthProperty().addListener(widthObserver);
@@ -247,76 +230,65 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
      *                                                                         *
      **************************************************************************/
 
-    private MapChangeListener<Object, Object> propertiesMapListener = new MapChangeListener<Object, Object>() {
-        @Override public void onChanged(MapChangeListener.Change<? extends Object, ? extends Object> c) {
-            if (! c.wasAdded()) return;
-            if (REFRESH.equals(c.getKey())) {
-                refreshView();
-                getSkinnable().getProperties().remove(REFRESH);
-            } else if (RECREATE.equals(c.getKey())) {
-                forceCellRecreate = true;
-                refreshView();
-                getSkinnable().getProperties().remove(RECREATE);
-            }
+    private MapChangeListener<Object, Object> propertiesMapListener = c -> {
+        if (! c.wasAdded()) return;
+        if (REFRESH.equals(c.getKey())) {
+            refreshView();
+            getSkinnable().getProperties().remove(REFRESH);
+        } else if (RECREATE.equals(c.getKey())) {
+            forceCellRecreate = true;
+            refreshView();
+            getSkinnable().getProperties().remove(RECREATE);
         }
     };
     
-    private ListChangeListener<S> rowCountListener = new ListChangeListener<S>() {
-        @Override public void onChanged(Change<? extends S> c) {
-            while (c.next()) {
-                if (c.wasReplaced()) {
-                    // RT-28397: Support for when an item is replaced with itself (but
-                    // updated internal values that should be shown visually)
-                    itemCount = 0;
-                    break;
-                } else if (c.getRemovedSize() == itemCount) {
-                    // RT-22463: If the user clears out an items list then we
-                    // should reset all cells (in particular their contained
-                    // items) such that a subsequent addition to the list of
-                    // an item which equals the old item (but is rendered
-                    // differently) still displays as expected (i.e. with the
-                    // updated display, not the old display).
-                    itemCount = 0;
-                    break;
-                }
+    private ListChangeListener<S> rowCountListener = c -> {
+        while (c.next()) {
+            if (c.wasReplaced()) {
+                // RT-28397: Support for when an item is replaced with itself (but
+                // updated internal values that should be shown visually)
+                itemCount = 0;
+                break;
+            } else if (c.getRemovedSize() == itemCount) {
+                // RT-22463: If the user clears out an items list then we
+                // should reset all cells (in particular their contained
+                // items) such that a subsequent addition to the list of
+                // an item which equals the old item (but is rendered
+                // differently) still displays as expected (i.e. with the
+                // updated display, not the old display).
+                itemCount = 0;
+                break;
             }
-            
-            rowCountDirty = true;
-            getSkinnable().requestLayout();
         }
+
+        rowCountDirty = true;
+        getSkinnable().requestLayout();
     };
     
-    private ListChangeListener<TC> visibleLeafColumnsListener = 
-        new ListChangeListener<TC>() {
-            @Override public void onChanged(Change<? extends TC> c) {
+    private ListChangeListener<TC> visibleLeafColumnsListener =
+            c -> {
                 updateVisibleColumnCount();
                 while (c.next()) {
                     updateVisibleLeafColumnWidthListeners(c.getAddedSubList(), c.getRemoved());
                 }
-            }
-    };
+            };
     
-    private InvalidationListener widthListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            // This forces the horizontal scrollbar to show when the column
-            // resizing occurs. It is not ideal, but will work for now.
-            
-            // using 'needCellsReconfigured' here rather than 'needCellsRebuilt'
-            // as otherwise performance suffers massively (RT-27831)
-            needCellsReconfigured = true;
-            if (getSkinnable() != null) {
-                getSkinnable().requestLayout();
-            }
+    private InvalidationListener widthListener = observable -> {
+        // This forces the horizontal scrollbar to show when the column
+        // resizing occurs. It is not ideal, but will work for now.
+
+        // using 'needCellsReconfigured' here rather than 'needCellsRebuilt'
+        // as otherwise performance suffers massively (RT-27831)
+        needCellsReconfigured = true;
+        if (getSkinnable() != null) {
+            getSkinnable().requestLayout();
         }
     };
     
-    private ChangeListener<ObservableList<S>> itemsChangeListener = 
-        new ChangeListener<ObservableList<S>>() {
-            @Override public void changed(ObservableValue<? extends ObservableList<S>> observable, 
-                    ObservableList<S> oldList, ObservableList<S> newList) {
+    private ChangeListener<ObservableList<S>> itemsChangeListener =
+            (observable, oldList, newList) -> {
                 updateTableItems(oldList, newList);
-            }
-    };
+            };
     
     private WeakListChangeListener<S> weakRowCountListener =
             new WeakListChangeListener<S>(rowCountListener);

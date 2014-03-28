@@ -104,10 +104,8 @@ public class ListCell<T> extends IndexedCell<T> {
      * editing. In such a case, we need to be notified so we can call startEdit
      * on our side.
      */
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            updateEditing();
-        }
+    private final InvalidationListener editingListener = value -> {
+        updateEditing();
     };
     private boolean updateEditingIndex = true;
 
@@ -115,10 +113,8 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the selection model on the ListView. Whenever the selection model
      * is changed (updated), the selected property on the ListCell is updated accordingly.
      */
-    private final ListChangeListener<Integer> selectedListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
-            updateSelection();
-        }
+    private final ListChangeListener<Integer> selectedListener = c -> {
+        updateSelection();
     };
 
     /**
@@ -149,10 +145,8 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the items on the ListView. Whenever the items are changed in such a way that
      * it impacts the index of this ListCell, then we must update the item.
      */
-    private final ListChangeListener<T> itemsListener = new ListChangeListener<T>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
-            updateItem(-1);
-        }
+    private final ListChangeListener<T> itemsListener = c -> {
+        updateItem(-1);
     };
 
     /**
@@ -177,10 +171,8 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the focus model on the ListView. Whenever the focus model changes,
      * the focused property on the ListCell is updated
      */
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            updateFocus();
-        }
+    private final InvalidationListener focusedListener = value -> {
+        updateFocus();
     };
 
     /**

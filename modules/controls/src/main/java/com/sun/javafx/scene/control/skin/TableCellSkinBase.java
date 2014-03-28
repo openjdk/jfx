@@ -110,10 +110,8 @@ public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBeh
      *                                                                         *
      **************************************************************************/
 
-    private InvalidationListener columnWidthListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            getSkinnable().requestLayout();
-        }
+    private InvalidationListener columnWidthListener = valueModel -> {
+        getSkinnable().requestLayout();
     };
 
     private WeakInvalidationListener weakColumnWidthListener =

@@ -656,10 +656,8 @@ public abstract class Axis<T> extends Region {
                 if (shouldAnimate()) {
                     FadeTransition ft = new FadeTransition(Duration.millis(250),tick.textNode);
                     ft.setToValue(0);
-                    ft.setOnFinished(new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getChildren().remove(tm.textNode);
-                        }
+                    ft.setOnFinished(actionEvent -> {
+                        getChildren().remove(tm.textNode);
                     });
                     ft.play();
                 } else {

@@ -311,12 +311,10 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                     symbol.setOpacity(0);
                     fadeSymbolTransition = new FadeTransition(Duration.millis(500),symbol);
                     fadeSymbolTransition.setToValue(0);
-                    fadeSymbolTransition.setOnFinished(new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            item.setSeries(null);
-                            getPlotChildren().remove(symbol);
-                            removeDataItemFromDisplay(series, item);
-                        }
+                    fadeSymbolTransition.setOnFinished(actionEvent -> {
+                        item.setSeries(null);
+                        getPlotChildren().remove(symbol);
+                        removeDataItemFromDisplay(series, item);
                     });
                     fadeSymbolTransition.play();
                 }
@@ -428,11 +426,9 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             seriesRemoveTimeline = new Timeline();
             seriesRemoveTimeline.getKeyFrames().addAll(
                 new KeyFrame(Duration.ZERO,startValues),
-                new KeyFrame(Duration.millis(900), new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().removeAll(nodes);
-                        removeSeriesFromDisplay(series);
-                    }
+                new KeyFrame(Duration.millis(900), actionEvent -> {
+                    getPlotChildren().removeAll(nodes);
+                    removeSeriesFromDisplay(series);
                 },endValues)
             );
             seriesRemoveTimeline.play();
@@ -515,12 +511,10 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
                 item.getCurrentY()), new KeyValue(item.currentXProperty(),
                 item.getCurrentX())),
-                new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        if (symbol != null) getPlotChildren().remove(symbol);
-                        removeDataItemFromDisplay(series, item);
-                        XYValueMap.clear();
-                    }
+                new KeyFrame(Duration.millis(500), actionEvent -> {
+                    if (symbol != null) getPlotChildren().remove(symbol);
+                    removeDataItemFromDisplay(series, item);
+                    XYValueMap.clear();
                 },
                 new KeyValue(item.currentYProperty(),
                 item.getYValue(), Interpolator.EASE_BOTH),

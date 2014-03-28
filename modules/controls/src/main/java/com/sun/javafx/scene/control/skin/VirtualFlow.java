@@ -496,37 +496,28 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         ** In a VirtualFlow a vertical scroll should scroll on the vertical only,
         ** whereas in a horizontal ScrollBar it can scroll horizontally.
         */ 
-        final EventDispatcher blockEventDispatcher = new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               // block the event from being passed down to children
-               return event;
-           }
-        };
+        final EventDispatcher blockEventDispatcher = (event, tail) -> event;
         // block ScrollEvent from being passed down to scrollbar's skin
         final EventDispatcher oldHsbEventDispatcher = hbar.getEventDispatcher();
-        hbar.setEventDispatcher(new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL && 
-                       !((ScrollEvent)event).isDirect()) {
-                   tail = tail.prepend(blockEventDispatcher);
-                   tail = tail.prepend(oldHsbEventDispatcher);
-                   return tail.dispatchEvent(event);
-               }
-               return oldHsbEventDispatcher.dispatchEvent(event, tail);
-           }
+        hbar.setEventDispatcher((event, tail) -> {
+            if (event.getEventType() == ScrollEvent.SCROLL &&
+                    !((ScrollEvent)event).isDirect()) {
+                tail = tail.prepend(blockEventDispatcher);
+                tail = tail.prepend(oldHsbEventDispatcher);
+                return tail.dispatchEvent(event);
+            }
+            return oldHsbEventDispatcher.dispatchEvent(event, tail);
         });
         // block ScrollEvent from being passed down to scrollbar's skin
         final EventDispatcher oldVsbEventDispatcher = vbar.getEventDispatcher();
-        vbar.setEventDispatcher(new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL &&
-                       !((ScrollEvent)event).isDirect()) {
-                   tail = tail.prepend(blockEventDispatcher);
-                   tail = tail.prepend(oldVsbEventDispatcher);
-                   return tail.dispatchEvent(event);
-               }
-               return oldVsbEventDispatcher.dispatchEvent(event, tail);
-           }
+        vbar.setEventDispatcher((event, tail) -> {
+            if (event.getEventType() == ScrollEvent.SCROLL &&
+                    !((ScrollEvent)event).isDirect()) {
+                tail = tail.prepend(blockEventDispatcher);
+                tail = tail.prepend(oldVsbEventDispatcher);
+                return tail.dispatchEvent(event);
+            }
+            return oldVsbEventDispatcher.dispatchEvent(event, tail);
         });
         /*
         ** listen for ScrollEvents over the whole of the VirtualFlow
@@ -662,60 +653,54 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                         || hbar.getBoundsInParent().contains(e.getX(), e.getY()));
             }
         });
-        addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                mouseDown = false;
-                if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                    startSBReleasedAnimation();
-                }
+        addEventFilter(MouseEvent.MOUSE_RELEASED, e -> {
+            mouseDown = false;
+            if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
+                startSBReleasedAnimation();
             }
         });
-        addEventFilter(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                    scrollBarOn();
-                }
-                if (! isPanning || ! isPannable()) return;
+        addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> {
+            if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
+                scrollBarOn();
+            }
+            if (! isPanning || ! isPannable()) return;
 
-                // With panning enabled, we support panning in both vertical
-                // and horizontal directions, regardless of the fact that
-                // VirtualFlow is virtual in only one direction.
-                double xDelta = lastX - e.getX();
-                double yDelta = lastY - e.getY();
+            // With panning enabled, we support panning in both vertical
+            // and horizontal directions, regardless of the fact that
+            // VirtualFlow is virtual in only one direction.
+            double xDelta = lastX - e.getX();
+            double yDelta = lastY - e.getY();
 
-                // figure out the distance that the mouse moved in the virtual
-                // direction, and then perform the movement along that axis
-                // virtualDelta will contain the amount we actually did move
-                double virtualDelta = isVertical() ? yDelta : xDelta;
-                double actual = adjustPixels(virtualDelta);
-                if (actual != 0) {
-                    // update last* here, as we know we've just adjusted the
-                    // scrollbar. This means we don't get the situation where a
-                    // user presses-and-drags a long way past the min or max
-                    // values, only to change directions and see the scrollbar
-                    // start moving immediately.
-                    if (isVertical()) lastY = e.getY();
-                    else lastX = e.getX();
-                }
+            // figure out the distance that the mouse moved in the virtual
+            // direction, and then perform the movement along that axis
+            // virtualDelta will contain the amount we actually did move
+            double virtualDelta = isVertical() ? yDelta : xDelta;
+            double actual = adjustPixels(virtualDelta);
+            if (actual != 0) {
+                // update last* here, as we know we've just adjusted the
+                // scrollbar. This means we don't get the situation where a
+                // user presses-and-drags a long way past the min or max
+                // values, only to change directions and see the scrollbar
+                // start moving immediately.
+                if (isVertical()) lastY = e.getY();
+                else lastX = e.getX();
+            }
 
-                // similarly, we do the same in the non-virtual direction
-                double nonVirtualDelta = isVertical() ? xDelta : yDelta;
-                ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
-                if (nonVirtualBar.isVisible()) {
-                    double newValue = nonVirtualBar.getValue() + nonVirtualDelta;
-                    if (newValue < nonVirtualBar.getMin()) {
-                        nonVirtualBar.setValue(nonVirtualBar.getMin());
-                    } else if (newValue > nonVirtualBar.getMax()) {
-                        nonVirtualBar.setValue(nonVirtualBar.getMax());
-                    } else {
-                        nonVirtualBar.setValue(newValue);
+            // similarly, we do the same in the non-virtual direction
+            double nonVirtualDelta = isVertical() ? xDelta : yDelta;
+            ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
+            if (nonVirtualBar.isVisible()) {
+                double newValue = nonVirtualBar.getValue() + nonVirtualDelta;
+                if (newValue < nonVirtualBar.getMin()) {
+                    nonVirtualBar.setValue(nonVirtualBar.getMin());
+                } else if (newValue > nonVirtualBar.getMax()) {
+                    nonVirtualBar.setValue(nonVirtualBar.getMax());
+                } else {
+                    nonVirtualBar.setValue(newValue);
 
-                        // same as the last* comment above
-                        if (isVertical()) lastX = e.getX();
-                        else lastY = e.getY();
-                    }
+                    // same as the last* comment above
+                    if (isVertical()) lastX = e.getX();
+                    else lastY = e.getY();
                 }
             }
         });
@@ -729,19 +714,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
          */
         // --- vbar
         vbar.setOrientation(Orientation.VERTICAL);
-        vbar.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                event.consume();
-            }
+        vbar.addEventHandler(MouseEvent.ANY, event -> {
+            event.consume();
         });
         getChildren().add(vbar);
 
         // --- hbar
         hbar.setOrientation(Orientation.HORIZONTAL);
-        hbar.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                event.consume();
-            }
+        hbar.addEventHandler(MouseEvent.ANY, event -> {
+            event.consume();
         });
         getChildren().add(hbar);
 
@@ -754,10 +735,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         
         // initBinds
         // clipView binds
-        InvalidationListener listenerX = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                updateHbar();
-            }
+        InvalidationListener listenerX = valueModel -> {
+            updateHbar();
         };
         verticalProperty().addListener(listenerX);
         hbar.valueProperty().addListener(listenerX);
@@ -771,21 +750,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 //        addChangedListener(VERTICAL, listenerY);
 //        vbar.addChangedListener(ScrollBar.VALUE, listenerY);
 
-        ChangeListener listenerY = new ChangeListener() {
-            @Override public void changed(ObservableValue ov, Object t, Object t1) {
-                clipView.setClipY(isVertical() ? 0 : vbar.getValue());
-            }
+        ChangeListener listenerY = (ov, t, t1) -> {
+            clipView.setClipY(isVertical() ? 0 : vbar.getValue());
         };
         vbar.valueProperty().addListener(listenerY);
         
-        super.heightProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldHeight, Number newHeight) {
-                // Fix for RT-8480, where the VirtualFlow does not show its content
-                // after changing size to 0 and back.
-                if (oldHeight.doubleValue() == 0 && newHeight.doubleValue() > 0) {
-                    recreateCells();
-                }
+        super.heightProperty().addListener((observable, oldHeight, newHeight) -> {
+            // Fix for RT-8480, where the VirtualFlow does not show its content
+            // after changing size to 0 and back.
+            if (oldHeight.doubleValue() == 0 && newHeight.doubleValue() > 0) {
+                recreateCells();
             }
         });
 
@@ -794,18 +768,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         ** there are certain animations that need to know if the touch is
         ** happening.....
         */
-        setOnTouchPressed(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                touchDetected = true;
-                scrollBarOn();
-            }
+        setOnTouchPressed(e -> {
+            touchDetected = true;
+            scrollBarOn();
         });
 
-        setOnTouchReleased(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                touchDetected = false;
-                startSBReleasedAnimation();
-            }
+        setOnTouchReleased(e -> {
+            touchDetected = false;
+            startSBReleasedAnimation();
         });
 
 
@@ -2561,15 +2531,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             setClip(clipRect);
             // --- clipping
             
-            super.widthProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    clipRect.setWidth(getWidth());
-                }
+            super.widthProperty().addListener(valueModel -> {
+                clipRect.setWidth(getWidth());
             });
-            super.heightProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    clipRect.setHeight(getHeight());
-                }
+            super.heightProperty().addListener(valueModel -> {
+                clipRect.setHeight(getHeight());
             });
         }
     }
@@ -2742,19 +2708,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             ** while after a scroll/drag
             */
             sbTouchTimeline = new Timeline();
-            sbTouchKF1 = new KeyFrame(Duration.millis(0), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    tempVisibility = true;
-                    requestLayout();
-                }
+            sbTouchKF1 = new KeyFrame(Duration.millis(0), event -> {
+                tempVisibility = true;
+                requestLayout();
             });
 
-            sbTouchKF2 = new KeyFrame(Duration.millis(1000), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    if (touchDetected == false && mouseDown == false) {
-                        tempVisibility = false;
-                        requestLayout();
-                    }
+            sbTouchKF2 = new KeyFrame(Duration.millis(1000), event -> {
+                if (touchDetected == false && mouseDown == false) {
+                    tempVisibility = false;
+                    requestLayout();
                 }
             });
             sbTouchTimeline.getKeyFrames().addAll(sbTouchKF1, sbTouchKF2);

@@ -125,13 +125,11 @@ public abstract class TextInputControl extends Control {
 
         // Add a listener so that whenever the Content is changed, we notify
         // listeners of the text property that it is invalid.
-        content.addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                if (content.length() > 0) {
-                    text.textIsNull = false;
-                }
-                text.invalidate();
+        content.addListener(observable -> {
+            if (content.length() > 0) {
+                text.textIsNull = false;
             }
+            text.invalidate();
         });
 
         // Bind the length to be based on the length of the text property

@@ -275,11 +275,9 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 symbol.setOpacity(0);
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
                 ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(symbol);
-                        removeDataItemFromDisplay(series, item);
-                    }
+                ft.setOnFinished(actionEvent -> {
+                    getPlotChildren().remove(symbol);
+                    removeDataItemFromDisplay(series, item);
                 });
                 ft.play();
             }
@@ -287,11 +285,9 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 animate( new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
                             item.getCurrentY()), new KeyValue(item.currentXProperty(),
                             item.getCurrentX())),
-                            new KeyFrame(Duration.millis(800), new EventHandler<ActionEvent>() {
-                                @Override public void handle(ActionEvent actionEvent) {
-                                    getPlotChildren().remove(symbol);
-                                    removeDataItemFromDisplay(series, item);
-                                }
+                            new KeyFrame(Duration.millis(800), actionEvent -> {
+                                getPlotChildren().remove(symbol);
+                                removeDataItemFromDisplay(series, item);
                             },
                             new KeyValue(item.currentYProperty(),
                             item.getYValue(), Interpolator.EASE_BOTH),
@@ -394,22 +390,18 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 Timeline tl = new Timeline();
                 tl.getKeyFrames().addAll(
                     new KeyFrame(Duration.ZERO,startValues),
-                    new KeyFrame(Duration.millis(400), new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().removeAll(nodes);
-                            removeSeriesFromDisplay(series);
-                        }
+                    new KeyFrame(Duration.millis(400), actionEvent -> {
+                        getPlotChildren().removeAll(nodes);
+                        removeSeriesFromDisplay(series);
                     },endValues)
                 );
                 tl.play();
             } else {
                 Timeline tl = new Timeline();
                 tl.getKeyFrames().addAll(
-                    new KeyFrame(Duration.millis(400), new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().removeAll(nodes);
-                            removeSeriesFromDisplay(series);
-                        }
+                    new KeyFrame(Duration.millis(400), actionEvent -> {
+                        getPlotChildren().removeAll(nodes);
+                        removeSeriesFromDisplay(series);
                     })
                 );
                 tl.play();                
@@ -717,14 +709,12 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
      
     
      private void sortAggregateList(ArrayList<DataPointInfo> aggregateList) {
-        Collections.sort(aggregateList, new Comparator(){
-            public int compare(Object o1, Object o2) {
-                Data<X,Y> d1 = ((DataPointInfo)o1).dataItem;
-                Data<X,Y> d2 = ((DataPointInfo)o2).dataItem;
-                double val1 = getXAxis().toNumericValue(d1.getXValue());
-                double val2 = getXAxis().toNumericValue(d2.getXValue());
-                return (val1 < val2 ? -1 : ( val1 == val2) ? 0 : 1);
-            }
+        Collections.sort(aggregateList, (o1, o2) -> {
+            Data<X,Y> d1 = ((DataPointInfo)o1).dataItem;
+            Data<X,Y> d2 = ((DataPointInfo)o2).dataItem;
+            double val1 = getXAxis().toNumericValue(d1.getXValue());
+            double val2 = getXAxis().toNumericValue(d2.getXValue());
+            return (val1 < val2 ? -1 : ( val1 == val2) ? 0 : 1);
         });
      }
     

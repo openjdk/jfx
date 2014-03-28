@@ -81,15 +81,13 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * Mouse handler used for consuming all mouse events (preventing them
      * from bubbling up to parent)
      */
-    private static final EventHandler<MouseEvent> mouseEventConsumer = new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            /*
-            ** we used to consume mouse wheel rotations here, 
-            ** be we've switched to ScrollEvents, and only consume those which we use.
-            ** See RT-13995 & RT-14480
-            */
-            event.consume();
-        }
+    private static final EventHandler<MouseEvent> mouseEventConsumer = event -> {
+        /*
+        ** we used to consume mouse wheel rotations here,
+        ** be we've switched to ScrollEvents, and only consume those which we use.
+        ** See RT-13995 & RT-14480
+        */
+        event.consume();
     };
     
     

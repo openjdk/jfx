@@ -44,6 +44,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Separator;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -101,43 +102,29 @@ public class ColorPalette extends Region {
             @Override public void handle(ActionEvent t) {
                 if (customColorDialog == null) {
                     customColorDialog = new CustomColorDialog(popupControl);
-                    customColorDialog.customColorProperty().addListener(new ChangeListener<Color>() {
-                        @Override public void changed(ObservableValue<? extends Color> ov, 
-                                                                Color t, Color t1) {
-                            colorPicker.setValue(customColorDialog.customColorProperty().get());
-                        }
+                    customColorDialog.customColorProperty().addListener((ov, t1, t2) -> {
+                        colorPicker.setValue(customColorDialog.customColorProperty().get());
                     });
-                    customColorDialog.setOnSave(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            Color customColor = customColorDialog.customColorProperty().get();
-                            ColorSquare cs = new ColorSquare(customColor, true);
-                            customSquares.add(cs);
-                            buildCustomColors();
-                            colorPicker.getCustomColors().add(customColor);
-                            updateSelection(customColor);
-                            Event.fireEvent(colorPicker, new ActionEvent());
-                            colorPicker.hide();
-                        }
+                    customColorDialog.setOnSave(() -> {
+                        Color customColor = customColorDialog.customColorProperty().get();
+                        ColorSquare cs = new ColorSquare(customColor, true);
+                        customSquares.add(cs);
+                        buildCustomColors();
+                        colorPicker.getCustomColors().add(customColor);
+                        updateSelection(customColor);
+                        Event.fireEvent(colorPicker, new ActionEvent());
+                        colorPicker.hide();
                     });
-                    customColorDialog.setOnUse(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            Event.fireEvent(colorPicker, new ActionEvent());
-                            colorPicker.hide();
-                        }
+                    customColorDialog.setOnUse(() -> {
+                        Event.fireEvent(colorPicker, new ActionEvent());
+                        colorPicker.hide();
                     });
                 }
                 customColorDialog.setCurrentColor(colorPicker.valueProperty().get());
                 if (popupControl != null) popupControl.setAutoHide(false);
                 customColorDialog.show();
-                 customColorDialog.setOnHidden(new EventHandler<WindowEvent>() {
- 
-                     @Override public void handle(WindowEvent event) {
-                        if (popupControl != null) popupControl.setAutoHide(true);
-                     }
+                 customColorDialog.setOnHidden(event -> {
+                    if (popupControl != null) popupControl.setAutoHide(true);
                  });
             }
         });
@@ -206,13 +193,11 @@ public class ColorPalette extends Region {
             customColorGrid.setManaged(true);
             if (contextMenu == null) {
                 MenuItem item = new MenuItem(getString("removeColor"));
-                item.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent e) {
-                        ColorSquare square = (ColorSquare)contextMenu.getOwnerNode();
-                        colorPicker.getCustomColors().remove(square.rectangle.getFill());
-                        customSquares.remove(square);
-                        buildCustomColors();
-                    }
+                item.setOnAction(e -> {
+                    ColorSquare square = (ColorSquare)contextMenu.getOwnerNode();
+                    colorPicker.getCustomColors().remove(square.rectangle.getFill());
+                    customSquares.remove(square);
+                    buildCustomColors();
                 });
                 contextMenu = new ContextMenu(item);
             }
@@ -234,40 +219,38 @@ public class ColorPalette extends Region {
     }
     
     private void initNavigation() {
-        setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent ke) {
-                switch (ke.getCode()) {
-                    case LEFT:
-                        if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                            processRightKey(ke);
-                        } else {
-                            processLeftKey(ke);
-                        }
-                        ke.consume();
-                        break;
-                    case RIGHT:
-                        if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                            processLeftKey(ke);
-                        } else {
-                            processRightKey(ke);
-                        }
-                        ke.consume();
-                        break;
-                    case UP:
-                        processUpKey(ke);
-                        ke.consume();
-                        break;
-                    case DOWN:
-                        processDownKey(ke);
-                        ke.consume();
-                        break;
-                    case SPACE:
-                    case ENTER:
-                        processSelectKey(ke);
-                        ke.consume();
-                        break;
-                    default: // no-op
-                }
+        setOnKeyPressed(ke -> {
+            switch (ke.getCode()) {
+                case LEFT:
+                    if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                        processRightKey(ke);
+                    } else {
+                        processLeftKey(ke);
+                    }
+                    ke.consume();
+                    break;
+                case RIGHT:
+                    if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+                        processLeftKey(ke);
+                    } else {
+                        processRightKey(ke);
+                    }
+                    ke.consume();
+                    break;
+                case UP:
+                    processUpKey(ke);
+                    ke.consume();
+                    break;
+                case DOWN:
+                    processDownKey(ke);
+                    ke.consume();
+                    break;
+                case SPACE:
+                case ENTER:
+                    processSelectKey(ke);
+                    ke.consume();
+                    break;
+                default: // no-op
             }
         });
     }
@@ -448,40 +431,34 @@ public class ColorPalette extends Region {
           
             rectangle.getStyleClass().add("color-rect");
 
-            addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    if (!dragDetected && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
-                        if (!isEmpty) {
-                            Color fill = (Color) rectangle.getFill();
-                            colorPicker.setValue(fill);
-                            colorPicker.fireEvent(new ActionEvent());
-                            updateSelection(fill);
-                            event.consume();
-                        }
-                        colorPicker.hide();
-                    } else if (event.getButton() == MouseButton.SECONDARY ||
-                            event.getButton() == MouseButton.MIDDLE) {
-                        if (isCustom && contextMenu != null) {
-                            if (!contextMenu.isShowing()) {
-                                contextMenu.show(ColorSquare.this, Side.RIGHT, 0, 0);
-                                Utils.addMnemonics(contextMenu, ColorSquare.this.getScene(), colorPicker.impl_isShowMnemonics());
-                            } else {
-                                contextMenu.hide();
-                                Utils.removeMnemonics(contextMenu, ColorSquare.this.getScene());
-                            }
+            addEventHandler(MouseEvent.MOUSE_RELEASED, event -> {
+                if (!dragDetected && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
+                    if (!isEmpty) {
+                        Color fill = (Color) rectangle.getFill();
+                        colorPicker.setValue(fill);
+                        colorPicker.fireEvent(new ActionEvent());
+                        updateSelection(fill);
+                        event.consume();
+                    }
+                    colorPicker.hide();
+                } else if (event.getButton() == MouseButton.SECONDARY ||
+                        event.getButton() == MouseButton.MIDDLE) {
+                    if (isCustom && contextMenu != null) {
+                        if (!contextMenu.isShowing()) {
+                            contextMenu.show(ColorSquare.this, Side.RIGHT, 0, 0);
+                            Utils.addMnemonics(contextMenu, ColorSquare.this.getScene(), colorPicker.impl_isShowMnemonics());
+                        } else {
+                            contextMenu.hide();
+                            Utils.removeMnemonics(contextMenu, ColorSquare.this.getScene());
                         }
                     }
                 }
             });
-            addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    setFocusedSquare(ColorSquare.this);
-                }
+            addEventHandler(MouseEvent.MOUSE_ENTERED, event -> {
+                setFocusedSquare(ColorSquare.this);
             });
-            addEventHandler(MouseEvent.MOUSE_EXITED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    setFocusedSquare(null);
-                }
+            addEventHandler(MouseEvent.MOUSE_EXITED, event -> {
+                setFocusedSquare(null);
             });
             getChildren().add(rectangle);
         }
@@ -549,38 +526,32 @@ public class ColorPalette extends Region {
                     rowIndex++;
                 }
             }
-            setOnMouseDragged(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent t) {
-                    if (!dragDetected) {
-                        dragDetected = true;
-                        mouseDragColor = colorPicker.getValue();
-                    }
-                    int xIndex = (int)(t.getX()/16.0);
-                    int yIndex = (int)(t.getY()/16.0);
-                        int index = xIndex + yIndex*12;
-                    if (index < NUM_OF_COLUMNS*NUM_OF_ROWS) {
-                        colorPicker.setValue((Color) squares.get(index).rectangle.getFill());
-                        updateSelection(colorPicker.getValue());
-                    }
+            setOnMouseDragged(t -> {
+                if (!dragDetected) {
+                    dragDetected = true;
+                    mouseDragColor = colorPicker.getValue();
+                }
+                int xIndex = (int)(t.getX()/16.0);
+                int yIndex = (int)(t.getY()/16.0);
+                    int index = xIndex + yIndex*12;
+                if (index < NUM_OF_COLUMNS*NUM_OF_ROWS) {
+                    colorPicker.setValue((Color) squares.get(index).rectangle.getFill());
+                    updateSelection(colorPicker.getValue());
                 }
             });
-            addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent t) {
-                    if(colorPickerGrid.getBoundsInLocal().contains(t.getX(), t.getY())) {
-                        updateSelection(colorPicker.getValue());
-                        colorPicker.fireEvent(new ActionEvent());
-                        colorPicker.hide();
-                    } else {
-                        // restore color as mouse release happened outside the grid.
-                        if (mouseDragColor != null) {
-                            colorPicker.setValue(mouseDragColor);
-                            updateSelection(mouseDragColor);
-                        }
+            addEventHandler(MouseEvent.MOUSE_RELEASED, t -> {
+                if(colorPickerGrid.getBoundsInLocal().contains(t.getX(), t.getY())) {
+                    updateSelection(colorPicker.getValue());
+                    colorPicker.fireEvent(new ActionEvent());
+                    colorPicker.hide();
+                } else {
+                    // restore color as mouse release happened outside the grid.
+                    if (mouseDragColor != null) {
+                        colorPicker.setValue(mouseDragColor);
+                        updateSelection(mouseDragColor);
                     }
-                    dragDetected = false;
                 }
+                dragDetected = false;
             });
         }
         

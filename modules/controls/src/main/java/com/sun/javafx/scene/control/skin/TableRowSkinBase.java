@@ -171,11 +171,9 @@ public abstract class TableRowSkinBase<T,
      *                                                                         *
      **************************************************************************/
 
-    private ListChangeListener<TableColumnBase> visibleLeafColumnsListener = new ListChangeListener<TableColumnBase>() {
-        @Override public void onChanged(Change<? extends TableColumnBase> c) {
-            isDirty = true;
-            getSkinnable().requestLayout();
-        }
+    private ListChangeListener<TableColumnBase> visibleLeafColumnsListener = c -> {
+        isDirty = true;
+        getSkinnable().requestLayout();
     };
 
     private WeakListChangeListener<TableColumnBase> weakVisibleLeafColumnsListener =

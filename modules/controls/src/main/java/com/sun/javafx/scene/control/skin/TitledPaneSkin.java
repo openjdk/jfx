@@ -297,48 +297,40 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         if (getSkinnable().isExpanded()) {
             k1 = new KeyFrame(
                 Duration.ZERO,
-                new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
+                    event -> {
                         // start expand
                         if (CACHE_ANIMATION) content.setCache(true);
                         content.setVisible(true);
-                    }
-                },
+                    },
                 new KeyValue(transitionProperty(), transitionStartValue)
             );
 
             k2 = new KeyFrame(
                 duration,
-                    new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
+                    event -> {
                         // end expand
                         if (CACHE_ANIMATION) content.setCache(false);
-                    }
-                },
+                    },
                 new KeyValue(transitionProperty(), 1, Interpolator.LINEAR)
 
             );
         } else {
             k1 = new KeyFrame(
                 Duration.ZERO,
-                new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
+                    event -> {
                         // Start collapse
                         if (CACHE_ANIMATION) content.setCache(true);
-                    }
-                },
+                    },
                 new KeyValue(transitionProperty(), transitionStartValue)
             );
 
             k2 = new KeyFrame(
                 duration,
-                new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
+                    event -> {
                         // end collapse
                         content.setVisible(false);
                         if (CACHE_ANIMATION) content.setCache(false);
-                    }
-                },
+                    },
                 new KeyValue(transitionProperty(), 0, Interpolator.LINEAR)
             );
         }
@@ -372,16 +364,14 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
             setAlignment(Pos.CENTER_LEFT);
 
-            setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    if( e.getButton() != MouseButton.PRIMARY ) return;
-                    ContextMenu contextMenu = getSkinnable().getContextMenu() ;
-                    if (contextMenu != null) {
-                        contextMenu.hide() ;
-                    }
-                    if (getSkinnable().isCollapsible() && getSkinnable().isFocused()) {
-                        getBehavior().toggle();
-                    }
+            setOnMouseReleased(e -> {
+                if( e.getButton() != MouseButton.PRIMARY ) return;
+                ContextMenu contextMenu = getSkinnable().getContextMenu() ;
+                if (contextMenu != null) {
+                    contextMenu.hide() ;
+                }
+                if (getSkinnable().isCollapsible() && getSkinnable().isFocused()) {
+                    getBehavior().toggle();
                 }
             });
 

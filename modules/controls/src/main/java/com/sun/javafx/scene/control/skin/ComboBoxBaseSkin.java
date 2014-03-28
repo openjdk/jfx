@@ -85,11 +85,9 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         getChildren().add(arrowButton);
 
         // When ComboBoxBase focus shifts to another node, it should hide.
-        getSkinnable().focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                if (!newValue) {
-                    focusLost();
-                }
+        getSkinnable().focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                focusLost();
             }
         });
         

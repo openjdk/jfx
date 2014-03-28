@@ -391,10 +391,8 @@ public class ListViewTest {
         listView.setItems(emptyModel);
         assertTrue(listView.getItems().isEmpty());
 
-        sm.selectedItemProperty().addListener(new ChangeListener<String>() {
-            @Override public void changed(ObservableValue<? extends String> observable, String oldValue, final String newValue) {
-                rt_18969_hitCount++;
-            }
+        sm.selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            rt_18969_hitCount++;
         });
 
         ObservableList<String> mod = FXCollections.observableArrayList();
@@ -585,11 +583,7 @@ public class ListViewTest {
         final ListView<String> listView = new ListView<String>(items);
         listView.setMinHeight(100);
         listView.setPrefHeight(100);
-        listView.setCellFactory(CheckBoxListCell.forListView(new Callback<String, ObservableValue<Boolean>>() {
-            public javafx.beans.value.ObservableValue<Boolean> call(String param) {
-                return new ReadOnlyBooleanWrapper(true);
-            }
-        }));
+        listView.setCellFactory(CheckBoxListCell.forListView(param -> new ReadOnlyBooleanWrapper(true)));
 
         // because only the first row has data, all other rows should be 
         // empty (and not contain check boxes - we just check the first four here)
@@ -747,20 +741,14 @@ public class ListViewTest {
     private int rt_29650_commit_count = 0;
     private int rt_29650_cancel_count = 0;
     @Test public void test_rt_29650() {
-        listView.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_start_count++;
-            }
+        listView.setOnEditStart(t -> {
+            rt_29650_start_count++;
         });
-        listView.setOnEditCommit(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_commit_count++;
-            }
+        listView.setOnEditCommit(t -> {
+            rt_29650_commit_count++;
         });
-        listView.setOnEditCancel(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_cancel_count++;
-            }
+        listView.setOnEditCancel(t -> {
+            rt_29650_cancel_count++;
         });
 
         listView.getItems().setAll("one", "two", "three", "four", "five");
@@ -831,11 +819,9 @@ public class ListViewTest {
         textFieldListView.setItems(FXCollections.observableArrayList("A", "B", "C"));
         textFieldListView.setEditable(true);
         textFieldListView.setCellFactory(TextFieldListCell.forListView());
-        textFieldListView.setOnEditCancel(new EventHandler<ListView.EditEvent<String>>() {
-            @Override public void handle(ListView.EditEvent<String> t) {
-                rt_35889_cancel_count++;
-                System.out.println("On Edit Cancel: " + t);
-            }
+        textFieldListView.setOnEditCancel(t -> {
+            rt_35889_cancel_count++;
+            System.out.println("On Edit Cancel: " + t);
         });
 
         ListCell cell0 = (ListCell) VirtualFlowTestUtils.getCell(textFieldListView, 0);

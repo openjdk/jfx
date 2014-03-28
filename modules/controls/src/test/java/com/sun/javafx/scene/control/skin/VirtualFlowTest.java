@@ -75,21 +75,17 @@ public class VirtualFlowTest {
         flow = new VirtualFlow();
 //        flow.setManaged(false);
         flow.setVertical(true);
-        flow.setCreateCell(new Callback<VirtualFlow, IndexedCell>() {
-            @Override public IndexedCell call(VirtualFlow p) {
-                return new CellStub(flow) {
-                    @Override protected double computeMinWidth(double height) { return computePrefWidth(height); }
-                    @Override protected double computeMaxWidth(double height) { return computePrefWidth(height); }
-                    @Override protected double computePrefWidth(double height) {
-                        return flow.isVertical() ? (c.getIndex() == 29 ? 200 : 100) : (c.getIndex() == 29 ? 100 : 25);
-                    }
+        flow.setCreateCell(p -> new CellStub(flow) {
+            @Override protected double computeMinWidth(double height) { return computePrefWidth(height); }
+            @Override protected double computeMaxWidth(double height) { return computePrefWidth(height); }
+            @Override protected double computePrefWidth(double height) {
+                return flow.isVertical() ? (c.getIndex() == 29 ? 200 : 100) : (c.getIndex() == 29 ? 100 : 25);
+            }
 
-                    @Override protected double computeMinHeight(double width) { return computePrefHeight(width); }
-                    @Override protected double computeMaxHeight(double width) { return computePrefHeight(width); }
-                    @Override protected double computePrefHeight(double width) {
-                        return flow.isVertical() ? (c.getIndex() == 29 ? 100 : 25) : (c.getIndex() == 29 ? 200 : 100);
-                    }
-                };
+            @Override protected double computeMinHeight(double width) { return computePrefHeight(width); }
+            @Override protected double computeMaxHeight(double width) { return computePrefHeight(width); }
+            @Override protected double computePrefHeight(double width) {
+                return flow.isVertical() ? (c.getIndex() == 29 ? 100 : 25) : (c.getIndex() == 29 ? 200 : 100);
             }
         });
         flow.setCellCount(100);
@@ -860,11 +856,7 @@ public class VirtualFlowTest {
         assertFalse(flow.isNeedsLayout());
         flow.getCellLength(49); // forces accum cell to be created
         assertNotNull("Accum cell was null", flow.accumCell);
-        flow.setCreateCell(new Callback<VirtualFlow, IndexedCell>() {
-            @Override public IndexedCell call(VirtualFlow p) {
-                return new CellStub(flow);
-            }
-        });
+        flow.setCreateCell(p -> new CellStub(flow));
         assertTrue(flow.isNeedsLayout());
         assertNull("accumCell didn't get cleared", flow.accumCell);
     }
@@ -902,21 +894,17 @@ public class VirtualFlowTest {
         */
         flow = new VirtualFlow();
         flow.setVertical(true);
-        flow.setCreateCell(new Callback<VirtualFlow, IndexedCell>() {
-            @Override public IndexedCell call(VirtualFlow p) {
-                return new CellStub(flow) {
-                    @Override protected double computeMinWidth(double height) { return computePrefWidth(height); }
-                    @Override protected double computeMaxWidth(double height) { return computePrefWidth(height); }
-                    @Override protected double computePrefWidth(double height) {
-                        return flow.isVertical() ? (c.getIndex() == 29 ? 200 : 100) : (c.getIndex() == 29 ? 100 : 25);
-                    }
+        flow.setCreateCell(p -> new CellStub(flow) {
+            @Override protected double computeMinWidth(double height) { return computePrefWidth(height); }
+            @Override protected double computeMaxWidth(double height) { return computePrefWidth(height); }
+            @Override protected double computePrefWidth(double height) {
+                return flow.isVertical() ? (c.getIndex() == 29 ? 200 : 100) : (c.getIndex() == 29 ? 100 : 25);
+            }
 
-                    @Override protected double computeMinHeight(double width) { return computePrefHeight(width); }
-                    @Override protected double computeMaxHeight(double width) { return computePrefHeight(width); }
-                    @Override protected double computePrefHeight(double width) {
-                        return flow.isVertical() ? (c.getIndex() == 29 ? 100 : 25) : (c.getIndex() == 29 ? 200 : 100);
-                    }
-                };
+            @Override protected double computeMinHeight(double width) { return computePrefHeight(width); }
+            @Override protected double computeMaxHeight(double width) { return computePrefHeight(width); }
+            @Override protected double computePrefHeight(double width) {
+                return flow.isVertical() ? (c.getIndex() == 29 ? 100 : 25) : (c.getIndex() == 29 ? 200 : 100);
             }
         });
         

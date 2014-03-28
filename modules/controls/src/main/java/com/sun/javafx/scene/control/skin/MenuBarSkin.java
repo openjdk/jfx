@@ -96,12 +96,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             for (Menu menu : menuBar.getMenus()) {
                 wrappedDefaultMenus.add(GlobalMenuAdapter.adapt(menu));
             }
-            menuBar.getMenus().addListener(new ListChangeListener<Menu>() {
-                @Override public void onChanged(Change<? extends Menu> c) {
-                    wrappedDefaultMenus.clear();
-                    for (Menu menu : menuBar.getMenus()) {
-                        wrappedDefaultMenus.add(GlobalMenuAdapter.adapt(menu));
-                    }
+            menuBar.getMenus().addListener((ListChangeListener<Menu>) c -> {
+                wrappedDefaultMenus.clear();
+                for (Menu menu : menuBar.getMenus()) {
+                    wrappedDefaultMenus.add(GlobalMenuAdapter.adapt(menu));
                 }
             });
         }
@@ -150,26 +148,22 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     private static void initSystemMenuBar() {
         systemMenuMap = new WeakHashMap<>();
 
-        final InvalidationListener focusedStageListener = new InvalidationListener() {
-            @Override public void invalidated(Observable ov) {
-                setSystemMenu((Stage)((ReadOnlyProperty<?>)ov).getBean());
-            }
+        final InvalidationListener focusedStageListener = ov -> {
+            setSystemMenu((Stage)((ReadOnlyProperty<?>)ov).getBean());
         };
 
         final ObservableList<Stage> stages = StageHelper.getStages();
         for (Stage stage : stages) {
             stage.focusedProperty().addListener(focusedStageListener);
         }
-        stages.addListener(new ListChangeListener<Stage>() {
-            @Override public void onChanged(Change<? extends Stage> c) {
-                while (c.next()) {
-                    for (Stage stage : c.getRemoved()) {
-                        stage.focusedProperty().removeListener(focusedStageListener);
-                    }
-                    for (Stage stage : c.getAddedSubList()) {
-                        stage.focusedProperty().addListener(focusedStageListener);
-                        setSystemMenu(stage);
-                    }
+        stages.addListener((ListChangeListener<Stage>) c -> {
+            while (c.next()) {
+                for (Stage stage : c.getRemoved()) {
+                    stage.focusedProperty().removeListener(focusedStageListener);
+                }
+                for (Stage stage : c.getAddedSubList()) {
+                    stage.focusedProperty().addListener(focusedStageListener);
+                    setSystemMenu(stage);
                 }
             }
         });
@@ -201,150 +195,133 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         getChildren().add(container);
         
         // Key navigation 
-        keyEventHandler = new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent event) {
-                // process right left and may be tab key events
-                if (openMenu != null) {
-                    switch (event.getCode()) {
-                        case LEFT: {
-                            boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
-                            if (control.getScene().getWindow().isFocused()) {
-                                if (openMenu == null) return;
-                                if ( !openMenu.isShowing()) {
-                                    if (isRTL) {
-                                        selectNextMenu(); // just move the selection bar
-                                    } else {
-                                        selectPrevMenu(); // just move the selection bar
-                                    }
-                                    event.consume();
-                                    return;
-                                }
+        keyEventHandler = event -> {
+            // process right left and may be tab key events
+            if (openMenu != null) {
+                switch (event.getCode()) {
+                    case LEFT: {
+                        boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+                        if (control.getScene().getWindow().isFocused()) {
+                            if (openMenu == null) return;
+                            if ( !openMenu.isShowing()) {
                                 if (isRTL) {
-                                    showNextMenu();
+                                    selectNextMenu(); // just move the selection bar
                                 } else {
-                                    showPrevMenu();
+                                    selectPrevMenu(); // just move the selection bar
                                 }
+                                event.consume();
+                                return;
                             }
-                            event.consume();
-                            break;
+                            if (isRTL) {
+                                showNextMenu();
+                            } else {
+                                showPrevMenu();
+                            }
                         }
-                        case RIGHT:
-                        {
-                            boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
-                            if (control.getScene().getWindow().isFocused()) {
-                                if (openMenu == null) return;
-                                if (! openMenu.isShowing()) {
-                                    if (isRTL) {
-                                        selectPrevMenu(); // just move the selection bar
-                                    } else {
-                                        selectNextMenu(); // just move the selection bar
-                                    }
-                                    event.consume();
-                                    return;
-                                }
-                                if (isRTL) {
-                                    showPrevMenu();
-                                } else {
-                                    showNextMenu();
-                                }
-                            }
-                            event.consume();
-                            break;
-                        }
-                        case DOWN:
-                        //case SPACE:
-                        //case ENTER:
-                            // RT-18859: Doing nothing for space and enter 
-                            if (control.getScene().getWindow().isFocused()) {
-                                if (focusedMenuIndex != -1 && openMenu != null) {
-                                    openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
-                                    if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
-                                        openMenu.show();
-                                    } 
-                                    event.consume();
-                                }
-                            }
-                            break;
-                        case ESCAPE:
-                            unSelectMenus();
-                            event.consume();
-                            break;
-                    default:
+                        event.consume();
                         break;
                     }
+                    case RIGHT:
+                    {
+                        boolean isRTL = control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+                        if (control.getScene().getWindow().isFocused()) {
+                            if (openMenu == null) return;
+                            if (! openMenu.isShowing()) {
+                                if (isRTL) {
+                                    selectPrevMenu(); // just move the selection bar
+                                } else {
+                                    selectNextMenu(); // just move the selection bar
+                                }
+                                event.consume();
+                                return;
+                            }
+                            if (isRTL) {
+                                showPrevMenu();
+                            } else {
+                                showNextMenu();
+                            }
+                        }
+                        event.consume();
+                        break;
+                    }
+                    case DOWN:
+                    //case SPACE:
+                    //case ENTER:
+                        // RT-18859: Doing nothing for space and enter
+                        if (control.getScene().getWindow().isFocused()) {
+                            if (focusedMenuIndex != -1 && openMenu != null) {
+                                openMenu = getSkinnable().getMenus().get(focusedMenuIndex);
+                                if (!isMenuEmpty(getSkinnable().getMenus().get(focusedMenuIndex))) {
+                                    openMenu.show();
+                                }
+                                event.consume();
+                            }
+                        }
+                        break;
+                    case ESCAPE:
+                        unSelectMenus();
+                        event.consume();
+                        break;
+                default:
+                    break;
                 }
             }
         };
-        menuBarFocusedPropertyListener = new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (t1) {
-                    // RT-23147 when MenuBar's focusTraversable is true the first 
-                    // menu will visually indicate focus  
-                    unSelectMenus();
-                    focusedMenuIndex = 0;
-                    openMenuButton = ((MenuBarButton)container.getChildren().get(0));
-                    openMenu = getSkinnable().getMenus().get(0);
-                    openMenuButton.setHover();
-                } else {
-                    unSelectMenus();
-                 }
+        menuBarFocusedPropertyListener = (ov, t, t1) -> {
+            if (t1) {
+                // RT-23147 when MenuBar's focusTraversable is true the first
+                // menu will visually indicate focus
+                unSelectMenus();
+                focusedMenuIndex = 0;
+                openMenuButton = ((MenuBarButton)container.getChildren().get(0));
+                openMenu = getSkinnable().getMenus().get(0);
+                openMenuButton.setHover();
+            } else {
+                unSelectMenus();
              }
          };
         weakSceneKeyEventHandler = new WeakEventHandler<KeyEvent>(keyEventHandler);
         control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
         
         // When we click else where in the scene - menu selection should be cleared.
-        mouseEventHandler = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {
-                if (!container.localToScene(container.getLayoutBounds()).contains(t.getX(), t.getY())) {
-                    unSelectMenus();
-                }
+        mouseEventHandler = t -> {
+            if (!container.localToScene(container.getLayoutBounds()).contains(t.getX(), t.getY())) {
+                unSelectMenus();
             }
         };
         weakSceneMouseEventHandler = new WeakEventHandler<MouseEvent>(mouseEventHandler);
         control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
         
-        weakWindowFocusListener = new WeakChangeListener<Boolean>(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (!t1) {
-                  unSelectMenus();
-                }
+        weakWindowFocusListener = new WeakChangeListener<Boolean>((ov, t, t1) -> {
+            if (!t1) {
+              unSelectMenus();
             }
         });
         // When the parent window looses focus - menu selection should be cleared
         if (control.getScene().getWindow() != null) {
             control.getScene().getWindow().focusedProperty().addListener(weakWindowFocusListener);
         } else {
-            ChangeListener<Window> sceneWindowListener = new ChangeListener<Window>() {
-                @Override public void changed(ObservableValue<? extends Window> observable, Window oldValue, Window newValue) {
-                    if (oldValue != null) oldValue.focusedProperty().removeListener(weakWindowFocusListener);
-                    if (newValue != null) newValue.focusedProperty().addListener(weakWindowFocusListener);
-                }
+            ChangeListener<Window> sceneWindowListener = (observable, oldValue, newValue) -> {
+                if (oldValue != null) oldValue.focusedProperty().removeListener(weakWindowFocusListener);
+                if (newValue != null) newValue.focusedProperty().addListener(weakWindowFocusListener);
             };
             weakWindowSceneListener = new WeakChangeListener<Window>(sceneWindowListener);
             control.getScene().windowProperty().addListener(weakWindowSceneListener);
         }
        
         rebuildUI();
-        control.getMenus().addListener(new ListChangeListener<Menu>() {
-            @Override public void onChanged(Change<? extends Menu> c) {
-                rebuildUI();
-            }
+        control.getMenus().addListener((ListChangeListener<Menu>) c -> {
+            rebuildUI();
         });
         for (final Menu menu : getSkinnable().getMenus()) {
-            menu.visibleProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                    rebuildUI();
-                }
+            menu.visibleProperty().addListener((ov, t, t1) -> {
+                rebuildUI();
             });
         }
 
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
-            control.useSystemMenuBarProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    rebuildUI();
-                }
+            control.useSystemMenuBarProperty().addListener(valueModel -> {
+                rebuildUI();
             });
         }
 
@@ -375,30 +352,27 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         engine.addTraverseListener(this);
         getSkinnable().setImpl_traversalEngine(engine);
 
-        control.sceneProperty().addListener(new ChangeListener<Scene>() {
-            @Override
-            public void changed(ObservableValue<? extends Scene> ov, Scene t, Scene t1) {
-                if (weakSceneKeyEventHandler != null) {
-                    // remove event filter from the old scene (t)
-                    if (t != null)
-                        t.removeEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
-                }
-                if (weakSceneMouseEventHandler != null) {
-                    // remove event filter from the old scene (t)
-                    if (t != null)
-                        t.removeEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
-                }
-                
-                /**
-                 * remove the f10 accelerator from the old scene
-                 * add it to the new scene
-                 */
-                if (t != null) {
-                    t.getAccelerators().remove(acceleratorKeyCombo);
-                }
-                if (t1 != null ) {
-                    t1.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
-                }
+        control.sceneProperty().addListener((ov, t, t1) -> {
+            if (weakSceneKeyEventHandler != null) {
+                // remove event filter from the old scene (t)
+                if (t != null)
+                    t.removeEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
+            }
+            if (weakSceneMouseEventHandler != null) {
+                // remove event filter from the old scene (t)
+                if (t != null)
+                    t.removeEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
+            }
+
+            /**
+             * remove the f10 accelerator from the old scene
+             * add it to the new scene
+             */
+            if (t != null) {
+                t.getAccelerators().remove(acceleratorKeyCombo);
+            }
+            if (t1 != null ) {
+                t1.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
             }
         });
     }
@@ -478,16 +452,13 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     }
     
     // RT-20411 : reset menu selected/focused state 
-    private EventHandler<ActionEvent> menuActionEventHandler = new EventHandler<ActionEvent>() {
-        @Override
-        public void handle(ActionEvent t) {
-            if (t.getSource() instanceof CustomMenuItem) {
-                // RT-29614 If CustomMenuItem hideOnClick is false, dont hide
-                CustomMenuItem cmi = (CustomMenuItem)t.getSource();
-                if (!cmi.isHideOnClick()) return;
-            }
-            unSelectMenus();
+    private EventHandler<ActionEvent> menuActionEventHandler = t -> {
+        if (t.getSource() instanceof CustomMenuItem) {
+            // RT-29614 If CustomMenuItem hideOnClick is false, dont hide
+            CustomMenuItem cmi = (CustomMenuItem)t.getSource();
+            if (!cmi.isHideOnClick()) return;
         }
+        unSelectMenus();
     };
     
     private void updateActionListeners(Menu m, boolean add) {
@@ -562,10 +533,8 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                         setSystemMenu(stage);
 
                         getSkinnable().requestLayout();
-                        javafx.application.Platform.runLater(new Runnable() {
-                            public void run() {
-                                getSkinnable().requestLayout();
-                            }
+                        javafx.application.Platform.runLater(() -> {
+                            getSkinnable().requestLayout();
                         });
                         return;
                     }
@@ -594,44 +563,32 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             menuButton.getItems().setAll(menu.getItems());
             container.getChildren().add(menuButton);
             // listen to changes in menu items & update menuButton items
-            menu.getItems().addListener(new ListChangeListener<MenuItem>() {
-                @Override public void onChanged(Change<? extends MenuItem> c) {
-                    while (c.next()) {
-                        menuButton.getItems().removeAll(c.getRemoved());
-                        menuButton.getItems().addAll(c.getFrom(), c.getAddedSubList());
+            menu.getItems().addListener((ListChangeListener<MenuItem>) c -> {
+                while (c.next()) {
+                    menuButton.getItems().removeAll(c.getRemoved());
+                    menuButton.getItems().addAll(c.getFrom(), c.getAddedSubList());
+                }
+            });
+            menu.getStyleClass().addListener((ListChangeListener<String>) c -> {
+                while(c.next()) {
+                    for(int i=c.getFrom(); i<c.getTo(); i++) {
+                        menuButton.getStyleClass().add(menu.getStyleClass().get(i));
+                    }
+                    for (String str : c.getRemoved()) {
+                        menuButton.getStyleClass().remove(str);
                     }
                 }
             });
-            menu.getStyleClass().addListener(new ListChangeListener<String>() {
-                @Override
-                public void onChanged(Change<? extends String> c) {
-                    while(c.next()) {
-                        for(int i=c.getFrom(); i<c.getTo(); i++) {
-                            menuButton.getStyleClass().add(menu.getStyleClass().get(i));
-                        }
-                        for (String str : c.getRemoved()) {
-                            menuButton.getStyleClass().remove(str);
-                        }
-                    }
-                }
+            menu.idProperty().addListener((observableValue, s, s2) -> {
+                menuButton.setId(s2);
             });
-            menu.idProperty().addListener(new ChangeListener<String>() {
-                @Override
-                public void changed(ObservableValue<? extends String> observableValue, String s, String s2) {
-                    menuButton.setId(s2);
+            menuButton.menuListener = (observable, oldValue, newValue) -> {
+                if (menu.isShowing()) {
+                    menuButton.show();
+                    focusedMenuIndex = container.getChildren().indexOf(menuButton);
+                } else {
+                    menuButton.hide();
                 }
-            });
-            menuButton.menuListener = new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                    if (menu.isShowing()) {
-                        menuButton.show();
-                        focusedMenuIndex = container.getChildren().indexOf(menuButton);
-                    } else {
-                        menuButton.hide();
-                    }
-                }
-
             };
             menuButton.menu = menu;
             menu.showingProperty().addListener(menuButton.menuListener);
@@ -639,56 +596,46 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             menuButton.textProperty().bind(menu.textProperty());
             menuButton.graphicProperty().bind(menu.graphicProperty());
             menuButton.styleProperty().bind(menu.styleProperty());
-            menuButton.getProperties().addListener(new MapChangeListener<Object, Object>() {
-                @Override
-                public void onChanged(Change<? extends Object, ? extends Object> c) {
-                     if (c.wasAdded() && MenuButtonSkin.AUTOHIDE.equals(c.getKey())) {
-                        menuButton.getProperties().remove(MenuButtonSkin.AUTOHIDE);
-                        menu.hide();
-                    }
+            menuButton.getProperties().addListener((MapChangeListener<Object, Object>) c -> {
+                 if (c.wasAdded() && MenuButtonSkin.AUTOHIDE.equals(c.getKey())) {
+                    menuButton.getProperties().remove(MenuButtonSkin.AUTOHIDE);
+                    menu.hide();
                 }
             });
-            menuButton.showingProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean isShowing) {
-                    if (isShowing) {
-                        if (openMenuButton != null && openMenuButton != menuButton) {
-                            openMenuButton.hide();
-                        }
-                        openMenuButton = menuButton;
-                        openMenu = menu;
-                        if (!menu.isShowing())menu.show();
+            menuButton.showingProperty().addListener((observable, oldValue, isShowing) -> {
+                if (isShowing) {
+                    if (openMenuButton != null && openMenuButton != menuButton) {
+                        openMenuButton.hide();
                     }
+                    openMenuButton = menuButton;
+                    openMenu = menu;
+                    if (!menu.isShowing())menu.show();
                 }
             });
 
-            menuButton.setOnMousePressed(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    pendingDismiss = menuButton.isShowing();
+            menuButton.setOnMousePressed(event -> {
+                pendingDismiss = menuButton.isShowing();
 
-                    // check if the owner window has focus
-                    if (menuButton.getScene().getWindow().isFocused()) {
-                        openMenu = menu;
-                        if (!isMenuEmpty(menu)){
-                            openMenu.show();
-                        } 
-                        // update FocusedIndex
-                        focusedMenuIndex = getMenuBarButtonIndex(menuButton);
+                // check if the owner window has focus
+                if (menuButton.getScene().getWindow().isFocused()) {
+                    openMenu = menu;
+                    if (!isMenuEmpty(menu)){
+                        openMenu.show();
                     }
+                    // update FocusedIndex
+                    focusedMenuIndex = getMenuBarButtonIndex(menuButton);
                 }
             });
             
-            menuButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    // check if the owner window has focus
-                    if (menuButton.getScene().getWindow().isFocused()) {
-                        if (pendingDismiss) {
-                            resetOpenMenu();
+            menuButton.setOnMouseReleased(event -> {
+                // check if the owner window has focus
+                if (menuButton.getScene().getWindow().isFocused()) {
+                    if (pendingDismiss) {
+                        resetOpenMenu();
 //                            menuButton.hide();
-                        }
                     }
-                    pendingDismiss = false;
                 }
+                pendingDismiss = false;
             });
 
 //            menuButton. setOnKeyPressed(new EventHandler<javafx.scene.input.KeyEvent>() {
@@ -753,25 +700,23 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 //                    }
 //                }
 //            });
-            menuButton.setOnMouseEntered(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    // check if the owner window has focus
-                    if (menuButton.getScene() != null && menuButton.getScene().getWindow() != null && 
-                            menuButton.getScene().getWindow().isFocused()) { 
-                        if (openMenuButton != null && openMenuButton != menuButton) {
-                                openMenuButton.clearHover();
-                                openMenuButton = null;
-                                openMenuButton = menuButton;
-                        }
+            menuButton.setOnMouseEntered(event -> {
+                // check if the owner window has focus
+                if (menuButton.getScene() != null && menuButton.getScene().getWindow() != null &&
+                        menuButton.getScene().getWindow().isFocused()) {
+                    if (openMenuButton != null && openMenuButton != menuButton) {
+                            openMenuButton.clearHover();
+                            openMenuButton = null;
+                            openMenuButton = menuButton;
+                    }
+                    updateFocusedIndex();
+                    if (openMenu != null && openMenu != menu) {
+                     // hide the currently visible menu, and move to the new one
+                        openMenu.hide();
+                        openMenu = menu;
                         updateFocusedIndex();
-                        if (openMenu != null && openMenu != menu) {
-                         // hide the currently visible menu, and move to the new one
-                            openMenu.hide();
-                            openMenu = menu;
-                            updateFocusedIndex();
-                            if (!isMenuEmpty(menu)) {
-                                openMenu.show();
-                            } 
+                        if (!isMenuEmpty(menu)) {
+                            openMenu.show();
                         }
                     }
                 }

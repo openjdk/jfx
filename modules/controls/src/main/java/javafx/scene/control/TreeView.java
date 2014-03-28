@@ -357,24 +357,22 @@ public class TreeView<T> extends Control {
     // we use this to forward events that have bubbled up TreeItem instances
     // to the TreeViewSkin, to force it to recalculate teh item count and redraw
     // if necessary
-    private final EventHandler<TreeModificationEvent<T>> rootEvent = new EventHandler<TreeModificationEvent<T>>() {
-        @Override public void handle(TreeModificationEvent<T> e) {
-            // this forces layoutChildren at the next pulse, and therefore
-            // updates the item count if necessary
-            EventType<?> eventType = e.getEventType();
-            boolean match = false;
-            while (eventType != null) {
-                if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
-                    match = true;
-                    break;
-                }
-                eventType = eventType.getSuperType();
+    private final EventHandler<TreeModificationEvent<T>> rootEvent = e -> {
+        // this forces layoutChildren at the next pulse, and therefore
+        // updates the item count if necessary
+        EventType<?> eventType = e.getEventType();
+        boolean match = false;
+        while (eventType != null) {
+            if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
+                match = true;
+                break;
             }
-            
-            if (match) {
-                expandedItemCountDirty = true;
-                requestLayout();
-            }
+            eventType = eventType.getSuperType();
+        }
+
+        if (match) {
+            expandedItemCountDirty = true;
+            requestLayout();
         }
     };
     
@@ -1245,12 +1243,9 @@ public class TreeView<T> extends Control {
             }
         }
         
-        private ChangeListener<TreeItem<T>> rootPropertyListener = new ChangeListener<TreeItem<T>>() {
-            @Override public void changed(ObservableValue<? extends TreeItem<T>> observable, 
-                    TreeItem<T> oldValue, TreeItem<T> newValue) {
-                clearSelection();
-                updateTreeEventListener(oldValue, newValue);
-            }
+        private ChangeListener<TreeItem<T>> rootPropertyListener = (observable, oldValue, newValue) -> {
+            clearSelection();
+            updateTreeEventListener(oldValue, newValue);
         };
         
         private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<TreeModificationEvent<T>>() {
@@ -1473,11 +1468,8 @@ public class TreeView<T> extends Control {
             updateTreeEventListener(null, treeView.getRoot());
         }
         
-        private final ChangeListener<TreeItem<T>> rootPropertyListener = new ChangeListener<TreeItem<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends TreeItem<T>> observable, TreeItem<T> oldValue, TreeItem<T> newValue) {
-                updateTreeEventListener(oldValue, newValue);
-            }
+        private final ChangeListener<TreeItem<T>> rootPropertyListener = (observable, oldValue, newValue) -> {
+            updateTreeEventListener(oldValue, newValue);
         };
                 
         private final WeakChangeListener<TreeItem<T>> weakRootPropertyListener =
@@ -1541,10 +1533,8 @@ public class TreeView<T> extends Control {
                 if(shift != 0) {
                     final int newFocus = getFocusedIndex() + shift;
                     if (newFocus >= 0) {
-                        Platform.runLater(new Runnable() {
-                            @Override public void run() {
-                                focus(newFocus);
-                            }
+                        Platform.runLater(() -> {
+                            focus(newFocus);
                         });
                     }
                 } 

@@ -127,10 +127,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      *                                                                         *
      **************************************************************************/
     
-    private final ListChangeListener<TableColumnBase> columnsListener = new ListChangeListener<TableColumnBase>() {
-        @Override public void onChanged(Change<? extends TableColumnBase> c) {
-            setHeadersNeedUpdate();
-        }
+    private final ListChangeListener<TableColumnBase> columnsListener = c -> {
+        setHeadersNeedUpdate();
     };
     
     private final WeakListChangeListener weakColumnsListener =

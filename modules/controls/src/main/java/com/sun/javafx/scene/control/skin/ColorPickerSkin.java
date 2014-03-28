@@ -189,11 +189,8 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         colorRect.getStyleClass().add("picker-color-rect");
 
         updateColor();
-        colorPicker.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                updateColor();
-            }
+        colorPicker.addEventHandler(ActionEvent.ACTION, t -> {
+            updateColor();
         });
 
         pickerColorBox.getChildren().add(colorRect);

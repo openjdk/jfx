@@ -76,14 +76,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private BreakIterator charIterator;
 
-    private InvalidationListener textListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            if (!isEditing()) {
-                // Text changed, but not by user action
-                undoManager.reset();
-            }
-            invalidateBidi();
+    private InvalidationListener textListener = observable -> {
+        if (!isEditing()) {
+            // Text changed, but not by user action
+            undoManager.reset();
         }
+        invalidateBidi();
     };
 
     /**************************************************************************

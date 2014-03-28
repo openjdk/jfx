@@ -150,11 +150,9 @@ public class ListViewMouseInputTest {
         final FocusModel fm = listView.getFocusModel();
         fm.focus(-1);
 
-        fm.focusedIndexProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                rt30394_count++;
-                assertEquals(0, fm.getFocusedIndex());
-            }
+        fm.focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt30394_count++;
+            assertEquals(0, fm.getFocusedIndex());
         });
 
         // test pre-conditions
@@ -272,11 +270,9 @@ public class ListViewMouseInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
 
-        listView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    rt_30626_count++;
-                }
+        listView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                rt_30626_count++;
             }
         });
 

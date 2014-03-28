@@ -99,61 +99,59 @@ public class PieChart extends Chart {
     private Legend legend = new Legend();
     private Data dataItemBeingRemoved = null;
     private Timeline dataRemoveTimeline = null;
-    private final ListChangeListener<Data> dataChangeListener = new ListChangeListener<Data>() {
-        @Override public void onChanged(Change<? extends Data> c) {
-            while(c.next()) {
-                // RT-28090 Probably a sort happened, just reorder the pointers.
-                if (c.wasPermutated()) {
-                    Data ptr = begin;
-                    for(int i = 0; i < getData().size(); i++) {
-                        Data item = getData().get(i);
-                        if (i == 0) {
-                            begin = item;
-                            ptr = begin;
-                            begin.next = null;
-                        } else {
-                            ptr.next = item;
-                            item.next = null;
-                            ptr = item;
-                        }
-                    }
-                    requestChartLayout();
-                    return;
-                }
-            // recreate linked list & set chart on new data
-            for(int i=c.getFrom(); i<c.getTo(); i++) {
-                getData().get(i).setChart(PieChart.this);
-                if (begin == null) {
-                    begin = getData().get(i);
-                    begin.next = null;
-                } else {
+    private final ListChangeListener<Data> dataChangeListener = c -> {
+        while(c.next()) {
+            // RT-28090 Probably a sort happened, just reorder the pointers.
+            if (c.wasPermutated()) {
+                Data ptr = begin;
+                for(int i = 0; i < getData().size(); i++) {
+                    Data item = getData().get(i);
                     if (i == 0) {
-                        getData().get(0).next = begin;
-                        begin = getData().get(0);
+                        begin = item;
+                        ptr = begin;
+                        begin.next = null;
                     } else {
-                        Data ptr = begin;
-                        for (int j = 0; j < i -1 ; j++) {
-                            ptr = ptr.next;
-                        }
-                        getData().get(i).next = ptr.next;
-                        ptr.next = getData().get(i);
+                        ptr.next = item;
+                        item.next = null;
+                        ptr = item;
                     }
                 }
+                requestChartLayout();
+                return;
             }
-            // call data added/removed methods
-            for (Data item : c.getRemoved()) {
-                dataItemRemoved(item);
+        // recreate linked list & set chart on new data
+        for(int i=c.getFrom(); i<c.getTo(); i++) {
+            getData().get(i).setChart(PieChart.this);
+            if (begin == null) {
+                begin = getData().get(i);
+                begin.next = null;
+            } else {
+                if (i == 0) {
+                    getData().get(0).next = begin;
+                    begin = getData().get(0);
+                } else {
+                    Data ptr = begin;
+                    for (int j = 0; j < i -1 ; j++) {
+                        ptr = ptr.next;
+                    }
+                    getData().get(i).next = ptr.next;
+                    ptr.next = getData().get(i);
+                }
             }
-            for(int i=c.getFrom(); i<c.getTo(); i++) {
-                Data item = getData().get(i);
-                dataItemAdded(item);
-            }
-            // update legend if any data has changed
-            if (isLegendVisible() && (c.getRemoved().size() > 0 || c.getFrom() < c.getTo())) updateLegend();
-            // re-layout everything
-            }
-            requestChartLayout();
         }
+        // call data added/removed methods
+        for (Data item : c.getRemoved()) {
+            dataItemRemoved(item);
+        }
+        for(int i=c.getFrom(); i<c.getTo(); i++) {
+            Data item = getData().get(i);
+            dataItemAdded(item);
+        }
+        // update legend if any data has changed
+        if (isLegendVisible() && (c.getRemoved().size() > 0 || c.getFrom() < c.getTo())) updateLegend();
+        // re-layout everything
+        }
+        requestChartLayout();
     };
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
@@ -408,8 +406,7 @@ public class PieChart extends Chart {
                     new KeyValue(item.currentPieValueProperty(), item.getCurrentPieValue()),
                     new KeyValue(item.radiusMultiplierProperty(), item.getRadiusMultiplier())),
                 new KeyFrame(Duration.millis(500),
-                    new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
+                        actionEvent -> {
                             text.setOpacity(0);
                             // RT-23597 : item's chart might have been set to null if
                             // this item is added and removed before its add animation finishes.
@@ -418,8 +415,7 @@ public class PieChart extends Chart {
                             FadeTransition ft = new FadeTransition(Duration.millis(150),text);
                             ft.setToValue(1);
                             ft.play();
-                        }
-                    },
+                        },
                     new KeyValue(item.currentPieValueProperty(), item.getPieValue(), Interpolator.EASE_BOTH),
                     new KeyValue(item.radiusMultiplierProperty(), 1, Interpolator.EASE_BOTH))
             );
@@ -458,8 +454,7 @@ public class PieChart extends Chart {
                     new KeyValue(item.currentPieValueProperty(), item.getCurrentPieValue()),
                     new KeyValue(item.radiusMultiplierProperty(), item.getRadiusMultiplier())),
                 new KeyFrame(Duration.millis(500),
-                    new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
+                        actionEvent -> {
                             // removing item
                             getChartChildren().remove(shape);
                             // fade out label
@@ -475,8 +470,7 @@ public class PieChart extends Chart {
                                  }
                             });
                             ft.play();
-                        }
-                    },
+                        },
                     new KeyValue(item.currentPieValueProperty(), 0, Interpolator.EASE_BOTH),
                     new KeyValue(item.radiusMultiplierProperty(), 0))
                 );

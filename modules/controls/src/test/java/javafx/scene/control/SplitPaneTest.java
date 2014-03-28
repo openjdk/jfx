@@ -1280,19 +1280,16 @@ public class SplitPaneTest {
         st.setScene(new Scene(sp, 2000, 2000));
         st.show();
            
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                StackPane rightsp = new StackPane();
-                Label right = new Label("right");
-                rightsp.getChildren().add(right);
-                
-                StackPane leftsp = new StackPane();
-                Label left = new Label("left");
-                leftsp.getChildren().add(left);
-                
-                sp.getItems().addAll(rightsp, leftsp);
-            }
+        Runnable runnable = () -> {
+            StackPane rightsp = new StackPane();
+            Label right = new Label("right");
+            rightsp.getChildren().add(right);
+
+            StackPane leftsp = new StackPane();
+            Label left = new Label("left");
+            leftsp.getChildren().add(left);
+
+            sp.getItems().addAll(rightsp, leftsp);
         };
         Platform.runLater(runnable);
                         

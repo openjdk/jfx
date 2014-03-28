@@ -121,12 +121,7 @@ public class PaginationTest {
     }
 
     @Test public void checkPageFactoryPropertyBind() {
-        Callback callback = new Callback() {
-            @Override
-            public Object call(Object arg0) {
-                return null;
-            }
-        };
+        Callback callback = arg0 -> null;
         ObjectProperty objPr = new SimpleObjectProperty(callback);
         pagination.pageFactoryProperty().bind(objPr);
         assertSame("page factory cannot be bound", pagination.pageFactoryProperty().getValue(), callback);
@@ -159,12 +154,9 @@ public class PaginationTest {
 
     @Test public void setCurrentPageIndexAndNavigateWithKeyBoard() {
         pagination.setPageCount(25);
-        pagination.setPageFactory(new Callback<Integer, Node>() {
-            @Override
-            public Node call(Integer pageIndex) {
-                Node n = createPage(pageIndex);
-                return n;
-            }
+        pagination.setPageFactory(pageIndex -> {
+            Node n = createPage(pageIndex);
+            return n;
         });
         root.setPrefSize(400, 400);
         root.getChildren().add(pagination);
@@ -187,12 +179,9 @@ public class PaginationTest {
 
     @Ignore @Test public void setCurrentPageIndexAndNavigateWithMouse() {
         pagination.setPageCount(25);
-        pagination.setPageFactory(new Callback<Integer, Node>() {
-            @Override
-            public Node call(Integer pageIndex) {
-                Node n = createPage(pageIndex);
-                return n;
-            }
+        pagination.setPageFactory(pageIndex -> {
+            Node n = createPage(pageIndex);
+            return n;
         });
 
         root.setPrefSize(400, 400);
@@ -216,13 +205,10 @@ public class PaginationTest {
 
     @Test public void setCurrentPageIndexAndVerifyCallback() {
         pagination.setPageCount(25);
-        pagination.setPageFactory(new Callback<Integer, Node>() {
-            @Override
-            public Node call(Integer pageIndex) {
-                Node n = createPage(pageIndex);
-                assertTrue(pageIndex == 0 || pageIndex == 4);
-                return n;
-            }
+        pagination.setPageFactory(pageIndex -> {
+            Node n = createPage(pageIndex);
+            assertTrue(pageIndex == 0 || pageIndex == 4);
+            return n;
         });
 
         root.setPrefSize(400, 400);

@@ -61,25 +61,19 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      **********************************************************************/
 
     public MultipleSelectionModelBase() {
-        selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                // we used to lazily retrieve the selected item, but now we just
-                // do it when the selection changes. This is hardly likely to be
-                // expensive, and we still lazily handle the multiple selection
-                // cases over in MultipleSelectionModel.
-                setSelectedItem(getModelItem(getSelectedIndex()));
-            }
+        selectedIndexProperty().addListener(valueModel -> {
+            // we used to lazily retrieve the selected item, but now we just
+            // do it when the selection changes. This is hardly likely to be
+            // expensive, and we still lazily handle the multiple selection
+            // cases over in MultipleSelectionModel.
+            setSelectedItem(getModelItem(getSelectedIndex()));
         });
         
         selectedIndices = new BitSet();
 
         selectedIndicesSeq = createListFromBitSet(selectedIndices);
         
-        final MappingChange.Map<Integer,T> map = new MappingChange.Map<Integer,T>() {
-            @Override public T map(Integer f) {
-                return getModelItem(f);
-            }
-        };
+        final MappingChange.Map<Integer,T> map = f -> getModelItem(f);
         
         selectedIndicesSeq.addListener(new ListChangeListener<Integer>() {
             @Override public void onChanged(final Change<? extends Integer> c) {

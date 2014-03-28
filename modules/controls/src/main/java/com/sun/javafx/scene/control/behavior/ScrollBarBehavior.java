@@ -174,9 +174,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         timeline.setCycleCount(Timeline.INDEFINITE);
 
         final EventHandler<ActionEvent> step =
-                new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+                event -> {
                     boolean i = (pos > ((bar.getValue() - bar.getMin())/(bar.getMax() - bar.getMin())));
                     if (incrementing == i) {
                         // we started incrementing and still are, or we
@@ -186,8 +184,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
                     else {
                         stopTimeline();
                     }
-                }
-            };
+                };
 
         final KeyFrame kf = new KeyFrame(Duration.millis(200), step);
         timeline.getKeyFrames().add(kf);
@@ -214,17 +211,14 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         timeline.setCycleCount(Timeline.INDEFINITE);
 
         final EventHandler<ActionEvent> dec =
-            new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+                event -> {
                     if (bar.getValue() > bar.getMin()) {
                         bar.decrement();
                     }
                     else {
                         stopTimeline();
                     }
-                }
-            };
+                };
 
         final KeyFrame kf = new KeyFrame(Duration.millis(200), dec);
         timeline.getKeyFrames().add(kf);
@@ -251,17 +245,14 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         timeline.setCycleCount(Timeline.INDEFINITE);
 
         final EventHandler<ActionEvent> inc =
-            new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+                event -> {
                     if (bar.getValue() < bar.getMax()) {
                         bar.increment();
                     }
                     else {
                         stopTimeline();
                     }
-                }
-            };
+                };
 
         final KeyFrame kf = new KeyFrame(Duration.millis(200), inc);
         timeline.getKeyFrames().add(kf);

@@ -236,21 +236,19 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         // all children columns know that this TreeTableColumn is their parent.
         getColumns().addListener(weakColumnsListener);
 
-        treeTableViewProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // set all children of this tableView to have the same TableView
-                // as this column
-                for (TreeTableColumn<S, ?> tc : getColumns()) {
-                    tc.setTreeTableView(getTreeTableView());
-                }
-                
-                // This code was commented out due to RT-22391, with this enabled
-                // the parent column will be null, which is not desired
+        treeTableViewProperty().addListener(observable -> {
+            // set all children of this tableView to have the same TableView
+            // as this column
+            for (TreeTableColumn<S, ?> tc : getColumns()) {
+                tc.setTreeTableView(getTreeTableView());
+            }
+
+            // This code was commented out due to RT-22391, with this enabled
+            // the parent column will be null, which is not desired
 //                // set the parent of this column to also have this tableView
 //                if (getParentColumn() != null) {
 //                    getParentColumn().setTableView(getTableView());
 //                }
-            }
         });
     }
 
@@ -274,15 +272,13 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      *                                                                         *
      **************************************************************************/
     
-    private EventHandler<TreeTableColumn.CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER = 
-            new EventHandler<TreeTableColumn.CellEditEvent<S,T>>() {
-        @Override public void handle(TreeTableColumn.CellEditEvent<S,T> t) {
-            ObservableValue<T> ov = getCellObservableValue(t.getRowValue());
-            if (ov instanceof WritableValue) {
-                ((WritableValue)ov).setValue(t.getNewValue());
-            }
-        }
-    };
+    private EventHandler<TreeTableColumn.CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER =
+            t -> {
+                ObservableValue<T> ov = getCellObservableValue(t.getRowValue());
+                if (ov instanceof WritableValue) {
+                    ((WritableValue)ov).setValue(t.getNewValue());
+                }
+            };
     
     private ListChangeListener columnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {

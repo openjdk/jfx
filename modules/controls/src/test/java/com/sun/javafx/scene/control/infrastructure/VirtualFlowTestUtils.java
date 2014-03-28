@@ -131,32 +131,30 @@ public class VirtualFlowTestUtils {
     }
 
     private static void assertRows(final Control control, final int startRow, final int endRow, final boolean expectEmpty) {
-        Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
-            @Override public Void call(IndexedCell<?> indexedCell) {
-                boolean hasChildrenCell = false;
-                for (Node n : indexedCell.getChildrenUnmodifiable()) {
-                    if (! (n instanceof IndexedCell)) {
-                        continue;
-                    }
-                    hasChildrenCell = true;
-                    IndexedCell<?> childCell = (IndexedCell<?>)n;
-
-                    if (expectEmpty) {
-                        assertCellEmpty(childCell);
-                    } else {
-                        assertCellNotEmpty(childCell);
-                    }
+        Callback<IndexedCell<?>, Void> callback = indexedCell -> {
+            boolean hasChildrenCell = false;
+            for (Node n : indexedCell.getChildrenUnmodifiable()) {
+                if (! (n instanceof IndexedCell)) {
+                    continue;
                 }
+                hasChildrenCell = true;
+                IndexedCell<?> childCell = (IndexedCell<?>)n;
 
-                if (! hasChildrenCell) {
-                    if (expectEmpty) {
-                        assertCellEmpty(indexedCell);
-                    } else {
-                        assertCellNotEmpty(indexedCell);
-                    }
+                if (expectEmpty) {
+                    assertCellEmpty(childCell);
+                } else {
+                    assertCellNotEmpty(childCell);
                 }
-                return null;
             }
+
+            if (! hasChildrenCell) {
+                if (expectEmpty) {
+                    assertCellEmpty(indexedCell);
+                } else {
+                    assertCellNotEmpty(indexedCell);
+                }
+            }
+            return null;
         };
 
         assertCallback(control, startRow, endRow, callback);
@@ -165,49 +163,45 @@ public class VirtualFlowTestUtils {
     public static void assertCellTextEquals(final Control control, final int index, final String... expected) {
         if (expected == null || expected.length == 0) return;
 
-        Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
-            @Override public Void call(IndexedCell<?> indexedCell) {
-                if (indexedCell.getIndex() != index) return null;
+        Callback<IndexedCell<?>, Void> callback = indexedCell -> {
+            if (indexedCell.getIndex() != index) return null;
 
-                if (expected.length == 1) {
-                    assertEquals(expected[0], indexedCell.getText());
-                } else {
-                    int jump = 0;
-                    for (int i = 0; i < expected.length; i++) {
-                        Node childNode = indexedCell.getChildrenUnmodifiable().get(i + jump);
-                        String text = null;
-                        if (! (childNode instanceof IndexedCell)) {
-                            jump++;
-                            continue;
-                        }
-
-                        text = ((IndexedCell) childNode).getText();
-                        assertEquals(expected[i], text);
+            if (expected.length == 1) {
+                assertEquals(expected[0], indexedCell.getText());
+            } else {
+                int jump = 0;
+                for (int i = 0; i < expected.length; i++) {
+                    Node childNode = indexedCell.getChildrenUnmodifiable().get(i + jump);
+                    String text = null;
+                    if (! (childNode instanceof IndexedCell)) {
+                        jump++;
+                        continue;
                     }
+
+                    text = ((IndexedCell) childNode).getText();
+                    assertEquals(expected[i], text);
                 }
-                return null;
             }
+            return null;
         };
 
         assertCallback(control, index, index + 1, callback);
     }
 
     public static void assertTableCellTextEquals(final Control control, final int row, final int column, final String expected) {
-        Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
-            @Override public Void call(IndexedCell<?> indexedCell) {
-                if (indexedCell.getIndex() != row) return null;
+        Callback<IndexedCell<?>, Void> callback = indexedCell -> {
+            if (indexedCell.getIndex() != row) return null;
 
-                int _column = column;
+            int _column = column;
 
-                // we need to account for TreeTableView having LabeledText node in the TreeTableRow
-                if (indexedCell instanceof TreeTableRow) {
-                    _column++;
-                }
-
-                IndexedCell cell = (IndexedCell) indexedCell.getChildrenUnmodifiable().get(_column);
-                assertEquals(expected, cell.getText());
-                return null;
+            // we need to account for TreeTableView having LabeledText node in the TreeTableRow
+            if (indexedCell instanceof TreeTableRow) {
+                _column++;
             }
+
+            IndexedCell cell = (IndexedCell) indexedCell.getChildrenUnmodifiable().get(_column);
+            assertEquals(expected, cell.getText());
+            return null;
         };
 
         assertCallback(control, row, row + 1, callback);
@@ -216,22 +210,20 @@ public class VirtualFlowTestUtils {
     // used by TreeView / TreeTableView to ensure the correct indentation
     // (although note that it has only been developed so far for TreeView)
     public static void assertLayoutX(final Control control, final int startRow, final int endRow, final double expectedLayoutX) {
-        Callback<IndexedCell<?>, Void> callback = new Callback<IndexedCell<?>, Void>() {
-            @Override public Void call(IndexedCell<?> indexedCell) {
-                List<Node> childrenOfCell = indexedCell.getChildrenUnmodifiable();
-                LabeledText labeledText = null;
-                for (int j = 0; j < childrenOfCell.size(); j++) {
-                    Node child = childrenOfCell.get(j);
-                    if (child instanceof LabeledText) {
-                        labeledText = (LabeledText) child;
-                    }
+        Callback<IndexedCell<?>, Void> callback = indexedCell -> {
+            List<Node> childrenOfCell = indexedCell.getChildrenUnmodifiable();
+            LabeledText labeledText = null;
+            for (int j = 0; j < childrenOfCell.size(); j++) {
+                Node child = childrenOfCell.get(j);
+                if (child instanceof LabeledText) {
+                    labeledText = (LabeledText) child;
                 }
-
-                String error = "Element in row " + indexedCell.getIndex() + " has incorrect indentation. "
-                        + "Expected " + expectedLayoutX + ", but found " + labeledText.getLayoutX();
-                assertEquals(error, expectedLayoutX, labeledText.getLayoutX(), 0.0);
-                return null;
             }
+
+            String error = "Element in row " + indexedCell.getIndex() + " has incorrect indentation. "
+                    + "Expected " + expectedLayoutX + ", but found " + labeledText.getLayoutX();
+            assertEquals(error, expectedLayoutX, labeledText.getLayoutX(), 0.0);
+            return null;
         };
 
         assertCallback(control, startRow, endRow, callback);

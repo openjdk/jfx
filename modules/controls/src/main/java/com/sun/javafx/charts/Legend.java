@@ -52,12 +52,10 @@ public class Legend extends TilePane {
     // -------------- PRIVATE FIELDS ------------------------------------------
 
     private int rows = 0, columns = 0;
-    private ListChangeListener<LegendItem> itemsListener = new ListChangeListener<LegendItem> () {
-        @Override public void onChanged(Change<? extends LegendItem> c) {
-            getChildren().clear();
-            for (LegendItem item : getItems()) getChildren().add(item.label);
-            if(isVisible()) requestLayout();
-        }
+    private ListChangeListener<LegendItem> itemsListener = c -> {
+        getChildren().clear();
+        for (LegendItem item : getItems()) getChildren().add(item.label);
+        if(isVisible()) requestLayout();
     };
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------

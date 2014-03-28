@@ -1840,21 +1840,13 @@ public class TableViewKeyInputTest {
         tableView.setEditable(true);
         col0.setEditable(true);
 
-        col0.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper("DUMMY TEXT");
-            }
-        });
+        col0.setCellValueFactory(param -> new ReadOnlyStringWrapper("DUMMY TEXT"));
 
-        col0.setOnEditStart(new EventHandler<TableColumn.CellEditEvent<String, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<String, String> t) {
-                rt29849_start_count++;
-            }
+        col0.setOnEditStart(t -> {
+            rt29849_start_count++;
         });
-        col0.setOnEditCancel(new EventHandler<TableColumn.CellEditEvent<String, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<String, String> t) {
-                rt29849_cancel_count++;
-            }
+        col0.setOnEditCancel(t -> {
+            rt29849_cancel_count++;
         });
 
         // initially the counts should be zero
@@ -1891,10 +1883,8 @@ public class TableViewKeyInputTest {
         // event when the selected items list changes (due to deselection).
         // It actually does always contain the right value - it just doesn't
         // let anyone know it!
-        sm.selectedItemProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                rt31577_count++;
-            }
+        sm.selectedItemProperty().addListener(observable -> {
+            rt31577_count++;
         });
 
         assertTrue(sm.getSelectedItems().isEmpty());
@@ -1981,11 +1971,7 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        col0.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue());
-            }
-        });
+        col0.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
 
         final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
@@ -2013,11 +1999,7 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        col0.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue());
-            }
-        });
+        col0.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
 
         final int lastIndex = 99;
 
@@ -3330,11 +3312,9 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -3361,11 +3341,9 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);
@@ -3392,11 +3370,9 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -3423,11 +3399,9 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);
@@ -3445,11 +3419,7 @@ public class TableViewKeyInputTest {
         }
 
         TableColumn<String, String> col = new TableColumn<>("Column");
-        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
         tableView.getColumns().setAll(col);
 
         new StageLoader(tableView);
@@ -3463,11 +3433,9 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(5, col));
         assertTrue(sm.isSelected(5, col));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -3485,11 +3453,7 @@ public class TableViewKeyInputTest {
         }
 
         TableColumn<String, String> col = new TableColumn<>("Column");
-        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
         tableView.getColumns().setAll(col);
 
         new StageLoader(tableView);
@@ -3503,11 +3467,9 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(5, col));
         assertTrue(sm.isSelected(5, col));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);
@@ -3525,11 +3487,7 @@ public class TableViewKeyInputTest {
         }
 
         TableColumn<String, String> col = new TableColumn<>("Column");
-        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
         tableView.getColumns().setAll(col);
 
         new StageLoader(tableView);
@@ -3543,11 +3501,9 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(5, col));
         assertTrue(sm.isSelected(5, col));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -3565,11 +3521,7 @@ public class TableViewKeyInputTest {
         }
 
         TableColumn<String, String> col = new TableColumn<>("Column");
-        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
         tableView.getColumns().setAll(col);
 
         new StageLoader(tableView);
@@ -3583,11 +3535,9 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(5, col));
         assertTrue(sm.isSelected(5, col));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);

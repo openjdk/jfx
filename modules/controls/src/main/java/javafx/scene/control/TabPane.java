@@ -107,19 +107,17 @@ public class TabPane extends Control {
         getStyleClass().setAll("tab-pane");
         setSelectionModel(new TabPaneSelectionModel(this));
 
-        tabs.addListener(new ListChangeListener<Tab>() {
-            @Override public void onChanged(Change<? extends Tab> c) {
-                while (c.next()) {
-                    for (Tab tab : c.getRemoved()) {
-                        if (tab != null && !getTabs().contains(tab)) {
-                            tab.setTabPane(null);
-                        }
+        tabs.addListener((ListChangeListener<Tab>) c -> {
+            while (c.next()) {
+                for (Tab tab : c.getRemoved()) {
+                    if (tab != null && !getTabs().contains(tab)) {
+                        tab.setTabPane(null);
                     }
+                }
 
-                    for (Tab tab : c.getAddedSubList()) {
-                        if (tab != null) {
-                            tab.setTabPane(TabPane.this);
-                        }
+                for (Tab tab : c.getAddedSubList()) {
+                    if (tab != null) {
+                        tab.setTabPane(TabPane.this);
                     }
                 }
             }
@@ -638,41 +636,39 @@ public class TabPane extends Control {
             this.tabPane = t;
 
             // watching for changes to the items list content
-            final ListChangeListener<Tab> itemsContentObserver = new ListChangeListener<Tab>() {
-                @Override public void onChanged(Change<? extends Tab> c) {
-                    while (c.next()) {
-                        for (Tab tab : c.getRemoved()) {
-                            if (tab != null && !tabPane.getTabs().contains(tab)) {
-                                if (getSelectedIndex() == 0 && tabPane.getTabs().size() > 0) {                                    
-                                    clearAndSelect(0);
-                                    tab.setSelected(false);
-                                }
-                                if (tab.isSelected()) {
-                                    tab.setSelected(false);
-                                    if (c.getFrom() == 0) {
-                                        if (tabPane.getTabs().size() > 1) {
-                                            clearSelection();
-                                        }
-                                    } else {
-                                        selectPrevious();
+            final ListChangeListener<Tab> itemsContentObserver = c -> {
+                while (c.next()) {
+                    for (Tab tab : c.getRemoved()) {
+                        if (tab != null && !tabPane.getTabs().contains(tab)) {
+                            if (getSelectedIndex() == 0 && tabPane.getTabs().size() > 0) {
+                                clearAndSelect(0);
+                                tab.setSelected(false);
+                            }
+                            if (tab.isSelected()) {
+                                tab.setSelected(false);
+                                if (c.getFrom() == 0) {
+                                    if (tabPane.getTabs().size() > 1) {
+                                        clearSelection();
                                     }
+                                } else {
+                                    selectPrevious();
                                 }
                             }
                         }
-                        if (c.wasAdded() || c.wasRemoved()) {
-                            // The selected tab index can be out of sync with the list of tab if
-                            // we add or remove tabs before the selected tab.
-                            if (getSelectedIndex() != tabPane.getTabs().indexOf(getSelectedItem())) {
-                                clearAndSelect(tabPane.getTabs().indexOf(getSelectedItem()));
-                            }
+                    }
+                    if (c.wasAdded() || c.wasRemoved()) {
+                        // The selected tab index can be out of sync with the list of tab if
+                        // we add or remove tabs before the selected tab.
+                        if (getSelectedIndex() != tabPane.getTabs().indexOf(getSelectedItem())) {
+                            clearAndSelect(tabPane.getTabs().indexOf(getSelectedItem()));
                         }
                     }
-                    if (getSelectedIndex() == -1 && getSelectedItem() == null && tabPane.getTabs().size() > 0) {                        
-                        selectFirst();
-                    } else if (tabPane.getTabs().isEmpty()) {
-                        clearSelection();
-                    }
-                }                
+                }
+                if (getSelectedIndex() == -1 && getSelectedItem() == null && tabPane.getTabs().size() > 0) {
+                    selectFirst();
+                } else if (tabPane.getTabs().isEmpty()) {
+                    clearSelection();
+                }
             };
             if (this.tabPane.getTabs() != null) {
                 this.tabPane.getTabs().addListener(itemsContentObserver);

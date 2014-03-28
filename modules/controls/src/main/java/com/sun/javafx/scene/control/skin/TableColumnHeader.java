@@ -142,11 +142,9 @@ public class TableColumnHeader extends Region {
         initUI();
         
         // change listener for multiple properties
-        changeListenerHandler = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
-            @Override public Void call(String p) {
-                handlePropertyChanged(p);
-                return null;
-            }
+        changeListenerHandler = new MultiplePropertyChangeListenerHandler(p -> {
+            handlePropertyChanged(p);
+            return null;
         });
         changeListenerHandler.registerChangeListener(sceneProperty(), "SCENE");
         
@@ -181,22 +179,16 @@ public class TableColumnHeader extends Region {
     
     protected final MultiplePropertyChangeListenerHandler changeListenerHandler;
     
-    private ListChangeListener<TableColumnBase<?,?>> sortOrderListener = new ListChangeListener<TableColumnBase<?,?>>() {
-        @Override public void onChanged(Change<? extends TableColumnBase<?,?>> c) {
-            updateSortPosition();
-        }
+    private ListChangeListener<TableColumnBase<?,?>> sortOrderListener = c -> {
+        updateSortPosition();
     };
     
-    private ListChangeListener<TableColumnBase<?,?>> visibleLeafColumnsListener = new ListChangeListener<TableColumnBase<?,?>>() {
-        @Override public void onChanged(Change<? extends TableColumnBase<?,?>> c) {
-            updateColumnIndex();
-        }
+    private ListChangeListener<TableColumnBase<?,?>> visibleLeafColumnsListener = c -> {
+        updateColumnIndex();
     };
     
-    private ListChangeListener<String> styleClassListener = new ListChangeListener<String>() {
-        @Override public void onChanged(Change<? extends String> c) {
-            updateStyleClass();
-        }
+    private ListChangeListener<String> styleClassListener = c -> {
+        updateStyleClass();
     };
     
     private WeakListChangeListener<TableColumnBase<?,?>> weakSortOrderListener =
@@ -206,60 +198,52 @@ public class TableColumnHeader extends Region {
     private final WeakListChangeListener<String> weakStyleClassListener =
             new WeakListChangeListener<String>(styleClassListener);
     
-    private static final EventHandler<MouseEvent> mousePressedHandler = new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent me) {
-            TableColumnHeader header = (TableColumnHeader) me.getSource(); 
+    private static final EventHandler<MouseEvent> mousePressedHandler = me -> {
+        TableColumnHeader header = (TableColumnHeader) me.getSource();
 
-            // pass focus to the table, so that the user immediately sees
-            // the focus rectangle around the table control.
-            header.getTableViewSkin().getSkinnable().requestFocus();
+        // pass focus to the table, so that the user immediately sees
+        // the focus rectangle around the table control.
+        header.getTableViewSkin().getSkinnable().requestFocus();
 
-            if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
-                header.columnReorderingStarted(me);
-            }
-            me.consume();
+        if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
+            header.columnReorderingStarted(me);
         }
+        me.consume();
     };
     
-    private static final EventHandler<MouseEvent> mouseDraggedHandler = new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent me) {
-            TableColumnHeader header = (TableColumnHeader) me.getSource(); 
-            
-            if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
-                header.columnReordering(me);
-            }
-            me.consume();
-        }
-    };
-    
-    private static final EventHandler<MouseEvent> mouseReleasedHandler = new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent me) {
-            if (me.isPopupTrigger()) return;
-            
-            TableColumnHeader header = (TableColumnHeader) me.getSource(); 
-            TableColumnBase tableColumn = header.getTableColumn();
-            
-            ContextMenu menu = tableColumn.getContextMenu();
-            if (menu != null && menu.isShowing()) return;
-            if (header.getTableHeaderRow().isReordering() && header.isColumnReorderingEnabled()) {
-                header.columnReorderingComplete(me);
-            } else if (me.isStillSincePress()) {
-                header.sortColumn(me.isShiftDown());
-            }
-            me.consume();
-        }
-    };
-    
-    private static final EventHandler<ContextMenuEvent> contextMenuRequestedHandler = new EventHandler<ContextMenuEvent>() {
-        @Override public void handle(ContextMenuEvent me) {
-            TableColumnHeader header = (TableColumnHeader) me.getSource(); 
-            TableColumnBase tableColumn = header.getTableColumn();
+    private static final EventHandler<MouseEvent> mouseDraggedHandler = me -> {
+        TableColumnHeader header = (TableColumnHeader) me.getSource();
 
-            ContextMenu menu = tableColumn.getContextMenu();
-            if (menu != null) {
-                menu.show(header, me.getScreenX(), me.getScreenY());
-                me.consume();
-            }
+        if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
+            header.columnReordering(me);
+        }
+        me.consume();
+    };
+    
+    private static final EventHandler<MouseEvent> mouseReleasedHandler = me -> {
+        if (me.isPopupTrigger()) return;
+
+        TableColumnHeader header = (TableColumnHeader) me.getSource();
+        TableColumnBase tableColumn = header.getTableColumn();
+
+        ContextMenu menu = tableColumn.getContextMenu();
+        if (menu != null && menu.isShowing()) return;
+        if (header.getTableHeaderRow().isReordering() && header.isColumnReorderingEnabled()) {
+            header.columnReorderingComplete(me);
+        } else if (me.isStillSincePress()) {
+            header.sortColumn(me.isShiftDown());
+        }
+        me.consume();
+    };
+    
+    private static final EventHandler<ContextMenuEvent> contextMenuRequestedHandler = me -> {
+        TableColumnHeader header = (TableColumnHeader) me.getSource();
+        TableColumnBase tableColumn = header.getTableColumn();
+
+        ContextMenu menu = tableColumn.getContextMenu();
+        if (menu != null) {
+            menu.show(header, me.getScreenX(), me.getScreenY());
+            me.consume();
         }
     };
 

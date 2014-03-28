@@ -99,13 +99,11 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
     private double fixedCellSize;
     private boolean fixedCellSizeEnabled;
     
-    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
-        @Override public Void call(String p) {
-            if ("EXPANDED".equals(p)) {
-                updateDisclosureNodeRotation(true);
-            }
-            return null;
+    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(p -> {
+        if ("EXPANDED".equals(p)) {
+            updateDisclosureNodeRotation(true);
         }
+        return null;
     });
     
     public TreeCellSkin(TreeCell<T> control) {

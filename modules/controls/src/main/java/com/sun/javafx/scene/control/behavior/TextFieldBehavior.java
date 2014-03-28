@@ -71,38 +71,31 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         handleFocusChange();
 
         // Register for change events
-        textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                handleFocusChange();
-            }
+        textField.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            handleFocusChange();
         });
 
-        focusOwnerListener = new ChangeListener<Node>() {
-            @Override public void changed(ObservableValue<? extends Node> observable, Node oldValue, Node newValue) {
-                // RT-23699: The selection is now only affected when the TextField
-                // gains or loses focus within the Scene, and not when the whole
-                // stage becomes active or inactive.
-                if (newValue == textField) {
-                    if (!focusGainedByMouseClick) {
-                        textField.selectRange(textField.getLength(), 0);
-                    }
-                } else {
-                    textField.selectRange(0, 0);
+        focusOwnerListener = (observable, oldValue, newValue) -> {
+            // RT-23699: The selection is now only affected when the TextField
+            // gains or loses focus within the Scene, and not when the whole
+            // stage becomes active or inactive.
+            if (newValue == textField) {
+                if (!focusGainedByMouseClick) {
+                    textField.selectRange(textField.getLength(), 0);
                 }
+            } else {
+                textField.selectRange(0, 0);
             }
         };
 
         final WeakChangeListener<Node> weakFocusOwnerListener =
                                 new WeakChangeListener<Node>(focusOwnerListener);
-        sceneListener = new ChangeListener<Scene>() {
-            @Override public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
-                if (oldValue != null) {
-                    oldValue.focusOwnerProperty().removeListener(weakFocusOwnerListener);
-                }
-                if (newValue != null) {
-                    newValue.focusOwnerProperty().addListener(weakFocusOwnerListener);
-                }
+        sceneListener = (observable, oldValue, newValue) -> {
+            if (oldValue != null) {
+                oldValue.focusOwnerProperty().removeListener(weakFocusOwnerListener);
+            }
+            if (newValue != null) {
+                newValue.focusOwnerProperty().addListener(weakFocusOwnerListener);
             }
         };
         textField.sceneProperty().addListener(new WeakChangeListener<Scene>(sceneListener));

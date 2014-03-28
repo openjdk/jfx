@@ -655,9 +655,7 @@ public class ComboBoxTest {
     }
     
     @Test public void ensureCanSetNonNullCellFactory() {
-        Callback<ListView<String>, ListCell<String>> cf = new Callback<ListView<String>, ListCell<String>>() {
-            @Override public ListCell<String> call(ListView<String> p) { return null; }
-        };
+        Callback<ListView<String>, ListCell<String>> cf = p -> null;
         comboBox.setCellFactory(cf);
         assertEquals(cf, comboBox.getCellFactory());
     }
@@ -751,9 +749,7 @@ public class ComboBoxTest {
     }
     
     @Test public void ensureCanSetOnAction() {
-        EventHandler<ActionEvent> onAction = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) { }
-        };
+        EventHandler<ActionEvent> onAction = t -> { };
         comboBox.setOnAction(onAction);
         assertEquals(onAction, comboBox.getOnAction());
     }
@@ -852,10 +848,8 @@ public class ComboBoxTest {
     @Test public void test_rt20103() {
         final TextField tf = new TextField();
         
-        comboBox.setOnAction(new EventHandler() {
-            @Override public void handle(Event t) {
-                count++;
-            }
+        comboBox.setOnAction(t -> {
+            count++;
         });
         
         assertTrue(count == 0);
@@ -1013,11 +1007,9 @@ public class ComboBoxTest {
         ComboBox<String> comboBox = new ComboBox<String>();
         comboBox.setItems(strings);
         comboBox.setEditable(true);
-        comboBox.valueProperty().addListener(new ChangeListener<String>() {
-            @Override public void changed(ObservableValue ov, String t, String t1) {
-                if (t == null && t1.isEmpty()) {
-                    fail("Old value is '" + t + "' and new value is '" + t1 + "'.");
-                }
+        comboBox.valueProperty().addListener((ov, t, t1) -> {
+            if (t == null && t1.isEmpty()) {
+                fail("Old value is '" + t + "' and new value is '" + t1 + "'.");
             }
         });
         
@@ -1067,11 +1059,9 @@ public class ComboBoxTest {
         final ComboBox<String> comboBox = new ComboBox<>(items);
         comboBox.getSelectionModel().select(0);
 
-        comboBox.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> ov, Number oldIdx, Number newIdx) {
-                if (newIdx.intValue() != 0) {
-                    comboBox.getSelectionModel().select(0);
-                }
+        comboBox.getSelectionModel().selectedIndexProperty().addListener((ov, oldIdx, newIdx) -> {
+            if (newIdx.intValue() != 0) {
+                comboBox.getSelectionModel().select(0);
             }
         });
 
@@ -1174,10 +1164,8 @@ public class ComboBoxTest {
         box.getSelectionModel().selectFirst();
 
         Button defaultButton = new Button("press");
-        defaultButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent arg0) {
-                test_rt34603_count++;
-            }
+        defaultButton.setOnAction(arg0 -> {
+            test_rt34603_count++;
         });
         defaultButton.setDefaultButton(true);
 
@@ -1198,11 +1186,9 @@ public class ComboBoxTest {
 
         final ComboBox<String> cb = new ComboBox<String>();
         cb.setEditable(true);
-        cb.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                test_rt35586_count++;
-                assertEquals("Test", cb.getEditor().getText());
-            }
+        cb.setOnAction(event -> {
+            test_rt35586_count++;
+            assertEquals("Test", cb.getEditor().getText());
         });
 
         new StageLoader(cb);

@@ -789,26 +789,22 @@ public class Tooltip extends PopupControl {
             });
 
             hideTimer.getKeyFrames().add(new KeyFrame(visibleDuration));
-            hideTimer.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
+            hideTimer.setOnFinished(event -> {
+                // Hide the currently visible tooltip.
+                assert visibleTooltip != null;
+                visibleTooltip.hide();
+                visibleTooltip = null;
+                hoveredNode = null;
+            });
+
+            leftTimer.getKeyFrames().add(new KeyFrame(closeDelay));
+            leftTimer.setOnFinished(event -> {
+                if (!hideOnExit) {
                     // Hide the currently visible tooltip.
                     assert visibleTooltip != null;
                     visibleTooltip.hide();
                     visibleTooltip = null;
                     hoveredNode = null;
-                }
-            });
-
-            leftTimer.getKeyFrames().add(new KeyFrame(closeDelay));
-            leftTimer.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    if (!hideOnExit) {
-                        // Hide the currently visible tooltip.
-                        assert visibleTooltip != null;
-                        visibleTooltip.hide();
-                        visibleTooltip = null;
-                        hoveredNode = null;
-                    }
                 }
             });
         }

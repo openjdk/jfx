@@ -146,12 +146,10 @@ public class Menu extends MenuItem {
         super(text,graphic);
         getStyleClass().add(DEFAULT_STYLE_CLASS);
 
-        parentPopupProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                for (int i = 0; i < getItems().size(); i++) {
-                    MenuItem item = getItems().get(i);
-                    item.setParentPopup(getParentPopup());
-                }
+        parentPopupProperty().addListener(observable -> {
+            for (int i = 0; i < getItems().size(); i++) {
+                MenuItem item = getItems().get(i);
+                item.setParentPopup(getParentPopup());
             }
         });
     }

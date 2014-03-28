@@ -210,38 +210,34 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         // listen to the value property input by the user, and if the value is
         // set to something that exists in the items list, we should update the
         // selection model to indicate that this is the selected item
-        valueProperty().addListener(new ChangeListener<T>() {
-            @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
-                if (getItems() == null) return;
-                
-                SelectionModel<T> sm = getSelectionModel();
-                int index = getItems().indexOf(t1);
-                
-                if (index == -1) {
-                    sm.setSelectedItem(t1);
-                } else {
-                    // we must compare the value here with the currently selected
-                    // item. If they are different, we overwrite the selection
-                    // properties to reflect the new value.
-                    // We do this as there can be circumstances where there are
-                    // multiple instances of a value in the ComboBox items list,
-                    // and if we don't check here we may change the selection
-                    // mistakenly because the indexOf above will return the first
-                    // instance always, and selection may be on the second or 
-                    // later instances. This is RT-19227.
-                    T selectedItem = sm.getSelectedItem();
-                    if (selectedItem == null || ! selectedItem.equals(getValue())) {
-                        sm.clearAndSelect(index);
-                    }
+        valueProperty().addListener((ov, t, t1) -> {
+            if (getItems() == null) return;
+
+            SelectionModel<T> sm = getSelectionModel();
+            int index = getItems().indexOf(t1);
+
+            if (index == -1) {
+                sm.setSelectedItem(t1);
+            } else {
+                // we must compare the value here with the currently selected
+                // item. If they are different, we overwrite the selection
+                // properties to reflect the new value.
+                // We do this as there can be circumstances where there are
+                // multiple instances of a value in the ComboBox items list,
+                // and if we don't check here we may change the selection
+                // mistakenly because the indexOf above will return the first
+                // instance always, and selection may be on the second or
+                // later instances. This is RT-19227.
+                T selectedItem = sm.getSelectedItem();
+                if (selectedItem == null || ! selectedItem.equals(getValue())) {
+                    sm.clearAndSelect(index);
                 }
             }
         });
         
-        editableProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                // when editable changes, we reset the selection / value states
-                getSelectionModel().clearSelection();
-            }
+        editableProperty().addListener(o -> {
+            // when editable changes, we reset the selection / value states
+            getSelectionModel().clearSelection();
         });
     }
     
@@ -474,12 +470,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             }
             this.comboBox = cb;
             
-            selectedIndexProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    // we used to lazily retrieve the selected item, but now we just
-                    // do it when the selection changes.
-                    setSelectedItem(getModelItem(getSelectedIndex()));
-                }
+            selectedIndexProperty().addListener(valueModel -> {
+                // we used to lazily retrieve the selected item, but now we just
+                // do it when the selection changes.
+                setSelectedItem(getModelItem(getSelectedIndex()));
             });
 
             /*
@@ -524,12 +518,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         };
         
         // watching for changes to the items list
-        private final ChangeListener<ObservableList<T>> itemsObserver = new ChangeListener<ObservableList<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<T>> valueModel, 
-                ObservableList<T> oldList, ObservableList<T> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
+        private final ChangeListener<ObservableList<T>> itemsObserver = (valueModel, oldList, newList) -> {
+                updateItemsObserver(oldList, newList);
         };
         
         private WeakListChangeListener<T> weakItemsContentObserver =

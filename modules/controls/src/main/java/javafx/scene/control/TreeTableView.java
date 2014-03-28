@@ -379,24 +379,19 @@ public class TreeTableView<S> extends Control {
 
         // watch for changes to the sort order list - and when it changes run
         // the sort method.
-        getSortOrder().addListener(new ListChangeListener<TreeTableColumn<S,?>>() {
-            @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
-                doSort(TableUtil.SortEventType.SORT_ORDER_CHANGE, c);
-            }
+        getSortOrder().addListener((ListChangeListener.Change<? extends TreeTableColumn<S, ?>> c) -> {
+            doSort(TableUtil.SortEventType.SORT_ORDER_CHANGE, c);
         });
 
         // We're watching for changes to the content width such
         // that the resize policy can be run if necessary. This comes from
         // TreeTableViewSkin.
-        getProperties().addListener(new MapChangeListener<Object, Object>() {
-            @Override
-            public void onChanged(Change<? extends Object, ? extends Object> c) {
-                if (c.wasAdded() && TableView.SET_CONTENT_WIDTH.equals(c.getKey())) {
-                    if (c.getValueAdded() instanceof Number) {
-                        setContentWidth((Double) c.getValueAdded());
-                    }
-                    getProperties().remove(TableView.SET_CONTENT_WIDTH);
+        getProperties().addListener((MapChangeListener<Object, Object>) c -> {
+            if (c.wasAdded() && TableView.SET_CONTENT_WIDTH.equals(c.getKey())) {
+                if (c.getValueAdded() instanceof Number) {
+                    setContentWidth((Double) c.getValueAdded());
                 }
+                getProperties().remove(TableView.SET_CONTENT_WIDTH);
             }
         });
 
@@ -637,24 +632,22 @@ public class TreeTableView<S> extends Control {
     // we use this to forward events that have bubbled up TreeItem instances
     // to the TreeTableViewSkin, to force it to recalculate teh item count and redraw
     // if necessary
-    private final EventHandler<TreeItem.TreeModificationEvent<S>> rootEvent = new EventHandler<TreeItem.TreeModificationEvent<S>>() {
-        @Override public void handle(TreeItem.TreeModificationEvent<S> e) {
-            // this forces layoutChildren at the next pulse, and therefore
-            // updates the item count if necessary
-            EventType<?> eventType = e.getEventType();
-            boolean match = false;
-            while (eventType != null) {
-                if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
-                    match = true;
-                    break;
-                }
-                eventType = eventType.getSuperType();
+    private final EventHandler<TreeItem.TreeModificationEvent<S>> rootEvent = e -> {
+        // this forces layoutChildren at the next pulse, and therefore
+        // updates the item count if necessary
+        EventType<?> eventType = e.getEventType();
+        boolean match = false;
+        while (eventType != null) {
+            if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
+                match = true;
+                break;
             }
-            
-            if (match) {
-                expandedItemCountDirty = true;
-                requestLayout();
-            }
+            eventType = eventType.getSuperType();
+        }
+
+        if (match) {
+            expandedItemCountDirty = true;
+            requestLayout();
         }
     };
     
@@ -705,43 +698,33 @@ public class TreeTableView<S> extends Control {
         }
     };
     
-    private final InvalidationListener columnVisibleObserver = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateVisibleLeafColumns();
-        }
+    private final InvalidationListener columnVisibleObserver = valueModel -> {
+        updateVisibleLeafColumns();
     };
     
-    private final InvalidationListener columnSortableObserver = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            TreeTableColumn col = (TreeTableColumn) ((BooleanProperty)valueModel).getBean();
-            if (! getSortOrder().contains(col)) return;
-            doSort(TableUtil.SortEventType.COLUMN_SORTABLE_CHANGE, col);
-        }
+    private final InvalidationListener columnSortableObserver = valueModel -> {
+        TreeTableColumn col = (TreeTableColumn) ((BooleanProperty)valueModel).getBean();
+        if (! getSortOrder().contains(col)) return;
+        doSort(TableUtil.SortEventType.COLUMN_SORTABLE_CHANGE, col);
     };
 
-    private final InvalidationListener columnSortTypeObserver = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            TreeTableColumn col = (TreeTableColumn) ((ObjectProperty)valueModel).getBean();
-            if (! getSortOrder().contains(col)) return;
-            doSort(TableUtil.SortEventType.COLUMN_SORT_TYPE_CHANGE, col);
-        }
+    private final InvalidationListener columnSortTypeObserver = valueModel -> {
+        TreeTableColumn col = (TreeTableColumn) ((ObjectProperty)valueModel).getBean();
+        if (! getSortOrder().contains(col)) return;
+        doSort(TableUtil.SortEventType.COLUMN_SORT_TYPE_CHANGE, col);
     };
     
-    private final InvalidationListener columnComparatorObserver = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            TreeTableColumn col = (TreeTableColumn) ((SimpleObjectProperty)valueModel).getBean();
-            if (! getSortOrder().contains(col)) return;
-            doSort(TableUtil.SortEventType.COLUMN_COMPARATOR_CHANGE, col);
-        }
+    private final InvalidationListener columnComparatorObserver = valueModel -> {
+        TreeTableColumn col = (TreeTableColumn) ((SimpleObjectProperty)valueModel).getBean();
+        if (! getSortOrder().contains(col)) return;
+        doSort(TableUtil.SortEventType.COLUMN_COMPARATOR_CHANGE, col);
     };
     
     /* proxy pseudo-class state change from selectionModel's cellSelectionEnabledProperty */
-    private final InvalidationListener cellSelectionModelInvalidationListener = new InvalidationListener() {
-        @Override public void invalidated(Observable o) {
-            boolean isCellSelection = ((BooleanProperty)o).get();
-            pseudoClassStateChanged(PSEUDO_CLASS_CELL_SELECTION,  isCellSelection);
-            pseudoClassStateChanged(PSEUDO_CLASS_ROW_SELECTION,  !isCellSelection);
-        }
+    private final InvalidationListener cellSelectionModelInvalidationListener = o -> {
+        boolean isCellSelection = ((BooleanProperty)o).get();
+        pseudoClassStateChanged(PSEUDO_CLASS_CELL_SELECTION,  isCellSelection);
+        pseudoClassStateChanged(PSEUDO_CLASS_ROW_SELECTION,  !isCellSelection);
     };
     
     private WeakEventHandler<TreeItem.TreeModificationEvent<S>> weakRootEventListener;
@@ -2082,11 +2065,9 @@ public class TreeTableView<S> extends Control {
 
             this.treeTableView = treeTableView;
             
-            cellSelectionEnabledProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable o) {
-                    isCellSelectionEnabled();
-                    clearSelection();
-                }
+            cellSelectionEnabledProperty().addListener(o -> {
+                isCellSelectionEnabled();
+                clearSelection();
             });
         }
 
@@ -2187,17 +2168,9 @@ public class TreeTableView<S> extends Control {
     // package for testing
     static class TreeTableViewArrayListSelectionModel<S> extends TreeTableViewSelectionModel<S> {
 
-        private final MappingChange.Map<TreeTablePosition<S,?>,TreeItem<S>> cellToItemsMap = new MappingChange.Map<TreeTablePosition<S,?>, TreeItem<S>>() {
-            @Override public TreeItem<S> map(TreeTablePosition<S,?> f) {
-                return getModelItem(f.getRow());
-            }
-        };
+        private final MappingChange.Map<TreeTablePosition<S,?>,TreeItem<S>> cellToItemsMap = f -> getModelItem(f.getRow());
 
-        private final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = new MappingChange.Map<TreeTablePosition<S,?>, Integer>() {
-            @Override public Integer map(TreeTablePosition<S,?> f) {
-                return f.getRow();
-            }
-        };
+        private final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
 
         /***********************************************************************
          *                                                                     *
@@ -2212,11 +2185,8 @@ public class TreeTableView<S> extends Control {
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
 
-            selectedCellsMap = new SelectedCellsMap<>(new ListChangeListener<TreeTablePosition<S,?>>() {
-                @Override
-                public void onChanged(final ListChangeListener.Change<? extends TreeTablePosition<S,?>> c) {
-                    handleSelectedCellsListChangeEvent(c);
-                }
+            selectedCellsMap = new SelectedCellsMap<>(c -> {
+                handleSelectedCellsListChangeEvent(c);
             });
 
             selectedItems = new ReadOnlyUnbackedObservableList<TreeItem<S>>() {
@@ -2253,12 +2223,9 @@ public class TreeTableView<S> extends Control {
             }
         }
         
-        private ChangeListener<TreeItem<S>> rootPropertyListener = new ChangeListener<TreeItem<S>>() {
-            @Override public void changed(ObservableValue<? extends TreeItem<S>> observable, 
-                    TreeItem<S> oldValue, TreeItem<S> newValue) {
-                clearSelection();
-                updateTreeEventListener(oldValue, newValue);
-            }
+        private ChangeListener<TreeItem<S>> rootPropertyListener = (observable, oldValue, newValue) -> {
+            clearSelection();
+            updateTreeEventListener(oldValue, newValue);
         };
         
         private EventHandler<TreeItem.TreeModificationEvent<S>> treeItemListener = new EventHandler<TreeItem.TreeModificationEvent<S>>() {
@@ -3082,11 +3049,8 @@ public class TreeTableView<S> extends Control {
             EMPTY_CELL = pos;
         }
         
-        private final ChangeListener<TreeItem<S>> rootPropertyListener = new ChangeListener<TreeItem<S>>() {
-            @Override
-            public void changed(ObservableValue<? extends TreeItem<S>> observable, TreeItem<S> oldValue, TreeItem<S> newValue) {
-                updateTreeEventListener(oldValue, newValue);
-            }
+        private final ChangeListener<TreeItem<S>> rootPropertyListener = (observable, oldValue, newValue) -> {
+            updateTreeEventListener(oldValue, newValue);
         };
                 
         private final WeakChangeListener<TreeItem<S>> weakRootPropertyListener =
@@ -3150,10 +3114,8 @@ public class TreeTableView<S> extends Control {
                 if(shift != 0) {
                     final int newFocus = getFocusedIndex() + shift;
                     if (newFocus >= 0) {
-                        Platform.runLater(new Runnable() {
-                            @Override public void run() {
-                                focus(newFocus);
-                            }
+                        Platform.runLater(() -> {
+                            focus(newFocus);
                         });
                     }
                 } 

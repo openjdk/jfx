@@ -55,18 +55,10 @@ public class SelectedCellsMap<T extends TablePositionBase> {
 
     public SelectedCellsMap(final ListChangeListener<T> listener) {
         selectedCells = FXCollections.<T>observableArrayList();
-        sortedSelectedCells = new SortedList<>(selectedCells, new Comparator<T>() {
-            @Override public int compare(T o1, T o2) {
-                return o1.getRow() - o2.getRow();
-            }
-        });
+        sortedSelectedCells = new SortedList<>(selectedCells, (o1, o2) -> o1.getRow() - o2.getRow());
         sortedSelectedCells.addListener(listener);
 
-        selectedCellBitSetMap = new TreeMap<>(new Comparator<Integer>() {
-            @Override public int compare(Integer o1, Integer o2) {
-                return o1.compareTo(o2);
-            }
-        });
+        selectedCellBitSetMap = new TreeMap<>((o1, o2) -> o1.compareTo(o2));
     }
 
     public int size() {

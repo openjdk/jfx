@@ -91,145 +91,139 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
     ** don't allow the Node to handle a key event if it is in externalFocus mode.
     ** the only keyboard actions allowed are the navigation keys......
     */ 
-    final EventDispatcher preemptiveEventDispatcher = new EventDispatcher() {
-        @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
+    final EventDispatcher preemptiveEventDispatcher = (event, tail) -> {
 
-            // block the event from being passed down to children
-            if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
-                if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown()  && !((KeyEvent)event).isAltDown()) {
-                    if (isExternalFocus()) {
-                        //
-                        // don't let the behaviour leak any navigation keys when
-                        // we're not in blocking mode....
-                        //
-                        Object obj = event.getTarget();
+        // block the event from being passed down to children
+        if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
+            if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown()  && !((KeyEvent)event).isAltDown()) {
+                if (isExternalFocus()) {
+                    //
+                    // don't let the behaviour leak any navigation keys when
+                    // we're not in blocking mode....
+                    //
+                    Object obj = event.getTarget();
 
-                        switch (((KeyEvent)event).getCode()) {
-                          case TAB :
-                              if (((KeyEvent)event).isShiftDown()) {
-                                  ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.PREVIOUS);
-                              }
-                              else {
-                                  ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.NEXT);
-                              }
-                              event.consume();
-                              break;
-                          case UP :
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.UP);
-                              event.consume();
-                              break;
-                          case DOWN :
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.DOWN);
-                              event.consume();
-                              break;
-                          case LEFT :
+                    switch (((KeyEvent)event).getCode()) {
+                      case TAB :
+                          if (((KeyEvent)event).isShiftDown()) {
+                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.PREVIOUS);
+                          }
+                          else {
+                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.NEXT);
+                          }
+                          event.consume();
+                          break;
+                      case UP :
+                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.UP);
+                          event.consume();
+                          break;
+                      case DOWN :
+                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.DOWN);
+                          event.consume();
+                          break;
+                      case LEFT :
+                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
+                          event.consume();
+                          break;
+                      case RIGHT :
+                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
+                          event.consume();
+                          break;
+                      case ENTER :
+                          setExternalFocus(false);
+                          event.consume();
+                          break;
+                      default :
+                          // this'll kill mnemonics.... unless!
+                          Scene s = tlNode.getScene();
+                          Event.fireEvent(s, event);
+                          event.consume();
+                          break;
+                    }
+                }
+            }
+        }
+        return event;
+    };
+    final EventDispatcher preemptivePopupEventDispatcher = (event, tail) -> {
+
+        // block the event from being passed down to children
+        if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
+            if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown()  && !((KeyEvent)event).isAltDown()) {
+                if (!isExternalFocus()) {
+                    //
+                    // don't let the behaviour leak any navigation keys when
+                    // we're not in blocking mode....
+                    //
+                    Object obj = event.getTarget();
+                    switch (((KeyEvent)event).getCode()) {
+                      case TAB :
+                      case ENTER :
+                          event.consume();
+                          break;
+                      case UP :
+                      case DOWN :
+                          break;
+                      case LEFT :
+                          if (obj instanceof Node) {
                               ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
                               event.consume();
-                              break;
-                          case RIGHT :
+                          }
+                          else if (obj instanceof Scene) {
+                              Node node = ((Scene)obj).getFocusOwner();
+                              if (node != null) {
+                                  node.impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
+                                  event.consume();
+                              }
+                          }
+                          break;
+                      case RIGHT :
+                          if (obj instanceof Node) {
                               ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
                               event.consume();
-                              break;
-                          case ENTER :
-                              setExternalFocus(false);
-                              event.consume();
-                              break;
-                          default :
-                              // this'll kill mnemonics.... unless!
-                              Scene s = tlNode.getScene();
+                          }
+                          else if (obj instanceof Scene) {
+                              Node node = ((Scene)obj).getFocusOwner();
+                              if (node != null) {
+                                  node.impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
+                                  event.consume();
+                              }
+                          }
+                          break;
+
+                      default :
+                          // this'll kill mnemonics.... unless!
+                          Scene s = null;
+                          if (tlNode != null) {
+                              s = tlNode.getScene();
                               Event.fireEvent(s, event);
-                              event.consume();
-                              break;
-                        }
+                          }
+                          event.consume();
+                          break;
                     }
                 }
             }
-            return event;
         }
+        return event;
     };
-    final EventDispatcher preemptivePopupEventDispatcher = new EventDispatcher() {
-        @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
 
-            // block the event from being passed down to children
-            if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
-                if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown()  && !((KeyEvent)event).isAltDown()) {
-                    if (!isExternalFocus()) {
-                        //
-                        // don't let the behaviour leak any navigation keys when
-                        // we're not in blocking mode....
-                        //
-                        Object obj = event.getTarget();
-                        switch (((KeyEvent)event).getCode()) {
-                          case TAB :
-                          case ENTER :
-                              event.consume();
-                              break;
-                          case UP :
-                          case DOWN :
-                              break;
-                          case LEFT :
-                              if (obj instanceof Node) {
-                                  ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
-                                  event.consume();
-                              }
-                              else if (obj instanceof Scene) {
-                                  Node node = ((Scene)obj).getFocusOwner();
-                                  if (node != null) {
-                                      node.impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
-                                      event.consume();
-                                  }
-                              }
-                              break;
-                          case RIGHT :
-                              if (obj instanceof Node) {
-                                  ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
-                                  event.consume();
-                              }
-                              else if (obj instanceof Scene) {
-                                  Node node = ((Scene)obj).getFocusOwner();
-                                  if (node != null) {
-                                      node.impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
-                                      event.consume();
-                                  }
-                              }
-                              break;
 
-                          default :
-                              // this'll kill mnemonics.... unless!
-                              Scene s = null;
-                              if (tlNode != null) {
-                                  s = tlNode.getScene();
-                                  Event.fireEvent(s, event);
-                              }
-                              event.consume();
-                              break;
-                        }
-                    }
-                }
+    final EventDispatcher tlfEventDispatcher = (event, tail) -> {
+
+        if ((event instanceof KeyEvent)) {
+
+            if (isExternalFocus()) {
+                tail = tail.prepend(preemptiveEventDispatcher);
+                return tail.dispatchEvent(event);
             }
-            return event;
+            else {
+                tail = tail.prepend(preemptivePopupEventDispatcher);
+                tail = tail.prepend(origEventDispatcher);
+                return tail.dispatchEvent(event);
+            }
         }
+        return origEventDispatcher.dispatchEvent(event, tail);
     };
-
-
-    final EventDispatcher tlfEventDispatcher = new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-
-               if ((event instanceof KeyEvent)) {
-
-                   if (isExternalFocus()) {
-                       tail = tail.prepend(preemptiveEventDispatcher);
-                       return tail.dispatchEvent(event);
-                   }
-                   else {
-                       tail = tail.prepend(preemptivePopupEventDispatcher);
-                       tail = tail.prepend(origEventDispatcher);
-                       return tail.dispatchEvent(event);
-                   }
-               }
-               return origEventDispatcher.dispatchEvent(event, tail);
-           }
-        };
 
     private Event postDispatchTidyup(Event event) {
 
@@ -265,24 +259,18 @@ public class TwoLevelFocusPopupBehavior extends TwoLevelFocusBehavior {
     }
 
 
-    private final EventHandler<KeyEvent> keyEventListener = new EventHandler<KeyEvent>() {
-        @Override public void handle(KeyEvent e) {
-            postDispatchTidyup(e);
-        }
+    private final EventHandler<KeyEvent> keyEventListener = e -> {
+        postDispatchTidyup(e);
     };
 
 
     /*
     **  When a node gets focus, put it in external-focus mode.
     */
-    final ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal, Boolean newVal) {
-        }
+    final ChangeListener<Boolean> focusListener = (observable, oldVal, newVal) -> {
     };
 
-    private final EventHandler<MouseEvent> mouseEventListener  = new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent e) {
-            setExternalFocus(false);
-        }
+    private final EventHandler<MouseEvent> mouseEventListener  = e -> {
+        setExternalFocus(false);
     };
 }

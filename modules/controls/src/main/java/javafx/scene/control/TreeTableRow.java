@@ -94,22 +94,16 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
     
-    private final ListChangeListener<Integer> selectedListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
-            updateSelection();
-        }
+    private final ListChangeListener<Integer> selectedListener = c -> {
+        updateSelection();
     };
 
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateFocus();
-        }
+    private final InvalidationListener focusedListener = valueModel -> {
+        updateFocus();
     };
 
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateEditing();
-        }
+    private final InvalidationListener editingListener = valueModel -> {
+        updateEditing();
     };
     
     private final InvalidationListener leafListener = new InvalidationListener() {
@@ -123,12 +117,10 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         }
     };
     
-    private final InvalidationListener treeItemExpandedInvalidationListener = new InvalidationListener() {
-        @Override public void invalidated(Observable o) {
-            final boolean expanded = ((BooleanProperty)o).get();
-            pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   expanded);
-            pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !expanded);
-        }
+    private final InvalidationListener treeItemExpandedInvalidationListener = o -> {
+        final boolean expanded = ((BooleanProperty)o).get();
+        pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   expanded);
+        pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !expanded);
     };
     
     private final WeakListChangeListener<Integer> weakSelectedListener = 

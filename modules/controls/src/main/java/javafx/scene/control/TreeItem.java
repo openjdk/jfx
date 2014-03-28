@@ -405,12 +405,10 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      **************************************************************************/
 
     // called whenever the contents of the children sequence changes
-    private ListChangeListener<TreeItem<T>> childrenListener = new ListChangeListener<TreeItem<T>>() {
-        @Override public void onChanged(Change<? extends TreeItem<T>> c) {
-            expandedDescendentCountDirty = true;
-            while (c.next()) {
-                updateChildren(c.getAddedSubList(), c.getRemoved());
-            }
+    private ListChangeListener<TreeItem<T>> childrenListener = c -> {
+        expandedDescendentCountDirty = true;
+        while (c.next()) {
+            updateChildren(c.getAddedSubList(), c.getRemoved());
         }
     };
 

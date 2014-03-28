@@ -250,10 +250,8 @@ public class Tab implements EventTarget, Styleable {
         return tabPane;
     }
 
-    private final InvalidationListener parentDisabledChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateDisabled();
-        }
+    private final InvalidationListener parentDisabledChangedListener = valueModel -> {
+        updateDisabled();
     };
     
     private StringProperty text;

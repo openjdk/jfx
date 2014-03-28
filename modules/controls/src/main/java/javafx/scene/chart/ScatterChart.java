@@ -106,11 +106,9 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
             // fade out old symbol
             FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
             ft.setToValue(0);
-            ft.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent actionEvent) {
-                    getPlotChildren().remove(symbol);
-                    removeDataItemFromDisplay(series, item);
-                }
+            ft.setOnFinished(actionEvent -> {
+                getPlotChildren().remove(symbol);
+                removeDataItemFromDisplay(series, item);
             });
             ft.play();
         } else {
@@ -136,20 +134,16 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         // remove all symbol nodes
         if (shouldAnimate()) {
             ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(new EventHandler<ActionEvent>() {
-                public void handle(ActionEvent event) {
-                    removeSeriesFromDisplay(series);
-                }
+            pt.setOnFinished(event -> {
+                removeSeriesFromDisplay(series);
             });
             for (final Data<X,Y> d : series.getData()) {
                 final Node symbol = d.getNode();
                 // fade out old symbol
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
                 ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(symbol);
-                    }
+                ft.setOnFinished(actionEvent -> {
+                    getPlotChildren().remove(symbol);
                 });
                 pt.getChildren().add(ft);
             }

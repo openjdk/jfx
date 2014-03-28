@@ -191,11 +191,8 @@ public class TextFieldTest {
     
     @Test public void checkOnActionPropertyBind() {
         ObjectProperty<EventHandler<ActionEvent>> op= new SimpleObjectProperty<EventHandler<ActionEvent>>();
-        EventHandler<ActionEvent> ev = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                //Nothing to do
-            }
+        EventHandler<ActionEvent> ev = event -> {
+            //Nothing to do
         };
         op.setValue(ev);
         txtField.onActionProperty().bind(op);

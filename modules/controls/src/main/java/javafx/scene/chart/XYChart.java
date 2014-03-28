@@ -107,72 +107,70 @@ public abstract class XYChart<X,Y> extends Chart {
     /* start pointer of a series linked list. */
     Series<X,Y> begin = null;
     /** This is called when a series is added or removed from the chart */
-    private final ListChangeListener<Series<X,Y>> seriesChanged = new ListChangeListener<Series<X,Y>>() {
-        @Override public void onChanged(Change<? extends Series<X,Y>> c) {
-            while (c.next()) {
-                if (c.getRemoved().size() > 0) updateLegend();
-                for (Series<X,Y> series : c.getRemoved()) {
-                    series.setToRemove = true;
-                    series.setChart(null);
-                    seriesRemoved(series);
-                    int idx = seriesColorMap.remove(series);
-                    colorBits.clear(idx);
+    private final ListChangeListener<Series<X,Y>> seriesChanged = c -> {
+        while (c.next()) {
+            if (c.getRemoved().size() > 0) updateLegend();
+            for (Series<X,Y> series : c.getRemoved()) {
+                series.setToRemove = true;
+                series.setChart(null);
+                seriesRemoved(series);
+                int idx = seriesColorMap.remove(series);
+                colorBits.clear(idx);
 //                    seriesDefaultColorIndex --;
-                }
-                for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
-                    final Series<X,Y> series = c.getList().get(i);
-                    // add new listener to data
-                    series.setChart(XYChart.this);
-                    if (series.setToRemove) {
-                        series.setToRemove = false;
-                        series.getChart().seriesBeingRemovedIsAdded(series);
-                    }
-                    // update linkedList Pointers for series
-                    if (XYChart.this.begin == null) {
-                        XYChart.this.begin = getData().get(i);
-                        XYChart.this.begin.next = null;
-                    } else {
-                        if (i == 0) {
-                            getData().get(0).next = XYChart.this.begin;
-                            begin = getData().get(0);
-                        } else {
-                            Series ptr = begin;
-                            for (int j = 0; j < i -1 && ptr!=null ; j++) {
-                                ptr = ptr.next;
-                            }
-                            if (ptr != null) {
-                                getData().get(i).next = ptr.next;
-                                ptr.next = getData().get(i);
-                            }
-
-                        }
-                    }
-                    // update default color style class
-                    int nextClearBit = colorBits.nextClearBit(0);
-                    colorBits.set(nextClearBit, true);
-                    series.defaultColorStyleClass = DEFAULT_COLOR+(nextClearBit%8);
-                    seriesColorMap.put(series, nextClearBit%8);
-                    // inform sub-classes of series added
-                    seriesAdded(series, i);
-                }
-                if (c.getFrom() < c.getTo()) updateLegend();
-                seriesChanged(c);
-                // RT-12069, linked list pointers should update when list is permutated.
-                if (c.wasPermutated() && getData().size() > 0) {
-                    XYChart.this.begin = getData().get(0);
-                    Series<X,Y> ptr = begin;
-                    for(int k = 1; k < getData().size() && ptr != null; k++) {
-                        ptr.next = getData().get(k);
-                        ptr = ptr.next;
-                    }
-                    ptr.next = null;
-                }
             }
-            // update axis ranges
-            invalidateRange();
-            // lay everything out
-            requestChartLayout();
+            for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
+                final Series<X,Y> series = c.getList().get(i);
+                // add new listener to data
+                series.setChart(XYChart.this);
+                if (series.setToRemove) {
+                    series.setToRemove = false;
+                    series.getChart().seriesBeingRemovedIsAdded(series);
+                }
+                // update linkedList Pointers for series
+                if (XYChart.this.begin == null) {
+                    XYChart.this.begin = getData().get(i);
+                    XYChart.this.begin.next = null;
+                } else {
+                    if (i == 0) {
+                        getData().get(0).next = XYChart.this.begin;
+                        begin = getData().get(0);
+                    } else {
+                        Series ptr = begin;
+                        for (int j = 0; j < i -1 && ptr!=null ; j++) {
+                            ptr = ptr.next;
+                        }
+                        if (ptr != null) {
+                            getData().get(i).next = ptr.next;
+                            ptr.next = getData().get(i);
+                        }
+
+                    }
+                }
+                // update default color style class
+                int nextClearBit = colorBits.nextClearBit(0);
+                colorBits.set(nextClearBit, true);
+                series.defaultColorStyleClass = DEFAULT_COLOR+(nextClearBit%8);
+                seriesColorMap.put(series, nextClearBit%8);
+                // inform sub-classes of series added
+                seriesAdded(series, i);
+            }
+            if (c.getFrom() < c.getTo()) updateLegend();
+            seriesChanged(c);
+            // RT-12069, linked list pointers should update when list is permutated.
+            if (c.wasPermutated() && getData().size() > 0) {
+                XYChart.this.begin = getData().get(0);
+                Series<X,Y> ptr = begin;
+                for(int k = 1; k < getData().size() && ptr != null; k++) {
+                    ptr.next = getData().get(k);
+                    ptr = ptr.next;
+                }
+                ptr.next = null;
+            }
         }
+        // update axis ranges
+        invalidateRange();
+        // lay everything out
+        requestChartLayout();
     };
 
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
@@ -438,15 +436,11 @@ public abstract class XYChart<X,Y> extends Chart {
         this.yAxis = yAxis;
         if(yAxis.getSide() == null) yAxis.setSide(Side.LEFT);
         // RT-23123 autoranging leads to charts incorrect appearance.
-        xAxis.autoRangingProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                updateAxisRange();
-            }
+        xAxis.autoRangingProperty().addListener((ov, t, t1) -> {
+            updateAxisRange();
         });
-        yAxis.autoRangingProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                updateAxisRange();
-            }
+        yAxis.autoRangingProperty().addListener((ov, t, t1) -> {
+            updateAxisRange();
         });
         // add initial content to chart content
         getChartChildren().addAll(plotBackground,plotArea,xAxis,yAxis);
@@ -475,11 +469,9 @@ public abstract class XYChart<X,Y> extends Chart {
         plotContent.setManaged(false);
         plotArea.setManaged(false);
         // listen to animation on/off and sync to axis
-        animatedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> valueModel, Boolean oldValue, Boolean newValue) {
-                if(getXAxis() != null) getXAxis().setAnimated(newValue);
-                if(getYAxis() != null) getYAxis().setAnimated(newValue);
-            }
+        animatedProperty().addListener((valueModel, oldValue, newValue) -> {
+            if(getXAxis() != null) getXAxis().setAnimated(newValue);
+            if(getYAxis() != null) getYAxis().setAnimated(newValue);
         });
     }
 

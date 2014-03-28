@@ -181,11 +181,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<T> converter) {
-        return new Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>() {
-            @Override public TreeTableCell<S,T> call(TreeTableColumn<S,T> list) {
-                return new CheckBoxTreeTableCell<S,T>(getSelectedProperty, converter);
-            }
-        };
+        return list -> new CheckBoxTreeTableCell<S,T>(getSelectedProperty, converter);
     }
     
     

@@ -230,26 +230,24 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     
     private boolean selectionChanging = false;
     
-    private final ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
-            while (c.next()) {
-                MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
-                
-                // there are no selected items, so lets clear out the anchor
-                if (! selectionChanging) {
-                    if (sm.isEmpty()) {
-                        setAnchor(-1);
-                    } else if (! sm.isSelected(getAnchor())) {
-                        setAnchor(-1);
-                    }
-                }
+    private final ListChangeListener<Integer> selectedIndicesListener = c -> {
+        while (c.next()) {
+            MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
 
-                int addedSize = c.getAddedSize();
-                if (addedSize > 0 && ! hasAnchor()) {
-                    List<? extends Integer> addedSubList = c.getAddedSubList();
-                    int index = addedSubList.get(addedSize - 1);
-                    setAnchor(index);
+            // there are no selected items, so lets clear out the anchor
+            if (! selectionChanging) {
+                if (sm.isEmpty()) {
+                    setAnchor(-1);
+                } else if (! sm.isSelected(getAnchor())) {
+                    setAnchor(-1);
                 }
+            }
+
+            int addedSize = c.getAddedSize();
+            if (addedSize > 0 && ! hasAnchor()) {
+                List<? extends Integer> addedSubList = c.getAddedSubList();
+                int index = addedSubList.get(addedSize - 1);
+                setAnchor(index);
             }
         }
     };
@@ -649,11 +647,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void expandRow() {
-        Callback<TreeItem<T>, Integer> getIndex = new Callback<TreeItem<T>, Integer>() {
-            @Override public Integer call(TreeItem<T> p) {
-                return getControl().getRow(p);
-            }
-        };
+        Callback<TreeItem<T>, Integer> getIndex = p -> getControl().getRow(p);
         TreeViewBehavior.expandRow(getControl().getSelectionModel(), getIndex);
     }
     

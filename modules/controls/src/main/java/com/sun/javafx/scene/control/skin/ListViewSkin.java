@@ -73,12 +73,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
     private static final boolean IS_PANNABLE =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return Boolean.getBoolean("com.sun.javafx.scene.control.skin.ListViewSkin.pannable");
-                }
-            });
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.scene.control.skin.ListViewSkin.pannable"));
 
     private ObservableList<T> listViewItems;
 
@@ -91,30 +86,24 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.setId("virtual-flow");
         flow.setPannable(IS_PANNABLE);
         flow.setVertical(getSkinnable().getOrientation() == Orientation.VERTICAL);
-        flow.setCreateCell(new Callback<VirtualFlow, ListCell<T>>() {
-            @Override public ListCell<T> call(VirtualFlow flow) {
-                return ListViewSkin.this.createCell();
-            }
-        });
+        flow.setCreateCell(flow1 -> ListViewSkin.this.createCell());
         flow.setFixedCellSize(listView.getFixedCellSize());
         getChildren().add(flow);
         
-        EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) { 
-                // RT-15127: cancel editing on scroll. This is a bit extreme
-                // (we are cancelling editing on touching the scrollbars).
-                // This can be improved at a later date.
-                if (listView.getEditingIndex() > -1) {
-                    listView.edit(-1);
-                }
-        
-                // This ensures that the list maintains the focus, even when the vbar
-                // and hbar controls inside the flow are clicked. Without this, the
-                // focus border will not be shown when the user interacts with the
-                // scrollbars, and more importantly, keyboard navigation won't be
-                // available to the user.
-                listView.requestFocus(); 
+        EventHandler<MouseEvent> ml = event -> {
+            // RT-15127: cancel editing on scroll. This is a bit extreme
+            // (we are cancelling editing on touching the scrollbars).
+            // This can be improved at a later date.
+            if (listView.getEditingIndex() > -1) {
+                listView.edit(-1);
             }
+
+            // This ensures that the list maintains the focus, even when the vbar
+            // and hbar controls inside the flow are clicked. Without this, the
+            // focus border will not be shown when the user interacts with the
+            // scrollbars, and more importantly, keyboard navigation won't be
+            // available to the user.
+            listView.requestFocus();
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
@@ -122,30 +111,14 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         updateRowCount();
 
         // init the behavior 'closures'
-        getBehavior().setOnFocusPreviousRow(new Runnable() {
-            @Override public void run() { onFocusPreviousCell(); }
-        });
-        getBehavior().setOnFocusNextRow(new Runnable() {
-            @Override public void run() { onFocusNextCell(); }
-        });
-        getBehavior().setOnMoveToFirstCell(new Runnable() {
-            @Override public void run() { onMoveToFirstCell(); }
-        });
-        getBehavior().setOnMoveToLastCell(new Runnable() {
-            @Override public void run() { onMoveToLastCell(); }
-        });
-        getBehavior().setOnScrollPageDown(new Callback<Boolean, Integer>() {
-            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageDown(isFocusDriven); }
-        });
-        getBehavior().setOnScrollPageUp(new Callback<Boolean, Integer>() {
-            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageUp(isFocusDriven); }
-        });
-        getBehavior().setOnSelectPreviousRow(new Runnable() {
-            @Override public void run() { onSelectPreviousCell(); }
-        });
-        getBehavior().setOnSelectNextRow(new Runnable() {
-            @Override public void run() { onSelectNextCell(); }
-        });
+        getBehavior().setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
+        getBehavior().setOnFocusNextRow(() -> { onFocusNextCell(); });
+        getBehavior().setOnMoveToFirstCell(() -> { onMoveToFirstCell(); });
+        getBehavior().setOnMoveToLastCell(() -> { onMoveToLastCell(); });
+        getBehavior().setOnScrollPageDown(isFocusDriven -> onScrollPageDown(isFocusDriven));
+        getBehavior().setOnScrollPageUp(isFocusDriven -> onScrollPageUp(isFocusDriven));
+        getBehavior().setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
+        getBehavior().setOnSelectNextRow(() -> { onSelectNextCell(); });
 
         // Register listeners
         registerChangeListener(listView.itemsProperty(), "ITEMS");

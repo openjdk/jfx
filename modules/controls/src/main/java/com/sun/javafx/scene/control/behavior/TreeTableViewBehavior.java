@@ -83,20 +83,15 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
      *                                                                        *  
      *************************************************************************/
     
-    private final ChangeListener<TreeTableView.TreeTableViewSelectionModel<T>> selectionModelListener = 
-            new ChangeListener<TreeTableView.TreeTableViewSelectionModel<T>>() {
-        @Override
-        public void changed(ObservableValue<? extends TreeTableView.TreeTableViewSelectionModel<T>> observable, 
-                    TreeTableView.TreeTableViewSelectionModel<T> oldValue, 
-                    TreeTableView.TreeTableViewSelectionModel<T> newValue) {
-            if (oldValue != null) {
-                oldValue.getSelectedCells().removeListener(weakSelectedCellsListener);
-            }
-            if (newValue != null) {
-                newValue.getSelectedCells().addListener(weakSelectedCellsListener);
-            }
-        }
-    };
+    private final ChangeListener<TreeTableView.TreeTableViewSelectionModel<T>> selectionModelListener =
+            (observable, oldValue, newValue) -> {
+                if (oldValue != null) {
+                    oldValue.getSelectedCells().removeListener(weakSelectedCellsListener);
+                }
+                if (newValue != null) {
+                    newValue.getSelectedCells().addListener(weakSelectedCellsListener);
+                }
+            };
     
     private final WeakChangeListener<TreeTableView.TreeTableViewSelectionModel<T>> weakSelectionModelListener = 
             new WeakChangeListener<TreeTableView.TreeTableViewSelectionModel<T>>(selectionModelListener);
@@ -221,11 +216,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     }
     
     private void expandRow() {
-        Callback<TreeItem<T>, Integer> getIndex = new Callback<TreeItem<T>, Integer>() {
-            @Override public Integer call(TreeItem<T> p) {
-                return getControl().getRow(p);
-            }
-        };
+        Callback<TreeItem<T>, Integer> getIndex = p -> getControl().getRow(p);
         TreeViewBehavior.expandRow(getControl().getSelectionModel(), getIndex);
     }
     

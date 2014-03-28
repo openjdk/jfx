@@ -146,9 +146,7 @@ public class ColorPickerTest {
     }
      
     @Test public void ensureCanSetOnAction() {
-        EventHandler<ActionEvent> onAction = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) { }
-        };
+        EventHandler<ActionEvent> onAction = t -> { };
         colorPicker.setOnAction(onAction);
         assertEquals(onAction, colorPicker.getOnAction());
     }

@@ -1105,15 +1105,11 @@ public class ListViewKeyInputTest {
     @Test public void test_rt29849() {
         listView.setEditable(true);
 
-        listView.setOnEditStart(new EventHandler<ListView.EditEvent<String>>() {
-            @Override public void handle(ListView.EditEvent<String> t) {
-                rt29849_start_count++;
-            }
+        listView.setOnEditStart(t -> {
+            rt29849_start_count++;
         });
-        listView.setOnEditCancel(new EventHandler<ListView.EditEvent<String>>() {
-            @Override public void handle(ListView.EditEvent<String> t) {
-                rt29849_cancel_count++;
-            }
+        listView.setOnEditCancel(t -> {
+            rt29849_cancel_count++;
         });
 
         // initially the counts should be zero
@@ -1148,10 +1144,8 @@ public class ListViewKeyInputTest {
         // event when the selected items list changes (due to deselection).
         // It actually does always contain the right value - it just doesn't
         // let anyone know it!
-        sm.selectedItemProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                rt31577_count++;
-            }
+        sm.selectedItemProperty().addListener(observable -> {
+            rt31577_count++;
         });
 
         assertTrue(sm.getSelectedItems().isEmpty());
@@ -1901,11 +1895,9 @@ public class ListViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -1932,11 +1924,9 @@ public class ListViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);
@@ -1963,11 +1953,9 @@ public class ListViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -1994,11 +1982,9 @@ public class ListViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);

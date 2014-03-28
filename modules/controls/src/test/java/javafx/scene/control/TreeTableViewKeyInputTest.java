@@ -2358,21 +2358,13 @@ public class TreeTableViewKeyInputTest {
         tableView.setEditable(true);
         col0.setEditable(true);
 
-        col0.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper("DUMMY TEXT");
-            }
-        });
+        col0.setCellValueFactory(param -> new ReadOnlyStringWrapper("DUMMY TEXT"));
 
-        col0.setOnEditStart(new EventHandler<TreeTableColumn.CellEditEvent<String, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<String, String> t) {
-                rt29849_start_count++;
-            }
+        col0.setOnEditStart(t -> {
+            rt29849_start_count++;
         });
-        col0.setOnEditCancel(new EventHandler<TreeTableColumn.CellEditEvent<String, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<String, String> t) {
-                rt29849_cancel_count++;
-            }
+        col0.setOnEditCancel(t -> {
+            rt29849_cancel_count++;
         });
 
         // initially the counts should be zero
@@ -2408,10 +2400,8 @@ public class TreeTableViewKeyInputTest {
         // event when the selected items list changes (due to deselection).
         // It actually does always contain the right value - it just doesn't
         // let anyone know it!
-        sm.selectedItemProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                rt31577_count++;
-            }
+        sm.selectedItemProperty().addListener(observable -> {
+            rt31577_count++;
         });
 
         assertTrue(sm.getSelectedItems().isEmpty());
@@ -2495,11 +2485,7 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<String>("Row " + i));
         }
 
-        col0.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        col0.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
 
         final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
@@ -2528,11 +2514,7 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<String>("Row " + i));
         }
 
-        col0.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        col0.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
 
         final int lastIndex = 99;
 
@@ -2932,11 +2914,9 @@ public class TreeTableViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.SINGLE);
         sm.clearAndSelect(0);
 
-        tableView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    rt_33559_count++;
-                }
+        tableView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                rt_33559_count++;
             }
         });
 
@@ -3854,11 +3834,9 @@ public class TreeTableViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -3886,11 +3864,9 @@ public class TreeTableViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);
@@ -3918,11 +3894,9 @@ public class TreeTableViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -3950,11 +3924,9 @@ public class TreeTableViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);
@@ -3973,11 +3945,7 @@ public class TreeTableViewKeyInputTest {
         }
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         tableView.getColumns().setAll(col);
 
         new StageLoader(tableView);
@@ -3991,11 +3959,9 @@ public class TreeTableViewKeyInputTest {
         assertTrue(fm.isFocused(5, col));
         assertTrue(sm.isSelected(5, col));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -4014,11 +3980,7 @@ public class TreeTableViewKeyInputTest {
         }
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         tableView.getColumns().setAll(col);
 
         new StageLoader(tableView);
@@ -4032,11 +3994,9 @@ public class TreeTableViewKeyInputTest {
         assertTrue(fm.isFocused(5, col));
         assertTrue(sm.isSelected(5, col));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);
@@ -4055,11 +4015,7 @@ public class TreeTableViewKeyInputTest {
         }
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         tableView.getColumns().setAll(col);
 
         new StageLoader(tableView);
@@ -4073,11 +4029,9 @@ public class TreeTableViewKeyInputTest {
         assertTrue(fm.isFocused(5, col));
         assertTrue(sm.isSelected(5, col));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -4096,11 +4050,7 @@ public class TreeTableViewKeyInputTest {
         }
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         tableView.getColumns().setAll(col);
 
         new StageLoader(tableView);
@@ -4114,11 +4064,9 @@ public class TreeTableViewKeyInputTest {
         assertTrue(fm.isFocused(5, col));
         assertTrue(sm.isSelected(5, col));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);

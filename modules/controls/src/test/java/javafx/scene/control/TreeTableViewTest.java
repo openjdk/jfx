@@ -299,34 +299,24 @@ public class TreeTableViewTest {
     // TODO test for sort policies returning null
     // TODO test for changing column sortType out of order
     
-    private static final Callback<TreeTableView<String>, Boolean> NO_SORT_FAILED_SORT_POLICY = 
-            new Callback<TreeTableView<String>, Boolean>() {
-        @Override public Boolean call(TreeTableView<String> treeTableView) {
-            return false;
-        }
-    };
+    private static final Callback<TreeTableView<String>, Boolean> NO_SORT_FAILED_SORT_POLICY =
+            treeTableView1 -> false;
     
-    private static final Callback<TreeTableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY = 
-            new Callback<TreeTableView<String>, Boolean>() {
-        @Override public Boolean call(TreeTableView<String> treeTableView) {
-            if (treeTableView.getSortOrder().isEmpty()) return true;
-            FXCollections.sort(treeTableView.getRoot().getChildren(), new Comparator<TreeItem<String>>() {
-                @Override public int compare(TreeItem<String> o1, TreeItem<String> o2) {
-                    return o1.getValue().compareTo(o2.getValue());
-                }
-            });
-            return true;
-        }
-    };
+    private static final Callback<TreeTableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY =
+            treeTableView1 -> {
+                if (treeTableView1.getSortOrder().isEmpty()) return true;
+                FXCollections.sort(treeTableView1.getRoot().getChildren(), new Comparator<TreeItem<String>>() {
+                    @Override public int compare(TreeItem<String> o1, TreeItem<String> o2) {
+                        return o1.getValue().compareTo(o2.getValue());
+                    }
+                });
+                return true;
+            };
     
     private TreeTableColumn<String, String> initSortTestStructure() {
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
         
         TreeItem<String> newRoot = new TreeItem<String>("root");
@@ -344,10 +334,8 @@ public class TreeTableViewTest {
     @Ignore("This test is only valid if sort event consumption should revert changes")
     @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeSortOrderList() {
         TreeTableColumn<String, String> col = initSortTestStructure();
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                event.consume();
-            }
+        treeTableView.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
@@ -360,10 +348,8 @@ public class TreeTableViewTest {
     
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeSortOrderList() {
         TreeTableColumn<String, String> col = initSortTestStructure();
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        treeTableView.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
@@ -378,10 +364,8 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = initSortTestStructure();
         assertEquals(ASCENDING, col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                event.consume();
-            }
+        treeTableView.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
@@ -400,10 +384,8 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = initSortTestStructure();
         assertEquals(ASCENDING, col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        treeTableView.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
@@ -421,10 +403,8 @@ public class TreeTableViewTest {
         col.setSortType(DESCENDING);
         assertEquals(DESCENDING, col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                event.consume();
-            }
+        treeTableView.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
@@ -441,10 +421,8 @@ public class TreeTableViewTest {
         col.setSortType(DESCENDING);
         assertEquals(DESCENDING, col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        treeTableView.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
@@ -462,10 +440,8 @@ public class TreeTableViewTest {
         col.setSortType(null);
         assertNull(col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                event.consume();
-            }
+        treeTableView.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
@@ -482,10 +458,8 @@ public class TreeTableViewTest {
         col.setSortType(null);
         assertNull(col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        treeTableView.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
@@ -1340,10 +1314,8 @@ public class TreeTableViewTest {
             @Override public Object call(Object p) {
                 TreeTableRow treeCell = new TreeTableRow() {
                     {
-                        disclosureNodeProperty().addListener(new ChangeListener() {
-                            @Override public void changed(ObservableValue ov, Object t, Object t1) {
-                                setDisclosureNode(null);
-                            }
+                        disclosureNodeProperty().addListener((ov, t, t1) -> {
+                            setDisclosureNode(null);
                         });
                     }
                     
@@ -1503,11 +1475,7 @@ public class TreeTableViewTest {
         firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
         
         // set dummy comparator to lock items in place until new comparator is set
-        firstNameCol.setComparator(new Comparator() {
-            @Override public int compare(Object t, Object t1) {
-                return 0;
-            }
-        });
+        firstNameCol.setComparator((t, t1) -> 0);
 
         table.getColumns().addAll(firstNameCol);
         table.getSortOrder().add(firstNameCol);
@@ -1594,10 +1562,8 @@ public class TreeTableViewTest {
         
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
 
-        table.setOnSort(new EventHandler<SortEvent<TreeTableView<Person>>>() {
-            @Override public void handle(SortEvent<TreeTableView<Person>> event) {
-                rt29330_count++;
-            }
+        table.setOnSort(event -> {
+            rt29330_count++;
         });
         
         // test preconditions
@@ -1645,10 +1611,8 @@ public class TreeTableViewTest {
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
         table.getColumns().addAll(parentColumn);
 
-        table.setOnSort(new EventHandler<SortEvent<TreeTableView<Person>>>() {
-            @Override public void handle(SortEvent<TreeTableView<Person>> event) {
-                rt29330_count++;
-            }
+        table.setOnSort(event -> {
+            rt29330_count++;
         });
         
         // test preconditions
@@ -1887,12 +1851,7 @@ public class TreeTableViewTest {
 
         treeTableView.getRoot().setExpanded(true);
         TreeTableColumn<Data, String> column = new TreeTableColumn<Data, String>("Items' name");
-        column.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Data, String>, ObservableValue<String>>() {
-            @Override
-            public ObservableValue<String> call(final TreeTableColumn.CellDataFeatures<Data, String> p) {
-                return new ReadOnlyStringWrapper(p.getValue().getValue().getData());
-            }
-        });
+        column.setCellValueFactory(p -> new ReadOnlyStringWrapper(p.getValue().getValue().getData()));
         treeTableView.getColumns().add(column);
 
         // show treeTableView
@@ -2076,11 +2035,7 @@ public class TreeTableViewTest {
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
         firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
-        firstNameCol.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(new Callback<Integer, ObservableValue<Boolean>>() {
-            public javafx.beans.value.ObservableValue<Boolean> call(Integer param) {
-                return new ReadOnlyBooleanWrapper(true);
-            }
-        }));
+        firstNameCol.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(param -> new ReadOnlyBooleanWrapper(true)));
         tableView.getColumns().add(firstNameCol);
 
         // because only the first row has data, all other rows should be
@@ -2098,11 +2053,7 @@ public class TreeTableViewTest {
         treeTableView.setEditable(true);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
-            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures param) {
-                return new ReadOnlyStringWrapper("TEST");
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper("TEST"));
         firstNameCol.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
         firstNameCol.setEditable(true);
 
@@ -2128,11 +2079,7 @@ public class TreeTableViewTest {
         installChildren();
 
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
 
         treeTableView.getColumns().add(firstNameCol);
 
@@ -2147,11 +2094,7 @@ public class TreeTableViewTest {
         installChildren();
 
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
 
         treeTableView.getColumns().add(firstNameCol);
 
@@ -2174,11 +2117,7 @@ public class TreeTableViewTest {
         installChildren();
 
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
 
         treeTableView.getColumns().add(firstNameCol);
 
@@ -2224,11 +2163,7 @@ public class TreeTableViewTest {
 
         installChildren();
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         treeTableView.getColumns().add(firstNameCol);
 
         firstNameCol.setCellFactory(new Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>>() {
@@ -2277,11 +2212,7 @@ public class TreeTableViewTest {
 
         installChildren();
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         treeTableView.getColumns().add(firstNameCol);
 
         treeTableView.setRowFactory(new Callback<TreeTableView<String>, TreeTableRow<String>>() {
@@ -2330,11 +2261,7 @@ public class TreeTableViewTest {
         treeTableView.setEditable(true);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
-            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures param) {
-                return new ReadOnlyStringWrapper("TEST");
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper("TEST"));
         firstNameCol.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
         firstNameCol.setEditable(true);
 
@@ -2364,11 +2291,7 @@ public class TreeTableViewTest {
 //        final TableSelectionModel sm = t.getSelectionModel();
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         // test pre-conditions
@@ -2433,11 +2356,7 @@ public class TreeTableViewTest {
 
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         col.setCellFactory(new Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>>() {
@@ -2477,11 +2396,7 @@ public class TreeTableViewTest {
 
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         treeTableView.setRowFactory(new Callback<TreeTableView<String>, TreeTableRow<String>>() {
@@ -2522,11 +2437,7 @@ public class TreeTableViewTest {
         treeTableView.setEditable(true);
 
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         //Set cell factory for cells that allow editing
@@ -2559,11 +2470,7 @@ public class TreeTableViewTest {
         treeTableView.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         new StageLoader(treeTableView);
@@ -2581,27 +2488,17 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> factory = TextFieldTreeTableCell.forTreeTableColumn();
         col.setCellFactory(factory);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        col.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_start_count++;
-            }
+        col.setOnEditStart(t -> {
+            rt_29650_start_count++;
         });
-        col.setOnEditCommit(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_commit_count++;
-            }
+        col.setOnEditCommit(t -> {
+            rt_29650_commit_count++;
         });
-        col.setOnEditCancel(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_cancel_count++;
-            }
+        col.setOnEditCancel(t -> {
+            rt_29650_cancel_count++;
         });
 
         new StageLoader(treeTableView);
@@ -2630,17 +2527,11 @@ public class TreeTableViewTest {
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setEditable(true);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        col.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29849_start_count++;
-            }
+        col.setOnEditStart(t -> {
+            rt_29849_start_count++;
         });
 
         // load the table so the default cells are created
@@ -2670,11 +2561,7 @@ public class TreeTableViewTest {
         // add in a column and some data
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setEditable(true);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         installChildren();
@@ -3061,12 +2948,9 @@ public class TreeTableViewTest {
         nameColumn.setCellValueFactory(new TreeItemPropertyValueFactory<String, String>("name"));
         view.getColumns().add(nameColumn);
 
-        view.expandedItemCountProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(
-                    ObservableValue<? extends Number> observableValue,
-                    Number oldCount, Number newCount) {
+        view.expandedItemCountProperty().addListener((observableValue, oldCount, newCount) -> {
 
-                // DEBUG OUTPUT
+            // DEBUG OUTPUT
 //                System.out.println("new expanded item count: " + newCount.intValue());
 //                for (int i = 0; i < newCount.intValue(); i++) {
 //                    TreeItem<String> item = view.getTreeItem(i);
@@ -3075,30 +2959,29 @@ public class TreeTableViewTest {
 //                }
 //                System.out.println("------------------------------------------");
 
-                if (test_rt_35213_eventCount == 0) {
-                    assertEquals(4, newCount);
-                    assertEquals("Boss", view.getTreeItem(0).getValue());
-                    assertEquals("Group 1", view.getTreeItem(1).getValue());
-                    assertEquals("Group 2", view.getTreeItem(2).getValue());
-                    assertEquals("Group 3", view.getTreeItem(3).getValue());
-                } else if (test_rt_35213_eventCount == 1) {
-                    assertEquals(6, newCount);
-                    assertEquals("Boss", view.getTreeItem(0).getValue());
-                    assertEquals("Group 1", view.getTreeItem(1).getValue());
-                    assertEquals("Group 2", view.getTreeItem(2).getValue());
-                    assertEquals("Employee 1", view.getTreeItem(3).getValue());
-                    assertEquals("Employee 2", view.getTreeItem(4).getValue());
-                    assertEquals("Group 3", view.getTreeItem(5).getValue());
-                } else if (test_rt_35213_eventCount == 2) {
-                    assertEquals(4, newCount);
-                    assertEquals("Boss", view.getTreeItem(0).getValue());
-                    assertEquals("Group 1", view.getTreeItem(1).getValue());
-                    assertEquals("Group 2", view.getTreeItem(2).getValue());
-                    assertEquals("Group 3", view.getTreeItem(3).getValue());
-                }
-
-                test_rt_35213_eventCount++;
+            if (test_rt_35213_eventCount == 0) {
+                assertEquals(4, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Group 3", view.getTreeItem(3).getValue());
+            } else if (test_rt_35213_eventCount == 1) {
+                assertEquals(6, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Employee 1", view.getTreeItem(3).getValue());
+                assertEquals("Employee 2", view.getTreeItem(4).getValue());
+                assertEquals("Group 3", view.getTreeItem(5).getValue());
+            } else if (test_rt_35213_eventCount == 2) {
+                assertEquals(4, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Group 3", view.getTreeItem(3).getValue());
             }
+
+            test_rt_35213_eventCount++;
         });
 
         new StageLoader(view);
@@ -3263,11 +3146,7 @@ public class TreeTableViewTest {
         final TreeTableView<String> treeView = new TreeTableView<>();
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return param.getValue().valueProperty();
-            }
-        });
+        col.setCellValueFactory(param -> param.getValue().valueProperty());
 
         treeView.getColumns().add(col);
         treeView.setRoot(root);

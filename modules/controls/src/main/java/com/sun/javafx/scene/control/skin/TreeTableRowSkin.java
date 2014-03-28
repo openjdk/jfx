@@ -104,14 +104,12 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      *                                                                         *
      **************************************************************************/
 
-    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
-        @Override public Void call(String p) {
-            if ("GRAPHIC".equals(p)) {
-                disclosureNodeDirty = true;
-                getSkinnable().requestLayout();
-            }
-            return null;
+    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(p -> {
+        if ("GRAPHIC".equals(p)) {
+            disclosureNodeDirty = true;
+            getSkinnable().requestLayout();
         }
+        return null;
     });
 
 

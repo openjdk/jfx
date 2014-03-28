@@ -119,27 +119,20 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         popup.setAutoHide(true);
         popup.setAutoFix(true);
         popup.setHideOnEscape(true);
-        popup.setOnAutoHide(new EventHandler<Event>() {
-            @Override
-            public void handle(Event e) {
-                getBehavior().onAutoHide();
-            }
+        popup.setOnAutoHide(e -> {
+            getBehavior().onAutoHide();
         });
-        popup.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {
-                // RT-18529: We listen to mouse input that is received by the popup
-                // but that is not consumed, and assume that this is due to the mouse
-                // clicking outside of the node, but in areas such as the 
-                // dropshadow.
-                getBehavior().onAutoHide();
-            }
+        popup.addEventHandler(MouseEvent.MOUSE_CLICKED, t -> {
+            // RT-18529: We listen to mouse input that is received by the popup
+            // but that is not consumed, and assume that this is due to the mouse
+            // clicking outside of the node, but in areas such as the
+            // dropshadow.
+            getBehavior().onAutoHide();
         });
         
         // Fix for RT-21207
-        InvalidationListener layoutPosListener = new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                reconfigurePopup();
-            }
+        InvalidationListener layoutPosListener = o -> {
+            reconfigurePopup();
         };
         getSkinnable().layoutXProperty().addListener(layoutPosListener);
         getSkinnable().layoutYProperty().addListener(layoutPosListener);

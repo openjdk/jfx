@@ -170,10 +170,8 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
      **************************************************************************/
 
     // Listen to ProgressIndicator indeterminateProperty
-    private final InvalidationListener indeterminateListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            initialize();
-        }
+    private final InvalidationListener indeterminateListener = valueModel -> {
+        initialize();
     };
 
     private final InvalidationListener progressListener = new InvalidationListener() {
@@ -406,25 +404,22 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
         private IndeterminateSpinner(boolean spinEnabled, Paint fillOverride) {
 
             // does not need to be a weak listener since it only listens to its own property
-            impl_treeVisibleProperty().addListener(new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
+            impl_treeVisibleProperty().addListener(observable -> {
 
-                    final boolean isVisible = ((BooleanExpression)observable).getValue();
-                    if (indeterminateTimeline != null) {
-                        if (isVisible) {
-                            indeterminateTimeline.play();
-                        }
-                        else {
-                            indeterminateTimeline.pause();
-                        }
+                final boolean isVisible = ((BooleanExpression)observable).getValue();
+                if (indeterminateTimeline != null) {
+                    if (isVisible) {
+                        indeterminateTimeline.play();
                     }
-                    else if (isVisible) {
-                        indeterminateTimeline = new Timeline();
-                        indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
-                        indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
-                        rebuildTimeline();
+                    else {
+                        indeterminateTimeline.pause();
                     }
+                }
+                else if (isVisible) {
+                    indeterminateTimeline = new Timeline();
+                    indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
+                    indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                    rebuildTimeline();
                 }
             });
             this.spinEnabled = spinEnabled;
@@ -504,31 +499,30 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 final ObservableList<KeyFrame> keyFrames = FXCollections.<KeyFrame>observableArrayList();
                 keyFrames.add(
                   new KeyFrame(
-                    Duration.millis(0), new EventHandler<ActionEvent>() {
-                      @Override public void handle(ActionEvent event) {
-                          /**
-                           * Stop the animation if the ProgressBar is removed
-                           * from a Scene, or is invisible.
-                           * Pause the animation if it's outside of a clipped
-                           * region (e.g. not visible in a ScrollPane)
-                           */
-                          if (indeterminateTimeline != null) {
-                              if (stopIfDisconnected()) {
-                                  return;
-                              }
-                              if (!isVisibleInClip()) {
-                                  if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
-                                      indeterminateTimeline.setDelay(CLIPPED_DELAY);
-                                  }
-                              }
-                              else {
-                                  if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
-                                      indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
-                                  }
-                              }
-                          }
-                      }
-                    }));
+                    Duration.millis(0), event -> {
+                        /**
+                         * Stop the animation if the ProgressBar is removed
+                         * from a Scene, or is invisible.
+                         * Pause the animation if it's outside of a clipped
+                         * region (e.g. not visible in a ScrollPane)
+                         */
+                        if (indeterminateTimeline != null) {
+                            if (stopIfDisconnected()) {
+                                return;
+                            }
+                            if (!isVisibleInClip()) {
+                                if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
+                                    indeterminateTimeline.setDelay(CLIPPED_DELAY);
+                                }
+                            }
+                            else {
+                                if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
+                                    indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                                }
+                            }
+                        }
+                    }
+                  ));
                 if(spinEnabled) {
                     keyFrames.add(new KeyFrame(Duration.millis(1), new KeyValue(pathsG.rotateProperty(), 360)));
                     keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
@@ -537,11 +531,10 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                 for (int i = 100; i <= 3900; i += 100) {
                     keyFrames.add(
                             new KeyFrame(
-                                    Duration.millis(i), new EventHandler<ActionEvent>() {
-                                @Override public void handle(ActionEvent event) {
-                                    shiftColors();
-                                }
-                            }));
+                                    Duration.millis(i), event -> {
+                                        shiftColors();
+                                    }
+                            ));
                 }
 
                 indeterminateTimeline.getKeyFrames().setAll(keyFrames);

@@ -171,11 +171,9 @@ public class TableViewMouseInputTest {
         final TableFocusModel fm = tableView.getFocusModel();
         fm.focus(-1);
 
-        fm.focusedIndexProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                rt30394_count++;
-                assertEquals(0, fm.getFocusedIndex());
-            }
+        fm.focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt30394_count++;
+            assertEquals(0, fm.getFocusedIndex());
         });
 
         // test pre-conditions
@@ -387,11 +385,9 @@ public class TableViewMouseInputTest {
         sm.setCellSelectionEnabled(false);
         sm.clearAndSelect(0);
 
-        tableView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    rt_30626_count++;
-                }
+        tableView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                rt_30626_count++;
             }
         });
 

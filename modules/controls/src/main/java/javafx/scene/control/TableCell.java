@@ -119,49 +119,37 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * be mutated, we create this observer here, and add/remove it from the
      * storeTableView method.
      */
-    private ListChangeListener<TablePosition> selectedListener = new ListChangeListener<TablePosition>() {
-        @Override public void onChanged(Change<? extends TablePosition> c) {
-            updateSelection();
-        }
+    private ListChangeListener<TablePosition> selectedListener = c -> {
+        updateSelection();
     };
 
     // same as above, but for focus
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            updateFocus();
-        }
+    private final InvalidationListener focusedListener = value -> {
+        updateFocus();
     };
 
     // same as above, but for for changes to the properties on TableRow
-    private final InvalidationListener tableRowUpdateObserver = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            itemDirty = true;
-            requestLayout();
-        }
+    private final InvalidationListener tableRowUpdateObserver = value -> {
+        itemDirty = true;
+        requestLayout();
     };
     
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            updateEditing();
-        }
+    private final InvalidationListener editingListener = value -> {
+        updateEditing();
     };
     
-    private ListChangeListener<TableColumn<S,?>> visibleLeafColumnsListener = new ListChangeListener<TableColumn<S,?>>() {
-        @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
-            updateColumnIndex();
-        }
+    private ListChangeListener<TableColumn<S,?>> visibleLeafColumnsListener = c -> {
+        updateColumnIndex();
     };
     
-    private ListChangeListener<String> columnStyleClassListener = new ListChangeListener<String>() {
-        @Override public void onChanged(Change<? extends String> c) {
-            while (c.next()) {
-                if (c.wasRemoved()) {
-                    getStyleClass().removeAll(c.getRemoved());
-                }
-                
-                if (c.wasAdded()) {
-                    getStyleClass().addAll(c.getAddedSubList());
-                }
+    private ListChangeListener<String> columnStyleClassListener = c -> {
+        while (c.next()) {
+            if (c.wasRemoved()) {
+                getStyleClass().removeAll(c.getRemoved());
+            }
+
+            if (c.wasAdded()) {
+                getStyleClass().addAll(c.getAddedSubList());
             }
         }
     };

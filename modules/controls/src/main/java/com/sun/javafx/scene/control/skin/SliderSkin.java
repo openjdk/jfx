@@ -122,54 +122,44 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         getChildren().clear();
         getChildren().addAll(track, thumb);
         setShowTickMarks(getSkinnable().isShowTickMarks(), getSkinnable().isShowTickLabels());
-        track.setOnMousePressed( new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                if (!thumb.isPressed()) {
-                    trackClicked = true;
-                    if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
-                        getBehavior().trackPress(me, (me.getX() / trackLength));
-                    } else {
-                        getBehavior().trackPress(me, (me.getY() / trackLength));
-                    }
-                    trackClicked = false;
+        track.setOnMousePressed(me -> {
+            if (!thumb.isPressed()) {
+                trackClicked = true;
+                if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
+                    getBehavior().trackPress(me, (me.getX() / trackLength));
+                } else {
+                    getBehavior().trackPress(me, (me.getY() / trackLength));
                 }
+                trackClicked = false;
             }
         });
         
-        track.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                if (!thumb.isPressed()) {
-                    if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
-                        getBehavior().trackPress(me, (me.getX() / trackLength));
-                    } else {
-                        getBehavior().trackPress(me, (me.getY() / trackLength));
-                    }
+        track.setOnMouseDragged(me -> {
+            if (!thumb.isPressed()) {
+                if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
+                    getBehavior().trackPress(me, (me.getX() / trackLength));
+                } else {
+                    getBehavior().trackPress(me, (me.getY() / trackLength));
                 }
             }
         });
 
-        thumb.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                getBehavior().thumbPressed(me, 0.0f);
-                dragStart = thumb.localToParent(me.getX(), me.getY());
-                preDragThumbPos = (getSkinnable().getValue() - getSkinnable().getMin()) /
-                        (getSkinnable().getMax() - getSkinnable().getMin());
-            }
+        thumb.setOnMousePressed(me -> {
+            getBehavior().thumbPressed(me, 0.0f);
+            dragStart = thumb.localToParent(me.getX(), me.getY());
+            preDragThumbPos = (getSkinnable().getValue() - getSkinnable().getMin()) /
+                    (getSkinnable().getMax() - getSkinnable().getMin());
         });
 
-        thumb.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                getBehavior().thumbReleased(me);
-            }
+        thumb.setOnMouseReleased(me -> {
+            getBehavior().thumbReleased(me);
         });
 
-        thumb.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                Point2D cur = thumb.localToParent(me.getX(), me.getY());
-                double dragPos = (getSkinnable().getOrientation() == Orientation.HORIZONTAL)?
-                    cur.getX() - dragStart.getX() : -(cur.getY() - dragStart.getY());
-                getBehavior().thumbDragged(me, preDragThumbPos + dragPos / trackLength);
-            }
+        thumb.setOnMouseDragged(me -> {
+            Point2D cur = thumb.localToParent(me.getX(), me.getY());
+            double dragPos = (getSkinnable().getOrientation() == Orientation.HORIZONTAL)?
+                cur.getX() - dragStart.getX() : -(cur.getY() - dragStart.getY());
+            getBehavior().thumbDragged(me, preDragThumbPos + dragPos / trackLength);
         });
     }
 

@@ -185,10 +185,8 @@ public class ScrollPaneSkinTest {
         scrollPane.setVvalue(originalValue);
 
         continueTest = false;
-        scrollPane.vvalueProperty().addListener(new ChangeListener() {
-            @Override public void changed(ObservableValue observable, Object oldBounds, Object newBounds) {
-                continueTest = true;
-            }
+        scrollPane.vvalueProperty().addListener((observable, oldBounds, newBounds) -> {
+            continueTest = true;
         });
 
         /*
@@ -236,10 +234,8 @@ public class ScrollPaneSkinTest {
         scrollPane.setHvalue(originalValue);
 
         continueTest = false;
-        scrollPane.hvalueProperty().addListener(new ChangeListener() {
-            @Override public void changed(ObservableValue observable, Object oldBounds, Object newBounds) {
-                continueTest = true;
-            }
+        scrollPane.hvalueProperty().addListener((observable, oldBounds, newBounds) -> {
+            continueTest = true;
         });
 
         /*
@@ -272,10 +268,8 @@ public class ScrollPaneSkinTest {
         scrolled = false;
 
         Rectangle rect = new Rectangle(100, 100, 100, 100);
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            scrolled = true;
         });
 
         final ScrollPane scrollPaneInner = new ScrollPane();
@@ -299,10 +293,8 @@ public class ScrollPaneSkinTest {
         scrollPaneOuter.setPrefWidth(500);
         scrollPaneOuter.setPrefHeight(500);
         scrollPaneOuter.setPannable(true);
-        scrollPaneOuter.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled = true;
-            }
+        scrollPaneOuter.setOnScroll(event -> {
+            scrolled = true;
         });
         scrollPaneOuter.setContent(pOuter);
 
@@ -348,10 +340,8 @@ public class ScrollPaneSkinTest {
         scrollPaneInner.setPannable(true);
 
         Scene scene = new Scene(new Group(), 400, 400);
-        scene.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                sceneClicked = true;
-            }
+        scene.setOnMouseClicked(me -> {
+            sceneClicked = true;
         });
 
         ((Group) scene.getRoot()).getChildren().clear();
@@ -660,25 +650,17 @@ public class ScrollPaneSkinTest {
         scrollPaneInner.setPrefHeight(100);
         scrollPaneInner.setPannable(true);
         scrollPaneInner.setContent(rect);
-        scrollPaneInner.setOnSwipeUp(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                scrolled = true;
-            }
+        scrollPaneInner.setOnSwipeUp(event -> {
+            scrolled = true;
         });
-        scrollPaneInner.setOnSwipeDown(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                scrolled = true;
-            }
+        scrollPaneInner.setOnSwipeDown(event -> {
+            scrolled = true;
         });
-        scrollPaneInner.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                scrolled = true;
-            }
+        scrollPaneInner.setOnSwipeLeft(event -> {
+            scrolled = true;
         });
-        scrollPaneInner.setOnSwipeRight(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                scrolled = true;
-            }
+        scrollPaneInner.setOnSwipeRight(event -> {
+            scrolled = true;
         });
         Pane pOuter = new Pane();
         pOuter.setPrefWidth(600);
@@ -728,25 +710,17 @@ public class ScrollPaneSkinTest {
         scrollPaneInner.setPrefHeight(100);
         scrollPaneInner.setPannable(true);
         scrollPaneInner.setContent(rect);
-        scrollPaneInner.setOnSwipeUp(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                scrolled = true;
-            }
+        scrollPaneInner.setOnSwipeUp(event -> {
+            scrolled = true;
         });
-        scrollPaneInner.setOnSwipeDown(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                scrolled = true;
-            }
+        scrollPaneInner.setOnSwipeDown(event -> {
+            scrolled = true;
         });
-        scrollPaneInner.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                scrolled = true;
-            }
+        scrollPaneInner.setOnSwipeLeft(event -> {
+            scrolled = true;
         });
-        scrollPaneInner.setOnSwipeRight(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                scrolled = true;
-            }
+        scrollPaneInner.setOnSwipeRight(event -> {
+            scrolled = true;
         });
         Pane pOuter = new Pane();
         pOuter.setPrefWidth(600);

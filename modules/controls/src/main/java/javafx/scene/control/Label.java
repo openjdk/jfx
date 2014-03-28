@@ -100,12 +100,8 @@ public class Label extends Labeled {
      *                                                                         *
      **************************************************************************/
 
-    private ChangeListener<Boolean> mnemonicStateListener = new ChangeListener<Boolean>() {
-        @Override
-        public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-            Label.this.impl_showMnemonicsProperty().setValue(newValue);
-        }
-
+    private ChangeListener<Boolean> mnemonicStateListener = (observable, oldValue, newValue) -> {
+        Label.this.impl_showMnemonicsProperty().setValue(newValue);
     };
 
     /**

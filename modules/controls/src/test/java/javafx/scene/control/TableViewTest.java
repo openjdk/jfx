@@ -333,34 +333,24 @@ public class TableViewTest {
     // TODO test for changing column sortType out of order
     // TODO test comparator returns to original when sort fails / is consumed
     
-    private static final Callback<TableView<String>, Boolean> NO_SORT_FAILED_SORT_POLICY = 
-            new Callback<TableView<String>, Boolean>() {
-        @Override public Boolean call(TableView<String> tableView) {
-            return false;
-        }
-    };
+    private static final Callback<TableView<String>, Boolean> NO_SORT_FAILED_SORT_POLICY =
+            tableView -> false;
     
-    private static final Callback<TableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY = 
-            new Callback<TableView<String>, Boolean>() {
-        @Override public Boolean call(TableView<String> tableView) {
-            if (tableView.getSortOrder().isEmpty()) return true;
-            FXCollections.sort(tableView.getItems(), new Comparator<String>() {
-                @Override public int compare(String o1, String o2) {
-                    return o1.compareTo(o2);
-                }
-            });
-            return true;
-        }
-    };
+    private static final Callback<TableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY =
+            tableView -> {
+                if (tableView.getSortOrder().isEmpty()) return true;
+                FXCollections.sort(tableView.getItems(), new Comparator<String>() {
+                    @Override public int compare(String o1, String o2) {
+                        return o1.compareTo(o2);
+                    }
+                });
+                return true;
+            };
     
     private TableColumn<String, String> initSortTestStructure() {
         TableColumn<String, String> col = new TableColumn<String, String>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue()));
         table.getColumns().add(col);
         table.getItems().addAll("Apple", "Orange", "Banana");
         return col;
@@ -369,10 +359,8 @@ public class TableViewTest {
     @Ignore("This test is only valid if sort event consumption should revert changes")
     @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeSortOrderList() {
         TableColumn<String, String> col = initSortTestStructure();
-        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
-            @Override public void handle(SortEvent<TableView<String>> event) {
-                event.consume();
-            }
+        table.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
@@ -385,10 +373,8 @@ public class TableViewTest {
     
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeSortOrderList() {
         TableColumn<String, String> col = initSortTestStructure();
-        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
-            @Override public void handle(SortEvent<TableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        table.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
@@ -403,10 +389,8 @@ public class TableViewTest {
         TableColumn<String, String> col = initSortTestStructure();
         assertEquals(ASCENDING, col.getSortType());
         table.getSortOrder().add(col);
-        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
-            @Override public void handle(SortEvent<TableView<String>> event) {
-                event.consume();
-            }
+        table.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
@@ -425,10 +409,8 @@ public class TableViewTest {
         TableColumn<String, String> col = initSortTestStructure();
         assertEquals(ASCENDING, col.getSortType());
         table.getSortOrder().add(col);
-        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
-            @Override public void handle(SortEvent<TableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        table.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Banana", "Orange");
@@ -446,10 +428,8 @@ public class TableViewTest {
         col.setSortType(DESCENDING);
         assertEquals(DESCENDING, col.getSortType());
         table.getSortOrder().add(col);
-        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
-            @Override public void handle(SortEvent<TableView<String>> event) {
-                event.consume();
-            }
+        table.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
@@ -466,10 +446,8 @@ public class TableViewTest {
         col.setSortType(DESCENDING);
         assertEquals(DESCENDING, col.getSortType());
         table.getSortOrder().add(col);
-        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
-            @Override public void handle(SortEvent<TableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        table.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Orange", "Banana", "Apple");
@@ -487,10 +465,8 @@ public class TableViewTest {
         col.setSortType(null);
         assertNull(col.getSortType());
         table.getSortOrder().add(col);
-        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
-            @Override public void handle(SortEvent<TableView<String>> event) {
-                event.consume();
-            }
+        table.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
@@ -507,10 +483,8 @@ public class TableViewTest {
         col.setSortType(null);
         assertNull(col.getSortType());
         table.getSortOrder().add(col);
-        table.setOnSort(new EventHandler<SortEvent<TableView<String>>>() {
-            @Override public void handle(SortEvent<TableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        table.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(table.getItems(), "Apple", "Orange", "Banana");
@@ -995,11 +969,7 @@ public class TableViewTest {
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
         
         // set dummy comparator to lock items in place until new comparator is set
-        firstNameCol.setComparator(new Comparator() {
-            @Override public int compare(Object t, Object t1) {
-                return 0;
-            }
-        });
+        firstNameCol.setComparator((t, t1) -> 0);
 
         table.getColumns().addAll(firstNameCol);
         table.getSortOrder().add(firstNameCol);
@@ -1076,10 +1046,8 @@ public class TableViewTest {
         
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
 
-        table.setOnSort(new EventHandler<SortEvent<TableView<Person>>>() {
-            @Override public void handle(SortEvent<TableView<Person>> event) {
-                rt29330_count++;
-            }
+        table.setOnSort(event -> {
+            rt29330_count++;
         });
         
         // test preconditions
@@ -1120,10 +1088,8 @@ public class TableViewTest {
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
         table.getColumns().addAll(parentColumn);
 
-        table.setOnSort(new EventHandler<SortEvent<TableView<Person>>>() {
-            @Override public void handle(SortEvent<TableView<Person>> event) {
-                rt29330_count++;
-            }
+        table.setOnSort(event -> {
+            rt29330_count++;
         });
         
         // test preconditions
@@ -1332,11 +1298,7 @@ public class TableViewTest {
 
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
-        firstNameCol.setCellFactory(CheckBoxTableCell.forTableColumn(new Callback<Integer, ObservableValue<Boolean>>() {
-            public javafx.beans.value.ObservableValue<Boolean> call(Integer param) {
-                return new ReadOnlyBooleanWrapper(true);
-            }
-        }));
+        firstNameCol.setCellFactory(CheckBoxTableCell.forTableColumn(param -> new ReadOnlyBooleanWrapper(true)));
         tableView.getColumns().add(firstNameCol);
 
         // because only the first row has data, all other rows should be
@@ -1717,11 +1679,7 @@ public class TableViewTest {
         for (int i = 0; i <= numColumns; i++) {
             TableColumn<List<Object>,Object> col = new TableColumn<>("Col" + i);
             final int coli = i;
-            col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<List<Object>,Object>, ObservableValue<Object>>() {
-                public ObservableValue<Object> call(TableColumn.CellDataFeatures<List<Object>,Object> p) {
-                    return new ReadOnlyObjectWrapper(p.getValue().get(coli));
-                }
-            });
+            col.setCellValueFactory(p -> new ReadOnlyObjectWrapper(p.getValue().get(coli)));
 
             table.getColumns().add(col);
         }
@@ -1816,20 +1774,14 @@ public class TableViewTest {
         Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
         first.setCellFactory(factory);
         table.getColumns().addAll(first);
-        first.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_start_count++;
-            }
+        first.setOnEditStart(t -> {
+            rt_29650_start_count++;
         });
-        first.setOnEditCommit(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_commit_count++;
-            }
+        first.setOnEditCommit(t -> {
+            rt_29650_commit_count++;
         });
-        first.setOnEditCancel(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_cancel_count++;
-            }
+        first.setOnEditCancel(t -> {
+            rt_29650_cancel_count++;
         });
 
         new StageLoader(table);
@@ -1864,10 +1816,8 @@ public class TableViewTest {
         Callback<TableColumn<Person, String>, TableCell<Person, String>> factory = TextFieldTableCell.forTableColumn();
         first.setCellFactory(factory);
         table.getColumns().addAll(first);
-        first.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29849_start_count++;
-            }
+        first.setOnEditStart(t -> {
+            rt_29849_start_count++;
         });
 
         // load the table so the default cells are created
@@ -2013,11 +1963,9 @@ public class TableViewTest {
         first.setCellFactory(factory);       // note that only the first name col is editable
 
         EventHandler<TableColumn.CellEditEvent<Person, String>> onEditCommit = first.getOnEditCommit();
-        first.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-                test_rt_34685_commitCount++;
-                onEditCommit.handle(event);
-            }
+        first.setOnEditCommit(event -> {
+            test_rt_34685_commitCount++;
+            onEditCommit.handle(event);
         });
 
         table.getColumns().addAll(first);
@@ -2656,10 +2604,8 @@ public class TableViewTest {
     }
 
     private void readOnlyUnbackedObservableListSubListTest(int from, int to) {
-        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<>(new ListChangeListener<TablePosition>() {
-            @Override public void onChanged(javafx.collections.ListChangeListener.Change<? extends TablePosition> c) {
-                // Do nothing
-            }
+        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<>(c -> {
+            // Do nothing
         });
         ReadOnlyUnbackedObservableList<TablePosition<Object, ?>> selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<Object, ?>>() {
             @Override public TablePosition<Object, ?> get(int i) {

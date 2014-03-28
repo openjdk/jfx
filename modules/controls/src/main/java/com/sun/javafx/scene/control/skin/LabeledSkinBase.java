@@ -99,11 +99,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      *
      * This is package private ONLY FOR THE SAKE OF TESTING
      */
-    final InvalidationListener graphicPropertyChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            invalidText = true;
-            getSkinnable().requestLayout();
-        }
+    final InvalidationListener graphicPropertyChangedListener = valueModel -> {
+        invalidText = true;
+        getSkinnable().requestLayout();
     };
 
     private Rectangle textClip;
@@ -471,12 +469,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 }
                 if (mnemonic_underscore != null) {
                     if (getChildren().contains(mnemonic_underscore)) {
-                        Platform.runLater(new Runnable() {
-                           @Override
-                               public void run() {
-                                 getChildren().remove(mnemonic_underscore);
-                                 mnemonic_underscore = null;
-                           }
+                        Platform.runLater(() -> {
+                              getChildren().remove(mnemonic_underscore);
+                              mnemonic_underscore = null;
                         });
                     }
                 }

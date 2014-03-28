@@ -664,10 +664,8 @@ public class TreeViewTest {
             @Override public Object call(Object p) {
                 TreeCell treeCell = new TreeCell() {
                     {
-                        disclosureNodeProperty().addListener(new ChangeListener() {
-                            @Override public void changed(ObservableValue ov, Object t, Object t1) {
-                                setDisclosureNode(null);
-                            }
+                        disclosureNodeProperty().addListener((ov, t, t1) -> {
+                            setDisclosureNode(null);
                         });
                     }
                     
@@ -757,11 +755,7 @@ public class TreeViewTest {
         }
         
         // run sort
-        Collections.sort(rootNode.getChildren(), new Comparator<TreeItem<String>>() {
-            @Override public int compare(TreeItem<String> o1, TreeItem<String> o2) {
-                return o1.getValue().compareTo(o2.getValue());
-            }
-        });
+        Collections.sort(rootNode.getChildren(), (o1, o2) -> o1.getValue().compareTo(o2.getValue()));
         
         // ensure the same indentation exists after the sort (which is where the
         // bug is - it drops down to 21.0px indentation when it shouldn't).
@@ -1024,11 +1018,7 @@ public class TreeViewTest {
         treeView.setPrefHeight(100);
         treeView.setCellFactory(
                 CheckBoxTreeCell.forTreeView(
-                        new Callback<TreeItem<String>, ObservableValue<Boolean>>() {
-                            public javafx.beans.value.ObservableValue<Boolean> call(TreeItem<String> param) {
-                                return new ReadOnlyBooleanWrapper(true);
-                            }
-                        }));
+                        param -> new ReadOnlyBooleanWrapper(true)));
 
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
@@ -1162,20 +1152,14 @@ public class TreeViewTest {
     private int rt_29650_cancel_count = 0;
     @Test public void test_rt_29650() {
         installChildren();
-        treeView.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_start_count++;
-            }
+        treeView.setOnEditStart(t -> {
+            rt_29650_start_count++;
         });
-        treeView.setOnEditCommit(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_commit_count++;
-            }
+        treeView.setOnEditCommit(t -> {
+            rt_29650_commit_count++;
         });
-        treeView.setOnEditCancel(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_cancel_count++;
-            }
+        treeView.setOnEditCancel(t -> {
+            rt_29650_cancel_count++;
         });
 
         treeView.setEditable(true);
@@ -1205,12 +1189,10 @@ public class TreeViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
 
-        treeView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    System.out.println(c);
-                    rt_33559_count++;
-                }
+        treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                System.out.println(c);
+                rt_33559_count++;
             }
         });
 
@@ -1458,12 +1440,9 @@ public class TreeViewTest {
 
         group2.getChildren().addAll(employee1, employee2);
 
-        view.expandedItemCountProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(
-                    ObservableValue<? extends Number> observableValue,
-                    Number oldCount, Number newCount) {
+        view.expandedItemCountProperty().addListener((observableValue, oldCount, newCount) -> {
 
-                // DEBUG OUTPUT
+            // DEBUG OUTPUT
 //                System.out.println("new expanded item count: " + newCount.intValue());
 //                for (int i = 0; i < newCount.intValue(); i++) {
 //                    TreeItem<String> item = view.getTreeItem(i);
@@ -1472,30 +1451,29 @@ public class TreeViewTest {
 //                }
 //                System.out.println("------------------------------------------");
 
-                if (test_rt_35213_eventCount == 0) {
-                    assertEquals(4, newCount);
-                    assertEquals("Boss", view.getTreeItem(0).getValue());
-                    assertEquals("Group 1", view.getTreeItem(1).getValue());
-                    assertEquals("Group 2", view.getTreeItem(2).getValue());
-                    assertEquals("Group 3", view.getTreeItem(3).getValue());
-                } else if (test_rt_35213_eventCount == 1) {
-                    assertEquals(6, newCount);
-                    assertEquals("Boss", view.getTreeItem(0).getValue());
-                    assertEquals("Group 1", view.getTreeItem(1).getValue());
-                    assertEquals("Group 2", view.getTreeItem(2).getValue());
-                    assertEquals("Employee 1", view.getTreeItem(3).getValue());
-                    assertEquals("Employee 2", view.getTreeItem(4).getValue());
-                    assertEquals("Group 3", view.getTreeItem(5).getValue());
-                } else if (test_rt_35213_eventCount == 2) {
-                    assertEquals(4, newCount);
-                    assertEquals("Boss", view.getTreeItem(0).getValue());
-                    assertEquals("Group 1", view.getTreeItem(1).getValue());
-                    assertEquals("Group 2", view.getTreeItem(2).getValue());
-                    assertEquals("Group 3", view.getTreeItem(3).getValue());
-                }
-
-                test_rt_35213_eventCount++;
+            if (test_rt_35213_eventCount == 0) {
+                assertEquals(4, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Group 3", view.getTreeItem(3).getValue());
+            } else if (test_rt_35213_eventCount == 1) {
+                assertEquals(6, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Employee 1", view.getTreeItem(3).getValue());
+                assertEquals("Employee 2", view.getTreeItem(4).getValue());
+                assertEquals("Group 3", view.getTreeItem(5).getValue());
+            } else if (test_rt_35213_eventCount == 2) {
+                assertEquals(4, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Group 3", view.getTreeItem(3).getValue());
             }
+
+            test_rt_35213_eventCount++;
         });
 
         new StageLoader(view);
@@ -1683,11 +1661,9 @@ public class TreeViewTest {
         final TreeView<String> textFieldTreeView = new TreeView<String>(root);
         textFieldTreeView.setEditable(true);
         textFieldTreeView.setCellFactory(TextFieldTreeCell.forTreeView());
-        textFieldTreeView.setOnEditCancel(new EventHandler<TreeView.EditEvent<String>>() {
-            @Override public void handle(TreeView.EditEvent<String> t) {
-                rt_35889_cancel_count++;
-                System.out.println("On Edit Cancel: " + t);
-            }
+        textFieldTreeView.setOnEditCancel(t -> {
+            rt_35889_cancel_count++;
+            System.out.println("On Edit Cancel: " + t);
         });
 
         TreeCell cell0 = (TreeCell) VirtualFlowTestUtils.getCell(textFieldTreeView, 0);

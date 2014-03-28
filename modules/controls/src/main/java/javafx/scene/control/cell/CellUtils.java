@@ -157,12 +157,9 @@ class CellUtils {
         ChoiceBox<T> choiceBox = new ChoiceBox<T>(items);
         choiceBox.setMaxWidth(Double.MAX_VALUE);
         choiceBox.converterProperty().bind(converter);
-        choiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
-            @Override
-            public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
-                if (cell.isEditing()) {
-                    cell.commitEdit(newValue);
-                }
+        choiceBox.getSelectionModel().selectedItemProperty().addListener((ov, oldValue, newValue) -> {
+            if (cell.isEditing()) {
+                cell.commitEdit(newValue);
             }
         });
         return choiceBox;
@@ -244,24 +241,20 @@ class CellUtils {
 
         // Use onAction here rather than onKeyReleased (with check for Enter),
         // as otherwise we encounter RT-34685
-        textField.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                if (converter == null) {
-                    throw new IllegalStateException(
-                            "Attempting to convert text input into Object, but provided "
-                                    + "StringConverter is null. Be sure to set a StringConverter "
-                                    + "in your cell factory.");
-                }
-                cell.commitEdit(converter.fromString(textField.getText()));
-                event.consume();
+        textField.setOnAction(event -> {
+            if (converter == null) {
+                throw new IllegalStateException(
+                        "Attempting to convert text input into Object, but provided "
+                                + "StringConverter is null. Be sure to set a StringConverter "
+                                + "in your cell factory.");
             }
+            cell.commitEdit(converter.fromString(textField.getText()));
+            event.consume();
         });
-        textField.setOnKeyReleased(new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent t) {
-                if (t.getCode() == KeyCode.ESCAPE) {
-                    cell.cancelEdit();
-                    t.consume();
-                }
+        textField.setOnKeyReleased(t -> {
+            if (t.getCode() == KeyCode.ESCAPE) {
+                cell.cancelEdit();
+                t.consume();
             }
         });
         return textField;
@@ -313,11 +306,9 @@ class CellUtils {
         ComboBox<T> comboBox = new ComboBox<T>(items);
         comboBox.converterProperty().bind(converter);
         comboBox.setMaxWidth(Double.MAX_VALUE);
-        comboBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
-            @Override public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
-                if (cell.isEditing()) {
-                    cell.commitEdit(newValue);
-                }
+        comboBox.getSelectionModel().selectedItemProperty().addListener((ov, oldValue, newValue) -> {
+            if (cell.isEditing()) {
+                cell.commitEdit(newValue);
             }
         });
         return comboBox;

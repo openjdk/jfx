@@ -98,25 +98,18 @@ public class TableRow<T> extends IndexedCell<T> {
      * be mutated, we create this observer here, and add/remove it from the
      * storeTableView method.
      */
-    private ListChangeListener<TablePosition> selectedListener = new ListChangeListener<TablePosition>() {
-        @Override
-        public void onChanged(Change<? extends TablePosition> c) {
-            updateSelection();
-        }
+    private ListChangeListener<TablePosition> selectedListener = c -> {
+        updateSelection();
     };
 
     // Same as selectedListener, but this time for focus events
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateFocus();
-        }
+    private final InvalidationListener focusedListener = valueModel -> {
+        updateFocus();
     };
 
     // same as above, but for editing events
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateEditing();
-        }
+    private final InvalidationListener editingListener = valueModel -> {
+        updateEditing();
     };
 
     private final WeakListChangeListener<TablePosition> weakSelectedListener = new WeakListChangeListener<>(selectedListener);

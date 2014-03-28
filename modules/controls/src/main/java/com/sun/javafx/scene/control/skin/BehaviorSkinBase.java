@@ -194,11 +194,9 @@ public abstract class BehaviorSkinBase<C extends Control, BB extends BehaviorBas
      */
     protected final void registerChangeListener(ObservableValue<?> property, String reference) {
         if (changeListenerHandler == null) {
-            changeListenerHandler = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
-                @Override public Void call(String p) {
-                    handleControlPropertyChanged(p);
-                    return null;
-                }
+            changeListenerHandler = new MultiplePropertyChangeListenerHandler(p -> {
+                handleControlPropertyChanged(p);
+                return null;
             });
         }
         changeListenerHandler.registerChangeListener(property, reference);

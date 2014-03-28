@@ -160,11 +160,9 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
             // fade out old bubble
             FadeTransition ft = new FadeTransition(Duration.millis(500),bubble);
             ft.setToValue(0);
-            ft.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent actionEvent) {
-                    getPlotChildren().remove(bubble);
-                    removeDataItemFromDisplay(series, item);
-                }
+            ft.setOnFinished(actionEvent -> {
+                getPlotChildren().remove(bubble);
+                removeDataItemFromDisplay(series, item);
             });
             ft.play();
         } else {
@@ -199,20 +197,16 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
         // remove all bubble nodes
         if (shouldAnimate()) {
             ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(new EventHandler<ActionEvent>() {
-                public void handle(ActionEvent event) {
-                    removeSeriesFromDisplay(series);
-                }
+            pt.setOnFinished(event -> {
+                removeSeriesFromDisplay(series);
             });
             for (XYChart.Data<X,Y> d : series.getData()) {
                 final Node bubble = d.getNode();
                 // fade out old bubble
                 FadeTransition ft = new FadeTransition(Duration.millis(500),bubble);
                 ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(bubble);
-                    }
+                ft.setOnFinished(actionEvent -> {
+                    getPlotChildren().remove(bubble);
                 });
                 pt.getChildren().add(ft);
             }

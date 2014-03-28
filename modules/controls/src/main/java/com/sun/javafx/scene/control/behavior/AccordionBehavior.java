@@ -190,17 +190,15 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
                 }
             }
         };
-        private final ListChangeListener<TitledPane> panesListener = new ListChangeListener<TitledPane>() {
-            @Override public void onChanged(Change<? extends TitledPane> c) {
-                while (c.next()) {
-                    if (c.wasAdded()) {
-                        for (final TitledPane tp: c.getAddedSubList()) {
-                            tp.focusedProperty().addListener(paneFocusListener);
-                        }
-                    } else if (c.wasRemoved()) {
-                        for (final TitledPane tp: c.getAddedSubList()) {
-                            tp.focusedProperty().removeListener(paneFocusListener);
-                        }
+        private final ListChangeListener<TitledPane> panesListener = c -> {
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    for (final TitledPane tp: c.getAddedSubList()) {
+                        tp.focusedProperty().addListener(paneFocusListener);
+                    }
+                } else if (c.wasRemoved()) {
+                    for (final TitledPane tp: c.getAddedSubList()) {
+                        tp.focusedProperty().removeListener(paneFocusListener);
                     }
                 }
             }

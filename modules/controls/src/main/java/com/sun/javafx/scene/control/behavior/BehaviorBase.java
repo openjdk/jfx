@@ -130,21 +130,17 @@ public class BehaviorBase<C extends Control> {
     /**
      * Listens to any key events on the Control and responds to them
      */
-    private final EventHandler<KeyEvent> keyEventListener = new EventHandler<KeyEvent>() {
-        @Override public void handle(KeyEvent e) {
-            if (!e.isConsumed()) {
-                callActionForEvent(e);
-            }
+    private final EventHandler<KeyEvent> keyEventListener = e -> {
+        if (!e.isConsumed()) {
+            callActionForEvent(e);
         }
     };
 
     /**
      * Listens to any focus events on the Control and calls protected methods as a result
      */
-    private final InvalidationListener focusListener = new InvalidationListener() {
-        @Override public void invalidated(Observable property) {
-            focusChanged();
-        }
+    private final InvalidationListener focusListener = property -> {
+        focusChanged();
     };
 
     /**

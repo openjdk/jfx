@@ -115,32 +115,28 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     public DatePicker() {
         this(null);
 
-        valueProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                LocalDate date = getValue();
-                Chronology chrono = getChronology();
+        valueProperty().addListener(observable -> {
+            LocalDate date = getValue();
+            Chronology chrono = getChronology();
 
-                if (validateDate(chrono, date)) {
-                    lastValidDate = date;
-                } else {
-                    System.err.println("Restoring value to " +
-                                ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
-                    setValue(lastValidDate);
-                }
+            if (validateDate(chrono, date)) {
+                lastValidDate = date;
+            } else {
+                System.err.println("Restoring value to " +
+                            ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
+                setValue(lastValidDate);
             }
         });
 
-        chronologyProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                LocalDate date = getValue();
-                Chronology chrono = getChronology();
+        chronologyProperty().addListener(observable -> {
+            LocalDate date = getValue();
+            Chronology chrono = getChronology();
 
-                if (validateDate(chrono, date)) {
-                    lastValidChronology = chrono;
-                } else {
-                    System.err.println("Restoring value to " + lastValidChronology);
-                    setChronology(lastValidChronology);
-                }
+            if (validateDate(chrono, date)) {
+                lastValidChronology = chrono;
+            } else {
+                System.err.println("Restoring value to " + lastValidChronology);
+                setChronology(lastValidChronology);
             }
         });
     }

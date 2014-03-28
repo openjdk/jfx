@@ -1311,15 +1311,11 @@ public class TreeViewKeyInputTest {
     @Test public void test_rt29849() {
         treeView.setEditable(true);
 
-        treeView.setOnEditStart(new EventHandler<TreeView.EditEvent<String>>() {
-            @Override public void handle(TreeView.EditEvent<String> event) {
-                rt29849_start_count++;
-            }
+        treeView.setOnEditStart(event -> {
+            rt29849_start_count++;
         });
-        treeView.setOnEditCancel(new EventHandler<TreeView.EditEvent<String>>() {
-            @Override public void handle(TreeView.EditEvent<String> event) {
-                rt29849_cancel_count++;
-            }
+        treeView.setOnEditCancel(event -> {
+            rt29849_cancel_count++;
         });
 
         // initially the counts should be zero
@@ -1355,10 +1351,8 @@ public class TreeViewKeyInputTest {
         // event when the selected items list changes (due to deselection).
         // It actually does always contain the right value - it just doesn't
         // let anyone know it!
-        sm.selectedItemProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                rt31577_count++;
-            }
+        sm.selectedItemProperty().addListener(observable -> {
+            rt31577_count++;
         });
 
         assertTrue(sm.getSelectedItems().isEmpty());
@@ -1519,31 +1513,22 @@ public class TreeViewKeyInputTest {
 
         treeView.setRoot(newRoot);
         treeView.setEditable(true);
-        treeView.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt32783_count_start++;
-            }
+        treeView.setOnEditStart(t -> {
+            rt32783_count_start++;
         });
 
-        treeView.setOnEditCommit(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt32783_count_commit++;
-            }
+        treeView.setOnEditCommit(t -> {
+            rt32783_count_commit++;
         });
 
-        treeView.setOnEditCancel(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt32783_count_cancel++;
-            }
+        treeView.setOnEditCancel(t -> {
+            rt32783_count_cancel++;
         });
 
-        treeView.editingItemProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                assertNotNull(treeView.getEditingItem());
-                System.out.println("editing item: " + treeView.getEditingItem());
-                rt32783_count++;
-            }
+        treeView.editingItemProperty().addListener(observable -> {
+            assertNotNull(treeView.getEditingItem());
+            System.out.println("editing item: " + treeView.getEditingItem());
+            rt32783_count++;
         });
 
         // start test
@@ -1864,11 +1849,9 @@ public class TreeViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.SINGLE);
         sm.clearAndSelect(0);
 
-        treeView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    rt_33559_count++;
-                }
+        treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                rt_33559_count++;
             }
         });
 
@@ -2132,11 +2115,9 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -2164,11 +2145,9 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);
@@ -2196,11 +2175,9 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
@@ -2228,11 +2205,9 @@ public class TreeViewKeyInputTest {
         assertTrue(fm.isFocused(5));
         assertTrue(sm.isSelected(5));
 
-        sm.selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // we expect only one selected index change event, from 5 to 4
-                assertEquals(4, sm.getSelectedIndex());
-            }
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
         });
 
         keyboard.doKeyPress(KeyCode.UP);
