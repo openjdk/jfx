@@ -60,6 +60,13 @@ public enum Role {
     COMBOBOX,
 
     /**
+     * ContextMenu.
+     * Attributed:
+     * Actions:
+     */
+    CONTEXT_MENU,
+
+    /**
      * Decrement button
      *
      */
@@ -113,6 +120,20 @@ public enum Role {
      * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION
      */
     LIST_ITEM,
+
+    /**
+     * Menu Bar.
+     * Attributed:
+     * Actions:
+     */
+    MENU_BAR,
+
+    /**
+     * Menu Item.
+     * Attributed: 
+     * Actions: Fire
+     */
+    MENU_ITEM,
 
     /**
      * Node

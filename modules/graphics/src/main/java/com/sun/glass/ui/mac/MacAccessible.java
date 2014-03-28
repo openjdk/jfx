@@ -106,6 +106,9 @@ final class MacAccessible extends PlatformAccessible {
         // Custom attributes
         NSAccessibilityVisitedAttribute(VISITED, MacVariant::createNSNumberForBoolean),
 
+        // NSAccessibilityMenuRole
+        NSAccessibilitySelectedChildrenAttribute(null, MacVariant::createNSArray),
+
         // NSAccessibilityStaticText
         NSAccessibilityNumberOfCharactersAttribute(TITLE, MacVariant::createNSNumberForInt),
         NSAccessibilitySelectedTextAttribute(SELECTION_START, MacVariant::createNSString),
@@ -241,6 +244,26 @@ final class MacAccessible extends PlatformAccessible {
                 MacAttributes.NSAccessibilityMinValueAttribute,
             },
             null
+        ),
+        NSAccessibilityMenuRole(Role.CONTEXT_MENU,
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilitySelectedChildrenAttribute,
+            },
+            new MacActions[] {
+                MacActions.NSAccessibilityPressAction,
+                MacActions.NSAccessibilityCancelAction,
+            }
+        ),
+        NSAccessibilityMenuItemRole(Role.MENU_ITEM,
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilityEnabledAttribute,
+                MacAttributes.NSAccessibilityTitleAttribute,
+                MacAttributes.NSAccessibilitySelectedAttribute,
+            },
+            new MacActions[] {
+                MacActions.NSAccessibilityPressAction,
+                MacActions.NSAccessibilityCancelAction,
+            }
         ),
         /* 
          * ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole.
@@ -621,9 +644,23 @@ final class MacAccessible extends PlatformAccessible {
             case SELECTED_CELLS:
                 macNotification = MacNotifications.NSAccessibilitySelectedCellsChangedNotification;
                 break;
-            case FOCUS_NODE:
+            case FOCUS_NODE: {
+                Node node = (Node)getAttribute(FOCUS_NODE);
+                if (node != null) {
+                    Role role = (Role)node.getAccessible().getAttribute(ROLE);
+                    if (role == Role.MENU_ITEM) {
+                        long menu = getAccessible(getContainerNode(node, Role.CONTEXT_MENU));
+                        if (menu != 0) {
+                            NSAccessibilityPostNotification(menu, MacNotifications.NSAccessibilitySelectedChildrenChangedNotification.ptr);
+                            return;
+                        }
+                    }
+                }
                 macNotification = MacNotifications.NSAccessibilityFocusedUIElementChangedNotification;
                 break;
+            }
+            case FOCUSED:
+                return;
             case SELECTION_START:
             case SELECTION_END:
                 macNotification = MacNotifications.NSAccessibilitySelectedTextChangedNotification;
@@ -829,6 +866,21 @@ final class MacAccessible extends PlatformAccessible {
                         default:
                     }
                     break;
+                case NSAccessibilitySelectedChildrenAttribute: {
+                    /* Used for ContextMenu's*/
+                    Scene scene = (Scene)getAttribute(SCENE);
+                    if (scene != null) {
+                        Accessible acc = scene.getAccessible();
+                        if (acc != null) {
+                            Node focus = (Node)acc.getAttribute(FOCUS_NODE);
+                            if (focus != null) {
+                                long[] result = {getAccessible(focus)};
+                                return attr.map.apply(result);
+                            }
+                        }
+                    }
+                    return null;
+                }
                 default:
               }
         }

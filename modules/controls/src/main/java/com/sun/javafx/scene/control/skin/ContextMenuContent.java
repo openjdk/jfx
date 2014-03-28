@@ -53,6 +53,8 @@ import javafx.event.EventHandler;
 import javafx.geometry.*;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -919,6 +921,14 @@ public class ContextMenuContent extends Region {
                 }
             }
         }
+
+        @Override
+        public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            switch (attribute) {
+                case ROLE: return Role.CONTEXT_MENU;
+                default: return super.accGetAttribute(attribute, parameters); 
+            }
+        }
     }
 
     class ArrowMenuItem extends StackPane {
@@ -1391,6 +1401,14 @@ public class ContextMenuContent extends Region {
             return null;
         }
 
+        @Override
+        public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            switch (attribute) {
+                case ROLE: return Role.MENU_ITEM;
+                case TITLE: return item.getText();
+                default: return super.accGetAttribute(attribute, parameters); 
+            }
+        }
     }
 
 

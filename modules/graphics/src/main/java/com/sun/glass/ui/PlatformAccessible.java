@@ -78,8 +78,7 @@ public abstract class PlatformAccessible {
         return pAcc != null ? pAcc.getNativeAccessible() : 0;
     }
 
-    protected Node getContainerNode(Role targetRole) {
-        Node node = (Node)getAttribute(PARENT);
+    protected Node getContainerNode(Node node, Role targetRole) {
         while (node != null) {
             Accessible acc = node.getAccessible();
             Role role = (Role)acc.getAttribute(ROLE);
@@ -87,6 +86,10 @@ public abstract class PlatformAccessible {
             node = (Node)acc.getAttribute(PARENT);
         }
         return null;
+    }
+
+    protected Node getContainerNode(Role targetRole) {
+        return getContainerNode((Node)getAttribute(PARENT), targetRole);
     }
 
     protected Object getAttribute(Attribute attribute, Object... parameters) {
