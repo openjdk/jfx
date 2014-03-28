@@ -123,6 +123,9 @@ final class WinAccessible extends PlatformAccessible {
     private static final int UIA_HyperlinkControlTypeId          = 50005;
     private static final int UIA_ImageControlTypeId              = 50006;
     private static final int UIA_ListControlTypeId               = 50008;
+    private static final int UIA_MenuControlTypeId               = 50009;
+    private static final int UIA_MenuBarControlTypeId			 = 50010;
+    private static final int UIA_MenuItemControlTypeId			 = 50011;
     private static final int UIA_ProgressBarControlTypeId        = 50012;
     private static final int UIA_RadioButtonControlTypeId        = 50013;
     private static final int UIA_ScrollBarControlTypeId          = 50014;
@@ -154,8 +157,12 @@ final class WinAccessible extends PlatformAccessible {
     private static final int RowOrColumnMajor_Indeterminate     = 2;
 
     /* Event ID constants */
+    private static final int UIA_MenuOpenedEventId               = 20003;
     private static final int UIA_AutomationPropertyChangedEventId= 20004;
     private static final int UIA_AutomationFocusChangedEventId   = 20005;
+    private static final int UIA_MenuClosedEventId               = 20007;
+    private static final int UIA_MenuModeEndEventId              = 20019;
+    private static final int UIA_MenuModeStartEventId            = 20018;
     private static final int UIA_SelectionItem_ElementRemovedFromSelectionEventId = 20011;
     private static final int UIA_SelectionItem_ElementSelectedEventId = 20012;
 
@@ -404,6 +411,8 @@ final class WinAccessible extends PlatformAccessible {
         Role role = (Role)getAttribute(ROLE);
         if (role == null) return UIA_GroupControlTypeId;
         switch (role) {
+        	case CONTEXTMENU: return UIA_MenuControlTypeId;
+        	case MENUITEM: return UIA_MenuItemControlTypeId; 
             case BUTTON:
             case TOGGLE_BUTTON:
             case INCREMENT_BUTTON:
@@ -451,6 +460,10 @@ final class WinAccessible extends PlatformAccessible {
         Role role = (Role)getAttribute(ROLE);
         boolean impl = false;
         switch (role) {
+            case MENUITEM:
+                impl = patternId == UIA_InvokePatternId;
+//                       patternId == UIA_ExpandCollapsePatternId ||
+//                       patternId == UIA_TogglePatternId;
             case HYPERLINK:
             case BUTTON:
             case INCREMENT_BUTTON:
