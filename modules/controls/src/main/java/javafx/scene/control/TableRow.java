@@ -369,7 +369,7 @@ public class TableRow<T> extends IndexedCell<T> {
             case INDEX: return getIndex();
             case FOCUS_ITEM: //Skin
             case SELECTED_CELLS: //Skin
-            case CELL_AT_ROWCOLUMN: //Skin
+            case CELL_AT_ROW_COLUMN: //Skin
             default: return super.accGetAttribute(attribute, parameters);
         }
     }

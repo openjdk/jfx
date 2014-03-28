@@ -1874,7 +1874,7 @@ public class TreeTableView<S> extends Control {
                 return FXCollections.observableArrayList(selection);
             }
             case FOCUS_ITEM:
-            case CELL_AT_ROWCOLUMN: {
+            case CELL_AT_ROW_COLUMN: {
                 TreeTableRow<S> row = (TreeTableRow<S>)super.accGetAttribute(attribute, parameters);
                 return row != null ? row.accGetAttribute(attribute, parameters) : null;
             }

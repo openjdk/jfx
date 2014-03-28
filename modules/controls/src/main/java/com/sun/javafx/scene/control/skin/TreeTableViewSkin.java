@@ -426,7 +426,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
 //            }
 
             case FOCUS_ITEM: // TableViewSkinBase
-            case CELL_AT_ROWCOLUMN: // TableViewSkinBase
+            case CELL_AT_ROW_COLUMN: // TableViewSkinBase
             case COLUMN_AT_INDEX: // TableViewSkinBase
             case HEADER: // TableViewSkinBase
             default: return super.accGetAttribute(attribute, parameters);

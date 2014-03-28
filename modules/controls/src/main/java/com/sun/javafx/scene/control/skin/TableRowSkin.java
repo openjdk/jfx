@@ -152,7 +152,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
                     return FXCollections.observableArrayList(selection);
                 }
             }
-            case CELL_AT_ROWCOLUMN: {
+            case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
                 TableColumn column = tableView.getVisibleLeafColumn(colIndex);
                 return cellsMap.get(column);

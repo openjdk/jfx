@@ -1607,7 +1607,7 @@ public class TableView<S> extends Control {
                 return FXCollections.observableArrayList(selection);
             }
             case FOCUS_ITEM:
-            case CELL_AT_ROWCOLUMN: {
+            case CELL_AT_ROW_COLUMN: {
                 TableRow<S> row = (TableRow<S>)super.accGetAttribute(attribute, parameters);
                 return row != null ? row.accGetAttribute(attribute, parameters) : null;
             }

@@ -1171,7 +1171,7 @@ final class WinAccessible extends PlatformAccessible {
 
     long GetItem(int row, int column) {
         if (isDisposed()) return 0;
-        Node node = (Node)getAttribute(CELL_AT_ROWCOLUMN, row, column);
+        Node node = (Node)getAttribute(CELL_AT_ROW_COLUMN, row, column);
         return getAccessible(node);
     }
 

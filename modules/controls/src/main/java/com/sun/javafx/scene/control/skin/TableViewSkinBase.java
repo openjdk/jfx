@@ -939,7 +939,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
                 int focusedIndex = fm.getFocusedIndex();
                 return flow.getCell(focusedIndex);
             }
-            case CELL_AT_ROWCOLUMN: {
+            case CELL_AT_ROW_COLUMN: {
                 int rowIndex = (Integer)parameters[0];
                 return flow.getCell(rowIndex);
             }

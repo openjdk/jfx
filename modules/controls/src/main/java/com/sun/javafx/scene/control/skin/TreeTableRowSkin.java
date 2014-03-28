@@ -425,7 +425,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                     return FXCollections.observableArrayList(selection);
                 }
             }
-            case CELL_AT_ROWCOLUMN: {
+            case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
                 TreeTableColumn column = treeTableView.getVisibleLeafColumn(colIndex);
                 return cellsMap.get(column);

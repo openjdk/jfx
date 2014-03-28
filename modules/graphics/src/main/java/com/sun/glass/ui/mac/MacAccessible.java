@@ -146,7 +146,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSString, MacVariant.NSValue_range),
         NSAccessibilityRangeForLineParameterizedAttribute(TITLE, MacVariant::createNSValueForRange, MacVariant.NSNumber_Int),
         NSAccessibilityAttributedStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSAttributedString, MacVariant.NSValue_range),
-        NSAccessibilityCellForColumnAndRowParameterizedAttribute(CELL_AT_ROWCOLUMN, MacVariant::createNSObject, MacVariant.NSArray_int),
+        NSAccessibilityCellForColumnAndRowParameterizedAttribute(CELL_AT_ROW_COLUMN, MacVariant::createNSObject, MacVariant.NSArray_int),
         ;
 
         long ptr; /* Initialized natively - treat as final */

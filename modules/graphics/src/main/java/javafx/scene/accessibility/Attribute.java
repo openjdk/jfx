@@ -63,7 +63,7 @@ public enum Attribute {
      * Parameter: Integer, Integer
      * Type: Node
      */
-    CELL_AT_ROWCOLUMN("CellAtRowColumn", Node.class),
+    CELL_AT_ROW_COLUMN("CellAtRowColumn", Node.class),
 
     /**
      * Returns the column count
