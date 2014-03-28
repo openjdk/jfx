@@ -53,6 +53,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.*;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
@@ -1407,6 +1408,16 @@ public class ContextMenuContent extends Region {
                 case ROLE: return Role.MENU_ITEM;
                 case TITLE: return item.getText();
                 default: return super.accGetAttribute(attribute, parameters); 
+            }
+        }
+
+        @Override
+        public void accExecuteAction(Action action, Object... parameters) {
+            switch (action) {
+                case FIRE: 
+                    doSelect();
+                    break;
+                default: super.accExecuteAction(action);
             }
         }
     }
