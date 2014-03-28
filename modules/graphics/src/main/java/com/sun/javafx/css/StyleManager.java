@@ -1438,9 +1438,7 @@ final public class StyleManager {
             return StyleMap.EMPTY_MAP;
         }
 
-        final String name = node.getClass().getName();
-        final int dotPos = name.lastIndexOf('.');
-        final String cname = name.substring(dotPos+1);  // want Foo, not bada.bing.Foo
+        final String cname = node.getTypeSelector();
         final String id = node.getId();
         final List<String> styleClasses = node.getStyleClass();
 
