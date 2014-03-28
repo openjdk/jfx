@@ -708,15 +708,15 @@ public class Scene implements EventTarget {
 
         Toolkit tk = Toolkit.getToolkit();
         tk.removeSceneTkPulseListener(scenePulseListener);
-        impl_peer.dispose();
-        impl_peer = null;
         if (accessible != null) {
-            accessible.dispose();
-            accessible = null;
             disposeAccessibles();
             Node root = getRoot();
             if (root != null) root.releaseAccessible();
+            accessible.dispose();
+            accessible = null;
         }
+        impl_peer.dispose();
+        impl_peer = null;
 
         PerformanceTracker.logEvent("Scene.disposePeer finished");
     }

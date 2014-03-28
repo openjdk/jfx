@@ -1788,11 +1788,11 @@ public abstract class Parent extends Node {
     }
 
     void releaseAccessible() {
-        super.releaseAccessible();
         for (int i=0, max=children.size(); i<max; i++) {
             final Node node = children.get(i);
             node.releaseAccessible();
         }
+        super.releaseAccessible();
     }
 
 }
