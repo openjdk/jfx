@@ -114,6 +114,20 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     int wrapWidth = 80;
     boolean wrapOnLongLines = true;
 
+    /** Determine if we should break when a long line overflows.
+     * If inserting a character would takes us beyond the wrap-width
+     * (normally the line-width), insert a newline first.
+     * This is needed for VT100-style behavior.
+     * (If would be preferable if the layout-algorithm could be modified
+     * to break in the middle of a word, but that is difficult.  At least
+     * we want selection/copy to not include the inserted newline.  Better
+     * would be for windows re-size to re-calculate the breaks.)
+     * Initial value is true.
+     */
+    public void setWrapOnLongLines(boolean value) {
+        wrapOnLongLines = value;
+    }
+
     public void resetCursorCache() {
         currentCursorColumn = -1;
         currentCursorLine = -1;
@@ -313,7 +327,6 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
 
     public String inputAsString() { return toString(inputLine.getChildNodes());}
 
-    // DEBUGGING:
     protected abstract void enter(KeyEvent ke);
 
     public String grabInput(Element input) {
@@ -1090,7 +1103,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     protected void insertString(String str, char kind) {
-        //WTDebug.println("insertString \""+WTDebug.toQuoted(str)+"\" len:"+str.length()+" in-is-out:"+(inputLine==outputBefore)+" DOM["+getHTMLText()+"]");
+        //WTDebug.println("insertString \""+WTDebug.toQuoted(str)+"\" len:"+str.length()+" in-is-out:"+(inputLine==outputBefore)+" before:"+WTDebug.pnode(outputBefore)+" DOM["+getHTMLText()+"]");
         int prevEnd = 0;
         int curColumn = getCursorColumn();
         int slen = str.length();
@@ -1256,6 +1269,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
             //currentCursorColumn = column;
         }
         //long lcol = delta2D(cursorHome, outputBefore);
+        //WTDebug.println("after insertString \""+WTDebug.toQuoted(str)+"\" len:"+str.length()+" in-is-out:"+(inputLine==outputBefore)+" DOM["+getHTMLText()+"]");
     }
 
     protected void insertSimpleOutput (String str, int beginIndex, int endIndex, char kind, int endColumn) {
@@ -1268,7 +1282,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         int slen = str.length();
         if (beginIndex > 0 || endIndex != slen)
             str = str.substring(beginIndex, endIndex);
-        //WTDebug.println("[insertSimple \""+WTDebug.toQuoted(str)+"\" kind:"+kind+" DOM["+getHTMLText()+"] outBef:"+WTDebug.pnode(outputBefore)+" endCol:"+endColumn+" cur:"+getCursorColumn()+" ins:"+inInsertMode());
+        //WTDebug.println("[insertSimple \""+WTDebug.toQuoted(str)+"\" kind:"+kind+" DOM["+getHTMLText()+"] outBef:"+WTDebug.pnode(outputBefore)+" container:"+WTDebug.pnode(outputContainer)+" endCol:"+endColumn+" cur:"+getCursorColumn()+" ins:"+inInsertMode());
         int column = getCursorColumn();
         int widthInColums = endColumn-column;
         if (! inInsertMode()) {
@@ -1324,33 +1338,27 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     public void insertPrompt (final String str) {
         Platform.runLater(new Runnable() {
                 public void run() {
+                    //WTDebug.println("insertPrompt "+WTDebug.toQuoted(str)+" DOM["+getHTMLText()+"] curL:"+currentCursorLine);
                     // <span std="prompt">
                     Element promptElement = createSpanNode();
                     promptElement.setAttribute("std", "prompt");
-                    resetCursorCache(); // FIXME - should avoid
                     insertNode(promptElement);
-                    boolean moveInputLine = false; //inputLine == outputBefore;
                     org.w3c.dom.Node savedParent = outputContainer;
                     Node savedBefore = outputBefore;
-                    if (moveInputLine) { // FIXME - useless code?
-                        outputContainer.removeChild(inputLine);
-                        outputContainer = promptElement;
-                        promptElement.appendChild(inputLine);
-                        outputBefore = inputLine;
-                    } else {
+                    try {
+                        // Note this sets outputBefore to null, which is not
+                        // fully supported yet (see comment for outputBefore).
+                        // It should be safe for prompt contents.
+                        // The alternative of temporarily moving the inputLine
+                        // inside the proptElement works, but is really ugly.
                         outputContainer = promptElement;
                         outputBefore = null;
-                    }
-                    insertString(str, '\0');
-                    // </span>
-                    if (moveInputLine) { // FIXME - useless code?
-                        outputContainer.removeChild(inputLine);
-                        savedParent.insertBefore(inputLine, promptElement.getNextSibling());
-                        setFocus();
-                    }
-                    else
+                        insertString(str, '\0');
+                    } finally {
+                        // </span>
                         outputBefore = savedBefore;
-                    outputContainer = savedParent;
+                        outputContainer = savedParent;
+                    }
                 }
             });
     }
@@ -1474,7 +1482,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
      * Currently, assumes startNode==cursorHome; that may change.
      */
     public void moveTo(Node startNode, int goalLine, int goalColumn, boolean addSpaceAsNeeded) {
-        //WTDebug.println("move start:"+WTDebug.pnode(startNode)+" gl:"+goalLine+" gc:"+goalColumn+" inputL:"+inputLine);
+        //WTDebug.println("move start:"+WTDebug.pnode(startNode)+" gl:"+goalLine+" gc:"+goalColumn+" inputL:"+WTDebug.pnode(inputLine));
         //WTDebug.println("move DOM["+getHTMLText()+"]");
         adjustStyleNeeded = true;
         int line = 0, column = 0;

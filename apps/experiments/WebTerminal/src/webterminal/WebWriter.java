@@ -37,9 +37,9 @@ package webterminal;
 
 public class WebWriter extends java.io.Writer
 {
-    WebTerminal terminal;
+    protected WebTerminal terminal;
 
-    StringBuilder sbuf = new StringBuilder();
+    protected StringBuilder sbuf = new StringBuilder();
     char kind;
 
     /** Which port is this?
@@ -54,26 +54,26 @@ public class WebWriter extends java.io.Writer
 
     public synchronized void write (int x) {
         sbuf.append((char) x);
-        //WebTerminal.origErr.println("after write1 "+WebTerminal.toQuoted(sbuf.toString()));
+        //WTDebug.println("after write1 "+WTDebug.toQuoted(String.valueOf(new char[]{(char)x})));
         if (x == '\n')
             flush();
     }
 
     public void write (String str) {
         sbuf.append(str);
-        //WebTerminal.origErr.println("after writeS "+WebTerminal.toQuoted(sbuf.toString()));
+        //WTDebug.println("after writeS "+WTDebug.toQuoted(str));
         flush();
     }
 
     public synchronized void write (char[] data, int off, int len) {
         sbuf.append(data, off, len);
-        //WebTerminal.origErr.println("after writeN "+WebTerminal.toQuoted(sbuf.toString()));
+        //WTDebug.println("after writeN len:"+String.valueOf(data,off,len));
         flush();
     }
 
     public synchronized void flush() {
         StringBuilder s = sbuf;
-        //WebTerminal.origErr.println("WebWr.flush "+WebTerminal.toQuoted(sbuf.toString()));
+        //WTDebug.println("WebWr.flush "+WTDebug.toQuoted(sbuf.toString()));
 
         if (s.length() > 0) {
             // FIXME optimize by passing sbuf to insertOutput?
