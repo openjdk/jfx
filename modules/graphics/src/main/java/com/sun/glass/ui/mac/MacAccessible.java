@@ -25,6 +25,9 @@
 
 package com.sun.glass.ui.mac;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javafx.collections.ObservableList;
@@ -221,10 +224,7 @@ final class MacAccessible extends PlatformAccessible {
                 /* Expanded only needed for Combobox, and not for PopUpButton */
 //                MacAttributes.NSAccessibilityExpandedAttribute,
             },
-            new MacActions[] {
-                MacActions.NSAccessibilityPressAction,
-                MacActions.NSAccessibilityShowMenuAction,
-            },
+            new MacActions[] {MacActions.NSAccessibilityPressAction},
             null
         ),
         NSAccessibilityTabGroupRole(new Role[] {Role.TAB_PANE, Role.PAGINATION},
@@ -430,9 +430,7 @@ final class MacAccessible extends PlatformAccessible {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityOverflowButtonAttribute,
             },
-            new MacActions[] {
-                MacActions.NSAccessibilityShowMenuAction,
-            }
+            null
         ),
         ;
 
@@ -440,7 +438,7 @@ final class MacAccessible extends PlatformAccessible {
         Role[] jfxRoles;
         MacAttributes[] macAttributes;
         MacAttributes[] macParameterizedAttributes;
-        MacActions[] macActions;
+        List<MacActions> macActions;
         MacRoles(Role jfxRole, MacAttributes[] macAttributes, MacActions[] macActions) {
             this(new Role[] {jfxRole}, macAttributes, macActions, null);
         }
@@ -448,7 +446,7 @@ final class MacAccessible extends PlatformAccessible {
         MacRoles(Role[] jfxRoles, MacAttributes[] macAttributes, MacActions[] macActions, MacAttributes[] macParameterizedAttributes) {
             this.jfxRoles = jfxRoles;
             this.macAttributes = macAttributes;
-            this.macActions = macActions;
+            this.macActions = macActions != null ? Arrays.asList(macActions) : null;
             this.macParameterizedAttributes = macParameterizedAttributes;
         }
 
@@ -1200,16 +1198,22 @@ final class MacAccessible extends PlatformAccessible {
     long[] accessibilityActionNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         Role role = (Role)getAttribute(ROLE);
+        List<MacActions> actions = new  ArrayList<>();
         if (role != null) {
-            Stream<MacActions> actions = Stream.empty();
             MacRoles macRole = MacRoles.getRole(role);
             if (macRole != null && macRole.macActions != null) {
-                actions = Stream.concat(actions, Stream.of(macRole.macActions));
+                actions.addAll(macRole.macActions);
             }
-            return actions.mapToLong(a -> a.ptr).toArray();
+            /* 
+             * Consider add a attribute to indicate when the node
+             * has a menu instead of using the role.
+             */
+            if (role != Role.NODE && role != Role.PARENT) {
+                actions.add(MacActions.NSAccessibilityShowMenuAction);
+            }
         }
         /* Return empty array instead of null to prevent warnings in the accessibility verifier */
-        return new long[0];
+        return actions.stream().mapToLong(a -> a.ptr).toArray();
     }
 
     String accessibilityActionDescription(long action) {

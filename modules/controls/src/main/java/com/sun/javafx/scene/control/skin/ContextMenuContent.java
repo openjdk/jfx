@@ -1414,6 +1414,13 @@ public class ContextMenuContent extends Region {
         @Override
         public void accExecuteAction(Action action, Object... parameters) {
             switch (action) {
+                case SHOW_MENU:{
+                    if (item instanceof Menu) {
+                        final Menu menuItem = (Menu) item;
+                        menuItem.hide();
+                    }
+                    break;
+                }
                 case FIRE: 
                     doSelect();
                     break;

@@ -38,6 +38,7 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
@@ -925,6 +926,15 @@ public abstract class Control extends Region implements Skinnable {
 
     /** @treatAsPrivate */
     @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SHOW_MENU:
+                ContextMenu menu = getContextMenu();
+                if (menu != null) {
+                    menu.show(this, Side.RIGHT, 0, 0);
+                }
+                break;
+            default:
+        }
         if (skinBase != null) {
             skinBase.accExecuteAction(action);
         }
