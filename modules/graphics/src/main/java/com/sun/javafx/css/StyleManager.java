@@ -985,7 +985,13 @@ final public class StyleManager {
                 }
 
                 if ((url != null) && !parse) {
-                    stylesheet = Stylesheet.loadBinary(url);
+
+                    try {
+                        // RT-36332: if loadBinary throws an IOException, make sure to try .css
+                        stylesheet = Stylesheet.loadBinary(url);
+                    } catch (IOException ioe) {
+                        stylesheet = null;
+                    }
 
                     if (stylesheet == null && (parse = !parse)) {
                         // If we failed to load the .bss file,
