@@ -248,6 +248,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityMenuRole(Role.CONTEXT_MENU,
             new MacAttributes[] {
                 MacAttributes.NSAccessibilitySelectedChildrenAttribute,
+                MacAttributes.NSAccessibilityEnabledAttribute,
             },
             new MacActions[] {
                 MacActions.NSAccessibilityPressAction,
@@ -436,8 +437,8 @@ final class MacAccessible extends PlatformAccessible {
 
         long ptr; /* Initialized natively - treat as final */
         Role[] jfxRoles;
-        MacAttributes[] macAttributes;
-        MacAttributes[] macParameterizedAttributes;
+        List<MacAttributes> macAttributes;
+        List<MacAttributes> macParameterizedAttributes;
         List<MacActions> macActions;
         MacRoles(Role jfxRole, MacAttributes[] macAttributes, MacActions[] macActions) {
             this(new Role[] {jfxRole}, macAttributes, macActions, null);
@@ -445,9 +446,9 @@ final class MacAccessible extends PlatformAccessible {
 
         MacRoles(Role[] jfxRoles, MacAttributes[] macAttributes, MacActions[] macActions, MacAttributes[] macParameterizedAttributes) {
             this.jfxRoles = jfxRoles;
-            this.macAttributes = macAttributes;
+            this.macAttributes = macAttributes != null ? Arrays.asList(macAttributes) : null;
             this.macActions = macActions != null ? Arrays.asList(macActions) : null;
-            this.macParameterizedAttributes = macParameterizedAttributes;
+            this.macParameterizedAttributes = macParameterizedAttributes != null ? Arrays.asList(macParameterizedAttributes) : null;
         }
 
         static MacRoles getRole(Role targetRole) {
@@ -489,7 +490,7 @@ final class MacAccessible extends PlatformAccessible {
 
         long ptr; /* Initialized natively - treat as final */
         Role[] jfxRoles;
-        MacAttributes[] macAttributes;
+        List<MacAttributes> macAttributes;
 
         MacSubroles(Role... jfxRoles) {
             this(jfxRoles, null);
@@ -497,7 +498,7 @@ final class MacAccessible extends PlatformAccessible {
 
         MacSubroles(Role[] jfxRoles, MacAttributes[] macAttributes) {
             this.jfxRoles = jfxRoles;
-            this.macAttributes = macAttributes;
+            this.macAttributes = macAttributes != null ? Arrays.asList(macAttributes) : null;
         }
 
         static MacSubroles getRole(Role targetRole) {
@@ -566,7 +567,7 @@ final class MacAccessible extends PlatformAccessible {
         long ptr;
     }
 
-    static MacAttributes[] baseAttributes = {
+    List<MacAttributes> baseAttributes = Arrays.asList(
         MacAttributes.NSAccessibilityRoleAttribute,
         MacAttributes.NSAccessibilityRoleDescriptionAttribute,
         MacAttributes.NSAccessibilityHelpAttribute,
@@ -577,8 +578,8 @@ final class MacAccessible extends PlatformAccessible {
         MacAttributes.NSAccessibilitySizeAttribute,
         MacAttributes.NSAccessibilityWindowAttribute,
         MacAttributes.NSAccessibilityTopLevelUIElementAttribute,
-        MacAttributes.NSAccessibilityTitleUIElementAttribute,
-    };
+        MacAttributes.NSAccessibilityTitleUIElementAttribute
+    );
 
     /* The native peer associated with the instance */
     private long peer;
@@ -708,23 +709,30 @@ final class MacAccessible extends PlatformAccessible {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         Role role = (Role)getAttribute(ROLE);
         if (role != null) {
-            Stream<MacAttributes> attrs = Stream.of(baseAttributes);
+            List<MacAttributes> attrs = new ArrayList<>(baseAttributes);
             MacRoles macRole = MacRoles.getRole(role);
             if (macRole != null && macRole.macAttributes != null) {
-                attrs = Stream.concat(attrs, Stream.of(macRole.macAttributes));
+                attrs.addAll(macRole.macAttributes);
             }
 
             /* Look to see if there is a subrole that we should also get the attributes of */
             MacSubroles macSubrole = MacSubroles.getRole(role);
             if (macSubrole != null && macSubrole.macAttributes != null) {
-                attrs = Stream.concat(attrs, Stream.of(macSubrole.macAttributes));
+                attrs.addAll(macSubrole.macAttributes);
             }
 
             /* ListView is row-based, must remove all the cell-based attributes */
             if (role == Role.LIST_VIEW) {
-                attrs = attrs.filter(a -> a.toString().indexOf("Cells") == -1);
+                attrs.remove(MacAttributes.NSAccessibilitySelectedCellsAttribute);
             }
-            return attrs.mapToLong(a -> a.ptr).toArray();
+
+            /* Menu and MenuItem do have have Window and top-level UI Element*/
+            if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM) {
+                attrs.remove(MacAttributes.NSAccessibilityWindowAttribute);
+                attrs.remove(MacAttributes.NSAccessibilityTopLevelUIElementAttribute);
+            }
+
+            return attrs.stream().mapToLong(a -> a.ptr).toArray();
         }
         return null;
     }
@@ -866,14 +874,18 @@ final class MacAccessible extends PlatformAccessible {
                     break;
                 case NSAccessibilitySelectedChildrenAttribute: {
                     /* Used for ContextMenu's*/
-                    Scene scene = (Scene)getAttribute(SCENE);
-                    if (scene != null) {
-                        Accessible acc = scene.getAccessible();
-                        if (acc != null) {
-                            Node focus = (Node)acc.getAttribute(FOCUS_NODE);
-                            if (focus != null) {
-                                long[] result = {getAccessible(focus)};
-                                return attr.map.apply(result);
+                    if (role == Role.CONTEXT_MENU) {
+                        Scene scene = (Scene)getAttribute(SCENE);
+                        if (scene != null) {
+                            Accessible acc = scene.getAccessible();
+                            if (acc != null) {
+                                Node focus = (Node)acc.getAttribute(FOCUS_NODE);
+                                if (focus != null && focus.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
+                                    long[] result = {getAccessible(focus)};
+                                    return attr.map.apply(result);
+                                } else {
+                                    return null;
+                                }
                             }
                         }
                     }
@@ -909,6 +921,10 @@ final class MacAccessible extends PlatformAccessible {
         switch (attr) {
             case NSAccessibilityWindowAttribute:
             case NSAccessibilityTopLevelUIElementAttribute: {
+                Role role = (Role)getAttribute(ROLE);
+                if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM) {
+                    return null;
+                }
                 Scene scene = (Scene)result;
                 View view = getRootView(scene);
                 if (view == null) return null;
@@ -932,8 +948,8 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityRoleDescriptionAttribute: {
-                Role resRole = (Role)result;
-                MacRoles macRole = MacRoles.getRole(resRole);
+                Role role = (Role)result;
+                MacRoles macRole = MacRoles.getRole(role);
                 if (macRole == null) return null;
                 if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
                     Boolean state = (Boolean)getAttribute(INDETERMINATE);
@@ -941,7 +957,7 @@ final class MacAccessible extends PlatformAccessible {
                         macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
                     }
                 }
-                MacSubroles subRole = MacSubroles.getRole(resRole);
+                MacSubroles subRole = MacSubroles.getRole(role);
                 result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
                 break;
             }
@@ -1137,10 +1153,11 @@ final class MacAccessible extends PlatformAccessible {
         if (role != null) {
             MacRoles macRole = MacRoles.getRole(role);
             if (macRole != null && macRole.macParameterizedAttributes != null) {
-                Stream<MacAttributes> attrs = Stream.of(macRole.macParameterizedAttributes);
+                Stream<MacAttributes> attrs = macRole.macParameterizedAttributes.stream();
+
                 /* ListView is row-based, must remove all the cell-based attributes */
                 if (role == Role.LIST_VIEW) {
-                    attrs = attrs.filter(a -> a.toString().indexOf("Cell") == -1);
+                    attrs = attrs.filter(a -> a != MacAttributes.NSAccessibilityCellForColumnAndRowParameterizedAttribute);
                 }
                 return attrs.mapToLong(a -> a.ptr).toArray();
             }
@@ -1198,7 +1215,7 @@ final class MacAccessible extends PlatformAccessible {
     long[] accessibilityActionNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         Role role = (Role)getAttribute(ROLE);
-        List<MacActions> actions = new  ArrayList<>();
+        List<MacActions> actions = new ArrayList<>();
         if (role != null) {
             MacRoles macRole = MacRoles.getRole(role);
             if (macRole != null && macRole.macActions != null) {
