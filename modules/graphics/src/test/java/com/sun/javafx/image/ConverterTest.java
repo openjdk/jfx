@@ -26,6 +26,7 @@
 package com.sun.javafx.image;
 
 import com.sun.javafx.image.impl.ByteArgb;
+import com.sun.javafx.image.impl.ByteBgr;
 import com.sun.javafx.image.impl.ByteBgra;
 import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.image.impl.ByteGray;
@@ -39,6 +40,8 @@ import static junit.framework.Assert.*;
 
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import javafx.scene.image.PixelFormat;
+import javafx.scene.image.WritablePixelFormat;
 import javafx.scene.paint.Color;
 import org.junit.Test;
 
@@ -424,8 +427,9 @@ public class ConverterTest {
         new ByteFormat(ByteBgraPre.getter, ByteBgraPre.setter,  3, 2, 1, 0),
         new ByteFormat(ByteRgba.getter,    ByteRgba.setter,     3, 0, 1, 2),
         new ByteFormat(ByteRgb.getter,                         -1, 0, 1, 2),
+        new ByteFormat(ByteBgr.getter,     ByteBgr.setter,     -1, 2, 1, 0),
 
-        new ByteFormat(ByteGray.getter,                                 -1, 0),
+        new ByteFormat(ByteGray.getter,         ByteGray.setter,        -1, 0),
         new ByteFormat(ByteGrayAlpha.getter,    ByteGrayAlpha.setter,    1, 0),
         new ByteFormat(ByteGrayAlphaPre.getter, ByteGrayAlphaPre.setter, 1, 0),
     };
@@ -564,6 +568,79 @@ public class ConverterTest {
         }
     }
 
+    static final int FxColors[] = {
+        0x00000000,
+        0xffff0000,
+        0xff00ff00,
+        0xff0000ff,
+        0xffffffff
+    };
+
+    static final PixelFormat FxFormats[] = {
+        PixelFormat.getByteBgraInstance(),
+        PixelFormat.getByteBgraPreInstance(),
+        PixelFormat.getByteRgbInstance(),
+        PixelFormat.getIntArgbInstance(),
+        PixelFormat.getIntArgbPreInstance(),
+        PixelFormat.createByteIndexedInstance(FxColors),
+        PixelFormat.createByteIndexedPremultipliedInstance(FxColors)
+    };
+
+    static final WritablePixelFormat FxWritableFormats[] = {
+        WritablePixelFormat.getByteBgraInstance(),
+        WritablePixelFormat.getByteBgraPreInstance(),
+        WritablePixelFormat.getIntArgbInstance(),
+        WritablePixelFormat.getIntArgbPreInstance()
+    };
+
+    static void checkAllTypesTested(PixelFormat<?> formats[], boolean writable) {
+        if (writable) {
+            for (PixelFormat<?> pf : formats) {
+                assertTrue(pf.isWritable());
+            }
+        }
+        for (PixelFormat.Type type : PixelFormat.Type.values()) {
+            if (type == PixelFormat.Type.BYTE_INDEXED ||
+                type == PixelFormat.Type.BYTE_RGB)
+            {
+                // Non-writable type
+                if (writable) continue;
+            }
+            boolean found = false;
+            for (PixelFormat<?> pf : formats) {
+                if (pf.getType() == type) {
+                    found = true;
+                    break;
+                }
+            }
+            assertTrue(found);
+        }
+    }
+
+    @Test
+    public void ensureFXConverters() {
+        checkAllTypesTested(FxFormats, false);
+        checkAllTypesTested(FxWritableFormats, true);
+        for (PixelFormat<?> pf : FxFormats) {
+            PixelGetter<?> getter = PixelUtils.getGetter(pf);
+            assertNotNull(getter);
+            for (WritablePixelFormat<?> wpf : FxWritableFormats) {
+                PixelSetter<?> setter = PixelUtils.getSetter(wpf);
+                assertNotNull(setter);
+                PixelConverter<?, ?> converter = PixelUtils.getConverter(getter, setter);
+                assertNotNull(converter);
+            }
+        }
+    }
+
+    @Test
+    public void ensureJ2DConverters() {
+        assertNotNull(PixelUtils.getConverter(ByteGray.getter, ByteGray.setter));
+        assertNotNull(PixelUtils.getConverter(ByteBgr.getter, ByteBgr.setter));
+        assertNotNull(PixelUtils.getConverter(IntArgbPre.getter, IntArgbPre.setter));
+        assertNotNull(PixelUtils.getConverter(ByteBgraPre.getter, IntArgbPre.setter));
+    }
+
     @Test
     public void testIntAccessors() {
         testIntAccessors(heapIntBuffer(0, 2));
@@ -641,6 +718,7 @@ public class ConverterTest {
                 if (bps == null) continue;
                 ByteToBytePixelConverter b2bpc =
                     PixelUtils.getB2BConverter(bpg, bps);
+                if (bfmtsetter.getNcomp() < 4 && b2bpc == null) continue;
                 if (!isGeneral(b2bpc)) {
                     PixelConverter pc = PixelUtils.getConverter(bpg, bps);
                     assertEquals(b2bpc, pc);
@@ -720,6 +798,7 @@ public class ConverterTest {
                 if (ips == null) continue;
                 ByteToIntPixelConverter b2ipc =
                     PixelUtils.getB2IConverter(bpg, ips);
+                // Should not be null - so far all int formats are full color+alpha
                 if (!isGeneral(b2ipc)) {
                     PixelConverter pc = PixelUtils.getConverter(bpg, ips);
                     assertEquals(b2ipc, pc);
@@ -798,6 +877,7 @@ public class ConverterTest {
                 if (bps == null) continue;
                 IntToBytePixelConverter i2bpc =
                     PixelUtils.getI2BConverter(ipg, bps);
+                if (bfmtsetter.getNcomp() < 4 && i2bpc == null) continue;
                 if (!isGeneral(i2bpc)) {
                     PixelConverter pc = PixelUtils.getConverter(ipg, bps);
                     assertEquals(i2bpc, pc);
@@ -876,6 +956,7 @@ public class ConverterTest {
                 if (ips == null) continue;
                 IntToIntPixelConverter i2ipc =
                     PixelUtils.getI2IConverter(ipg, ips);
+                // Should not be null - so far all int formats are full color+alpha
                 if (!isGeneral(i2ipc)) {
                     PixelConverter pc = PixelUtils.getConverter(ipg, ips);
                     assertEquals(i2ipc, pc);

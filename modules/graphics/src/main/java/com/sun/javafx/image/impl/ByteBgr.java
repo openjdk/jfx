@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,33 +26,37 @@
 package com.sun.javafx.image.impl;
 
 import com.sun.javafx.image.AlphaType;
+import com.sun.javafx.image.BytePixelAccessor;
 import com.sun.javafx.image.BytePixelGetter;
 import com.sun.javafx.image.BytePixelSetter;
 import com.sun.javafx.image.ByteToBytePixelConverter;
 import com.sun.javafx.image.ByteToIntPixelConverter;
 import com.sun.javafx.image.IntPixelSetter;
+import com.sun.javafx.image.PixelUtils;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
-public class ByteRgb {
-    public static final BytePixelGetter getter = Getter.instance;
+public class ByteBgr {
+    public static final BytePixelGetter     getter = Accessor.instance;
+    public static final BytePixelSetter     setter = Accessor.instance;
+    public static final BytePixelAccessor accessor = Accessor.instance;
 
-    public static final ByteToBytePixelConverter ToByteBgraConverter =
-        ByteRgb.ToByteBgrfConv.nonpremult;
-    public static final ByteToBytePixelConverter ToByteBgraPreConverter =
-        ByteRgb.ToByteBgrfConv.premult;
-    public static final ByteToIntPixelConverter ToIntArgbConverter =
-        ByteRgb.ToIntFrgbConv.nonpremult;
-    public static final ByteToIntPixelConverter ToIntArgbPreConverter =
-        ByteRgb.ToIntFrgbConv.premult;
-    public static final ByteToBytePixelConverter ToByteArgbConverter =
-        ByteRgb.ToByteFrgbConv.nonpremult;
     public static final ByteToBytePixelConverter ToByteBgrConverter =
-        ByteRgb.SwapThreeByteConverter.rgbToBgrInstance;
+        BaseByteToByteConverter.create(accessor);
+    public static final ByteToBytePixelConverter ToByteBgraConverter =
+        ByteBgr.ToByteBgrfConv.nonpremult;
+    public static final ByteToBytePixelConverter ToByteBgraPreConverter =
+        ByteBgr.ToByteBgrfConv.premult;
+    public static final ByteToIntPixelConverter ToIntArgbConverter =
+        ByteBgr.ToIntFrgbConv.nonpremult;
+    public static final ByteToIntPixelConverter ToIntArgbPreConverter =
+        ByteBgr.ToIntFrgbConv.premult;
+    public static final ByteToBytePixelConverter ToByteArgbConverter =
+        ByteBgr.ToByteFrgbConv.nonpremult;
 
-    static class Getter implements BytePixelGetter {
-        static final BytePixelGetter instance = new Getter();
-        private Getter() {}
+    static class Accessor implements BytePixelAccessor {
+        static final BytePixelAccessor instance = new Accessor();
+        private Accessor() {}
 
         @Override
         public AlphaType getAlphaType() {
@@ -66,34 +70,58 @@ public class ByteRgb {
 
         @Override
         public int getArgb(byte arr[], int offset) {
-            return (((arr[offset + 2] & 0xff)      ) |
+            return (((arr[offset    ] & 0xff)      ) |
                     ((arr[offset + 1] & 0xff) <<  8) |
-                    ((arr[offset    ] & 0xff) << 16) |
+                    ((arr[offset + 2] & 0xff) << 16) |
                     ((                  0xff) << 24));
         }
 
         @Override
         public int getArgbPre(byte arr[], int offset) {
-            return (((arr[offset + 2] & 0xff)      ) |
+            return (((arr[offset    ] & 0xff)      ) |
                     ((arr[offset + 1] & 0xff) <<  8) |
-                    ((arr[offset    ] & 0xff) << 16) |
+                    ((arr[offset + 2] & 0xff) << 16) |
                     ((                  0xff) << 24));
         }
 
         @Override
         public int getArgb(ByteBuffer buffer, int offset) {
-            return (((buffer.get(offset + 2) & 0xff)      ) |
+            return (((buffer.get(offset    ) & 0xff)      ) |
                     ((buffer.get(offset + 1) & 0xff) <<  8) |
-                    ((buffer.get(offset    ) & 0xff) << 16) |
+                    ((buffer.get(offset + 2) & 0xff) << 16) |
                     ((                         0xff) << 24));
         }
 
         @Override
         public int getArgbPre(ByteBuffer buffer, int offset) {
-            return (((buffer.get(offset + 2) & 0xff)      ) |
+            return (((buffer.get(offset    ) & 0xff)      ) |
                     ((buffer.get(offset + 1) & 0xff) <<  8) |
-                    ((buffer.get(offset    ) & 0xff) << 16) |
+                    ((buffer.get(offset + 2) & 0xff) << 16) |
                     ((                         0xff) << 24));
+        }
+
+        @Override
+        public void setArgb(byte[] arr, int offset, int argb) {
+            arr[offset    ] = (byte) (argb      );
+            arr[offset + 1] = (byte) (argb >>  8);
+            arr[offset + 2] = (byte) (argb >> 16);
+        }
+
+        @Override
+        public void setArgbPre(byte[] arr, int offset, int argbpre) {
+            setArgb(arr, offset, PixelUtils.PretoNonPre(argbpre));
+        }
+
+        @Override
+        public void setArgb(ByteBuffer buf, int offset, int argb) {
+            buf.put(offset    , (byte) (argb      ));
+            buf.put(offset + 1, (byte) (argb >>  8));
+            buf.put(offset + 2, (byte) (argb >> 16));
+        }
+
+        @Override
+        public void setArgbPre(ByteBuffer buf, int offset, int argbpre) {
+            setArgb(buf, offset, PixelUtils.PretoNonPre(argbpre));
         }
     }
 
@@ -104,11 +132,11 @@ public class ByteRgb {
             new ToByteBgrfConv(ByteBgraPre.setter);
 
         private ToByteBgrfConv(BytePixelSetter setter) {
-            // Note that using ByteRgb.getter here causes a circular reference
+            // Note that using ByteBgr.getter here causes a circular reference
             // between the classes that prevents the above *premult fields
-            // from being initialized before the ByteRgb class copies their
+            // from being initialized before the ByteBgr class copies their
             // (not yet inited = null) values into its owns static fields.
-            super(ByteRgb.Getter.instance, setter);
+            super(Accessor.instance, setter);
         }
 
         @Override
@@ -120,11 +148,10 @@ public class ByteRgb {
             dstscanbytes -= w * 4;
             while (--h >= 0) {
                 for (int x = 0; x < w; x++) {
-                    dstarr[dstoff++] = srcarr[srcoff + 2];
-                    dstarr[dstoff++] = srcarr[srcoff + 1];
-                    dstarr[dstoff++] = srcarr[srcoff    ];
+                    dstarr[dstoff++] = srcarr[srcoff++];
+                    dstarr[dstoff++] = srcarr[srcoff++];
+                    dstarr[dstoff++] = srcarr[srcoff++];
                     dstarr[dstoff++] = (byte) 0xff;
-                    srcoff += 3;
                 }
                 srcoff += srcscanbytes;
                 dstoff += dstscanbytes;
@@ -140,12 +167,10 @@ public class ByteRgb {
             dstscanbytes -= w * 4;
             while (--h >= 0) {
                 for (int x = 0; x < w; x++) {
-                    dstbuf.put(dstoff    , srcbuf.get(srcoff + 2));
-                    dstbuf.put(dstoff + 1, srcbuf.get(srcoff + 1));
-                    dstbuf.put(dstoff + 2, srcbuf.get(srcoff    ));
-                    dstbuf.put(dstoff + 3, (byte) 0xff);
-                    srcoff += 3;
-                    dstoff += 4;
+                    dstbuf.put(dstoff++, srcbuf.get(srcoff++));
+                    dstbuf.put(dstoff++, srcbuf.get(srcoff++));
+                    dstbuf.put(dstoff++, srcbuf.get(srcoff++));
+                    dstbuf.put(dstoff++, (byte) 0xff);
                 }
                 srcoff += srcscanbytes;
                 dstoff += dstscanbytes;
@@ -160,11 +185,11 @@ public class ByteRgb {
             new ToIntFrgbConv(IntArgbPre.setter);
 
         private ToIntFrgbConv(IntPixelSetter setter) {
-            // Note that using ByteRgb.getter here causes a circular reference
+            // Note that using ByteBgr.getter here causes a circular reference
             // between the classes that prevents the above *premult fields
-            // from being initialized before the ByteRgb class copies their
+            // from being initialized before the ByteBgr class copies their
             // (not yet inited = null) values into its owns static fields.
-            super(ByteRgb.Getter.instance, setter);
+            super(Accessor.instance, setter);
         }
 
         @Override
@@ -175,9 +200,9 @@ public class ByteRgb {
             srcscanbytes -= w * 3;
             while (--h >= 0) {
                 for (int x = 0; x < w; x++) {
-                    int r = srcarr[srcoff++] & 0xff;
-                    int g = srcarr[srcoff++] & 0xff;
                     int b = srcarr[srcoff++] & 0xff;
+                    int g = srcarr[srcoff++] & 0xff;
+                    int r = srcarr[srcoff++] & 0xff;
                     dstarr[dstoff + x] = 0xff000000 | (r << 16) | (g << 8) | b;
                 }
                 srcoff += srcscanbytes;
@@ -193,10 +218,9 @@ public class ByteRgb {
             srcscanbytes -= w * 3;
             while (--h >= 0) {
                 for (int x = 0; x < w; x++) {
-                    int r = srcbuf.get(srcoff    ) & 0xff;
-                    int g = srcbuf.get(srcoff + 1) & 0xff;
-                    int b = srcbuf.get(srcoff + 2) & 0xff;
-                    srcoff += 3;
+                    int b = srcbuf.get(srcoff++) & 0xff;
+                    int g = srcbuf.get(srcoff++) & 0xff;
+                    int r = srcbuf.get(srcoff++) & 0xff;
                     dstbuf.put(dstoff + x, 0xff000000 | (r << 16) | (g << 8) | b);
                 }
                 srcoff += srcscanbytes;
@@ -210,11 +234,11 @@ public class ByteRgb {
             new ToByteFrgbConv(ByteArgb.setter);
 
         private ToByteFrgbConv(BytePixelSetter setter) {
-            // Note that using ByteRgb.getter here causes a circular reference
+            // Note that using ByteBgr.getter here causes a circular reference
             // between the classes that prevents the above *premult fields
-            // from being initialized before the ByteRgb class copies their
+            // from being initialized before the ByteBgr class copies their
             // (not yet inited = null) values into its owns static fields.
-            super(ByteRgb.Getter.instance, setter);
+            super(Accessor.instance, setter);
         }
 
         @Override
@@ -227,9 +251,10 @@ public class ByteRgb {
             while (--h >= 0) {
                 for (int x = 0; x < w; x++) {
                     dstarr[dstoff++] = (byte) 0xff;
-                    dstarr[dstoff++] = srcarr[srcoff++];
-                    dstarr[dstoff++] = srcarr[srcoff++];
-                    dstarr[dstoff++] = srcarr[srcoff++];
+                    dstarr[dstoff++] = srcarr[srcoff + 2];
+                    dstarr[dstoff++] = srcarr[srcoff + 1];
+                    dstarr[dstoff++] = srcarr[srcoff    ];
+                    srcoff += 3;
                 }
                 srcoff += srcscanbytes;
                 dstoff += dstscanbytes;
@@ -246,53 +271,6 @@ public class ByteRgb {
             while (--h >= 0) {
                 for (int x = 0; x < w; x++) {
                     dstbuf.put(dstoff++, (byte) 0xff);
-                    dstbuf.put(dstoff++, srcbuf.get(srcoff++));
-                    dstbuf.put(dstoff++, srcbuf.get(srcoff++));
-                    dstbuf.put(dstoff++, srcbuf.get(srcoff++));
-                }
-                srcoff += srcscanbytes;
-                dstoff += dstscanbytes;
-            }
-        }
-    }
-
-    static class SwapThreeByteConverter extends BaseByteToByteConverter {
-        static final ByteToBytePixelConverter rgbToBgrInstance =
-            new SwapThreeByteConverter(ByteRgb.Getter.instance,
-                                       ByteBgr.Accessor.instance);
-
-        public SwapThreeByteConverter(BytePixelGetter getter, BytePixelSetter setter) {
-            super(getter, setter);
-        }
-
-        @Override
-        void doConvert(byte[] srcarr, int srcoff, int srcscanbytes,
-                       byte[] dstarr, int dstoff, int dstscanbytes,
-                       int w, int h)
-        {
-            srcscanbytes -= w * 3;
-            srcscanbytes -= w * 4;
-            while (--h >= 0) {
-                for (int x = 0; x < w; x++) {
-                    dstarr[dstoff++] = srcarr[srcoff + 2];
-                    dstarr[dstoff++] = srcarr[srcoff + 1];
-                    dstarr[dstoff++] = srcarr[srcoff    ];
-                    srcoff += 3;
-                }
-                srcoff += srcscanbytes;
-                dstoff += dstscanbytes;
-            }
-        }
-
-        @Override
-        void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
-                       ByteBuffer dstbuf, int dstoff, int dstscanbytes,
-                       int w, int h)
-        {
-            srcscanbytes -= w * 3;
-            srcscanbytes -= w * 4;
-            while (--h >= 0) {
-                for (int x = 0; x < w; x++) {
                     dstbuf.put(dstoff++, srcbuf.get(srcoff + 2));
                     dstbuf.put(dstoff++, srcbuf.get(srcoff + 1));
                     dstbuf.put(dstoff++, srcbuf.get(srcoff    ));
