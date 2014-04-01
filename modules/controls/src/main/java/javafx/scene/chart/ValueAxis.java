@@ -158,7 +158,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     private final ObjectProperty<StringConverter<T>> tickLabelFormatter = new ObjectPropertyBase<StringConverter<T>>(null){
         @Override protected void invalidated() {
             invalidateRange();
-            formatterValid = true;
             requestAxisLayout();
         }
 
