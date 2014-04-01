@@ -467,6 +467,7 @@ public class PieChart extends Chart {
                                      // remove chart references from old data - RT-22553
                                      item.setChart(null);
                                      removeDataItemRef(item);
+                                     item.textNode.setOpacity(1.0);
                                  }
                             });
                             ft.play();

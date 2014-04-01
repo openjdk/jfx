@@ -109,6 +109,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
             ft.setOnFinished(actionEvent -> {
                 getPlotChildren().remove(symbol);
                 removeDataItemFromDisplay(series, item);
+                symbol.setOpacity(1.0);
             });
             ft.play();
         } else {
@@ -144,6 +145,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
                 ft.setToValue(0);
                 ft.setOnFinished(actionEvent -> {
                     getPlotChildren().remove(symbol);
+                    symbol.setOpacity(1.0);
                 });
                 pt.getChildren().add(ft);
             }
