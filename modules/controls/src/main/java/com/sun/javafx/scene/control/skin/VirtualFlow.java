@@ -857,7 +857,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         needsReconfigureCells = false;
         needsRebuildCells = false;
         sizeChanged = false;
-        
+
         if (needsCellsLayout) {
             for (int i = 0, max = cells.size(); i < max; i++) {
                 Cell cell = cells.get(i);
@@ -867,11 +867,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
             needsCellsLayout = false;
 
-            // yes, we return here - if needsCellsLayout was set to true, we 
+            // yes, we return here - if needsCellsLayout was set to true, we
             // only did it to do the above - not rerun the entire layout.
             return;
         }
-        
+
         final double width = getWidth();
         final double height = getHeight();
         final boolean isVertical = isVertical();
@@ -915,8 +915,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         T firstCell = getFirstVisibleCell();
 
-        // If no cells need layout, we check other criteria to see if this 
-        // layout call is even necessary. If it is found that no layout is 
+        // If no cells need layout, we check other criteria to see if this
+        // layout call is even necessary. If it is found that no layout is
         // needed, we just punt.
         if (! cellNeedsLayout && !thumbNeedsLayout) {
             boolean cellSizeChanged = false;
@@ -1034,7 +1034,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
-        updateViewport();
+        initViewport();
         updateScrollBarsAndCells(recreatedOrRebuilt);
 
         // Get the index of the "current" cell
@@ -1069,23 +1069,27 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             setMaxPrefBreadth(-1);
             // Start by dumping all the cells into the pile
             addAllToPile();
-            
+
             // The distance from the top of the viewport to the top of the
             // cell for the current index.
             double offset = -computeViewportOffset(getPosition());
-            
+
             // Add all the leading and trailing cells (the call to add leading
             // cells will add the current cell as well -- that is, the one that
             // represents the current position on the mapper).
             addLeadingCells(currentIndex, offset);
-            
+
             // Force filling of space with empty cells if necessary
             addTrailingCells(true);
         } else if (needTrailingCells) {
             addTrailingCells(true);
         }
-        updateViewport(); 
-        updateScrollBarsAndCells(recreatedOrRebuilt);
+
+        if (computeBarVisiblity()) {
+            updateScrollBarsAndCells(recreatedOrRebuilt);
+        } else {
+            fitCells();
+        }
 
         lastWidth = getWidth();
         lastHeight = getHeight();
@@ -1260,7 +1264,64 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return filledWithNonEmpty;
     }
 
-    private void updateViewport() {
+    /**
+     * @return true if bar visibility changed
+     */
+    private boolean computeBarVisiblity() {
+        if (cells.isEmpty()) {
+            // In case no cells are set yet, we assume no bars are needed
+            needLengthBar = false;
+            needBreadthBar = false;
+            return true;
+        }
+
+        final boolean isVertical = isVertical();
+        boolean barVisibilityChanged = false;
+
+        VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
+        VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
+        double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
+        double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
+
+        final double viewportBreadth = getViewportBreadth();
+
+        final int cellsSize = cells.size();
+        for (int i = 0; i < 2; i++) {
+            final boolean lengthBarVisible = getPosition() > 0 || cellCount > cellsSize ||
+                    (cellCount == cellsSize && (getCellPosition(cells.getLast()) + getCellLength(cells.getLast())) > getViewportLength());
+            if (lengthBarVisible ^ needLengthBar) {
+                needLengthBar = lengthBarVisible;
+                barVisibilityChanged = true;
+            }
+
+            final boolean breadthBarVisible = (maxPrefBreadth > viewportBreadth) || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
+            if (breadthBarVisible ^ needBreadthBar) {
+                needBreadthBar = breadthBarVisible;
+                barVisibilityChanged = true;
+            }
+        }
+
+        // Start by optimistically deciding whether the length bar and
+        // breadth bar are needed and adjust the viewport dimensions
+        // accordingly. If during layout we find that one or the other of the
+        // bars actually is needed, then we will perform a cleanup pass
+
+        if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
+            setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
+            setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
+
+            breadthBar.setVisible(needBreadthBar);
+            lengthBar.setVisible(needLengthBar);
+        } else {
+            breadthBar.setVisible(needBreadthBar && tempVisibility);
+            lengthBar.setVisible(needLengthBar && tempVisibility);
+        }
+
+        return barVisibilityChanged;
+    }
+
+    private void initViewport() {
+
         // Initialize the viewportLength and viewportBreadth to match the
         // width/height of the flow
         final boolean isVertical = isVertical();
@@ -1269,59 +1330,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         setViewportLength(snapSize(isVertical ? height : width));
         setViewportBreadth(snapSize(isVertical ? width : height));
 
-        // Assign the hbar and vbar to the breadthBar and lengthBar so as
-        // to make some subsequent calculations easier.
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
-        double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
-        double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
 
         // If there has been a switch between the virtualized bar, then we
         // will want to do some stuff TODO.
         breadthBar.setVirtual(false);
         lengthBar.setVirtual(true);
 
-        // We need to determine whether the hbar and vbar are necessary. If the
-        // flow has been scrolled in the virtual direction, then we know for
-        // certain that the virtual scroll bar is required. If the
-        // maxPrefBreadth is already greater than the viewport, then we know
-        // we need the breadthBar as well. If neither of these two conditions
-        // are met, then we need to grab the first page worth of cells and
-        // compute the maxPrefBreadth and also determine if we have enough cells
-        // such that it will require more than a single page.
-
-        final double maxPrefBreadth = getMaxPrefBreadth();
-        if (maxPrefBreadth == -1) {
-            return;
-        }
-
-        final double viewportBreadth = getViewportBreadth();
-        final double viewportLength = getViewportLength();
-
-        // Perform a few computations used for understanding the effect of the
-        // bars on the viewport dimensions. Here we tentatively decide whether
-        // we need the breadth bar and the length bar.
-        // The last condition here (viewportLength >= getHeight()) was added to
-        // resolve the edge-case identified in RT-14350.
-        needLengthBar = getPosition() > 0 || cellCount >= cells.size();
-        needBreadthBar = maxPrefBreadth > viewportBreadth || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
-
-        // Start by optimistically deciding whether the length bar and
-        // breadth bar are needed and adjust the viewport dimensions
-        // accordingly. If during layout we find that one or the other of the
-        // bars actually is needed, then we will perform a cleanup pass
-
-        if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-            if (needBreadthBar) setViewportLength(viewportLength - breadthBarLength);
-            if (needLengthBar) setViewportBreadth(viewportBreadth - lengthBarBreadth);
-
-            breadthBar.setVisible(needBreadthBar);
-            lengthBar.setVisible(needLengthBar);
-        }
-        else {
-            breadthBar.setVisible(needBreadthBar && tempVisibility);
-            lengthBar.setVisible(needLengthBar && tempVisibility);
-        }
+        computeBarVisiblity();
     }
 
     @Override protected void setWidth(double value) {
@@ -1349,9 +1366,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
         
-        double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
-        double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
-
         // Update cell positions.
         // When rebuilding the cells, we add the cells and along the way compute
         // the maxPrefBreadth. Based on the computed value, we may add
@@ -1381,58 +1395,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 positionCell(cell, offset);
 
                 offset += getCellLength(cell);
-            }
-        }
-
-        // Now that we've laid out the cells, we may need to adjust the scroll
-        // bars and update the viewport dimensions based on the bars
-        // We have to do the following work twice because the first pass
-        // through the loop may have made the breadth bar visible, which will
-        // adjust the viewportLength, which may make the lengthBar need to
-        // be visible as well.
-        final int cellsSize = cells.size();
-        for (int i = 0; i < 2; i++) {
-            if (! lengthBar.isVisible()) {
-                // If cellCount is > than cells.size(), then we know we need the
-                // length bar.
-                if (cellCount > cellsSize) {
-                    if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                        lengthBar.setVisible(true);
-                    }
-                    else {
-                        lengthBar.setVisible(tempVisibility);
-                    }
-                } else if (cellCount == cellsSize) {
-                    // We must check a corner case here where the cell count
-                    // exactly matches the number of cells laid out. In this case,
-                    // we need to check the last cell's layout position + length
-                    // to determine if we need the length bar
-                    T lastCell = cells.getLast();
-                    if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                        lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > getViewportLength());
-                    }
-                    else {
-                        lengthBar.setVisible(((getCellPosition(lastCell) + getCellLength(lastCell)) > getViewportLength()) && tempVisibility);
-                    }
-                }
-                
-                // If the bar is needed, adjust the viewportBreadth
-                if (lengthBar.isVisible() && !BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                    setViewportBreadth(getViewportBreadth() - lengthBarBreadth);
-                }
-            }
-            
-            if (! breadthBar.isVisible()) {
-                final boolean visible = getMaxPrefBreadth() > getViewportBreadth();
-                if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                    breadthBar.setVisible(visible);
-                    if (visible) {
-                        setViewportLength(getViewportLength() - breadthBarLength);
-                    }
-                }
-                else {
-                    breadthBar.setVisible(visible && tempVisibility);
-                }
             }
         }
 

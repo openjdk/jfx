@@ -751,6 +751,39 @@ public class VirtualFlowTest {
         assertMatch(cells, flow.cells);
     }
 
+
+    @Test
+    public void testCellLayout_BiasedCellAndLengthBar() {
+        flow.setCreateCell(param -> new CellStub(flow) {
+            @Override protected double computeMinWidth(double height) { return 0; }
+            @Override protected double computeMaxWidth(double height) { return Double.MAX_VALUE; }
+            @Override protected double computePrefWidth(double height) {
+                return 200;
+            }
+
+            @Override protected double computeMinHeight(double width) { return 0; }
+            @Override protected double computeMaxHeight(double width) { return Double.MAX_VALUE; }
+            @Override protected double computePrefHeight(double width) {
+                return getIndex() == 0 ? 100 - 5 *(Math.floorDiv((int)width - 200, 10)) : 100;
+            }
+        });
+        flow.setCellCount(3);
+        flow.recreateCells(); // This help to override layoutChildren() in flow.setCellCount()
+        flow.getVbar().setPrefWidth(20); // Since Skins are not initialized, we set the pref width explicitly
+        flow.requestLayout();
+        pulse();
+        assertEquals(300, flow.cells.get(0).getWidth(), 1e-100);
+        assertEquals(50, flow.cells.get(0).getHeight(), 1e-100);
+
+        flow.resize(200, 300);
+
+        flow.requestLayout();
+        pulse();
+        assertEquals(200, flow.cells.get(0).getWidth(), 1e-100);
+        assertEquals(100, flow.cells.get(0).getHeight(), 1e-100);
+
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     //
     //  Cell Life Cycle
