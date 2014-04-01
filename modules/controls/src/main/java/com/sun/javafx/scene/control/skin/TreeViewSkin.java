@@ -485,10 +485,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 return flow.getPrivateCell(focusedIndex);
             }
             case ROW_AT_INDEX: {
-            	/* Note: Using getVisibleCell() is safer than getCell() for this case.
-            	 * getCell() frequently recycles cells for hidden items which can cause 
-            	 * next sibling traversal to infinite loop.
-            	 */
                 final int rowIndex = (Integer)parameters[0];
                 return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
             }

@@ -286,7 +286,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
                 List<Node> selection = new ArrayList<>();
                 TableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
                 for (TablePosition pos : sm.getSelectedCells()) {
-                    TableRow<T> row = flow.getCell(pos.getRow());
+                    TableRow<T> row = flow.getPrivateCell(pos.getRow());
                     if (row != null) selection.add(row);
                 }
                 return FXCollections.observableArrayList(selection);

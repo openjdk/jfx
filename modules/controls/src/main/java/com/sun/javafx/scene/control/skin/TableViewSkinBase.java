@@ -937,11 +937,11 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             case FOCUS_ITEM: {
                 TableFocusModel<S,?> fm = getFocusModel();
                 int focusedIndex = fm.getFocusedIndex();
-                return flow.getCell(focusedIndex);
+                return flow.getPrivateCell(focusedIndex);
             }
             case CELL_AT_ROW_COLUMN: {
                 int rowIndex = (Integer)parameters[0];
-                return flow.getCell(rowIndex);
+                return flow.getPrivateCell(rowIndex);
             }
             case COLUMN_AT_INDEX: {
                 int index = (Integer)parameters[0];

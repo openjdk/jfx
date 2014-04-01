@@ -427,7 +427,6 @@ final class WinAccessible extends PlatformAccessible {
             case TEXT_FIELD:
             case PASSWORD_FIELD:
             case TEXT_AREA: return UIA_TextControlTypeId;
-            case TREE_TABLE_VIEW:
             case TABLE_VIEW: return UIA_TableControlTypeId;
             case LIST_VIEW: return UIA_ListControlTypeId;
             case TREE_TABLE_CELL:
@@ -438,6 +437,7 @@ final class WinAccessible extends PlatformAccessible {
             case CHECKBOX: return UIA_CheckBoxControlTypeId;
             case COMBOBOX: return UIA_ComboBoxControlTypeId;
             case HYPERLINK: return UIA_HyperlinkControlTypeId;
+            case TREE_TABLE_VIEW:
             case TREE_VIEW: return UIA_TreeControlTypeId;
             case TREE_TABLE_ITEM:
             case TREE_ITEM: return UIA_TreeItemControlTypeId;
@@ -1210,6 +1210,7 @@ final class WinAccessible extends PlatformAccessible {
                 case TABLE_ROW:
                 case TABLE_CELL: return getContainer(Role.TABLE_VIEW);
                 case LIST_ITEM: return getContainer(Role.LIST_VIEW);
+                case TREE_TABLE_ITEM:
                 case TREE_TABLE_CELL: return getContainer(Role.TREE_TABLE_VIEW);
                 default:
             }
@@ -1223,8 +1224,9 @@ final class WinAccessible extends PlatformAccessible {
         Role role = (Role) getAttribute(ROLE);
         if (role != null) {
             switch (role) {
-                case TABLE_ROW:
+                case TREE_TABLE_ITEM:
                 case TREE_TABLE_CELL:
+                case TABLE_ROW:
                 case TABLE_CELL: result = (Integer)getAttribute(ROW_INDEX); break;
                 case LIST_ITEM: result = (Integer)getAttribute(INDEX); break;
                 default:

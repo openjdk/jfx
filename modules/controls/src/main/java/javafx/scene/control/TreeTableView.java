@@ -857,7 +857,7 @@ public class TreeTableView<S> extends Control {
      */
     public final ObjectProperty<TreeTableColumn<S,?>> treeColumnProperty() {
         if (treeColumn == null) {
-            treeColumn = new SimpleObjectProperty<TreeTableColumn<S,?>>(this, "treeColumn", null);
+            treeColumn = new SimpleObjectProperty<>(this, "treeColumn", null);
         }
         return treeColumn;
     }
@@ -1857,9 +1857,8 @@ public class TreeTableView<S> extends Control {
 
             case TREE_ITEM_COUNT:
             case ROW_COUNT: return getExpandedItemCount();
-
-            // --- TableView-specific attributes
             case COLUMN_COUNT: return getVisibleLeafColumns().size();
+
             /*
              * TreeTableViewSkin returns TreeTableRows back to TreeTableView.
              * TreeTableRowSkin returns TreeTableCells back to TreeTableRow.
@@ -1882,14 +1881,10 @@ public class TreeTableView<S> extends Control {
                 MultipleSelectionModel sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
             }
+
             case COLUMN_INDEX: //Skin
             case HEADER: //Skin
-
-                // --- TreeView-specific attributes
             case ROW_AT_INDEX: //Skin
-            case SELECTED_ROWS: //Skin
-            case TREE_ITEM_AT_INDEX: //Skin
-
             case VERTICAL_SCROLLBAR: //Skin
             case HORIZONTAL_SCROLLBAR: // Skin
 
