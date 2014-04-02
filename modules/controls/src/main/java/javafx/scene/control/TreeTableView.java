@@ -2874,6 +2874,9 @@ public class TreeTableView<S> extends Control {
         private void updateSelectedIndex(int row) {
             setSelectedIndex(row);
             setSelectedItem(getModelItem(row));
+
+            /* Does this get all the change events ? */
+            getTreeTableView().accSendNotification(Attribute.SELECTED_CELLS);
         }
         
         @Override public void focus(int row) {
