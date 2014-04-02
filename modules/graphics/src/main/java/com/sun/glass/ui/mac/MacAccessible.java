@@ -274,7 +274,7 @@ final class MacAccessible extends PlatformAccessible {
          * as a ProgressIndicatorRole.
          */
         NSAccessibilityBusyIndicatorRole(Role.PROGRESS_INDICATOR, null, null),
-        NSAccessibilityStaticTextRole(new Role[] {Role.TEXT},
+        NSAccessibilityStaticTextRole(new Role[] {Role.TEXT, Role.TREE_TABLE_CELL},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityValueAttribute,
@@ -365,7 +365,7 @@ final class MacAccessible extends PlatformAccessible {
             },
             null, null
         ),
-        NSAccessibilityTableRole(new Role[] {Role.LIST_VIEW, Role.TABLE_VIEW, Role.TREE_TABLE_VIEW},
+        NSAccessibilityTableRole(new Role[] {Role.LIST_VIEW, Role.TABLE_VIEW},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityColumnsAttribute,
@@ -390,7 +390,7 @@ final class MacAccessible extends PlatformAccessible {
             },
             null
         ),
-        NSAccessibilityCellRole(new Role[] {Role.TABLE_CELL, Role.TREE_TABLE_CELL},
+        NSAccessibilityCellRole(new Role[] {Role.TABLE_CELL/*, Role.TREE_TABLE_CELL*/},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityColumnIndexRangeAttribute,
                 MacAttributes.NSAccessibilityEnabledAttribute,
@@ -407,7 +407,7 @@ final class MacAccessible extends PlatformAccessible {
             },
             null
         ),
-        NSAccessibilityOutlineRole(Role.TREE_VIEW,
+        NSAccessibilityOutlineRole(new Role[] {Role.TREE_VIEW, Role.TREE_TABLE_VIEW},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityColumnsAttribute,
                 MacAttributes.NSAccessibilityEnabledAttribute,
@@ -415,6 +415,7 @@ final class MacAccessible extends PlatformAccessible {
                 MacAttributes.NSAccessibilityRowsAttribute,
                 MacAttributes.NSAccessibilitySelectedRowsAttribute,
             },
+            null,
             null
         ),
         NSAccessibilityDisclosureTriangleRole(Role.DISCLOSURE_NODE,
@@ -672,10 +673,19 @@ final class MacAccessible extends PlatformAccessible {
                     macNotification = MacNotifications.NSAccessibilityRowCollapsedNotification;
                 }
 
-                if (getAttribute(ROLE) == Role.TREE_ITEM) {
-                    long treeView = getAccessible(getContainerNode(Role.TREE_VIEW));
-                    if (treeView != 0) {
-                        NSAccessibilityPostNotification(treeView, MacNotifications.NSAccessibilityRowCountChangedNotification.ptr);
+                Role role = (Role) getAttribute(ROLE);
+                if (role == Role.TREE_ITEM || role == Role.TREE_TABLE_ITEM) {
+                    long control = 0;
+                    switch (role) {
+                        case TREE_ITEM:
+                            control = getAccessible(getContainerNode(Role.TREE_VIEW));
+                            break;
+                        case TREE_TABLE_ITEM:
+                            control = getAccessible(getContainerNode(Role.TREE_TABLE_VIEW));
+                            break;
+                    }
+                    if (control != 0) {
+                        NSAccessibilityPostNotification(control, MacNotifications.NSAccessibilityRowCountChangedNotification.ptr);
                     }
                 }
                 break;
@@ -722,7 +732,7 @@ final class MacAccessible extends PlatformAccessible {
             }
 
             /* ListView is row-based, must remove all the cell-based attributes */
-            if (role == Role.LIST_VIEW) {
+            if (role == Role.LIST_VIEW || role == Role.TREE_TABLE_VIEW) {
                 attrs.remove(MacAttributes.NSAccessibilitySelectedCellsAttribute);
             }
 
@@ -1013,7 +1023,7 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityTitleAttribute: {
-                /* 
+                /*
                  * Voice over sends title attributes in unexpected cases.
                  * For text roles, where the title is reported in AXValue, reporting 
                  * the value again in AXTitle will cause voice over to read the text twice. 
@@ -1023,6 +1033,31 @@ final class MacAccessible extends PlatformAccessible {
                     case TEXT:
                     case TEXT_FIELD:
                     case TEXT_AREA: return null;
+                    case TREE_TABLE_ITEM: return null;
+                    case TREE_TABLE_CELL: {
+                        /*
+                         * When clicking on a TreeTableRow, only a single cell is selected
+                         * by VoiceOver to be read out. Here we add the text for the other
+                         * cells in the row, so that all cells are read out.
+                         * TODO should we do as SWT does and read out empty cells as 'blank'?
+                         */
+                        Node treeTableRow = (Node) getAttribute(PARENT);
+                        if (treeTableRow == null) break;
+                        Role parentRole = (Role) treeTableRow.accGetAttribute(ROLE);
+                        if (parentRole == Role.TREE_TABLE_ITEM) {
+                            Stream<Node> children = ((List<Node>)treeTableRow.accGetAttribute(CHILDREN)).stream();
+
+                            final StringBuilder text = new StringBuilder();
+                            children.forEach(node -> {
+                                Role childRole = (Role) node.accGetAttribute(ROLE);
+                                if (childRole == Role.TREE_TABLE_CELL) {
+                                    String title = (String) node.accGetAttribute(TITLE);
+                                    text.append(title + " ");
+                                }
+                            });
+                            result = text.toString();
+                        }
+                    }
                     default:
                 }
                 break;
@@ -1156,7 +1191,7 @@ final class MacAccessible extends PlatformAccessible {
                 Stream<MacAttributes> attrs = macRole.macParameterizedAttributes.stream();
 
                 /* ListView is row-based, must remove all the cell-based attributes */
-                if (role == Role.LIST_VIEW) {
+                if (role == Role.LIST_VIEW || role == Role.TREE_TABLE_VIEW) {
                     attrs = attrs.filter(a -> a != MacAttributes.NSAccessibilityCellForColumnAndRowParameterizedAttribute);
                 }
                 return attrs.mapToLong(a -> a.ptr).toArray();
