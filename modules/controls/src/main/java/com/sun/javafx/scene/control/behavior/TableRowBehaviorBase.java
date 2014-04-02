@@ -32,6 +32,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
+import javafx.scene.control.TreeItem;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
@@ -115,9 +116,11 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
                     final int anchorRow = anchor.getRow();
                     selectRows(anchorRow, index);
                 } else {
-                    sm.clearAndSelect(getIndex());
+                    simpleSelect(button, clickCount, shortcutDown);
                 }
             }
+        } else {
+            simpleSelect(button, clickCount, shortcutDown);
         }
     }
 

@@ -626,4 +626,27 @@ public class TreeTableViewMouseInputTest {
         MouseEventFirer mouse = new MouseEventFirer(row);
         mouse.fireMousePressAndRelease(1, 100, 10);
     }
+
+    @Test public void test_rt_36509() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+
+        // expand
+        assertFalse(root.isExpanded());
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, 2);
+        assertTrue(root.isExpanded());
+
+        // collapse
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, 2);
+        assertFalse(root.isExpanded());
+
+        // expand again
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, 2);
+        assertTrue(root.isExpanded());
+    }
 }
