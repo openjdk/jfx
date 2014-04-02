@@ -227,7 +227,8 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     null,
                     params -> {
                         extractParamsFromAppResources(params);
-                        return (Boolean) params.get("fxPackaging");
+                        Boolean result = (Boolean) params.get("fxPackaging");
+                        return (result == null) ? Boolean.FALSE : Boolean.TRUE;
                     },
                     false,
                     (s, p) -> Boolean.valueOf(s)
@@ -368,7 +369,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "stopOnUninstall",
                     Boolean.class,
                     null,
-                    params -> false,
+                    params -> true,
                     false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
@@ -414,11 +415,11 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             );
 
     @SuppressWarnings("unchecked")
-    public static final StandardBundlerParam<List<String>> LICENSE_FILES =
+    public static final StandardBundlerParam<List<String>> LICENSE_FILE =
             new StandardBundlerParam<>(
-                    I18N.getString("param.license-files.name"),
-                    I18N.getString("param.license-files.description"), //FIXME incorrect
-                    BundleParams.PARAM_LICENSE_FILES,
+                    I18N.getString("param.license-file.name"),
+                    I18N.getString("param.license-file.description"),
+                    BundleParams.PARAM_LICENSE_FILE,
                     (Class<List<String>>)(Object)List.class,
                     null,
                     params -> Collections.<String>emptyList(),

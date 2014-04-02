@@ -128,8 +128,16 @@ public class LinuxAppBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Smoke");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), fakeMainJar.toString());
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
         
         File output = bundler.execute(bundleParams, new File(workDir, "smoke"));
         validatePackageCfg(output);

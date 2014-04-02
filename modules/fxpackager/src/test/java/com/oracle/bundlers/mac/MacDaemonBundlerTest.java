@@ -25,32 +25,40 @@
 
 package com.oracle.bundlers.mac;
 
+import static com.oracle.bundlers.StandardBundlerParam.APP_NAME;
+import static com.oracle.bundlers.StandardBundlerParam.IDENTIFIER;
+import static com.oracle.bundlers.StandardBundlerParam.BUILD_ROOT;
+import static com.oracle.bundlers.StandardBundlerParam.VERBOSE;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import com.oracle.bundlers.AbstractBundler;
-import com.oracle.bundlers.Bundler;
 import com.sun.javafx.tools.packager.Log;
-import com.sun.javafx.tools.packager.bundlers.*;
+import com.sun.javafx.tools.packager.bundlers.ConfigException;
+import com.sun.javafx.tools.packager.bundlers.MacAppBundler;
+import com.sun.javafx.tools.packager.bundlers.RelativeFileSet;
+import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
+
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.*;
-
-import static com.oracle.bundlers.StandardBundlerParam.*;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class MacDMGBundlerTest {
+
+public class MacDaemonBundlerTest {
 
     static File tmpBase;
     static File workDir;
-    static File appResourcesDir;
-    static File fakeMainJar;
-    static Set<File> appResources;
     static boolean retain = false;
 
     @BeforeClass
@@ -61,21 +69,13 @@ public class MacDMGBundlerTest {
         Log.setLogger(new Log.Logger(true));
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
-
-        workDir = new File("build/tmp/tests", "macdmg");
-        appResourcesDir = new File("build/tmp/tests", "appResources");
-        fakeMainJar = new File(appResourcesDir, "mainApp.jar");
-
-        appResources = new HashSet<>(Arrays.asList(fakeMainJar,
-                new File(appResourcesDir, "LICENSE"),
-                new File(appResourcesDir, "LICENSE2")
-        ));
+        workDir = new File("build/tmp/tests", "macdaemon");
     }
 
     @Before
     public void createTmpDir() throws IOException {
         if (retain) {
-            tmpBase = new File("build/tmp/tests/macdmg");
+            tmpBase = new File("build/tmp/tests/macdaemon");
         } else {
             tmpBase = Files.createTempDirectory("fxpackagertests").toFile();
         }
@@ -109,12 +109,13 @@ public class MacDMGBundlerTest {
         }
     }
 
+    
     /**
      * See if smoke comes out
      */
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
-        AbstractBundler bundler = new MacDMGBundler();
+        AbstractBundler bundler = new MacDaemonBundler();
 
         assertNotNull(bundler.getName());
         assertNotNull(bundler.getID());
@@ -125,19 +126,9 @@ public class MacDMGBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(APP_NAME.getID(), "Smoke");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
-        bundleParams.put(MAIN_JAR.getID(),
-                new RelativeFileSet(fakeMainJar.getParentFile(),
-                        new HashSet<>(Arrays.asList(fakeMainJar)))
-        );
-        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), fakeMainJar.toString());
-        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-        bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
+        bundleParams.put(APP_NAME.getID(), "Smoke Test App");
+        bundleParams.put(IDENTIFIER.getID(), "smoke.app");        
         bundleParams.put(VERBOSE.getID(), true);
-//        bundleParams.put(StandardBundlerParam.RUNTIME.getID(),
-//                JreUtils.extractJreAsRelativeFileSet(MacAppBundler.adjustMacRuntimePath(System.getProperty("java.home")),
-//                        MacAppBundler.macJDKRules));
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -147,29 +138,5 @@ public class MacDMGBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
     }
-
-    /**
-     * The bare minimum configuration needed to make it work
-     * <ul>
-     *     <li>Where to build it</li>
-     *     <li>The jar containing the application (with a main-class attribute)</li>
-     * </ul>
-     *
-     * All other values will be driven off of those two values.
-     */
-    @Test
-    public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
-        Bundler bundler = new MacDMGBundler();
-
-        Map<String, Object> bundleParams = new HashMap<>();
-
-        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-
-        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-
-        File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
-        System.err.println("Bundle at - " + output);
-        assertNotNull(output);
-        assertTrue(output.exists());
-    }
+    
 }

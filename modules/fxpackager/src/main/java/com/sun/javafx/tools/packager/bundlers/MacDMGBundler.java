@@ -37,7 +37,7 @@ import static com.oracle.bundlers.StandardBundlerParam.*;
 
 public class MacDMGBundler extends MacBaseInstallerBundler {
 
-    static final String DEFAULT_BACKGROUND_IMAGE="background.png";
+    static final String DEFAULT_BACKGROUND_IMAGE="background_dmg.png";
     static final String DEFAULT_DMG_SETUP_SCRIPT="DMGsetup.scpt";
     static final String TEMPLATE_BUNDLE_ICON = "GenericApp.icns";
 
@@ -176,12 +176,12 @@ public class MacDMGBundler extends MacBaseInstallerBundler {
 
     private void prepareLicense(Map<String, ? super Object> params) {
         try {
-            if (LICENSE_FILES.fetchFrom(params).isEmpty()) {
+            if (LICENSE_FILE.fetchFrom(params).isEmpty()) {
                 return;
             }
-
+            
             File licFile = new File(APP_RESOURCES.fetchFrom(params).getBaseDirectory(),
-                    LICENSE_FILES.fetchFrom(params).get(0));
+                    LICENSE_FILE.fetchFrom(params).get(0));
 
             byte[] licenseContentOriginal = IOUtils.readFully(licFile);
             BASE64Encoder encoder = new BASE64Encoder();
@@ -368,7 +368,7 @@ public class MacDMGBundler extends MacBaseInstallerBundler {
         } else {
             Log.verbose("Skip enabling custom icon as SetFile utility is not found");
         }
-
+        
         // Detach the temporary image
         pb = new ProcessBuilder(
                 hdiutil,

@@ -112,7 +112,6 @@ public class WinAppBundler extends AbstractBundler {
     );
 
     private final static String EXECUTABLE_NAME = "WinLauncher.exe";
-    private final static String EXECUTABLE_SVC_NAME = "WinLauncherSvc.exe";
 
     private static final String TOOL_ICON_SWAP="IconSwap.exe";
 
@@ -175,12 +174,6 @@ public class WinAppBundler extends AbstractBundler {
                     I18N.getString("error.no-windows-resources.advice"));
         }
 
-        if (SERVICE_HINT.fetchFrom(p) && WinResources.class.getResource(EXECUTABLE_SVC_NAME) == null) {
-            throw new ConfigException(
-                    I18N.getString("error.no-windows-resources"),
-                    I18N.getString("error.no-windows-resources.advice"));
-        }
-
         if (MAIN_JAR.fetchFrom(p) == null) {
             throw new ConfigException(
                     I18N.getString("error.no-application-jar"),
@@ -215,10 +208,6 @@ public class WinAppBundler extends AbstractBundler {
         return APP_NAME.fetchFrom(p);
     }
 
-    static String getAppSvcName(Map<String, ? super Object>  p) {
-        return APP_NAME.fetchFrom(p) + "Svc";
-    }
-
     //it is static for the sake of sharing with "Exe" bundles
     // that may skip calls to validate/bundle in this class!
     private static File getRootDir(File outDir, Map<String, ? super Object> p) {
@@ -227,10 +216,6 @@ public class WinAppBundler extends AbstractBundler {
 
     public static File getLauncher(File outDir, Map<String, ? super Object> p) {
         return new File(getRootDir(outDir, p), getAppName(p)+".exe");
-    }
-
-    public static File getLauncherSvc(File outDir, Map<String, ? super Object> p) {
-        return new File(getRootDir(outDir, p), getAppName(p)+"Svc.exe");
     }
 
     private File getConfig_AppIcon(Map<String, ? super Object> params) {
@@ -299,15 +284,6 @@ public class WinAppBundler extends AbstractBundler {
                     RAW_EXECUTABLE_URL.fetchFrom(p),
                     executableFile);
             executableFile.setExecutable(true, false);
-
-            // Copy executable to install application as service
-            if (SERVICE_HINT.fetchFrom(p)) {
-                File executableSvcFile = getLauncherSvc(outputDirectory, p);
-                IOUtils.copyFromURL(
-                        WinResources.class.getResource(EXECUTABLE_SVC_NAME),
-                        executableSvcFile);
-                executableSvcFile.setExecutable(true, false);
-            }
 
             //Update branding of exe file
             if (REBRAND_EXECUTABLE.fetchFrom(p) && getConfig_AppIcon(p).exists()) {
@@ -455,8 +431,8 @@ public class WinAppBundler extends AbstractBundler {
     }
 
     @Override
-    public BundleType getBundleType() {
-        return BundleType.IMAGE;
+    public String getBundleType() {
+        return "IMAGE";
     }
 
     @Override

@@ -81,7 +81,7 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
                     "win.64BitJreRuntime",
                     Boolean.class,
                     null,
-                    params -> {extractFlagsFromRuntime(params); return "64".equals(params.get(".runtime.bit-arc"));},
+                    params -> {extractFlagsFromRuntime(params); return "64".equals(params.get(".runtime.bit-arch"));},
                     false,
                     (s, p) -> Boolean.valueOf(s)
             );

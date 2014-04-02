@@ -39,6 +39,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.oracle.bundlers.StandardBundlerParam.DESCRIPTION;
+import static com.oracle.bundlers.StandardBundlerParam.RUN_AT_STARTUP;
+import static com.oracle.bundlers.StandardBundlerParam.SERVICE_HINT;
+import static com.oracle.bundlers.StandardBundlerParam.START_ON_INSTALL;
+import static com.oracle.bundlers.StandardBundlerParam.STOP_ON_UNINSTALL;
 import static com.oracle.bundlers.windows.WindowsBundlerParam.*;
 
 public class WinMsiBundler  extends AbstractBundler {
@@ -52,6 +56,12 @@ public class WinMsiBundler  extends AbstractBundler {
             "win.app.bundler",
             WinAppBundler.class, null, params -> new WinAppBundler(), false, null);
 
+    public static final BundlerParamInfo<WinServiceBundler> SERVICE_BUNDLER = new WindowsBundlerParam<>(
+            I18N.getString("param.service-bundler.name"),
+            I18N.getString("param.service-bundler.description"),
+            "win.service.bundler",
+            WinServiceBundler.class, null, params -> new WinServiceBundler(), false, null);
+    
     public static final BundlerParamInfo<Boolean> CAN_USE_WIX36 = new WindowsBundlerParam<>(
             I18N.getString("param.can-use-wix36.name"),
             I18N.getString("param.can-use-wix36.description"),
@@ -159,8 +169,8 @@ public class WinMsiBundler  extends AbstractBundler {
     }
 
     @Override
-    public BundleType getBundleType() {
-        return BundleType.INSTALLER;
+    public String getBundleType() {
+        return "INSTALLER";
     }
 
     @Override
@@ -185,6 +195,10 @@ public class WinMsiBundler  extends AbstractBundler {
                 MENU_HINT,
                 MSI_SYSTEM_WIDE,
                 SHORTCUT_HINT,
+                SERVICE_HINT,
+                START_ON_INSTALL,
+                STOP_ON_UNINSTALL,
+                RUN_AT_STARTUP,
                 UPGRADE_UUID,
                 VENDOR,
                 VERSION
@@ -248,6 +262,10 @@ public class WinMsiBundler  extends AbstractBundler {
             //we are not interested in return code, only possible exception
             APP_BUNDLER.fetchFrom(p).doValidate(p);
 
+            if (SERVICE_HINT.fetchFrom(p)) {
+                SERVICE_BUNDLER.fetchFrom(p).validate(p);                
+            }
+            
             double candleVersion = findToolVersion(TOOL_CANDLE_EXECUTABLE.fetchFrom(p));
             double lightVersion = findToolVersion(TOOL_LIGHT_EXECUTABLE.fetchFrom(p));
 
@@ -341,6 +359,12 @@ public class WinMsiBundler  extends AbstractBundler {
         File bundleRoot = MSI_IMAGE_DIR.fetchFrom(p);
         File appDir = APP_BUNDLER.fetchFrom(p).doBundle(p, bundleRoot, true);
         p.put(WIN_APP_IMAGE.getID(), appDir);
+        
+        if (SERVICE_HINT.fetchFrom(p) && appDir != null) {
+            // just copies the service launcher to the app root folder
+            appDir = SERVICE_BUNDLER.fetchFrom(p).doBundle(p, appDir, true);
+        }
+        
         return appDir != null;
     }
 
@@ -541,8 +565,8 @@ public class WinMsiBundler  extends AbstractBundler {
         File launcherFile = WinAppBundler.getLauncher(
                 /* Step up as WinAppBundler will add app folder */
                 imageRootDir.getParentFile(), params);
-        File launcherSvcFile = WinAppBundler.getLauncherSvc(
-                                imageRootDir.getParentFile(), params);
+        File launcherSvcFile = WinServiceBundler.getLauncherSvc(
+                                imageRootDir, params);
 
         //Find out if we need to use registry. We need it if
         //  - we doing user level install as file can not serve as KeyPath
@@ -613,7 +637,7 @@ public class WinMsiBundler  extends AbstractBundler {
                 needServiceEntries = true;
             }
         }
-
+        
         if (needServiceEntries) {
             out.println(prefix + " <Component Id=\"comp" + (compId++) + "\" DiskId=\"1\""
                     + " Guid=\"" + UUID.randomUUID().toString() + "\""

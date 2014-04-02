@@ -38,6 +38,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.oracle.bundlers.StandardBundlerParam.SERVICE_HINT;
 import static com.oracle.bundlers.StandardBundlerParam.VERBOSE;
 import static com.oracle.bundlers.windows.WindowsBundlerParam.*;
 
@@ -52,6 +53,12 @@ public class WinExeBundler extends AbstractBundler {
             "win.app.bundler",
             WinAppBundler.class, null, params -> new WinAppBundler(), false, null);
 
+    public static final BundlerParamInfo<WinServiceBundler> SERVICE_BUNDLER = new WindowsBundlerParam<>(
+            I18N.getString("param.service-bundler.name"),
+            I18N.getString("param.service-bundler.description"),
+            "win.service.bundler",
+            WinServiceBundler.class, null, params -> new WinServiceBundler(), false, null);
+    
     public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
@@ -124,8 +131,8 @@ public class WinExeBundler extends AbstractBundler {
     }
 
     @Override
-    public BundleType getBundleType() {
-        return BundleType.INSTALLER;
+    public String getBundleType() {
+        return "INSTALLER";
     }
 
     @Override
@@ -148,10 +155,14 @@ public class WinExeBundler extends AbstractBundler {
                 IDENTIFIER,
                 EXE_IMAGE_DIR,
                 IMAGES_ROOT,
-                LICENSE_FILES,
+                LICENSE_FILE,
                 MENU_GROUP,
                 MENU_HINT,
                 SHORTCUT_HINT,
+                SERVICE_HINT,
+                START_ON_INSTALL,
+                STOP_ON_UNINSTALL,
+                RUN_AT_STARTUP,
                 TITLE,
                 VENDOR,
                 VERSION
@@ -213,6 +224,10 @@ public class WinExeBundler extends AbstractBundler {
             //we are not interested in return code, only possible exception
             APP_BUNDLER.fetchFrom(p).validate(p);
 
+            if (SERVICE_HINT.fetchFrom(p)) {
+                SERVICE_BUNDLER.fetchFrom(p).validate(p);                
+            }
+            
             double innoVersion = findToolVersion(TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(p));
 
             //Inno Setup 5+ is required
@@ -237,13 +252,21 @@ public class WinExeBundler extends AbstractBundler {
         if (appOutputDir == null) {
             return false;
         }
-        List<String> licenseFiles = LICENSE_FILES.fetchFrom(params);
+        List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
         if (licenseFiles != null) {
             RelativeFileSet appRoot = APP_RESOURCES.fetchFrom(params);
             //need to copy license file to the root of win-app.image
             for (String s : licenseFiles) {
                 File lfile = new File(appRoot.getBaseDirectory(), s);
                 IOUtils.copyFile(lfile, new File(imageDir, lfile.getName()));
+            }
+        }
+        
+        if (SERVICE_HINT.fetchFrom(params)) {
+            // copies the service launcher to the app root folder
+            appOutputDir = SERVICE_BUNDLER.fetchFrom(params).doBundle(params, appOutputDir, true);
+            if (appOutputDir == null) {
+                return false;
             }
         }
         return true;
@@ -342,7 +365,7 @@ public class WinExeBundler extends AbstractBundler {
 
 
     private String getLicenseFile(Map<String, ? super Object> params) {
-        List<String> licenseFiles = LICENSE_FILES.fetchFrom(params);
+        List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
         if (licenseFiles == null || licenseFiles.isEmpty()) {
             return "";
         } else {
@@ -356,10 +379,13 @@ public class WinExeBundler extends AbstractBundler {
         data.put("PRODUCT_APP_IDENTIFIER", getAppIdentifier(params));
 
         data.put("APPLICATION_NAME", WinAppBundler.getAppName(params));
+
         data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
         data.put("APPLICATION_VERSION", VERSION.fetchFrom(params)); // TODO make our own version paraminfo?
+        
         data.put("APPLICATION_LAUNCHER_FILENAME",
                 WinAppBundler.getLauncher(EXE_IMAGE_DIR.fetchFrom(params), params).getName());
+
         data.put("APPLICATION_DESKTOP_SHORTCUT", SHORTCUT_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_MENU_SHORTCUT", MENU_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_GROUP", MENU_GROUP.fetchFrom(params));
@@ -383,7 +409,7 @@ public class WinExeBundler extends AbstractBundler {
         }
 
         if (SERVICE_HINT.fetchFrom(params)) {
-            data.put("RUN_FILENAME", WinAppBundler.getAppSvcName(params));
+            data.put("RUN_FILENAME", WinServiceBundler.getAppSvcName(params));
         } else {
             data.put("RUN_FILENAME", WinAppBundler.getAppName(params));
         }

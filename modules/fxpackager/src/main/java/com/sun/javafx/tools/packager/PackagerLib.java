@@ -30,6 +30,7 @@ import com.sun.javafx.tools.ant.Utils;
 import com.sun.javafx.tools.packager.DeployParams.Icon;
 import com.sun.javafx.tools.packager.JarSignature.InputStreamSource;
 import com.sun.javafx.tools.packager.bundlers.*;
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import com.sun.javafx.tools.resource.DeployResource;
 import com.sun.javafx.tools.resource.PackagerResource;
 import java.io.BufferedReader;
@@ -69,6 +70,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -471,7 +473,7 @@ public class PackagerLib {
 
             BundleParams bp = deployParams.getBundleParams();
             if (bp != null) {
-                generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType(), deployParams.getTargetFormat(), deployParams.verbose);
+                generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType().toString(), deployParams.getTargetFormat(), deployParams.verbose);
             }
         } catch (Exception ex) {
             throw new PackagerException(ex, "ERR_DeployFailed", ex.getMessage());
@@ -480,7 +482,7 @@ public class PackagerLib {
         this.deployParams = null;
     }
 
-    private void generateNativeBundles(File outdir, Map<String, ? super Object> params, BundleType bundleType, String bundleFormat, boolean verbose) {
+    private void generateNativeBundles(File outdir, Map<String, ? super Object> params, String bundleType, String bundleFormat, boolean verbose) {
         outdir = new File(outdir, "bundles");
 
         if (params.containsKey(RUNTIME.getID())) {
@@ -500,10 +502,11 @@ public class PackagerLib {
         for (com.oracle.bundlers.Bundler bundler : Bundlers.createBundlersInstance().getBundlers(bundleType)) {
             // if they specify the bundle format, require we match the ID
             if (bundleFormat != null && !bundleFormat.equals(bundler.getID())) continue;
-            
+
+            Map<String, ? super Object> localParams = new HashMap<>(params);
             try {
-                if (bundler.validate(params)) {
-                    bundler.execute(params, outdir);
+                if (bundler.validate(localParams)) {
+                    bundler.execute(localParams, outdir);
                 }
                 
             } catch (UnsupportedPlatformException e) {
@@ -767,33 +770,27 @@ public class PackagerLib {
         }
         final Process p = Runtime.getRuntime().exec(argsList.toArray(new String[argsList.size()]));
         final BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
-        Thread t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String line;
-                    while ((line = in.readLine()) != null) {
-                        System.out.println(line);
-                    }
-                } catch (IOException ioe) {
-                    Log.verbose(ioe);
+        Thread t = new Thread(() -> {
+            try {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    System.out.println(line);
                 }
+            } catch (IOException ioe) {
+                Log.verbose(ioe);
             }
         });
         t.setDaemon(true);
         t.start();
         final BufferedReader err = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-        t = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    String line;
-                    while ((line = err.readLine()) != null) {
-                        System.err.println(line);
-                    }
-                } catch (IOException ioe) {
-                    Log.verbose(ioe);
+        t = new Thread(() -> {
+            try {
+                String line;
+                while ((line = err.readLine()) != null) {
+                    System.err.println(line);
                 }
+            } catch (IOException ioe) {
+                Log.verbose(ioe);
             }
         });
         t.setDaemon(true);

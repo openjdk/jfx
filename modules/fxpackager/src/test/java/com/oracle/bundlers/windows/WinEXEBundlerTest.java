@@ -72,7 +72,10 @@ public class WinEXEBundlerTest {
         appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
-        appResources = new HashSet<>(Arrays.asList(fakeMainJar));
+        appResources = new HashSet<>(Arrays.asList(fakeMainJar,
+                new File(appResourcesDir, "LICENSE"),
+                new File(appResourcesDir, "LICENSE2")
+        ));
     }
 
     @Before
@@ -130,8 +133,17 @@ public class WinEXEBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Smoke");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), fakeMainJar.toString());
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(VERBOSE.getID(), true);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
 
         File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
         System.err.println("Bundle at - " + result);

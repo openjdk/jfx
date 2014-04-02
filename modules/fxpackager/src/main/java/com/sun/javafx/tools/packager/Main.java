@@ -28,7 +28,7 @@ package com.sun.javafx.tools.packager;
 import com.oracle.bundlers.Bundler;
 import com.oracle.bundlers.BundlerParamInfo;
 import com.oracle.bundlers.Bundlers;
-import com.sun.javafx.tools.packager.bundlers.BundleType;
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
 
@@ -280,6 +280,8 @@ public class Main {
                             deployParams.setDescription(nextArg(args, i++));
                         } else if(arg.equalsIgnoreCase("-appclass")) {
                             deployParams.setApplicationClass(nextArg(args, i++));
+                        } else if(arg.equalsIgnoreCase("-daemon")) {
+                            deployParams.setServiceHint(true);
                         } else if (arg.equalsIgnoreCase("-preloader")) {
                             deployParams.setPreloader(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-paramFile")) {

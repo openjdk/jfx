@@ -27,26 +27,27 @@ package com.oracle.bundlers.mac;
 
 import com.oracle.bundlers.BundlerParamInfo;
 import com.oracle.bundlers.StandardBundlerParam;
-
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.IOUtils;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
 import com.sun.javafx.tools.resource.mac.MacResources;
 
-import java.io.*;
-import java.text.MessageFormat;import java.util.ArrayList;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.io.Writer;
+import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 
-import static com.oracle.bundlers.StandardBundlerParam.APP_NAME;
-import static com.oracle.bundlers.StandardBundlerParam.BUILD_ROOT;
-import static com.oracle.bundlers.StandardBundlerParam.IDENTIFIER;
-import static com.oracle.bundlers.StandardBundlerParam.SERVICE_HINT;
-import static com.oracle.bundlers.StandardBundlerParam.VERBOSE;
+import static com.oracle.bundlers.StandardBundlerParam.*;
 
 public class MacPKGBundler extends MacBaseInstallerBundler {
 
@@ -56,8 +57,12 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
     public final static String MAC_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "macosx" + File.separator;
     
+    private static final String DEFAULT_BACKGROUND_IMAGE = "background_pkg.png";
+    
     private static final String TEMPLATE_PREINSTALL_SCRIPT = "preinstall.template";
     private static final String TEMPLATE_POSTINSTALL_SCRIPT = "postinstall.template";
+    
+    private static final String TEMPLATE_DISTRIBUTION_XML  = "distribution.dist.template";
     
     private static final BundlerParamInfo<File> PACKAGES_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.packages-root.name"),
@@ -87,7 +92,16 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
             },
             false,
             (s, p) -> new File(s));
-    
+
+    public static final BundlerParamInfo<String> DEVELOPER_ID_INSTALLER_SIGNING_KEY = new StandardBundlerParam<>(
+            I18N.getString("param.signing-key-developer-id-installer.name"),
+            I18N.getString("param.signing-key-developer-id-installer.description"),
+            "mac.signing-key-developer-id-installer",
+            String.class,
+            null,
+            params -> "Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params),
+            false,
+            (s, p) -> s);
     
     public MacPKGBundler() {
         super();
@@ -133,6 +147,14 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
         }
     }
     
+    private File getConfig_DistributionXMLFile(Map<String, ? super Object> params) {
+        return new File(CONFIG_ROOT.fetchFrom(params), "distribution.dist");
+    }
+    
+    private File getConfig_BackgroundImage(Map<String, ? super Object> params) {
+        return new File(CONFIG_ROOT.fetchFrom(params), APP_NAME.fetchFrom(params) + "-background.png");
+    }
+    
     private File getScripts_PreinstallFile(Map<String, ? super Object> params) {
         return new File(SCRIPTS_DIR.fetchFrom(params), "preinstall");
     }
@@ -149,9 +171,22 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
             getScripts_PostinstallFile(params).delete();
         }
     }
+
+    private void cleanupConfigFiles(Map<String, ? super Object> params) {
+        if (getConfig_DistributionXMLFile(params) != null) {
+            getConfig_DistributionXMLFile(params).delete();
+        }
+        if (getConfig_BackgroundImage(params) != null) {
+            getConfig_BackgroundImage(params).delete();
+        }
+    }
+    
+    private String getAppIdentifier(Map<String, ? super Object> params) {
+        return IDENTIFIER.fetchFrom(params);
+    }
     
     private String getDaemonIdentifier(Map<String, ? super Object> params) {
-        return IDENTIFIER.fetchFrom(params).toLowerCase() + ".daemon";
+        return IDENTIFIER.fetchFrom(params) + ".daemon";
     }
     
     private void preparePackageScripts(Map<String, ? super Object> params) throws IOException
@@ -187,6 +222,90 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
         getScripts_PostinstallFile(params).setExecutable(true, false);        
     }
     
+    private void prepareDistributionXMLFile(Map<String, ? super Object> params)
+            throws IOException
+    {
+        File f = getConfig_DistributionXMLFile(params);
+        
+        Log.verbose(MessageFormat.format(I18N.getString("message.preparing-distribution-dist"), f.getAbsolutePath()));
+
+        PrintStream out = new PrintStream(f);
+
+        out.println("<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>");
+        out.println("<installer-gui-script minSpecVersion=\"1\">");
+        
+        out.println("<title>" + APP_NAME.fetchFrom(params) + "</title>");
+        out.println("<background" +
+                        " file=\"" + getConfig_BackgroundImage(params).getName() + "\"" +
+                        " mime-type=\"image/png\"" +
+                        " alignment=\"bottomleft\" " +
+                        " scaling=\"none\""+
+                    "/>");
+        
+        if (!LICENSE_FILE.fetchFrom(params).isEmpty()) {
+            File licFile = new File(APP_RESOURCES.fetchFrom(params).getBaseDirectory(),
+                    LICENSE_FILE.fetchFrom(params).get(0));
+            out.println("<license" +
+                            " file=\"" + licFile.getAbsolutePath() + "\"" +
+                            " mime-type=\"text/rtf\"" +
+                        "/>");
+        }
+
+        /*
+         * Note that the content of the distribution file
+         * below is generated by productbuild --synthesize
+         */
+
+        String appId = getAppIdentifier(params);
+        String daemonId = getDaemonIdentifier(params);
+        
+        out.println("<pkg-ref id=\"" + appId + "\"/>");
+        if (SERVICE_HINT.fetchFrom(params)) {
+            out.println("<pkg-ref id=\"" + daemonId + "\"/>");
+        }
+        
+        out.println("<options customize=\"never\" require-scripts=\"false\"/>");
+        out.println("<choices-outline>");
+        out.println("    <line choice=\"default\">");
+        out.println("        <line choice=\"" + appId + "\"/>");
+        if (SERVICE_HINT.fetchFrom(params)) {
+            out.println("        <line choice=\"" + daemonId + "\"/>");
+        }
+        out.println("    </line>");
+        out.println("</choices-outline>");
+        out.println("<choice id=\"default\"/>");
+        out.println("<choice id=\"" + appId + "\" visible=\"false\">");
+        out.println("    <pkg-ref id=\"" + appId + "\"/>");
+        out.println("</choice>");
+        out.println("<pkg-ref id=\"" + appId + "\" version=\"" + VERSION.fetchFrom(params) +
+                        "\" onConclusion=\"none\">" +
+                        getPackages_AppPackage(params).getName() + "</pkg-ref>");
+
+        if (SERVICE_HINT.fetchFrom(params)) {
+            out.println("<choice id=\"" + daemonId + "\" visible=\"false\">");
+            out.println("    <pkg-ref id=\"" + daemonId + "\"/>");
+            out.println("</choice>");
+            out.println("<pkg-ref id=\"" + daemonId + "\" version=\"" + VERSION.fetchFrom(params) +
+                            "\" onConclusion=\"none\">" +
+                            getPackages_DaemonPackage(params).getName() + "</pkg-ref>");
+        }
+
+        out.println("</installer-gui-script>");
+        
+        out.close();        
+    }
+    
+    private void prepareConfigFiles(Map<String, ? super Object> params) throws IOException {
+        File imageTarget = getConfig_BackgroundImage(params);
+        fetchResource(com.sun.javafx.tools.packager.bundlers.MacAppBundler.MAC_BUNDLER_PREFIX + imageTarget.getName(),
+                I18N.getString("resource.pkg-background-image"),
+                DEFAULT_BACKGROUND_IMAGE,
+                imageTarget,
+                VERBOSE.fetchFrom(params));
+
+        prepareDistributionXMLFile(params);
+    }
+    
     private File createPKG(Map<String, ? super Object> params, File outdir) {
         //generic find attempt
         try {
@@ -211,10 +330,12 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
                     appPKG.getAbsolutePath());
             IOUtils.exec(pb, VERBOSE.fetchFrom(params));
 
+            prepareConfigFiles(params);
+            
             // build daemon package if requested
             if (SERVICE_HINT.fetchFrom(params)) {
                 preparePackageScripts(params);
-                
+
                 pb = new ProcessBuilder("pkgbuild",
                         "--identifier",
                         APP_NAME.fetchFrom(params) + ".daemon",
@@ -232,12 +353,22 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
 
             List<String> commandLine = new ArrayList<>();
             commandLine.add("productbuild");
-            commandLine.add("--package");
-            commandLine.add(appPKG.getAbsolutePath());
-            if (SERVICE_HINT.fetchFrom(params)) {
-                commandLine.add("--package");
-                commandLine.add(daemonPKG.getAbsolutePath());            
+
+            commandLine.add("--resources");
+            commandLine.add(CONFIG_ROOT.fetchFrom(params).getAbsolutePath());
+
+            // maybe sign
+            String signingIdentity = DEVELOPER_ID_INSTALLER_SIGNING_KEY.fetchFrom(params);
+            if (signingIdentity != null) {
+                commandLine.add("--sign");
+                commandLine.add(signingIdentity);
             }
+
+            commandLine.add("--distribution");
+            commandLine.add(getConfig_DistributionXMLFile(params).getAbsolutePath());
+            commandLine.add("--package-path");
+            commandLine.add(PACKAGES_ROOT.fetchFrom(params).getAbsolutePath());
+            
             commandLine.add(finalPKG.getAbsolutePath());
 
             pb = new ProcessBuilder(commandLine);
@@ -250,6 +381,7 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
         } finally {
             if (!VERBOSE.fetchFrom(params)) {
                 cleanupPackagesFiles(params);
+                cleanupConfigFiles(params);
                 
                 if (SERVICE_HINT.fetchFrom(params)) {
                     cleanupPackageScripts(params);

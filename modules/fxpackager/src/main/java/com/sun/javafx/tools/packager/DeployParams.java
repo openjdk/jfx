@@ -27,6 +27,7 @@ package com.sun.javafx.tools.packager;
 
 import com.sun.javafx.tools.ant.Callback;
 import com.sun.javafx.tools.packager.bundlers.*;
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import com.sun.javafx.tools.resource.DeployResource;
 import java.io.File;
 import java.io.IOException;

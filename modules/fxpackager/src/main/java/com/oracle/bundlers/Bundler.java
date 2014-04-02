@@ -25,7 +25,6 @@
 
 package com.oracle.bundlers;
 
-import com.sun.javafx.tools.packager.bundlers.BundleType;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
 
@@ -54,7 +53,7 @@ public interface Bundler {
     /**
      * @return The bundle type of the bundle that is created by this bundler.
      */
-    BundleType getBundleType();
+    String getBundleType();
 
     /**
      * The parameters that this bundler uses to generate it's bundle.
@@ -63,7 +62,11 @@ public interface Bundler {
     Collection<BundlerParamInfo<?>> getBundleParameters();
 
     /**
-     * Determins if this bundler will execute with the given parameters.
+     * Determines if this bundler will execute with the given parameters.
+     *
+     * @param params The parameters to be validate.  Validation may modify
+     *               the map, so if you are going to be using the same map
+     *               across multiple bundlers you should pass in a deep copy.
      * @return true if valid
      * @throws UnsupportedPlatformException If the bundler cannot run on this
      *         platform (i.e. creating mac apps on windows)
@@ -74,8 +77,11 @@ public interface Bundler {
 
     /**
      * Creates a bundle from existing content.
-     * @param params The parameters as specified by getBundleParameters.  Keyed by
-     *               the id from the ParamInfo
+     * @param params The parameters as specified by getBundleParameters.
+     *               Keyed by the id from the ParamInfo.  Validation may
+     *               modify the map, so if you are going to be using the
+     *               same map across multiple bundlers you should pass
+     *               in a deep copy.
      * @param outputParentDir
      *   The parent dir that the returned bundle will be placed in.
      * @return The resulting bundled file
@@ -90,7 +96,7 @@ public interface Bundler {
      * directory of those files (linux, and windows, images), whose name is not
      * relavent to the result.
      *
-     * @throws java.lang.IllegalArgumentException for any of teh following
+     * @throws java.lang.IllegalArgumentException for any of the following
      * reasons:
      *  <ul>
      *      <li>A required parameter is not found in the params list, for

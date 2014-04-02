@@ -1735,6 +1735,22 @@ project(":fxpackager") {
                 }
             }
         }
+        task compileWinLauncherSvc(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher";
+            matches = "WinLauncherSvc\\.cpp";
+            params.addAll(WIN.launcher.ccFlags);
+            output(file("$buildDir/native/WinLauncherSvc"));
+            source(file("src/main/native/launcher/win"));
+            compiler = WIN.launcher.compiler
+            exe = true;
+            linkerOptions.addAll(WIN.launcher.linkFlags);
+            doLast {
+                copy {
+                    from "$buildDir/native/WinLauncherSvc/WinLauncherSvc.exe"
+                    into "$buildDir/classes/main/com/sun/javafx/tools/resource/windows"
+                }
+            }
+        }
         task compileIconSwap(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher"
             matches = "IconSwap\\.cpp"
@@ -1751,7 +1767,7 @@ project(":fxpackager") {
                 }
             }
         }
-        task compileLauncher(dependsOn: [compileWinLauncher, compileIconSwap])
+        task compileLauncher(dependsOn: [compileWinLauncher, compileWinLauncherSvc, compileIconSwap])
         jar.dependsOn compileLauncher;
     } else if (COMPILE_FXPACKAGER) {
         if (IS_MAC) {
@@ -1884,6 +1900,18 @@ project(":fxpackager") {
                     "Main-Class": "hello.TestPackager",
                     "Custom-Attribute": " Is it stripped?"
             )
+        }
+
+        doFirst {
+            copy {
+                from "$projectDir/../../LICENSE"
+                into project.file("$projectDir/build/tmp/tests/appResources")
+            }
+            copy {
+                from "$projectDir/../../LICENSE"
+                into project.file("$projectDir/build/tmp/tests/appResources")
+                rename '(.*)LICENSE', '$1LICENSE2'
+            }
         }
     }
     

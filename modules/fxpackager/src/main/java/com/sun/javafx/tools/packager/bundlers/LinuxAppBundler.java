@@ -294,8 +294,8 @@ public class LinuxAppBundler extends AbstractBundler {
     }
 
     @Override
-    public BundleType getBundleType() {
-        return BundleType.IMAGE;
+    public String getBundleType() {
+        return "IMAGE";
     }
 
     @Override

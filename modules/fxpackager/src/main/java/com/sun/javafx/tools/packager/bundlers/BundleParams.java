@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import com.oracle.bundlers.BundlerParamInfo;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.PackagerLib;
@@ -84,7 +85,7 @@ public class BundleParams {
     public static final String PARAM_LICENSE_TYPE           = "licenseType"; // String
 
     /* File(s) with license. Format is OS/bundler specific */
-    public static final String PARAM_LICENSE_FILES          = "licenseFiles"; // List<String>
+    public static final String PARAM_LICENSE_FILE          = "licenseFile"; // List<String>
 
     /* user or system level install.
        null means "default" */
@@ -153,7 +154,7 @@ public class BundleParams {
     // java launcher will take care of them!
     
     public Map<String, ? super Object> getBundleParamsAsMap() {
-        return new HashMap<String, Object>(params);
+        return new HashMap<>(params);
     }
 
     public void setJvmargs(List<String> jvmargs) {
@@ -233,12 +234,12 @@ public class BundleParams {
 
     //path is relative to the application root
     public void addLicenseFile(String path) {
-        List<String> licenseFile = fetchParam(LICENSE_FILES);
-        if (licenseFile == null) {
-            licenseFile = new ArrayList<>();
-            params.put(PARAM_LICENSE_FILES, licenseFile);
+        List<String> licenseFiles = fetchParam(LICENSE_FILE);
+        if (licenseFiles == null || licenseFiles.isEmpty()) {
+            licenseFiles = new ArrayList<>();
+            params.put(PARAM_LICENSE_FILE, licenseFiles);
         }
-        licenseFile.add(path);
+        licenseFiles.add(path);
     }
 
     public Boolean getSystemWide() {
@@ -299,7 +300,7 @@ public class BundleParams {
 
 
     public List<String> getLicenseFile() {
-        return fetchParam(LICENSE_FILES);
+        return fetchParam(LICENSE_FILE);
     }
 
     public List<String> getJvmargs() {

@@ -26,6 +26,7 @@ package com.sun.javafx.tools.packager.bundlers;
 
 import com.oracle.bundlers.*;
 import com.oracle.bundlers.JreUtils.Rule;
+import com.oracle.bundlers.mac.MacBaseInstallerBundler;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.resource.mac.MacResources;
 
@@ -36,6 +37,7 @@ import java.text.MessageFormat;
 import java.util.*;
 
 import static com.oracle.bundlers.StandardBundlerParam.*;
+import static com.oracle.bundlers.mac.MacBaseInstallerBundler.SIGNING_KEY_USER;
 import static com.oracle.bundlers.mac.MacBaseInstallerBundler.getPredefinedImage;
 
 public class MacAppBundler extends AbstractBundler {
@@ -228,9 +230,20 @@ public class MacAppBundler extends AbstractBundler {
             MacAppBundler::extractMacRuntime
     );
 
+    public static final BundlerParamInfo<String> DEVELOPER_ID_APP_SIGNING_KEY = new StandardBundlerParam<>(
+            I18N.getString("param.signing-key-developer-id-app.name"),
+            I18N.getString("param.signing-key-developer-id-app.description"),
+            "mac.signing-key-developer-id-app",
+            String.class,
+            null,
+            params -> "Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params),
+            false,
+            (s, p) -> s);
+
+
     public static RelativeFileSet extractMacRuntime(String base, Map<String, ? super Object> params) {
         if (base.endsWith("/Home")) {
-            throw new IllegalArgumentException("Currently Macs require a JDK to package");
+            throw new IllegalArgumentException(I18N.getString("message.no-mac-jre-support"));
         } else if (base.endsWith("/Home/jre")) {
             File baseDir = new File(base).getParentFile().getParentFile().getParentFile();
             return JreUtils.extractJreAsRelativeFileSet(baseDir.toString(),
@@ -250,7 +263,6 @@ public class MacAppBundler extends AbstractBundler {
     @Override
     public boolean validate(Map<String, ? super Object> params) throws UnsupportedPlatformException, ConfigException {
         try {
-            logParameters(params);
             return doValidate(params);
         } catch (RuntimeException re) {
             throw new ConfigException(re);
@@ -270,8 +282,8 @@ public class MacAppBundler extends AbstractBundler {
 
         if (MAIN_JAR.fetchFrom(p) == null) {
             throw new ConfigException(
-                    "Main application jar is missing.",
-                    "Make sure to use fx:jar task to create main application jar.");
+                    I18N.getString("error.no-application-jar"),
+                    I18N.getString("error.no-application-jar.advice"));
         }
 
         //validate required inputs
@@ -320,7 +332,7 @@ public class MacAppBundler extends AbstractBundler {
             rootDirectory.mkdirs();
 
             if (!dependentTask) {
-                Log.info("Creating app bundle: " + rootDirectory.getAbsolutePath());
+                Log.info(MessageFormat.format(I18N.getString("message.creating-app-bundle"), rootDirectory.getAbsolutePath()));
             }
 
             File contentsDirectory = new File(rootDirectory, "Contents");
@@ -367,6 +379,12 @@ public class MacAppBundler extends AbstractBundler {
             // Generate Info.plist
             IOUtils.copyFile(getConfig_InfoPlist(p),
                     new File(contentsDirectory, "Info.plist"));
+
+            // maybe sign
+            String signingIdentity = DEVELOPER_ID_APP_SIGNING_KEY.fetchFrom(p);
+            if (signingIdentity != null) {
+                MacBaseInstallerBundler.signAppBundle(p, rootDirectory, signingIdentity, IDENTIFIER.fetchFrom(p) + ".");
+            }
         } catch (IOException ex) {
             Log.verbose(ex);
             return null;
@@ -375,9 +393,7 @@ public class MacAppBundler extends AbstractBundler {
                 //cleanup
                 cleanupConfigFiles(p);
             } else {
-                Log.info("Config files are saved to " +
-                        CONFIG_ROOT.fetchFrom(p).getAbsolutePath()  +
-                        ". Use them to customize package.");
+                Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), CONFIG_ROOT.fetchFrom(p).getAbsolutePath()));
             }
         }
         return rootDirectory;
@@ -403,7 +419,7 @@ public class MacAppBundler extends AbstractBundler {
     private void copyClassPathEntries(File javaDirectory, Map<String, ? super Object> params) throws IOException {
         RelativeFileSet classPath = APP_RESOURCES.fetchFrom(params);
         if (classPath == null) {
-            throw new RuntimeException("Null app resources?");
+            throw new RuntimeException(I18N.getString("message.null-classpath"));
         }
         File srcdir = classPath.getBaseDirectory();
         for (String fname : classPath.getIncludedFiles()) {
@@ -480,7 +496,7 @@ public class MacAppBundler extends AbstractBundler {
     }
 
     private void writeInfoPlist(File file, Map<String, ? super Object> params) throws IOException {
-        Log.verbose("Preparing Info.plist: "+file.getAbsolutePath());
+        Log.verbose(MessageFormat.format(I18N.getString("message.preparing-info-plist"), file.getAbsolutePath()));
 
         //prepare config for exe
         //Note: do not need CFBundleDisplayName if we do not support localization
@@ -547,7 +563,7 @@ public class MacAppBundler extends AbstractBundler {
         Writer w = new BufferedWriter(new FileWriter(file));
         w.write(preprocessTextResource(
                 MAC_BUNDLER_PREFIX + getConfig_InfoPlist(params).getName(),
-                "Bundle config file", TEMPLATE_INFO_PLIST, data,
+                I18N.getString("resource.bundle-config-file"), TEMPLATE_INFO_PLIST, data,
                 VERBOSE.fetchFrom(params)));
         w.close();
 
@@ -570,12 +586,12 @@ public class MacAppBundler extends AbstractBundler {
 
     @Override
     public String getName() {
-        return "Mac Application Image";
+        return I18N.getString("bundler.name");
     }
 
     @Override
     public String getDescription() {
-        return "A Directory based image of a mac Application with an optionally co-bundled JRE.  Used as a base for the Installer bundlers";
+        return I18N.getString("bundler.description");
     }
 
     @Override
@@ -584,8 +600,8 @@ public class MacAppBundler extends AbstractBundler {
     }
 
     @Override
-    public BundleType getBundleType() {
-        return BundleType.IMAGE;
+    public String getBundleType() {
+        return "IMAGE";
     }
 
     @Override

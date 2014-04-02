@@ -35,28 +35,15 @@ import com.sun.javafx.tools.packager.bundlers.MacAppBundler;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
 import com.sun.javafx.tools.resource.mac.MacResources;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
-import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static com.oracle.bundlers.JreUtils.Rule.suffix;
 import static com.oracle.bundlers.JreUtils.Rule.suffixNeg;
-import static com.oracle.bundlers.StandardBundlerParam.IDENTIFIER;
-import static com.oracle.bundlers.StandardBundlerParam.APP_NAME;
-import static com.oracle.bundlers.StandardBundlerParam.VERBOSE;
+import static com.oracle.bundlers.StandardBundlerParam.*;
 
 public class MacAppStoreBundler extends MacBaseInstallerBundler {
 
@@ -117,43 +104,13 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
 
     };
 
-    public static final BundlerParamInfo<String> MAC_APP_STORE_SIGNING_KEY_USER = new StandardBundlerParam<>(
-            I18N.getString("param.signing-key-name.name"),
-            I18N.getString("param.signing-key-name.description"),
-            "mac.signing-key-user-name",
-            String.class,
-            null,
-            params -> {
-                try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
-                    ProcessBuilder pb = new ProcessBuilder(
-                            "dscacheutil",
-                            "-q", "user", "-a", "name", System.getProperty("user.name"));
-
-                    IOUtils.exec(pb, Log.isDebug(), false, ps);
-
-                    String commandOutput = baos.toString();
-
-                    Pattern pattern = Pattern.compile(".*gecos: (.*)");
-                    Matcher matcher = pattern.matcher(commandOutput);
-                    if (matcher.matches()) {
-                        return (matcher.group(1));
-                    }
-                } catch (IOException ioe) {
-                    Log.info("Error retrieving gecos name");
-                    Log.debug(ioe);
-                }
-                return null;
-            },
-            false,
-            null);
-
     public static final BundlerParamInfo<String> MAC_APP_STORE_APP_SIGNING_KEY = new StandardBundlerParam<>(
             I18N.getString("param.signing-key-app.name"),
             I18N.getString("param.signing-key-app.description"),
             "mac.signing-key-app",
             String.class,
             null,
-            params -> "3rd Party Mac Developer Application: " + MAC_APP_STORE_SIGNING_KEY_USER.fetchFrom(params),
+            params -> "3rd Party Mac Developer Application: " + SIGNING_KEY_USER.fetchFrom(params),
             false,
             (s, p) -> s);
 
@@ -163,7 +120,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             "mac.signing-key-pkg",
             String.class,
             null,
-            params -> "3rd Party Mac Developer Installer: " + MAC_APP_STORE_SIGNING_KEY_USER.fetchFrom(params),
+            params -> "3rd Party Mac Developer Installer: " + SIGNING_KEY_USER.fetchFrom(params),
             false,
             (s, p) -> s);
 
@@ -197,84 +154,20 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
         File appImageDir = APP_IMAGE_BUILD_ROOT.fetchFrom(p);
         try {
             appImageDir.mkdirs();
+
+            // first, make sure we don't use the local signing key
+            p.put(MacAppBundler.DEVELOPER_ID_APP_SIGNING_KEY.getID(), null);
             File appLocation = prepareAppBundle(p);
 
             prepareEntitlements(p);
 
-            List<String> args = new ArrayList<>();
-            args.addAll(Arrays.asList(
-                    "codesign",
-                    "-s", MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(p), // sign with this key
-                    "-f", // replace all existing signatures
-                    "--entitlements", getConfig_Entitlements(p).toString() // entitlements
-            ));
+            String signingIdentity = MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(p);
+            String identifierPrefix = IDENTIFIER.fetchFrom(p) + ".";
+            String entitlementsFile = getConfig_Entitlements(p).toString();
+            String inheritEntitlements = getConfig_Inherit_Entitlements(p).toString();
 
-            // sign all dylibs and jars
-            List<String> signTargets = Files.walk(appLocation.toPath())
-                    .map(Path::toString)
-                    .filter(s -> (s.endsWith(".jar")
-                            || s.endsWith(".dylib"))
-                    )
-                    .collect(Collectors.toList());
-
-            args.addAll(signTargets);
-            ProcessBuilder pb = new ProcessBuilder(args);
-            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
-
-            // sign all contained executables with an inherit entitlement
-            Files.find(appLocation.toPath().resolve("Contents"), Integer.MAX_VALUE,
-                    (path, attr) -> (Files.isExecutable(path) && Files.isRegularFile(path)))
-                    .filter(path -> (!path.toString().endsWith(".dylib")))
-                    .forEach(path -> {
-                        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
-                            ProcessBuilder pb2 = new ProcessBuilder("codesign",
-                                    "-s", MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(p), // sign with this key
-                                    "-f", // replace all existing signatures
-                                    "--prefix", IDENTIFIER.fetchFrom(p), // use the identifier as a prefix
-                                    "--entitlements", getConfig_Inherit_Entitlements(p).toString(), // entitlements
-                                    path.toString());
-                            IOUtils.exec(pb2, VERBOSE.fetchFrom(p));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
-
-            // sign all plugins and frameworks
-            Consumer<? super Path> signIdentifiedByPList = path -> {
-                try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
-                    ProcessBuilder pb2 = new ProcessBuilder("/usr/libexec/PlistBuddy",
-                            "-c", "Print :CFBundleIdentifier", path.resolve("Contents/Info.plist").toString());
-                    IOUtils.exec(pb2, VERBOSE.fetchFrom(p), false, ps);
-                    String bundleID = baos.toString();
-
-                    pb2 = new ProcessBuilder("codesign",
-                            "-s", MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(p), // sign with this key
-                            "-f", // replace all existing signatures
-                            //"-i", bundleID, // sign the bundle's CFBundleIdentifier
-                            path.toString());
-                    IOUtils.exec(pb2, VERBOSE.fetchFrom(p));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            };
-            Path pluginsPath = appLocation.toPath().resolve("Contents/PlugIns");
-            if (Files.isDirectory(pluginsPath)) {
-                Files.list(pluginsPath)
-                        .forEach(signIdentifiedByPList);
-            }
-            Path frameworkPath = appLocation.toPath().resolve("Contents/Frameworks");
-            if (Files.isDirectory(frameworkPath)) {
-                Files.list(frameworkPath)
-                        .forEach(signIdentifiedByPList);
-            }
-
-            // sign the app itself
-            pb = new ProcessBuilder("codesign",
-                    "-s", MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(p), // sign with this key
-                    "-f", // replace all existing signatures
-                    "--entitlements", getConfig_Entitlements(p).toString(), // entitlements
-                    appLocation.toString());
-            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+            signAppBundle(p, appLocation, signingIdentity, identifierPrefix, entitlementsFile, inheritEntitlements);
+            ProcessBuilder pb;
 
             // create the final pkg file
             File finalPKG = new File(outdir, APP_NAME.fetchFrom(p)+".pkg");

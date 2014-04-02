@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,8 +23,41 @@
  * questions.
  */
 
-package com.sun.javafx.tools.packager.bundlers;
+package hello;
 
-public enum BundleType {
-    NONE, IMAGE, INSTALLER, ALL
+import javafx.application.Application;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
+
+/**
+ */
+public class HelloRectangle extends Application {
+    @Override public void start(Stage stage) {
+        stage.setTitle("Hello Rectangle");
+
+        Group root = new Group();
+        Scene scene = new Scene(root, 600, 450);
+
+        Rectangle rect = new Rectangle();
+        rect.setX(25);
+        rect.setY(40);
+        rect.setWidth(300);
+        rect.setHeight(300);
+        rect.setFill(Color.RED);
+
+        root.getChildren().addAll(rect);
+
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String[] args) {
+        Application.launch(args);
+    }
 }

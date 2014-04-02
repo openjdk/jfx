@@ -25,8 +25,6 @@
 
 package com.oracle.bundlers;
 
-import com.sun.javafx.tools.packager.bundlers.BundleType;
-
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.ServiceLoader;
@@ -92,7 +90,7 @@ public interface Bundlers {
      *
      * @return a read-only collection of the requested bundlers
      */
-    Collection<Bundler> getBundlers(BundleType type);
+    Collection<Bundler> getBundlers(String type);
 
     /**
      * A list of the "standard" parameters that bundlers should support

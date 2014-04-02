@@ -129,7 +129,7 @@ public class MacAppStoreBundlerTest {
 
     @Test
     public void showSigningKeyNames() {
-        System.err.println(MacAppStoreBundler.MAC_APP_STORE_SIGNING_KEY_USER.fetchFrom(new TreeMap<>()));
+        System.err.println(MacBaseInstallerBundler.SIGNING_KEY_USER.fetchFrom(new TreeMap<>()));
         System.err.println(MacAppStoreBundler.MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(new TreeMap<>()));
     }
 
@@ -150,10 +150,18 @@ public class MacAppStoreBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Smoke");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), fakeMainJar.toString());
         bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
         bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
 
         File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
         System.err.println("Bundle at - " + result);
