@@ -10,6 +10,7 @@
 ^.idea/tasks.xml$
 ^.idea/workspace.xml$
 ^.idea/inspectionProfiles/*
+^.idea/copyright/profile_settings.xml$
 ^\.gradle/
 ^buildSrc/\.gradle/
 ^.idea/out/
