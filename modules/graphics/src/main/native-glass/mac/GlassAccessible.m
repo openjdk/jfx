@@ -349,6 +349,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initEnum
     CFBundleRef bundle = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.Cocoa"));
     if (bundle == NULL) return FALSE;
     int i = 0;
+    NSString *customNamePrefix = @"AX";
     while (i < length) {
         jobject value = (*env)->GetObjectArrayElement(env, values, i++);
         jstring name = (jstring)(*env)->CallObjectMethod(env, value, jToString);
@@ -356,16 +357,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initEnum
         NSString* nsName = jStringToNSString(env, name);
         if (nsName == NULL) return FALSE;
         if ((*env)->ExceptionCheck(env)) return FALSE;
-        CFStringRef *data = CFBundleGetDataPointerForName(bundle, (CFStringRef)nsName);
-        if (data == NULL) {
-            /* synthesize the name using NSAccessibilityNAMEAttribute -> AXNANE */
-            NSUInteger length = [nsName length];
-            if (length > 15 + 9) {
-                NSRange range = NSMakeRange(15, length - 15 - 9);
-                nsName = [nsName substringWithRange: range];
-                nsName = [[NSString alloc] initWithFormat: @"AX%@", nsName];
-                data = (CFStringRef*)&nsName;
-            }
+        NSRange range = [nsName rangeOfString: customNamePrefix];
+        CFStringRef *data;
+        if (range.location == 0) {
+            nsName = [[NSString alloc] initWithString: nsName];
+            data = (CFStringRef*)&nsName;
+        } else {
+            data = CFBundleGetDataPointerForName(bundle, (CFStringRef)nsName);
         }
         if (data == NULL) return FALSE;
         (*env)->SetLongField(env, value, jPtr, (jlong)*data);

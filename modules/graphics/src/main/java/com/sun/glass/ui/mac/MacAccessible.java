@@ -107,7 +107,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityOverflowButtonAttribute(OVERFLOW_BUTTON, MacVariant::createNSObject),
 
         // Custom attributes
-        NSAccessibilityVisitedAttribute(VISITED, MacVariant::createNSNumberForBoolean),
+        AXVisited(VISITED, MacVariant::createNSNumberForBoolean),
 
         // NSAccessibilityMenuRole
         NSAccessibilitySelectedChildrenAttribute(null, MacVariant::createNSArray),
@@ -403,7 +403,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityLinkRole(Role.HYPERLINK,
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityVisitedAttribute
+                MacAttributes.AXVisited
             },
             null
         ),
@@ -558,6 +558,8 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityRowExpandedNotification,
         NSAccessibilityRowCollapsedNotification,
         NSAccessibilityExpandedChangedNotification,
+        AXMenuOpened,
+        AXMenuClosed,
         ;long ptr;
     }
 
