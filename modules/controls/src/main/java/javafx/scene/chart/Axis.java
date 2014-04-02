@@ -49,8 +49,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.FontCssMetaData;
 import javafx.css.StyleableProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Pos;
@@ -88,7 +86,7 @@ public abstract class Axis<T> extends Region {
     private double oldLength = 0;
     /** True when the current range invalid and all dependent calculations need to be updated */
     boolean rangeValid = false;
-    private boolean tickPropertyChanged = false;
+    private boolean measureInvalid = false;
 
     private int numLabelsToSkip = 1;
 
@@ -271,6 +269,7 @@ public abstract class Axis<T> extends Region {
             for(TickMark<T> tm : getTickMarks()) {
                 tm.textNode.setFont(f);
             }
+            measureInvalid = true;
             requestAxisLayout();
         }
 
@@ -296,8 +295,9 @@ public abstract class Axis<T> extends Region {
     /** The fill for all tick labels */
     private ObjectProperty<Paint> tickLabelFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
         @Override protected void invalidated() {
-            tickPropertyChanged = true;
-            requestAxisLayout();
+            for (TickMark<T> tick : tickMarks) {
+                tick.textNode.setFill(getTickLabelFill());
+            }
         }
 
         @Override
@@ -679,14 +679,8 @@ public abstract class Axis<T> extends Region {
             rangeValid = true;
         }
 
-        if (tickPropertyChanged) {
-            tickPropertyChanged = false;
-            for (TickMark<T> tick : tickMarks) {
-                tick.textNode.setFill(getTickLabelFill());
-            }
-        }
-
-        if (oldLength != length || rangeInvalid) {
+        if (oldLength != length || rangeInvalid || measureInvalid) {
+            measureInvalid = false;
             // RT-12272 : tick labels overlapping
             switch (side) {
                 case LEFT:
