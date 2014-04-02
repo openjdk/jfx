@@ -51,6 +51,7 @@ import javafx.css.FontCssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Bounds;
 import javafx.geometry.Dimension2D;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.control.Label;
@@ -81,6 +82,7 @@ public abstract class Axis<T> extends Region {
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
 
     Text measure = new Text();
+    private Orientation effectiveOrientation;
     private Label axisLabel = new Label();
     private final Path tickMarkPath = new Path();
     private double oldLength = 0;
@@ -132,6 +134,20 @@ public abstract class Axis<T> extends Region {
     public final Side getSide() { return side.get(); }
     public final void setSide(Side value) { side.set(value); }
     public final ObjectProperty<Side> sideProperty() { return side; }
+
+    final void setEffectiveOrientation(Orientation orientation) {
+        effectiveOrientation = orientation;
+    }
+
+    final Side getEffectiveSide() {
+        final Side side = getSide();
+        if (side == null || (side.isVertical() && effectiveOrientation == Orientation.HORIZONTAL)
+                || side.isHorizontal() && effectiveOrientation == Orientation.VERTICAL) {
+            // Means side == null && effectiveOrientation == null produces Side.BOTTOM
+            return effectiveOrientation == Orientation.VERTICAL ? Side.LEFT : Side.BOTTOM;
+        }
+        return side;
+    }
 
     /** The axis label */
     private ObjectProperty<String> label = new ObjectPropertyBase<String>() {
@@ -539,8 +555,8 @@ public abstract class Axis<T> extends Region {
      * @return the computed preferred width for this axis
      */
     @Override protected double computePrefHeight(double width) {
-        final Side side = getSide();
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL
+        final Side side = getEffectiveSide();
+        if (side.isVertical()) {
             // TODO for now we have no hard and fast answer here, I guess it should work
             // TODO out the minimum size needed to display min, max and zero tick mark labels.
             return 100;
@@ -574,8 +590,8 @@ public abstract class Axis<T> extends Region {
      * @return the computed preferred width for this axis
      */
     @Override protected double computePrefWidth(double height) {
-        final Side side = getSide();
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL
+        final Side side = getEffectiveSide();
+        if (side.isVertical()) {
             // we need to first auto range as this may/will effect tick marks
             Object range = autoRange(height);
             // calculate max tick label width
@@ -616,8 +632,8 @@ public abstract class Axis<T> extends Region {
         final double tickMarkLength = (getTickLength() > 0) ? getTickLength() : 0;
         final boolean isFirstPass = oldLength == 0;
         // auto range if it is not valid
-        final Side side = getSide() == null ? Side.BOTTOM : getSide();
-        final double length = (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) ? height : width;
+        final Side side = getEffectiveSide();
+        final double length = (side.isVertical()) ? height : width;
         int tickIndex = 0;
         boolean rangeInvalid = !isRangeValid();
         if (oldLength != length || rangeInvalid) {

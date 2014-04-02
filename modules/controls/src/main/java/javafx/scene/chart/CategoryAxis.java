@@ -266,9 +266,9 @@ public final class CategoryAxis extends Axis<String> {
     // -------------- PRIVATE METHODS ----------------------------------------------------------------------------------
 
     private double calculateNewSpacing(double length, List<String> categories) {
-        final Side side = getSide();
+        final Side side = getEffectiveSide();
         double newCategorySpacing = 1;
-        if(side != null && categories != null) {
+        if(categories != null) {
             double bVal = (isGapStartAndEnd() ? (categories.size()) : (categories.size() - 1));
             // RT-14092 flickering  : check if bVal is 0
             newCategorySpacing = (bVal == 0) ? 1 : (length-getStartMargin()-getEndMargin()) / bVal;
@@ -279,15 +279,13 @@ public final class CategoryAxis extends Axis<String> {
     }
 
     private double calculateNewFirstPos(double length, double catSpacing) {
-        final Side side = getSide();
+        final Side side = getEffectiveSide();
         double newPos = 1;
-        if(side != null) {
-            double offset = ((isGapStartAndEnd()) ? (catSpacing / 2) : (0));
-            if (side.equals(Side.TOP) || side.equals(Side.BOTTOM)) { // HORIZONTAL
-                newPos = 0 + getStartMargin() + offset;
-            }  else { // VERTICAL
-                newPos = length - getStartMargin() - offset;
-            }
+        double offset = ((isGapStartAndEnd()) ? (catSpacing / 2) : (0));
+        if (side.isHorizontal()) {
+            newPos = 0 + getStartMargin() + offset;
+        }  else { // VERTICAL
+            newPos = length - getStartMargin() - offset;
         }
         // if autoranging is off setRange is not called so we update first cateogory pos.
         if (!isAutoRanging()) firstCategoryPos.set(newPos);
@@ -351,14 +349,13 @@ public final class CategoryAxis extends Axis<String> {
      * @return Range information, this is implementation dependent
      */
     @Override protected Object autoRange(double length) {
-        final Side side = getSide();
-        final boolean vertical = Side.LEFT.equals(side) || Side.RIGHT.equals(side);
+        final Side side = getEffectiveSide();
         // TODO check if we can display all categories
         final double newCategorySpacing = calculateNewSpacing(length,allDataCategories);
         final double newFirstPos = calculateNewFirstPos(length, newCategorySpacing);
         double tickLabelRotation = getTickLabelRotation();
         if (length >= 0) {
-            double requiredLengthToDisplay = calculateRequiredSize(vertical,tickLabelRotation);
+            double requiredLengthToDisplay = calculateRequiredSize(side.isVertical(),tickLabelRotation);
             if (requiredLengthToDisplay > length) {
                 // change text to vertical
                 tickLabelRotation = 90;
@@ -461,7 +458,7 @@ public final class CategoryAxis extends Axis<String> {
      */
     @Override public double getDisplayPosition(String value) {
         // find index of value
-        if (Side.TOP.equals(getSide()) || Side.BOTTOM.equals(getSide())) { // HORIZONTAL
+        if (getEffectiveSide().isHorizontal()) {
             return firstCategoryPos.get() + getCategories().indexOf("" + value) * categorySpacing.get();
         } else {
             return firstCategoryPos.get() + getCategories().indexOf("" + value) * categorySpacing.get() * -1;
@@ -477,7 +474,7 @@ public final class CategoryAxis extends Axis<String> {
      *         null if not on axis;
      */
     @Override public String getValueForDisplay(double displayPosition) {
-        if (getSide().equals(Side.TOP) || getSide().equals(Side.BOTTOM)) { // HORIZONTAL
+        if (getEffectiveSide().isHorizontal()) {
             if (displayPosition < 0 || displayPosition > getWidth()) return null;
             double d = (displayPosition - firstCategoryPos.get()) /   categorySpacing.get();
             return toRealValue(d);

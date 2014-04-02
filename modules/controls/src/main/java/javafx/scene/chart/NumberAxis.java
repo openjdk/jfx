@@ -332,8 +332,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @return The calculated range
      */
     @Override protected Object autoRange(double minValue, double maxValue, double length, double labelSize) {
-        final Side side = getSide();
-        final boolean vertical = Side.LEFT.equals(side) || Side.RIGHT.equals(side);
+        final Side side = getEffectiveSide();
         // check if we need to force zero into range
         if (isForceZeroInRange()) {
             if (maxValue < 0) {
@@ -391,8 +390,8 @@ public final class NumberAxis extends ValueAxis<Number> {
             double last = 0;
             count = 0;
             for (double major = minRounded; major <= maxRounded; major += tickUnitRounded, count ++)  {
-                double size = (vertical) ? measureTickMarkSize((Double)major, getTickLabelRotation(), rangeIndex).getHeight() :
-                                            measureTickMarkSize((Double)major, getTickLabelRotation(), rangeIndex).getWidth();
+                double size = side.isVertical() ? measureTickMarkSize(major, getTickLabelRotation(), rangeIndex).getHeight() :
+                                            measureTickMarkSize(major, getTickLabelRotation(), rangeIndex).getWidth();
                 if (major == minRounded) { // first
                     last = size/2;
                 } else {

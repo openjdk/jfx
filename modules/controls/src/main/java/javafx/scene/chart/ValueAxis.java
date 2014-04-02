@@ -293,8 +293,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      */
     protected final double calculateNewScale(double length, double lowerBound, double upperBound) {
         double newScale = 1;
-        final Side side = getSide();
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL 
+        final Side side = getEffectiveSide();
+        if (side.isVertical()) {
             offset = length;
             newScale = ((upperBound-lowerBound) == 0) ? -length : -(length / (upperBound - lowerBound));
         } else { // HORIZONTAL
@@ -342,8 +342,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * Invoked during the layout pass to layout this axis and all its content.
      */
     @Override protected void layoutChildren() {
-        final Side side = getSide();
-        final double length = (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) ? getHeight() :getWidth() ;
+        final Side side = getEffectiveSide();
+        final double length = side.isVertical() ? getHeight() :getWidth() ;
         // if we are not auto ranging we need to calculate the new scale
         if(!isAutoRanging()) {
             // calculate new scale
