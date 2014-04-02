@@ -67,7 +67,7 @@ final class MacAccessible extends PlatformAccessible {
             System.err.println("Fail linking MacRoles");
         }
         if (!_initEnum("MacSubroles")) {
-            System.err.println("Fail linking MacNotifications");
+            System.err.println("Fail linking MacSubroles");
         }
         if (!_initEnum("MacNotifications")) {
             System.err.println("Fail linking MacNotifications");
@@ -548,7 +548,6 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityFocusedUIElementChangedNotification,
         NSAccessibilityValueChangedNotification,
         NSAccessibilitySelectedChildrenChangedNotification,
-        NSAccessibilitySelectedColumnsChangedNotification,
         NSAccessibilitySelectedRowsChangedNotification,
         NSAccessibilityTitleChangedNotification,
         NSAccessibilityRowCountChangedNotification,
@@ -557,7 +556,6 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilitySelectedTextChangedNotification,
         NSAccessibilityRowExpandedNotification,
         NSAccessibilityRowCollapsedNotification,
-        NSAccessibilityExpandedChangedNotification,
         AXMenuOpened,
         AXMenuClosed,
         ;long ptr;
