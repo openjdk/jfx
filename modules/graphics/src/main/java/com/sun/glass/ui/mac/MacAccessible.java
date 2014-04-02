@@ -390,7 +390,7 @@ final class MacAccessible extends PlatformAccessible {
             },
             null
         ),
-        NSAccessibilityCellRole(new Role[] {Role.TABLE_CELL/*, Role.TREE_TABLE_CELL*/},
+        NSAccessibilityCellRole(new Role[] {Role.TABLE_CELL},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityColumnIndexRangeAttribute,
                 MacAttributes.NSAccessibilityEnabledAttribute,
@@ -675,15 +675,8 @@ final class MacAccessible extends PlatformAccessible {
 
                 Role role = (Role) getAttribute(ROLE);
                 if (role == Role.TREE_ITEM || role == Role.TREE_TABLE_ITEM) {
-                    long control = 0;
-                    switch (role) {
-                        case TREE_ITEM:
-                            control = getAccessible(getContainerNode(Role.TREE_VIEW));
-                            break;
-                        case TREE_TABLE_ITEM:
-                            control = getAccessible(getContainerNode(Role.TREE_TABLE_VIEW));
-                            break;
-                    }
+                    Role container = role == Role.TREE_ITEM ? Role.TREE_VIEW : Role.TREE_TABLE_VIEW;
+                    long control = getAccessible(getContainerNode(container));
                     if (control != 0) {
                         NSAccessibilityPostNotification(control, MacNotifications.NSAccessibilityRowCountChangedNotification.ptr);
                     }
@@ -1039,24 +1032,21 @@ final class MacAccessible extends PlatformAccessible {
                          * When clicking on a TreeTableRow, only a single cell is selected
                          * by VoiceOver to be read out. Here we add the text for the other
                          * cells in the row, so that all cells are read out.
-                         * TODO should we do as SWT does and read out empty cells as 'blank'?
                          */
-                        Node treeTableRow = (Node) getAttribute(PARENT);
-                        if (treeTableRow == null) break;
-                        Role parentRole = (Role) treeTableRow.accGetAttribute(ROLE);
-                        if (parentRole == Role.TREE_TABLE_ITEM) {
-                            Stream<Node> children = ((List<Node>)treeTableRow.accGetAttribute(CHILDREN)).stream();
+                        Node parent = (Node)getAttribute(PARENT);
+                        if (parent == null) return null;
+                        Accessible acc = parent.getAccessible();
+                        if (acc.getAttribute(ROLE) == Role.TREE_TABLE_ITEM) {
+                            Stream<Node> children = ((List<Node>)acc.getAttribute(CHILDREN)).stream();
 
-                            final StringBuilder text = new StringBuilder();
-                            children.forEach(node -> {
-                                Role childRole = (Role) node.accGetAttribute(ROLE);
-                                if (childRole == Role.TREE_TABLE_CELL) {
-                                    String title = (String) node.accGetAttribute(TITLE);
-                                    text.append(title + " ");
-                                }
-                            });
-                            result = text.toString();
+                            result = children.map(n -> n.getAccessible())
+                                             .filter(a -> a.getAttribute(ROLE) == Role.TREE_TABLE_CELL)
+                                             .map(a -> (String)a.getAttribute(TITLE))
+                                             .filter(t -> t != null && !t.isEmpty()) //Consider reporting empty cells as "(blank)"
+                                             .reduce((s1, s2) -> s1 + " " + s2)
+                                             .orElse("");
                         }
+                        break;
                     }
                     default:
                 }
