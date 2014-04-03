@@ -852,9 +852,11 @@ final public class CSSParser {
             final String text = str.toLowerCase(Locale.ROOT);
             if ("ladder".equals(text)) {
                 value = ladder(root);
-            } else if ("linear".equals(text)) {
+            } else if ("linear".equals(text) && (root.nextInSeries) != null) {
+                // if nextInSeries is null, then assume this is _not_ an old-style linear gradient
                 value = linearGradient(root);
-            } else if ("radial".equals(text)) {
+            } else if ("radial".equals(text) && (root.nextInSeries) != null) {
+                // if nextInSeries is null, then assume this is _not_ an old-style radial gradient
                 value = radialGradient(root);
             } else if ("true".equals(text)) {
                 // TODO: handling of boolean is really bogus

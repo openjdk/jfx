@@ -211,18 +211,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
             sm.clearAndSelect(row, sm.isCellSelectionEnabled() ? column : null);
         }
 
-        // handle editing, which only occurs with the primary mouse button
-        if (button == MouseButton.PRIMARY) {
-            if (clickCount == 1 && isAlreadySelected) {
-                edit(getControl());
-            } else if (clickCount == 1) {
-                // cancel editing
-                edit(null);
-            } else if (clickCount == 2 && getControl().isEditable()) {
-                // edit at the specified row and column
-                edit(getControl());
-            }
-        }
+        handleClicks(button, clickCount, isAlreadySelected);
     }
 
     private int getColumn() {

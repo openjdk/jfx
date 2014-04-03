@@ -704,14 +704,14 @@ public class TableView<S> extends Control {
         new SimpleObjectProperty<ObservableList<S>>(this, "items") {
             WeakReference<ObservableList<S>> oldItemsRef;
 
-            // need to override set() rather than invalidated() as we need to
-            // be notified of all changes (even when the item is the same, such
-            // as in the case of a new empty items list replacing an old (but
-            // equal) empty items list
-            
             @Override protected void invalidated() {
                 final ObservableList<S> oldItems = oldItemsRef == null ? null : oldItemsRef.get();
                 final ObservableList<S> newItems = getItems();
+
+                // Fix for RT-36425
+                if (newItems != null && newItems == oldItems) {
+                    return;
+                }
 
                 // Fix for RT-35763
                 if (! (newItems instanceof SortedList)) {

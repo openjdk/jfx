@@ -27,7 +27,6 @@ package com.oracle.bundlers;
 
 import com.oracle.bundlers.mac.MacAppStoreBundler;
 import com.oracle.bundlers.mac.MacPKGBundler;
-import com.sun.javafx.tools.packager.bundlers.BundleType;
 import com.sun.javafx.tools.packager.bundlers.LinuxAppBundler;
 import com.sun.javafx.tools.packager.bundlers.LinuxDebBundler;
 import com.sun.javafx.tools.packager.bundlers.LinuxRPMBundler;
@@ -69,12 +68,12 @@ public class BasicBundlers implements Bundlers {
         return Collections.unmodifiableCollection(bundlers);
     }
 
-    public Collection<Bundler> getBundlers(BundleType type) {
+    public Collection<Bundler> getBundlers(String type) {
         if (type == null) return Collections.emptySet();
         switch (type) {
-            case NONE:
+            case "NONE":
                 return Collections.emptySet();
-            case ALL:
+            case "ALL":
                 return getBundlers();
             default:
                 return Arrays.asList(getBundlers().stream()

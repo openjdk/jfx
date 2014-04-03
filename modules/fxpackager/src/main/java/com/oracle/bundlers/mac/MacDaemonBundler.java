@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,7 +42,6 @@ import com.oracle.bundlers.BundlerParamInfo;
 import com.oracle.bundlers.StandardBundlerParam;
 
 import com.sun.javafx.tools.packager.Log;
-import com.sun.javafx.tools.packager.bundlers.BundleType;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.IOUtils;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
@@ -211,14 +211,23 @@ public class MacDaemonBundler extends AbstractBundler {
     }
 
     @Override
-    public BundleType getBundleType() {
-        return BundleType.IMAGE;
+    public String getBundleType() {
+        return "INSTALLER";
     }
 
     @Override
     public Collection<BundlerParamInfo<?>> getBundleParameters() {
-        // TODO Auto-generated method stub
-        return null;
+        return getDaemonBundleParameters();
+    }
+
+    public static Collection<BundlerParamInfo<?>> getDaemonBundleParameters() {
+        return Arrays.asList(
+                APP_NAME,
+                BUILD_ROOT,
+                IDENTIFIER,
+                START_ON_INSTALL,
+                RUN_AT_STARTUP
+        );
     }
 
     @Override
@@ -226,7 +235,6 @@ public class MacDaemonBundler extends AbstractBundler {
             throws UnsupportedPlatformException, ConfigException
     {
         try {
-            logParameters(params);
             return doValidate(params);
         } catch (RuntimeException re) {
             throw new ConfigException(re);

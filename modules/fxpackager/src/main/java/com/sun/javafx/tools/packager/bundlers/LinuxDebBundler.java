@@ -60,11 +60,16 @@ public class LinuxDebBundler extends AbstractBundler {
             String.class, null, params -> {
                 String nm = APP_NAME.fetchFrom(params);
                 if (nm == null) return null;
-        
-                //spaces are not allowed in RPM package names
-                nm = nm.replaceAll(" ", "");
+
+                // only lower-alphanumeric and -+. are allowed
+                // so to lower case,
+                // spaces and underscores become dashes
+                // and drop all other bad characters
+                nm = nm.toLowerCase()
+                       .replaceAll("[ _]", "-")
+                       .replaceAll("[^-+.a-z0-9]", "");
+                System.out.println(nm);
                 return nm;
-        
             }, false, (s, p) -> s);
 
     public static final BundlerParamInfo<String> FULL_PACKAGE_NAME = new StandardBundlerParam<> (
@@ -72,7 +77,7 @@ public class LinuxDebBundler extends AbstractBundler {
             I18N.getString("param.full-package-name.description"),
             "linux.deb.fullPackageName",
             String.class, null,
-            params -> APP_NAME.fetchFrom(params) + "-" + VERSION.fetchFrom(params),
+            params -> BUNDLE_NAME.fetchFrom(params) + "-" + VERSION.fetchFrom(params),
             false, (s, p) -> s);
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
@@ -131,7 +136,7 @@ public class LinuxDebBundler extends AbstractBundler {
             String.class, null,
             params -> {
                 try {
-                    List<String> licenseFiles = LICENSE_FILES.fetchFrom(params);
+                    List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
                     RelativeFileSet appRoot = APP_RESOURCES.fetchFrom(params);
                     //need to copy license file to the root of linux-app.image
                     if (licenseFiles.size() > 0) {
@@ -559,8 +564,8 @@ public class LinuxDebBundler extends AbstractBundler {
     }
 
     @Override
-    public BundleType getBundleType() {
-        return BundleType.INSTALLER;
+    public String getBundleType() {
+        return "INSTALLER";
     }
 
     @Override
@@ -586,7 +591,7 @@ public class LinuxDebBundler extends AbstractBundler {
                 ICON,
                 DEB_IMAGE_DIR,
                 IMAGES_ROOT,
-                LICENSE_FILES,
+                LICENSE_FILE,
                 LICENSE_TEXT,
                 LICENSE_TYPE,
                 MAINTAINER,

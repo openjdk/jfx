@@ -308,13 +308,13 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             } else {
                 // fade out symbol
                 if (symbol != null) {
-                    symbol.setOpacity(0);
                     fadeSymbolTransition = new FadeTransition(Duration.millis(500),symbol);
                     fadeSymbolTransition.setToValue(0);
                     fadeSymbolTransition.setOnFinished(actionEvent -> {
                         item.setSeries(null);
                         getPlotChildren().remove(symbol);
                         removeDataItemFromDisplay(series, item);
+                        symbol.setOpacity(1.0);
                     });
                     fadeSymbolTransition.play();
                 }

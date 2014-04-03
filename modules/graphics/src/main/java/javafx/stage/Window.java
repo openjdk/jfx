@@ -231,7 +231,10 @@ public class Window implements EventTarget {
     private static final float CENTER_ON_SCREEN_Y_FRACTION = 1.0f / 3;
 
     /**
-     * Sets x and y properties on this Window so that it is centered on the screen.
+     * Sets x and y properties on this Window so that it is centered on the
+     * curent screen.
+     * The current screen is determined from the intersection of current window bounds and
+     * visual bounds of all screens.
      */
     public void centerOnScreen() {
         xExplicit = false;

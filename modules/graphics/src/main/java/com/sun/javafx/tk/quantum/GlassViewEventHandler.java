@@ -63,6 +63,18 @@ import java.security.PrivilegedAction;
 
 class GlassViewEventHandler extends View.EventHandler {
 
+    static boolean zoomGestureEnabled;
+    static boolean rotateGestureEnabled;
+    static {
+        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+            @Override public Void run() {
+                zoomGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.zoom", "false"));
+                rotateGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.rotate", "false"));
+                return null;
+            }
+        });
+    }    
+
     private ViewScene scene;
     private final GlassSceneDnDEventHandler dndHandler;
     private final GestureRecognizers gestures;
@@ -75,6 +87,12 @@ class GlassViewEventHandler extends View.EventHandler {
         gestures = new GestureRecognizers();
         if (PlatformUtil.isWindows() || PlatformUtil.isIOS() || PlatformUtil.isEmbedded()) {
             gestures.add(new SwipeGestureRecognizer(scene));
+        }
+        if (zoomGestureEnabled) {
+            gestures.add(new ZoomGestureRecognizer(scene));
+        }
+        if (rotateGestureEnabled) {
+            gestures.add(new RotateGestureRecognizer(scene));
         }
     }
 

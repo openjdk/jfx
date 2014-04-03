@@ -483,18 +483,18 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             case FOCUS_ITEM: {
                 FocusModel<?> fm = getSkinnable().getFocusModel();
                 int focusedIndex = fm.getFocusedIndex();
-                return flow.getCell(focusedIndex);
+                return flow.getPrivateCell(focusedIndex);
             }
             case ROW_AT_INDEX: {
                 int rowIndex = (Integer)parameters[0];
-                return flow.getCell(rowIndex);
+                return flow.getPrivateCell(rowIndex);
             }
             case SELECTED_ROWS: {
                 MultipleSelectionModel sm = getSkinnable().getSelectionModel();
                 ObservableList<Integer> indices = sm.getSelectedIndices();
                 List<Node> selection = new ArrayList<>(indices.size());
                 for (int i : indices) {
-                    ListCell<T> row = flow.getCell(i);
+                    ListCell<T> row = flow.getPrivateCell(i);
 
                     // We should never, ever get row == null. If we do then
                     // something is very wrong.

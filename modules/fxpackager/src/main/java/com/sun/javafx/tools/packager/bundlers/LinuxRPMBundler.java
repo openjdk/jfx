@@ -241,7 +241,7 @@ public class LinuxRPMBundler extends AbstractBundler {
 
     private String getLicenseFileString(Map<String, ? super Object> params) {
         StringBuilder sb = new StringBuilder();
-        for (String f: LICENSE_FILES.fetchFrom(params)) {
+        for (String f: LICENSE_FILE.fetchFrom(params)) {
             if (sb.length() != 0) {
                 sb.append("\n");
             }
@@ -402,8 +402,8 @@ public class LinuxRPMBundler extends AbstractBundler {
     }
 
     @Override
-    public BundleType getBundleType() {
-        return BundleType.INSTALLER;
+    public String getBundleType() {
+        return "INSTALLER";
     }
 
     @Override
@@ -426,7 +426,7 @@ public class LinuxRPMBundler extends AbstractBundler {
                 ICON,
                 RPM_IMAGE_DIR,
                 IMAGES_ROOT,
-                LICENSE_FILES,
+                LICENSE_FILE,
                 LICENSE_TYPE,
                 MENU_HINT,
                 SHORTCUT_HINT,

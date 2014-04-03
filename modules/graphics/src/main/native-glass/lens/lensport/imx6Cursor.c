@@ -333,6 +333,8 @@ static void fbImx6CursorInitialize(int screenWidth, int screenHeight, int screen
     if (ioctl(cursor.fd, MXCFB_SET_OVERLAY_POS, &cpos)) {
         GLASS_LOG_SEVERE("Error %s in setting overlay position", strerror(errno));
     }
+
+    fbImx6BlankCursor();
 }
 
 
@@ -450,7 +452,9 @@ static void fbImx6CursorSetPosition(int x, int y) {
 
 void fbImx6CursorClose() {
     if (cursor.fd >= 0) {
-        fbImx6BlankCursor();
+        if (cursor.isVisible) {
+            fbImx6BlankCursor();
+        }
         close(cursor.fd);
         cursor.fd = -1;
         cursor.isVisible = 0;

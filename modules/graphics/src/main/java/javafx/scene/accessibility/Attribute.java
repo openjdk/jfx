@@ -31,6 +31,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCombination;
 
 /**
  * Experimental API - Do not use (will be removed).
@@ -38,6 +39,12 @@ import javafx.scene.Scene;
  * @treatAsPrivate
  */
 public enum Attribute {
+
+    /**
+     * Returns the accelerator for the Node.
+     * Type: KeyCombination
+     */
+    ACCELERATOR("Accelerator", KeyCombination.class),
 
     /**
      * Returns the bounds for the Node.
@@ -177,6 +184,30 @@ public enum Attribute {
      * Type: Double
      */
     MAX_VALUE("MaxValue", Double.class),
+
+    /**
+     * Returns the Menu.
+     * Type: Node
+     */
+    MENU("Menu", Node.class),
+
+    /**
+     * Returns the owner Menu.
+     * Type: Node
+     */
+    MENU_FOR("MenuFor", Node.class),
+
+    /**
+     * Returns the Menu Item Type.
+     * Type: Role
+     */
+    MENU_ITEM_TYPE("MenuItemType", Role.class),
+
+    /**
+     * Returns the mnemonic for the node.
+     * Type: String
+     */
+    MNEMONIC("Mnemonic", String.class),
 
     /**
      * Returns whether the control allows for multiple selection.

@@ -272,10 +272,10 @@ public final class NumberAxis extends ValueAxis<Number> {
         final double lowerBound = getLowerBound();
         final double upperBound = getUpperBound();
         final double tickUnit = getTickUnit();
-        final double minorUnit = tickUnit/getMinorTickCount();
+        final double minorUnit = tickUnit/Math.max(1, getMinorTickCount());
         if (getTickUnit() > 0) {
             for (double major = lowerBound; major < upperBound; major += tickUnit)  {
-                for (double minor=major+minorUnit; minor < (major+tickUnit); minor += minorUnit) {
+                for (double minor = major + minorUnit; minor < (major + tickUnit); minor += minorUnit) {
                     minorTickMarks.add(minor);
                     if(minorTickMarks.size()>10000) {
                         // This is a ridiculous amount of major tick marks, something has probably gone wrong
@@ -332,8 +332,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @return The calculated range
      */
     @Override protected Object autoRange(double minValue, double maxValue, double length, double labelSize) {
-        final Side side = getSide();
-        final boolean vertical = Side.LEFT.equals(side) || Side.RIGHT.equals(side);
+        final Side side = getEffectiveSide();
         // check if we need to force zero into range
         if (isForceZeroInRange()) {
             if (maxValue < 0) {
@@ -391,8 +390,8 @@ public final class NumberAxis extends ValueAxis<Number> {
             double last = 0;
             count = 0;
             for (double major = minRounded; major <= maxRounded; major += tickUnitRounded, count ++)  {
-                double size = (vertical) ? measureTickMarkSize((Double)major, getTickLabelRotation(), rangeIndex).getHeight() :
-                                            measureTickMarkSize((Double)major, getTickLabelRotation(), rangeIndex).getWidth();
+                double size = side.isVertical() ? measureTickMarkSize(major, getTickLabelRotation(), rangeIndex).getHeight() :
+                                            measureTickMarkSize(major, getTickLabelRotation(), rangeIndex).getWidth();
                 if (major == minRounded) { // first
                     last = size/2;
                 } else {

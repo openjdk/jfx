@@ -163,6 +163,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
             ft.setOnFinished(actionEvent -> {
                 getPlotChildren().remove(bubble);
                 removeDataItemFromDisplay(series, item);
+                bubble.setOpacity(1.0);
             });
             ft.play();
         } else {
@@ -207,6 +208,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                 ft.setToValue(0);
                 ft.setOnFinished(actionEvent -> {
                     getPlotChildren().remove(bubble);
+                    bubble.setOpacity(1.0);
                 });
                 pt.getChildren().add(ft);
             }

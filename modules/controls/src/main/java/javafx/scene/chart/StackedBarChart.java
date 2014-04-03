@@ -361,6 +361,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                     ft.setToValue(0);
                     ft.setOnFinished(actionEvent -> {
                         getPlotChildren().remove(bar);
+                        bar.setOpacity(1.0);
                     });
                     pt.getChildren().add(ft);
                 }

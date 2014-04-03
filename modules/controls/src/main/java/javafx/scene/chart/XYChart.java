@@ -42,12 +42,11 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.geometry.Orientation;
 import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -432,9 +431,9 @@ public abstract class XYChart<X,Y> extends Chart {
      */
     public XYChart(Axis<X> xAxis, Axis<Y> yAxis) {
         this.xAxis = xAxis;
-        if(xAxis.getSide() == null) xAxis.setSide(Side.BOTTOM);
+        xAxis.setEffectiveOrientation(Orientation.HORIZONTAL);
         this.yAxis = yAxis;
-        if(yAxis.getSide() == null) yAxis.setSide(Side.LEFT);
+        yAxis.setEffectiveOrientation(Orientation.VERTICAL);
         // RT-23123 autoranging leads to charts incorrect appearance.
         xAxis.autoRangingProperty().addListener((ov, t, t1) -> {
             updateAxisRange();
@@ -670,7 +669,7 @@ public abstract class XYChart<X,Y> extends Chart {
         final Axis<Y> ya = getYAxis();
         final ObservableList<Axis.TickMark<Y>> yaTickMarks = ya.getTickMarks();
         // check we have 2 axises and know their sides
-        if (xa == null || ya == null || xa.getSide() == null || ya.getSide() == null) return;
+        if (xa == null || ya == null) return;
         // try and work out width and height of axises
         double xAxisWidth = 0;
         double xAxisHeight = 30; // guess x axis height to start with
@@ -691,31 +690,28 @@ public abstract class XYChart<X,Y> extends Chart {
         yAxisHeight = Math.ceil(yAxisHeight);
         // calc xAxis height
         double xAxisY = 0;
-        if (xa.getSide().equals(Side.TOP)) {
-            xa.setVisible(true);
-            xAxisY = top+1;
-            top += xAxisHeight;
-        } else if (xa.getSide().equals(Side.BOTTOM)) {
-            xa.setVisible(true);
-            xAxisY = top + yAxisHeight;
-        } else {
-            // X axis should never be left or right so hide
-            xa.setVisible(false);
-            xAxisHeight = 0;
+        switch(xa.getEffectiveSide()) {
+            case TOP:
+                xa.setVisible(true);
+                xAxisY = top+1;
+                top += xAxisHeight;
+                break;
+            case BOTTOM:
+                xa.setVisible(true);
+                xAxisY = top + yAxisHeight;
         }
+
         // calc yAxis width
         double yAxisX = 0;
-        if (ya.getSide().equals(Side.LEFT)) {
-            ya.setVisible(true);
-            yAxisX = left +1;
-            left += yAxisWidth;
-        } else if (ya.getSide().equals(Side.RIGHT)) {
-            ya.setVisible(true);
-            yAxisX = left + xAxisWidth;
-        } else {
-            // Y axis should never be top or bottom so hide
-            ya.setVisible(false);
-            yAxisWidth = 0;
+        switch(ya.getEffectiveSide()) {
+            case LEFT:
+                ya.setVisible(true);
+                yAxisX = left +1;
+                left += yAxisWidth;
+                break;
+            case RIGHT:
+                ya.setVisible(true);
+                yAxisX = left + xAxisWidth;
         }
         // resize axises
         xa.resizeRelocate(left, xAxisY, xAxisWidth, xAxisHeight);

@@ -278,6 +278,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 ft.setOnFinished(actionEvent -> {
                     getPlotChildren().remove(symbol);
                     removeDataItemFromDisplay(series, item);
+                    symbol.setOpacity(1.0);
                 });
                 ft.play();
             }

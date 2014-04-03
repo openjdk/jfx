@@ -314,7 +314,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                     ft.setFromValue(1);
                     ft.setToValue(0);
                     ft.setOnFinished(actionEvent -> {
-                       processDataRemove(series, d);
+                        processDataRemove(series, d);
+                        bar.setOpacity(1.0);
                     });
                     pt.getChildren().add(ft);
                 }

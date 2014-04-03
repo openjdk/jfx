@@ -41,6 +41,8 @@ import java.nio.file.Files;
 import java.util.*;
 
 import static com.oracle.bundlers.StandardBundlerParam.*;
+import static com.sun.javafx.tools.packager.bundlers.MacAppBundler.DEVELOPER_ID_APP_SIGNING_KEY;
+import static com.oracle.bundlers.mac.MacPKGBundler.DEVELOPER_ID_INSTALLER_SIGNING_KEY;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -66,7 +68,10 @@ public class MacPKGBundlerTest {
         appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
-        appResources = new HashSet<>(Arrays.asList(fakeMainJar));
+        appResources = new HashSet<>(Arrays.asList(fakeMainJar,
+                new File(appResourcesDir, "LICENSE"),
+                new File(appResourcesDir, "LICENSE2")
+        ));
     }
 
     @Before
@@ -125,16 +130,68 @@ public class MacPKGBundlerTest {
         bundleParams.put(APP_NAME.getID(), "Smoke");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
+        bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
+        bundleParams.put(DEVELOPER_ID_INSTALLER_SIGNING_KEY.getID(), null); // force no signing
+
+//        bundleParams.put(StandardBundlerParam.RUNTIME.getID(),
+//                JreUtils.extractJreAsRelativeFileSet(MacAppBundler.adjustMacRuntimePath(System.getProperty("java.home")),
+//                        MacAppBundler.macJDKRules));
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
+    }
+
+    /**
+     * Build smoke test and mark it as quarantined, possibly signed
+     */
+    @Test
+    public void quarantinedAppTest() throws IOException, ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new MacPKGBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+        //assertNotNull(bundler.getBundleParameters());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "Quarantine");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
 
 //        bundleParams.put(StandardBundlerParam.RUNTIME.getID(),
 //                JreUtils.extractJreAsRelativeFileSet(MacAppBundler.adjustMacRuntimePath(System.getProperty("java.home")),
 //                        MacAppBundler.macJDKRules));
 
-        File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File result = bundler.execute(bundleParams, new File(workDir, "quarantine"));
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+
+        // mark it as though it's been downloaded
+        ProcessBuilder pb = new ProcessBuilder(
+                "xattr", "-w", "com.apple.quarantine",
+                "0000;" + Long.toHexString(System.currentTimeMillis() / 1000L) + ";Java Unit Tests;|com.oracle.jvm.8u",
+                result.toString());
+        IOUtils.exec(pb, true);
     }
 
     /**

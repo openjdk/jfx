@@ -2695,4 +2695,30 @@ public class TableViewTest {
 
         VirtualFlowTestUtils.assertTableCellTextEquals(tableView, 0, 0, ""+expected);
     }
+
+    @Test public void test_rt36425() {
+        TableView<String> tableView = new TableView<>();
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellValueFactory(data -> new SimpleStringProperty(data.getValue()));
+        tableColumn.setText("Test");
+        tableView.getColumns().add(tableColumn);
+
+        SimpleListProperty<String> data = new SimpleListProperty<>(FXCollections.observableArrayList());
+        tableView.itemsProperty().bind(data);
+        data.addAll("AAA", "BBB");
+
+        assertEquals("AAA", data.get(0));
+        assertEquals("BBB", data.get(1));
+
+        tableView.getSortOrder().add(tableColumn);
+
+        assertTrue(tableView.getSortOrder().contains(tableColumn));
+        assertEquals("AAA", data.get(0));
+        assertEquals("BBB", data.get(1));
+
+        tableColumn.setSortType(TableColumn.SortType.DESCENDING);
+        assertEquals("AAA", data.get(1));
+        assertEquals("BBB", data.get(0));
+    }
 }

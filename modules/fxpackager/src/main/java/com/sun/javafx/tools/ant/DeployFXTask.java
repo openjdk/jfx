@@ -34,7 +34,7 @@ import com.sun.javafx.tools.packager.DeployParams;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.PackagerException;
 import com.sun.javafx.tools.packager.PackagerLib;
-import com.sun.javafx.tools.packager.bundlers.BundleType;
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.DynamicAttribute;
 import org.apache.tools.ant.Task;

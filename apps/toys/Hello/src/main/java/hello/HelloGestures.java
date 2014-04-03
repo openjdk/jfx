@@ -57,6 +57,7 @@ public void start(Stage primaryStage) {
     circle.setFill(Color.WHITE);
 
     final Path path = new Path();
+    path.setPickOnBounds(true);
 
     MoveTo moveTo = new MoveTo();
     moveTo.setX(startPointX);

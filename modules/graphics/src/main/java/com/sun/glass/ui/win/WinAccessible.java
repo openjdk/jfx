@@ -34,6 +34,7 @@ import javafx.scene.accessibility.Accessible;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
+import javafx.scene.input.KeyCombination;
 import com.sun.glass.ui.PlatformAccessible;
 import com.sun.glass.ui.View;
 import static javafx.scene.accessibility.Attribute.*;
@@ -427,7 +428,6 @@ final class WinAccessible extends PlatformAccessible {
             case TEXT_FIELD:
             case PASSWORD_FIELD:
             case TEXT_AREA: return UIA_TextControlTypeId;
-            case TREE_TABLE_VIEW:
             case TABLE_VIEW: return UIA_TableControlTypeId;
             case LIST_VIEW: return UIA_ListControlTypeId;
             case TREE_TABLE_CELL:
@@ -438,6 +438,7 @@ final class WinAccessible extends PlatformAccessible {
             case CHECKBOX: return UIA_CheckBoxControlTypeId;
             case COMBOBOX: return UIA_ComboBoxControlTypeId;
             case HYPERLINK: return UIA_HyperlinkControlTypeId;
+            case TREE_TABLE_VIEW:
             case TREE_VIEW: return UIA_TreeControlTypeId;
             case TREE_TABLE_ITEM:
             case TREE_ITEM: return UIA_TreeItemControlTypeId;
@@ -462,8 +463,16 @@ final class WinAccessible extends PlatformAccessible {
         switch (role) {
             case MENU_ITEM:
                 impl = patternId == UIA_InvokePatternId;
-//                       patternId == UIA_ExpandCollapsePatternId ||
-//                       patternId == UIA_TogglePatternId;
+                if (!impl) {
+                    Object type = getAttribute(MENU_ITEM_TYPE);
+                    if (type == Role.CONTEXT_MENU) {
+                        impl |= patternId == UIA_ExpandCollapsePatternId;
+                    }
+                    if (type == Role.CHECKBOX || type == Role.RADIO_BUTTON) {
+                        impl |= patternId == UIA_TogglePatternId;
+                    }
+                }
+                break;
             case HYPERLINK:
             case BUTTON:
             case INCREMENT_BUTTON:
@@ -619,6 +628,12 @@ final class WinAccessible extends PlatformAccessible {
                          */
                     default:
                         name = (String)getAttribute(TITLE);
+                        if (name != null && name.length() != 0) {
+                            KeyCombination kc = (KeyCombination)getAttribute(ACCELERATOR);
+                            if (kc != null) {
+                                name += "\t" + kc.toString();
+                            }
+                        }
                 }
 
                 if (name == null || name.length() == 0) {
@@ -1210,6 +1225,7 @@ final class WinAccessible extends PlatformAccessible {
                 case TABLE_ROW:
                 case TABLE_CELL: return getContainer(Role.TABLE_VIEW);
                 case LIST_ITEM: return getContainer(Role.LIST_VIEW);
+                case TREE_TABLE_ITEM:
                 case TREE_TABLE_CELL: return getContainer(Role.TREE_TABLE_VIEW);
                 default:
             }
@@ -1223,8 +1239,9 @@ final class WinAccessible extends PlatformAccessible {
         Role role = (Role) getAttribute(ROLE);
         if (role != null) {
             switch (role) {
-                case TABLE_ROW:
+                case TREE_TABLE_ITEM:
                 case TREE_TABLE_CELL:
+                case TABLE_ROW:
                 case TABLE_CELL: result = (Integer)getAttribute(ROW_INDEX); break;
                 case LIST_ITEM: result = (Integer)getAttribute(INDEX); break;
                 default:

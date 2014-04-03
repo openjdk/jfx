@@ -175,4 +175,61 @@ public class MultiTouch2Test extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
     }
 
+    /**
+     * Touch down two fingers, release both,
+     * touch down two fingers again and release them
+     */
+    @Test
+    public void pressReleasePressTest() throws Exception {
+
+        //Fails on monocle RT-36461
+        Assume.assumeTrue(TestApplication.isLens());
+
+        Rectangle2D r = TestTouchDevices.getScreenBounds();
+        final int width = (int) r.getWidth();
+        final int height = (int) r.getHeight();
+        int x1 = (int) Math.round(width / 2);
+        int y1 = (int) Math.round(height * 0.3);
+        int x2 = (int) Math.round(width / 2);
+        int y2 = (int) Math.round(height * 0.7);
+
+        //press two fingers
+        TestLog.reset();
+        int p1 = device.addPoint(x1, y1);
+        int p2 = device.addPoint(x2, y2);
+        device.sync();
+
+        //verify pressing two fingers
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+
+        //release both fingers
+        TestLog.reset();
+        device.removePoint(p1);
+        device.removePoint(p2);
+        device.sync();
+
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1);
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
+
+        //press two fingers second time
+        TestLog.reset();
+        p1 = device.addPoint(x1, y1);
+        p2 = device.addPoint(x2, y2);
+        device.sync();
+
+        //verify pressing two fingers
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+
+        //release both fingers
+        TestLog.reset();
+        device.removePoint(p1);
+        device.removePoint(p2);
+        device.sync();
+
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1);
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
+    }
+
 }

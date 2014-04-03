@@ -1406,6 +1406,12 @@ public class ContextMenuContent extends Region {
         public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
                 case ROLE: return Role.MENU_ITEM;
+                case MENU_ITEM_TYPE:
+                    if (item instanceof RadioMenuItem) return Role.RADIO_BUTTON;
+                    if (item instanceof CheckMenuItem) return Role.CHECKBOX;
+                    if (item instanceof Menu) return Role.CONTEXT_MENU;
+                    return Role.MENU_ITEM;
+                case ACCELERATOR: return item.getAccelerator();
                 case TITLE: return item.getText();
                 default: return super.accGetAttribute(attribute, parameters); 
             }
