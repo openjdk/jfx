@@ -519,6 +519,7 @@ public class DeployParams extends CommonParams {
             bundleParams.setLicenseType(licenseType);
             bundleParams.setDescription(description);
             bundleParams.setTitle(title);
+            bundleParams.setVerbose(verbose);
 
             bundleParams.setJvmProperties(properties);
             bundleParams.setJvmargs(jvmargs);

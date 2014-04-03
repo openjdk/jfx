@@ -473,7 +473,7 @@ public class PackagerLib {
 
             BundleParams bp = deployParams.getBundleParams();
             if (bp != null) {
-                generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType().toString(), deployParams.getTargetFormat(), deployParams.verbose);
+                generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType().toString(), deployParams.getTargetFormat());
             }
         } catch (Exception ex) {
             throw new PackagerException(ex, "ERR_DeployFailed", ex.getMessage());
@@ -482,7 +482,7 @@ public class PackagerLib {
         this.deployParams = null;
     }
 
-    private void generateNativeBundles(File outdir, Map<String, ? super Object> params, String bundleType, String bundleFormat, boolean verbose) {
+    private void generateNativeBundles(File outdir, Map<String, ? super Object> params, String bundleType, String bundleFormat) {
         outdir = new File(outdir, "bundles");
 
         if (params.containsKey(RUNTIME.getID())) {

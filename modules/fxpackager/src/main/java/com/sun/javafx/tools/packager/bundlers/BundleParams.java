@@ -298,6 +298,13 @@ public class BundleParams {
         putUnlessNull(PARAM_BUNDLE_FORMAT, t);
     }
 
+    public boolean getVerbose() {
+        return fetchParam(VERBOSE);
+    }
+
+    public void setVerbose(boolean verbose) {
+        putUnlessNull(VERBOSE.getID(), verbose);
+    }
 
     public List<String> getLicenseFile() {
         return fetchParam(LICENSE_FILE);

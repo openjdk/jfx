@@ -227,8 +227,11 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                     List<String> args = new ArrayList<>();
                     args.addAll(Arrays.asList(
                             "codesign",
-                            "-s", signingIdentity, // sign with this key
                             "-f")); // replace all existing signatures
+                    if (signingIdentity != null) {
+                        args.add("-s");
+                        args.add(signingIdentity); // sign with this key
+                    }
                     if (entitlementsFile != null) {
                         args.add("--entitlements");
                         args.add(entitlementsFile); // entitlements
@@ -266,10 +269,13 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
 
                     List<String> args = new ArrayList<>();
                     args.addAll(Arrays.asList("codesign",
-                            "-s", signingIdentity, // sign with this key
                             "--deep",
 //                            "--prefix", identifierPrefix, // use the identifier as a prefix
                             "-f")); // replace all existing signatures
+                    if (signingIdentity != null) {
+                        args.add("-s");
+                        args.add(signingIdentity); // sign with this key
+                    }
                     if (inheritedEntitlements != null) {
                         args.add("--entitlements");
                         args.add(inheritedEntitlements); // entitlements
@@ -307,13 +313,19 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                 IOUtils.exec(pb, VERBOSE.fetchFrom(params), false, ps);
                 String bundleID = baos.toString();
 
-                pb = new ProcessBuilder("codesign",
+                List<String> args = new ArrayList<>();
+                args.addAll(Arrays.asList("codesign",
                         "-s", signingIdentity, // sign with this key
                         "-f", // replace all existing signatures
                         "--prefix", identifierPrefix, // use the identifier as a prefix
                         //"-i", bundleID, // sign the bundle's CFBundleIdentifier
-                        "-vvvv",
-                        path.toString());
+                        "-vvvv"));
+                if (signingIdentity != null) {
+                    args.add("-s");
+                    args.add(signingIdentity); // sign with this key
+                }
+                args.add(path.toString());
+                pb = new ProcessBuilder(args);
                 IOUtils.exec(pb, VERBOSE.fetchFrom(params));
             } catch (IOException e) {
                 toThrow.set(e);

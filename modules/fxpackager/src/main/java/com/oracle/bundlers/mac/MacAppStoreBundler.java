@@ -36,7 +36,9 @@ import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
 import com.sun.javafx.tools.resource.mac.MacResources;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -110,7 +112,15 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             "mac.signing-key-app",
             String.class,
             null,
-            params -> "3rd Party Mac Developer Application: " + SIGNING_KEY_USER.fetchFrom(params),
+            params -> {
+                String key = "3rd Party Mac Developer Application: " + SIGNING_KEY_USER.fetchFrom(params);
+                try {
+                    IOUtils.exec(new ProcessBuilder("security", "find-certificate", "-c", key), VERBOSE.fetchFrom(params));
+                    return key;
+                } catch (IOException ioe) {
+                    return null;
+                }
+            },
             false,
             (s, p) -> s);
 
@@ -120,7 +130,15 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             "mac.signing-key-pkg",
             String.class,
             null,
-            params -> "3rd Party Mac Developer Installer: " + SIGNING_KEY_USER.fetchFrom(params),
+            params -> {
+                String key = "3rd Party Mac Developer Installer: " + SIGNING_KEY_USER.fetchFrom(params);
+                try {
+                    IOUtils.exec(new ProcessBuilder("security", "find-certificate", "-c", key), VERBOSE.fetchFrom(params));
+                    return key;
+                } catch (IOException ioe) {
+                    return null;
+                }
+            },
             false,
             (s, p) -> s);
 
@@ -185,7 +203,35 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             ex.printStackTrace();
             Log.debug(ex);
             return null;
+        } finally {
+            try {
+                if (appImageDir != null && !Log.isDebug()) {
+                    IOUtils.deleteRecursive(appImageDir);
+                } else if (appImageDir != null) {
+                    Log.info("[DEBUG] Intermediate application bundle image: "+
+                            appImageDir.getAbsolutePath());
+                }
+                if (!VERBOSE.fetchFrom(p)) {
+                    //cleanup
+                    cleanupConfigFiles(p);
+                } else {
+                    Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), CONFIG_ROOT.fetchFrom(p).getAbsolutePath()));
+                }
+            } catch (FileNotFoundException ex) {
+                //noinspection ReturnInsideFinallyBlock
+                return null;
+            }
         }
+    }
+
+    protected void cleanupConfigFiles(Map<String, ? super Object> params) {
+        if (getConfig_Entitlements(params) != null) {
+            getConfig_Entitlements(params).delete();
+        }
+        if (getConfig_Inherit_Entitlements(params) != null) {
+            getConfig_Inherit_Entitlements(params).delete();
+        }
+        APP_BUNDLER.fetchFrom(params).cleanupConfigFiles(params);
     }
 
     private File getConfig_Entitlements(Map<String, ? super Object> params) {

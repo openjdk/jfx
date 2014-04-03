@@ -236,7 +236,15 @@ public class MacAppBundler extends AbstractBundler {
             "mac.signing-key-developer-id-app",
             String.class,
             null,
-            params -> "Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params),
+            params -> {
+                String key = "Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params);
+                try {
+                    IOUtils.exec(new ProcessBuilder("security", "find-certificate", "-c", key), VERBOSE.fetchFrom(params));
+                    return key;
+                } catch (IOException ioe) {
+                    return null;
+                }
+            },
             false,
             (s, p) -> s);
 
@@ -403,7 +411,7 @@ public class MacAppBundler extends AbstractBundler {
         return APP_NAME.fetchFrom(params) + ".app";
     }
 
-    protected void cleanupConfigFiles(Map<String, ? super Object> params) {
+    public void cleanupConfigFiles(Map<String, ? super Object> params) {
         //Since building the app can be bypassed, make sure configRoot was set
         if (CONFIG_ROOT.fetchFrom(params) != null) {
             if (getConfig_Icon(params) != null) {

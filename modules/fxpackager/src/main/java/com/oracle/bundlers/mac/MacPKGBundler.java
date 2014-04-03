@@ -99,7 +99,15 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
             "mac.signing-key-developer-id-installer",
             String.class,
             null,
-            params -> "Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params),
+            params -> {
+                String key = "Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params);
+                try {
+                    IOUtils.exec(new ProcessBuilder("security", "find-certificate", "-c", key), VERBOSE.fetchFrom(params));
+                    return key;
+                } catch (IOException ioe) {
+                    return null;
+                }
+            },
             false,
             (s, p) -> s);
     
