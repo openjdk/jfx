@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.scene.control.infrastructure;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -45,6 +46,7 @@ public class StageLoader {
         stage = new Stage();
         stage.setScene(scene);
         stage.show();
+        Toolkit.getToolkit().firePulse();
     }
     
     public StageLoader(Scene scene) {
