@@ -41,6 +41,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TableColumnBase;
@@ -291,6 +292,19 @@ public abstract class TableRowSkinBase<T,
                     disclosureWidth = disclosureNode.prefWidth(h);
                     if (disclosureWidth > defaultDisclosureWidth) {
                         maxDisclosureWidthMap.put(c, disclosureWidth);
+
+                        // RT-36359: The recorded max width of the disclosure node
+                        // has increased. We need to go back and request all
+                        // earlier rows to update themselves to take into account
+                        // this increased indentation.
+                        final VirtualFlow<C> flow = getVirtualFlow();
+                        final int thisIndex = getSkinnable().getIndex();
+                        for (int i = 0; i < flow.cells.size(); i++) {
+                            C cell = flow.cells.get(i);
+                            if (cell == null || cell.isEmpty() || cell.getIndex() >= thisIndex) continue;
+                            cell.requestLayout();
+                            cell.layout();
+                        }
                     }
                 }
             }
@@ -506,6 +520,17 @@ public abstract class TableRowSkinBase<T,
         if (!fixedCellSizeEnabled && (resetChildren || cellsEmpty)) {
             getChildren().setAll(cells);
         }
+    }
+
+    private VirtualFlow<C> getVirtualFlow() {
+        Parent p = getSkinnable();
+        while (p != null) {
+            if (p instanceof VirtualFlow) {
+                return (VirtualFlow<C>) p;
+            }
+            p = p.getParent();
+        }
+        return null;
     }
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
