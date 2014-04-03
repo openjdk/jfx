@@ -137,7 +137,7 @@ public class TextFieldTest {
         txtField.setStyle("-fx-pref-column-count: 100");
         Scene s = new Scene(txtField);
         txtField.impl_processCSS(true);
-        assertEquals(100, txtField.getPrefColumnCount(), 0);
+        assertEquals(100.0, txtField.getPrefColumnCount(), 0);
     }
 
     @Test public void pseudoClassState_isReadOnly() {
