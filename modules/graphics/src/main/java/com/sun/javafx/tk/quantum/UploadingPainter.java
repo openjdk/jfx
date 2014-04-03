@@ -104,6 +104,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 rttexture.lock();
                 if (rttexture.isSurfaceLost()) {
                     rttexture.unlock();
+                    sceneState.getScene().entireSceneNeedsRepaint();
                     needsReset = true;
                 }
             }
