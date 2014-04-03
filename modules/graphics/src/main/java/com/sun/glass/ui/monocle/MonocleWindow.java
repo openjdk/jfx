@@ -191,7 +191,7 @@ public final class MonocleWindow extends Window {
      */
     @Override
     public long getNativeWindow() {
-        return NativePlatformFactory.getNativePlatform().getScreen().getNativeHandle();
+        return id;
     }
 
     @Override
@@ -383,6 +383,7 @@ public final class MonocleWindow extends Window {
     @Override
     protected void notifyClose() {
         super.notifyClose();
+        close();
     }
 
     @Override
