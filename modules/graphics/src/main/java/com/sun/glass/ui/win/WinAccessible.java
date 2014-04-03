@@ -34,6 +34,7 @@ import javafx.scene.accessibility.Accessible;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
+import javafx.scene.input.KeyCombination;
 import com.sun.glass.ui.PlatformAccessible;
 import com.sun.glass.ui.View;
 import static javafx.scene.accessibility.Attribute.*;
@@ -462,8 +463,16 @@ final class WinAccessible extends PlatformAccessible {
         switch (role) {
             case MENU_ITEM:
                 impl = patternId == UIA_InvokePatternId;
-//                       patternId == UIA_ExpandCollapsePatternId ||
-//                       patternId == UIA_TogglePatternId;
+                if (!impl) {
+                    Object type = getAttribute(MENU_ITEM_TYPE);
+                    if (type == Role.CONTEXT_MENU) {
+                        impl |= patternId == UIA_ExpandCollapsePatternId;
+                    }
+                    if (type == Role.CHECKBOX || type == Role.RADIO_BUTTON) {
+                        impl |= patternId == UIA_TogglePatternId;
+                    }
+                }
+                break;
             case HYPERLINK:
             case BUTTON:
             case INCREMENT_BUTTON:
@@ -619,6 +628,12 @@ final class WinAccessible extends PlatformAccessible {
                          */
                     default:
                         name = (String)getAttribute(TITLE);
+                        if (name != null && name.length() != 0) {
+                            KeyCombination kc = (KeyCombination)getAttribute(ACCELERATOR);
+                            if (kc != null) {
+                                name += "\t" + kc.toString();
+                            }
+                        }
                 }
 
                 if (name == null || name.length() == 0) {
