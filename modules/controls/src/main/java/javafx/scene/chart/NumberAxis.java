@@ -272,10 +272,10 @@ public final class NumberAxis extends ValueAxis<Number> {
         final double lowerBound = getLowerBound();
         final double upperBound = getUpperBound();
         final double tickUnit = getTickUnit();
-        final double minorUnit = tickUnit/getMinorTickCount();
+        final double minorUnit = tickUnit/Math.max(1, getMinorTickCount());
         if (getTickUnit() > 0) {
             for (double major = lowerBound; major < upperBound; major += tickUnit)  {
-                for (double minor=major+minorUnit; minor < (major+tickUnit); minor += minorUnit) {
+                for (double minor = major + minorUnit; minor < (major + tickUnit); minor += minorUnit) {
                     minorTickMarks.add(minor);
                     if(minorTickMarks.size()>10000) {
                         // This is a ridiculous amount of major tick marks, something has probably gone wrong
