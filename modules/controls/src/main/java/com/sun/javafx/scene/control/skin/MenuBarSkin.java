@@ -910,6 +910,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
                 case ROLE: return Role.MENU_ITEM;
+                case MENU_ITEM_TYPE: return Role.CONTEXT_MENU;
                 case TITLE: return getText();
                 case FOCUS_ITEM: return MenuBarButton.this;
                 default: return super.accGetAttribute(attribute, parameters);
