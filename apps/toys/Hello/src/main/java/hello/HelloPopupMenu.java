@@ -26,11 +26,19 @@
 package hello;
 
 import javafx.application.Application;
+import javafx.event.ActionEvent;
+import javafx.geometry.Bounds;
+import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
@@ -42,40 +50,71 @@ public class HelloPopupMenu extends Application {
         stage.setHeight(500);
         Scene scene = createScene();
         scene.setFill(Color.WHITE);
-
         stage.setScene(scene);
         stage.show();
     }
 
     private Scene createScene() {
-        final Scene scene = new Scene(new Group());
-        final ContextMenu popupMenu = new ContextMenu();
-        popupMenu.setOnShowing(t -> System.out.println("showing"));
-        popupMenu.setOnShown(t -> System.out.println("shown"));
-        popupMenu.setOnHiding(t -> System.out.println("hiding"));
-        popupMenu.setOnHidden(t -> System.out.println("hidden"));
-        popupMenu.setOnAction(t -> System.out.println("on Action: " + t.getTarget()));
+        ContextMenu popupMenu = new ContextMenu();
+        popupMenu.addEventHandler(Menu.ON_SHOWN, t -> System.out.println("menu shown"));
+        popupMenu.addEventHandler(Menu.ON_HIDDEN, t -> System.out.println("menu hidden"));
+        popupMenu.addEventHandler(ActionEvent.ACTION, t -> System.out.println("action " + t.getTarget()));
 
-        MenuItem item1 = new MenuItem("About");
-        item1.setOnAction(e -> System.out.println("About"));
+        MenuItem item = new MenuItem("About");
+        popupMenu.getItems().add(item);
+        item = new MenuItem("Preferences");
+        popupMenu.getItems().add(item);
+        item = new MenuItem("Templates");
+        popupMenu.getItems().add(item);
 
-        MenuItem item2 = new MenuItem("Preferences");
-        item2.setOnAction(e -> System.out.println("Preferences"));
+        Menu menu = new Menu("Weekdays");
+        menu.addEventHandler(ActionEvent.ACTION, t -> System.out.println("Weekdays action " + t.getTarget()));
+        popupMenu.getItems().add(menu);
+        item = new RadioMenuItem("Monday");
+        menu.getItems().add(item);
+        item = new RadioMenuItem("Tuesday");
+        menu.getItems().add(item);
+        item = new RadioMenuItem("Wednesday");
+        menu.getItems().add(item);
+        item = new SeparatorMenuItem();
+        popupMenu.getItems().add(item);
 
-        MenuItem item3 = new MenuItem("Templates");
-        item3.setOnAction(e -> System.out.println("Templates"));
+        menu = new Menu("Types");
+        menu.addEventHandler(ActionEvent.ACTION, t -> System.out.println("Types action " + t.getTarget()));
+        popupMenu.getItems().add(menu);
+        item = new MenuItem("Push");
+        menu.getItems().add(item);
+        item = new RadioMenuItem("Radio1");
+        menu.getItems().add(item);
+        item = new RadioMenuItem("Radio2");
+        menu.getItems().add(item);
+        item = new MenuItem("Mnem_onic");
+        menu.getItems().add(item);
+        item = new MenuItem("Disabled");
+        item.setDisable(true);
+        menu.getItems().add(item);
+        item = new SeparatorMenuItem();
+        menu.getItems().add(item);
+        item = new CheckMenuItem("Check");
+        menu.getItems().add(item);
+        item = new CheckMenuItem("Shortcut1");
+        item.setAccelerator(KeyCombination.keyCombination("Shortcut+S"));
+        menu.getItems().add(item);
+        item = new CheckMenuItem("Shortcut2");
+        item.setAccelerator(KeyCombination.keyCombination("Shortcut + Shift + W"));
+        menu.getItems().add(item);
+        item = new CheckMenuItem("Shortcut3");
+        item.setAccelerator(KeyCombination.keyCombination("Shortcut + Shift + Meta + R"));
+        menu.getItems().add(item);
 
-        popupMenu.getItems().add(item1);
-        popupMenu.getItems().add(item2);
-        popupMenu.getItems().add(item3);
-
-        final Button button = new Button("Click me");
+        Button button = new Button("Click me");
         button.setContextMenu(popupMenu);
-
-        Group root = (Group) scene.getRoot();
-        root.getChildren().clear();
-        root.getChildren().add(button);
-        return scene;
+        button.setOnAction(e -> {
+            Bounds b = button.getBoundsInLocal();
+            Point2D pt = button.localToScreen(b.getMaxX(), b.getMaxY());
+            popupMenu.show(button, pt.getX(), pt.getY());
+        });
+        return new Scene(new Group(button));
     }
 
     /**
