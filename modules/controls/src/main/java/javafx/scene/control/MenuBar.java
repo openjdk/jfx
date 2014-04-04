@@ -40,6 +40,9 @@ import javafx.css.StyleableBooleanProperty;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 /**
  * <p>
@@ -221,6 +224,23 @@ public class MenuBar extends Control {
     @Deprecated @Override
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.MENU_BAR;
+            case FOCUS_NODE: // Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }
 

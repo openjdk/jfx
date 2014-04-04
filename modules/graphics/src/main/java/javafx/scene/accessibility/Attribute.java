@@ -128,6 +128,7 @@ public enum Attribute {
      * Type: Node
      *
      * This attribute is requested to the Scene, where it maps to {@link Scene#focusOwnerProperty()}
+     * The Scene can delegate the request to its current transient focus container.
      */
     FOCUS_NODE("FocusNode", Node.class),
 

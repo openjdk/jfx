@@ -42,6 +42,8 @@ import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -61,6 +63,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.WeakHashMap;
 import com.sun.javafx.menu.MenuBase;
+import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.traversal.Direction;
@@ -272,7 +275,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                 // RT-23147 when MenuBar's focusTraversable is true the first
                 // menu will visually indicate focus
                 unSelectMenus();
-                focusedMenuIndex = 0;
+                menuModeStart(0);
                 openMenuButton = ((MenuBarButton)container.getChildren().get(0));
                 openMenu = getSkinnable().getMenus().get(0);
                 openMenuButton.setHover();
@@ -390,7 +393,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 //                        container.getChildren().get(0).requestFocus();
                         if (focusedMenuIndex != 0) {
                             unSelectMenus();
-                            focusedMenuIndex = 0;
+                            menuModeStart(0);
                             openMenuButton = ((MenuBarButton)container.getChildren().get(0));
                             openMenu = getSkinnable().getMenus().get(0);
                             openMenuButton.setHover();
@@ -585,7 +588,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             menuButton.menuListener = (observable, oldValue, newValue) -> {
                 if (menu.isShowing()) {
                     menuButton.show();
-                    focusedMenuIndex = container.getChildren().indexOf(menuButton);
+                    menuModeStart(container.getChildren().indexOf(menuButton));
                 } else {
                     menuButton.hide();
                 }
@@ -623,7 +626,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                         openMenu.show();
                     }
                     // update FocusedIndex
-                    focusedMenuIndex = getMenuBarButtonIndex(menuButton);
+                    menuModeStart(getMenuBarButtonIndex(menuButton));
                 }
             });
             
@@ -753,7 +756,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
             openMenuButton.clearHover();
             openMenuButton = null;
-            focusedMenuIndex = -1;
+            menuModeEnd();
         }
     }
     
@@ -767,6 +770,23 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         if (openMenuButton != null) {
             openMenuButton.clearHover();
             openMenuButton = null;
+        }
+        menuModeEnd();
+    }
+
+    private void menuModeStart(int newIndex) {
+        if (focusedMenuIndex == -1) {
+            SceneHelper.getSceneAccessor().setTransientFocusContainer(getSkinnable().getScene(), getSkinnable());
+        }
+        focusedMenuIndex = newIndex;
+    }
+
+    private void menuModeEnd() {
+        if (focusedMenuIndex != -1) {
+            SceneHelper.getSceneAccessor().setTransientFocusContainer(getSkinnable().getScene(), null);
+
+            /* Return the a11y focus to a control in the scene. */
+            getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
         }
         focusedMenuIndex = -1;
     }
@@ -844,7 +864,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             }
             index++;
         }
-        focusedMenuIndex = -1;
+        menuModeEnd();
     }
 
     private void clearMenuButtonHover() {
@@ -882,6 +902,18 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         
         private void setHover() {
             setHover(true);
+
+            /* Transfer the a11y focus to an item in the menu bar. */
+            menuBarSkin.getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+        }
+
+        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            switch (attribute) {
+                case ROLE: return Role.MENU_ITEM;
+                case TITLE: return getText();
+                case FOCUS_ITEM: return MenuBarButton.this;
+                default: return super.accGetAttribute(attribute, parameters);
+            }
         }
     }
 
@@ -936,5 +968,21 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     // grow horizontally, but not vertically
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefHeight(-1);
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_NODE: return openMenuButton;
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

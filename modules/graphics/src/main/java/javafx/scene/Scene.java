@@ -156,6 +156,12 @@ public class Scene implements EventTarget {
 
     private Camera defaultCamera;
 
+    /**
+     * A node that is temporarily responsible for the FOCUS_NODE
+     * accessibility attribute. E.g. a currently active MenuBar.
+     */
+    private Node transientFocusContainer;
+
     //Neither width nor height are initialized and will be calculated according to content when this Scene
     //is shown for the first time.
 //    public Scene() {
@@ -391,6 +397,11 @@ public class Scene implements EventTarget {
                                            // don't resize
                                        }
                                    };
+                        }
+
+                        @Override
+                        public void setTransientFocusContainer(Scene scene, Node node) {
+                            scene.transientFocusContainer = node;
                         }
                     });
         }
@@ -6196,7 +6207,12 @@ public class Scene implements EventTarget {
                         }
                         case ROLE: return Role.PARENT;
                         case SCENE: return Scene.this;
-                        case FOCUS_NODE: return getFocusOwner();
+                        case FOCUS_NODE: {
+                            if (transientFocusContainer != null) {
+                                return transientFocusContainer.accGetAttribute(Attribute.FOCUS_NODE);
+                            }
+                            return getFocusOwner();
+                        }
                         default:
                     }
                     return super.getAttribute(attribute, parameters);

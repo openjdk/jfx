@@ -246,9 +246,25 @@ final class WinAccessible extends PlatformAccessible {
         switch (notification) {
             case FOCUS_NODE:
                 if (getView() != null) {
+                    // This is a Scene
                     long focus = GetFocus();
                     if (focus != 0) {
                         UiaRaiseAutomationEvent(focus, UIA_AutomationFocusChangedEventId);
+                    }
+                } else {
+                    // This is a Scene.transientFocusContainer
+                    Node node = (Node)getAttribute(FOCUS_NODE);
+                    if (node != null) {
+                        UiaRaiseAutomationEvent(getAccessible(node), UIA_AutomationFocusChangedEventId);
+                    } else {
+                        // Delegate back to the Scene if the transient focus owner is null
+                        Scene scene = (Scene)getAttribute(SCENE);
+                        if (scene != null) {
+                            Accessible acc = scene.getAccessible();
+                            if (acc != null) {
+                                acc.sendNotification(FOCUS_NODE);
+                            }
+                        }
                     }
                 }
                 break;
@@ -449,6 +465,7 @@ final class WinAccessible extends PlatformAccessible {
             case SCROLL_PANE: return UIA_PaneControlTypeId;
             case SCROLL_BAR: return UIA_ScrollBarControlTypeId;
             case THUMB: return UIA_ThumbControlTypeId;
+            case MENU_BAR: return UIA_MenuBarControlTypeId;
             default: return 0;
         }
     }
@@ -672,7 +689,7 @@ final class WinAccessible extends PlatformAccessible {
                  * Windows won't work correctly unless the accessible returned in GetFocus() 
                  * answer TRUE in UIA_HasKeyboardFocusPropertyId.
                  * Note that UIA_HasKeyboardFocusPropertyId reports true for the main parent
-                 * of a 'focus item', but that doesn't seen to cause problems.
+                 * of a 'focus item', but that doesn't seem to cause problems.
                  */
                 if (Boolean.FALSE.equals(focus)) {
                     Scene scene = (Scene)getAttribute(SCENE);
