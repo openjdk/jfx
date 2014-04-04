@@ -162,15 +162,6 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         TabPane tabPane = getControl();
         // only switch to another tab if the selected tab is the one we're closing
         int index = tabPane.getTabs().indexOf(tab);
-        if (tab.isSelected()) {
-            if (index == 0) {
-                if (tabPane.getTabs().size() > 0) {
-                    tabPane.getSelectionModel().selectFirst();
-                }
-            } else {
-                tabPane.getSelectionModel().selectPrevious();
-            }
-        }
         if (index != -1) {
             tabPane.getTabs().remove(index);
         }                

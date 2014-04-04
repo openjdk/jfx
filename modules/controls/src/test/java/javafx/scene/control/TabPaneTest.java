@@ -866,4 +866,79 @@ public class TabPaneTest {
         Toolkit.getToolkit().firePulse();
         assertTrue(splitPane.getParent().isVisible());
     }
+
+    @Test public void test_rt_36456_default_selectionMovesBackwardOne() {
+        Tab tab0 = new Tab("Tab 0");
+        Tab tab1 = new Tab("Tab 1");
+        Tab tab2 = new Tab("Tab 2");
+
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(tab0, tab1, tab2);
+        tabPane.getSelectionModel().select(tab1);
+
+        new StageLoader(tabPane);
+
+        assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
+        tabPane.getTabs().remove(tab1);
+        assertEquals(tab0, tabPane.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void test_rt_36456_selectionMovesBackwardTwoSkippingDisabledTab() {
+        Tab tab0 = new Tab("Tab 0");
+        Tab tab1 = new Tab("Tab 1");
+        tab1.setDisable(true);
+        Tab tab2 = new Tab("Tab 2");
+
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(tab0, tab1, tab2);
+        tabPane.getSelectionModel().select(tab2);
+
+        new StageLoader(tabPane);
+
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+        tabPane.getTabs().remove(tab2);
+
+        // selection should jump from tab2 to tab0, as tab1 is disabled
+        assertEquals(tab0, tabPane.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void test_rt_36456_selectionMovesForwardOne() {
+        Tab tab0 = new Tab("Tab 0");
+        tab0.setDisable(true);
+        Tab tab1 = new Tab("Tab 1");
+        Tab tab2 = new Tab("Tab 2");
+
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(tab0, tab1, tab2);
+        tabPane.getSelectionModel().select(tab1);
+
+        new StageLoader(tabPane);
+
+        assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
+        tabPane.getTabs().remove(tab1);
+
+        // selection should move to the next non-disabled tab - in this case tab2
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void test_rt_36456_selectionMovesForwardTwoSkippingDisabledTab() {
+        Tab tab0 = new Tab("Tab 0");
+        Tab tab1 = new Tab("Tab 1");
+        tab1.setDisable(true);
+        Tab tab2 = new Tab("Tab 2");
+
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(tab0, tab1, tab2);
+        tabPane.getSelectionModel().select(tab0);
+
+        new StageLoader(tabPane);
+
+        assertEquals(tab0, tabPane.getSelectionModel().getSelectedItem());
+        tabPane.getTabs().remove(tab0);
+
+        // selection should move to the next non-disabled tab - in this case tab2
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+    }
+
+
 }

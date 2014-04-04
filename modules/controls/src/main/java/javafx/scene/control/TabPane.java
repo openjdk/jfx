@@ -640,18 +640,44 @@ public class TabPane extends Control {
                 while (c.next()) {
                     for (Tab tab : c.getRemoved()) {
                         if (tab != null && !tabPane.getTabs().contains(tab)) {
-                            if (getSelectedIndex() == 0 && tabPane.getTabs().size() > 0) {
-                                clearAndSelect(0);
-                                tab.setSelected(false);
-                            }
                             if (tab.isSelected()) {
                                 tab.setSelected(false);
-                                if (c.getFrom() == 0) {
-                                    if (tabPane.getTabs().size() > 1) {
-                                        clearSelection();
+                                final int tabIndex = c.getFrom();
+                                final int tabCount = tabPane.getTabs().size();
+
+                                // we always try to select the nearest, non-disabled
+                                // tab from the position of the closed tab.
+                                int i = 1;
+                                while (true) {
+                                    // look leftwards
+                                    int downPos = tabIndex - i;
+                                    if (downPos >= 0) {
+                                        Tab _tab = getModelItem(downPos);
+                                        System.out.println(_tab.getText() + " disabled: " + _tab.isDisabled() + ", disable: " + _tab.isDisable());
+                                        if (_tab != null && ! _tab.isDisable()) {
+                                            select(_tab);
+                                            break;
+                                        }
                                     }
-                                } else {
-                                    selectPrevious();
+
+                                    // look rightwards. We subtract one as we need
+                                    // to take into account that a tab has been removed
+                                    // and if we don't do this we'll miss the tab
+                                    // to the right of the tab (as it has moved into
+                                    // the removed tabs position).
+                                    int upPos = tabIndex + i - 1;
+                                    if (upPos < tabCount) {
+                                        Tab _tab = getModelItem(upPos);
+                                        if (_tab != null && ! _tab.isDisable()) {
+                                            select(_tab);
+                                            break;
+                                        }
+                                    }
+
+                                    if (downPos < 0 && upPos >= tabCount) {
+                                        break;
+                                    }
+                                    i++;
                                 }
                             }
                         }

@@ -136,7 +136,7 @@ public class SamplePageHelpers {
             tabPane.getTabs().add(
                 TabBuilder.create()
                     .text("Tab "+i)
-                    .disable(i==0 && disableFirst)
+                    .disable(i==1 && disableFirst)
                     .content(new Label((i==1 && firstTabText!=null)? firstTabText :"Tab "+i+" Content"))
                     .build()
             );
