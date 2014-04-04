@@ -955,11 +955,11 @@ final class MacAccessible extends PlatformAccessible {
 
         Function<Object, MacVariant> map = attr.map;
         Attribute jfxAttr = attr.jfxAttr;
+        Role role = (Role)getAttribute(ROLE);
+        if (role == null) return null;
         if (jfxAttr == null) {
-            Role role = (Role)getAttribute(ROLE);
-            if (role == null) return null;
             switch (attr) {
-                case NSAccessibilityValueAttribute:
+                case NSAccessibilityValueAttribute: {
                     switch (role) {
                         case TAB_PANE:
                             jfxAttr = SELECTED_TAB;
@@ -999,13 +999,15 @@ final class MacAccessible extends PlatformAccessible {
                             return null;
                     }
                     break;
-                case NSAccessibilityTabsAttribute:
+                }
+                case NSAccessibilityTabsAttribute: {
                     switch (role) {
                         case TAB_PANE: jfxAttr = TABS; break;
                         case PAGINATION: jfxAttr = PAGES; break;
                         default:
                     }
                     break;
+                }
                 case NSAccessibilitySelectedChildrenAttribute: {
                     /* Used for ContextMenu's*/
                     if (role == Role.CONTEXT_MENU) {
@@ -1040,13 +1042,13 @@ final class MacAccessible extends PlatformAccessible {
                      * JFX does not require ListView to report column count == 1
                      * But Mac needs NSAccessibilityColumnCountAttribute == 1 to work
                      */
-                    result = 1; break;
+                    result = 1;
+                    break;
                 case NSAccessibilityValueAttribute:
-                    Role role = (Role)getAttribute(ROLE);
                     if (role == Role.COMBOBOX) {
                         result = "";
-                        break;
                     }
+                    break;
                 case AXMenuItemCmdModifiers:
                     return attr.map.apply(kAXMenuItemModifierNoCommand);
                 default: return null;
@@ -1057,7 +1059,6 @@ final class MacAccessible extends PlatformAccessible {
         switch (attr) {
             case NSAccessibilityWindowAttribute:
             case NSAccessibilityTopLevelUIElementAttribute: {
-                Role role = (Role)getAttribute(ROLE);
                 if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM) {
                     return null;
                 }
@@ -1084,8 +1085,7 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityRoleDescriptionAttribute: {
-                Role role = (Role)result;
-                MacRoles macRole = MacRoles.getRole(role);
+                MacRoles macRole = MacRoles.getRole((Role)result);
                 if (macRole == null) return null;
                 if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
                     Boolean state = (Boolean)getAttribute(INDETERMINATE);
@@ -1111,7 +1111,7 @@ final class MacAccessible extends PlatformAccessible {
                 if (getView() != null) {
                     result = getView().getWindow().getNativeWindow();
                 } else if (result != null) {
-                    if (getAttribute(ROLE) == Role.CONTEXT_MENU) {
+                    if (role == Role.CONTEXT_MENU) {
                         Node menuItem = (Node)getAttribute(MENU_FOR);
                         if (menuItem != null) {
                             if (menuItem.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
@@ -1133,7 +1133,6 @@ final class MacAccessible extends PlatformAccessible {
                 if (jfxAttr == SELECTED_TAB || jfxAttr == SELECTED_PAGE) {
                     result = getAccessible((Node)result);
                 }
-                Role role = (Role)getAttribute(ROLE);
                 if (role == Role.CHECKBOX || role == Role.RADIO_BUTTON) {
                     if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
                         result = 2;
@@ -1167,7 +1166,6 @@ final class MacAccessible extends PlatformAccessible {
                  * For text roles, where the title is reported in AXValue, reporting 
                  * the value again in AXTitle will cause voice over to read the text twice. 
                  */
-                Role role = (Role)getAttribute(ROLE);
                 switch (role) {
                     case TEXT:
                     case TEXT_FIELD:

@@ -130,8 +130,8 @@ public enum Role {
 
     /**
      * Menu Item.
-     * Attributed: 
-     * Actions: Fire
+     * Attributed: MENU_ITEM_TYPE, SELECTED, ACCELERATOR, TITLE
+     * Actions: FIRE
      */
     MENU_ITEM,
 
@@ -179,7 +179,7 @@ public enum Role {
 
     /**
      * RadioButton
-     * Attributes: TITLE
+     * Attributes: TITLE, SELECTED
      * Actions: FIRE
      */
     RADIO_BUTTON,
