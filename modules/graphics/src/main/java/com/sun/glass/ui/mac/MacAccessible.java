@@ -757,6 +757,54 @@ final class MacAccessible extends PlatformAccessible {
         return inMenu;
     }
 
+    private int getMenuItemCmdGlyph(KeyCode code) {
+        // Based on System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/Headers/Menus.h
+        switch (code) {
+            case ENTER:        return 0x04;
+            case SHIFT:        return 0x05;
+            case CONTROL:      return 0x06;
+            case META:         return 0x07;
+            case SPACE:        return 0x09;
+            case COMMAND:      return 0x11;
+            case ESCAPE:       return 0x1b;
+            case CLEAR:        return 0x1c;
+            case PAGE_UP:      return 0x62;
+            case CAPS:         return 0x63;
+            case LEFT:
+            case KP_LEFT:      return 0x64;
+            case RIGHT:
+            case KP_RIGHT:     return 0x65;
+            case HELP:         return 0x67;
+            case UP:
+            case KP_UP:        return 0x68;
+            case DOWN:
+            case KP_DOWN:      return 0x6a;
+            case PAGE_DOWN:    return 0x6b;
+            case CONTEXT_MENU: return 0x6d;
+            case POWER:        return 0x6e;
+            case F1:           return 0x6f;
+            case F2:           return 0x70;
+            case F3:           return 0x71;
+            case F4:           return 0x72;
+            case F5:           return 0x73;
+            case F6:           return 0x74;
+            case F7:           return 0x75;
+            case F8:           return 0x76;
+            case F9:           return 0x77;
+            case F10:          return 0x78;
+            case F11:          return 0x79;
+            case F12:          return 0x7a;
+            case F13:          return 0x87;
+            case F14:          return 0x88;
+            case F15:          return 0x89;
+            default: return 0;
+        }
+    }
+
+    private boolean isCmdCharBased(KeyCode code) {
+        return code.isLetterKey() || (code.isDigitKey() && !code.isKeypadKey());
+    }
+
     /* NSAccessibility Protocol - JNI entry points */
     long[] accessibilityAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
@@ -1149,7 +1197,7 @@ final class MacAccessible extends PlatformAccessible {
                 } 
                 if (kc instanceof KeyCodeCombination) {
                     KeyCode code = ((KeyCodeCombination)kc).getCode();
-                    if (code.isLetterKey()) {
+                    if (isCmdCharBased(code)) {
                         result = code.getName();
                     }
                 }
@@ -1161,8 +1209,10 @@ final class MacAccessible extends PlatformAccessible {
                 result = null;
                 if (kc instanceof KeyCodeCombination) {
                     KeyCode code = ((KeyCodeCombination)kc).getCode();
-                    if (!code.isLetterKey()) {
-                        //TODO
+                    if (!isCmdCharBased(code)) {
+                        @SuppressWarnings("deprecation")
+                        int keyCode = code.impl_getCode();
+                        result = MacApplication._GetMacKey(keyCode);
                     }
                 }
                 if (result == null) return null;
@@ -1173,8 +1223,8 @@ final class MacAccessible extends PlatformAccessible {
                 result = null;
                 if (kc instanceof KeyCodeCombination) {
                     KeyCode code = ((KeyCodeCombination)kc).getCode();
-                    if (!code.isLetterKey()) {
-                        //TODO
+                    if (!isCmdCharBased(code)) {
+                        result = getMenuItemCmdGlyph(code);
                     }                    
                 }
                 if (result == null) return null;
