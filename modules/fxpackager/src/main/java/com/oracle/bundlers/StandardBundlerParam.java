@@ -228,7 +228,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     params -> {
                         extractParamsFromAppResources(params);
                         Boolean result = (Boolean) params.get("fxPackaging");
-                        return (result == null) ? Boolean.FALSE : Boolean.TRUE;
+                        return (result == null) ? Boolean.FALSE : result;
                     },
                     false,
                     (s, p) -> Boolean.valueOf(s)
