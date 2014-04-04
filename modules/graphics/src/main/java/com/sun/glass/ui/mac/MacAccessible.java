@@ -1133,7 +1133,7 @@ final class MacAccessible extends PlatformAccessible {
                 if (jfxAttr == SELECTED_TAB || jfxAttr == SELECTED_PAGE) {
                     result = getAccessible((Node)result);
                 }
-                if (role == Role.CHECKBOX || role == Role.RADIO_BUTTON) {
+                if (role == Role.CHECKBOX || role == Role.TOGGLE_BUTTON) {
                     if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
                         result = 2;
                     } else {
