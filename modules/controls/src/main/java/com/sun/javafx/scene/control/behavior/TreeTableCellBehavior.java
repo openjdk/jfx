@@ -114,13 +114,21 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
 
     @Override protected boolean handleDisclosureNode(double x, double y) {
         final TreeItem<S> treeItem = getControl().getTreeTableRow().getTreeItem();
-        final Node disclosureNode = getControl().getTreeTableRow().getDisclosureNode();
-        if (disclosureNode != null) {
-            if (disclosureNode.getBoundsInParent().contains(x, y)) {
-                if (treeItem != null) {
-                    treeItem.setExpanded(! treeItem.isExpanded());
+
+        final TreeTableView<S> treeTableView = getControl().getTreeTableView();
+        final TreeTableColumn<S,T> column = getTableColumn();
+        final TreeTableColumn<S,?> treeColumn = treeTableView.getTreeColumn() == null ?
+                treeTableView.getVisibleLeafColumn(0) : treeTableView.getTreeColumn();
+
+        if (column == treeColumn) {
+            final Node disclosureNode = getControl().getTreeTableRow().getDisclosureNode();
+            if (disclosureNode != null) {
+                if (disclosureNode.getBoundsInLocal().contains(x, y)) {
+                    if (treeItem != null) {
+                        treeItem.setExpanded(!treeItem.isExpanded());
+                    }
+                    return true;
                 }
-                return true;
             }
         }
         return false;
