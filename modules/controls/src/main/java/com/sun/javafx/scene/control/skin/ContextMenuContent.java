@@ -773,9 +773,7 @@ public class ContextMenuContent extends Region {
         return submenu;
     }
 
-    private void showSubmenu(Menu menu) {
-        openSubmenu = menu;
-
+    private void createSubmenu() {
         if (submenu == null) {
             submenu = new ContextMenu();
             submenu.showingProperty().addListener(new ChangeListener<Boolean>() {
@@ -797,7 +795,11 @@ public class ContextMenuContent extends Region {
                 }
             });
         }
-
+    }
+   
+    private void showSubmenu(Menu menu) {
+        openSubmenu = menu;
+        createSubmenu();
         submenu.getItems().setAll(menu.getItems());
         submenu.show(selectedBackground, Side.RIGHT, 0, 0);
     }
@@ -927,6 +929,8 @@ public class ContextMenuContent extends Region {
         public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
                 case ROLE: return Role.CONTEXT_MENU;
+                case VISIBLE: return contextMenu.isShowing();
+                case MENU_FOR: return contextMenu.getOwnerNode();
                 default: return super.accGetAttribute(attribute, parameters); 
             }
         }
@@ -1413,6 +1417,15 @@ public class ContextMenuContent extends Region {
                     return Role.MENU_ITEM;
                 case ACCELERATOR: return item.getAccelerator();
                 case TITLE: return item.getText();
+                case MENU:
+                    createSubmenu();
+                    // Accessibility might need to see the menu node before the window
+                    // is visible (i.e. before the skin is applied).
+                    if (submenu.getSkin() == null) {
+                        submenu.impl_styleableGetNode().impl_processCSS(true);
+                    }
+                    ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
+                    return cmContent.itemsContainer;
                 default: return super.accGetAttribute(attribute, parameters); 
             }
         }

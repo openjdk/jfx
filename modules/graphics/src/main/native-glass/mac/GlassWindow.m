@@ -186,6 +186,30 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     [super setWorksWhenModal:NO];
 }
 
+- (BOOL)accessibilityIsIgnored
+{
+    /* In JavaFX NSPanels are used to implement PopupWindows,
+     * which are used by ContextMenu.  In Accessibility, for a
+     * menu to work as expected, the window has to be ignored.
+     * Note that asking the children of the window is
+     * very important in this context. It ensures that all
+     * descendants created.  Without it, the menu  will
+     * not be seen by the assistive technology.
+     */
+    __block BOOL ignored = [super accessibilityIsIgnored];
+    NSArray* children = [self accessibilityAttributeValue: NSAccessibilityChildrenAttribute];
+    if (children) {
+        [children enumerateObjectsUsingBlock: ^(id child, NSUInteger index, BOOL *stop) {
+            NSString* role = [child accessibilityAttributeValue: NSAccessibilityRoleAttribute];
+            if ([NSAccessibilityMenuRole isEqualToString: role]) {
+                ignored = YES;
+                *stop = YES;
+            }
+        }];
+    }
+    return ignored;
+}
+
 @end
 // --------------------------------------------------------------------------------------
 
