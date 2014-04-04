@@ -377,7 +377,10 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     private void removeTab(Tab tab) {
         final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
-        tabRegion.removeListeners(tab);
+
+        if (tabRegion != null) {
+            tabRegion.removeListeners(tab);
+        }
         tabHeaderArea.removeTab(tab);
         removeTabContent(tab);
 
@@ -397,7 +400,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
         // end of removing menu item
 
-        tabRegion.animating = false;
+        if (tabRegion != null) {
+            tabRegion.animating = false;
+        }
         tabHeaderArea.requestLayout();
     }
 
