@@ -131,7 +131,7 @@ public class CheckBox extends ButtonBase {
                     final boolean active = get();
                     pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE,  !active);
                     pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE, active);
-                    accSendNotification(Attribute.TOGGLE_STATE);
+                    accSendNotification(Attribute.INDETERMINATE);
                 }
 
                 @Override
@@ -165,7 +165,7 @@ public class CheckBox extends ButtonBase {
                 @Override protected void invalidated() {
                     final Boolean v = get();
                     pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, v);
-                    accSendNotification(Attribute.TOGGLE_STATE);
+                    accSendNotification(Attribute.SELECTED);
                 }
 
                 @Override
@@ -270,7 +270,8 @@ public class CheckBox extends ButtonBase {
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.CHECKBOX;
-            case TOGGLE_STATE: return isIndeterminate() ? 2 : (isSelected() ? 1 : 0);
+            case SELECTED: return isSelected();
+            case INDETERMINATE: return isIndeterminate();
             default: return super.accGetAttribute(attribute, parameters);
         }
     }

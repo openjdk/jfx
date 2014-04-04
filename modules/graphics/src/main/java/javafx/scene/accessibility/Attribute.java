@@ -339,11 +339,6 @@ public enum Attribute {
     TITLE("Title", String.class),
 
     /**
-     * An integer 0, 1, or 2, corresponding to OFF, ON, and INDETERMINATE states.
-     */
-    TOGGLE_STATE("ToggleState", Integer.class),
-
-    /**
      * The text of the Tooltip associated with a given node, although for now this
      * is only supported on Control subclasses.
      */

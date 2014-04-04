@@ -991,7 +991,7 @@ final class MacAccessible extends PlatformAccessible {
                             break;
                         case CHECKBOX:
                         case TOGGLE_BUTTON:
-                            jfxAttr = TOGGLE_STATE;
+                            jfxAttr = SELECTED;
                             map = MacVariant::createNSNumberForInt;
                             break;
                         default:
@@ -1132,6 +1132,15 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilityValueAttribute: {
                 if (jfxAttr == SELECTED_TAB || jfxAttr == SELECTED_PAGE) {
                     result = getAccessible((Node)result);
+                }
+                Role role = (Role)getAttribute(ROLE);
+                if (role == Role.CHECKBOX || role == Role.RADIO_BUTTON) {
+                    if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
+                        result = 2;
+                    } else {
+                        boolean selected = Boolean.TRUE.equals(result);
+                        result = selected ? 1 : 0;
+                    }
                 }
                 break;
             }

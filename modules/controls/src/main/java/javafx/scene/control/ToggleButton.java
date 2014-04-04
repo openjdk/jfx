@@ -158,7 +158,7 @@ import javafx.css.StyleableProperty;
                         }
                     }
                     pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, get());
-                    accSendNotification(Attribute.TOGGLE_STATE);
+                    accSendNotification(Attribute.SELECTED);
                 }
 
                 @Override
@@ -272,7 +272,7 @@ import javafx.css.StyleableProperty;
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.TOGGLE_BUTTON;
-            case TOGGLE_STATE: return isSelected() ? 1 : 0;
+            case SELECTED: return isSelected();
             default: return super.accGetAttribute(attribute, parameters); 
         }
     }

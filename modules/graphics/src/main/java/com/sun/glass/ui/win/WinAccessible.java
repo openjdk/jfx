@@ -188,6 +188,11 @@ final class WinAccessible extends PlatformAccessible {
     /* Scroll */
     private static final int UIA_ScrollPatternNoScroll          = -1;
 
+    /* ToggleState */
+    private static final int ToggleState_Off                    = 0;
+    private static final int ToggleState_On                     = 1;
+    private static final int ToggleState_Indeterminate          = 2;
+
     /* Other constants */
     private static final int UiaAppendRuntimeId                  = 3;
 
@@ -316,7 +321,18 @@ final class WinAccessible extends PlatformAccessible {
                 }
                 break;
             }
+            case INDETERMINATE: {
+                if (getAttribute(ROLE) == Role.CHECKBOX) {
+                    notifyToggleState();
+                }
+                break;
+            }
             case SELECTED: {
+                Object role = getAttribute(ROLE); 
+                if (role == Role.CHECKBOX || role == Role.RADIO_BUTTON) {
+                    notifyToggleState();
+                    break;
+                }
                 Boolean selected = (Boolean)getAttribute(SELECTED);
                 if (selected != null) {
                     if (selected) {
@@ -364,19 +380,6 @@ final class WinAccessible extends PlatformAccessible {
                 documentRangeValid = false;
                 selectionRangeValid = false;
                 break;
-            case TOGGLE_STATE: {
-                Integer state = (Integer)getAttribute(TOGGLE_STATE);
-                if (state != null) {
-                    WinVariant vo = new WinVariant();
-                    vo.vt = WinVariant.VT_I4;
-                    vo.lVal = (Integer)state;
-                    WinVariant vn = new WinVariant();
-                    vn.vt = WinVariant.VT_I4;
-                    vn.lVal = (Integer)state;
-                    UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ToggleToggleStatePropertyId, vo, vn);
-                }
-                break;
-            }
             case EXPANDED: {
                 Boolean expanded = (Boolean)getAttribute(EXPANDED);
                 if (expanded != null) {
@@ -393,6 +396,17 @@ final class WinAccessible extends PlatformAccessible {
             default:
                 UiaRaiseAutomationEvent(peer, UIA_AutomationPropertyChangedEventId);
         }
+    }
+
+    void notifyToggleState() {
+        int state = get_ToggleState();
+        WinVariant vo = new WinVariant();
+        vo.vt = WinVariant.VT_I4;
+        vo.lVal = state;
+        WinVariant vn = new WinVariant();
+        vn.vt = WinVariant.VT_I4;
+        vn.lVal = state;
+        UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ToggleToggleStatePropertyId, vo, vn);
     }
 
     @Override
@@ -1331,8 +1345,11 @@ final class WinAccessible extends PlatformAccessible {
 
     int get_ToggleState() {
         if (isDisposed()) return 0;
-        Integer state = (Integer)getAttribute(TOGGLE_STATE);
-        return state != null ? state : 0;
+        if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
+            return ToggleState_Indeterminate;
+        }
+        boolean selected = Boolean.TRUE.equals(getAttribute(SELECTED));
+        return selected ? ToggleState_On : ToggleState_Off;
     }
 
     /***********************************************/

@@ -47,7 +47,7 @@ public enum Role {
 
     /**
      * CheckBox.
-     * Attributes: TITLE, TOGGLE_STATE
+     * Attributes: TITLE, SELECTED, INDETERMINATE
      * Actions: FIRE
      */
     CHECKBOX,
@@ -214,7 +214,7 @@ public enum Role {
 
     /**
      * ToggleButton
-     * Attributes: TITLE
+     * Attributes: TITLE, SELECTED
      * Action: FIRE
      */
     TOGGLE_BUTTON,
