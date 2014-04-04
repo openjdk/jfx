@@ -140,14 +140,14 @@ class MacVariant {
     }
 
     Object getValue() {
-        switch(type) {
-        case NSNumber_Boolean: return int1 != 0;
-        case NSNumber_Int: return int1;
-        case NSNumber_Double: return double1;
-        case NSArray_id: return longArray;
-        case NSArray_int: return intArray;
-        case NSValue_range: return new int[] {int1, int2};
-        //TODO REST
+        switch (type) {
+            case NSNumber_Boolean: return int1 != 0;
+            case NSNumber_Int: return int1;
+            case NSNumber_Double: return double1;
+            case NSArray_id: return longArray;
+            case NSArray_int: return intArray;
+            case NSValue_range: return new int[] {int1, int2};
+            //TODO REST
         }
         return null;
     }
@@ -155,10 +155,10 @@ class MacVariant {
     @Override
     public String toString() {
         Object v = getValue();
-        switch(type) {
-        case NSArray_id: v = Arrays.toString((long[])v); break;
-        case NSArray_int: v = Arrays.toString((int[])v); break;
-        case NSValue_range: v = Arrays.toString((int[])v); break;
+        switch (type) {
+            case NSArray_id: v = Arrays.toString((long[])v); break;
+            case NSArray_int: v = Arrays.toString((int[])v); break;
+            case NSValue_range: v = Arrays.toString((int[])v); break;
         }
         return "MacVariant type: " + type + " value " + v;
     }

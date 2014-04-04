@@ -1415,8 +1415,17 @@ public class ContextMenuContent extends Region {
                     if (item instanceof CheckMenuItem) return Role.CHECKBOX;
                     if (item instanceof Menu) return Role.CONTEXT_MENU;
                     return Role.MENU_ITEM;
+                case SELECTED:
+                    if (item instanceof CheckMenuItem) {
+                        return ((CheckMenuItem)item).isSelected();
+                    }
+                    if (item instanceof RadioMenuItem) {
+                        return ((RadioMenuItem) item).isSelected();
+                    }
+                    return false;
                 case ACCELERATOR: return item.getAccelerator();
                 case TITLE: return item.getText();
+                case ENABLED: return !item.isDisable();
                 case MENU:
                     createSubmenu();
                     // Accessibility might need to see the menu node before the window

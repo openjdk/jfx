@@ -95,18 +95,33 @@ public class HelloPopupMenu extends Application {
         menu.getItems().add(item);
         item = new SeparatorMenuItem();
         menu.getItems().add(item);
-        item = new CheckMenuItem("Check");
+        item = new CheckMenuItem("Check1");
+        menu.getItems().add(item);
+        item = new CheckMenuItem("Check2");
+        ((CheckMenuItem)item).setSelected(true);
         menu.getItems().add(item);
         item = new CheckMenuItem("Shortcut1");
-        item.setAccelerator(KeyCombination.keyCombination("Shortcut+S"));
+        item.setAccelerator(KeyCombination.keyCombination("Shortcut + s"));
         menu.getItems().add(item);
         item = new CheckMenuItem("Shortcut2");
         item.setAccelerator(KeyCombination.keyCombination("Shortcut + Shift + W"));
         menu.getItems().add(item);
         item = new CheckMenuItem("Shortcut3");
-        item.setAccelerator(KeyCombination.keyCombination("Shortcut + Shift + Meta + R"));
+        item.setAccelerator(KeyCombination.keyCombination("Shortcut + Shift + Ctrl + R"));
         menu.getItems().add(item);
-
+        item = new CheckMenuItem("Shortcut4");
+        item.setAccelerator(KeyCombination.keyCombination("F1"));
+        menu.getItems().add(item);
+        item = new CheckMenuItem("Shortcut5");
+        item.setAccelerator(KeyCombination.keyCombination("Shortcut + 1"));
+        menu.getItems().add(item);
+        item = new CheckMenuItem("Shortcut6");
+        item.setAccelerator(KeyCombination.keyCombination("Shortcut + UP"));
+        menu.getItems().add(item);
+        item = new CheckMenuItem("Shortcut7");
+        item.setAccelerator(KeyCombination.keyCombination("Shortcut + DOWN"));
+        menu.getItems().add(item);
+        
         Button button = new Button("Click me");
         button.setContextMenu(popupMenu);
         button.setOnAction(e -> {

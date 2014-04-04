@@ -41,6 +41,10 @@ import javafx.scene.accessibility.Accessible;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
+import javafx.scene.input.KeyCharacterCombination;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import com.sun.glass.ui.PlatformAccessible;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
@@ -107,6 +111,11 @@ final class MacAccessible extends PlatformAccessible {
 
         // Custom attributes
         AXVisited(VISITED, MacVariant::createNSNumberForBoolean),
+        AXMenuItemCmdChar(ACCELERATOR, MacVariant::createNSString),
+        AXMenuItemCmdVirtualKey(ACCELERATOR, MacVariant::createNSNumberForInt),
+        AXMenuItemCmdGlyph(ACCELERATOR, MacVariant::createNSNumberForInt),
+        AXMenuItemCmdModifiers(ACCELERATOR, MacVariant::createNSNumberForInt),
+        AXMenuItemMarkChar(SELECTED, MacVariant::createNSString),
 
         // NSAccessibilityMenuRole
         NSAccessibilitySelectedChildrenAttribute(null, MacVariant::createNSArray),
@@ -259,6 +268,11 @@ final class MacAccessible extends PlatformAccessible {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityTitleAttribute,
                 MacAttributes.NSAccessibilitySelectedAttribute,
+                MacAttributes.AXMenuItemCmdChar,
+                MacAttributes.AXMenuItemCmdVirtualKey,
+                MacAttributes.AXMenuItemCmdGlyph,
+                MacAttributes.AXMenuItemCmdModifiers,
+                MacAttributes.AXMenuItemMarkChar,
             },
             new MacActions[] {
                 MacActions.NSAccessibilityPressAction,
@@ -599,6 +613,11 @@ final class MacAccessible extends PlatformAccessible {
     private static native String NSAccessibilityRoleDescription(long role, long subrole);
     private static native MacVariant idToMacVariant(long id, int type);
     private static native MacAccessible GlassAccessibleToMacAccessible(long glassAccessible);
+    private static final int kAXMenuItemModifierNone         = 0;
+    private static final int kAXMenuItemModifierShift        = (1 << 0);
+    private static final int kAXMenuItemModifierOption       = (1 << 1);
+    private static final int kAXMenuItemModifierControl      = (1 << 2);
+    private static final int kAXMenuItemModifierNoCommand    = (1 << 3);
 
     private MacAccessible(Accessible accessible) {
         super(accessible);
@@ -980,6 +999,8 @@ final class MacAccessible extends PlatformAccessible {
                         result = "";
                         break;
                     }
+                case AXMenuItemCmdModifiers:
+                    return attr.map.apply(kAXMenuItemModifierNoCommand);
                 default: return null;
             }
         }
@@ -1117,6 +1138,73 @@ final class MacAccessible extends PlatformAccessible {
                         break;
                     }
                     default:
+                }
+                break;
+            }
+            case AXMenuItemCmdChar: {
+                KeyCombination kc = (KeyCombination)result;
+                result = null;
+                if (kc instanceof KeyCharacterCombination) {
+                    result = ((KeyCharacterCombination)kc).getCharacter();
+                } 
+                if (kc instanceof KeyCodeCombination) {
+                    KeyCode code = ((KeyCodeCombination)kc).getCode();
+                    if (code.isLetterKey()) {
+                        result = code.getName();
+                    }
+                }
+                if (result == null) return null;
+                break;
+            }
+            case AXMenuItemCmdVirtualKey: {
+                KeyCombination kc = (KeyCombination)result;
+                result = null;
+                if (kc instanceof KeyCodeCombination) {
+                    KeyCode code = ((KeyCodeCombination)kc).getCode();
+                    if (!code.isLetterKey()) {
+                        //TODO
+                    }
+                }
+                if (result == null) return null;
+                break;
+            }
+            case AXMenuItemCmdGlyph: {
+                KeyCombination kc = (KeyCombination)result;
+                result = null;
+                if (kc instanceof KeyCodeCombination) {
+                    KeyCode code = ((KeyCodeCombination)kc).getCode();
+                    if (!code.isLetterKey()) {
+                        //TODO
+                    }                    
+                }
+                if (result == null) return null;
+                break;
+            }
+            case AXMenuItemCmdModifiers: {
+                KeyCombination kc = (KeyCombination)result;
+                int mod = kAXMenuItemModifierNoCommand;
+                if (kc != null) {
+                    if (kc.getShortcut() == KeyCombination.ModifierValue.DOWN) {
+                        mod = kAXMenuItemModifierNone;
+                    }
+                    if (kc.getAlt() == KeyCombination.ModifierValue.DOWN) {
+                        mod |= kAXMenuItemModifierOption;
+                    }
+                    if (kc.getControl() == KeyCombination.ModifierValue.DOWN) {
+                        mod |= kAXMenuItemModifierControl;
+                    }
+                    if (kc.getShift() == KeyCombination.ModifierValue.DOWN) {
+                        mod |= kAXMenuItemModifierShift;
+                    }
+                }
+                result = mod;
+                break;
+            }
+            case AXMenuItemMarkChar: {
+                if (Boolean.TRUE.equals(result)) {
+                    result = "\u2713";
+                } else {
+                    return null;
                 }
                 break;
             }
