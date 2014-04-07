@@ -763,6 +763,37 @@ public class Tab implements EventTarget, Styleable {
         eventHandlerManager.setEventHandler(eventType, eventHandler);
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Tab tab = (Tab) o;
+
+        if (content != null ? !content.equals(tab.content) : tab.content != null)
+            return false;
+        if (graphic != null ? !graphic.equals(tab.graphic) : tab.graphic != null)
+            return false;
+        if (selected != null ? !selected.equals(tab.selected) : tab.selected != null)
+            return false;
+        if (tabPane != null ? !tabPane.equals(tab.tabPane) : tab.tabPane != null)
+            return false;
+        if (text != null ? !text.equals(tab.text) : tab.text != null)
+            return false;
+
+        return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        int result = selected != null ? selected.hashCode() : 0;
+        result = 31 * result + (tabPane != null ? tabPane.hashCode() : 0);
+        result = 31 * result + (text != null ? text.hashCode() : 0);
+        result = 31 * result + (graphic != null ? graphic.hashCode() : 0);
+        result = 31 * result + (content != null ? content.hashCode() : 0);
+        return result;
+    }
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -815,6 +846,5 @@ public class Tab implements EventTarget, Styleable {
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return Collections.emptyList();
-    }                
-    
+    }
 }

@@ -933,11 +933,13 @@ public class TabPaneTest {
 
         new StageLoader(tabPane);
 
-        assertEquals(tab0, tabPane.getSelectionModel().getSelectedItem());
+        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+        assertEquals(tab0, selectedTab);
         tabPane.getTabs().remove(tab0);
 
         // selection should move to the next non-disabled tab - in this case tab2
-        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+        selectedTab = tabPane.getSelectionModel().getSelectedItem();
+        assertEquals(tab2.getText() + " != " +  tab2.getText(), tab2, selectedTab);
     }
 
 
