@@ -141,6 +141,7 @@ final class WinAccessible extends PlatformAccessible {
     private static final int UIA_ThumbControlTypeId              = 50027;
     private static final int UIA_DataGridControlTypeId           = 50028;
     private static final int UIA_DataItemControlTypeId           = 50029;
+    private static final int UIA_SplitButtonControlTypeId        = 50031;
     private static final int UIA_WindowControlTypeId             = 50032;
     private static final int UIA_PaneControlTypeId               = 50033;
     private static final int UIA_TableControlTypeId              = 50036;
@@ -449,6 +450,7 @@ final class WinAccessible extends PlatformAccessible {
             case TOGGLE_BUTTON:
             case INCREMENT_BUTTON:
             case DECREMENT_BUTTON: return UIA_ButtonControlTypeId;
+            case SPLIT_MENU_BUTTON: return UIA_SplitButtonControlTypeId;
             case PAGINATION:
             case TAB_PANE: return UIA_TabControlTypeId;
             case PAGE:
@@ -582,6 +584,10 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             case TEXT:
                 /* UIA_TextPatternId seems overkill for text. Use UIA_NamePropertyId instead */
+                break;
+            case SPLIT_MENU_BUTTON:
+                impl = patternId == UIA_InvokePatternId ||
+                       patternId == UIA_ExpandCollapsePatternId;
                 break;
             case RADIO_BUTTON:
                 impl = patternId == UIA_SelectionItemPatternId;

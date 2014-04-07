@@ -241,6 +241,13 @@ public enum Role {
     SCROLL_PANE,
 
     /**
+     * SplitMenuButton
+     * Attributes: TITLE, EXPANDED.
+     * Actions: FIRE, EXPAND, COLLAPSE.
+     */
+    SPLIT_MENU_BUTTON,
+
+    /**
      * Tab
      * Attributes: TITLE, SELECTED
      * Actions: SELECT
