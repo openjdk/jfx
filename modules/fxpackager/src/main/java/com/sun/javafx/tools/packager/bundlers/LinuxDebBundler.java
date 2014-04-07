@@ -68,7 +68,6 @@ public class LinuxDebBundler extends AbstractBundler {
                 nm = nm.toLowerCase()
                        .replaceAll("[ _]", "-")
                        .replaceAll("[^-+.a-z0-9]", "");
-                System.out.println(nm);
                 return nm;
             }, false, (s, p) -> s);
 

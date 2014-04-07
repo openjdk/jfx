@@ -196,8 +196,8 @@ public class LinuxAppBundler extends AbstractBundler {
 
             return rootDirectory;
         } catch (IOException ex) {
-            System.out.println("Exception: "+ex);
-            ex.printStackTrace();
+            Log.info("Exception: "+ex);
+            Log.debug(ex);
             return null;
         }
     }
