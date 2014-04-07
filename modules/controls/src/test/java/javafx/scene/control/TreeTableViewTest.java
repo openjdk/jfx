@@ -1855,9 +1855,8 @@ public class TreeTableViewTest {
         treeTableView.getColumns().add(column);
 
         // show treeTableView
-        StageLoader stageLoader = new StageLoader(treeTableView);
-        stageLoader.getStage().show();
-        
+        StageLoader sl = new StageLoader(treeTableView);
+
         // expand all collapsed branches
         root.setExpanded(true);
         for (int i = 0; i < root.getChildren().size(); i++) {
@@ -1895,6 +1894,8 @@ public class TreeTableViewTest {
                 }
             }
         }
+
+        sl.dispose();
     }
     private void addLevel(TreeItem<Data> item, int level, int length) {
         for (int i = 0; i < 3; i++) {
@@ -2205,6 +2206,8 @@ public class TreeTableViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(12, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_31200_tableRow() {
@@ -2254,6 +2257,8 @@ public class TreeTableViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(17, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_31727() {
@@ -2453,7 +2458,7 @@ public class TreeTableViewTest {
         };
         col.setCellFactory(cellFactory);
 
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         assertEquals(0, rt_31015_count);
 
@@ -2462,6 +2467,8 @@ public class TreeTableViewTest {
 
         treeTableView.edit(-1, null);
         assertEquals(1, rt_31015_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_30688() {
@@ -2473,9 +2480,11 @@ public class TreeTableViewTest {
         col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         assertEquals(treeTableView.contentWidth, col.getWidth(), 0.0);
+
+        sl.dispose();
     }
 
     private int rt_29650_start_count = 0;
@@ -2501,7 +2510,7 @@ public class TreeTableViewTest {
             rt_29650_cancel_count++;
         });
 
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         treeTableView.edit(0, col);
 
@@ -2518,6 +2527,8 @@ public class TreeTableViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
     }
 
     private int rt_29849_start_count = 0;
@@ -2535,7 +2546,7 @@ public class TreeTableViewTest {
         });
 
         // load the table so the default cells are created
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         // now replace the cell factory
         Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> factory = TextFieldTreeTableCell.forTreeTableColumn();
@@ -2546,6 +2557,8 @@ public class TreeTableViewTest {
         // now start an edit and count the start edit events - it should be just 1
         treeTableView.edit(0, col);
         assertEquals(1, rt_29849_start_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_34327() {
@@ -2662,7 +2675,7 @@ public class TreeTableViewTest {
         table.getColumns().addAll(first, last, email);
 
         // load the table
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         // resize the last column
         last.impl_setWidth(400);
@@ -2675,6 +2688,8 @@ public class TreeTableViewTest {
         // the last column should still be 400px, not the default width or any
         // other value (based on the width of the content in that column)
         assertEquals(400, last.getWidth(), 0.0);
+
+        sl.dispose();
     }
 
     @Test public void test_rt26721_collapseParent_firstRootChild() {
@@ -2865,6 +2880,7 @@ public class TreeTableViewTest {
         if (useMouseToInitiateEdit) {
             MouseEventFirer mouse = new MouseEventFirer(cell);
             mouse.fireMousePressAndRelease(2, 10, 10);  // click 10 pixels in and 10 pixels down
+            mouse.dispose();
         } else {
             table.edit(0,first);
         }
@@ -2984,7 +3000,7 @@ public class TreeTableViewTest {
             test_rt_35213_eventCount++;
         });
 
-        new StageLoader(view);
+        StageLoader sl = new StageLoader(view);
 
         root.setExpanded(true);
         Toolkit.getToolkit().firePulse();
@@ -2994,6 +3010,8 @@ public class TreeTableViewTest {
 
         group2.setExpanded(false);
         Toolkit.getToolkit().firePulse();
+
+        sl.dispose();
     }
 
     @Test public void test_rt23245_itemIsInTree() {
@@ -3095,7 +3113,7 @@ public class TreeTableViewTest {
         final TreeTableView<String> treeView = new TreeTableView<>();
         treeView.setRoot(root);
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         // everything should be null to start with
         assertNull(treeView.getSelectionModel().getSelectedItem());
@@ -3108,6 +3126,8 @@ public class TreeTableViewTest {
         // that "bbc" remains selected as it is still in the list
         treeView.setRoot(root);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35039_resetRootChildren() {
@@ -3121,7 +3141,7 @@ public class TreeTableViewTest {
         final TreeTableView<String> treeView = new TreeTableView<>();
         treeView.setRoot(root);
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         // everything should be null to start with
         assertNull(treeView.getSelectionModel().getSelectedItem());
@@ -3134,6 +3154,8 @@ public class TreeTableViewTest {
         // that "bbc" remains selected as it is still in the list
         root.getChildren().setAll(aabbaa, bbc);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35763() {

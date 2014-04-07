@@ -425,7 +425,7 @@ public class TreeTableViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
+        StageLoader sl = new StageLoader(tableView);
 
         tableView.setShowRoot(true);
         final MultipleSelectionModel sm = tableView.getSelectionModel();
@@ -445,6 +445,8 @@ public class TreeTableViewMouseInputTest {
         assertEquals(0, sm.getSelectedIndex());
         assertEquals(0, fm.getFocusedIndex());
         assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
     }
 
     @Test public void test_rt_32963() {
@@ -487,7 +489,7 @@ public class TreeTableViewMouseInputTest {
         }
         tableView.setRoot(root);
 
-        new StageLoader(tableView);
+        StageLoader sl = new StageLoader(tableView);
 
         tableView.setShowRoot(true);
         final MultipleSelectionModel sm = tableView.getSelectionModel();
@@ -512,6 +514,9 @@ public class TreeTableViewMouseInputTest {
         mouse.fireMousePressAndRelease();
         assertTrue(root.isExpanded());
         assertEquals(9, tableView.getExpandedItemCount());
+
+        mouse.dispose();
+        sl.dispose();
     }
 
     private int rt_30626_count = 0;
@@ -625,6 +630,7 @@ public class TreeTableViewMouseInputTest {
 
         MouseEventFirer mouse = new MouseEventFirer(row);
         mouse.fireMousePressAndRelease(1, 100, 10);
+        mouse.dispose();
     }
 
     @Test public void test_rt_36509() {

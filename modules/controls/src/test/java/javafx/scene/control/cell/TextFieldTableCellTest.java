@@ -420,5 +420,7 @@ public class TextFieldTableCellTest {
         assertEquals("Dummy Text", textField.getSelectedText());
         mouse.fireMouseReleased(MouseButton.SECONDARY);
         assertEquals("Dummy Text", textField.getSelectedText());
+
+        mouse.dispose();
     }
 }

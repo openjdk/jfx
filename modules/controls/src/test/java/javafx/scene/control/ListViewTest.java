@@ -617,6 +617,8 @@ public class ListViewTest {
         Toolkit.getToolkit().firePulse();
         final double afterEmptiedWidth = listView.prefWidth(-1);
         assertEquals(initialWidth, afterEmptiedWidth, 0.00);
+
+        sl.dispose();
     }
 
     @Test public void test_rt31165() {
@@ -701,6 +703,8 @@ public class ListViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(24, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_30484() {
@@ -755,7 +759,7 @@ public class ListViewTest {
         listView.setEditable(true);
         listView.setCellFactory(TextFieldListCell.forListView());
 
-        new StageLoader(listView);
+        StageLoader sl = new StageLoader(listView);
 
         listView.edit(0);
 
@@ -772,6 +776,8 @@ public class ListViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt35039() {
@@ -782,7 +788,7 @@ public class ListViewTest {
         final ListView<String> listView = new ListView<>();
         listView.setItems(FXCollections.observableArrayList(data));
 
-        new StageLoader(listView);
+        StageLoader sl = new StageLoader(listView);
 
         // everything should be null to start with
         assertNull(listView.getSelectionModel().getSelectedItem());
@@ -795,6 +801,8 @@ public class ListViewTest {
         // that "bbc" remains selected as it is still in the list
         listView.setItems(FXCollections.observableArrayList(data));
         assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35857() {

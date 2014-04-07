@@ -1112,6 +1112,8 @@ public class TreeViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(24, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_30484() {
@@ -1165,7 +1167,7 @@ public class TreeViewTest {
         treeView.setEditable(true);
         treeView.setCellFactory(TextFieldTreeCell.forTreeView());
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         treeView.edit(root);
         TreeCell rootCell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
@@ -1178,6 +1180,8 @@ public class TreeViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
     }
 
     private int rt_33559_count = 0;
@@ -1476,7 +1480,7 @@ public class TreeViewTest {
             test_rt_35213_eventCount++;
         });
 
-        new StageLoader(view);
+        StageLoader sl = new StageLoader(view);
 
         root.setExpanded(true);
         Toolkit.getToolkit().firePulse();
@@ -1486,6 +1490,8 @@ public class TreeViewTest {
 
         group2.setExpanded(false);
         Toolkit.getToolkit().firePulse();
+
+        sl.dispose();
     }
 
     @Test public void test_rt23245_itemIsInTree() {
@@ -1587,7 +1593,7 @@ public class TreeViewTest {
         final TreeView<String> treeView = new TreeView<>();
         treeView.setRoot(root);
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         // everything should be null to start with
         assertNull(treeView.getSelectionModel().getSelectedItem());
@@ -1600,6 +1606,8 @@ public class TreeViewTest {
         // that "bbc" remains selected as it is still in the list
         treeView.setRoot(root);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35039_resetRootChildren() {
@@ -1613,7 +1621,7 @@ public class TreeViewTest {
         final TreeView<String> treeView = new TreeView<>();
         treeView.setRoot(root);
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         // everything should be null to start with
         assertNull(treeView.getSelectionModel().getSelectedItem());
@@ -1626,6 +1634,8 @@ public class TreeViewTest {
         // that "bbc" remains selected as it is still in the list
         root.getChildren().setAll(aabbaa, bbc);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35857() {

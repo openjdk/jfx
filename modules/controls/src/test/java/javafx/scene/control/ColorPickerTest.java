@@ -197,6 +197,7 @@ public class ColorPickerTest {
         Hyperlink hyperlink = ColorPickerPaletteRetriever.getCustomColorLink(colorPalette);
         MouseEventFirer mouse = new MouseEventFirer(hyperlink);
         mouse.fireMousePressAndRelease();
+        mouse.dispose();
 
         Stage dialog = ColorPickerPaletteRetriever.getCustomColorDialog(colorPalette);
         assertNotNull(dialog);

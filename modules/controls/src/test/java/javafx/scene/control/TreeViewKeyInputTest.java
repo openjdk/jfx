@@ -1891,10 +1891,6 @@ public class TreeViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
-
         sm.clearAndSelect(99);
         treeView.scrollTo(99);
         assertEquals(99, getAnchor());
@@ -1914,10 +1910,6 @@ public class TreeViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
-
         sm.clearAndSelect(99);
         treeView.scrollTo(99);
         assertEquals(99, getAnchor());
@@ -1936,10 +1928,6 @@ public class TreeViewKeyInputTest {
         for (int i = 0; i < items; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
-
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
 
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor());
@@ -1983,10 +1971,6 @@ public class TreeViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
-
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor());
         assertEquals(1, fm.getFocusedIndex());
@@ -2015,9 +1999,7 @@ public class TreeViewKeyInputTest {
         }
         treeView.setPrefHeight(130); // roughly room for four rows
 
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        StageLoader sl = new StageLoader(treeView);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(0);
@@ -2044,6 +2026,8 @@ public class TreeViewKeyInputTest {
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());
         assertEquals(leadSelectedIndex, fm.getFocusedIndex());
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+
+        sl.dispose();
     }
 
     @Test public void test_rt34407_up_up_down() {
@@ -2055,9 +2039,7 @@ public class TreeViewKeyInputTest {
         }
         treeView.setPrefHeight(120); // roughly room for four rows
 
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        StageLoader sl = new StageLoader(treeView);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(99);
@@ -2086,6 +2068,8 @@ public class TreeViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+
+        sl.dispose();
     }
 
     @Test public void test_rt34768() {
@@ -2105,9 +2089,6 @@ public class TreeViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(5);
@@ -2135,9 +2116,6 @@ public class TreeViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(5);
@@ -2165,9 +2143,6 @@ public class TreeViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
 
         sm.clearAndSelect(5);
@@ -2195,9 +2170,6 @@ public class TreeViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(treeView);
-        final FocusModel fm = treeView.getFocusModel();
-        final MultipleSelectionModel sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
 
         sm.clearAndSelect(5);

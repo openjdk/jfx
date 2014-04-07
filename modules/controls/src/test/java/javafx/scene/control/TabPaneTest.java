@@ -856,7 +856,7 @@ public class TabPaneTest {
         splitTab.setContent(splitPane);
         tabPane.getTabs().addAll(emptyTab = new Tab("Empty Tab"), splitTab);
 
-        new StageLoader(tabPane);
+        StageLoader sl = new StageLoader(tabPane);
 
         tabPane.getSelectionModel().select(emptyTab);
         Toolkit.getToolkit().firePulse();
@@ -865,6 +865,8 @@ public class TabPaneTest {
         tabPane.getSelectionModel().select(splitTab);
         Toolkit.getToolkit().firePulse();
         assertTrue(splitPane.getParent().isVisible());
+
+        sl.dispose();
     }
 
     @Test public void test_rt_36456_default_selectionMovesBackwardOne() {
@@ -876,11 +878,13 @@ public class TabPaneTest {
         tabPane.getTabs().addAll(tab0, tab1, tab2);
         tabPane.getSelectionModel().select(tab1);
 
-        new StageLoader(tabPane);
+        StageLoader sl = new StageLoader(tabPane);
 
         assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
         tabPane.getTabs().remove(tab1);
         assertEquals(tab0, tabPane.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
     }
 
     @Test public void test_rt_36456_selectionMovesBackwardTwoSkippingDisabledTab() {
@@ -893,13 +897,15 @@ public class TabPaneTest {
         tabPane.getTabs().addAll(tab0, tab1, tab2);
         tabPane.getSelectionModel().select(tab2);
 
-        new StageLoader(tabPane);
+        StageLoader sl = new StageLoader(tabPane);
 
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
         tabPane.getTabs().remove(tab2);
 
         // selection should jump from tab2 to tab0, as tab1 is disabled
         assertEquals(tab0, tabPane.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
     }
 
     @Test public void test_rt_36456_selectionMovesForwardOne() {
@@ -912,13 +918,15 @@ public class TabPaneTest {
         tabPane.getTabs().addAll(tab0, tab1, tab2);
         tabPane.getSelectionModel().select(tab1);
 
-        new StageLoader(tabPane);
+        StageLoader sl = new StageLoader(tabPane);
 
         assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
         tabPane.getTabs().remove(tab1);
 
         // selection should move to the next non-disabled tab - in this case tab2
         assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
     }
 
     @Test public void test_rt_36456_selectionMovesForwardTwoSkippingDisabledTab() {
@@ -931,7 +939,7 @@ public class TabPaneTest {
         tabPane.getTabs().addAll(tab0, tab1, tab2);
         tabPane.getSelectionModel().select(tab0);
 
-        new StageLoader(tabPane);
+        StageLoader sl = new StageLoader(tabPane);
 
         Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
         assertEquals(tab0, selectedTab);
@@ -940,7 +948,7 @@ public class TabPaneTest {
         // selection should move to the next non-disabled tab - in this case tab2
         selectedTab = tabPane.getSelectionModel().getSelectedItem();
         assertEquals(tab2.getText() + " != " +  tab2.getText(), tab2, selectedTab);
+
+        sl.dispose();
     }
-
-
 }

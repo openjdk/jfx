@@ -1419,6 +1419,8 @@ public class TableViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(14, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_31200_tableRow() {
@@ -1467,6 +1469,8 @@ public class TableViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(14, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_31727() {
@@ -1729,7 +1733,7 @@ public class TableViewTest {
         };
         first.setCellFactory(cellFactory);
 
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         assertEquals(0, rt_31015_count);
 
@@ -1738,6 +1742,8 @@ public class TableViewTest {
 
         table.edit(-1, null);
         assertEquals(1, rt_31015_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_31653() {
@@ -1785,7 +1791,7 @@ public class TableViewTest {
             rt_29650_cancel_count++;
         });
 
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         table.edit(0, first);
 
@@ -1802,6 +1808,8 @@ public class TableViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
     }
 
     private int rt_29849_start_count = 0;
@@ -1822,7 +1830,7 @@ public class TableViewTest {
         });
 
         // load the table so the default cells are created
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         // now replace the cell factory
         first.setCellFactory(TextFieldTableCell.<Person>forTableColumn());
@@ -1832,6 +1840,8 @@ public class TableViewTest {
         // now start an edit and count the start edit events - it should be just 1
         table.edit(0, first);
         assertEquals(1, rt_29849_start_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_32708_removeFromColumnsList() {
@@ -1850,7 +1860,7 @@ public class TableViewTest {
         table.getColumns().addAll(first, last, email);
 
         // load the table so the default cells are created
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         // test pre-conditions - last column should be visible
         VirtualFlowTestUtils.assertTableHeaderColumnExists(table, last, true);
@@ -1861,6 +1871,8 @@ public class TableViewTest {
 
         // test post conditions - last column should not be visible
         VirtualFlowTestUtils.assertTableHeaderColumnExists(table, last, false);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_32708_toggleVisible() {
@@ -1879,7 +1891,7 @@ public class TableViewTest {
         table.getColumns().addAll(first, last, email);
 
         // load the table so the default cells are created
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         // test pre-conditions - last column should be visible
         VirtualFlowTestUtils.assertTableHeaderColumnExists(table, last, true);
@@ -1890,6 +1902,8 @@ public class TableViewTest {
 
         // test post conditions - last column should not be visible
         VirtualFlowTestUtils.assertTableHeaderColumnExists(table, last, false);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_34493() {
@@ -1907,7 +1921,7 @@ public class TableViewTest {
         table.getColumns().addAll(first, last, email);
 
         // load the table
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         // resize the last column
         last.impl_setWidth(400);
@@ -1920,6 +1934,8 @@ public class TableViewTest {
         // the last column should still be 400px, not the default width or any
         // other value (based on the width of the content in that column)
         assertEquals(400, last.getWidth(), 0.0);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_34685_directEditCall_cellSelectionMode() {
@@ -1984,6 +2000,7 @@ public class TableViewTest {
         if (useMouseToInitiateEdit) {
             MouseEventFirer mouse = new MouseEventFirer(cell);
             mouse.fireMousePressAndRelease(2, 10, 10);  // click 10 pixels in and 10 pixels down
+            mouse.dispose();
         } else {
             table.edit(0,first);
         }
@@ -2017,13 +2034,15 @@ public class TableViewTest {
         TableColumn col2 = new TableColumn();
         table.getColumns().setAll(col1, col2);
 
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         Toolkit.getToolkit().firePulse();
         col1.getColumns().setAll(new TableColumn(), new TableColumn());
         Toolkit.getToolkit().firePulse();
         col2.getColumns().setAll(new TableColumn(), new TableColumn());
         Toolkit.getToolkit().firePulse();
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_simple_switch_two_columns_move_col1_forward_1_place() {
@@ -2473,7 +2492,7 @@ public class TableViewTest {
         final TableView<String> tableView = new TableView<>();
         tableView.setItems(FXCollections.observableArrayList(data));
 
-        new StageLoader(tableView);
+        StageLoader sl = new StageLoader(tableView);
 
         // everything should be null to start with
         assertNull(tableView.getSelectionModel().getSelectedItem());
@@ -2486,6 +2505,8 @@ public class TableViewTest {
         // that "bbc" remains selected as it is still in the list
         tableView.setItems(FXCollections.observableArrayList(data));
         assertEquals("bbc", tableView.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35763_observableList() {
@@ -2654,7 +2675,7 @@ public class TableViewTest {
 
         table.getColumns().setAll(name);
 
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         TableHeaderRow headerRow = VirtualFlowTestUtils.getTableHeaderRow(table);
 
@@ -2667,6 +2688,8 @@ public class TableViewTest {
         assertEquals(first, firstHeader.getTableColumn());
         assertNotNull(lastHeader);
         assertEquals(last, lastHeader.getTableColumn());
+
+        sl.dispose();
     }
 
     @Test public void test_rt36220() {

@@ -1318,9 +1318,11 @@ public class SplitPaneTest {
         page.setId("AnchorPane");
         page.getChildren().add(splitPane);
 
-        new StageLoader(page);
+        StageLoader sl = new StageLoader(page);
 
         VBox myvbox = (VBox) page.lookup("#myvbox");
         myvbox.getChildren().add(new Button("Hello world !!!"));
+
+        sl.dispose();
     }
 }

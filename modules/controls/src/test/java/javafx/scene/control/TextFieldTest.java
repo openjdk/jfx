@@ -141,7 +141,7 @@ public class TextFieldTest {
     }
 
     @Test public void pseudoClassState_isReadOnly() {
-        new StageLoader(txtField);
+        StageLoader sl = new StageLoader(txtField);
         txtField.impl_processCSS(true);
 
         txtField.setEditable(false);
@@ -152,10 +152,12 @@ public class TextFieldTest {
             match = "readonly".equals(pc.getPseudoClassName());
         }
         assertTrue(match);
+
+        sl.dispose();
     }
 
     @Test public void pseudoClassState_isNotReadOnly() {
-        new StageLoader(txtField);
+        StageLoader sl = new StageLoader(txtField);
         txtField.impl_processCSS(true);
 
         txtField.setEditable(true);
@@ -166,6 +168,7 @@ public class TextFieldTest {
             match = "readonly".equals(pc.getPseudoClassName());
         }
         assertFalse(match);
+        sl.dispose();
     }
 
     /*********************************************************************

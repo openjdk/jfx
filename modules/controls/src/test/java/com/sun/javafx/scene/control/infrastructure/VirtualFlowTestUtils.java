@@ -71,18 +71,23 @@ public class VirtualFlowTestUtils {
                     continue;
                 }
                 IndexedCell<?> childCell = (IndexedCell<?>)n;
-                new MouseEventFirer(childCell).fireMousePressAndRelease(clickCount, modifiers);
+                MouseEventFirer mouse = new MouseEventFirer(childCell);
+                mouse.fireMousePressAndRelease(clickCount, modifiers);
+                mouse.dispose();
                 break;
             }
         } else {
             if (ignoreChildren) {
                 // special case when we want to click on the row rather than its
                 // children (e.g. TableRow rather than its TableCell)
-                MouseEventFirer mef = new MouseEventFirer(cell);
-                mef.fireMousePressed(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
-                mef.fireMouseReleased(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
+                MouseEventFirer mouse = new MouseEventFirer(cell);
+                mouse.fireMousePressed(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
+                mouse.fireMouseReleased(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
+                mouse.dispose();
             } else {
-                new MouseEventFirer(cell).fireMousePressAndRelease(clickCount, modifiers);
+                MouseEventFirer mouse = new MouseEventFirer(cell);
+                mouse.fireMousePressAndRelease(clickCount, modifiers);
+                mouse.dispose();
             }
         }
     }
@@ -355,8 +360,9 @@ public class VirtualFlowTestUtils {
     }
 
     public static TableHeaderRow getTableHeaderRow(final Control control) {
+        StageLoader sl = null;
         if (control.getSkin() == null) {
-            new StageLoader(control);
+            sl = new StageLoader(control);
         }
 
         TableViewSkinBase<?,?,?,?,?,?> skin = (TableViewSkinBase) control.getSkin();
@@ -366,6 +372,10 @@ public class VirtualFlowTestUtils {
                 headerRow = (TableHeaderRow) n;
                 break;
             }
+        }
+
+        if (sl != null) {
+            sl.dispose();
         }
 
         return headerRow;

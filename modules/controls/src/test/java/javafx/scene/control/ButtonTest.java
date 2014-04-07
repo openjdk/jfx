@@ -48,6 +48,7 @@ import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.tk.Toolkit;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
@@ -82,6 +83,11 @@ public class ButtonTest {
         stage = new Stage();
         stage.setScene(scene);
         mouse = new MouseEventFirer(btn);
+    }
+
+    @After public void after() {
+        stage.hide();
+        mouse.dispose();
     }
     
     /*********************************************************************
