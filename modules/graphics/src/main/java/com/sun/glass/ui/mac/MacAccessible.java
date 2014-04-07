@@ -279,6 +279,15 @@ final class MacAccessible extends PlatformAccessible {
                 MacActions.NSAccessibilityCancelAction,
             }
         ),
+        NSAccessibilityMenuButtonRole(Role.MENU_BUTTON,
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilityEnabledAttribute,
+                MacAttributes.NSAccessibilityTitleAttribute,
+            },
+            new MacActions[] {
+                MacActions.NSAccessibilityPressAction,
+            }
+        ),
         /* 
          * ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole.
          * Depending on the state of the indeterminate property.

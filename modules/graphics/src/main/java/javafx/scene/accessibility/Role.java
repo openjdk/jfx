@@ -129,6 +129,13 @@ public enum Role {
     MENU_BAR,
 
     /**
+     * Menu Button.
+     * Attributed: TITLE.
+     * Actions: FIRE.
+     */
+    MENU_BUTTON,
+
+    /**
      * Menu Item.
      * Attributed: MENU_ITEM_TYPE, SELECTED, ACCELERATOR, TITLE
      * Actions: FIRE

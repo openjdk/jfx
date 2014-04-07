@@ -33,6 +33,9 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Side;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import com.sun.javafx.scene.control.skin.MenuButtonSkin;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -259,4 +262,31 @@ public class MenuButton extends ButtonBase {
     private static final PseudoClass PSEUDO_CLASS_SHOWING = 
             PseudoClass.getPseudoClass("showing");
 
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.MENU_BUTTON;
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case FIRE: 
+                if (isShowing()) {
+                    hide();
+                } else {
+                    show();
+                }
+                break;
+            default: super.accExecuteAction(action);
+        }
+    }
 }
