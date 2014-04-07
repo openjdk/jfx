@@ -29,12 +29,15 @@ import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 import com.sun.javafx.collections.ObservableListWrapper;
 import java.text.Collator;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import javafx.collections.ListChangeListener.Change;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Map;
+
 import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -44,6 +47,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.Ignore;
 import static org.junit.Assert.* ;
+import static org.junit.Assert.assertEquals;
 
 /**
  *
@@ -352,5 +356,53 @@ public class SortedListTest {
         list.addAll("B", "A");
         
         assertEquals(Arrays.asList("A", "B"), sl);
+    }
+
+    @Test
+    public void test_rt36353_sortedList() {
+        ObservableList<String> data = FXCollections.observableArrayList("2", "1", "3");
+        SortedList<String> sortedList = new SortedList<String>(data);
+
+        HashMap<Integer, Integer> pMap = new HashMap<>();
+        sortedList.addListener((ListChangeListener<String>) c -> {
+            while (c.next()) {
+                if (c.wasPermutated()) {
+                    for (int i = c.getFrom(); i < c.getTo(); i++) {
+                        pMap.put(i, c.getPermutation(i));
+                    }
+                }
+            }
+        });
+
+        Map<Integer, Integer> expected = new HashMap<>();
+
+        // comparator that will create list of [1,2,3]. Sort indices based on
+        // previous order [2,1,3].
+        sortedList.setComparator((s1,s2) -> s1.compareTo(s2));
+        assertEquals(FXCollections.observableArrayList("1","2","3"), sortedList);
+        expected.put(0, 1);     // item "2" has moved from index 0 to index 1
+        expected.put(1, 0);     // item "1" has moved from index 1 to index 0
+        expected.put(2, 2);     // item "3" has remained in index 2
+        assertEquals(expected, pMap);
+
+        // comparator that will create list of [3,2,1]. Sort indices based on
+        // previous order [1,2,3].
+        sortedList.setComparator((s1,s2) -> s2.compareTo(s1));
+        assertEquals(FXCollections.observableArrayList("3","2","1"), sortedList);
+        expected.clear();
+        expected.put(0, 2);     // item "1" has moved from index 0 to index 2
+        expected.put(1, 1);     // item "2" has remained in index 1
+        expected.put(2, 0);     // item "3" has moved from index 2 to index 0
+        assertEquals(expected, pMap);
+
+        // null comparator so sort order should return to [2,1,3]. Sort indices based on
+        // previous order [3,2,1].
+        sortedList.setComparator(null);
+        assertEquals(FXCollections.observableArrayList("2","1","3"), sortedList);
+        expected.clear();
+        expected.put(0, 2);     // item "3" has moved from index 0 to index 2
+        expected.put(1, 0);     // item "2" has moved from index 1 to index 0
+        expected.put(2, 1);     // item "1" has moved from index 2 to index 1
+        assertEquals(expected, pMap);
     }
 }

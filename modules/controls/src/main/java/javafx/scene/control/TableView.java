@@ -2135,6 +2135,8 @@ public class TableView<S> extends Control {
                     //       -- add the new index to the new indices list
                     //   -- Perform batch selection (6)
 
+                    makeAtomic = true;
+
                     final int oldSelectedIndex = getSelectedIndex();
 
                     // (1)
@@ -2167,11 +2169,14 @@ public class TableView<S> extends Control {
 
                     // (6)
                     quietClearSelection();
+                    makeAtomic = false;
                     selectedCellsMap.setAll(newIndices);
                     selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<>(0, newIndices.size(), selectedCellsSeq));
 
                     if (oldSelectedIndex >= 0 && oldSelectedIndex < itemCount) {
-                        setSelectedIndex(c.getPermutation(oldSelectedIndex));
+                        int newIndex = c.getPermutation(oldSelectedIndex);
+                        setSelectedIndex(newIndex);
+                        focus(newIndex);
                     }
                 }
             }

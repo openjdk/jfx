@@ -185,6 +185,9 @@ public final class SortedList<E> extends TransformationList<E, E>{
         } else {
             int[] perm = new int[size];
             int[] rperm = new int[size];
+            for (int i = 0; i < size; ++i) {
+                perm[i] = rperm[i] = i;
+            }
             boolean changed = false;
             int idx = 0;
             while (idx < size) {

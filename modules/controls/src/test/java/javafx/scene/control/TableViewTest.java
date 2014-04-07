@@ -39,6 +39,7 @@ import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.*;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.*;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -2720,5 +2721,59 @@ public class TableViewTest {
         tableColumn.setSortType(TableColumn.SortType.DESCENDING);
         assertEquals("AAA", data.get(1));
         assertEquals("BBB", data.get(0));
+    }
+
+    private int test_rt_36353_selectedItemCount = 0;
+    private int test_rt_36353_selectedIndexCount = 0;
+    @Test public void test_rt36353() {
+        ObservableList<String> data = FXCollections.observableArrayList();
+        data.addAll("2", "1", "3");
+        SortedList<String> sortedList = new SortedList<>(data);
+
+        TableView<String> tableView = new TableView<>(sortedList);
+        sortedList.comparatorProperty().bind(tableView.comparatorProperty());
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue()));
+        tableColumn.setText("Test");
+        tableView.getColumns().add(tableColumn);
+
+        tableView.getSelectionModel().selectedItemProperty().addListener((e, oldSelection, newSelection) -> {
+            test_rt_36353_selectedItemCount++;
+        });
+        tableView.getSelectionModel().selectedIndexProperty().addListener((e, oldIndex, newIndex) -> {
+            test_rt_36353_selectedIndexCount++;
+        });
+
+        assertEquals(0, test_rt_36353_selectedItemCount);
+        assertEquals(0, test_rt_36353_selectedIndexCount);
+
+        tableView.getSelectionModel().select(1);
+        assertEquals(1, test_rt_36353_selectedItemCount);
+        assertEquals(1, test_rt_36353_selectedIndexCount);
+        assertEquals("2", sortedList.get(0));
+        assertEquals("1", sortedList.get(1));
+        assertEquals("3", sortedList.get(2));
+
+        tableView.getSortOrder().add(tableColumn);
+        assertEquals(1, test_rt_36353_selectedItemCount);
+        assertEquals(2, test_rt_36353_selectedIndexCount);
+        assertEquals("1", sortedList.get(0));
+        assertEquals("2", sortedList.get(1));
+        assertEquals("3", sortedList.get(2));
+
+        tableColumn.setSortType(TableColumn.SortType.DESCENDING);
+        assertEquals(1, test_rt_36353_selectedItemCount);
+        assertEquals(3, test_rt_36353_selectedIndexCount);
+        assertEquals("3", sortedList.get(0));
+        assertEquals("2", sortedList.get(1));
+        assertEquals("1", sortedList.get(2));
+
+        tableView.getSortOrder().remove(tableColumn);
+        assertEquals(1, test_rt_36353_selectedItemCount);
+        assertEquals(4, test_rt_36353_selectedIndexCount);
+        assertEquals("2", sortedList.get(0));
+        assertEquals("1", sortedList.get(1));
+        assertEquals("3", sortedList.get(2));
     }
 }
