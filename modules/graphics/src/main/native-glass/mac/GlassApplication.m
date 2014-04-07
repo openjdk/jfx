@@ -1044,10 +1044,10 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getDataDire
 
 /*
  * Class:     com_sun_glass_ui_mac_MacApplication
- * Method:    _GetMacKey
+ * Method:    _getMacKey
  * Signature: (I)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1GetMacKey
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getMacKey
 (JNIEnv *env, jclass jClass, jint code)
 {
 	unsigned short macCode = 0;

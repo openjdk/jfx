@@ -1219,7 +1219,7 @@ final class MacAccessible extends PlatformAccessible {
                     if (!isCmdCharBased(code)) {
                         @SuppressWarnings("deprecation")
                         int keyCode = code.impl_getCode();
-                        result = MacApplication._GetMacKey(keyCode);
+                        result = MacApplication._getMacKey(keyCode);
                     }
                 }
                 if (result == null) return null;

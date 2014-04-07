@@ -55,7 +55,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         _initIDs();
     }
 
-    native static int _GetMacKey(int code);
+    native static int _getMacKey(int code);
 
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
