@@ -445,6 +445,7 @@ final class WinAccessible extends PlatformAccessible {
             case CONTEXT_MENU: return UIA_MenuControlTypeId;
             case MENU_ITEM: return UIA_MenuItemControlTypeId;
             case BUTTON:
+            case MENU_BUTTON:
             case TOGGLE_BUTTON:
             case INCREMENT_BUTTON:
             case DECREMENT_BUTTON: return UIA_ButtonControlTypeId;
@@ -508,6 +509,7 @@ final class WinAccessible extends PlatformAccessible {
             case BUTTON:
             case INCREMENT_BUTTON:
             case DECREMENT_BUTTON:
+            case MENU_BUTTON:
                 impl = patternId == UIA_InvokePatternId;
                 break;
             case PAGE:

@@ -279,7 +279,7 @@ public class MenuButton extends ButtonBase {
     /** @treatAsPrivate */
     @Override public void accExecuteAction(Action action, Object... parameters) {
         switch (action) {
-            case FIRE: 
+            case FIRE:
                 if (isShowing()) {
                     hide();
                 } else {
