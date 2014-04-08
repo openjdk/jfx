@@ -478,7 +478,6 @@ final class WinAccessible extends PlatformAccessible {
             case PROGRESS_INDICATOR: return UIA_ProgressBarControlTypeId;
             case TOOLBAR: return UIA_ToolBarControlTypeId;
             case TITLED_PANE: return UIA_GroupControlTypeId;
-            case ACCORDION:
             case SCROLL_PANE: return UIA_PaneControlTypeId;
             case SCROLL_BAR: return UIA_ScrollBarControlTypeId;
             case THUMB: return UIA_ThumbControlTypeId;

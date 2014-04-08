@@ -33,12 +33,6 @@ package javafx.scene.accessibility;
 public enum Role {
 
     /**
-     * Accordion
-     * Attributes:
-     */
-    ACCORDION,
-
-    /**
      * Button
      * Attributes: TITLE
      * Actions: FIRE
