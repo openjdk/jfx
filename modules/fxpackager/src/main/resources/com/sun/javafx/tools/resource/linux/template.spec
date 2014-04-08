@@ -37,7 +37,7 @@ APPLICATION_LICENSE_FILE
 %post
 cp /opt/APPLICATION_NAME/APPLICATION_NAME.desktop /usr/share/applications/
 if [ "SERVICE_HINT" = "true" ]; then
-    cp /opt/APPLICATION_NAME/APPLICATION_NAME.init /etc/init.d/APPLICATION_PACKAGE
+    cp /opt/APPLICATION_NAME/APPLICATION_PACKAGE.init /etc/init.d/APPLICATION_PACKAGE
     if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
         /sbin/chkconfig --add APPLICATION_PACKAGE
         if [ "START_ON_INSTALL" = "true" ]; then
