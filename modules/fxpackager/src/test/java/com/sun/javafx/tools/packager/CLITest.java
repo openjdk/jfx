@@ -38,6 +38,10 @@ public class CLITest {
 
     @BeforeClass
     public static void prepareApp() {
+        // on mac, require a full test
+        Assume.assumeTrue(!System.getProperty("os.name").toLowerCase().contains("os x") || Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+
         Log.setLogger(new Log.Logger(true));
 
         String tmpBasePath = System.getProperty("tmpBase");
