@@ -144,6 +144,7 @@ public class TitledPane extends Labeled {
             final boolean active = get();
             pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED,   active);
             pseudoClassStateChanged(PSEUDO_CLASS_COLLAPSED, !active);
+            accSendNotification(Attribute.EXPANDED);
         }
 
         @Override

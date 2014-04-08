@@ -441,14 +441,15 @@ final class MacAccessible extends PlatformAccessible {
             null,
             null
         ),
-        NSAccessibilityDisclosureTriangleRole(Role.DISCLOSURE_NODE,
+        NSAccessibilityDisclosureTriangleRole(new Role[] {Role.DISCLOSURE_NODE, Role.TITLED_PANE},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityValueAttribute
             },
             new MacActions[] {
                 MacActions.NSAccessibilityPressAction
-            }
+            },
+            null
         ),
         NSAccessibilityToolbarRole(Role.TOOLBAR,
             new MacAttributes[] {
@@ -1016,6 +1017,10 @@ final class MacAccessible extends PlatformAccessible {
                             jfxAttr = DATE;
                             map = MacVariant::createNSDate;
                             break;
+                        case TITLED_PANE:
+                            jfxAttr = EXPANDED;
+                            map = MacVariant::createNSNumberForInt;
+                            break;
                         default:
                             /* VoiceOver can ask NSAccessibilityValueAttribute in unexpected cases, AXColumn for example. */
                             return null;
@@ -1119,8 +1124,16 @@ final class MacAccessible extends PlatformAccessible {
                         macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
                     }
                 }
-                MacSubroles subRole = MacSubroles.getRole(role);
-                result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
+                if (role == Role.TITLED_PANE) {
+                    /* 
+                     * The default role description for a NSAccessibilityDisclosureTriangleRole 
+                     * is 'disclosure triangle'. Redefine to something more friendly.  
+                     */
+                    result = "title pane";
+                } else {
+                    MacSubroles subRole = MacSubroles.getRole(role);
+                    result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
+                }
                 break;
             }
             case NSAccessibilitySelectedCellsAttribute:
@@ -1156,16 +1169,23 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityValueAttribute: {
-                if (jfxAttr == SELECTED_TAB || jfxAttr == SELECTED_PAGE) {
-                    result = getAccessible((Node)result);
-                }
-                if (role == Role.CHECKBOX || role == Role.TOGGLE_BUTTON) {
-                    if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
-                        result = 2;
-                    } else {
-                        boolean selected = Boolean.TRUE.equals(result);
-                        result = selected ? 1 : 0;
-                    }
+                switch (role) {
+                    case TAB_PANE:
+                    case PAGINATION:
+                        result = getAccessible((Node)result);
+                        break;
+                    case CHECKBOX:
+                    case TOGGLE_BUTTON:
+                        if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
+                            result = 2;
+                        } else {
+                            result = Boolean.TRUE.equals(result) ? 1 : 0;
+                        }
+                        break;
+                    case TITLED_PANE:
+                        result = Boolean.TRUE.equals(result) ? 1 : 0;
+                        break;
+                    default:
                 }
                 break;
             }
@@ -1503,6 +1523,16 @@ final class MacAccessible extends PlatformAccessible {
 
     void accessibilityPerformAction(long action) {
         MacActions macAction = MacActions.getAction(action);
+        if (macAction == MacActions.NSAccessibilityPressAction) {
+            if (getAttribute(ROLE) == Role.TITLED_PANE) {
+                if (Boolean.TRUE.equals(getAttribute(EXPANDED))) {
+                    executeAction(Action.COLLAPSE);
+                } else {
+                    executeAction(Action.EXPAND);
+                }
+                return;
+            }
+        }
         if (macAction != null && macAction.jfxAction != null) {
             executeAction(macAction.jfxAction);
         }
