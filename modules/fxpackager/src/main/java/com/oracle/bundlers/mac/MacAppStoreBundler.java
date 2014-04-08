@@ -111,7 +111,6 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-app.description"),
             "mac.signing-key-app",
             String.class,
-            null,
             params -> {
                 String key = "3rd Party Mac Developer Application: " + SIGNING_KEY_USER.fetchFrom(params);
                 try {
@@ -121,7 +120,6 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
                     return null;
                 }
             },
-            false,
             (s, p) -> s);
 
     public static final BundlerParamInfo<String> MAC_APP_STORE_PKG_SIGNING_KEY = new StandardBundlerParam<>(
@@ -129,7 +127,6 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-pkg.description"),
             "mac.signing-key-pkg",
             String.class,
-            null,
             params -> {
                 String key = "3rd Party Mac Developer Installer: " + SIGNING_KEY_USER.fetchFrom(params);
                 try {
@@ -139,7 +136,6 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
                     return null;
                 }
             },
-            false,
             (s, p) -> s);
 
     public static final StandardBundlerParam<File> MAC_APP_STORE_ENTITLEMENTS  = new StandardBundlerParam<>(
@@ -147,9 +143,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             I18N.getString("param.mac-app-store-entitlements.description"),
             "mac.app-store-entitlements",
             File.class,
-            null,
             params -> null,
-            false,
             (s, p) -> new File(s));
 
     public MacAppStoreBundler() {

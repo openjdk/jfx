@@ -53,37 +53,44 @@ public class LinuxRPMBundler extends AbstractBundler {
             I18N.getString("param.app-bundler.name"), 
             I18N.getString("param.app-bundler.description"),
             "linux.app.bundler",
-            LinuxAppBundler.class, null, params -> new LinuxAppBundler(), false, null);
+            LinuxAppBundler.class,
+            params -> new LinuxAppBundler(),
+            null);
 
     public static final BundlerParamInfo<File> RPM_IMAGE_DIR = new StandardBundlerParam<>(
             I18N.getString("param.image-dir.name"), 
             I18N.getString("param.image-dir.description"),
             "linux.rpm.imageDir",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imagesRoot = IMAGES_ROOT.fetchFrom(params);
                 if (!imagesRoot.exists()) imagesRoot.mkdirs();
                 return new File(imagesRoot, "linux-rpm.image");
-            }, false, (s, p) -> new File(s));
+            },
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.config-root.name"), 
             I18N.getString("param.config-root.description"),
             "configRoot",
-            File.class, null, params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
-            false, (s, p) -> new File(s));
+            File.class,
+            params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<String> BUNDLE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.bundle-name.name"), 
             I18N.getString("param.bundle-name.description"),
             "linux.bundleName",
-            String.class, null, params -> {
+            String.class,
+            params -> {
                 String nm = APP_NAME.fetchFrom(params);
                 if (nm == null) return null;
         
                 //spaces are not allowed in RPM package names
                 nm = nm.replaceAll(" ", "");
                 return nm;
-            }, false, (s, p) -> s);
+            },
+            (s, p) -> s);
 
     private final static String DEFAULT_ICON = "javalogo_white_32.png";
     private final static String DEFAULT_SPEC_TEMPLATE = "template.spec";

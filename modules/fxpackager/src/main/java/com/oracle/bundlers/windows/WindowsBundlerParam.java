@@ -46,8 +46,8 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
     
     private static final ResourceBundle I18N = ResourceBundle.getBundle("com.oracle.bundlers.windows.WindowsBundlerParam");
     
-    public WindowsBundlerParam(String name, String description, String id, Class<T> valueType, String[] fallbackIDs, Function<Map<String, ? super Object>, T> defaultValueFunction, boolean requiresUserSetting, BiFunction<String, Map<String, ? super Object>, T> stringConverter) {
-        super(name, description, id, valueType, fallbackIDs, defaultValueFunction, requiresUserSetting, stringConverter);
+    public WindowsBundlerParam(String name, String description, String id, Class<T> valueType, Function<Map<String, ? super Object>, T> defaultValueFunction, BiFunction<String, Map<String, ? super Object>, T> stringConverter) {
+        super(name, description, id, valueType, defaultValueFunction, stringConverter);
     }
 
     public static final StandardBundlerParam<String> MENU_GROUP =
@@ -56,9 +56,11 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
                     I18N.getString("param.menu-group.description"),
                     "win.menuGroup",
                     String.class,
-                    new String[] {VENDOR.getID(), CATEGORY.getID(), },
-                    params -> I18N.getString("param.menu-group.default"),
-                    false,
+                    params -> params.containsKey(VENDOR.getID())
+                            ? VENDOR.fetchFrom(params)
+                            : params.containsKey(CATEGORY.getID())
+                            ? CATEGORY.fetchFrom(params)
+                            : I18N.getString("param.menu-group.default"),
                     (s, p) -> s
             );
 
@@ -68,9 +70,7 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
                     I18N.getString("param.64-bit.description"),
                     "win.64Bit",
                     Boolean.class,
-                    null,
                     params -> System.getProperty("os.arch").contains("64"),
-                    false,
                     (s, p) -> Boolean.valueOf(s)
             );
 
@@ -80,9 +80,7 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
                     I18N.getString("param.runtime-64-bit.description"),
                     "win.64BitJreRuntime",
                     Boolean.class,
-                    null,
                     params -> {extractFlagsFromRuntime(params); return "64".equals(params.get(".runtime.bit-arch"));},
-                    false,
                     (s, p) -> Boolean.valueOf(s)
             );
        

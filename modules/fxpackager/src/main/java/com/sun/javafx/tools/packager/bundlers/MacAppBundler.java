@@ -106,9 +106,9 @@ public class MacAppBundler extends AbstractBundler {
                     "Mac App Store Categories. Note that the key is the string to display to the user and the value is the id of the category",
                     "mac.category",
                     String.class,
-                    new String[] {CATEGORY.getID()},
-                    params -> "Unknown",
-                    false,
+                    params -> params.containsKey(CATEGORY.getID())
+                            ? CATEGORY.fetchFrom(params)
+                            : "Unknown",
                     (s, p) -> s,
                     getMacCategories(),
                     false //strict - for MacStoreBundler this should be strict
@@ -120,9 +120,7 @@ public class MacAppBundler extends AbstractBundler {
                     "The name of the app as it appears in the Menu Bar.  This can be different from the application name.  This name should be less than 16 characters long and be suitable for displaying in the menu bar and the app’s Info window.",
                     "mac.CFBundleName",
                     String.class,
-                    null,
                     params -> null,
-                    false,
                     (s, p) -> s);
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
@@ -130,13 +128,11 @@ public class MacAppBundler extends AbstractBundler {
             I18N.getString("param.config-root.description"),
             "configRoot",
             File.class,
-            null,
             params -> {
                 File configRoot = new File(BUILD_ROOT.fetchFrom(params), "macosx");
                 configRoot.mkdirs();
                 return configRoot;
             },
-            false,
             (s, p) -> new File(s));
 
     public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new StandardBundlerParam<>(
@@ -144,9 +140,7 @@ public class MacAppBundler extends AbstractBundler {
             "Override the packager default launcher with a custom launcher.",
             "mac.launcher.url",
             URL.class,
-            null,
             params -> MacResources.class.getResource(EXECUTABLE_NAME),
-            false,
             (s, p) -> {
                 try {
                     return new URL(s);
@@ -161,9 +155,7 @@ public class MacAppBundler extends AbstractBundler {
             "The Default Icon for when a user does not specify an icns file.",
             ".mac.default.icns",
             String.class,
-            null,
             params -> TEMPLATE_BUNDLE_ICON,
-            false,
             (s, p) -> s);
 
     //Subsetting of JRE is restricted.
@@ -175,7 +167,6 @@ public class MacAppBundler extends AbstractBundler {
             "",
             ".mac-jdk.runtime.rules",
             Rule[].class,
-            null,
             params -> new Rule[]{
                     Rule.suffixNeg("macos/libjli.dylib"),
                     Rule.suffixNeg("resources"),
@@ -215,7 +206,6 @@ public class MacAppBundler extends AbstractBundler {
                     Rule.suffixNeg("jre/lib/security/javaws.policy"),
                     Rule.substrNeg("Contents/Info.plist")
             },
-            false,
             (s, p) -> null
     );
 
@@ -224,9 +214,7 @@ public class MacAppBundler extends AbstractBundler {
             RUNTIME.getDescription(),
             RUNTIME.getID(),
             RelativeFileSet.class,
-            null,
             params -> extractMacRuntime(System.getProperty("java.home"), params),
-            false,
             MacAppBundler::extractMacRuntime
     );
 
@@ -235,7 +223,6 @@ public class MacAppBundler extends AbstractBundler {
             I18N.getString("param.signing-key-developer-id-app.description"),
             "mac.signing-key-developer-id-app",
             String.class,
-            null,
             params -> {
                 String key = "Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params);
                 try {
@@ -245,7 +232,6 @@ public class MacAppBundler extends AbstractBundler {
                     return null;
                 }
             },
-            false,
             (s, p) -> s);
 
 
@@ -328,7 +314,8 @@ public class MacAppBundler extends AbstractBundler {
                 return predefinedImage;
             }
 
-            File file = BUILD_ROOT.fetchFrom(p);
+            // side effect is temp dir is created if not specified
+            BUILD_ROOT.fetchFrom(p);
 
             //prepare config resources (we will copy them to the bundle later)
             // NB: explicitly saving them to simplify customization

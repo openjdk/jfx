@@ -68,9 +68,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             I18N.getString("param.app-bundle.description"),
             "mac.app.bundler",
             MacAppBundler.class,
-            null,
             params -> new MacAppBundler(),
-            false,
             (s, p) -> null);
 
     protected final BundlerParamInfo<File> APP_IMAGE_BUILD_ROOT = new StandardBundlerParam<>(
@@ -78,13 +76,11 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             I18N.getString("param.app-image-build-root.description"),
             "mac.app.imageRoot",
             File.class,
-            null,
             params -> {
                 File imageDir = IMAGES_ROOT.fetchFrom(params);
                 if (!imageDir.exists()) imageDir.mkdirs();
                 return new File(imageDir, getID()+ ".image");
             },
-            false,
             (s, p) -> new File(s));
 
     public static final StandardBundlerParam<File> MAC_APP_IMAGE = new StandardBundlerParam<>(
@@ -92,9 +88,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             I18N.getString("param.app-image.description"),
             "mac.app.image",
             File.class,
-            null,
             params -> null,
-            false,
             (s, p) -> new File(s));
 
 
@@ -103,9 +97,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             I18N.getString("param.daemon-bundler.description"),
             "mac.daemon.bundler",
             MacDaemonBundler.class,
-            null,
             params -> new MacDaemonBundler(),
-            false,
             (s, p) -> null);
 
 
@@ -114,13 +106,11 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             I18N.getString("param.daemon-image-build-root.description"),
             "mac.daemon.image",
             File.class,
-            null,
             params -> {
                 File imageDir = IMAGES_ROOT.fetchFrom(params);
                 if (!imageDir.exists()) imageDir.mkdirs();
                 return new File(imageDir, getID()+ ".daemon");
             },
-            false,
             (s, p) -> new File(s));
 
 
@@ -129,20 +119,18 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             I18N.getString("param.config-root.description"),
             "configRoot",
             File.class,
-            null,
             params -> {
                 File imagesRoot = new File(BUILD_ROOT.fetchFrom(params), "macosx");
                 imagesRoot.mkdirs();
                 return imagesRoot;
             },
-            false, (s, p) -> null);
+            (s, p) -> null);
 
     public static final BundlerParamInfo<String> SIGNING_KEY_USER = new StandardBundlerParam<>(
             I18N.getString("param.signing-key-name.name"),
             I18N.getString("param.signing-key-name.description"),
             "mac.signing-key-user-name",
             String.class,
-            null,
             params -> {
                 try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
                     ProcessBuilder pb = new ProcessBuilder(
@@ -164,7 +152,6 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                 }
                 return null;
             },
-            false,
             null);
 
 

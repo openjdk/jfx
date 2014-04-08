@@ -62,13 +62,11 @@ public class MacDaemonBundler extends AbstractBundler {
             I18N.getString("param.config-root.description"),
             "configRoot",
             File.class,
-            null,
             params -> {
                 File configRoot = new File(BUILD_ROOT.fetchFrom(params), "macosx");
                 configRoot.mkdirs();
                 return configRoot;
             },
-            false,
             (s, p) -> new File(s));
 
     public MacDaemonBundler() {

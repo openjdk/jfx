@@ -70,13 +70,11 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
             I18N.getString("param.packages-root.description"),
             "mac.pkg.packagesRoot",
             File.class,
-            null,
             params -> {
                 File packagesRoot = new File(BUILD_ROOT.fetchFrom(params), "packages");
                 packagesRoot.mkdirs();
                 return packagesRoot;
             },
-            false,
             (s, p) -> new File(s));
 
     
@@ -85,13 +83,11 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
             I18N.getString("param.scripts-dir.description"),
             "mac.pkg.scriptsDir",
             File.class,
-            null,
             params -> {
                 File scriptsDir = new File(CONFIG_ROOT.fetchFrom(params), "scripts");
                 scriptsDir.mkdirs();
                 return scriptsDir;
             },
-            false,
             (s, p) -> new File(s));
 
     public static final BundlerParamInfo<String> DEVELOPER_ID_INSTALLER_SIGNING_KEY = new StandardBundlerParam<>(
@@ -99,7 +95,6 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-developer-id-installer.description"),
             "mac.signing-key-developer-id-installer",
             String.class,
-            null,
             params -> {
                 String key = "Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params);
                 try {
@@ -109,7 +104,6 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
                     return null;
                 }
             },
-            false,
             (s, p) -> s);
     
     public MacPKGBundler() {

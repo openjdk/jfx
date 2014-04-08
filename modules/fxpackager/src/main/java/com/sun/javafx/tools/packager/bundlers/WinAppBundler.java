@@ -55,11 +55,13 @@ public class WinAppBundler extends AbstractBundler {
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"), 
             "configRoot",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imagesRoot = new File(BUILD_ROOT.fetchFrom(params), "windows");
                 imagesRoot.mkdirs();
                 return imagesRoot;
-            }, false, (s, p) -> null);
+            },
+            (s, p) -> null);
 
     //Subsetting of JRE is restricted.
     //JRE README defines what is allowed to strip:
@@ -69,7 +71,6 @@ public class WinAppBundler extends AbstractBundler {
             "",
             ".win.runtime.rules",
             Rule[].class,
-            null,
             params -> new Rule[]{
                 Rule.prefixNeg("\\bin\\new_plugin"),
                 Rule.prefixNeg("\\lib\\deploy"),
@@ -94,7 +95,6 @@ public class WinAppBundler extends AbstractBundler {
                 //Rule.suffixNeg("plugin.jar"),
                 Rule.suffix(".jar")
             },
-            false,
             (s, p) -> null
     );
 
@@ -103,10 +103,8 @@ public class WinAppBundler extends AbstractBundler {
             RUNTIME.getDescription(),
             RUNTIME.getID(),
             RelativeFileSet.class,
-            null,
             params -> extractJreAsRelativeFileSet(System.getProperty("java.home"),
                     WIN_JRE_RULES.fetchFrom(params)),
-            false,
             (s, p) -> extractJreAsRelativeFileSet(s,
                     WIN_JRE_RULES.fetchFrom(p))
     );
@@ -119,8 +117,9 @@ public class WinAppBundler extends AbstractBundler {
             I18N.getString("param.raw-executable-url.name"),
             I18N.getString("param.raw-executable-url.description"),
             "win.launcher.url",
-            URL.class, null, params -> WinResources.class.getResource(EXECUTABLE_NAME), 
-            false, (s, p) -> {
+            URL.class,
+            params -> WinResources.class.getResource(EXECUTABLE_NAME),
+            (s, p) -> {
                 try {
                     return new URL(s);
                 } catch (MalformedURLException e) {
@@ -133,8 +132,9 @@ public class WinAppBundler extends AbstractBundler {
             I18N.getString("param.rebrand-executable.name"),
             I18N.getString("param.rebrand-executable.description"),
             "win.launcher.rebrand",
-            Boolean.class, null, params -> Boolean.TRUE, 
-            false, (s, p) -> Boolean.valueOf(s));
+            Boolean.class,
+            params -> Boolean.TRUE,
+            (s, p) -> Boolean.valueOf(s));
 
     public WinAppBundler() {
         super();

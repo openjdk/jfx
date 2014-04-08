@@ -57,8 +57,9 @@ public class LinuxAppBundler extends AbstractBundler {
             I18N.getString("param.raw-executable-url.name"),
             I18N.getString("param.raw-executable-url.description"),
             "linux.launcher.url",
-            URL.class, null, params -> LinuxResources.class.getResource(EXECUTABLE_NAME),
-            false, (s, p) -> {
+            URL.class,
+            params -> LinuxResources.class.getResource(EXECUTABLE_NAME),
+            (s, p) -> {
                 try {
                     return new URL(s);
                 } catch (MalformedURLException e) {
@@ -76,7 +77,6 @@ public class LinuxAppBundler extends AbstractBundler {
             "",
             ".linux.runtime.rules",
             Rule[].class,
-            null,
             params -> new Rule[]{
                     Rule.prefixNeg("/bin"),
                     Rule.prefixNeg("/plugin"),
@@ -86,7 +86,6 @@ public class LinuxAppBundler extends AbstractBundler {
                     Rule.prefixNeg("/lib/desktop"),
                     Rule.substrNeg("libnpjp2.so")
             },
-            false,
             (s, p) ->  null
     );
 
@@ -95,10 +94,8 @@ public class LinuxAppBundler extends AbstractBundler {
             RUNTIME.getDescription(),
             RUNTIME.getID(),
             RelativeFileSet.class,
-            null,
             params -> JreUtils.extractJreAsRelativeFileSet(System.getProperty("java.home"),
                     LINUX_JRE_RULES.fetchFrom(params)),
-            false,
             (s, p) -> JreUtils.extractJreAsRelativeFileSet(s, LINUX_JRE_RULES.fetchFrom(p))
     );
 
@@ -171,7 +168,7 @@ public class LinuxAppBundler extends AbstractBundler {
             File appDirectory = new File(rootDirectory, "app");
             appDirectory.mkdirs();
 
-            // Copy executable to MacOS folder
+            // Copy executable to Linux folder
             File executableFile = getLauncher(outputDirectory, p);
             IOUtils.copyFromURL(
                     RAW_EXECUTABLE_URL.fetchFrom(p),

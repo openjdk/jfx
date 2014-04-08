@@ -51,13 +51,16 @@ public class LinuxDebBundler extends AbstractBundler {
             I18N.getString("param.app-bundler.name"),
             I18N.getString("param.app-bundler.description"),
             "linux.app.bundler",
-            LinuxAppBundler.class, null, params -> new LinuxAppBundler(), false, (s, p) -> null);
+            LinuxAppBundler.class,
+            params -> new LinuxAppBundler(),
+            (s, p) -> null);
 
     public static final BundlerParamInfo<String> BUNDLE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.bundle-name.name"),
             I18N.getString("param.bundle-name.description"),
             "linux.bundleName",
-            String.class, null, params -> {
+            String.class,
+            params -> {
                 String nm = APP_NAME.fetchFrom(params);
                 if (nm == null) return null;
 
@@ -69,70 +72,77 @@ public class LinuxDebBundler extends AbstractBundler {
                        .replaceAll("[ _]", "-")
                        .replaceAll("[^-+.a-z0-9]", "");
                 return nm;
-            }, false, (s, p) -> s);
+            },
+            (s, p) -> s);
 
     public static final BundlerParamInfo<String> FULL_PACKAGE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.full-package-name.name"),
             I18N.getString("param.full-package-name.description"),
             "linux.deb.fullPackageName",
-            String.class, null,
+            String.class,
             params -> BUNDLE_NAME.fetchFrom(params) + "-" + VERSION.fetchFrom(params),
-            false, (s, p) -> s);
+            (s, p) -> s);
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
             "configRoot",
-            File.class, null, params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
-            false, (s, p) -> new File(s));
+            File.class,
+            params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<File> DEB_IMAGE_DIR = new StandardBundlerParam<>(
             I18N.getString("param.image-dir.name"),
             I18N.getString("param.image-dir.description"),
             "linux.deb.imageDir",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imagesRoot = IMAGES_ROOT.fetchFrom(params);
                 if (!imagesRoot.exists()) imagesRoot.mkdirs();
                 return new File(new File(imagesRoot, "linux-deb.image"), FULL_PACKAGE_NAME.fetchFrom(params));
-            }, false, (s, p) -> new File(s));
+            },
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<File> APP_IMAGE_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.app-image-root.name"),
             I18N.getString("param.app-image-root.description"),
             "linux.deb.imageRoot",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imageDir = DEB_IMAGE_DIR.fetchFrom(params);
                 return new File(imageDir, "opt");
-            }, false, (s, p) -> new File(s));
+            },
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<File> CONFIG_DIR = new StandardBundlerParam<>(
             I18N.getString("param.config-dir.name"),
             I18N.getString("param.config-dir.description"),
             "linux.deb.configDir",
-            File.class, null, params ->  new File(DEB_IMAGE_DIR.fetchFrom(params), "DEBIAN"),
-            false, (s, p) -> new File(s));
+            File.class,
+            params ->  new File(DEB_IMAGE_DIR.fetchFrom(params), "DEBIAN"),
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<String> EMAIL = new StandardBundlerParam<> (
             I18N.getString("param.maintainer-email.name"),
             I18N.getString("param.maintainer-email.description"),
             BundleParams.PARAM_EMAIL,
-            String.class, null,
+            String.class,
             params -> "Unknown",
-            false, (s, p) -> s);
+            (s, p) -> s);
 
     public static final BundlerParamInfo<String> MAINTAINER = new StandardBundlerParam<> (
             I18N.getString("param.maintainer-name.name"),
             I18N.getString("param.maintainer-name.description"),
             "linux.deb.maintainer",
-            String.class, null,
+            String.class,
             params -> VENDOR.fetchFrom(params) + " <" + EMAIL.fetchFrom(params) + ">",
-            false, (s, p) -> s);
+            (s, p) -> s);
 
     public static final BundlerParamInfo<String> LICENSE_TEXT = new StandardBundlerParam<> (
             I18N.getString("param.license-text.name"),
             I18N.getString("param.license-text.description"),
             "linux.deb.licenseText",
-            String.class, null,
+            String.class,
             params -> {
                 try {
                     List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
@@ -148,7 +158,7 @@ public class LinuxDebBundler extends AbstractBundler {
                 }
                 return LICENSE_TYPE.fetchFrom(params);
             },
-            false, (s, p) -> s);
+            (s, p) -> s);
 
     private final static String DEFAULT_ICON = "javalogo_white_32.png";
     private final static String DEFAULT_CONTROL_TEMPLATE = "template.control";

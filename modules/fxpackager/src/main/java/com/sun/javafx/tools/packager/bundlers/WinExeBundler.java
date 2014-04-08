@@ -51,23 +51,28 @@ public class WinExeBundler extends AbstractBundler {
             I18N.getString("param.app-bundler.name"),
             I18N.getString("param.app-bundler.description"),
             "win.app.bundler",
-            WinAppBundler.class, null, params -> new WinAppBundler(), false, null);
+            WinAppBundler.class,
+            params -> new WinAppBundler(),
+            null);
 
     public static final BundlerParamInfo<WinServiceBundler> SERVICE_BUNDLER = new WindowsBundlerParam<>(
             I18N.getString("param.service-bundler.name"),
             I18N.getString("param.service-bundler.description"),
             "win.service.bundler",
-            WinServiceBundler.class, null, params -> new WinServiceBundler(), false, null);
+            WinServiceBundler.class,
+            params -> new WinServiceBundler(),
+            null);
     
     public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
             "configRoot",
-            File.class, null,params -> {
+            File.class, params -> {
                 File imagesRoot = new File(BUILD_ROOT.fetchFrom(params), "windows");
                 imagesRoot.mkdirs();
                 return imagesRoot;
-            }, false, (s, p) -> null);
+            },
+            (s, p) -> null);
 
     //default for .exe is user level installation
     // only do system wide if explicitly requested
@@ -77,9 +82,9 @@ public class WinExeBundler extends AbstractBundler {
                     I18N.getString("param.system-wide.description"),
                     "win.exe." + BundleParams.PARAM_SYSTEM_WIDE,
                     Boolean.class,
-                    new String[] {BundleParams.PARAM_SYSTEM_WIDE},
-                    params -> false, // EXEs default to user local install
-                    false,
+                    params -> params.containsKey(SYSTEM_WIDE.getID())
+                                ? SYSTEM_WIDE.fetchFrom(params)
+                                : false, // EXEs default to user local install
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s) // valueOf(null) is false, and we actually do want null
             );
 
@@ -87,11 +92,13 @@ public class WinExeBundler extends AbstractBundler {
             I18N.getString("param.image-dir.name"),
             I18N.getString("param.image-dir.description"),
             "win.exe.imageDir",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imagesRoot = IMAGES_ROOT.fetchFrom(params);
                 if (!imagesRoot.exists()) imagesRoot.mkdirs();
                 return new File(imagesRoot, "win-exe.image");
-            }, false, (s, p) -> null);
+            },
+            (s, p) -> null);
 
     private final static String DEFAULT_EXE_PROJECT_TEMPLATE = "template.iss";
     private static final String TOOL_INNO_SETUP_COMPILER = "iscc.exe";
@@ -100,7 +107,8 @@ public class WinExeBundler extends AbstractBundler {
             I18N.getString("param.iscc-path.name"),
             I18N.getString("param.iscc-path.description"),
             "win.exe.iscc.exe",
-            String.class, null, params -> {
+            String.class,
+            params -> {
                 for (String dirString : (System.getenv("PATH") + ";C:\\Program Files (x86)\\Inno Setup 5;C:\\Program Files\\Inno Setup 5").split(";")) {
                     File f = new File(dirString.replace("\"", ""), TOOL_INNO_SETUP_COMPILER);
                     if (f.isFile()) {
@@ -108,7 +116,8 @@ public class WinExeBundler extends AbstractBundler {
                     }
                 }
                 return null;
-            }, false, null);
+            },
+            null);
 
     public WinExeBundler() {
         super();
