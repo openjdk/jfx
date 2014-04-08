@@ -431,8 +431,10 @@ public abstract class XYChart<X,Y> extends Chart {
      */
     public XYChart(Axis<X> xAxis, Axis<Y> yAxis) {
         this.xAxis = xAxis;
+        if (xAxis.getSide() == null) xAxis.setSide(Side.BOTTOM);
         xAxis.setEffectiveOrientation(Orientation.HORIZONTAL);
         this.yAxis = yAxis;
+        if (yAxis.getSide() == null) yAxis.setSide(Side.LEFT);
         yAxis.setEffectiveOrientation(Orientation.VERTICAL);
         // RT-23123 autoranging leads to charts incorrect appearance.
         xAxis.autoRangingProperty().addListener((ov, t, t1) -> {
