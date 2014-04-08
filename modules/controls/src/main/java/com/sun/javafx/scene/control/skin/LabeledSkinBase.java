@@ -1164,7 +1164,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     }
 
     /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case TITLE: {
                 if (bindings != null) {
