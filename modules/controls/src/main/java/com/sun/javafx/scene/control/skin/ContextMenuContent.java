@@ -1275,7 +1275,7 @@ public class ContextMenuContent extends Region {
                     getChildren().remove(right);
                 }
 
-                String text = KeystrokeUtils.toString(item.getAccelerator());
+                String text = item.getAccelerator().getDisplayText();
                 right = new Label(text);
                 right.setStyle(item.getStyle());
                 right.getStyleClass().add("accelerator-text");
