@@ -67,6 +67,13 @@ public enum Role {
     CONTEXT_MENU,
 
     /**
+     * DatePicker.
+     * Attributed: DATE
+     * Actions:
+     */
+    DATE_PICKER,
+
+    /**
      * Decrement button
      *
      */

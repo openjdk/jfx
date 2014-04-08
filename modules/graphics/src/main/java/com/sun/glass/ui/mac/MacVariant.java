@@ -25,8 +25,8 @@
 
 package com.sun.glass.ui.mac;
 
+import java.time.LocalDate;
 import java.util.Arrays;
-
 import javafx.geometry.Bounds;
 
 class MacVariant {
@@ -87,6 +87,18 @@ class MacVariant {
         MacVariant variant = new MacVariant();
         variant.type = NSAttributedString;
         variant.string = (String)result;
+        return variant;
+    }
+
+    static MacVariant createNSDate(Object result) {
+        /* LocalDate#toEpochDay returns day since Jan 1 1970.
+         * [NSDate dateWithTimeIntervalSince1970] used natively
+         * takes second since Jan 1 1970.
+         */
+        long epochDay = ((LocalDate)result).toEpochDay();
+        MacVariant variant = new MacVariant();
+        variant.type = NSDate;
+        variant.long1 = (epochDay + 1) * 24 * 60 * 60;
         return variant;
     }
 

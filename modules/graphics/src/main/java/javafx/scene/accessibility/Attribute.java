@@ -25,6 +25,7 @@
 
 package javafx.scene.accessibility;
 
+import java.time.LocalDate;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
@@ -101,6 +102,8 @@ public enum Attribute {
      * Type: Integer
      */
     DISCLOSURE_LEVEL("DisclosureLevel", Integer.class),
+
+    DATE("Date", LocalDate.class),
 
     /**
      * Returns true if the Node is enabled.

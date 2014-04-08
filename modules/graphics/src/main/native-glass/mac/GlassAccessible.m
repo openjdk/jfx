@@ -316,6 +316,10 @@ id variantToID(JNIEnv *env, jobject variant) {
         jint value = (*env)->GetIntField(env, variant, jVariantInt1);
         return [NSNumber numberWithInt: value];
     }
+    case com_sun_glass_ui_mac_MacVariant_NSDate: {
+        jlong value = (*env)->GetLongField(env, variant, jVariantLong1);
+        return [NSDate dateWithTimeIntervalSince1970: value];
+    }
     }
     return NULL;
 }

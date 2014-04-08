@@ -116,6 +116,7 @@ final class MacAccessible extends PlatformAccessible {
         AXMenuItemCmdGlyph(ACCELERATOR, MacVariant::createNSNumberForInt),
         AXMenuItemCmdModifiers(ACCELERATOR, MacVariant::createNSNumberForInt),
         AXMenuItemMarkChar(SELECTED, MacVariant::createNSString),
+        AXDateTimeComponents(null, MacVariant::createNSNumberForInt),
 
         // NSAccessibilityMenuRole
         NSAccessibilitySelectedChildrenAttribute(null, MacVariant::createNSArray),
@@ -456,6 +457,14 @@ final class MacAccessible extends PlatformAccessible {
             },
             null
         ),
+        AXDateTimeArea(Role.DATE_PICKER,
+                new MacAttributes[] {
+                    MacAttributes.NSAccessibilityEnabledAttribute,
+                    MacAttributes.NSAccessibilityValueAttribute,
+                    MacAttributes.AXDateTimeComponents,
+                },
+                null
+            ),
         ;
 
         long ptr; /* Initialized natively - treat as final */
@@ -1003,6 +1012,10 @@ final class MacAccessible extends PlatformAccessible {
                             jfxAttr = SELECTED;
                             map = MacVariant::createNSNumberForInt;
                             break;
+                        case DATE_PICKER:
+                            jfxAttr = DATE;
+                            map = MacVariant::createNSDate;
+                            break;
                         default:
                             /* VoiceOver can ask NSAccessibilityValueAttribute in unexpected cases, AXColumn for example. */
                             return null;
@@ -1036,6 +1049,15 @@ final class MacAccessible extends PlatformAccessible {
                     }
                     return null;
                 }
+                case AXDateTimeComponents: {
+                    /* 
+                     * AXDateTimeComponents is an undocumented attribute which
+                     * is used by native DateTime controls in Cocoa.
+                     * It it used a bit vector and 224 indicates that
+                     * month, day, and year should be read out.
+                     */
+                    return attr.map.apply(224);
+                }
                 default:
               }
         }
@@ -1052,11 +1074,6 @@ final class MacAccessible extends PlatformAccessible {
                      * But Mac needs NSAccessibilityColumnCountAttribute == 1 to work
                      */
                     result = 1;
-                    break;
-                case NSAccessibilityValueAttribute:
-                    if (role == Role.COMBOBOX) {
-                        result = "";
-                    }
                     break;
                 case AXMenuItemCmdModifiers:
                     return attr.map.apply(kAXMenuItemModifierNoCommand);
