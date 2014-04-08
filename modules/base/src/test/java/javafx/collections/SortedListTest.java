@@ -29,6 +29,7 @@ import com.sun.javafx.collections.NonIterableChange.SimplePermutationChange;
 import com.sun.javafx.collections.ObservableListWrapper;
 import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import javafx.collections.ListChangeListener.Change;
@@ -404,5 +405,73 @@ public class SortedListTest {
         expected.put(1, 0);     // item "2" has moved from index 1 to index 0
         expected.put(2, 1);     // item "1" has moved from index 2 to index 1
         assertEquals(expected, pMap);
+    }
+
+
+    @Test
+    public void testAddWhenUnsorted() {
+        sortedList.setComparator(null);
+        mockListObserver.clear();
+        list.add(2, "b");
+        assertEquals(5, sortedList.size());
+        assertEquals(Arrays.asList("a", "c", "b", "d", "c"), sortedList);
+        mockListObserver.check1AddRemove(sortedList, Collections.emptyList(), 2, 3);
+
+        mockListObserver.clear();
+        sortedList.setComparator(Comparator.<String>naturalOrder());
+        mockListObserver.check1Permutation(sortedList, new int[] {0, 2, 1, 4, 3});
+        assertEquals(5, sortedList.size());
+        assertEquals(Arrays.asList("a", "b", "c", "c", "d"), sortedList);
+
+        mockListObserver.clear();
+        sortedList.setComparator(null);
+        assertEquals(5, sortedList.size());
+        assertEquals(Arrays.asList("a", "c", "b", "d", "c"), sortedList);
+        mockListObserver.check1Permutation(sortedList, new int[] {0, 2, 1, 4, 3});
+
+    }
+
+    @Test
+    public void testRemoveWhenUnsorted() {
+        sortedList.setComparator(null);
+        mockListObserver.clear();
+        list.remove(1);
+        assertEquals(3, sortedList.size());
+        assertEquals(Arrays.asList("a", "d", "c"), sortedList);
+        mockListObserver.check1AddRemove(sortedList, Arrays.asList("c"), 1, 1);
+
+        mockListObserver.clear();
+        sortedList.setComparator(Comparator.<String>naturalOrder());
+        mockListObserver.check1Permutation(sortedList, new int[] {0, 2, 1});
+        assertEquals(3, sortedList.size());
+        assertEquals(Arrays.asList("a", "c", "d"), sortedList);
+
+        mockListObserver.clear();
+        sortedList.setComparator(null);
+        assertEquals(3, sortedList.size());
+        assertEquals(Arrays.asList("a", "d", "c"), sortedList);
+        mockListObserver.check1Permutation(sortedList, new int[] {0, 2, 1});
+    }
+
+    @Test
+    public void testSetWhenUnsorted() {
+        sortedList.setComparator(null);
+        mockListObserver.clear();
+        list.set(1, "e");
+        assertEquals(4, sortedList.size());
+        assertEquals(Arrays.asList("a", "e", "d", "c"), sortedList);
+        mockListObserver.check1AddRemove(sortedList, Arrays.asList("c"), 1, 2);
+
+        mockListObserver.clear();
+        sortedList.setComparator(Comparator.<String>naturalOrder());
+        mockListObserver.check1Permutation(sortedList, new int[] {0, 3, 2, 1});
+        assertEquals(4, sortedList.size());
+        assertEquals(Arrays.asList("a", "c", "d", "e"), sortedList);
+
+        mockListObserver.clear();
+        sortedList.setComparator(null);
+        assertEquals(4, sortedList.size());
+        assertEquals(Arrays.asList("a", "e", "d", "c"), sortedList);
+        mockListObserver.check1Permutation(sortedList, new int[] {0, 3, 2, 1});
     }
 }
