@@ -114,6 +114,9 @@ public class MacDMGBundlerTest {
      */
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
+        // only run with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
         AbstractBundler bundler = new MacDMGBundler();
 
         assertNotNull(bundler.getName());
@@ -159,6 +162,9 @@ public class MacDMGBundlerTest {
      */
     @Test
     public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
+        // only run with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
         Bundler bundler = new MacDMGBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();

@@ -1918,6 +1918,7 @@ project(":fxpackager") {
     test {
         dependsOn packagerFakeJar
         systemProperty "RETAIN_PACKAGER_TESTS", RETAIN_PACKAGER_TESTS
+        systemProperty "FULL_TEST", FULL_TEST
     }
 }
 
