@@ -61,6 +61,7 @@ import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -3225,5 +3226,57 @@ public class TreeTableViewTest {
         assertEquals(2, root.getChildren().size());
         assertEquals("B", root.getChildren().get(0).getValue());
         assertEquals("C", root.getChildren().get(1).getValue());
+    }
+
+    private int rt36452_instanceCount = 0;
+    @Test public void test_rt36452() {
+        TreeTableColumn<String, String> myColumn = new TreeTableColumn<String,String>();
+        myColumn.setCellValueFactory((item)->(new ReadOnlyObjectWrapper<>(item.getValue().getValue())));
+        myColumn.setCellFactory(column -> new TreeTableCell<String, String>() {
+            {
+                rt36452_instanceCount++;
+            }
+        });
+
+        TreeTableView<String> ttv = new TreeTableView<>();
+        ttv.setShowRoot(false);
+        ttv.getColumns().add(myColumn);
+
+        TreeItem<String> treeRootItem = new TreeItem<>("root");
+        treeRootItem.setExpanded(true);
+
+        for (int i = 0; i < 100; i++) {
+            treeRootItem.getChildren().add(new TreeItem<>("Child: " + i));
+        }
+
+        ttv.setRoot(treeRootItem);
+        ttv.setFixedCellSize(25);
+
+        StackPane root = new StackPane();
+        root.getChildren().add(ttv);
+
+        StageLoader sl = new StageLoader(root);
+
+        final int cellCountAtStart = rt36452_instanceCount;
+
+        // start scrolling
+        for (int i = 0; i < 100; i++) {
+            ttv.scrollTo(i);
+            Toolkit.getToolkit().firePulse();
+        }
+
+        // we don't mind if an extra few cells are created. What we are really
+        // testing for here is that we don't end up with an order of magnitude
+        // extra cells.
+        // On my machine the cellCountAtStart is 16. Before this issue was fixed
+        // I would end up with 102 instances after running this test. Once the
+        // bug was fixed, I would consistently see that 17 cells had been
+        // created in total.
+        // However, for now, we'll test on the assumption that across all
+        // platforms we only get one extra cell created, and we can loosen this
+        // up if necessary.
+        assertEquals(cellCountAtStart + 1, rt36452_instanceCount);
+
+        sl.dispose();
     }
 }

@@ -244,7 +244,7 @@ public abstract class TableRowSkinBase<T,
     }
 
     @Override protected void layoutChildren(double x, final double y, final double w, final double h) {
-        checkState(true);
+        checkState();
         if (cellsMap.isEmpty()) return;
 
         ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
@@ -550,7 +550,7 @@ public abstract class TableRowSkinBase<T,
         }
 
         // fix for RT-29080
-        checkState(false);
+        checkState();
 
         // Support for RT-18467: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
@@ -579,7 +579,7 @@ public abstract class TableRowSkinBase<T,
         }
 
         // fix for RT-29080
-        checkState(false);
+        checkState();
 
         // Support for RT-18467: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
@@ -608,13 +608,8 @@ public abstract class TableRowSkinBase<T,
     }
 
     // protected to allow subclasses to ensure a consistent state during layout
-    protected final void checkState(boolean doRecreateIfNecessary) {
+    protected final void checkState() {
         if (isDirty) {
-            // doRecreateIfNecessary was added to resolve RT-29382, which was
-            // introduced by the fix for RT-29080 above in computePrefHeight
-            if (doRecreateIfNecessary) {
-                recreateCells();
-            }
             updateCells(true);
             isDirty = false;
         } else if (updateCells) {
