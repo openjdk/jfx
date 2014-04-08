@@ -35,26 +35,6 @@ import com.sun.scenario.animation.shared.TimerReceiver;
 
 public abstract class AbstractMasterTimer {
 
-    // This PropertyChangeListener is added to Settings to listen for changes
-    // to the nogap and fullspeed properties.
-    private static Callback<String, Void> pcl = new Callback<String, Void>() {
-        public Void call(String key) {
-            switch (key) {
-                case FULLSPEED_PROP:
-                    fullspeed = Settings.getBoolean(FULLSPEED_PROP);
-                    break;
-                case ADAPTIVE_PULSE_PROP:
-                    useAdaptivePulse = Settings.getBoolean(ADAPTIVE_PULSE_PROP);
-                    break;
-                case ANIMATION_MBEAN_ENABLED:
-                    AnimationPulse.getDefaultBean()
-                                  .setEnabled(Settings.getBoolean(ANIMATION_MBEAN_ENABLED));
-                    break;
-            }
-            return null;
-        }
-    };
-
     protected final static String FULLSPEED_PROP = "javafx.animation.fullspeed";
     private static boolean fullspeed = Settings.getBoolean(FULLSPEED_PROP);
 
@@ -81,6 +61,24 @@ public abstract class AbstractMasterTimer {
     private final int PULSE_DURATION_NS = getPulseDuration(1000000000);
     private final int PULSE_DURATION_TICKS = getPulseDuration((int)TickCalculation.fromMillis(1000));
 
+    // This PropertyChangeListener is added to Settings to listen for changes
+    // to the nogap and fullspeed properties.
+    private static Callback<String, Void> pcl = key -> {
+        switch (key) {
+            case FULLSPEED_PROP:
+                fullspeed = Settings.getBoolean(FULLSPEED_PROP);
+                break;
+            case ADAPTIVE_PULSE_PROP:
+                useAdaptivePulse = Settings.getBoolean(ADAPTIVE_PULSE_PROP);
+                break;
+            case ANIMATION_MBEAN_ENABLED:
+                AnimationPulse.getDefaultBean()
+                              .setEnabled(Settings.getBoolean(ANIMATION_MBEAN_ENABLED));
+                break;
+        }
+        return null;
+    };
+    
     private boolean paused = false;
     private long totalPausedTime;
     private long startPauseTime;

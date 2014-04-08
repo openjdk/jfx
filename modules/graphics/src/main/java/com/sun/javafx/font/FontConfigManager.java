@@ -45,8 +45,7 @@ class FontConfigManager {
 
     static {
         AccessController.doPrivileged(
-            new PrivilegedAction<Void>() {
-                public Void run() {
+                (PrivilegedAction<Void>) () -> {
                     String dbg = System.getProperty("prism.debugfonts", "");
                     debugFonts = "true".equals(dbg);
                     String ufc = System.getProperty("prism.useFontConfig", "true");
@@ -55,7 +54,6 @@ class FontConfigManager {
                     useEmbeddedFontSupport = "true".equals(emb);
                     return null;
                 }
-            }
         );
     }
 
@@ -350,12 +348,10 @@ class FontConfigManager {
 
         static {
             AccessController.doPrivileged(
-                new PrivilegedAction<Void>() {
-                    public Void run() {
+                    (PrivilegedAction<Void>) () -> {
                         initEmbeddedFonts();
                     return null;
                     }
-                }
             );
         }
 
@@ -403,11 +399,7 @@ class FontConfigManager {
 
         private static boolean exists(final File f) {
             return AccessController.doPrivileged(
-                new PrivilegedAction<Boolean>() {
-                    public Boolean run() {
-                        return f.exists();
-                    }
-                }
+                    (PrivilegedAction<Boolean>) () -> f.exists()
             );
         }
 
@@ -551,23 +543,22 @@ class FontConfigManager {
         {
             final Properties props = new Properties();
             AccessController.doPrivileged(
-              new PrivilegedAction<Void>() {
-                public Void run() {
-                    try {
-                        String lFile = fontDir+"/allfonts.properties";
-                        FileInputStream fis = new FileInputStream(lFile);
-                        props.load(fis);
-                        fis.close();
-                    } catch (IOException ioe) {
-                        props.clear();
-                        if (debugFonts) {
-                            System.err.println(ioe);
-                            System.err.println("Fall back to opening the files");
+                    (PrivilegedAction<Void>) () -> {
+                        try {
+                            String lFile = fontDir+"/allfonts.properties";
+                            FileInputStream fis = new FileInputStream(lFile);
+                            props.load(fis);
+                            fis.close();
+                        } catch (IOException ioe) {
+                            props.clear();
+                            if (debugFonts) {
+                                System.err.println(ioe);
+                                System.err.println("Fall back to opening the files");
+                            }
                         }
+                        return null;
                     }
-                    return null;
-                }
-            });
+            );
 
             if (!props.isEmpty()) {
                 int maxFont = Integer.MAX_VALUE;

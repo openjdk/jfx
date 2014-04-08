@@ -62,12 +62,7 @@ public class X11Screen implements NativeScreen {
         int y = 0;
         int w = X.WidthOfScreen(screen);
         int h = X.HeightOfScreen(screen);
-        String geometry = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override
-            public String run() {
-                return System.getProperty("x11.geometry");
-            }
-        });
+        String geometry = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("x11.geometry"));
         if (geometry != null) {
             try {
                 String size;

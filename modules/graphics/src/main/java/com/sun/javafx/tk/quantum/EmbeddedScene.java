@@ -163,19 +163,13 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
 
     @Override
     public void setSize(final int width, final int height) {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override
-                    public Void run() {
-                        if (sceneListener != null) {
-                            sceneListener.changedSize(width, height);
-                        }
-                        return null;
-                    }
-                }, getAccessControlContext());
-            }
+        Platform.runLater(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (sceneListener != null) {
+                    sceneListener.changedSize(width, height);
+                }
+                return null;
+            }, getAccessControlContext());
         });
     }
 
@@ -240,33 +234,27 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                            final boolean shift, final boolean ctrl, final boolean alt, final boolean meta,
                            final int wheelRotation, final boolean popupTrigger)
     {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override
-                    public Void run() {
-                        if (sceneListener == null) {
-                            return null;
-                        }
-                        // Click events are generated in Scene, so we don't expect them here
-                        assert type != AbstractEvents.MOUSEEVENT_CLICKED;
-                        if (type == AbstractEvents.MOUSEEVENT_WHEEL) {
-                            sceneListener.scrollEvent(ScrollEvent.SCROLL, 0, -wheelRotation, 0, 0, 40.0, 40.0,
-                                    0, 0, 0, 0, 0,
-                                    x, y, xAbs, yAbs, shift, ctrl, alt, meta, false, false);
-                        } else {
-                            EventType<MouseEvent> eventType = AbstractEvents.mouseIDToFXEventID(type);
-                            sceneListener.mouseEvent(eventType, x, y, xAbs, yAbs,
-                                    AbstractEvents.mouseButtonToFXMouseButton(button),
-                                    popupTrigger, false, // do we know if it's synthesized? RT-20142
-                                    shift, ctrl, alt, meta,
-                                    primaryBtnDown, middleBtnDown, secondaryBtnDown);
-                        }
-                        return null;
-                    }
-                }, getAccessControlContext());
-            }
+        Platform.runLater(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (sceneListener == null) {
+                    return null;
+                }
+                // Click events are generated in Scene, so we don't expect them here
+                assert type != AbstractEvents.MOUSEEVENT_CLICKED;
+                if (type == AbstractEvents.MOUSEEVENT_WHEEL) {
+                    sceneListener.scrollEvent(ScrollEvent.SCROLL, 0, -wheelRotation, 0, 0, 40.0, 40.0,
+                            0, 0, 0, 0, 0,
+                            x, y, xAbs, yAbs, shift, ctrl, alt, meta, false, false);
+                } else {
+                    EventType<MouseEvent> eventType = AbstractEvents.mouseIDToFXEventID(type);
+                    sceneListener.mouseEvent(eventType, x, y, xAbs, yAbs,
+                            AbstractEvents.mouseButtonToFXMouseButton(button),
+                            popupTrigger, false, // do we know if it's synthesized? RT-20142
+                            shift, ctrl, alt, meta,
+                            primaryBtnDown, middleBtnDown, secondaryBtnDown);
+                }
+                return null;
+            }, getAccessControlContext());
         });
     }
 
@@ -274,67 +262,49 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     public void inputMethodEvent(final EventType<InputMethodEvent> type,
                                  final ObservableList<InputMethodTextRun> composed, final String committed,
                                  final int caretPosition) {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override
-                    public Void run() {
-                        if (sceneListener != null) {
-                            sceneListener.inputMethodEvent(type, composed, committed, caretPosition);
-                        }
-                        return null;
-                    }
-                });
-            }
+        Platform.runLater(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (sceneListener != null) {
+                    sceneListener.inputMethodEvent(type, composed, committed, caretPosition);
+                }
+                return null;
+            });
         });
     }
 
     @Override
     public void menuEvent(final int x, final int y, final int xAbs, final int yAbs, final boolean isKeyboardTrigger) {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override
-                    public Void run() {
-                        if (sceneListener != null) {
-                            sceneListener.menuEvent(x, y, xAbs, yAbs, isKeyboardTrigger);
-                        }
-                        return null;
-                    }
-                }, getAccessControlContext());
-            }
+        Platform.runLater(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (sceneListener != null) {
+                    sceneListener.menuEvent(x, y, xAbs, yAbs, isKeyboardTrigger);
+                }
+                return null;
+            }, getAccessControlContext());
         });
     }
 
     @Override
     public void keyEvent(final int type, final int key, final char[] ch, final int modifiers) {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override
-                    public Void run() {
-                        if (sceneListener != null) {
-                            boolean shiftDown = (modifiers & AbstractEvents.MODIFIER_SHIFT) != 0;
-                            boolean controlDown = (modifiers & AbstractEvents.MODIFIER_CONTROL) != 0;
-                            boolean altDown = (modifiers & AbstractEvents.MODIFIER_ALT) != 0;
-                            boolean metaDown = (modifiers & AbstractEvents.MODIFIER_META) != 0;
+        Platform.runLater(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (sceneListener != null) {
+                    boolean shiftDown = (modifiers & AbstractEvents.MODIFIER_SHIFT) != 0;
+                    boolean controlDown = (modifiers & AbstractEvents.MODIFIER_CONTROL) != 0;
+                    boolean altDown = (modifiers & AbstractEvents.MODIFIER_ALT) != 0;
+                    boolean metaDown = (modifiers & AbstractEvents.MODIFIER_META) != 0;
 
-                            String str = new String(ch);
-                            String text = str; // TODO: this must be a text like "HOME", "F1", or "A"
-                            javafx.scene.input.KeyEvent keyEvent = new javafx.scene.input.KeyEvent(
-                                    AbstractEvents.keyIDToFXEventType(type),
-                                    str, text,
-                                    KeyCodeMap.valueOf(key),
-                                    shiftDown, controlDown, altDown, metaDown);
-                            sceneListener.keyEvent(keyEvent);
-                        }
-                        return null;
-                    }
-                }, getAccessControlContext());
-            }
+                    String str = new String(ch);
+                    String text = str; // TODO: this must be a text like "HOME", "F1", or "A"
+                    javafx.scene.input.KeyEvent keyEvent = new javafx.scene.input.KeyEvent(
+                            AbstractEvents.keyIDToFXEventType(type),
+                            str, text,
+                            KeyCodeMap.valueOf(key),
+                            shiftDown, controlDown, altDown, metaDown);
+                    sceneListener.keyEvent(keyEvent);
+                }
+                return null;
+            }, getAccessControlContext());
         });
     }
 

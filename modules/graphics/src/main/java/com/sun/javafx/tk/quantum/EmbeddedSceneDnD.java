@@ -108,16 +108,13 @@ final class EmbeddedSceneDnD {
         final AtomicReference<T> result = new AtomicReference<>();
         final CountDownLatch l = new CountDownLatch(1);
 
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    result.set(r.call());
-                } catch (Exception z) {
-                    // ignore
-                } finally {
-                    l.countDown();
-                }
+        Platform.runLater(() -> {
+            try {
+                result.set(r.call());
+            } catch (Exception z) {
+                // ignore
+            } finally {
+                l.countDown();
             }
         });
 
@@ -156,13 +153,10 @@ final class EmbeddedSceneDnD {
     
     public EmbeddedSceneDTInterface createDropTarget() {
         setHostThread();
-        return executeOnFXThread(new Callable<EmbeddedSceneDTInterface>() {
-            @Override
-            public EmbeddedSceneDTInterface call() {
-                assert fxDropTarget == null;
-                fxDropTarget = new EmbeddedSceneDT(EmbeddedSceneDnD.this, dndHandler);
-                return fxDropTarget;
-            }
+        return executeOnFXThread(() -> {
+            assert fxDropTarget == null;
+            fxDropTarget = new EmbeddedSceneDT(EmbeddedSceneDnD.this, dndHandler);
+            return fxDropTarget;
         });
     }
 

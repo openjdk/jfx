@@ -105,12 +105,7 @@ public final class PrismSettings {
     static {
         final Properties systemProperties =
                 (Properties) AccessController.doPrivileged(
-                                 new PrivilegedAction() {
-                                     @Override
-                                     public Object run() {
-                                         return System.getProperties();
-                                     }
-                                 });
+                        (PrivilegedAction) () -> System.getProperties());
 
         /* Vsync */
         isVsyncEnabled  = getBoolean(systemProperties, "prism.vsync", true)

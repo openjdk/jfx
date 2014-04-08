@@ -39,13 +39,8 @@ public abstract class NativePlatformFactory {
     public static synchronized NativePlatform getNativePlatform() {
         if (platform == null) {
             String platformFactoryProperty =
-                    AccessController.doPrivileged(new PrivilegedAction<String>() {
-                @Override
-                public String run() {
-                    return System.getProperty("monocle.platform",
-                                              "MX6,OMAP,Dispman,Linux,Headless");
-                }
-            });
+                    AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("monocle.platform",
+                                              "MX6,OMAP,Dispman,Linux,Headless"));
             String[] platformFactories = platformFactoryProperty.split(",");
             for (int i = 0; i < platformFactories.length; i++) {
                 String factoryName = platformFactories[i].trim();

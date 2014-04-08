@@ -621,12 +621,8 @@ public class ParentTest {
         root.getLayoutBounds(); // validate
         sub.getBoundsInParent(); // validate
 
-        root.layoutBoundsProperty().addListener(new ChangeListener<Bounds>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Bounds> observable, Bounds oldValue, Bounds newValue) {
-                // ChangeListener will immediately validate the bounds
-            }
+        root.layoutBoundsProperty().addListener((observable, oldValue, newValue) -> {
+            // ChangeListener will immediately validate the bounds
         });
         sub.clear();
 
@@ -642,11 +638,7 @@ public class ParentTest {
 
         final Group child = new Group(new Group(), new Group(), new Group());
 
-        child.getChildren().get(1).sceneProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                child.getChildren().add(2, new Group());
-            }
-        });
+        child.getChildren().get(1).sceneProperty().addListener(o -> child.getChildren().add(2, new Group()));
 
         root.getChildren().add(child);
 

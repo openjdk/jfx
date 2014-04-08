@@ -592,18 +592,8 @@ public abstract class Window {
                 }
                 add(this);
                 if (parent != 0) {
-                    final Runnable checkRunnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            checkScreenLocation();
-                        }
-                    };
-                    final Runnable timerRunnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            Application.invokeLater(checkRunnable);
-                        }
-                    };
+                    final Runnable checkRunnable = () -> checkScreenLocation();
+                    final Runnable timerRunnable = () -> Application.invokeLater(checkRunnable);
                     embeddedLocationTimer =
                            Application.GetApplication().createTimer(timerRunnable);
                     embeddedLocationTimer.start(16);

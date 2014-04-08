@@ -88,21 +88,18 @@ public final class ImageViewTest {
                 imageView, "image", "image",
                 null,
                 TestImages.TEST_IMAGE_200x100,
-                new Comparator() {
-                    @Override
-                    public int compare(final Object sgValue,
-                                       final Object pgValue) {
-                        if (sgValue == null) {
-                            assertNull(pgValue);
-                        } else {
-                            assertSame(
-                                    ((Image) sgValue).impl_getPlatformImage(),
-                                    pgValue);
-                        }
-
-                        return 0;
+                (sgValue, pgValue) -> {
+                    if (sgValue == null) {
+                        assertNull(pgValue);
+                    } else {
+                        assertSame(
+                                ((Image) sgValue).impl_getPlatformImage(),
+                                pgValue);
                     }
-                });
+
+                    return 0;
+                }
+        );
     }
 
     @Test

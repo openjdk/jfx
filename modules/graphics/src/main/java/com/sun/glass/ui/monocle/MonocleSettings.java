@@ -29,12 +29,7 @@ import java.security.PrivilegedAction;
 public class MonocleSettings {
 
     public static final MonocleSettings settings = AccessController.doPrivileged(
-            new PrivilegedAction<MonocleSettings>() {
-                @Override
-                public MonocleSettings run() {
-                    return new MonocleSettings();
-                }
-            });
+            (PrivilegedAction<MonocleSettings>) () -> new MonocleSettings());
 
     public final boolean traceEvents;
     public final boolean traceEventsVerbose;

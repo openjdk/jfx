@@ -47,12 +47,7 @@ public class TouchState {
         }
     }
 
-    static Comparator<Point> pointIdComparator = new Comparator<Point>() {
-        @Override
-        public int compare(Point p1, Point p2) {
-            return p1.id - p2.id;
-        }
-    };
+    static Comparator<Point> pointIdComparator = (p1, p2) -> p1.id - p2.id;
 
     private Point[] points = new Point[1];
     private int pointCount = 0;

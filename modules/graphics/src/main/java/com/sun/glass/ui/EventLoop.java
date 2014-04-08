@@ -116,13 +116,11 @@ public final class EventLoop {
             stack.pop();
 
             if (!stack.isEmpty() && stack.peek().state.equals(State.LEAVING)) {
-                Application.invokeLater(new java.lang.Runnable() {
-                    @Override public void run() {
-                        EventLoop loop = stack.peek();
-                        // we might have already entered another loop, so check again
-                        if (loop != null && loop.state.equals(State.LEAVING)) {
-                            Application.leaveNestedEventLoop(loop);
-                        }
+                Application.invokeLater(() -> {
+                    EventLoop loop = stack.peek();
+                    // we might have already entered another loop, so check again
+                    if (loop != null && loop.state.equals(State.LEAVING)) {
+                        Application.leaveNestedEventLoop(loop);
                     }
                 });
             }

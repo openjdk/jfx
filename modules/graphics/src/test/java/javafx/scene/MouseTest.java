@@ -32,6 +32,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.sun.javafx.pgstub.StubScene;
@@ -89,18 +90,12 @@ public class MouseTest {
     public void ImpossibleToComputeCoordsShouldResultInNaNs() {
         final SimpleTestScene scene = new SimpleTestScene();
 
-        scene.smallSquareTracker.node.setOnMouseMoved(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                scene.smallSquareTracker.node.setScaleX(0);
-            }
-        });
+        scene.smallSquareTracker.node.setOnMouseMoved(event -> scene.smallSquareTracker.node.setScaleX(0));
 
-        scene.smallSquareTracker.node.setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                assertTrue(Double.isNaN(event.getX()));
-                assertTrue(Double.isNaN(event.getY()));
-                assertTrue(Double.isNaN(event.getZ()));
-            }
+        scene.smallSquareTracker.node.setOnMouseExited(event -> {
+            assertTrue(Double.isNaN(event.getX()));
+            assertTrue(Double.isNaN(event.getY()));
+            assertTrue(Double.isNaN(event.getZ()));
         });
 
         scene.processEvent(MouseEventGenerator.generateMouseEvent(
@@ -995,15 +990,13 @@ public class MouseTest {
         scene.smallSquareTracker.clear();
 
         scene.smallSquareTracker.node.addEventHandler(MouseEvent.MOUSE_RELEASED,
-                new EventHandler<MouseEvent>() {
-
-            @Override public void handle(MouseEvent event) {
-                assertEquals(Double.NaN, event.getX(), 0.0001);
-                assertEquals(Double.NaN, event.getY(), 0.0001);
-                assertEquals(251.0, event.getSceneX(), 0.0001);
-                assertEquals(251.0, event.getSceneY(), 0.0001);
-            }
-        });
+                event -> {
+                    Assert.assertEquals(Double.NaN, event.getX(), 0.0001);
+                    Assert.assertEquals(Double.NaN, event.getY(), 0.0001);
+                    Assert.assertEquals(251.0, event.getSceneX(), 0.0001);
+                    Assert.assertEquals(251.0, event.getSceneY(), 0.0001);
+                }
+        );
 
         ((Rectangle) scene.smallSquareTracker.node).setScaleX(0);
 
@@ -1088,13 +1081,12 @@ public class MouseTest {
         final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
 
         s.parent1.addEventHandler(MouseEvent.MOUSE_ENTERED_TARGET,
-                new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        if (event.getTarget() == s.innerRect1) {
-                            s.called = true;
-                        }
+                event -> {
+                    if (event.getTarget() == s.innerRect1) {
+                        s.called = true;
                     }
-                });
+                }
+        );
 
         s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
         s.assertCalled();
@@ -1197,11 +1189,7 @@ public class MouseTest {
     public void fullDragShouldDeliverToOtherSubScene() {
         final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
 
-        s.innerRect1.setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                s.innerRect1.startFullDrag();
-            }
-        });
+        s.innerRect1.setOnDragDetected(event -> s.innerRect1.startFullDrag());
         s.innerRect2.setOnMouseDragOver(s.handler(s.innerRect2, 10, 10));
 
         s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
@@ -1217,11 +1205,7 @@ public class MouseTest {
     public void fullDragEnterShouldDeliverToOtherSubScene() {
         final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
 
-        s.innerRect1.setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                s.innerRect1.startFullDrag();
-            }
-        });
+        s.innerRect1.setOnDragDetected(event -> s.innerRect1.startFullDrag());
         s.innerRect2.setOnMouseDragEntered(s.handler(s.innerRect2, 10, 10));
 
         s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
@@ -1236,11 +1220,7 @@ public class MouseTest {
     public void fullDragEnterShouldDeliverToOtherSubScenesParent() {
         final TestSceneWithSubScenes s = new TestSceneWithSubScenes();
 
-        s.innerRect1.setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                s.innerRect1.startFullDrag();
-            }
-        });
+        s.innerRect1.setOnDragDetected(event -> s.innerRect1.startFullDrag());
         s.parent2.setOnMouseDragEntered(s.handler(s.parent2, 130, 20));
 
         s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
@@ -1307,12 +1287,10 @@ public class MouseTest {
         s.subScene1.setTranslateZ(5);
         s.innerRect1.setTranslateZ(10);
 
-        s.parent1.setOnMouseMoved(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                assertEquals(5, event.getZ(), 0.00001);
-                assertSame(s.innerRect1, event.getTarget());
-                s.called = true;
-            }
+        s.parent1.setOnMouseMoved(event -> {
+            Assert.assertEquals(5, event.getZ(), 0.00001);
+            assertSame(s.innerRect1, event.getTarget());
+            s.called = true;
         });
 
         s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
@@ -1349,19 +1327,17 @@ public class MouseTest {
         ((Group) s.subScene1.getRoot()).getChildren().add(s.subScene1.getCamera());
         s.subScene1.getCamera().setTranslateZ(-3.0);
 
-        s.innerRect1.setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                assertSame(s.innerRect2, event.getPickResult().getIntersectedNode());
-                assertSame(s.innerRect1, event.getTarget());
-                assertEquals(16.58, event.getPickResult().getIntersectedPoint().getX(), 0.1);
-                assertEquals(7.33, event.getPickResult().getIntersectedPoint().getY(), 0.1);
-                assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
-                assertEquals(295.81, event.getX(), 0.1);
-                assertEquals(57.64, event.getY(), 0.1);
-                assertEquals(-3.0, event.getZ(), 0.1);
+        s.innerRect1.setOnMouseExited(event -> {
+            assertSame(s.innerRect2, event.getPickResult().getIntersectedNode());
+            assertSame(s.innerRect1, event.getTarget());
+            Assert.assertEquals(16.58, event.getPickResult().getIntersectedPoint().getX(), 0.1);
+            Assert.assertEquals(7.33, event.getPickResult().getIntersectedPoint().getY(), 0.1);
+            Assert.assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+            Assert.assertEquals(295.81, event.getX(), 0.1);
+            Assert.assertEquals(57.64, event.getY(), 0.1);
+            Assert.assertEquals(-3.0, event.getZ(), 0.1);
 
-                s.called = true;
-            }
+            s.called = true;
         });
 
         s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
@@ -1386,19 +1362,17 @@ public class MouseTest {
         s.innerRect2.setRotationAxis(Rotate.Y_AXIS);
         s.innerRect2.setRotate(45);
 
-        s.innerRect1.setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                assertSame(s.innerRect2, event.getPickResult().getIntersectedNode());
-                assertSame(s.innerRect1, event.getTarget());
-                assertEquals(14.07, event.getPickResult().getIntersectedPoint().getX(), 0.1);
-                assertEquals(5.97, event.getPickResult().getIntersectedPoint().getY(), 0.1);
-                assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
-                assertEquals(216.49, event.getX(), 0.1);
-                assertEquals(57.64, event.getY(), 0.1);
-                assertEquals(-191.49, event.getZ(), 0.1);
+        s.innerRect1.setOnMouseExited(event -> {
+            assertSame(s.innerRect2, event.getPickResult().getIntersectedNode());
+            assertSame(s.innerRect1, event.getTarget());
+            Assert.assertEquals(14.07, event.getPickResult().getIntersectedPoint().getX(), 0.1);
+            Assert.assertEquals(5.97, event.getPickResult().getIntersectedPoint().getY(), 0.1);
+            Assert.assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+            Assert.assertEquals(216.49, event.getX(), 0.1);
+            Assert.assertEquals(57.64, event.getY(), 0.1);
+            Assert.assertEquals(-191.49, event.getZ(), 0.1);
 
-                s.called = true;
-            }
+            s.called = true;
         });
 
         s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
@@ -1413,20 +1387,14 @@ public class MouseTest {
         s.parent2.setTranslateZ(10);
         s.innerRect2.setTranslateZ(10);
 
-        s.innerRect1.setOnMouseMoved(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                s.innerRect1.setScaleX(0.0);
-            }
-        });
+        s.innerRect1.setOnMouseMoved(event -> s.innerRect1.setScaleX(0.0));
 
-        s.innerRect1.setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                assertSame(s.innerRect1, event.getTarget());
-                assertTrue(Double.isNaN(event.getX()));
-                assertTrue(Double.isNaN(event.getY()));
-                assertTrue(Double.isNaN(event.getZ()));
-                s.called = true;
-            }
+        s.innerRect1.setOnMouseExited(event -> {
+            assertSame(s.innerRect1, event.getTarget());
+            assertTrue(Double.isNaN(event.getX()));
+            assertTrue(Double.isNaN(event.getY()));
+            assertTrue(Double.isNaN(event.getZ()));
+            s.called = true;
         });
 
         s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
@@ -1441,21 +1409,17 @@ public class MouseTest {
         s.parent2.setTranslateZ(10);
         s.innerRect2.setTranslateZ(10);
 
-        s.innerRect1.setOnMouseMoved(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                s.subScene1.setRotationAxis(Rotate.Y_AXIS);
-                s.subScene1.setRotate(90);
-            }
+        s.innerRect1.setOnMouseMoved(event -> {
+            s.subScene1.setRotationAxis(Rotate.Y_AXIS);
+            s.subScene1.setRotate(90);
         });
 
-        s.innerRect1.setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                assertSame(s.innerRect1, event.getTarget());
-                assertTrue(Double.isNaN(event.getX()));
-                assertTrue(Double.isNaN(event.getY()));
-                assertTrue(Double.isNaN(event.getZ()));
-                s.called = true;
-            }
+        s.innerRect1.setOnMouseExited(event -> {
+            assertSame(s.innerRect1, event.getTarget());
+            assertTrue(Double.isNaN(event.getX()));
+            assertTrue(Double.isNaN(event.getY()));
+            assertTrue(Double.isNaN(event.getZ()));
+            s.called = true;
         });
 
         s.processEvent(MouseEvent.MOUSE_MOVED, 130, 30);
@@ -1467,11 +1431,8 @@ public class MouseTest {
     public void mouseExitedShouldBeGeneratedBeforeNodeRemoval() {
         final SimpleTestScene s = new SimpleTestScene();
         s.smallSquareTracker.node.addEventHandler(MouseEvent.MOUSE_EXITED,
-                new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                assertNotNull(s.smallSquareTracker.node.getScene());
-            }
-        });
+                event -> assertNotNull(s.smallSquareTracker.node.getScene())
+        );
 
         s.processEvent(MouseEventGenerator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
@@ -1538,21 +1499,9 @@ public class MouseTest {
     public void testMouseEventCanEditCursor() {
         final SimpleTestScene s = new SimpleTestScene();
         
-        s.smallSquare.setOnMousePressed(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent event) {
-                s.smallSquare.setCursor(Cursor.CROSSHAIR);
-            }
-        });
+        s.smallSquare.setOnMousePressed(event -> s.smallSquare.setCursor(Cursor.CROSSHAIR));
         
-        s.smallSquare.setOnMouseReleased(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent event) {
-                s.smallSquare.setCursor(Cursor.WAIT);
-            }
-        });
+        s.smallSquare.setOnMouseReleased(event -> s.smallSquare.setCursor(Cursor.WAIT));
         
         s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_MOVED, 250, 250));
         assertSame(Cursor.HAND.getCurrentFrame(), s.getCursorFrame());
@@ -1561,13 +1510,7 @@ public class MouseTest {
         s.processEvent(MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, 250, 250));
         assertSame(Cursor.WAIT.getCurrentFrame(), s.getCursorFrame());
         
-        s.smallSquare.setOnMouseClicked(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent event) {
-                s.smallSquare.setCursor(Cursor.TEXT);
-            }
-        });
+        s.smallSquare.setOnMouseClicked(event -> s.smallSquare.setCursor(Cursor.TEXT));
         
         s.smallSquare.setCursor(Cursor.HAND);
         
@@ -1621,11 +1564,8 @@ public class MouseTest {
             bigSquareTracker = new MouseEventTracker(bigSquare);
             smallSquareTracker = new MouseEventTracker(smallSquare);
 
-            scene.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    moused = true;
-                }
+            scene.addEventHandler(MouseEvent.ANY, event -> {
+                moused = true;
             });
 
             Stage stage = new Stage();
@@ -1673,90 +1613,61 @@ public class MouseTest {
         public MouseEventTracker(Node node) {
             this.node = node;
 
-            node.setOnMousePressed(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    pressed = true;
+            node.setOnMousePressed(event -> {
+                pressed = true;
+            });
+
+            node.setOnMouseReleased(event -> {
+                released = true;
+            });
+
+            node.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 1) {
+                    clicked = true;
+                } else if (event.getClickCount() == 2) {
+                    doubleClicked = true;
                 }
             });
 
-            node.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    released = true;
+            node.setOnMouseMoved(event -> {
+                moved = true;
+            });
+
+            node.setOnMouseDragged(event -> {
+                dragged = true;
+            });
+
+            node.addEventHandler(MouseEvent.MOUSE_ENTERED_TARGET, event -> {
+                if (event.getTarget() == MouseEventTracker.this.node) {
+                    enteredMe = true;
+                } else {
+                    enteredChild = true;
                 }
             });
 
-            node.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    if (event.getClickCount() == 1) {
-                        clicked = true;
-                    } else if (event.getClickCount() == 2) {
-                        doubleClicked = true;
-                    }
-                }
-            });
-
-            node.setOnMouseMoved(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    moved = true;
-                }
-            });
-
-            node.setOnMouseDragged(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    dragged = true;
-                }
-            });
-
-            node.addEventHandler(MouseEvent.MOUSE_ENTERED_TARGET, new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    if (event.getTarget() == MouseEventTracker.this.node) {
-                        enteredMe = true;
-                    } else {
-                        enteredChild = true;
-                    }
-                }
-            });
-
-            node.addEventHandler(MouseEvent.MOUSE_EXITED_TARGET, new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    if (event.getTarget() == MouseEventTracker.this.node) {
-                        exitedMe = true;
-                    } else {
-                        exitedChild = true;
-                    }
+            node.addEventHandler(MouseEvent.MOUSE_EXITED_TARGET, event -> {
+                if (event.getTarget() == MouseEventTracker.this.node) {
+                    exitedMe = true;
+                } else {
+                    exitedChild = true;
                 }
             });
             
-            node.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    if (event.getEventType() != MouseEvent.MOUSE_CLICKED) {
-                        lastClickCount = event.getClickCount();
-                        lastIsStill = event.isStillSincePress();
-                    }
+            node.addEventHandler(MouseEvent.ANY, event -> {
+                if (event.getEventType() != MouseEvent.MOUSE_CLICKED) {
+                    lastClickCount = event.getClickCount();
+                    lastIsStill = event.isStillSincePress();
                 }
             });
         }
 
         public MouseEventTracker(Scene scene) {
-            scene.setOnMouseEntered(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    enteredMe = true;
-                }
+            scene.setOnMouseEntered(event -> {
+                enteredMe = true;
             });
 
-            scene.setOnMouseExited(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    exitedMe = true;
-                }
+            scene.setOnMouseExited(event -> {
+                exitedMe = true;
             });
         }
 
@@ -1883,16 +1794,13 @@ public class MouseTest {
         public EventHandler<MouseEvent> handler(final EventTarget target,
                 final double x, final double y) {
 
-            return new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    if (target != null) assertSame(target, event.getTarget());
-                    if (x != DONT_TEST) assertEquals(x, event.getX(), 0.00001);
-                    if (y != DONT_TEST) assertEquals(y, event.getY(), 0.00001);
-                    assertEquals(0.0, event.getZ(), 0.00001);
-                    lastPickResult = event.getPickResult();
-                    called = true;
-                }
+            return event -> {
+                if (target != null) assertSame(target, event.getTarget());
+                if (x != DONT_TEST) assertEquals(x, event.getX(), 0.00001);
+                if (y != DONT_TEST) assertEquals(y, event.getY(), 0.00001);
+                assertEquals(0.0, event.getZ(), 0.00001);
+                lastPickResult = event.getPickResult();
+                called = true;
             };
         }
 

@@ -51,13 +51,9 @@ public class TouchInput {
      * filtered out.The value of the property is in pixels.
      */
     private final int touchRadius = AccessController.doPrivileged(
-            new PrivilegedAction<Integer>() {
-                @Override
-                public Integer run() {
-                    return Integer.getInteger(
-                            "monocle.input.touchRadius", 20);
-                }
-            });
+            (PrivilegedAction<Integer>) () -> Integer.getInteger(
+                    "monocle.input.touchRadius", 20)
+    );
 
     private static TouchInput instance = new TouchInput();
     private TouchPipeline basePipeline;
@@ -79,14 +75,10 @@ public class TouchInput {
         if (basePipeline == null) {
             basePipeline = new TouchPipeline();
             String[] touchFilterNames = AccessController.doPrivileged(
-                    new PrivilegedAction<String>() {
-                        @Override
-                        public String run() {
-                            return System.getProperty(
-                                    "monocle.input.touchFilters",
-                                    "SmallMove");
-                        }
-                    }).split(",");
+                    (PrivilegedAction<String>) () -> System.getProperty(
+                            "monocle.input.touchFilters",
+                            "SmallMove")
+            ).split(",");
             if (touchFilterNames != null) {
                 for (String touchFilterName : touchFilterNames) {
                     basePipeline.addNamedFilter(touchFilterName.trim());

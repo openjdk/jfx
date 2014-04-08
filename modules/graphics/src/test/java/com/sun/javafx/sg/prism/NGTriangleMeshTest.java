@@ -41,12 +41,7 @@ public class NGTriangleMeshTest {
     public void testSyncFaceSmoothingGroups() {
         final int[] faceSmoothingGroups = new int[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.syncFaceSmoothingGroups(new IntegerArraySyncer() {
-
-            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
-                return faceSmoothingGroups;
-            }
-        });
+        instance.syncFaceSmoothingGroups((array, fromAndLengthIndices) -> faceSmoothingGroups);
         int[] actuals = instance.test_getFaceSmoothingGroups();
         int[] expecteds = new int[]{0, 1, 2, 3, 4, 5};
         assertArrayEquals(expecteds, actuals);
@@ -59,18 +54,10 @@ public class NGTriangleMeshTest {
     public void testSyncFaceSmoothingGroups2() {
         final int[] faceSmoothingGroups = new int[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.syncFaceSmoothingGroups(new IntegerArraySyncer() {
-
-            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
-                return faceSmoothingGroups;
-            }
-        });
-        instance.syncFaceSmoothingGroups(new IntegerArraySyncer() {
-
-            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
-                Arrays.fill(array, 1, 1 + 4, 1);
-                return array;
-            }
+        instance.syncFaceSmoothingGroups((array, fromAndLengthIndices) -> faceSmoothingGroups);
+        instance.syncFaceSmoothingGroups((array, fromAndLengthIndices) -> {
+            Arrays.fill(array, 1, 1 + 4, 1);
+            return array;
         });
         int[] actuals = instance.test_getFaceSmoothingGroups();
         int[] expecteds = new int[]{0, 1, 1, 1, 1, 5};
@@ -84,12 +71,7 @@ public class NGTriangleMeshTest {
     public void testSyncPoints() {
         final float[] points = new float[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.syncPoints(new FloatArraySyncer() {
-
-            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
-                return points;
-            }
-        });
+        instance.syncPoints((array, fromAndLengthIndices) -> points);
         float[] actuals = instance.test_getPoints();
         float[] expecteds = new float[]{0, 1, 2, 3, 4, 5};
         assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
@@ -102,18 +84,10 @@ public class NGTriangleMeshTest {
     public void testSyncPoints2() {
         final float[] points = new float[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.syncPoints(new FloatArraySyncer() {
-
-            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
-                return points;
-            }
-        });
-        instance.syncPoints(new FloatArraySyncer() {
-
-            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
-                Arrays.fill(array, 1, 1 + 4, 1);
-                return array;
-            }
+        instance.syncPoints((array, fromAndLengthIndices) -> points);
+        instance.syncPoints((array, fromAndLengthIndices) -> {
+            Arrays.fill(array, 1, 1 + 4, 1);
+            return array;
         });
         float[] actuals = instance.test_getPoints();
         float[] expecteds = new float[]{0, 1, 1, 1, 1, 5};
@@ -127,12 +101,7 @@ public class NGTriangleMeshTest {
     public void testSyncTexCoords() {
         final float[] texcoords = new float[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.syncTexCoords(new FloatArraySyncer() {
-
-            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
-                return texcoords;
-            }
-        });
+        instance.syncTexCoords((array, fromAndLengthIndices) -> texcoords);
         float[] actuals = instance.test_getTexCoords();
         float[] expecteds = new float[]{0, 1, 2, 3, 4, 5};
         assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
@@ -145,18 +114,10 @@ public class NGTriangleMeshTest {
     public void testSyncTexCoords2() {
         final float[] texcoords = new float[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.syncTexCoords(new FloatArraySyncer() {
-
-            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
-                return texcoords;
-            }
-        });
-        instance.syncTexCoords(new FloatArraySyncer() {
-
-            public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
-                Arrays.fill(array, 1, 1 + 4, 1);
-                return array;
-            }
+        instance.syncTexCoords((array, fromAndLengthIndices) -> texcoords);
+        instance.syncTexCoords((array, fromAndLengthIndices) -> {
+            Arrays.fill(array, 1, 1 + 4, 1);
+            return array;
         });
         float[] actuals = instance.test_getTexCoords();
         float[] expecteds = new float[]{0, 1, 1, 1, 1, 5};
@@ -170,12 +131,7 @@ public class NGTriangleMeshTest {
     public void testSyncFaces() {
         final int[] faces = new int[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.syncFaces(new IntegerArraySyncer() {
-
-            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
-                return faces;
-            }
-        });
+        instance.syncFaces((array, fromAndLengthIndices) -> faces);
         int[] actuals = instance.test_getFaces();
         int[] expecteds = new int[]{0, 1, 2, 3, 4, 5};
         assertArrayEquals(expecteds, actuals);
@@ -188,18 +144,10 @@ public class NGTriangleMeshTest {
     public void testSyncFaces2() {
         final int[] faces = new int[]{0, 1, 2, 3, 4, 5};
         NGTriangleMesh instance = new NGTriangleMesh();
-        instance.syncFaces(new IntegerArraySyncer() {
-
-            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
-                return faces;
-            }
-        });
-        instance.syncFaces(new IntegerArraySyncer() {
-
-            public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
-                Arrays.fill(array, 1, 1 + 4, 1);
-                return array;
-            }
+        instance.syncFaces((array, fromAndLengthIndices) -> faces);
+        instance.syncFaces((array, fromAndLengthIndices) -> {
+            Arrays.fill(array, 1, 1 + 4, 1);
+            return array;
         });
         int[] actuals = instance.test_getFaces();
         int[] expecteds = new int[]{0, 1, 1, 1, 1, 5};

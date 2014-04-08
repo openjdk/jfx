@@ -89,44 +89,19 @@ final class LensTouchInputSupport {
 
     static {
         touchTapRadius = AccessController.doPrivileged(
-        new PrivilegedAction<Integer>() {
-            @Override
-            public Integer run() {
-                return Integer.getInteger("lens.input.touch.TapRadius", 20);
-            }
-        });
+                (PrivilegedAction<Integer>) () -> Integer.getInteger("lens.input.touch.TapRadius", 20));
 
         touchMoveSensitivity = AccessController.doPrivileged(
-        new PrivilegedAction<Integer>() {
-            @Override
-            public Integer run() {
-                return Integer.getInteger("lens.input.touch.MoveSensitivity", 20);
-            }
-        });
+                (PrivilegedAction<Integer>) () -> Integer.getInteger("lens.input.touch.MoveSensitivity", 20));
 
         pruneInputDevices = AccessController.doPrivileged(
-        new PrivilegedAction<Boolean>() {
-            @Override
-            public Boolean run() {
-                return Boolean.getBoolean("lens.input.pruneDevices");
-            }
-        });
+                (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("lens.input.pruneDevices"));
 
         useMultiTouch = AccessController.doPrivileged(
-        new PrivilegedAction<Boolean>() {
-            @Override
-            public Boolean run() {
-                return !(Boolean.getBoolean("lens.input.forceSingleTouch"));
-            }
-        });
+                (PrivilegedAction<Boolean>) () -> !(Boolean.getBoolean("lens.input.forceSingleTouch")));
 
         enableDeviceTrace = AccessController.doPrivileged(
-        new PrivilegedAction<Boolean>() {
-            @Override
-            public Boolean run() {
-                return Boolean.getBoolean("lens.input.trace");
-            }
-        });
+                (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("lens.input.trace"));
 
     }
 

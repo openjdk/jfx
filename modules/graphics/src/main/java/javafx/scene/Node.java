@@ -757,17 +757,9 @@ public abstract class Node implements EventTarget, Styleable {
         return parent;
     }
 
-    private final InvalidationListener parentDisabledChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateDisabled();
-        }
-    };
+    private final InvalidationListener parentDisabledChangedListener = valueModel -> updateDisabled();
 
-    private final InvalidationListener parentTreeVisibleChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateTreeVisible(true);
-        }
-    };
+    private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
     private SubScene subScene = null;
 
@@ -2014,17 +2006,15 @@ public abstract class Node implements EventTarget, Styleable {
         // Create a deferred runnable that will be run from a pulse listener
         // that is called after all of the scenes have been synced but before
         // any of them have been rendered.
-        final Runnable snapshotRunnable = new Runnable() {
-            @Override public void run() {
-                WritableImage img = doSnapshot(theParams, theImage);
-                SnapshotResult result = new SnapshotResult(img, Node.this, theParams);
+        final Runnable snapshotRunnable = () -> {
+            WritableImage img = doSnapshot(theParams, theImage);
+            SnapshotResult result = new SnapshotResult(img, Node.this, theParams);
 //                System.err.println("Calling snapshot callback");
-                try {
-                    Void v = theCallback.call(result);
-                } catch (Throwable th) {
-                    System.err.println("Exception in snapshot callback");
-                    th.printStackTrace(System.err);
-                }
+            try {
+                Void v = theCallback.call(result);
+            } catch (Throwable th) {
+                System.err.println("Exception in snapshot callback");
+                th.printStackTrace(System.err);
             }
         };
 
@@ -5355,12 +5345,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         private InvalidationListener getLocalToSceneInvalidationListener() {
             if (localToSceneInvLstnr == null) {
-                localToSceneInvLstnr = new InvalidationListener() {
-                    @Override
-                    public void invalidated(Observable observable) {
-                        invalidateLocalToSceneTransform();
-                    }
-                };
+                localToSceneInvLstnr = observable -> invalidateLocalToSceneTransform();
             }
             return localToSceneInvLstnr;
         }
@@ -8150,17 +8135,13 @@ public abstract class Node implements EventTarget, Styleable {
             EventDispatchChain tail) {
 
         if (preprocessMouseEventDispatcher == null) {
-            preprocessMouseEventDispatcher = new EventDispatcher() {
-                @Override
-                public Event dispatchEvent(Event event,
-                                           EventDispatchChain tail) {
-                    event = tail.dispatchEvent(event);
-                    if (event instanceof MouseEvent) {
-                        preprocessMouseEvent((MouseEvent) event);
-                    }
-
-                    return event;
+            preprocessMouseEventDispatcher = (event, tail1) -> {
+                event = tail1.dispatchEvent(event);
+                if (event instanceof MouseEvent) {
+                    preprocessMouseEvent((MouseEvent) event);
                 }
+
+                return event;
             };
         }
 
@@ -9076,12 +9057,7 @@ public abstract class Node implements EventTarget, Styleable {
         protected abstract Bounds computeBounds();
     }
 
-    private static final BoundsAccessor boundsAccessor = new BoundsAccessor() {
-        @Override
-        public BaseBounds getGeomBounds(BaseBounds bounds, BaseTransform tx, Node node) {
-            return node.getGeomBounds(bounds, tx);
-        }
-    };
+    private static final BoundsAccessor boundsAccessor = (bounds, tx, node) -> node.getGeomBounds(bounds, tx);
 
     /**
      * This method is used by Scene-graph JMX bean to obtain the Scene-graph structure.

@@ -38,25 +38,23 @@ public abstract class View {
     public final static int GESTURE_NO_VALUE = Integer.MAX_VALUE;
     public final static double GESTURE_NO_DOUBLE_VALUE = Double.NaN;
 
-    final static boolean accessible = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-        public Boolean run() {
-            boolean force = Boolean.getBoolean("javafx.accessible.force");
-            if (force) return true;
+    final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+        boolean force = Boolean.getBoolean("javafx.accessible.force");
+        if (force) return true;
 
-            /* Only enable accessibility for Mac 10.9 and Windows 8 or greater.
-             * All other platforms must use the force flag. 
-             */
-            try {
-                String platform = Platform.determinePlatform();
-                String version = System.getProperty("os.version").replaceFirst("(\\d+\\.\\d+).*", "$1");
-                float v = Float.parseFloat(version);
-                boolean allowedPlatform = (platform.equals(Platform.MAC) && v >= 10.9f) ||
-                                          (platform.equals(Platform.WINDOWS) && v >= 6.2f);
-    
-                return allowedPlatform ? Boolean.getBoolean("javafx.accessible") : false;
-            } catch (Exception e) {
-                return false;
-            }
+        /* Only enable accessibility for Mac 10.9 and Windows 8 or greater.
+         * All other platforms must use the force flag.
+         */
+        try {
+            String platform = Platform.determinePlatform();
+            String version = System.getProperty("os.version").replaceFirst("(\\d+\\.\\d+).*", "$1");
+            float v = Float.parseFloat(version);
+            boolean allowedPlatform = (platform.equals(Platform.MAC) && v >= 10.9f) ||
+                                      (platform.equals(Platform.WINDOWS) && v >= 6.2f);
+
+            return allowedPlatform ? Boolean.getBoolean("javafx.accessible") : false;
+        } catch (Exception e) {
+            return false;
         }
     });
 

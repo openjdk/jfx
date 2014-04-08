@@ -234,64 +234,55 @@ class RotateGestureRecognizer implements GestureRecognizer {
     }
 
     private void sendRotateStartedEvent() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (scene.sceneListener != null) {
-                    scene.sceneListener.rotateEvent(RotateEvent.ROTATION_STARTED,
-                        0, 0,
-                        centerX, centerY,
-                        centerAbsX, centerAbsY,
-                        (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                        (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                        direct, 
-                        false /*inertia*/);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (scene.sceneListener != null) {
+                scene.sceneListener.rotateEvent(RotateEvent.ROTATION_STARTED,
+                    0, 0,
+                    centerX, centerY,
+                    centerAbsX, centerAbsY,
+                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                    direct,
+                    false /*inertia*/);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 
     private void sendRotateEvent() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (scene.sceneListener != null) {
-                    scene.sceneListener.rotateEvent(RotateEvent.ROTATE,
-                        currentRotation, totalRotation,
-                        centerX, centerY,
-                        centerAbsX, centerAbsY,
-                        (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                        (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                        direct, false /*inertia*/);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (scene.sceneListener != null) {
+                scene.sceneListener.rotateEvent(RotateEvent.ROTATE,
+                    currentRotation, totalRotation,
+                    centerX, centerY,
+                    centerAbsX, centerAbsY,
+                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                    direct, false /*inertia*/);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 
     private void sendRotateFinishedEvent() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (scene.sceneListener != null) {
-                    scene.sceneListener.rotateEvent(RotateEvent.ROTATION_FINISHED,
-                        0, totalRotation,
-                        centerX, centerY,
-                        centerAbsX, centerAbsY,
-                        (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                        (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                        direct, 
-                        false /*inertia*/);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (scene.sceneListener != null) {
+                scene.sceneListener.rotateEvent(RotateEvent.ROTATION_FINISHED,
+                    0, totalRotation,
+                    centerX, centerY,
+                    centerAbsX, centerAbsY,
+                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                    direct,
+                    false /*inertia*/);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 

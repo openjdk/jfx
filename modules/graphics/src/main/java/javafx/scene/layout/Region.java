@@ -286,13 +286,7 @@ public class
     static double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
             Function<Integer, Double> positionToWidth,
             double areaHeight, final boolean fillHeight, double minComplement, boolean snapToPixel) {
-        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, new Function<Integer, Boolean>() {
-
-            @Override
-            public Boolean apply(Integer t) {
-                return fillHeight;
-            }
-        }, minComplement, snapToPixel);
+        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, t -> fillHeight, minComplement, snapToPixel);
     }
 
     double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
@@ -437,18 +431,16 @@ public class
      * We also are sure to remove this listener from any old BackgroundImage or
      * BorderImage images in the background and border property invalidation code.
      */
-    private InvalidationListener imageChangeListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            final ReadOnlyObjectPropertyBase imageProperty = (ReadOnlyObjectPropertyBase) observable;
-            final Image image = (Image) imageProperty.getBean();
-            final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
-            if (image.getProgress() == 1 && !acc.isAnimation(image)) {
-                // We can go ahead and remove the listener since loading is done.
-                removeImageListener(image);
-            }
-            // Cause the region to repaint
-            impl_markDirty(DirtyBits.NODE_CONTENTS);
+    private InvalidationListener imageChangeListener = observable -> {
+        final ReadOnlyObjectPropertyBase imageProperty = (ReadOnlyObjectPropertyBase) observable;
+        final Image image = (Image) imageProperty.getBean();
+        final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
+        if (image.getProgress() == 1 && !acc.isAnimation(image)) {
+            // We can go ahead and remove the listener since loading is done.
+            removeImageListener(image);
         }
+        // Cause the region to repaint
+        impl_markDirty(DirtyBits.NODE_CONTENTS);
     };
 
     /**

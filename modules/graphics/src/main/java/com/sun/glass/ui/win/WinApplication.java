@@ -65,12 +65,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     private final InvokeLaterDispatcher invokeLaterDispatcher;
     WinApplication() {
         boolean isEventThread = AccessController
-                .doPrivileged(new PrivilegedAction<Boolean>() {
-                    public Boolean run() {
-                        // Embedded in SWT, with shared event thread
-                        return Boolean.getBoolean("javafx.embed.isEventThread");
-                    }
-                });
+                .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
             invokeLaterDispatcher = new InvokeLaterDispatcher(this);
             invokeLaterDispatcher.start();
@@ -90,11 +85,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected void runLoop(final Runnable launchable) {
         boolean isEventThread = AccessController
-            .doPrivileged(new PrivilegedAction<Boolean>() {
-                public Boolean run() {
-                    return Boolean.getBoolean("javafx.embed.isEventThread");
-                }
-            });
+            .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
 
         ClassLoader classLoader = WinApplication.class.getClassLoader();
         _setClassLoader(classLoader);
@@ -106,16 +97,10 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             return;
         }
         final Thread toolkitThread =
-            AccessController.doPrivileged(new PrivilegedAction<Thread>() {
-                public Thread run() {
-                    return new Thread(new Runnable() {
-                        public void run() {
-                            _init();
-                            _runLoop(launchable);
-                        }
-                    }, "WindowsNativeRunloopThread");
-                }
-            });   
+            AccessController.doPrivileged((PrivilegedAction<Thread>) () -> new Thread(() -> {
+                _init();
+                _runLoop(launchable);
+            }, "WindowsNativeRunloopThread"));
         setEventThread(toolkitThread);
         toolkitThread.start();
     }
@@ -286,11 +271,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     
     public String getDataDirectory() {
         checkEventThread();
-        String baseDirectory = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override public String run() {
-                return System.getenv("APPDATA");
-            }
-        });
+        String baseDirectory = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getenv("APPDATA"));
         if (baseDirectory == null || baseDirectory.length() == 0) {
             return super.getDataDirectory();
         }

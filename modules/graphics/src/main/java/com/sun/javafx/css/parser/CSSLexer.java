@@ -77,73 +77,65 @@ final class CSSLexer {
     final static int FONT_FACE = 42;
     final static int URL = 43;
 
-    private final Recognizer A = (c) -> { return c == 'a' || c == 'A'; };
-    private final Recognizer B = (c) -> { return c == 'b' || c == 'B'; };
-    private final Recognizer C = (c) -> { return c == 'c' || c == 'C'; };
-    private final Recognizer D = (c) -> { return c == 'd' || c == 'D'; };
-    private final Recognizer E = (c) -> { return c == 'e' || c == 'E'; };
-    private final Recognizer F = (c) -> { return c == 'f' || c == 'F'; };
-    private final Recognizer G = (c) -> { return c == 'g' || c == 'G'; };
-    private final Recognizer H = (c) -> { return c == 'h' || c == 'H'; };
-    private final Recognizer I = (c) -> { return c == 'i' || c == 'I'; };
-    private final Recognizer J = (c) -> { return c == 'j' || c == 'J'; };
-    private final Recognizer K = (c) -> { return c == 'k' || c == 'K'; };
-    private final Recognizer L = (c) -> { return c == 'l' || c == 'L'; };
-    private final Recognizer M = (c) -> { return c == 'm' || c == 'M'; };
-    private final Recognizer N = (c) -> { return c == 'n' || c == 'N'; };
-    private final Recognizer O = (c) -> { return c == 'o' || c == 'O'; };
-    private final Recognizer P = (c) -> { return c == 'p' || c == 'P'; };
-    private final Recognizer Q = (c) -> { return c == 'q' || c == 'Q'; };
-    private final Recognizer R = (c) -> { return c == 'r' || c == 'R'; };
-    private final Recognizer S = (c) -> { return c == 's' || c == 'S'; };
-    private final Recognizer T = (c) -> { return c == 't' || c == 'T'; };
-    private final Recognizer U = (c) -> { return c == 'u' || c == 'U'; };
-    private final Recognizer V = (c) -> { return c == 'v' || c == 'V'; };
-    private final Recognizer W = (c) -> { return c == 'w' || c == 'W'; };
-    private final Recognizer X = (c) -> { return c == 'x' || c == 'X'; };
-    private final Recognizer Y = (c) -> { return c == 'y' || c == 'Y'; };
-    private final Recognizer Z = (c) -> { return c == 'z' || c == 'Z'; };
-    private final Recognizer ALPHA =  (c) -> {
-            return ('a' <= c && c <= 'z') ||
-                   ('A' <= c && c <= 'Z');
-        };
+    private final Recognizer A = (c) -> c == 'a' || c == 'A';
+    private final Recognizer B = (c) -> c == 'b' || c == 'B';
+    private final Recognizer C = (c) -> c == 'c' || c == 'C';
+    private final Recognizer D = (c) -> c == 'd' || c == 'D';
+    private final Recognizer E = (c) -> c == 'e' || c == 'E';
+    private final Recognizer F = (c) -> c == 'f' || c == 'F';
+    private final Recognizer G = (c) -> c == 'g' || c == 'G';
+    private final Recognizer H = (c) -> c == 'h' || c == 'H';
+    private final Recognizer I = (c) -> c == 'i' || c == 'I';
+    private final Recognizer J = (c) -> c == 'j' || c == 'J';
+    private final Recognizer K = (c) -> c == 'k' || c == 'K';
+    private final Recognizer L = (c) -> c == 'l' || c == 'L';
+    private final Recognizer M = (c) -> c == 'm' || c == 'M';
+    private final Recognizer N = (c) -> c == 'n' || c == 'N';
+    private final Recognizer O = (c) -> c == 'o' || c == 'O';
+    private final Recognizer P = (c) -> c == 'p' || c == 'P';
+    private final Recognizer Q = (c) -> c == 'q' || c == 'Q';
+    private final Recognizer R = (c) -> c == 'r' || c == 'R';
+    private final Recognizer S = (c) -> c == 's' || c == 'S';
+    private final Recognizer T = (c) -> c == 't' || c == 'T';
+    private final Recognizer U = (c) -> c == 'u' || c == 'U';
+    private final Recognizer V = (c) -> c == 'v' || c == 'V';
+    private final Recognizer W = (c) -> c == 'w' || c == 'W';
+    private final Recognizer X = (c) -> c == 'x' || c == 'X';
+    private final Recognizer Y = (c) -> c == 'y' || c == 'Y';
+    private final Recognizer Z = (c) -> c == 'z' || c == 'Z';
+    private final Recognizer ALPHA =  (c) -> ('a' <= c && c <= 'z') ||
+           ('A' <= c && c <= 'Z');
 
-    private final Recognizer NON_ASCII = (c) -> { return '\u0080' <= c && c <= '\uFFFF'; };
+    private final Recognizer NON_ASCII = (c) -> '\u0080' <= c && c <= '\uFFFF';
 
-    private final Recognizer DOT_CHAR =        (c) -> { return c == '.'; };
-    private final Recognizer GREATER_CHAR =    (c) -> { return c == '>'; };
-    private final Recognizer LBRACE_CHAR =     (c) -> { return c == '{'; };
-    private final Recognizer RBRACE_CHAR =     (c) -> { return c == '}'; };
-    private final Recognizer SEMI_CHAR  =      (c) -> { return c == ';'; };
-    private final Recognizer COLON_CHAR =      (c) -> { return c == ':'; };
-    private final Recognizer SOLIDUS_CHAR =    (c) -> { return c == '/'; };
-    private final Recognizer MINUS_CHAR =      (c) -> { return c == '-'; };
-    private final Recognizer PLUS_CHAR =       (c) -> { return c == '+'; };
-    private final Recognizer STAR_CHAR =       (c) -> { return c == '*'; };
-    private final Recognizer LPAREN_CHAR =     (c) -> { return c == '('; };
-    private final Recognizer RPAREN_CHAR =     (c) -> { return c == ')'; };
-    private final Recognizer COMMA_CHAR =      (c) -> { return c == ','; };
-    private final Recognizer UNDERSCORE_CHAR = (c) -> { return c == '_'; };
-    private final Recognizer HASH_CHAR =       (c) -> { return c == '#'; };
+    private final Recognizer DOT_CHAR =        (c) -> c == '.';
+    private final Recognizer GREATER_CHAR =    (c) -> c == '>';
+    private final Recognizer LBRACE_CHAR =     (c) -> c == '{';
+    private final Recognizer RBRACE_CHAR =     (c) -> c == '}';
+    private final Recognizer SEMI_CHAR  =      (c) -> c == ';';
+    private final Recognizer COLON_CHAR =      (c) -> c == ':';
+    private final Recognizer SOLIDUS_CHAR =    (c) -> c == '/';
+    private final Recognizer MINUS_CHAR =      (c) -> c == '-';
+    private final Recognizer PLUS_CHAR =       (c) -> c == '+';
+    private final Recognizer STAR_CHAR =       (c) -> c == '*';
+    private final Recognizer LPAREN_CHAR =     (c) -> c == '(';
+    private final Recognizer RPAREN_CHAR =     (c) -> c == ')';
+    private final Recognizer COMMA_CHAR =      (c) -> c == ',';
+    private final Recognizer UNDERSCORE_CHAR = (c) -> c == '_';
+    private final Recognizer HASH_CHAR =       (c) -> c == '#';
 
-    private final Recognizer WS_CHARS = (c) -> {
-            return c == ' '  ||
-                   c == '\t' ||
-                   c == '\r' ||
-                   c == '\n' ||
-                   c == '\f';
-        };
-    private final Recognizer NL_CHARS = (c) -> {
-            return (c == '\r' || c == '\n');
-        };
+    private final Recognizer WS_CHARS = (c) -> c == ' '  ||
+           c == '\t' ||
+           c == '\r' ||
+           c == '\n' ||
+           c == '\f';
+    private final Recognizer NL_CHARS = (c) -> (c == '\r' || c == '\n');
 
-    private final Recognizer DIGIT = (c) -> { return '0' <= c && c <= '9'; };
+    private final Recognizer DIGIT = (c) -> '0' <= c && c <= '9';
 
-    private final Recognizer HEX_DIGIT = (c) ->  {
-            return ('0' <= c && c <= '9') ||
-                   ('a' <= c && c <= 'f') ||
-                   ('A' <= c && c <= 'F');
-        };
+    private final Recognizer HEX_DIGIT = (c) -> ('0' <= c && c <= '9') ||
+           ('a' <= c && c <= 'f') ||
+           ('A' <= c && c <= 'F');
 
     // The initial accepts any character
     final LexerState initState = new LexerState("initState", null) {
@@ -616,7 +608,7 @@ final class CSSLexer {
             { P, X },
             { R, A, D },
             { T, U, R, N },
-            { (c) -> { return c == '%'; } }
+            { (c) -> c == '%'}
             
         };
         

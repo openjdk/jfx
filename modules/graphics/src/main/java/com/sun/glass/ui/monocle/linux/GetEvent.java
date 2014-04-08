@@ -45,54 +45,51 @@ public class GetEvent {
 
     private static Set<File> devices = new HashSet<>();
 
-    private static UdevListener udevListener = new UdevListener() {
-        @Override
-        public void udevEvent(String action, Map<String, String> event) {
-            String subsystem = event.get("SUBSYSTEM");
-            String devPath = event.get("DEVPATH");
-            if (subsystem != null && subsystem.equals("input")
-                    && devPath != null) {
+    private static UdevListener udevListener = (action, event) -> {
+        String subsystem = event.get("SUBSYSTEM");
+        String devPath = event.get("DEVPATH");
+        if (subsystem != null && subsystem.equals("input")
+                && devPath != null) {
 
-                // show the udev event properties
-                System.out.format("%1$ts.%1$tL Received UEVENT:\n",
-                        new Date());
-                List<String> keys = new ArrayList<>(event.keySet());
-                Collections.sort(keys);
-                for (String key: keys) {
-                    System.out.format("  %s='%s'\n", key, event.get(key));
-                }
+            // show the udev event properties
+            System.out.format("%1$ts.%1$tL Received UEVENT:\n",
+                    new Date());
+            List<String> keys = new ArrayList<>(event.keySet());
+            Collections.sort(keys);
+            for (String key: keys) {
+                System.out.format("  %s='%s'\n", key, event.get(key));
+            }
 
-                // process the event
-                try {
-                    File sysPath = new File("/sys", devPath);
-                    String devNode = event.get("DEVNAME");
-                    if (devNode == null) {
-                        return;
-                    }
-                    if (action.equals("add")
-                            || (action.equals("change")
-                                && !devices.contains(sysPath))) {
-                        LinuxInputDevice device = new LinuxInputDevice(
-                                new File(devNode), sysPath, event);
-                        device.setInputProcessor(new LinuxInputProcessor.Logger());
-                        Thread thread = new Thread(device);
-                        thread.setName(devNode.toString());
-                        thread.setDaemon(true);
-                        thread.start();
-                        System.out.println("Added device " + devNode);
-                        System.out.println("  touch=" + device.isTouch());
-                        System.out.println("  multiTouch=" + device.isMultiTouch());
-                        System.out.println("  relative=" + device.isRelative());
-                        System.out.println("  5-way=" + device.is5Way());
-                        System.out.println("  fullKeyboard=" + device.isFullKeyboard());
-                        System.out.println("  PRODUCT=" + device.getProduct());
-                        devices.add(sysPath);
-                    } else if (action.equals("remove")) {
-                        devices.remove(devPath);
-                    }
-                } catch (IOException | RuntimeException e) {
-                    e.printStackTrace();
+            // process the event
+            try {
+                File sysPath = new File("/sys", devPath);
+                String devNode = event.get("DEVNAME");
+                if (devNode == null) {
+                    return;
                 }
+                if (action.equals("add")
+                        || (action.equals("change")
+                            && !devices.contains(sysPath))) {
+                    LinuxInputDevice device = new LinuxInputDevice(
+                            new File(devNode), sysPath, event);
+                    device.setInputProcessor(new LinuxInputProcessor.Logger());
+                    Thread thread = new Thread(device);
+                    thread.setName(devNode.toString());
+                    thread.setDaemon(true);
+                    thread.start();
+                    System.out.println("Added device " + devNode);
+                    System.out.println("  touch=" + device.isTouch());
+                    System.out.println("  multiTouch=" + device.isMultiTouch());
+                    System.out.println("  relative=" + device.isRelative());
+                    System.out.println("  5-way=" + device.is5Way());
+                    System.out.println("  fullKeyboard=" + device.isFullKeyboard());
+                    System.out.println("  PRODUCT=" + device.getProduct());
+                    devices.add(sysPath);
+                } else if (action.equals("remove")) {
+                    devices.remove(devPath);
+                }
+            } catch (IOException | RuntimeException e) {
+                e.printStackTrace();
             }
         }
     };

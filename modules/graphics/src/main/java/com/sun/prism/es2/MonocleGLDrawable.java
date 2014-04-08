@@ -33,12 +33,7 @@ import java.security.PrivilegedAction;
 class MonocleGLDrawable extends GLDrawable {
 
     private static final boolean transparentFramebuffer =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return Boolean.getBoolean("com.sun.javafx.transparentFramebuffer");
-                }
-            });
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.transparentFramebuffer"));
 
     AcceleratedScreen accScreen;
 

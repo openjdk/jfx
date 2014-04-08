@@ -52,11 +52,9 @@ final class SWTView extends View {
     @Override protected long _create(Map caps) {
         if (hiddenShell == null) {
             hiddenShell = new Shell(Display.getDefault(), SWT.SHELL_TRIM);
-            Display.getDefault().disposeExec(new Runnable () {
-                public void run () {
-                    hiddenShell.dispose();
-                    hiddenShell = null;
-                }
+            Display.getDefault().disposeExec(() -> {
+                hiddenShell.dispose();
+                hiddenShell = null;
             });
         }
         int bits = SWT.NO_BACKGROUND | SWT.NO_REDRAW_RESIZE | SWT.LEFT_TO_RIGHT;// | SWT.NO_FOCUS;
@@ -70,11 +68,7 @@ final class SWTView extends View {
             canvas = new Canvas(hiddenShell, bits);
         }
         canvas.setData(this);
-        Listener keyListener = new Listener () {
-            public void handleEvent(Event event) {
-                sendKeyEvent(event);
-            }
-        };
+        Listener keyListener = event -> sendKeyEvent(event);
         int [] keyEvents = new int[] {
             SWT.KeyDown,
             SWT.KeyUp,
@@ -82,11 +76,7 @@ final class SWTView extends View {
         for (int i=0; i<keyEvents.length; i++) {
             canvas.addListener (keyEvents[i], keyListener);
         }
-        Listener mouseListener = new Listener () {
-            public void handleEvent(Event event) {
-                sendMouseEvent(event);
-            }
-        };
+        Listener mouseListener = event -> sendMouseEvent(event);
         int [] mouseEvents = new int[] {
             SWT.MouseDown,
             SWT.MouseUp,
@@ -100,16 +90,10 @@ final class SWTView extends View {
         for (int i=0; i<mouseEvents.length; i++) {
             canvas.addListener (mouseEvents[i], mouseListener);
         }
-        canvas.addListener(SWT.Paint, new Listener() {
-            public void handleEvent(Event event) {
-                notifyRepaint(event.x, event.y, event.width, event.height);
-            }
-        });
-        canvas.addListener(SWT.Resize, new Listener () {
-            public void handleEvent(Event event) {
-                org.eclipse.swt.graphics.Rectangle rect = canvas.getClientArea();
-                notifyResize(rect.width, rect.height);
-            }
+        canvas.addListener(SWT.Paint, event -> notifyRepaint(event.x, event.y, event.width, event.height));
+        canvas.addListener(SWT.Resize, event -> {
+            Rectangle rect = canvas.getClientArea();
+            notifyResize(rect.width, rect.height);
         });
         
         //TODO - refactor to drop target creation in a better place

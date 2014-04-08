@@ -97,12 +97,10 @@ public abstract class Application {
     private static Application application;
     private static Thread eventThread;
     private static final boolean disableThreadChecks =
-        AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                final String str =
-                        System.getProperty("glass.disableThreadChecks", "false");
-                return "true".equalsIgnoreCase(str);
-            }
+        AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            final String str =
+                    System.getProperty("glass.disableThreadChecks", "false");
+            return "true".equalsIgnoreCase(str);
         });
     
     // May be called on any thread.
@@ -151,11 +149,9 @@ public abstract class Application {
         // on Linux - TODO
         //application.name = DEFAULT_NAME; // default
         try {
-            application.runLoop(new Runnable() {
-                @Override public void run() {
-                    Screen.initScreens();
-                    launchable.run();
-                }
+            application.runLoop(() -> {
+                Screen.initScreens();
+                launchable.run();
             });
         } catch (Throwable t) {
             t.printStackTrace();
@@ -218,11 +214,7 @@ public abstract class Application {
      */
     public String getDataDirectory() {
         checkEventThread();
-        String userHome = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override public String run() {
-                return System.getProperty("user.home");
-            }
-        });
+        String userHome = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("user.home"));
         return userHome + File.separator + "." + name + File.separator;
     }
 

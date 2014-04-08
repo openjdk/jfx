@@ -153,27 +153,23 @@ public final class StyleMap {
     }
 
     private static final Comparator<CascadingStyle> cascadingStyleComparator =
-            new Comparator<CascadingStyle>() {
+            (o1, o2) -> {
 
-                @Override public int compare(CascadingStyle o1, CascadingStyle o2) {
+                //
+                // primary sort is on property. If the property names are the same,
+                // then go through the cascade logic. Otherwise, sort by property
+                // name since the cascade doesn't matter for dissimilar properties.
+                //
+                // What we want to end up with is a list where all the same properties
+                // are together in the list.
+                //
+                String thisProperty = o1.getProperty();
+                String otherProperty = o2.getProperty();
 
-                    //
-                    // primary sort is on property. If the property names are the same,
-                    // then go through the cascade logic. Otherwise, sort by property
-                    // name since the cascade doesn't matter for dissimilar properties.
-                    //
-                    // What we want to end up with is a list where all the same properties
-                    // are together in the list.
-                    //
-                    String thisProperty = o1.getProperty();
-                    String otherProperty = o2.getProperty();
+                int c = thisProperty.compareTo(otherProperty);
+                if (c != 0) return c;
 
-                    int c = thisProperty.compareTo(otherProperty);
-                    if (c != 0) return c;
-
-                    return o1.compareTo(o2);
-
-                }
+                return o1.compareTo(o2);
 
             };
 

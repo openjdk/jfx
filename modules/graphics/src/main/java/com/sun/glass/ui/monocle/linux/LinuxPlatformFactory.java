@@ -36,12 +36,7 @@ public class LinuxPlatformFactory extends NativePlatformFactory {
     @Override
     protected boolean matches() {
         String os = AccessController.doPrivileged(
-                new PrivilegedAction<String>() {
-                    @Override
-                    public String run() {
-                        return System.getProperty("os.name");
-                    }
-                });
+                (PrivilegedAction<String>) () -> System.getProperty("os.name"));
         return os != null && os.equals("Linux");
     }
 

@@ -230,11 +230,7 @@ public class TilePane extends Pane {
         return (Insets)getConstraint(node, MARGIN_CONSTRAINT);
     }
 
-    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
-        public Insets call(Node n) {
-            return getMargin(n);
-        }
-    };
+    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
 
     /**
      * Removes all tilepane constraints from the child node.
@@ -944,12 +940,7 @@ public class TilePane extends Pane {
                                             computeContentHeight(lastColumnRemainder, getTileHeight()),
                                             vpos) : columnY;
         double baselineOffset = getTileAlignmentInternal().getVpos() == VPos.BASELINE ?
-                getAreaBaselineOffset(managed, marginAccessor, new Function<Integer, Double>() {
-
-            public Double apply(Integer i) {
-                return getTileWidth();
-            }
-        }, getTileHeight(), false) : -1;
+                getAreaBaselineOffset(managed, marginAccessor, i -> getTileWidth(), getTileHeight(), false) : -1;
 
         int r = 0;
         int c = 0;

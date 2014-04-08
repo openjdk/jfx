@@ -43,31 +43,26 @@ public abstract class HostServicesDelegate {
         HostServicesDelegate instance = null;
         try {
             instance = AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<HostServicesDelegate>() {
-                @Override
-                public HostServicesDelegate run()
-                        throws NoSuchMethodException, IllegalAccessException,
-                        InvocationTargetException, ExceptionInInitializerError,
-                        InstantiationException {
-                    if (getInstanceMeth == null) {
-                        try {
-                            final String factoryClassName =
-                                    "com.sun.deploy.uitoolkit.impl.fx.HostServicesFactory";
+                    (PrivilegedExceptionAction<HostServicesDelegate>) () -> {
+                        if (getInstanceMeth == null) {
+                            try {
+                                final String factoryClassName =
+                                        "com.sun.deploy.uitoolkit.impl.fx.HostServicesFactory";
 
-                            Class factoryClass = Class.forName(factoryClassName,
-                                    true,
-                                    HostServicesDelegate.class.getClassLoader());
-                            getInstanceMeth = factoryClass.getMethod(
-                                    "getInstance", Application.class);
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                            return null;
+                                Class factoryClass = Class.forName(factoryClassName,
+                                        true,
+                                        HostServicesDelegate.class.getClassLoader());
+                                getInstanceMeth = factoryClass.getMethod(
+                                        "getInstance", Application.class);
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                                return null;
+                            }
                         }
+                        return (HostServicesDelegate)
+                                getInstanceMeth.invoke(null, app);
                     }
-                    return (HostServicesDelegate)
-                            getInstanceMeth.invoke(null, app);
-                }
-            });
+            );
         } catch (PrivilegedActionException pae) {
             System.err.println(pae.getException().toString());
             return null;

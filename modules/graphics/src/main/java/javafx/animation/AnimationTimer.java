@@ -53,11 +53,9 @@ public abstract class AnimationTimer {
                 throw new IllegalStateException("Error: AccessControlContext not captured");
             }
 
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override public Void run() {
-                    AnimationTimer.this.handle(now);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                AnimationTimer.this.handle(now);
+                return null;
             }, accessCtrlCtx);
         }
     }

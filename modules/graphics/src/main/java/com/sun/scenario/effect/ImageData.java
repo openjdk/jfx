@@ -47,25 +47,23 @@ public class ImageData {
     private static HashSet<ImageData> alldatas;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
-                if (System.getProperty("decora.showleaks") != null) {
-                    alldatas = new HashSet<ImageData>();
-                    Runtime.getRuntime().addShutdownHook(new Thread() {
-                        @Override
-                        public void run() {
-                            Iterator<ImageData> datas = alldatas.iterator();
-                            while (datas.hasNext()) {
-                                ImageData id = datas.next();
-                                Rectangle r = id.getUntransformedBounds();
-                                System.out.println("id["+r.width+"x"+r.height+", refcount="+id.refcount+"] leaked from:");
-                                id.fromwhere.printStackTrace(System.out);
-                            }
+        AccessController.doPrivileged((PrivilegedAction) () -> {
+            if (System.getProperty("decora.showleaks") != null) {
+                alldatas = new HashSet<ImageData>();
+                Runtime.getRuntime().addShutdownHook(new Thread() {
+                    @Override
+                    public void run() {
+                        Iterator<ImageData> datas = alldatas.iterator();
+                        while (datas.hasNext()) {
+                            ImageData id = datas.next();
+                            Rectangle r = id.getUntransformedBounds();
+                            System.out.println("id["+r.width+"x"+r.height+", refcount="+id.refcount+"] leaked from:");
+                            id.fromwhere.printStackTrace(System.out);
                         }
-                    });
-                }
-                return null;
+                    }
+                });
             }
+            return null;
         });
     }
 

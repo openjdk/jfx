@@ -671,14 +671,11 @@ class WindowStage extends GlassStage {
             isInFullScreen = true;
             activeFSWindow.set(this);
         }
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (stageListener != null) {
-                    stageListener.changedFullscreen(fs);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (stageListener != null) {
+                stageListener.changedFullscreen(fs);
             }
+            return null;
         }, getAccessControlContext());
     }
 

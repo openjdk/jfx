@@ -33,11 +33,9 @@ import com.sun.javafx.geom.Path2D;
 class OSFreetype {
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-           public Void run() {
-               NativeLibLoader.loadLibrary("javafx_font_freetype");
-               return null;
-           }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            NativeLibLoader.loadLibrary("javafx_font_freetype");
+            return null;
         });
     }
 

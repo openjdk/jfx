@@ -181,64 +181,55 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     }
     
     private void sendZoomStartedEvent() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (scene.sceneListener != null) {
-                    scene.sceneListener.zoomEvent(ZoomEvent.ZOOM_STARTED,
-                        1, 1,
-                        centerX, centerY,
-                        centerAbsX, centerAbsY,
-                        (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                        (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                        direct, 
-                        false /*inertia*/);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (scene.sceneListener != null) {
+                scene.sceneListener.zoomEvent(ZoomEvent.ZOOM_STARTED,
+                    1, 1,
+                    centerX, centerY,
+                    centerAbsX, centerAbsY,
+                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                    direct,
+                    false /*inertia*/);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 
     private void sendZoomEvent() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (scene.sceneListener != null) {
-                    scene.sceneListener.zoomEvent(ZoomEvent.ZOOM,
-                        zoomFactor, totalZoomFactor,
-                        centerX, centerY,
-                        centerAbsX, centerAbsY,
-                        (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                        (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                        direct, false /*inertia*/);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (scene.sceneListener != null) {
+                scene.sceneListener.zoomEvent(ZoomEvent.ZOOM,
+                    zoomFactor, totalZoomFactor,
+                    centerX, centerY,
+                    centerAbsX, centerAbsY,
+                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                    direct, false /*inertia*/);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 
     private void sendZoomFinishedEvent() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (scene.sceneListener != null) {
-                    scene.sceneListener.zoomEvent(ZoomEvent.ZOOM_FINISHED,
-                        1, totalZoomFactor,
-                        centerX, centerY,
-                        centerAbsX, centerAbsY,
-                        (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                        (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                        direct, 
-                        false /*inertia*/);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (scene.sceneListener != null) {
+                scene.sceneListener.zoomEvent(ZoomEvent.ZOOM_FINISHED,
+                    1, totalZoomFactor,
+                    centerX, centerY,
+                    centerAbsX, centerAbsY,
+                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                    direct,
+                    false /*inertia*/);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 

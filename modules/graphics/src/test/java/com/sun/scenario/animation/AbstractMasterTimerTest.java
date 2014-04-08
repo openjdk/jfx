@@ -95,12 +95,7 @@ public class AbstractMasterTimerTest {
     public void testPulseReceiver() {
         final Flag flag = new Flag();
         
-        final PulseReceiver pulseReceiver = new PulseReceiver() {
-            @Override
-            public void timePulse(long now) {
-                flag.flag();
-            }
-        };
+        final PulseReceiver pulseReceiver = now -> flag.flag();
         
         // add PulseReceiver
         timer.addPulseReceiver(pulseReceiver);
@@ -125,11 +120,7 @@ public class AbstractMasterTimerTest {
             }
         };
 
-        final TimerReceiver timerReceiver = new TimerReceiver() {
-            @Override public void handle(long l) {
-                animationTimer.handle(l);
-            }
-        };
+        final TimerReceiver timerReceiver = l -> animationTimer.handle(l);
         
         // add AnimationTimer
         timer.addAnimationTimer(timerReceiver);

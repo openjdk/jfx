@@ -106,12 +106,7 @@ public class GradientUtils {
         }
 
         public Parser(String content) {
-            tokens = splitString(content, new Delimiter() {
-                @Override
-                public boolean isDelimiter(char value) {
-                    return (value == ',');
-                }
-            }, false);
+            tokens = splitString(content, value -> (value == ','), false);
 
             index = 0;
         }
@@ -215,12 +210,7 @@ public class GradientUtils {
 
             for (int i = 0; i < stopsCount; i++) {
                 String stopString = tokens[i + index].trim();
-                String[] stopTokens = splitString(stopString, new Delimiter() {
-                    @Override
-                    public boolean isDelimiter(char value) {
-                        return Character.isWhitespace(value);
-                    }
-                }, true);
+                String[] stopTokens = splitString(stopString, value -> Character.isWhitespace(value), true);
 
                 if (stopTokens.length == 0) {
                     throw new IllegalArgumentException("Invalid gradient specification, "

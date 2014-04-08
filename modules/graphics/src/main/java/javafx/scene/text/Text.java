@@ -112,18 +112,10 @@ public class Text extends Shape {
      * Creates an empty instance of Text.
      */
     public Text() {
-        InvalidationListener listener = new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                checkSpan();
-            }
-        };
+        InvalidationListener listener = observable -> checkSpan();
         parentProperty().addListener(listener);
         managedProperty().addListener(listener);
-        effectiveNodeOrientationProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                checkOrientation();
-            }
-        });
+        effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
         setPickOnBounds(true);
     }
 

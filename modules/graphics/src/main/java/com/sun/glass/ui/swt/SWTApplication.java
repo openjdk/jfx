@@ -175,11 +175,7 @@ public final class SWTApplication extends Application {
             runCocoaLoop(launchable);
         } else {
             // the current thread can't block as the caller is waiting on it
-            new Thread(new Runnable() {
-                @Override public void run() {
-                    runSWTEventLoop(launchable);
-                }
-            }).start();
+            new Thread(() -> runSWTEventLoop(launchable)).start();
         }
     }
 

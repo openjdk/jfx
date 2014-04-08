@@ -120,14 +120,10 @@ public class ShapeTest {
         assertNotNull(actual);
         assertTrue(actual.isEmpty());
 
-        actual.addListener(new ListChangeListener<Double>(){
-
-            @Override
-            public void onChanged(Change<? extends Double> c) {
-                listChangeCalled = true;
-                assertTrue(c.next());
-                assertEquals(expected, c.getAddedSubList());
-            }
+        actual.addListener((ListChangeListener<Double>) c -> {
+            listChangeCalled = true;
+            assertTrue(c.next());
+            Assert.assertEquals(expected, c.getAddedSubList());
         });
         
         shape.getStrokeDashArray().addAll(expected);
@@ -210,10 +206,8 @@ public class ShapeTest {
 
         Shape shape = new StubShape();
 
-        Runnable listener = new Runnable() {
-            public void run() {
-                listenerCalled = true;
-            }
+        Runnable listener = () -> {
+            listenerCalled = true;
         };
 
         shape.impl_setShapeChangeListener(listener);
