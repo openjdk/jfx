@@ -89,6 +89,7 @@ bool WindowContextBase::im_filter_keypress(GdkEventKey* event) {
         case XLookupChars:
             buffer[len] = 0;
             jstring str = mainEnv->NewStringUTF(buffer);
+            EXCEPTION_OCCURED(mainEnv);
             jsize slen = mainEnv->GetStringLength(str);
             mainEnv->CallVoidMethod(jview,
                     jViewNotifyInputMethod,
@@ -141,9 +142,11 @@ static void im_preedit_draw(XIM im_xim, XPointer client, XPointer call) {
             char *ctext = new char[csize + 1];
             wcstombs(ctext, data->text->string.wide_char, csize + 1);
             text = mainEnv->NewStringUTF(ctext);
+            EXCEPTION_OCCURED(mainEnv);
             delete[] ctext;
         } else {
             text = mainEnv->NewStringUTF(data->text->string.multi_byte);
+            EXCEPTION_OCCURED(mainEnv);
         }
     }
 

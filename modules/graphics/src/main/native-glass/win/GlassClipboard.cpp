@@ -1017,10 +1017,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_initIDs
     (JNIEnv *env, jclass cls)
 {
     fidPtr = env->GetFieldID(cls, "ptr", "J");
+    if (env->ExceptionCheck()) return;
     fidName = env->GetFieldID(cls, "name", "Ljava/lang/String;");
+    if (env->ExceptionCheck()) return;
     midFosSerialize = env->GetMethodID(cls, "fosSerialize", "(Ljava/lang/String;J)[B");
+    if (env->ExceptionCheck()) return;
     midContentChanged = env->GetMethodID(cls, "contentChanged", "()V");
+    if (env->ExceptionCheck()) return;
     midActionPerformed = env->GetMethodID(cls, "actionPerformed", "(I)V");
+    env->ExceptionCheck();
 }
 
 /*

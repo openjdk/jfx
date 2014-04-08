@@ -945,33 +945,41 @@ extern "C" {
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
     (JNIEnv *env, jclass cls)
 {
-    midNotifyClose = env->GetMethodID(cls, "notifyClose", "()V");
-    ASSERT(midNotifyClose);
+     midNotifyClose = env->GetMethodID(cls, "notifyClose", "()V");
+     ASSERT(midNotifyClose);
+     if (env->ExceptionCheck()) return;
 
-    midNotifyMove = env->GetMethodID(cls, "notifyMove", "(II)V");
-    ASSERT(midNotifyMove);
+     midNotifyMove = env->GetMethodID(cls, "notifyMove", "(II)V");
+     ASSERT(midNotifyMove);
+     if (env->ExceptionCheck()) return;
 
-    midNotifyResize = env->GetMethodID(cls, "notifyResize", "(III)V");
-    ASSERT(midNotifyResize);
+     midNotifyResize = env->GetMethodID(cls, "notifyResize", "(III)V");
+     ASSERT(midNotifyResize);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.Window.notifyFocus = env->GetMethodID(cls, "notifyFocus", "(I)V");
-    ASSERT(javaIDs.Window.notifyFocus);
+     javaIDs.Window.notifyFocus = env->GetMethodID(cls, "notifyFocus", "(I)V");
+     ASSERT(javaIDs.Window.notifyFocus);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.Window.notifyFocusDisabled = env->GetMethodID(cls, "notifyFocusDisabled", "()V");
-    ASSERT(javaIDs.Window.notifyFocusDisabled);
+     javaIDs.Window.notifyFocusDisabled = env->GetMethodID(cls, "notifyFocusDisabled", "()V");
+     ASSERT(javaIDs.Window.notifyFocusDisabled);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.Window.notifyFocusUngrab = env->GetMethodID(cls, "notifyFocusUngrab", "()V");
-    ASSERT(javaIDs.Window.notifyFocusUngrab);
+     javaIDs.Window.notifyFocusUngrab = env->GetMethodID(cls, "notifyFocusUngrab", "()V");
+     ASSERT(javaIDs.Window.notifyFocusUngrab);
+     if (env->ExceptionCheck()) return;
 
-    midNotifyMoveToAnotherScreen = env->GetMethodID(cls, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
-    ASSERT(midNotifyMoveToAnotherScreen);
+     midNotifyMoveToAnotherScreen = env->GetMethodID(cls, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
+     ASSERT(midNotifyMoveToAnotherScreen);
+     if (env->ExceptionCheck()) return;
 
+     javaIDs.Window.notifyDestroy = env->GetMethodID(cls, "notifyDestroy", "()V");
+     ASSERT(javaIDs.Window.notifyDestroy);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.Window.notifyDestroy = env->GetMethodID(cls, "notifyDestroy", "()V");
-    ASSERT(javaIDs.Window.notifyDestroy);
-
-    javaIDs.Window.notifyDelegatePtr = env->GetMethodID(cls, "notifyDelegatePtr", "(J)V");
-    ASSERT(javaIDs.Window.notifyDelegatePtr);
+     javaIDs.Window.notifyDelegatePtr = env->GetMethodID(cls, "notifyDelegatePtr", "(J)V");
+     ASSERT(javaIDs.Window.notifyDelegatePtr);
+     if (env->ExceptionCheck()) return;
 }
 
 /*

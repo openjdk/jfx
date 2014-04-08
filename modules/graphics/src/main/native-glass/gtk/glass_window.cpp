@@ -400,7 +400,7 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     } else {
         glassModifier &= ~glass_key_to_modifier(glassKey);
     }
-    jcharArray jChars;
+    jcharArray jChars = NULL;
     jchar key = gdk_keyval_to_unicode(event->keyval);
     if (key >= 'a' && key <= 'z' && (event->state & GDK_CONTROL_MASK)) {
         key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
@@ -410,8 +410,10 @@ void WindowContextBase::process_key(GdkEventKey* event) {
 
     if (key > 0) {
         jChars = mainEnv->NewCharArray(1);
-        mainEnv->SetCharArrayRegion(jChars, 0, 1, &key);
-
+        if (jChars) {
+            mainEnv->SetCharArrayRegion(jChars, 0, 1, &key);
+            CHECK_JNI_EXCEPTION(mainEnv)
+        }
     } else {
         jChars = mainEnv->NewCharArray(0);
     }
