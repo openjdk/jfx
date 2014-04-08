@@ -215,4 +215,18 @@ public class WinEXEBundlerTest {
         File output = bundler.execute(bundleParams, new File(workDir, "NullISSC"));
         assertNull(output);
     }
+
+    @Test(expected = ConfigException.class)
+    public void invalidLicenseFile() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LICENSE_FILE.getID(), "BOGUS_LICENSE");
+
+        bundler.validate(bundleParams);
+    }
 }

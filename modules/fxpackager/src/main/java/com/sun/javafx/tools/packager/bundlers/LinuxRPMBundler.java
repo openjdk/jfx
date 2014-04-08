@@ -134,7 +134,20 @@ public class LinuxRPMBundler extends AbstractBundler {
             //we are not interested in return code, only possible exception
             APP_BUNDLER.fetchFrom(p).doValidate(p);
 
-            //TODO: validate presense of required tools?
+            // validate license file, if used, exists in the proper place
+            if (p.containsKey(LICENSE_FILE.getID())) {
+                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
+                for (String license : LICENSE_FILE.fetchFrom(p)) {
+                    if (!appResources.contains(license)) {
+                        throw new ConfigException(
+                                I18N.getString("error.license-missing"),
+                                MessageFormat.format(I18N.getString("error.license-missing.advice"),
+                                        license, appResources.getBaseDirectory().toString()));
+                    }
+                }
+            }
+
+            //validate presense of required tools
             if (!testTool(TOOL_RPMBUILD, TOOL_RPMBUILD_MIN_VERSION)){
                 throw new ConfigException(
                         I18N.getString(MessageFormat.format("error.cannot-find-rpmbuild", TOOL_RPMBUILD_MIN_VERSION)),

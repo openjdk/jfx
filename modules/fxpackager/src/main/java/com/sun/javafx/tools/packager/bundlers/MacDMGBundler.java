@@ -31,11 +31,15 @@ import com.sun.javafx.tools.resource.mac.MacResources;
 import sun.misc.BASE64Encoder;
 
 import java.io.*;
+import java.text.MessageFormat;
 import java.util.*;
 
 import static com.oracle.bundlers.StandardBundlerParam.*;
 
 public class MacDMGBundler extends MacBaseInstallerBundler {
+
+    private static final ResourceBundle I18N =
+            ResourceBundle.getBundle("com.oracle.bundlers.mac.MacDMGBundler");
 
     static final String DEFAULT_BACKGROUND_IMAGE="background_dmg.png";
     static final String DEFAULT_DMG_SETUP_SCRIPT="DMGsetup.scpt";
@@ -455,19 +459,32 @@ public class MacDMGBundler extends MacBaseInstallerBundler {
     @Override
     public boolean validate(Map<String, ? super Object> params) throws UnsupportedPlatformException, ConfigException {
         try {
-            if (params == null) throw new ConfigException("Parameters map is null.", "Pass in a non-null parameters map.");
-
-            // hdiutil is always available so there's no need to test for availability.
-            //run basic validation to ensure requirements are met
+            if (params == null) throw new ConfigException(
+                    I18N.getString("error.parameters-null"),
+                    I18N.getString("error.parameters-null.advice"));
 
             //run basic validation to ensure requirements are met
             //we are not interested in return code, only possible exception
             validateAppImageAndBundeler(params);
 
+            // hdiutil is always available so there's no need to test for availability.
             if (SERVICE_HINT.fetchFrom(params)) {
                 throw new ConfigException(
-                        "DMG bundler doesn't support services.",
-                        "Make sure that the service hint is set to false.");
+                        I18N.getString("error.dmg-does-not-do-daemons"),
+                        I18N.getString("error.dmg-does-not-do-daemons.advice"));
+            }
+
+            // validate license file, if used, exists in the proper place
+            if (params.containsKey(LICENSE_FILE.getID())) {
+                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
+                for (String license : LICENSE_FILE.fetchFrom(params)) {
+                    if (!appResources.contains(license)) {
+                        throw new ConfigException(
+                                I18N.getString("error.license-missing"),
+                                MessageFormat.format(com.sun.imageio.plugins.common.I18N.getString("error.license-missing.advice"),
+                                        license, appResources.getBaseDirectory().toString()));
+                    }
+                }
             }
 
             return true;

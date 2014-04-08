@@ -224,10 +224,24 @@ public class WinExeBundler extends AbstractBundler {
             //we are not interested in return code, only possible exception
             APP_BUNDLER.fetchFrom(p).validate(p);
 
-            if (SERVICE_HINT.fetchFrom(p)) {
-                SERVICE_BUNDLER.fetchFrom(p).validate(p);                
+            // validate license file, if used, exists in the proper place
+            if (p.containsKey(LICENSE_FILE.getID())) {
+                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
+                for (String license : LICENSE_FILE.fetchFrom(p)) {
+                    if (!appResources.contains(license)) {
+                        throw new ConfigException(
+                                I18N.getString("error.license-missing"),
+                                MessageFormat.format(I18N.getString("error.license-missing.advice"),
+                                        license, appResources.getBaseDirectory().toString()));
+                    }
+                }
             }
-            
+
+
+            if (SERVICE_HINT.fetchFrom(p)) {
+                SERVICE_BUNDLER.fetchFrom(p).validate(p);
+            }
+
             double innoVersion = findToolVersion(TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(p));
 
             //Inno Setup 5+ is required

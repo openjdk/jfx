@@ -198,6 +198,21 @@ public class LinuxDebBundler extends AbstractBundler {
                         I18N.getString("error.tool-not-found.advice"));
             }
 
+            // validate license file, if used, exists in the proper place
+            if (p.containsKey(LICENSE_FILE.getID())) {
+                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
+                for (String license : LICENSE_FILE.fetchFrom(p)) {
+                    if (!appResources.contains(license)) {
+                        throw new ConfigException(
+                                I18N.getString("error.license-missing"),
+                                MessageFormat.format(I18N.getString("error.license-missing.advice"),
+                                        license, appResources.getBaseDirectory().toString()));
+                    }
+                }
+            } else {
+                Log.info("message.debs-like-licenses");
+            }
+
             return true;
         } catch (RuntimeException re) {
             throw new ConfigException(re);
