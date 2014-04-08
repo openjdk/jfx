@@ -643,6 +643,27 @@ final class WinAccessible extends PlatformAccessible {
                 }
                 break;
             }
+            case UIA_AccessKeyPropertyId: {
+                String mnemonic = (String)getAttribute(MNEMONIC);
+                if (mnemonic != null) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_BSTR;
+                    variant.bstrVal = "Alt"+mnemonic.toLowerCase();
+                }
+                break;
+            }
+            case UIA_AcceleratorKeyPropertyId: {
+                KeyCombination kc = (KeyCombination)getAttribute(ACCELERATOR);
+                if (kc != null) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_BSTR;
+                    /* Note: KeyCombination should have a getDisplayText() which encapsulates 
+                     * KeystrokeUtils.toString()
+                     */
+                    variant.bstrVal = kc.toString().replaceAll("Shortcut", "Ctrl");
+                }
+                break;
+            }
             case UIA_NamePropertyId: {
                 String name;
 
@@ -667,12 +688,6 @@ final class WinAccessible extends PlatformAccessible {
                          */
                     default:
                         name = (String)getAttribute(TITLE);
-                        if (name != null && name.length() != 0) {
-                            KeyCombination kc = (KeyCombination)getAttribute(ACCELERATOR);
-                            if (kc != null) {
-                                name += "\t" + kc.toString();
-                            }
-                        }
                 }
 
                 if (name == null || name.length() == 0) {

@@ -1424,7 +1424,22 @@ public class ContextMenuContent extends Region {
                     }
                     return false;
                 case ACCELERATOR: return item.getAccelerator();
-                case TITLE: return item.getText();
+                case TITLE: {
+                    final Label label = getLabel();
+                    if (label != null) {
+                        String title = (String)label.accGetAttribute(Attribute.TITLE);
+                        if (title != null) return title;
+                    }
+                    return item.getText();
+                }
+                case MNEMONIC: {
+                    final Label label = getLabel();
+                    if (label != null) {
+                        String mnemonic = (String)label.accGetAttribute(Attribute.MNEMONIC);
+                        if (mnemonic != null) return mnemonic;
+                    }
+                    return null;
+                }
                 case ENABLED: return !item.isDisable();
                 case MENU:
                     createSubmenu();

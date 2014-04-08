@@ -911,8 +911,9 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             switch (attribute) {
                 case ROLE: return Role.MENU_ITEM;
                 case MENU_ITEM_TYPE: return Role.CONTEXT_MENU;
-                case TITLE: return getText();
                 case FOCUS_ITEM: return MenuBarButton.this;
+                case TITLE: //fall through because the super class handles mnemonics right
+                case MNEMONIC:
                 default: return super.accGetAttribute(attribute, parameters);
             }
         }

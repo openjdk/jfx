@@ -36,6 +36,7 @@ import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -1159,6 +1160,26 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (text.getClip() != null) {
                 text.setClip(null);
             }
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TITLE: {
+                if (bindings != null) {
+                    return bindings.getText();
+                }
+                final Labeled labeled = getSkinnable();
+                return labeled != null ? labeled.getText() : null;
+            }
+            case MNEMONIC: {
+                if (bindings != null) {
+                    return bindings.getMnemonic();
+                }
+                return null;
+            }
+            default: return super.accGetAttribute(attribute, parameters);
         }
     }
 }
