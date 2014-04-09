@@ -233,6 +233,23 @@ public class WinExeBundler extends AbstractBundler {
             //we are not interested in return code, only possible exception
             APP_BUNDLER.fetchFrom(p).validate(p);
 
+            // make sure some key values don't have newlines
+            for (BundlerParamInfo<String> pi : Arrays.asList(
+                    APP_NAME,
+                    COPYRIGHT,
+                    DESCRIPTION,
+                    MENU_GROUP,
+                    TITLE,
+                    VENDOR,
+                    VERSION)
+            ) {
+                String v = pi.fetchFrom(p);
+                if (v.contains("\n") | v.contains("\r")) {
+                    throw new ConfigException("Parmeter '" + pi.getID() + "' cannot contain a newline.",
+                            "Change the value of '" + pi.getID() + " so that it does not contain any newlines");
+                }
+            }
+
             // validate license file, if used, exists in the proper place
             if (p.containsKey(LICENSE_FILE.getID())) {
                 RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
@@ -347,7 +364,7 @@ public class WinExeBundler extends AbstractBundler {
 
     //name of post-image script
     private File getConfig_Script(Map<String, ? super Object> params) {
-        return new File(EXE_IMAGE_DIR.fetchFrom(params), WinAppBundler.getAppName(params) + "-post-image.wsf");
+        return new File(EXE_IMAGE_DIR.fetchFrom(params), APP_NAME.fetchFrom(params) + "-post-image.wsf");
     }
 
     protected void saveConfigFiles(Map<String, ? super Object> params) {
@@ -396,26 +413,40 @@ public class WinExeBundler extends AbstractBundler {
         }
     }
 
+    void validateValueAndPut(Map<String, String> data, String key, BundlerParamInfo<String> param, Map<String, ? super Object> params) throws IOException {
+        String value = param.fetchFrom(params);
+        if (value.contains("\r") || value.contains("\n")) {
+            throw new IOException("Configuration Parameter " + param.getID() + " cannot contain multiple lines of text");
+        }
+        data.put(key, innosetupEscape(value));
+    }
+
+    private String innosetupEscape(String value) {
+        if (value.contains("\"") || !value.trim().equals(value)) {
+            value = "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
 
     boolean prepareMainProjectFile(Map<String, ? super Object> params) throws IOException {
         Map<String, String> data = new HashMap<>();
-        data.put("PRODUCT_APP_IDENTIFIER", getAppIdentifier(params));
+        data.put("PRODUCT_APP_IDENTIFIER", innosetupEscape(getAppIdentifier(params)));
 
-        data.put("APPLICATION_NAME", WinAppBundler.getAppName(params));
+        validateValueAndPut(data, "APPLICATION_NAME", APP_NAME, params);
 
-        data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
-        data.put("APPLICATION_VERSION", VERSION.fetchFrom(params)); // TODO make our own version paraminfo?
+        validateValueAndPut(data, "APPLICATION_VENDOR", VENDOR, params);
+        validateValueAndPut(data, "APPLICATION_VERSION", VERSION, params); // TODO make our own version paraminfo?
         
         data.put("APPLICATION_LAUNCHER_FILENAME",
-                WinAppBundler.getLauncher(EXE_IMAGE_DIR.fetchFrom(params), params).getName());
+                innosetupEscape(WinAppBundler.getLauncher(EXE_IMAGE_DIR.fetchFrom(params), params).getName()));
 
         data.put("APPLICATION_DESKTOP_SHORTCUT", SHORTCUT_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_MENU_SHORTCUT", MENU_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
-        data.put("APPLICATION_GROUP", MENU_GROUP.fetchFrom(params));
-        data.put("APPLICATION_COMMENTS", TITLE.fetchFrom(params)); // TODO this seems strange, at least in name
-        data.put("APPLICATION_COPYRIGHT", COPYRIGHT.fetchFrom(params));
+        validateValueAndPut(data, "APPLICATION_GROUP", MENU_GROUP, params);
+        validateValueAndPut(data, "APPLICATION_COMMENTS", TITLE, params); // TODO this seems strange, at least in name
+        validateValueAndPut(data, "APPLICATION_COPYRIGHT", COPYRIGHT, params);
 
-        data.put("APPLICATION_LICENSE_FILE", getLicenseFile(params));
+        data.put("APPLICATION_LICENSE_FILE", innosetupEscape(getLicenseFile(params)));
 
         if (EXE_SYSTEM_WIDE.fetchFrom(params)) {
             data.put("APPLICATION_INSTALL_ROOT", "{pf}");
@@ -432,11 +463,11 @@ public class WinExeBundler extends AbstractBundler {
         }
 
         if (SERVICE_HINT.fetchFrom(params)) {
-            data.put("RUN_FILENAME", WinServiceBundler.getAppSvcName(params));
+            data.put("RUN_FILENAME", innosetupEscape(WinServiceBundler.getAppSvcName(params)));
         } else {
-            data.put("RUN_FILENAME", WinAppBundler.getAppName(params));
+            validateValueAndPut(data, "RUN_FILENAME", APP_NAME, params);
         }
-        data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
+        validateValueAndPut(data, "APPLICATION_DESCRIPTION", DESCRIPTION, params);
         data.put("APPLICATION_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_NOT_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnFalse" : "returnTrue");
         data.put("START_ON_INSTALL", START_ON_INSTALL.fetchFrom(params) ? "-startOnInstall" : "");
@@ -476,12 +507,12 @@ public class WinExeBundler extends AbstractBundler {
 
     private File getConfig_SmallInnoSetupIcon(Map<String, ? super Object> params) {
         return new File(EXE_IMAGE_DIR.fetchFrom(params),
-                WinAppBundler.getAppName(params) + "-setup-icon.bmp");
+                APP_NAME.fetchFrom(params) + "-setup-icon.bmp");
     }
 
     private File getConfig_ExeProjectFile(Map<String, ? super Object> params) {
         return new File(EXE_IMAGE_DIR.fetchFrom(params),
-                WinAppBundler.getAppName(params) + ".iss");
+                APP_NAME.fetchFrom(params) + ".iss");
     }
 
 

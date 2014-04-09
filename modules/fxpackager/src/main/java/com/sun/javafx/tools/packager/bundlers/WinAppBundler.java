@@ -204,22 +204,18 @@ public class WinAppBundler extends AbstractBundler {
         }
     }
 
-    static String getAppName(Map<String, ? super Object>  p) {
-        return APP_NAME.fetchFrom(p);
-    }
-
     //it is static for the sake of sharing with "Exe" bundles
     // that may skip calls to validate/bundle in this class!
     private static File getRootDir(File outDir, Map<String, ? super Object> p) {
-        return new File(outDir, getAppName(p));
+        return new File(outDir, APP_NAME.fetchFrom(p));
     }
 
     public static File getLauncher(File outDir, Map<String, ? super Object> p) {
-        return new File(getRootDir(outDir, p), getAppName(p)+".exe");
+        return new File(getRootDir(outDir, p), APP_NAME.fetchFrom(p) +".exe");
     }
 
     private File getConfig_AppIcon(Map<String, ? super Object> params) {
-        return new File(getConfigRoot(params), getAppName(params) + ".ico");
+        return new File(getConfigRoot(params), APP_NAME.fetchFrom(params) + ".ico");
     }
 
     private final static String TEMPLATE_APP_ICON ="javalogo_white_48.ico";
@@ -259,7 +255,7 @@ public class WinAppBundler extends AbstractBundler {
             outputDirectory.mkdirs();
 
             if (!dependentTask) {
-                Log.info(MessageFormat.format(I18N.getString("message.creating-app-bundle"), getAppName(p), outputDirectory.getAbsolutePath()));
+                Log.info(MessageFormat.format(I18N.getString("message.creating-app-bundle"), APP_NAME.fetchFrom(p), outputDirectory.getAbsolutePath()));
             }
 
             prepareConfigFiles(p);
@@ -312,7 +308,7 @@ public class WinAppBundler extends AbstractBundler {
             copyRuntime(p, runtimeDirectory);
 
             IOUtils.copyFile(getConfig_AppIcon(p),
-                    new File(getRootDir(outputDirectory, p), getAppName(p) + ".ico"));
+                    new File(getRootDir(outputDirectory, p), APP_NAME.fetchFrom(p) + ".ico"));
 
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.result-dir"), outputDirectory.getAbsolutePath()));

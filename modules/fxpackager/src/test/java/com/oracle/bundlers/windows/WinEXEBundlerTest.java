@@ -140,6 +140,7 @@ public class WinEXEBundlerTest {
         bundleParams.put(MAIN_JAR_CLASSPATH.getID(), fakeMainJar.toString());
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
+        bundleParams.put(COPYRIGHT.getID(), "Copyright(c) 2014 the testers \"who like to break stuff\"");
         bundleParams.put(VERBOSE.getID(), true);
 
         boolean valid = bundler.validate(bundleParams);
@@ -226,6 +227,20 @@ public class WinEXEBundlerTest {
 
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(LICENSE_FILE.getID(), "BOGUS_LICENSE");
+
+        bundler.validate(bundleParams);
+    }
+
+    @Test(expected = ConfigException.class)
+    public void invalidCopyright() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(COPYRIGHT.getID(), "Copyright (c) 2014 The Testers\nWho like to break stuff");
 
         bundler.validate(bundleParams);
     }
