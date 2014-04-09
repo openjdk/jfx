@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import javafx.beans.InvalidationListener;
 import javafx.event.Event;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.SkinStub;
@@ -959,6 +960,34 @@ public class VirtualFlowTest {
 
         assertTrue(originalValue != flow.getPosition());
     }
+
+    @Test
+    public void test_RT_36507() {
+        flow = new VirtualFlow();
+        flow.setVertical(true);
+        // Worst case scenario is that the cells have height = 0.
+        // The code should prevent creating more than 100 of these zero height cells
+        // (since viewportLength is 100).
+        // An "INFO: index exceeds maxCellCount" message should print out.
+        flow.setCreateCell(p -> new CellStub(flow) {
+            @Override
+            protected double computeMaxHeight(double width) { return 0; }
+            @Override
+            protected double computePrefHeight(double width) { return 0; }
+            @Override
+            protected double computeMinHeight(double width) { return 0; }
+
+        });
+        flow.setCellCount(10);
+        flow.setViewportLength(100);
+        flow.addLeadingCells(1, 0);
+        flow.sheetChildren.addListener((InvalidationListener) (o) -> {
+            int count = ((List) o).size();
+            assertTrue(Integer.toString(count), count <= 100);
+        });
+        flow.addTrailingCells(true);
+    }
+
 }
 
 class CellStub extends IndexedCell {

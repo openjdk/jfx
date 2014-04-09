@@ -25,23 +25,18 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
@@ -54,12 +49,12 @@ import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import sun.util.logging.PlatformLogger;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
@@ -1284,10 +1279,32 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         boolean filledWithNonEmpty = index <= cellCount;
 
         final double viewportLength = getViewportLength();
+
+        //
+        // RT-36507: Math.ceil(viewportLength/offset) gives the maximum number of
+        // additional cells that should ever be able to fit in the viewport if
+        // every cell had a height of 1. If index ever exceeds this count,
+        // then offset is not incrementing fast enough, or at all, which means
+        // there is something wrong with the cell size calculation.
+        //
+        final double maxCellCount = offset > 0 ? Math.ceil(viewportLength/offset) : viewportLength;
+
         while (offset < viewportLength) {
             if (index >= cellCount) {
                 if (offset < viewportLength) filledWithNonEmpty = false;
                 if (! fillEmptyCells) return filledWithNonEmpty;
+                // RT-36507 - return if we've exceeded the maximum
+                if (index > maxCellCount) {
+                    final PlatformLogger logger = Logging.getControlsLogger();
+                    if (logger.isLoggable(PlatformLogger.Level.INFO)) {
+                        if (startCell != null) {
+                            logger.info("index exceeds maxCellCount. Check size calculations for " + startCell.getClass());
+                        } else {
+                            logger.info("index exceeds maxCellCount");
+                        }
+                    }
+                    return filledWithNonEmpty;
+                }
             }
             T cell = getAvailableCell(index);
             setCellIndex(cell, index);
