@@ -259,16 +259,16 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
         // update the column headers...
 
-        // iterate through all current headers, telling them to clean up
-        for (int i = 0; i < getColumnHeaders().size(); i++) {
-            TableColumnHeader header = getColumnHeaders().get(i);
-            header.dispose();
-        }
-        
-        // then iterate through all columns, unless we've got no child columns
+        // iterate through all columns, unless we've got no child columns
         // any longer, in which case we should switch to a TableColumnHeader 
         // instead
         if (getColumns().isEmpty()) {
+            // iterate through all current headers, telling them to clean up
+            for (int i = 0; i < getColumnHeaders().size(); i++) {
+                TableColumnHeader header = getColumnHeaders().get(i);
+                header.dispose();
+            }
+
             // switch out to be a TableColumn instead, if we have a parent header
             NestedTableColumnHeader parentHeader = getParentHeader();
             if (parentHeader != null) {
@@ -282,15 +282,37 @@ public class NestedTableColumnHeader extends TableColumnHeader {
                 getColumnHeaders().clear();
             }
         } else {
-            List<TableColumnHeader> newHeaders = new ArrayList<TableColumnHeader>();
+            List<TableColumnHeader> oldHeaders = new ArrayList<>(getColumnHeaders());
+            List<TableColumnHeader> newHeaders = new ArrayList<>();
             
             for (int i = 0; i < getColumns().size(); i++) {
                 TableColumnBase<?,?> column = getColumns().get(i);
                 if (column == null || ! column.isVisible()) continue;
-                newHeaders.add(createColumnHeader(column));
+
+                // check if the header already exists and reuse it
+                boolean found = false;
+                for (int j = 0; j < oldHeaders.size(); j++) {
+                    TableColumnHeader oldColumn = oldHeaders.get(j);
+                    if (column == oldColumn.getTableColumn()) {
+                        newHeaders.add(oldColumn);
+                        found = true;
+                        break;
+                    }
+                }
+
+                // otherwise create a new table column header
+                if (!found) {
+                    newHeaders.add(createColumnHeader(column));
+                }
             }
             
             getColumnHeaders().setAll(newHeaders);
+
+            // dispose all old headers
+            oldHeaders.removeAll(newHeaders);
+            for (int i = 0; i < oldHeaders.size(); i++) {
+                oldHeaders.get(i).dispose();
+            }
         }
         
         // update the content

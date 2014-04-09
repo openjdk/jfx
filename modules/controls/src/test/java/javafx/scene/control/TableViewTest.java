@@ -2799,4 +2799,40 @@ public class TableViewTest {
         assertEquals("1", sortedList.get(1));
         assertEquals("3", sortedList.get(2));
     }
+
+    // This test ensures that we reuse column headers when the columns still
+    // exist after a change to the columns list - rather than recreating new
+    // column headers. The issue in RT-36290 was that we were creating new column
+    // headers that were then in their initial states, allowing them to call
+    // TableColumnHeader#updateScene(), which would resize the column based on the
+    // data within it.
+    @Test public void test_rt36290() {
+        TableView<String> tableView = new TableView<>();
+
+        TableColumn<String, String> tableColumn1 = new TableColumn<>();
+        tableColumn1.setCellValueFactory(data -> new SimpleStringProperty(data.getValue()));
+        tableColumn1.setText("Test1");
+
+        TableColumn<String, String> tableColumn2 = new TableColumn<>();
+        tableColumn2.setCellValueFactory(data -> new SimpleStringProperty(data.getValue()));
+        tableColumn2.setText("Test2");
+
+        tableView.getColumns().setAll(tableColumn1, tableColumn2);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        final TableColumnHeader header1 = VirtualFlowTestUtils.getTableColumnHeader(tableView, tableColumn1);
+        final TableColumnHeader header2 = VirtualFlowTestUtils.getTableColumnHeader(tableView, tableColumn2);
+
+        tableView.getColumns().setAll(tableColumn2, tableColumn1);
+        Toolkit.getToolkit().firePulse();
+
+        final TableColumnHeader header1_after = VirtualFlowTestUtils.getTableColumnHeader(tableView, tableColumn1);
+        final TableColumnHeader header2_after = VirtualFlowTestUtils.getTableColumnHeader(tableView, tableColumn2);
+
+        assertEquals(header1, header1_after);
+        assertEquals(header2, header2_after);
+
+        sl.dispose();
+    }
 }
