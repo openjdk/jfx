@@ -1711,6 +1711,40 @@ public class TreeViewTest {
         view.getSelectionModel().select(b);
         assertEquals(Arrays.asList(b), view.getSelectionModel().getSelectedItems());
         assertFalse(b.isExpanded());
+    }
 
+    @Test public void test_rt25679() {
+        Button focusBtn = new Button("Focus here");
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.getChildren().setAll(new TreeItem("a"), new TreeItem("b"));
+        root.setExpanded(true);
+
+        final TreeView<String> treeView = new TreeView<>(root);
+        SelectionModel sm = treeView.getSelectionModel();
+
+        VBox vbox = new VBox(focusBtn, treeView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        focusBtn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        // test initial state
+        assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
+        assertTrue(focusBtn.isFocused());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+
+        // move focus to the treeview
+        treeView.requestFocus();
+
+        // ensure that there is a selection (where previously there was not one)
+        assertEquals(sl.getStage().getScene().getFocusOwner(), treeView);
+        assertTrue(treeView.isFocused());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(root, sm.getSelectedItem());
+
+        sl.dispose();
     }
 }

@@ -30,6 +30,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -319,6 +321,8 @@ public class ListView<T> extends Control {
 
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
+
+        focusedProperty().addListener(focusedListener);
     }
     
     
@@ -334,6 +338,20 @@ public class ListView<T> extends Control {
         List<T> list = getItems();
         if (index < 0 || index >= list.size()) return;
         list.set(index, t.getNewValue());
+    };
+
+    private InvalidationListener focusedListener = observable -> {
+        // RT-25679 - we select the first item in the control if there is no
+        // current selection or focus on any other cell
+        List<T> items = getItems();
+        MultipleSelectionModel<T> sm = getSelectionModel();
+        FocusModel<T> fm = getFocusModel();
+
+        if (items != null && items.size() > 0 &&
+            sm != null && sm.isEmpty() &&
+            fm != null && fm.getFocusedIndex() == -1) {
+                sm.select(0);
+        }
     };
     
     

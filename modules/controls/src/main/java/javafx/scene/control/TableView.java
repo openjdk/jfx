@@ -550,6 +550,8 @@ public class TableView<S> extends Control {
             }
         });
 
+        focusedProperty().addListener(focusedListener);
+
         isInited = true;
     }
 
@@ -686,6 +688,21 @@ public class TableView<S> extends Control {
     
     private final WeakInvalidationListener weakCellSelectionModelInvalidationListener = 
             new WeakInvalidationListener(cellSelectionModelInvalidationListener);
+
+    private InvalidationListener focusedListener = observable -> {
+        // RT-25679 - we select the first item in the control if there is no
+        // current selection or focus on any other cell
+        List<S> items = getItems();
+        MultipleSelectionModel<S> sm = getSelectionModel();
+        FocusModel<S> fm = getFocusModel();
+
+        if (items != null && items.size() > 0 &&
+                sm != null && sm.isEmpty() &&
+                fm != null && fm.getFocusedIndex() == -1) {
+            sm.select(0);
+        }
+    };
+
     
     /***************************************************************************
      *                                                                         *

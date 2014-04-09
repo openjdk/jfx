@@ -54,6 +54,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
@@ -2832,6 +2833,41 @@ public class TableViewTest {
 
         assertEquals(header1, header1_after);
         assertEquals(header2, header2_after);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt25679() {
+        Button focusBtn = new Button("Focus here");
+
+        TableView<String> tableView = new TableView<>(FXCollections.observableArrayList("A", "B", "C"));
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue()));
+        tableView.getColumns().add(tableColumn);
+        SelectionModel sm = tableView.getSelectionModel();
+
+        VBox vbox = new VBox(focusBtn, tableView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        focusBtn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        // test initial state
+        assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
+        assertTrue(focusBtn.isFocused());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+
+        // move focus to the tableView
+        tableView.requestFocus();
+
+        // ensure that there is a selection (where previously there was not one)
+        assertEquals(sl.getStage().getScene().getFocusOwner(), tableView);
+        assertTrue(tableView.isFocused());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("A", sm.getSelectedItem());
 
         sl.dispose();
     }

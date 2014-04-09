@@ -847,4 +847,36 @@ public class ListViewTest {
 
         assertEquals(0, rt_35889_cancel_count);
     }
+
+    @Test public void test_rt25679() {
+        Button focusBtn = new Button("Focus here");
+
+        final ListView<String> listView = new ListView<String>();
+        SelectionModel sm = listView.getSelectionModel();
+        listView.setItems(FXCollections.observableArrayList("A", "B", "C"));
+
+        VBox vbox = new VBox(focusBtn, listView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        focusBtn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        // test initial state
+        assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
+        assertTrue(focusBtn.isFocused());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+
+        // move focus to the listview
+        listView.requestFocus();
+
+        // ensure that there is a selection (where previously there was not one)
+        assertEquals(sl.getStage().getScene().getFocusOwner(), listView);
+        assertTrue(listView.isFocused());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("A", sm.getSelectedItem());
+
+        sl.dispose();
+    }
 }
