@@ -216,7 +216,7 @@ public class WinMsiBundler  extends AbstractBundler {
                 START_ON_INSTALL,
                 STOP_ON_UNINSTALL,
                 RUN_AT_STARTUP,
-                UPGRADE_UUID,
+                //UPGRADE_UUID,
                 VENDOR,
                 VERSION
         );
