@@ -1133,6 +1133,8 @@ final class MacAccessible extends PlatformAccessible {
                 switch (role) {
                     case TITLED_PANE: result = "title pane"; break;
                     case SPLIT_MENU_BUTTON: result = "split button"; break;
+                    case PAGE: result = "page"; break;
+                    case TAB_ITEM: result = "tab"; break;
                     default:
                         MacSubroles subRole = MacSubroles.getRole(role);
                         result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
