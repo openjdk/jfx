@@ -152,7 +152,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
     private void initializeSwipeAndTouchHandlers() {
         final Pagination control = getSkinnable();
 
-        getSkinnable().setOnTouchPressed(e -> {
+        getSkinnable().addEventHandler(TouchEvent.TOUCH_PRESSED, e -> {
             if (touchEventId == -1) {
                 touchEventId = e.getTouchPoint().getId();
             }
@@ -165,7 +165,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             e.consume();
         });
 
-        getSkinnable().setOnTouchMoved(e -> {
+        getSkinnable().addEventHandler(TouchEvent.TOUCH_MOVED, e -> {
             if (touchEventId != e.getTouchPoint().getId()) {
                 return;
             }
@@ -243,7 +243,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             e.consume();
         });
 
-        getSkinnable().setOnTouchReleased(e -> {
+        getSkinnable().addEventHandler(TouchEvent.TOUCH_RELEASED, e -> {
             if (touchEventId != e.getTouchPoint().getId()) {
                 return;
             } else {

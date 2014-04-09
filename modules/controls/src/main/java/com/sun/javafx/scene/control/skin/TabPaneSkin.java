@@ -430,11 +430,11 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     private void initializeSwipeHandlers() {
         if (IS_TOUCH_SUPPORTED) {
-            getSkinnable().setOnSwipeLeft(t -> {
+            getSkinnable().addEventHandler(SwipeEvent.SWIPE_LEFT, t -> {
                 getBehavior().selectNextTab();
             });
 
-            getSkinnable().setOnSwipeRight(t -> {
+            getSkinnable().addEventHandler(SwipeEvent.SWIPE_RIGHT, t -> {
                 getBehavior().selectPreviousTab();
             });
         }    
