@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
@@ -44,7 +42,6 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Separator;
 import javafx.scene.control.Tooltip;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -55,7 +52,6 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
-import javafx.stage.WindowEvent;
 
 import java.util.List;
 
@@ -89,6 +85,7 @@ public class ColorPalette extends Region {
     
     public ColorPalette(final ColorPicker colorPicker) {
         getStyleClass().add("color-palette-region");
+        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         this.colorPicker = colorPicker;
         colorPickerGrid = new ColorPickerGrid();
         colorPickerGrid.requestFocus();
@@ -169,8 +166,16 @@ public class ColorPalette extends Region {
         hoverSquare.rectangle.setFill(focusedSquare.rectangle.getFill());
 
         Bounds b = square.localToScene(square.getLayoutBounds());
-        hoverSquare.setLayoutX(snapPosition(b.getMinX()) - focusedSquare.getWidth() / 2.0 - (hoverSquare.getScaleX() == 1.0 ? 0 : hoverSquare.getWidth() / 4.0));
-        hoverSquare.setLayoutY(snapPosition(b.getMinY()) - focusedSquare.getHeight() / 2.0 + (hoverSquare.getScaleY() == 1.0 ? 0 : focusedSquare.getHeight() / 4.0));
+
+        double x = b.getMinX();
+        double y = b.getMinY();
+
+        if (colorPicker.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            x -= hoverSquare.getWidth() * hoverSquare.getScaleX() / 2.0;
+        }
+
+        hoverSquare.setLayoutX(snapPosition(x) - focusedSquare.getWidth() / 2.0 - (hoverSquare.getScaleX() == 1.0 ? 0 : hoverSquare.getWidth() / 4.0));
+        hoverSquare.setLayoutY(snapPosition(y) - focusedSquare.getHeight() / 2.0 + (hoverSquare.getScaleY() == 1.0 ? 0 : focusedSquare.getHeight() / 4.0));
     }
     
     private void buildCustomColors() {
@@ -222,19 +227,11 @@ public class ColorPalette extends Region {
         setOnKeyPressed(ke -> {
             switch (ke.getCode()) {
                 case LEFT:
-                    if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                        processRightKey(ke);
-                    } else {
-                        processLeftKey(ke);
-                    }
+                    processLeftKey(ke);
                     ke.consume();
                     break;
                 case RIGHT:
-                    if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                        processLeftKey(ke);
-                    } else {
-                        processRightKey(ke);
-                    }
+                    processRightKey(ke);
                     ke.consume();
                     break;
                 case UP:
