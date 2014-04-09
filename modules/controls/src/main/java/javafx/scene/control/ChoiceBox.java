@@ -408,27 +408,32 @@ public class ChoiceBox<T> extends Control {
             }
         }
     }
-    
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
     /** @treatAsPrivate */
     @Override
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
-		switch(attribute) {
-		    case ROLE: return Role.COMBOBOX;
-		    case TITLE:
-		        //let the skin first.
-	    		Object title = super.accGetAttribute(attribute, parameters);
-	    		if (title != null) return title;
-	    		StringConverter<T> converter = getConverter();
-	    		if (converter == null) {
-	    			return getValue() != null ? getValue().toString() : "";
-	    		}
-	    		return converter.toString(getValue());
-		    case EXPANDED:
-	        	return isShowing();
-	    	default: return super.accGetAttribute(attribute, parameters);
-		}
+        switch(attribute) {
+            case ROLE: return Role.COMBOBOX;
+            case TITLE:
+                //let the skin first.
+                Object title = super.accGetAttribute(attribute, parameters);
+                if (title != null) return title;
+                StringConverter<T> converter = getConverter();
+                if (converter == null) {
+                    return getValue() != null ? getValue().toString() : "";
+                }
+                return converter.toString(getValue());
+            case EXPANDED: return isShowing();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
-    
+
     @Override
     public void accExecuteAction(Action action, Object... parameters) {
         switch (action) {
@@ -437,5 +442,5 @@ public class ChoiceBox<T> extends Control {
             default: super.accExecuteAction(action); break;
         }
     }
-    
+
 }
