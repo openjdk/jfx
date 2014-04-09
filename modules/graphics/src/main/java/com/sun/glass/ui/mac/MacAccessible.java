@@ -230,8 +230,6 @@ final class MacAccessible extends PlatformAccessible {
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityValueAttribute,
-                /* Expanded only needed for Combobox, and not for PopUpButton */
-//                MacAttributes.NSAccessibilityExpandedAttribute,
             },
             new MacActions[] {MacActions.NSAccessibilityPressAction},
             null
@@ -1528,28 +1526,25 @@ final class MacAccessible extends PlatformAccessible {
 
     void accessibilityPerformAction(long action) {
         MacActions macAction = MacActions.getAction(action);
+        boolean expand = false;
         if (macAction == MacActions.NSAccessibilityPressAction) {
-            if (getAttribute(ROLE) == Role.TITLED_PANE) {
-                if (Boolean.TRUE.equals(getAttribute(EXPANDED))) {
-                    executeAction(Action.COLLAPSE);
-                } else {
-                    executeAction(Action.EXPAND);
-                }
-                return;
+            Role role = (Role)getAttribute(ROLE);
+            if (role == Role.TITLED_PANE || role == Role.COMBOBOX) {
+                expand = true;
             }
         }
         if (macAction == MacActions.NSAccessibilityShowMenuAction) {
             if (getAttribute(ROLE) == Role.SPLIT_MENU_BUTTON) {
-                /* Note, it is not expected a split menu button 
-                 * to have a context menu
-                 */
-                if (Boolean.TRUE.equals(getAttribute(EXPANDED))) {
-                    executeAction(Action.COLLAPSE);
-                } else {
-                    executeAction(Action.EXPAND);
-                }
-                return;
+                expand = true;
             }
+        }
+        if (expand) {
+            if (Boolean.TRUE.equals(getAttribute(EXPANDED))) {
+                executeAction(Action.COLLAPSE);
+            } else {
+                executeAction(Action.EXPAND);
+            }
+            return;
         }
         if (macAction != null && macAction.jfxAction != null) {
             executeAction(macAction.jfxAction);
