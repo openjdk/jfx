@@ -198,7 +198,7 @@ final class MacAccessible extends PlatformAccessible {
     enum MacRoles {
         NSAccessibilityUnknownRole(Role.NODE, null, null),
         NSAccessibilityGroupRole(Role.PARENT, null, null),
-        NSAccessibilityButtonRole(new Role[] {Role.BUTTON, Role.INCREMENT_BUTTON, Role.DECREMENT_BUTTON, Role.HEADER},
+        NSAccessibilityButtonRole(new Role[] {Role.BUTTON, Role.INCREMENT_BUTTON, Role.DECREMENT_BUTTON, Role.HEADER, Role.SPLIT_MENU_BUTTON},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityTitleAttribute,
@@ -1124,15 +1124,18 @@ final class MacAccessible extends PlatformAccessible {
                         macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
                     }
                 }
-                if (role == Role.TITLED_PANE) {
-                    /* 
-                     * The default role description for a NSAccessibilityDisclosureTriangleRole 
-                     * is 'disclosure triangle'. Redefine to something more friendly.  
-                     */
-                    result = "title pane";
-                } else {
-                    MacSubroles subRole = MacSubroles.getRole(role);
-                    result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
+                /* 
+                 * In some cases there is no proper mapping from a JFX role
+                 * to a Mac role. For example, reporting 'disclosure triangle'
+                 * for a TITLED_PANE is not appropriate.
+                 * Providing a custom role description makes it much better.
+                 */
+                switch (role) {
+                    case TITLED_PANE: result = "title pane"; break;
+                    case SPLIT_MENU_BUTTON: result = "split button"; break;
+                    default:
+                        MacSubroles subRole = MacSubroles.getRole(role);
+                        result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
                 }
                 break;
             }
@@ -1525,6 +1528,19 @@ final class MacAccessible extends PlatformAccessible {
         MacActions macAction = MacActions.getAction(action);
         if (macAction == MacActions.NSAccessibilityPressAction) {
             if (getAttribute(ROLE) == Role.TITLED_PANE) {
+                if (Boolean.TRUE.equals(getAttribute(EXPANDED))) {
+                    executeAction(Action.COLLAPSE);
+                } else {
+                    executeAction(Action.EXPAND);
+                }
+                return;
+            }
+        }
+        if (macAction == MacActions.NSAccessibilityShowMenuAction) {
+            if (getAttribute(ROLE) == Role.SPLIT_MENU_BUTTON) {
+                /* Note, it is not expected a split menu button 
+                 * to have a context menu
+                 */
                 if (Boolean.TRUE.equals(getAttribute(EXPANDED))) {
                     executeAction(Action.COLLAPSE);
                 } else {
