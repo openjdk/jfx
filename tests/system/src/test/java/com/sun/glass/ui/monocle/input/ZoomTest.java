@@ -30,11 +30,13 @@ import com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 import javafx.geometry.Rectangle2D;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.Parameterized;
 import java.util.Collection;
 
 /** Zoom tests with two touch points */
+@Ignore("RT-36595")
 public class ZoomTest extends ParameterizedTestBase {
 
     public ZoomTest(TestTouchDevice device) {
