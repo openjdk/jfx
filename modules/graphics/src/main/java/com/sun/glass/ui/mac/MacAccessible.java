@@ -252,6 +252,15 @@ final class MacAccessible extends PlatformAccessible {
             },
             null
         ),
+        NSAccessibilityMenuBarRole(Role.MENU_BAR,
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilitySelectedChildrenAttribute,
+                MacAttributes.NSAccessibilityEnabledAttribute,
+            },
+            new MacActions[] {
+                MacActions.NSAccessibilityCancelAction,
+            }
+        ),
         NSAccessibilityMenuRole(Role.CONTEXT_MENU,
             new MacAttributes[] {
                 MacAttributes.NSAccessibilitySelectedChildrenAttribute,
@@ -681,9 +690,35 @@ final class MacAccessible extends PlatformAccessible {
             case SELECTED_CELLS:
                 macNotification = MacNotifications.NSAccessibilitySelectedCellsChangedNotification;
                 break;
-            case FOCUS_NODE:
-                macNotification = MacNotifications.NSAccessibilityFocusedUIElementChangedNotification;
-                break;
+            case FOCUS_NODE: {
+                Node node = (Node)getAttribute(FOCUS_NODE);
+                final View view = getView();
+                if (node == null && view == null) {
+                    /* The transientFocusContainer resigns focus.
+                       Delegate to the scene. */
+                    Scene scene = (Scene)getAttribute(SCENE);
+                    if (scene != null) {
+                        Accessible acc = scene.getAccessible();
+                        if (acc != null) {
+                            node = (Node)acc.getAttribute(FOCUS_NODE);
+                        }
+                    }
+                }
+
+                long id = 0L;
+                if (node != null) {
+                    Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
+                    id = item != null ? getAccessible(item) : getAccessible(node);
+                } else if (view != null) {
+                    /* No focused element. Send the notification to the scene itself. */
+                    id = view.getNativeView();
+                }
+
+                if (id != 0) {
+                    NSAccessibilityPostNotification(id, MacNotifications.NSAccessibilityFocusedUIElementChangedNotification.ptr);
+                }
+                return;
+            }
             case FOCUSED:
                 return;
             case SELECTION_START:
@@ -769,7 +804,7 @@ final class MacAccessible extends PlatformAccessible {
     private Boolean inMenu;
     private boolean isInMenu() {
         if (inMenu == null) {
-            inMenu = getContainerNode(Role.CONTEXT_MENU) != null;
+            inMenu = getContainerNode(Role.CONTEXT_MENU) != null || getContainerNode(Role.MENU_BAR) != null;
         }
         return inMenu;
     }
@@ -845,7 +880,7 @@ final class MacAccessible extends PlatformAccessible {
             }
 
             /* Menu and MenuItem do have have Window and top-level UI Element*/
-            if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM) {
+            if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM || role == Role.MENU_BAR) {
                 attrs.remove(MacAttributes.NSAccessibilityWindowAttribute);
                 attrs.remove(MacAttributes.NSAccessibilityTopLevelUIElementAttribute);
             }
@@ -1050,6 +1085,15 @@ final class MacAccessible extends PlatformAccessible {
                             }
                         }
                     }
+                    if (role == Role.MENU_BAR) {
+                        Node focus = (Node)getAttribute(FOCUS_NODE);
+                        if (focus != null && focus.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
+                            long[] result = {getAccessible(focus)};
+                            return attr.map.apply(result);
+                        } else {
+                            return null;
+                        }
+                    }
                     return null;
                 }
                 case AXDateTimeComponents: {
@@ -1088,7 +1132,7 @@ final class MacAccessible extends PlatformAccessible {
         switch (attr) {
             case NSAccessibilityWindowAttribute:
             case NSAccessibilityTopLevelUIElementAttribute: {
-                if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM) {
+                if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM || role == Role.MENU_BAR) {
                     return null;
                 }
                 Scene scene = (Scene)result;
@@ -1563,7 +1607,7 @@ final class MacAccessible extends PlatformAccessible {
     boolean accessibilityIsIgnored() {
         if (isInMenu()) {
             Role role = (Role)getAttribute(ROLE);
-            return role != Role.CONTEXT_MENU && role != Role.MENU_ITEM;
+            return role != Role.CONTEXT_MENU && role != Role.MENU_ITEM && role != Role.MENU_BAR;
         } else {
             return isIgnored();
         }
