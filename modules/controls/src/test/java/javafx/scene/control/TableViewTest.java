@@ -54,6 +54,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -2868,6 +2869,80 @@ public class TableViewTest {
         assertTrue(tableView.isFocused());
         assertEquals(0, sm.getSelectedIndex());
         assertEquals("A", sm.getSelectedItem());
+
+        sl.dispose();
+    }
+
+    private int rt36556_instanceCount;
+    @Test public void test_rt36556_scrollTo() {
+        rt36556_instanceCount = 0;
+
+        TableView<String> tableView = new TableView<>();
+        tableView.setRowFactory(new Callback<TableView<String>, TableRow<String>>() {
+            @Override public TableRow<String> call(TableView<String> param) {
+                rt36556_instanceCount++;
+                return new TableRow<String>();
+            }
+        });
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue()));
+
+        tableView.getColumns().add(tableColumn);
+
+        for (int i = 0; i < 1000; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        StackPane root = new StackPane();
+        root.getChildren().add(tableView);
+
+        StageLoader sl = new StageLoader(root);
+
+        final int cellCountAtStart = rt36556_instanceCount;
+
+        // start scrolling
+        for (int i = 0; i < 1000; i++) {
+            tableView.scrollTo(i);
+            Toolkit.getToolkit().firePulse();
+        }
+
+        assertEquals(cellCountAtStart + 1, rt36556_instanceCount);
+        sl.dispose();
+    }
+
+    @Test public void test_rt36556_mouseWheel() {
+        rt36556_instanceCount = 0;
+
+        TableView<String> tableView = new TableView<>();
+        tableView.setRowFactory(new Callback<TableView<String>, TableRow<String>>() {
+            @Override public TableRow<String> call(TableView<String> param) {
+                rt36556_instanceCount++;
+                return new TableRow<String>();
+            }
+        });
+
+        TableColumn<String, String> tableColumn = new TableColumn<>();
+        tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue()));
+        tableView.getColumns().add(tableColumn);
+
+        for (int i = 0; i < 1000; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        StackPane root = new StackPane();
+        root.getChildren().add(tableView);
+
+        StageLoader sl = new StageLoader(root);
+
+        final int cellCountAtStart = rt36556_instanceCount;
+
+        // start scrolling - we call VirtualFlow.adjustPixels, which is what
+        // is called when the mouse wheel is scrolled
+        VirtualFlow flow = VirtualFlowTestUtils.getVirtualFlow(tableView);
+        flow.adjustPixels(1000 * 24);
+
+        assertEquals(cellCountAtStart + 1, rt36556_instanceCount);
 
         sl.dispose();
     }

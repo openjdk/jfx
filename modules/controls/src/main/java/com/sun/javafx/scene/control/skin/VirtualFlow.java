@@ -2284,6 +2284,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
+            // Now throw away any cells that don't fit
+            // (take one - this resolves RT-36556)
+            cull();
+
             // Fix for RT-32908
             T firstCell = cells.getFirst();
             double layoutY = firstCell == null ? 0 : getCellPosition(firstCell);
@@ -2344,7 +2348,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
-        // Now throw away any cells that don't fit
+        // Now throw away any cells that don't fit (take two)
         cull();
 
         // Finally, update the scroll bars
