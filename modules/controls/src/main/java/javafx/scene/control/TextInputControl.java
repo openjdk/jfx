@@ -897,6 +897,7 @@ public abstract class TextInputControl extends Control {
         this.caretPosition.set(Utils.clamp(0, caretPosition, getLength()));
         this.anchor.set(Utils.clamp(0, anchor, getLength()));
         this.selection.set(IndexRange.normalize(getAnchor(), getCaretPosition()));
+        accSendNotification(Attribute.SELECTION_START);
     }
 
     /**
@@ -1223,6 +1224,8 @@ public abstract class TextInputControl extends Control {
                 }
                 return text;
             }
+            case SELECTION_START: return getSelection().getStart();
+            case SELECTION_END: return getSelection().getEnd();
             default: return super.accGetAttribute(attribute, parameters);
         }
     }
