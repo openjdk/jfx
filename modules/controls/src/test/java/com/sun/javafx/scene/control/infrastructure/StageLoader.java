@@ -46,23 +46,12 @@ public class StageLoader {
         stage = new Stage();
         stage.setScene(scene);
         stage.show();
-        Toolkit.getToolkit().firePulse();
     }
     
     public StageLoader(Scene scene) {
         stage = new Stage();
         stage.setScene(scene);
         stage.show();
-    }
-
-    // bad I know, but this is better than having unit tests running out of memory
-    // and stalling. If this isn't done we leave all stages in memory as they
-    // are collected in a static list (Stage.stages). The alternative is to
-    // expect all users of StageLoader (i.e. ui controls unit tests) to always
-    // properly clean up after themselves.
-    @Override protected void finalize() throws Throwable {
-        dispose();
-        super.finalize();
     }
 
     public Stage getStage() {

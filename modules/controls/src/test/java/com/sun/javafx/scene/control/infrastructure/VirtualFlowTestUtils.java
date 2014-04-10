@@ -359,10 +359,11 @@ public class VirtualFlowTestUtils {
         return getVirtualFlowScrollbar(control, Orientation.HORIZONTAL);
     }
 
+    // this method must be called with the control having been shown in a
+    // stage (e.g. via StageLoader). Be sure to dispose too!
     public static TableHeaderRow getTableHeaderRow(final Control control) {
-        StageLoader sl = null;
         if (control.getSkin() == null) {
-            sl = new StageLoader(control);
+            throw new IllegalStateException("getTableHeaderRow requires the control to be visible in a stage");
         }
 
         TableViewSkinBase<?,?,?,?,?,?> skin = (TableViewSkinBase) control.getSkin();
@@ -372,10 +373,6 @@ public class VirtualFlowTestUtils {
                 headerRow = (TableHeaderRow) n;
                 break;
             }
-        }
-
-        if (sl != null) {
-            sl.dispose();
         }
 
         return headerRow;

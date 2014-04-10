@@ -2053,12 +2053,16 @@ public class TableViewTest {
         TableColumn col2 = new TableColumn();
         table.getColumns().setAll(col1, col2);
 
+        StageLoader sl = new StageLoader(table);
+
         assertEquals(0, getColumnIndex(col1));
         assertEquals(1, getColumnIndex(col2));
 
         moveColumn(col1, 1);
         assertEquals(1, getColumnIndex(col1));
         assertEquals(0, getColumnIndex(col2));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_simple_switch_two_columns_move_col2_backward_1_place() {
@@ -2067,12 +2071,16 @@ public class TableViewTest {
         TableColumn col2 = new TableColumn();
         table.getColumns().setAll(col1, col2);
 
+        StageLoader sl = new StageLoader(table);
+
         assertEquals(0, getColumnIndex(col1));
         assertEquals(1, getColumnIndex(col2));
 
         moveColumn(col2, 0);
         assertEquals(1, getColumnIndex(col1));
         assertEquals(0, getColumnIndex(col2));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_simple_switch_three_columns_move_col1_forward_1_place() {
@@ -2082,6 +2090,8 @@ public class TableViewTest {
         TableColumn col3 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3);
 
+        StageLoader sl = new StageLoader(table);
+
         assertEquals(0, getColumnIndex(col1));
         assertEquals(1, getColumnIndex(col2));
         assertEquals(2, getColumnIndex(col3));
@@ -2090,6 +2100,8 @@ public class TableViewTest {
         assertEquals(1, getColumnIndex(col1));
         assertEquals(0, getColumnIndex(col2));
         assertEquals(2, getColumnIndex(col3));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_simple_switch_three_columns_move_col2_backward_1_place() {
@@ -2099,6 +2111,8 @@ public class TableViewTest {
         TableColumn col3 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3);
 
+        StageLoader sl = new StageLoader(table);
+
         assertEquals(0, getColumnIndex(col1));
         assertEquals(1, getColumnIndex(col2));
         assertEquals(2, getColumnIndex(col3));
@@ -2107,6 +2121,8 @@ public class TableViewTest {
         assertEquals(1, getColumnIndex(col1));
         assertEquals(0, getColumnIndex(col2));
         assertEquals(2, getColumnIndex(col3));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_simple_switch_three_columns_move_col2_forward_1_place() {
@@ -2116,6 +2132,8 @@ public class TableViewTest {
         TableColumn col3 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3);
 
+        StageLoader sl = new StageLoader(table);
+
         assertEquals(0, getColumnIndex(col1));
         assertEquals(1, getColumnIndex(col2));
         assertEquals(2, getColumnIndex(col3));
@@ -2124,6 +2142,8 @@ public class TableViewTest {
         assertEquals(0, getColumnIndex(col1));
         assertEquals(2, getColumnIndex(col2));
         assertEquals(1, getColumnIndex(col3));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_simple_switch_three_columns_move_col3_backward_1_place() {
@@ -2133,6 +2153,8 @@ public class TableViewTest {
         TableColumn col3 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3);
 
+        StageLoader sl = new StageLoader(table);
+
         assertEquals(0, getColumnIndex(col1));
         assertEquals(1, getColumnIndex(col2));
         assertEquals(2, getColumnIndex(col3));
@@ -2141,6 +2163,8 @@ public class TableViewTest {
         assertEquals(0, getColumnIndex(col1));
         assertEquals(2, getColumnIndex(col2));
         assertEquals(1, getColumnIndex(col3));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_simple_switch_three_columns_move_col0_forward_2_places() {
@@ -2150,6 +2174,8 @@ public class TableViewTest {
         TableColumn col3 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3);
 
+        StageLoader sl = new StageLoader(table);
+
         assertEquals(0, getColumnIndex(col1));
         assertEquals(1, getColumnIndex(col2));
         assertEquals(2, getColumnIndex(col3));
@@ -2158,6 +2184,8 @@ public class TableViewTest {
         assertEquals(2, getColumnIndex(col1));
         assertEquals(0, getColumnIndex(col2));
         assertEquals(1, getColumnIndex(col3));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_simple_switch_three_columns_move_col3_backward_2_places() {
@@ -2167,6 +2195,8 @@ public class TableViewTest {
         TableColumn col3 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3);
 
+        StageLoader sl = new StageLoader(table);
+
         assertEquals(0, getColumnIndex(col1));
         assertEquals(1, getColumnIndex(col2));
         assertEquals(2, getColumnIndex(col3));
@@ -2175,6 +2205,8 @@ public class TableViewTest {
         assertEquals(1, getColumnIndex(col1));
         assertEquals(2, getColumnIndex(col2));
         assertEquals(0, getColumnIndex(col3));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_hidden_column_move_col1_forward_1_place() {
@@ -2183,6 +2215,8 @@ public class TableViewTest {
         TableColumn col2 = new TableColumn();
         TableColumn col3 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3);
+
+        StageLoader sl = new StageLoader(table);
 
         col2.setVisible(false);
 
@@ -2194,6 +2228,8 @@ public class TableViewTest {
         assertEquals(1, getColumnIndex(col1));
         assertEquals(-1, getColumnIndex(col2));
         assertEquals(0, getColumnIndex(col3));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_hidden_column_move_col1_forward_100_places() {
@@ -2202,6 +2238,8 @@ public class TableViewTest {
         TableColumn col2 = new TableColumn();
         TableColumn col3 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3);
+
+        StageLoader sl = new StageLoader(table);
 
         col2.setVisible(false);
 
@@ -2213,6 +2251,8 @@ public class TableViewTest {
         assertEquals(1, getColumnIndex(col1));
         assertEquals(-1, getColumnIndex(col2));
         assertEquals(0, getColumnIndex(col3));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_hidden_column_move_col3_backward_1_place() {
@@ -2221,6 +2261,8 @@ public class TableViewTest {
         TableColumn col2 = new TableColumn();
         TableColumn col3 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3);
+
+        StageLoader sl = new StageLoader(table);
 
         col2.setVisible(false);
 
@@ -2232,6 +2274,8 @@ public class TableViewTest {
         assertEquals(1, getColumnIndex(col1));
         assertEquals(-1, getColumnIndex(col2));
         assertEquals(0, getColumnIndex(col3));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_multiple_hidden_columns_move_col1_to_middle() {
@@ -2243,6 +2287,8 @@ public class TableViewTest {
         TableColumn col5 = new TableColumn();
         TableColumn col6 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        StageLoader sl = new StageLoader(table);
 
         col2.setVisible(false);
         col4.setVisible(false);
@@ -2261,6 +2307,8 @@ public class TableViewTest {
         assertEquals(-1, getColumnIndex(col4));
         assertEquals(2, getColumnIndex(col5));
         assertEquals(3, getColumnIndex(col6));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_multiple_hidden_columns_move_col1_to_end() {
@@ -2272,6 +2320,8 @@ public class TableViewTest {
         TableColumn col5 = new TableColumn();
         TableColumn col6 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        StageLoader sl = new StageLoader(table);
 
         col2.setVisible(false);
         col4.setVisible(false);
@@ -2290,6 +2340,8 @@ public class TableViewTest {
         assertEquals(-1, getColumnIndex(col4));
         assertEquals(1, getColumnIndex(col5));
         assertEquals(2, getColumnIndex(col6));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_multiple_hidden_columns_move_col3_to_start() {
@@ -2301,6 +2353,8 @@ public class TableViewTest {
         TableColumn col5 = new TableColumn();
         TableColumn col6 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        StageLoader sl = new StageLoader(table);
 
         col2.setVisible(false);
         col4.setVisible(false);
@@ -2319,6 +2373,8 @@ public class TableViewTest {
         assertEquals(-1, getColumnIndex(col4));
         assertEquals(2, getColumnIndex(col5));
         assertEquals(3, getColumnIndex(col6));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_multiple_hidden_columns_move_col3_to_end() {
@@ -2330,6 +2386,8 @@ public class TableViewTest {
         TableColumn col5 = new TableColumn();
         TableColumn col6 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        StageLoader sl = new StageLoader(table);
 
         col2.setVisible(false);
         col4.setVisible(false);
@@ -2348,6 +2406,8 @@ public class TableViewTest {
         assertEquals(-1, getColumnIndex(col4));
         assertEquals(1, getColumnIndex(col5));
         assertEquals(2, getColumnIndex(col6));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_multiple_hidden_columns_move_col6_to_start() {
@@ -2359,6 +2419,8 @@ public class TableViewTest {
         TableColumn col5 = new TableColumn();
         TableColumn col6 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        StageLoader sl = new StageLoader(table);
 
         col2.setVisible(false);
         col4.setVisible(false);
@@ -2377,6 +2439,8 @@ public class TableViewTest {
         assertEquals(-1, getColumnIndex(col4));
         assertEquals(3, getColumnIndex(col5));
         assertEquals(0, getColumnIndex(col6));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_35141_multiple_hidden_columns_move_col6_to_middle() {
@@ -2388,6 +2452,8 @@ public class TableViewTest {
         TableColumn col5 = new TableColumn();
         TableColumn col6 = new TableColumn();
         table.getColumns().setAll(col1, col2, col3, col4, col5, col6);
+
+        StageLoader sl = new StageLoader(table);
 
         col2.setVisible(false);
         col4.setVisible(false);
@@ -2406,6 +2472,8 @@ public class TableViewTest {
         assertEquals(-1, getColumnIndex(col4));
         assertEquals(3, getColumnIndex(col5));
         assertEquals(1, getColumnIndex(col6));
+
+        sl.dispose();
     }
 
     @Test public void test_rt_34042() {
@@ -2881,7 +2949,7 @@ public class TableViewTest {
         tableView.setRowFactory(new Callback<TableView<String>, TableRow<String>>() {
             @Override public TableRow<String> call(TableView<String> param) {
                 rt36556_instanceCount++;
-                return new TableRow<String>();
+                return new TableRow<>();
             }
         });
 
@@ -2904,10 +2972,10 @@ public class TableViewTest {
         // start scrolling
         for (int i = 0; i < 1000; i++) {
             tableView.scrollTo(i);
-            Toolkit.getToolkit().firePulse();
+//            Toolkit.getToolkit().firePulse();
         }
 
-        assertEquals(cellCountAtStart + 1, rt36556_instanceCount);
+        assertEquals(cellCountAtStart, rt36556_instanceCount);
         sl.dispose();
     }
 
