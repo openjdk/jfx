@@ -235,7 +235,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
             
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
                 getChildren().add(cell);
-                cell.impl_processCSS(false);
+                cell.applyCss();
                 maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
                 getChildren().remove(cell);
             }

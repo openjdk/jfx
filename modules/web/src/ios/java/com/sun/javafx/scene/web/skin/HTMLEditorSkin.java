@@ -744,7 +744,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         fgColorButton.setFocusTraversable(false);
         toolbar1.getItems().add(fgColorButton);
 
-        fgColorButton.impl_processCSS(true);
+        fgColorButton.applyCss();
         ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
         String fgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
             @Override public String run() {
@@ -770,7 +770,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         bgColorButton.setFocusTraversable(false);
         toolbar1.getItems().add(bgColorButton);
 
-        bgColorButton.impl_processCSS(true);
+        bgColorButton.applyCss();
         ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
         String bgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
             @Override public String run() {

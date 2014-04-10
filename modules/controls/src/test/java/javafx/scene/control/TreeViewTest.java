@@ -30,6 +30,7 @@ import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.scene.control.test.Employee;
 import com.sun.javafx.scene.control.test.Person;
@@ -1172,6 +1173,7 @@ public class TreeViewTest {
         treeView.edit(root);
         TreeCell rootCell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
         TextField textField = (TextField) rootCell.getGraphic();
+        textField.setSkin(new TextFieldSkin(textField));
         textField.setText("Testing!");
         KeyEventFirer keyboard = new KeyEventFirer(textField);
         keyboard.doKeyPress(KeyCode.ENTER);

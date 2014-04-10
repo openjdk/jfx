@@ -289,6 +289,7 @@ final public class StyleManager {
 
         final int hash;
         final byte[] checksum;
+        boolean checksumInvalid = false;
 
         StylesheetContainer(String fname, Stylesheet stylesheet) {
             this(fname, stylesheet, stylesheet != null ? calculateCheckSum(stylesheet.getUrl()) : new byte[0]);
@@ -331,6 +332,10 @@ final public class StyleManager {
             this.checksum = checksum;
         }
 
+        void invalidateChecksum() {
+            // if checksum is byte[0], then it is forever valid.
+            checksumInvalid = checksum.length > 0 ? true : false;
+        }
         @Override
         public int hashCode() {
             return hash;
@@ -463,6 +468,12 @@ final public class StyleManager {
             if (c.wasRemoved()) {
                 for (String fname : c.getRemoved()) {
                     stylesheetRemoved(scene, fname);
+
+                    StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
+                    if (stylesheetContainer != null) {
+                        stylesheetContainer.invalidateChecksum();
+                    }
+
                 }
             }
         }
@@ -513,6 +524,11 @@ final public class StyleManager {
             if (c.wasRemoved()) {
                 for (String fname : c.getRemoved()) {
                     stylesheetRemoved(parent, fname);
+
+                    StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
+                    if (stylesheetContainer != null) {
+                        stylesheetContainer.invalidateChecksum();
+                    }
                 }
             }
         }
@@ -1274,14 +1290,18 @@ final public class StyleManager {
 
                 if (!list.contains(container)) {
                     // minor optimization: if existing checksum in byte[0], then don't bother recalculating
-                    final byte[] checksum = container.checksum.length > 0 ? calculateCheckSum(fname) : container.checksum;
-                    if (checksum.length > 0 && !Arrays.equals(checksum, container.checksum)) {
-                        removeStylesheetContainer(container);
+                    if (container.checksumInvalid) {
+                        final byte[] checksum = calculateCheckSum(fname);
+                        if (!Arrays.equals(checksum, container.checksum)) {
+                            removeStylesheetContainer(container);
 
-                        // Stylesheet did change. Re-load the stylesheet and update the container map.
-                        Stylesheet stylesheet = loadStylesheet(fname);
-                        container = new StylesheetContainer(fname, stylesheet, checksum);
-                        stylesheetContainerMap.put(fname, container);
+                            // Stylesheet did change. Re-load the stylesheet and update the container map.
+                            Stylesheet stylesheet = loadStylesheet(fname);
+                            container = new StylesheetContainer(fname, stylesheet, checksum);
+                            stylesheetContainerMap.put(fname, container);
+                        } else {
+                            container.checksumInvalid = false;
+                        }
                     }
                     list.add(container);
                 }

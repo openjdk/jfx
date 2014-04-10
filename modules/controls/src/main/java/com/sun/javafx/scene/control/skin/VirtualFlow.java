@@ -1281,14 +1281,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         final double viewportLength = getViewportLength();
 
         //
-        // RT-36507: Math.ceil(viewportLength/offset) gives the maximum number of
+        // RT-36507: viewportLength - offset gives the maximum number of
         // additional cells that should ever be able to fit in the viewport if
         // every cell had a height of 1. If index ever exceeds this count,
         // then offset is not incrementing fast enough, or at all, which means
         // there is something wrong with the cell size calculation.
         //
-        final double maxCellCount = offset > 0 ? Math.ceil(viewportLength/offset) : viewportLength;
-
+        final double maxCellCount = viewportLength - offset;
         while (offset < viewportLength) {
             if (index >= cellCount) {
                 if (offset < viewportLength) filledWithNonEmpty = false;
@@ -1902,7 +1901,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // RT-34333, where the sizes were being reported incorrectly to the
         // ComboBox popup.
         if (cell.isNeedsLayout() && cell.getScene() != null) {
-            cell.impl_processCSS(false);
+            cell.applyCss();
         }
     }
 

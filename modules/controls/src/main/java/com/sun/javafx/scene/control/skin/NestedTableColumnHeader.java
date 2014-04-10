@@ -320,7 +320,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         
         // RT-33596: Do CSS now, as we are in the middle of layout pass and the headers are new Nodes w/o CSS done
         for (TableColumnHeader header : getColumnHeaders()) {
-            header.impl_processCSS(false);
+            header.applyCss();
         }
     }
     
