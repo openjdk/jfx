@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.beans.IDProperty;
 import javafx.collections.ObservableSet;
 import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
@@ -72,6 +73,7 @@ import javafx.collections.ObservableMap;
  * @since JavaFX 2.0
  */
 @DefaultProperty("content")
+@IDProperty("id")
 public class Tab implements EventTarget, Styleable {
 
     /***************************************************************************

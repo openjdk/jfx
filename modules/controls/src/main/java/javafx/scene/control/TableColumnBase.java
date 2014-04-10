@@ -28,6 +28,7 @@ package javafx.scene.control;
 import java.text.Collator;
 import java.util.Comparator;
 
+import com.sun.javafx.beans.IDProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -94,6 +95,7 @@ import javafx.collections.ObservableMap;
  * @see TablePositionBase
  * @since JavaFX 8.0
  */
+@IDProperty("id")
 public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     
     /***************************************************************************
