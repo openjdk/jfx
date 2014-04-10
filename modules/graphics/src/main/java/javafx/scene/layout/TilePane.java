@@ -886,10 +886,12 @@ public class TilePane extends Pane {
     }
 
     private double computeContentWidth(int columns, double tilewidth) {
+        if (columns == 0) return 0;
         return columns * tilewidth + (columns - 1) * snapSpace(getHgap());
     }
 
     private double computeContentHeight(int rows, double tileheight) {
+        if (rows == 0) return 0;
         return rows * tileheight + (rows - 1) * snapSpace(getVgap());
     }
 
