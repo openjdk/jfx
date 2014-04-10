@@ -552,6 +552,14 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         switch (attribute) {
             case ROLE: return Role.DATE_PICKER;
             case DATE: return getValue();
+            case TITLE: {
+                LocalDate date = getValue();
+                StringConverter<LocalDate> c = getConverter();
+                if (date != null && c != null) {
+                    return c.toString(date);
+                }
+                return "";
+            }
             default: return super.accGetAttribute(attribute, parameters);
         }
     }

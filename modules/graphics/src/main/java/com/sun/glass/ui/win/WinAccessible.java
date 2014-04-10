@@ -482,6 +482,7 @@ final class WinAccessible extends PlatformAccessible {
             case SCROLL_BAR: return UIA_ScrollBarControlTypeId;
             case THUMB: return UIA_ThumbControlTypeId;
             case MENU_BAR: return UIA_MenuBarControlTypeId;
+            case DATE_PICKER: return UIA_PaneControlTypeId;
             default: return 0;
         }
     }

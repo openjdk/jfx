@@ -62,7 +62,7 @@ public enum Role {
 
     /**
      * DatePicker.
-     * Attributed: DATE
+     * Attributed: DATE, TITLE
      * Actions:
      */
     DATE_PICKER,
