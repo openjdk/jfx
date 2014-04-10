@@ -56,22 +56,22 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
      **************************************************************************/
 
     @Override
-    MultipleSelectionModel<TreeItem<T>> getSelectionModel() {
+    protected MultipleSelectionModel<TreeItem<T>> getSelectionModel() {
         return getCellContainer().getSelectionModel();
     }
 
     @Override
-    FocusModel<TreeItem<T>> getFocusModel() {
+    protected FocusModel<TreeItem<T>> getFocusModel() {
         return getCellContainer().getFocusModel();
     }
 
     @Override
-    TreeView<T> getCellContainer() {
+    protected TreeView<T> getCellContainer() {
         return getControl().getTreeView();
     }
 
     @Override
-    void edit(TreeCell<T> cell) {
+    protected void edit(TreeCell<T> cell) {
         TreeItem treeItem = cell == null ? null : cell.getTreeItem();
         getCellContainer().edit(treeItem);
     }
@@ -96,7 +96,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
         }
     }
 
-    @Override boolean handleDisclosureNode(double x, double y) {
+    @Override protected boolean handleDisclosureNode(double x, double y) {
         TreeCell<T> treeCell = getControl();
         Node disclosureNode = treeCell.getDisclosureNode();
         if (disclosureNode != null) {

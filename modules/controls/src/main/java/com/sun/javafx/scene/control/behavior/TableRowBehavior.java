@@ -52,27 +52,27 @@ public class TableRowBehavior<T> extends TableRowBehaviorBase<TableRow<T>> {
      *                                                                         *
      **************************************************************************/
 
-    @Override TableSelectionModel<T> getSelectionModel() {
+    @Override protected TableSelectionModel<T> getSelectionModel() {
         return getCellContainer().getSelectionModel();
     }
 
-    @Override TablePositionBase<?> getFocusedCell() {
+    @Override protected TablePositionBase<?> getFocusedCell() {
         return getCellContainer().getFocusModel().getFocusedCell();
     }
 
-    @Override FocusModel<T> getFocusModel() {
+    @Override protected FocusModel<T> getFocusModel() {
         return getCellContainer().getFocusModel();
     }
 
-    @Override ObservableList getVisibleLeafColumns() {
+    @Override protected ObservableList getVisibleLeafColumns() {
         return getCellContainer().getVisibleLeafColumns();
     }
 
-    @Override TableView<T> getCellContainer() {
+    @Override protected TableView<T> getCellContainer() {
         return getControl().getTableView();
     }
 
-    @Override void edit(TableRow<T> cell) {
+    @Override protected void edit(TableRow<T> cell) {
         // no-op (for now)
     }
 }

@@ -65,20 +65,20 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *                                                                        *  
      *************************************************************************/  
     
-    abstract TableColumnBase<S, T> getTableColumn(); // getControl().getTableColumn()
-    abstract int getItemCount();        // tableView.impl_getTreeItemCount()
-    abstract TableSelectionModel<S> getSelectionModel();
-    abstract TableFocusModel<S,TC> getFocusModel();
-    abstract TablePositionBase getFocusedCell();
-    abstract boolean isTableRowSelected(); // tableCell.getTreeTableRow().isSelected()
+    protected abstract TableColumnBase<S, T> getTableColumn(); // getControl().getTableColumn()
+    protected abstract int getItemCount();        // tableView.impl_getTreeItemCount()
+    protected abstract TableSelectionModel<S> getSelectionModel();
+    protected abstract TableFocusModel<S,TC> getFocusModel();
+    protected abstract TablePositionBase getFocusedCell();
+    protected abstract boolean isTableRowSelected(); // tableCell.getTreeTableRow().isSelected()
 
     /**
      * Returns the position of the given table column in the visible leaf columns
      * list of the underlying control.
      */
     protected abstract int getVisibleLeafIndex(TableColumnBase<S,T> tc);
-    
-    abstract void focus(int row, TableColumnBase<S,T> tc); //fm.focus(new TreeTablePosition(tableView, row, tableColumn));
+
+    protected abstract void focus(int row, TableColumnBase<S,T> tc); //fm.focus(new TreeTablePosition(tableView, row, tableColumn));
 
     
     

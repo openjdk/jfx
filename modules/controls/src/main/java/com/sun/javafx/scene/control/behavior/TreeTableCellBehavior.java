@@ -59,37 +59,37 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
      **************************************************************************/          
 
     /** @{@inheritDoc} */
-    @Override TreeTableView<S> getCellContainer() {
+    @Override protected TreeTableView<S> getCellContainer() {
         return getControl().getTreeTableView();
     }
 
     /** @{@inheritDoc} */
-    @Override TreeTableColumn<S,T> getTableColumn() {
+    @Override protected TreeTableColumn<S,T> getTableColumn() {
         return getControl().getTableColumn();
     }
 
     /** @{@inheritDoc} */
-    @Override int getItemCount() {
+    @Override protected int getItemCount() {
         return getCellContainer().getExpandedItemCount();
     }
 
     /** @{@inheritDoc} */
-    @Override TreeTableView.TreeTableViewSelectionModel<S> getSelectionModel() {
+    @Override protected TreeTableView.TreeTableViewSelectionModel<S> getSelectionModel() {
         return getCellContainer().getSelectionModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TreeTableView.TreeTableViewFocusModel<S> getFocusModel() {
+    @Override protected TreeTableView.TreeTableViewFocusModel<S> getFocusModel() {
         return getCellContainer().getFocusModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TablePositionBase getFocusedCell() {
+    @Override protected TablePositionBase getFocusedCell() {
         return getCellContainer().getFocusModel().getFocusedCell();
     }
 
     /** @{@inheritDoc} */
-    @Override boolean isTableRowSelected() {
+    @Override protected boolean isTableRowSelected() {
         return getControl().getTreeTableRow().isSelected();
     }
 
@@ -99,12 +99,12 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
     }
 
     /** @{@inheritDoc} */
-    @Override void focus(int row, TableColumnBase tc) {
+    @Override protected void focus(int row, TableColumnBase tc) {
         getFocusModel().focus(row, (TreeTableColumn)tc);
     }
 
     /** @{@inheritDoc} */
-    @Override void edit(TreeTableCell<S,T> cell) {
+    @Override protected void edit(TreeTableCell<S,T> cell) {
         if (cell == null) {
             getCellContainer().edit(-1, null);
         } else {

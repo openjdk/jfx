@@ -53,13 +53,13 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
     private static final String ANCHOR_PROPERTY_KEY = "anchor";
 
-    static <T> T getAnchor(Control control, T defaultResponse) {
+    public static <T> T getAnchor(Control control, T defaultResponse) {
         return hasAnchor(control) ?
                 (T) control.getProperties().get(ANCHOR_PROPERTY_KEY) :
                 defaultResponse;
     }
 
-    static <T> void setAnchor(Control control, T anchor) {
+    public static <T> void setAnchor(Control control, T anchor) {
         if (control != null && anchor == null) {
             removeAnchor(control);
         } else {
@@ -67,11 +67,11 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         }
     }
 
-    static boolean hasAnchor(Control control) {
+    public static boolean hasAnchor(Control control) {
         return control.getProperties().get(ANCHOR_PROPERTY_KEY) != null;
     }
 
-    static void removeAnchor(Control control) {
+    public static void removeAnchor(Control control) {
         control.getProperties().remove(ANCHOR_PROPERTY_KEY);
     }
 
@@ -101,15 +101,14 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
     }
 
 
-    abstract Control getCellContainer(); // e.g. ListView
-    abstract MultipleSelectionModel<?> getSelectionModel();
-    abstract FocusModel<?> getFocusModel();
-    abstract void edit(T cell);
-    boolean handleDisclosureNode(double x, double y) {
+    protected abstract Control getCellContainer(); // e.g. ListView
+    protected abstract MultipleSelectionModel<?> getSelectionModel();
+    protected abstract FocusModel<?> getFocusModel();
+    protected abstract void edit(T cell);
+    protected boolean handleDisclosureNode(double x, double y) {
         return false;
     }
-
-    boolean isClickPositionValid(final double x, final double y) {
+    protected boolean isClickPositionValid(final double x, final double y) {
         return true;
     }
 
@@ -120,7 +119,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
      *                                                                         *
      **************************************************************************/
 
-    int getIndex() {
+    protected int getIndex() {
         return getControl() instanceof IndexedCell ? ((IndexedCell)getControl()).getIndex() : -1;
     }
 

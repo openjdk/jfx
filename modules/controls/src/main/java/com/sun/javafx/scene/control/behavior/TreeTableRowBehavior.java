@@ -52,27 +52,27 @@ public class TreeTableRowBehavior<T> extends TableRowBehaviorBase<TreeTableRow<T
      *                                                                         *
      **************************************************************************/
 
-    @Override TableSelectionModel<TreeItem<T>> getSelectionModel() {
+    @Override protected TableSelectionModel<TreeItem<T>> getSelectionModel() {
         return getCellContainer().getSelectionModel();
     }
 
-    @Override TableFocusModel<TreeItem<T>,?> getFocusModel() {
+    @Override protected TableFocusModel<TreeItem<T>,?> getFocusModel() {
         return getCellContainer().getFocusModel();
     }
 
-    @Override TreeTableView<T> getCellContainer() {
+    @Override protected TreeTableView<T> getCellContainer() {
         return getControl().getTreeTableView();
     }
 
-    @Override TablePositionBase<?> getFocusedCell() {
+    @Override protected TablePositionBase<?> getFocusedCell() {
         return getCellContainer().getFocusModel().getFocusedCell();
     }
 
-    @Override ObservableList getVisibleLeafColumns() {
+    @Override protected ObservableList getVisibleLeafColumns() {
         return getCellContainer().getVisibleLeafColumns();
     }
 
-    @Override void edit(TreeTableRow<T> cell) {
+    @Override protected void edit(TreeTableRow<T> cell) {
         // no-op (for now)
     }
 

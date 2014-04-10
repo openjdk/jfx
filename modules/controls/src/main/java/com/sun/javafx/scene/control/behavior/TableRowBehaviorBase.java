@@ -67,11 +67,11 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
         super.mousePressed(e);
     }
 
-    @Override abstract TableSelectionModel<?> getSelectionModel();
+    @Override protected abstract TableSelectionModel<?> getSelectionModel();
 
-    abstract TablePositionBase<?> getFocusedCell();
+    protected abstract TablePositionBase<?> getFocusedCell();
 
-    abstract ObservableList getVisibleLeafColumns();
+    protected abstract ObservableList getVisibleLeafColumns();
 
 
 
@@ -124,7 +124,7 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
         }
     }
 
-    @Override boolean isClickPositionValid(final double x, final double y) {
+    @Override protected boolean isClickPositionValid(final double x, final double y) {
         // get width of all visible columns (we only care about clicks to the
         // right of the right-most column)
         List<TableColumnBase<T, ?>> columns = getVisibleLeafColumns();
