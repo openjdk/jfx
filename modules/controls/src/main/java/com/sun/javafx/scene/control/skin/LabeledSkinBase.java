@@ -149,7 +149,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         registerChangeListener(labeled.wrapTextProperty(), "WRAP_TEXT");
         registerChangeListener(labeled.underlineProperty(), "UNDERLINE");
         registerChangeListener(labeled.lineSpacingProperty(), "LINE_SPACING");
-        registerChangeListener(labeled.parentProperty(), "PARENT");
+        registerChangeListener(labeled.sceneProperty(), "SCENE");
     }
 
     /***************************************************************************
@@ -221,8 +221,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             textMetricsChanged();
         } else if ("LINE_SPACING".equals(p)) {
             textMetricsChanged();
-        } else if ("PARENT".equals(p)) {
-            parentChanged();
+        } else if ("SCENE".equals(p)) {
+            sceneChanged();
         }
     }
 
@@ -260,41 +260,18 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     */
     protected void mnemonicTargetChanged() {
         if (containsMnemonic == true) {
-            KeyCombination mnemonicKeyCombo = mnemonicCode;
-
             /*
             ** was there previously a labelFor
             */
-            if (mnemonicScene != null) {
-                if (labeledNode != null) {
-                    Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                    mnemonicScene.removeMnemonic(myMnemonic);
-                    mnemonicScene = null;
-                }
-                else {
-                    /*
-                    ** maybe we were a target ourselves
-                    */
-                    Mnemonic myMnemonic = new Mnemonic(getSkinnable(), mnemonicKeyCombo);
-                    mnemonicScene.removeMnemonic(myMnemonic);
-                    mnemonicScene = null;
-                }
-            }
+            removeMnemonic();
 
             /*
             ** is there a new labelFor
             */
             Control control = getSkinnable();
             if (control instanceof Label) {
-                Node newNode = ((Label)control).getLabelFor();
-                if (newNode != null) {
-                    Mnemonic myMnemonic = new Mnemonic(newNode, mnemonicKeyCombo);
-                    mnemonicScene = newNode.getScene();
-                    if (mnemonicScene != null) {
-                        mnemonicScene.addMnemonic(myMnemonic);
-                    }
-                }
-                labeledNode = newNode;
+                labeledNode = ((Label)control).getLabelFor();
+                addMnemonic();
             }
             else {
                 labeledNode = null;
@@ -302,45 +279,14 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
     }
 
-    /*
-    ** parent has changed,
-    ** if it's null then remove any mnemonics from the scene,
-    ** if it's valid then check to see if mnemonics should
-    ** be added
-    */
-    private void parentChanged() {
+    private void sceneChanged() {
         final Labeled labeled = getSkinnable();
-        Parent newParent = labeled.getParent();
+        Scene scene = labeled.getScene();
 
-        if (newParent == null) {
-            /*
-            ** we're here because we lost our parent
-            ** tidy up any mnemonics that may have been
-            ** left on the scene
-            */
-            if (mnemonicScene != null) {
-                KeyCombination mnemonicKeyCombo = mnemonicCode;
-                Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                mnemonicScene.removeMnemonic(myMnemonic);
-                mnemonicScene = null;
-            }
+        if (scene != null) {
+            addMnemonic();
         }
-        else {
-            /*
-            ** we're here because we just got a parent,
-            ** add any mnemonics etc to the scene.
-            */
-            if (containsMnemonic == true) {
-                KeyCombination mnemonicKeyCombo = mnemonicCode;
-                if (labeledNode != null) {
-                    Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                    mnemonicScene = labeledNode.getScene();
-                    if (mnemonicScene != null) {
-                        mnemonicScene.addMnemonic(myMnemonic);
-                    }
-                }
-            }
-        }
+
     }
 
     /**
@@ -382,7 +328,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                     */
                     if (labeled instanceof Label) {
                         // buttons etc
-                        labeledNode = (Node)((Label)labeled).getLabelFor();
+                        labeledNode = ((Label)labeled).getLabelFor();
                     } else {
                         labeledNode = labeled;
                     }
@@ -397,18 +343,14 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             /*
             ** we were previously a mnemonic
             */
-            if (containsMnemonic == true) {
+            if (containsMnemonic) {
                 /*
                 ** are we no longer a mnemonic, or have we changed code?
                 */
                 if (mnemonicScene != null) {
                     if (mnemonicIndex == -1 ||
-                        (bindings != null && !bindings.getMnemonicKeyCombination().equals(mnemonicCode))) {
-
-                        KeyCombination mnemonicKeyCombo = mnemonicCode;
-                        Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                        mnemonicScene.removeMnemonic(myMnemonic);
-                        mnemonicScene = null;
+                            (bindings != null && !bindings.getMnemonicKeyCombination().equals(mnemonicCode))) {
+                        removeMnemonic();
                     }
                     containsMnemonic = false;
                 }
@@ -418,12 +360,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 ** this can happen if mnemonic parsing is
                 ** disabled on a previously valid mnemonic
                 */
-                if (mnemonicScene != null && labeledNode != null) {
-                    KeyCombination mnemonicKeyCombo = mnemonicCode;
-                    Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                    mnemonicScene.removeMnemonic(myMnemonic);
-                    mnemonicScene = null;
-                }
+                removeMnemonic();
             }
 
             /*
@@ -433,15 +370,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 if (mnemonicIndex >= 0 && containsMnemonic == false) {
                     containsMnemonic = true;
                     mnemonicCode = bindings.getMnemonicKeyCombination();
-
-                    KeyCombination mnemonicKeyCombo = mnemonicCode;
-                    if (labeledNode != null) {
-                        Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                        mnemonicScene = labeledNode.getScene();
-                        if (mnemonicScene != null) {
-                            mnemonicScene.addMnemonic(myMnemonic);
-                        }
-                    }
+                    addMnemonic();
                 }
             }
 
@@ -579,6 +508,23 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             text.setText(result);
             updateWrappingWidth();
             invalidText = false;
+        }
+    }
+
+    private void addMnemonic() {
+        if (labeledNode != null) {
+            mnemonicScene = labeledNode.getScene();
+            if (mnemonicScene != null) {
+                mnemonicScene.addMnemonic(new Mnemonic(labeledNode, mnemonicCode));
+            }
+        }
+    }
+
+
+    private void removeMnemonic() {
+        if (mnemonicScene != null && labeledNode != null) {
+            mnemonicScene.removeMnemonic(new Mnemonic(labeledNode, mnemonicCode));
+            mnemonicScene = null;
         }
     }
 

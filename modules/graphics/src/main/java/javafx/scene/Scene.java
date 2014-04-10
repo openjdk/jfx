@@ -60,7 +60,6 @@ import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.NamedArg;
-import javafx.beans.Observable;
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
@@ -4112,6 +4111,12 @@ public class Scene implements EventTarget {
         getInternalEventDispatcher().getKeyboardShortcutsHandler()
                                     .removeMnemonic(m);
     }
+
+    final void clearNodeMnemonics(Node node) {
+        getInternalEventDispatcher().getKeyboardShortcutsHandler()
+                .clearNodeMnemonics(node);
+    }
+
 
     /**
      * Gets the list of mnemonics for this {@code Scene}.

@@ -839,6 +839,10 @@ public abstract class Node implements EventTarget, Styleable {
         if (newScene == null && peer != null) {
             peer.release();
         }
+
+        if (oldScene != null) {
+            oldScene.clearNodeMnemonics(this);
+        }
         if (getParent() == null) {
             // if we are the root we need to handle scene change
             parentResolvedOrientationInvalidated();

@@ -27,6 +27,7 @@ package com.sun.javafx.scene;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -380,6 +381,19 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         if (b != mnemonicsDisplayEnabled) {
             mnemonicsDisplayEnabled = b;
             processMnemonicsKeyDisplay();
+        }
+    }
+
+    public void clearNodeMnemonics(Node node) {
+        if (mnemonics != null) {
+            for (ObservableList<Mnemonic> list : mnemonics.values()) {
+                for (Iterator<Mnemonic> it = list.iterator(); it.hasNext(); ) {
+                    Mnemonic m = it.next();
+                    if (m.getNode() == node) {
+                        it.remove();
+                    }
+                }
+            }
         }
     }
 }
