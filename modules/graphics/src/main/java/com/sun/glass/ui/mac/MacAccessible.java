@@ -692,10 +692,11 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             case FOCUS_NODE: {
                 Node node = (Node)getAttribute(FOCUS_NODE);
-                final View view = getView();
+                View view = getView();
                 if (node == null && view == null) {
                     /* The transientFocusContainer resigns focus.
-                       Delegate to the scene. */
+                     * Delegate to the scene.
+                     */
                     Scene scene = (Scene)getAttribute(SCENE);
                     if (scene != null) {
                         Accessible acc = scene.getAccessible();
@@ -709,9 +710,13 @@ final class MacAccessible extends PlatformAccessible {
                 if (node != null) {
                     Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
                     id = item != null ? getAccessible(item) : getAccessible(node);
-                } else if (view != null) {
-                    /* No focused element. Send the notification to the scene itself. */
-                    id = view.getNativeView();
+                } else {
+                    /* No focused element. Send the notification to the scene itself.
+                     * Note, the view is NULL when the FOCUS_NODE notification is sent
+                     * by the transientFocusContainer.
+                     */
+                    if (view == null) view = getRootView((Scene)getAttribute(SCENE));
+                    if (view != null) id = view.getNativeView();
                 }
 
                 if (id != 0) {
