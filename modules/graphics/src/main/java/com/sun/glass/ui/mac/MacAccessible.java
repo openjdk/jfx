@@ -80,7 +80,7 @@ final class MacAccessible extends PlatformAccessible {
         }
     }
 
-    enum MacAttributes {
+    static enum MacAttributes {
         // Dynamic mapping to FX attribute, dynamic return type
         NSAccessibilityValueAttribute(null, null),
 
@@ -90,7 +90,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityEnabledAttribute(ENABLED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityHelpAttribute(TOOLTIP, MacVariant::createNSString),
 
-        /* FOCUSED might not match the result of accessibilityFocusedUIElement() cause of FOCUS_ITEM */
+        // FOCUSED might not match the result of accessibilityFocusedUIElement() cause of FOCUS_ITEM 
         NSAccessibilityFocusedAttribute(FOCUSED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityExpandedAttribute(EXPANDED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityMaxValueAttribute(MAX_VALUE, MacVariant::createNSNumberForDouble),
@@ -156,15 +156,14 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityRowIndexRangeAttribute(ROW_INDEX, MacVariant::createNSValueForRange),
         NSAccessibilityColumnIndexRangeAttribute(COLUMN_INDEX, MacVariant::createNSValueForRange),
 
-        /* Parameterized Attributes */
+        // Parameterized Attributes
         NSAccessibilityLineForIndexParameterizedAttribute(LINE_FOR_OFFSET, MacVariant::createNSNumberForInt, MacVariant.NSNumber_Int),
         NSAccessibilityStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSString, MacVariant.NSValue_range),
         NSAccessibilityRangeForLineParameterizedAttribute(LINE_START, MacVariant::createNSValueForRange, MacVariant.NSNumber_Int),
         NSAccessibilityAttributedStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSAttributedString, MacVariant.NSValue_range),
         NSAccessibilityCellForColumnAndRowParameterizedAttribute(CELL_AT_ROW_COLUMN, MacVariant::createNSObject, MacVariant.NSArray_int),
-        ;
 
-        long ptr; /* Initialized natively - treat as final */
+        ;long ptr; /* Initialized natively - treat as final */
         Attribute jfxAttr;
         Function<Object, MacVariant> map; /* Maps the object returned by JavaFX to the appropriate MacVariant */
         int inputType; /* Defined only for parameterized attributes to convert the native input parameter (id) to MacVariant */
@@ -195,7 +194,7 @@ final class MacAccessible extends PlatformAccessible {
      * The Attribute and Action for roles are defined in
      * https://developer.apple.com/library/mac/documentation/UserExperience/Reference/Accessibility_RoleAttribute_Ref/Introduction.html
      */
-    enum MacRoles {
+    static enum MacRoles {
         NSAccessibilityUnknownRole(Role.NODE, null, null),
         NSAccessibilityGroupRole(Role.PARENT, null, null),
         NSAccessibilityButtonRole(new Role[] {Role.BUTTON, Role.INCREMENT_BUTTON, Role.DECREMENT_BUTTON, Role.HEADER, Role.SPLIT_MENU_BUTTON},
@@ -259,6 +258,12 @@ final class MacAccessible extends PlatformAccessible {
             null,
             null
         ),
+        /* ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole.
+         * Depending on the state of the indeterminate property.
+         * Only in NSAccessibilityRoleAttribute and NSAccessibilityRoleDescriptionAttribute
+         * the correct adjustments are made, on all other method BusyIndicatorRole reply 
+         * as a ProgressIndicatorRole.
+         */
         NSAccessibilityProgressIndicatorRole(Role.PROGRESS_INDICATOR,
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityOrientationAttribute,
@@ -268,6 +273,7 @@ final class MacAccessible extends PlatformAccessible {
             },
             null
         ),
+        NSAccessibilityBusyIndicatorRole(Role.PROGRESS_INDICATOR, null, null),
         NSAccessibilityMenuBarRole(Role.MENU_BAR,
             new MacAttributes[] {
                 MacAttributes.NSAccessibilitySelectedChildrenAttribute,
@@ -312,14 +318,6 @@ final class MacAccessible extends PlatformAccessible {
                 MacActions.NSAccessibilityPressAction,
             }
         ),
-        /* 
-         * ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole.
-         * Depending on the state of the indeterminate property.
-         * Only in NSAccessibilityRoleAttribute and NSAccessibilityRoleDescriptionAttribute
-         * the correct adjustments are made, on all other method BusyIndicatorRole reply 
-         * as a ProgressIndicatorRole.
-         */
-        NSAccessibilityBusyIndicatorRole(Role.PROGRESS_INDICATOR, null, null),
         NSAccessibilityStaticTextRole(new Role[] {Role.TEXT, Role.TREE_TABLE_CELL},
             textAttributes,null, textParameterizedAttributes
         ),
@@ -446,16 +444,15 @@ final class MacAccessible extends PlatformAccessible {
             null
         ),
         AXDateTimeArea(Role.DATE_PICKER,
-                new MacAttributes[] {
-                    MacAttributes.NSAccessibilityEnabledAttribute,
-                    MacAttributes.NSAccessibilityValueAttribute,
-                    MacAttributes.AXDateTimeComponents,
-                },
-                null
-            ),
-        ;
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilityEnabledAttribute,
+                MacAttributes.NSAccessibilityValueAttribute,
+                MacAttributes.AXDateTimeComponents,
+            },
+            null
+        ),
 
-        long ptr; /* Initialized natively - treat as final */
+        ;long ptr; /* Initialized natively - treat as final */
         Role[] jfxRoles;
         List<MacAttributes> macAttributes;
         List<MacAttributes> macParameterizedAttributes;
@@ -484,7 +481,7 @@ final class MacAccessible extends PlatformAccessible {
         }
     }
 
-    enum MacSubroles {
+    static enum MacSubroles {
         NSAccessibilityTableRowSubrole(Role.LIST_ITEM, Role.TABLE_ROW),
         NSAccessibilitySortButtonSubrole(Role.HEADER),
         NSAccessibilitySecureTextFieldSubrole(Role.PASSWORD_FIELD),
@@ -506,9 +503,8 @@ final class MacAccessible extends PlatformAccessible {
                 MacAttributes.NSAccessibilitySubroleAttribute
             }
         )
-        ;
 
-        long ptr; /* Initialized natively - treat as final */
+        ;long ptr; /* Initialized natively - treat as final */
         Role[] jfxRoles;
         List<MacAttributes> macAttributes;
 
@@ -534,7 +530,7 @@ final class MacAccessible extends PlatformAccessible {
         }
     }
 
-    enum MacActions {
+    static enum MacActions {
         NSAccessibilityCancelAction,
         NSAccessibilityConfirmAction,
         NSAccessibilityDecrementAction(Action.DECREMENT),
@@ -543,9 +539,9 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityPickAction,
         NSAccessibilityPressAction(Action.FIRE),
         NSAccessibilityRaiseAction,
-        NSAccessibilityShowMenuAction(Action.SHOW_MENU);
+        NSAccessibilityShowMenuAction(Action.SHOW_MENU),
 
-        long ptr; /* Initialized natively - treat as final */
+        ;long ptr; /* Initialized natively - treat as final */
         Action jfxAction;
         MacActions() {}
         MacActions(Action jfxAction) {
@@ -562,7 +558,7 @@ final class MacAccessible extends PlatformAccessible {
         }
     }
 
-    enum MacNotifications {
+    static enum MacNotifications {
         NSAccessibilityCreatedNotification,
         NSAccessibilityFocusedUIElementChangedNotification,
         NSAccessibilityValueChangedNotification,
@@ -577,17 +573,17 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityRowCollapsedNotification,
         AXMenuOpened,
         AXMenuClosed,
-        ;long ptr;
+        ;long ptr; /* Initialized natively - treat as final */
     }
 
-    enum MacOrientations {
+    static enum MacOrientations {
         NSAccessibilityHorizontalOrientationValue,
         NSAccessibilityVerticalOrientationValue,
-        NSAccessibilityUnknownOrientationValue;
-        long ptr;
+        NSAccessibilityUnknownOrientationValue,
+        ;long ptr; /* Initialized natively - treat as final */
     }
 
-    List<MacAttributes> baseAttributes = Arrays.asList(
+    static final List<MacAttributes> baseAttributes = Arrays.asList(
         MacAttributes.NSAccessibilityRoleAttribute,
         MacAttributes.NSAccessibilityRoleDescriptionAttribute,
         MacAttributes.NSAccessibilityHelpAttribute,
