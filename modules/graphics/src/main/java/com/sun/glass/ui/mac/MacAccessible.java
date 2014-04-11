@@ -224,8 +224,10 @@ final class MacAccessible extends PlatformAccessible {
             new MacActions[] {MacActions.NSAccessibilityPressAction},
             null
         ),
+        /* ComboBox can be either a NSAccessibilityComboBoxRole or a NSAccessibilityPopUpButtonRole (Based on EDITABLE) */
         NSAccessibilityComboBoxRole(new Role[] {Role.COMBOBOX},
             new MacAttributes[] {
+                MacAttributes.NSAccessibilityExpandedAttribute, /* Note, besides AXExpanded the rest is textAttributes */
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityValueAttribute,
                 MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
@@ -235,12 +237,7 @@ final class MacAccessible extends PlatformAccessible {
                 MacAttributes.NSAccessibilityVisibleCharacterRangeAttribute,
             },
             new MacActions[] {MacActions.NSAccessibilityPressAction},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityLineForIndexParameterizedAttribute,
-                MacAttributes.NSAccessibilityRangeForLineParameterizedAttribute,
-                MacAttributes.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
-                MacAttributes.NSAccessibilityStringForRangeParameterizedAttribute,
-            }
+            textParameterizedAttributes
         ),
         NSAccessibilityPopUpButtonRole(Role.COMBOBOX,
             new MacAttributes[] {
@@ -258,12 +255,7 @@ final class MacAccessible extends PlatformAccessible {
             null,
             null
         ),
-        /* ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole.
-         * Depending on the state of the indeterminate property.
-         * Only in NSAccessibilityRoleAttribute and NSAccessibilityRoleDescriptionAttribute
-         * the correct adjustments are made, on all other method BusyIndicatorRole reply 
-         * as a ProgressIndicatorRole.
-         */
+        /* ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole (Based on INDETERMINATE) */
         NSAccessibilityProgressIndicatorRole(Role.PROGRESS_INDICATOR,
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityOrientationAttribute,
@@ -273,7 +265,13 @@ final class MacAccessible extends PlatformAccessible {
             },
             null
         ),
-        NSAccessibilityBusyIndicatorRole(Role.PROGRESS_INDICATOR, null, null),
+        NSAccessibilityBusyIndicatorRole(Role.PROGRESS_INDICATOR,
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilityOrientationAttribute,
+                MacAttributes.NSAccessibilityValueAttribute,
+            },
+            null
+        ),
         NSAccessibilityMenuBarRole(Role.MENU_BAR,
             new MacAttributes[] {
                 MacAttributes.NSAccessibilitySelectedChildrenAttribute,
@@ -879,7 +877,7 @@ final class MacAccessible extends PlatformAccessible {
         Role role = (Role)getAttribute(ROLE);
         if (role != null) {
             List<MacAttributes> attrs = new ArrayList<>(baseAttributes);
-            MacRoles macRole = MacRoles.getRole(role);
+            MacRoles macRole = getRole(role);
             if (macRole != null && macRole.macAttributes != null) {
                 attrs.addAll(macRole.macAttributes);
             }
@@ -1488,7 +1486,7 @@ final class MacAccessible extends PlatformAccessible {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         Role role = (Role)getAttribute(ROLE);
         if (role != null) {
-            MacRoles macRole = MacRoles.getRole(role);
+            MacRoles macRole = getRole(role);
             if (macRole != null && macRole.macParameterizedAttributes != null) {
                 Stream<MacAttributes> attrs = macRole.macParameterizedAttributes.stream();
 
@@ -1563,7 +1561,7 @@ final class MacAccessible extends PlatformAccessible {
         Role role = (Role)getAttribute(ROLE);
         List<MacActions> actions = new ArrayList<>();
         if (role != null) {
-            MacRoles macRole = MacRoles.getRole(role);
+            MacRoles macRole = getRole(role);
             if (macRole != null && macRole.macActions != null) {
                 actions.addAll(macRole.macActions);
             }
