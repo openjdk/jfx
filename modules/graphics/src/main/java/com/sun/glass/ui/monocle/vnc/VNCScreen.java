@@ -241,21 +241,18 @@ public class VNCScreen extends HeadlessScreen {
                             buffer.clear();
                             buffer.limit(6);
                             socket.read(buffer);
-                            Platform.runLater(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        if (fb.hasReceivedData()) {
-                                            // an update is in progress and will
-                                            // be sent on the next call to
-                                            // swapBuffers. No need to
-                                            // respond to this request.
-                                        } else {
-                                            sendBuffer(socket);
-                                        }
-                                    } catch (IOException e) {
-                                        removeClient(ClientConnection.this, e);
+                            Platform.runLater(() -> {
+                                try {
+                                    if (fb.hasReceivedData()) {
+                                        // an update is in progress and will
+                                        // be sent on the next call to
+                                        // swapBuffers. No need to
+                                        // respond to this request.
+                                    } else {
+                                        sendBuffer(socket);
                                     }
+                                } catch (IOException e) {
+                                    removeClient(ClientConnection.this, e);
                                 }
                             });
                             break;
@@ -285,12 +282,7 @@ public class VNCScreen extends HeadlessScreen {
                             if (buttons.get(2)) {
                                 state.pressButton(MouseEvent.BUTTON_RIGHT);
                             }
-                            Platform.runLater(new Runnable() {
-                                @Override
-                                public void run() {
-                                    MouseInput.getInstance().setState(state, false);
-                                }
-                            });
+                            Platform.runLater(() -> MouseInput.getInstance().setState(state, false));
                             break;
                         }
                         case 6: // ClientCutText

@@ -57,11 +57,7 @@ public abstract class Effect {
     private final int maxInputs;
 
     static {
-        AccessHelper.setStateAccessor(new AccessHelper.StateAccessor() {
-            public Object getState(Effect effect) {
-                return effect.getState();
-            }
-        });
+        AccessHelper.setStateAccessor(effect -> effect.getState());
     }
 
     /**

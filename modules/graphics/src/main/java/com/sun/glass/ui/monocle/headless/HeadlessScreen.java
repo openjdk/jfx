@@ -54,12 +54,7 @@ public class HeadlessScreen implements NativeScreen {
         this.width = defaultWidth;
         this.height = defaultHeight;
         this.depth = defaultDepth;
-        String geometry = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override
-            public String run() {
-                return System.getProperty("headless.geometry");
-            }
-        });
+        String geometry = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("headless.geometry"));
         if (geometry != null && geometry.indexOf('x') > 0) {
             try {
                 int i = geometry.indexOf("x");

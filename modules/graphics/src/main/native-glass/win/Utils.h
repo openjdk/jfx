@@ -237,21 +237,28 @@ private:
 inline jstring CreateJString(JNIEnv *env, const wchar_t *wszStr) {
     if (wszStr == NULL)
         return NULL;
-    return env->NewString((const jchar *)wszStr, jsize(wcslen(wszStr)));
+    jstring jStr = env->NewString((const jchar *)wszStr, jsize(wcslen(wszStr)));
+    if (CheckAndClearException(env)) return NULL;
+    return jStr;
 }
 
 inline jstring CreateJString(JNIEnv *env, const char *szStr) {
     if (szStr == NULL)
         return NULL;
-    return env->NewStringUTF(szStr);
+    jstring jStr = env->NewStringUTF(szStr);
+    if (CheckAndClearException(env)) return NULL;
+    return jStr;
 }
 
 inline jstring ConcatJStrings(JNIEnv *env, jstring str1, jstring str2) {
     if (str1 == NULL || str2 == NULL)
         return NULL;
     jclass cls = env->FindClass("java/lang/String");
-
+    if (CheckAndClearException(env)) {
+        return NULL;
+    }
     jmethodID mid = env->GetMethodID(cls, "concat", "(Ljava/lang/String;)Ljava/lang/String;");
+    if (CheckAndClearException(env)) return NULL;
     jstring ret = (jstring)env->CallObjectMethod(str1, mid, str2);
     CheckAndClearException(env);
 

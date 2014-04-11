@@ -366,10 +366,8 @@ public class PopupTest {
         Popup p1 = new Popup();
         p1.setAutoHide(true);
         p1.show(stage);
-        p1.setOnAutoHide(new EventHandler<Event>() {
-            @Override public void handle(Event e) {
-                done = true;
-            }
+        p1.setOnAutoHide(e -> {
+            done = true;
         });
         Rectangle rect = new Rectangle(20, 20, 50, 50);
         p1.getContent().add(rect);

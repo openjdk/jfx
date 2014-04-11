@@ -352,7 +352,7 @@ public class TableViewMouseInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        new StageLoader(tableView);
+        StageLoader sl = new StageLoader(tableView);
 
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -370,6 +370,8 @@ public class TableViewMouseInputTest {
         assertEquals(0, sm.getSelectedIndex());
         assertEquals(0, fm.getFocusedIndex());
         assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
     }
 
     private int rt_30626_count = 0;
@@ -474,5 +476,6 @@ public class TableViewMouseInputTest {
 
         MouseEventFirer mouse = new MouseEventFirer(row);
         mouse.fireMousePressAndRelease(1, 100, 10);
+        mouse.dispose();
     }
 }

@@ -33,12 +33,6 @@ package javafx.scene.accessibility;
 public enum Role {
 
     /**
-     * Accordion
-     * Attributes:
-     */
-    ACCORDION,
-
-    /**
      * Button
      * Attributes: TITLE
      * Actions: FIRE
@@ -65,6 +59,13 @@ public enum Role {
      * Actions:
      */
     CONTEXT_MENU,
+
+    /**
+     * DatePicker.
+     * Attributed: DATE, TITLE
+     * Actions:
+     */
+    DATE_PICKER,
 
     /**
      * Decrement button
@@ -127,6 +128,13 @@ public enum Role {
      * Actions:
      */
     MENU_BAR,
+
+    /**
+     * Menu Button.
+     * Attributed: TITLE.
+     * Actions: FIRE.
+     */
+    MENU_BUTTON,
 
     /**
      * Menu Item.
@@ -232,6 +240,13 @@ public enum Role {
      * Actions: (none)
      */
     SCROLL_PANE,
+
+    /**
+     * SplitMenuButton
+     * Attributes: TITLE, EXPANDED.
+     * Actions: FIRE, EXPAND, COLLAPSE.
+     */
+    SPLIT_MENU_BUTTON,
 
     /**
      * Tab

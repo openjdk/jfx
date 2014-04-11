@@ -339,12 +339,7 @@ public final class Scenegraph_eventHandlers_Test {
     private static final Event TEST_EVENT = new Event(new EventType<Event>());
 
     private static final EventHandler<Event> EVENT_CONSUMING_HANDLER =
-            new EventHandler<Event>() {
-                @Override
-                public void handle(final Event event) {
-                    event.consume();
-                }
-            };
+            event -> event.consume();
 
     private static final class EventCountingHandler 
             implements EventHandler<Event> {

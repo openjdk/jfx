@@ -52,20 +52,9 @@ public class BundlerParamInfo<T> {
     Class<T> valueType;
 
     /**
-     * If the parameter is not set, what parameter the bundler will fall back on to use
-     */
-    String[] fallbackIDs;
-
-    /**
      * If the value is not set, and no fallback value is found, the parameter uses the value returned by the producer.
      */
     Function<Map<String, ? super Object>, T> defaultValueFunction;
-
-    /**
-     * Does the parameter require the user or tool to set a value?  i.e. if the parameter is
-     * not set will it cause the bundler to fail?
-     */
-    boolean requiresUserSetting;
 
     /**
      * An optional string converter for command line arguments.
@@ -104,28 +93,12 @@ public class BundlerParamInfo<T> {
         this.valueType = valueType;
     }
 
-    public String[] getFallbackIDs() {
-        return fallbackIDs;
-    }
-
-    public void setFallbackIDs(String[] fallbackID) {
-        this.fallbackIDs = fallbackID;
-    }
-
     public Function<Map<String, ? super Object>, T> getDefaultValueFunction() {
         return defaultValueFunction;
     }
 
     public void setDefaultValueFunction(Function<Map<String, ? super Object>, T> defaultValueFunction) {
         this.defaultValueFunction = defaultValueFunction;
-    }
-
-    public boolean isRequiresUserSetting() {
-        return requiresUserSetting;
-    }
-
-    public void setRequiresUserSetting(boolean requiresUserSetting) {
-        this.requiresUserSetting = requiresUserSetting;
     }
 
     public BiFunction<String, Map<String, ? super Object>,T> getStringConverter() {
@@ -153,17 +126,6 @@ public class BundlerParamInfo<T> {
         if (params.containsKey(getID())) {
             // explicit nulls are allowed
             return null;
-        }
-
-        if (getFallbackIDs() != null) {
-            for (String fallback: getFallbackIDs()) {
-                o = params.get(fallback);
-                if (klass.isInstance(o)) {
-                    return (T) o;
-                } else if (o instanceof String) {
-                    return getStringConverter().apply((String)o, params);
-                }
-            }
         }
 
         if (getDefaultValueFunction() != null) {

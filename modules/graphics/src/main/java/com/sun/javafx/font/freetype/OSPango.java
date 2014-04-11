@@ -32,11 +32,9 @@ import com.sun.glass.utils.NativeLibLoader;
 class OSPango {
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-           public Void run() {
-               NativeLibLoader.loadLibrary("javafx_font_pango");
-               return null;
-           }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            NativeLibLoader.loadLibrary("javafx_font_pango");
+            return null;
         });
     }
 

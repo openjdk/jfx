@@ -344,8 +344,6 @@ public class TextField extends TextInputControl {
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.TEXT_FIELD;
-            case SELECTION_START: return getSelection().getStart();
-            case SELECTION_END: return getSelection().getEnd();
             default: return super.accGetAttribute(attribute, parameters);
         }
     }

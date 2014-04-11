@@ -339,7 +339,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
             // RT-28668: Ensemble tree arrow disappears
             if (disclosureNode.getScene() != null) {
-                disclosureNode.impl_processCSS(true);
+                disclosureNode.applyCss();
             }
         }
     }

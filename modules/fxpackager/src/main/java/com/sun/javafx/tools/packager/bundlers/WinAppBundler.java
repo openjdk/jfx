@@ -55,11 +55,13 @@ public class WinAppBundler extends AbstractBundler {
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"), 
             "configRoot",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imagesRoot = new File(BUILD_ROOT.fetchFrom(params), "windows");
                 imagesRoot.mkdirs();
                 return imagesRoot;
-            }, false, (s, p) -> null);
+            },
+            (s, p) -> null);
 
     //Subsetting of JRE is restricted.
     //JRE README defines what is allowed to strip:
@@ -69,7 +71,6 @@ public class WinAppBundler extends AbstractBundler {
             "",
             ".win.runtime.rules",
             Rule[].class,
-            null,
             params -> new Rule[]{
                 Rule.prefixNeg("\\bin\\new_plugin"),
                 Rule.prefixNeg("\\lib\\deploy"),
@@ -94,7 +95,6 @@ public class WinAppBundler extends AbstractBundler {
                 //Rule.suffixNeg("plugin.jar"),
                 Rule.suffix(".jar")
             },
-            false,
             (s, p) -> null
     );
 
@@ -103,10 +103,8 @@ public class WinAppBundler extends AbstractBundler {
             RUNTIME.getDescription(),
             RUNTIME.getID(),
             RelativeFileSet.class,
-            null,
             params -> extractJreAsRelativeFileSet(System.getProperty("java.home"),
                     WIN_JRE_RULES.fetchFrom(params)),
-            false,
             (s, p) -> extractJreAsRelativeFileSet(s,
                     WIN_JRE_RULES.fetchFrom(p))
     );
@@ -119,8 +117,9 @@ public class WinAppBundler extends AbstractBundler {
             I18N.getString("param.raw-executable-url.name"),
             I18N.getString("param.raw-executable-url.description"),
             "win.launcher.url",
-            URL.class, null, params -> WinResources.class.getResource(EXECUTABLE_NAME), 
-            false, (s, p) -> {
+            URL.class,
+            params -> WinResources.class.getResource(EXECUTABLE_NAME),
+            (s, p) -> {
                 try {
                     return new URL(s);
                 } catch (MalformedURLException e) {
@@ -133,8 +132,24 @@ public class WinAppBundler extends AbstractBundler {
             I18N.getString("param.rebrand-executable.name"),
             I18N.getString("param.rebrand-executable.description"),
             "win.launcher.rebrand",
-            Boolean.class, null, params -> Boolean.TRUE, 
-            false, (s, p) -> Boolean.valueOf(s));
+            Boolean.class,
+            params -> Boolean.TRUE,
+            (s, p) -> Boolean.valueOf(s));
+
+    public static final BundlerParamInfo<File> ICON_ICO = new StandardBundlerParam<>(
+            I18N.getString("param.icon-ico.name"),
+            I18N.getString("param.icon-ico.description"),
+            "icon.ico",
+            File.class,
+            params -> {
+                File f = ICON.fetchFrom(params);
+                if (f != null && !f.getName().toLowerCase().endsWith(".ico")) {
+                    Log.info(MessageFormat.format(I18N.getString("message.icon-not-ico"), f));
+                    return null;
+                }
+                return f;
+            },
+            (s, p) -> new File(s));
 
     public WinAppBundler() {
         super();
@@ -204,22 +219,18 @@ public class WinAppBundler extends AbstractBundler {
         }
     }
 
-    static String getAppName(Map<String, ? super Object>  p) {
-        return APP_NAME.fetchFrom(p);
-    }
-
     //it is static for the sake of sharing with "Exe" bundles
     // that may skip calls to validate/bundle in this class!
     private static File getRootDir(File outDir, Map<String, ? super Object> p) {
-        return new File(outDir, getAppName(p));
+        return new File(outDir, APP_NAME.fetchFrom(p));
     }
 
     public static File getLauncher(File outDir, Map<String, ? super Object> p) {
-        return new File(getRootDir(outDir, p), getAppName(p)+".exe");
+        return new File(getRootDir(outDir, p), APP_NAME.fetchFrom(p) +".exe");
     }
 
     private File getConfig_AppIcon(Map<String, ? super Object> params) {
-        return new File(getConfigRoot(params), getAppName(params) + ".ico");
+        return new File(getConfigRoot(params), APP_NAME.fetchFrom(params) + ".ico");
     }
 
     private final static String TEMPLATE_APP_ICON ="javalogo_white_48.ico";
@@ -234,7 +245,7 @@ public class WinAppBundler extends AbstractBundler {
     private void prepareConfigFiles(Map<String, ? super Object> params) throws IOException {
         File iconTarget = getConfig_AppIcon(params);
 
-        File icon = ICON.fetchFrom(params);
+        File icon = ICON_ICO.fetchFrom(params);
         if (icon != null && icon.exists()) {
             fetchResource(WIN_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.application-icon"),
@@ -259,7 +270,7 @@ public class WinAppBundler extends AbstractBundler {
             outputDirectory.mkdirs();
 
             if (!dependentTask) {
-                Log.info(MessageFormat.format(I18N.getString("message.creating-app-bundle"), getAppName(p), outputDirectory.getAbsolutePath()));
+                Log.info(MessageFormat.format(I18N.getString("message.creating-app-bundle"), APP_NAME.fetchFrom(p), outputDirectory.getAbsolutePath()));
             }
 
             prepareConfigFiles(p);
@@ -312,7 +323,7 @@ public class WinAppBundler extends AbstractBundler {
             copyRuntime(p, runtimeDirectory);
 
             IOUtils.copyFile(getConfig_AppIcon(p),
-                    new File(getRootDir(outputDirectory, p), getAppName(p) + ".ico"));
+                    new File(getRootDir(outputDirectory, p), APP_NAME.fetchFrom(p) + ".ico"));
 
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.result-dir"), outputDirectory.getAbsolutePath()));
@@ -320,8 +331,8 @@ public class WinAppBundler extends AbstractBundler {
 
             return rootDirectory;
         } catch (IOException ex) {
-            System.out.println("Exception: "+ex);
-            ex.printStackTrace();
+            Log.info("Exception: "+ex);
+            Log.debug(ex);
             return null;
         } finally {
             if (VERBOSE.fetchFrom(p)) {
@@ -446,7 +457,7 @@ public class WinAppBundler extends AbstractBundler {
                 APP_RESOURCES,
                 BUILD_ROOT,
                 CONFIG_ROOT,
-                ICON,
+                ICON_ICO,
                 IDENTIFIER,
                 JVM_OPTIONS,
                 JVM_PROPERTIES,
@@ -456,7 +467,6 @@ public class WinAppBundler extends AbstractBundler {
                 PREFERENCES_ID,
                 RAW_EXECUTABLE_URL,
                 WIN_RUNTIME,
-                USE_FX_PACKAGING,
                 USER_JVM_OPTIONS,
                 VERSION
         );

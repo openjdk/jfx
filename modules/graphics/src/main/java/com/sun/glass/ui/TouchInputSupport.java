@@ -76,7 +76,7 @@ public class TouchInputSupport
     public void notifyBeginTouchEvent(View view, int modifiers, boolean isDirect,
                                       int touchEventCount) {
 
-        if (curView != null && view != curView && touchCount != 0) {
+        if (curView != null && view != curView && touchCount != 0 && touch != null) {
             // Release the currently pressed touch points
             curView.notifyBeginTouchEvent(0, true, touchCount);
             for (Map.Entry<Long, TouchCoord> e : touch.entrySet()) {

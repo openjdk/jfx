@@ -30,6 +30,7 @@ import com.oracle.bundlers.StandardBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.IOUtils;
+import com.sun.javafx.tools.packager.bundlers.RelativeFileSet;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
 import com.sun.javafx.tools.resource.mac.MacResources;
 
@@ -69,13 +70,11 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
             I18N.getString("param.packages-root.description"),
             "mac.pkg.packagesRoot",
             File.class,
-            null,
             params -> {
                 File packagesRoot = new File(BUILD_ROOT.fetchFrom(params), "packages");
                 packagesRoot.mkdirs();
                 return packagesRoot;
             },
-            false,
             (s, p) -> new File(s));
 
     
@@ -84,13 +83,11 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
             I18N.getString("param.scripts-dir.description"),
             "mac.pkg.scriptsDir",
             File.class,
-            null,
             params -> {
                 File scriptsDir = new File(CONFIG_ROOT.fetchFrom(params), "scripts");
                 scriptsDir.mkdirs();
                 return scriptsDir;
             },
-            false,
             (s, p) -> new File(s));
 
     public static final BundlerParamInfo<String> DEVELOPER_ID_INSTALLER_SIGNING_KEY = new StandardBundlerParam<>(
@@ -98,7 +95,6 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-developer-id-installer.description"),
             "mac.signing-key-developer-id-installer",
             String.class,
-            null,
             params -> {
                 String key = "Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params);
                 try {
@@ -108,7 +104,6 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
                     return null;
                 }
             },
-            false,
             (s, p) -> s);
     
     public MacPKGBundler() {
@@ -430,12 +425,25 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
                     I18N.getString("error.parameters-null"),
                     I18N.getString("error.parameters-null.advice"));
 
-            // hdiutil is always available so there's no need to test for availability.
-            //run basic validation to ensure requirements are met
-
             //run basic validation to ensure requirements are met
             //we are not interested in return code, only possible exception
             APP_BUNDLER.fetchFrom(params).doValidate(params);
+
+            // validate license file, if used, exists in the proper place
+            if (params.containsKey(LICENSE_FILE.getID())) {
+                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
+                for (String license : LICENSE_FILE.fetchFrom(params)) {
+                    if (!appResources.contains(license)) {
+                        throw new ConfigException(
+                                I18N.getString("error.license-missing"),
+                                MessageFormat.format(I18N.getString("error.license-missing.advice"),
+                                        license, appResources.getBaseDirectory().toString()));
+                    }
+                }
+            }
+
+            // hdiutil is always available so there's no need to test for availability.
+
             return true;
         } catch (RuntimeException re) {
             throw new ConfigException(re);

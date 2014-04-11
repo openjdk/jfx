@@ -65,29 +65,25 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
                 return false;
             }
         };
-        Thread x11InputThread = new Thread(new Runnable() {
-            public void run() {
-                NativePlatform platform =
-                        NativePlatformFactory.getNativePlatform();
-                X11Screen screen = (X11Screen) platform.getScreen();
-                long display = screen.getDisplay();
-                long window = screen.getNativeHandle();
-                RunnableProcessor runnableProcessor =
-                        platform.getRunnableProcessor();
-                runnableProcessor.invokeLater(new Runnable() {
-                    public void run() {
-                        devices.add(device);
-                    }
-                });
-                state = new MouseState();
-                X.XEvent event = new X.XEvent();
-                while (true) {
-                    X.XNextEvent(display, event.p);
-                    if (X.XEvent.getWindow(event.p) != window) {
-                        continue;
-                    }
-                    processXEvent(event, runnableProcessor);
+        Thread x11InputThread = new Thread(() -> {
+            NativePlatform platform =
+                    NativePlatformFactory.getNativePlatform();
+            X11Screen screen = (X11Screen) platform.getScreen();
+            long display = screen.getDisplay();
+            long window = screen.getNativeHandle();
+            RunnableProcessor runnableProcessor =
+                    platform.getRunnableProcessor();
+            runnableProcessor.invokeLater(() -> {
+                devices.add(device);
+            });
+            state = new MouseState();
+            X.XEvent event = new X.XEvent();
+            while (true) {
+                X.XNextEvent(display, event.p);
+                if (X.XEvent.getWindow(event.p) != window) {
+                    continue;
                 }
+                processXEvent(event, runnableProcessor);
             }
         });
         x11InputThread.setName("X11 Input");

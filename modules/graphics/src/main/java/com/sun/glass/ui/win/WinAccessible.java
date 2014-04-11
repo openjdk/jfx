@@ -141,6 +141,7 @@ final class WinAccessible extends PlatformAccessible {
     private static final int UIA_ThumbControlTypeId              = 50027;
     private static final int UIA_DataGridControlTypeId           = 50028;
     private static final int UIA_DataItemControlTypeId           = 50029;
+    private static final int UIA_SplitButtonControlTypeId        = 50031;
     private static final int UIA_WindowControlTypeId             = 50032;
     private static final int UIA_PaneControlTypeId               = 50033;
     private static final int UIA_TableControlTypeId              = 50036;
@@ -445,9 +446,11 @@ final class WinAccessible extends PlatformAccessible {
             case CONTEXT_MENU: return UIA_MenuControlTypeId;
             case MENU_ITEM: return UIA_MenuItemControlTypeId;
             case BUTTON:
+            case MENU_BUTTON:
             case TOGGLE_BUTTON:
             case INCREMENT_BUTTON:
             case DECREMENT_BUTTON: return UIA_ButtonControlTypeId;
+            case SPLIT_MENU_BUTTON: return UIA_SplitButtonControlTypeId;
             case PAGINATION:
             case TAB_PANE: return UIA_TabControlTypeId;
             case PAGE:
@@ -474,12 +477,12 @@ final class WinAccessible extends PlatformAccessible {
             case TREE_ITEM: return UIA_TreeItemControlTypeId;
             case PROGRESS_INDICATOR: return UIA_ProgressBarControlTypeId;
             case TOOLBAR: return UIA_ToolBarControlTypeId;
-            case ACCORDION:
-            case TITLED_PANE:
+            case TITLED_PANE: return UIA_GroupControlTypeId;
             case SCROLL_PANE: return UIA_PaneControlTypeId;
             case SCROLL_BAR: return UIA_ScrollBarControlTypeId;
             case THUMB: return UIA_ThumbControlTypeId;
             case MENU_BAR: return UIA_MenuBarControlTypeId;
+            case DATE_PICKER: return UIA_PaneControlTypeId;
             default: return 0;
         }
     }
@@ -508,6 +511,7 @@ final class WinAccessible extends PlatformAccessible {
             case BUTTON:
             case INCREMENT_BUTTON:
             case DECREMENT_BUTTON:
+            case MENU_BUTTON:
                 impl = patternId == UIA_InvokePatternId;
                 break;
             case PAGE:
@@ -581,6 +585,10 @@ final class WinAccessible extends PlatformAccessible {
             case TEXT:
                 /* UIA_TextPatternId seems overkill for text. Use UIA_NamePropertyId instead */
                 break;
+            case SPLIT_MENU_BUTTON:
+                impl = patternId == UIA_InvokePatternId ||
+                       patternId == UIA_ExpandCollapsePatternId;
+                break;
             case RADIO_BUTTON:
                 impl = patternId == UIA_SelectionItemPatternId;
                 break;
@@ -635,6 +643,27 @@ final class WinAccessible extends PlatformAccessible {
                 }
                 break;
             }
+            case UIA_AccessKeyPropertyId: {
+                String mnemonic = (String)getAttribute(MNEMONIC);
+                if (mnemonic != null) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_BSTR;
+                    variant.bstrVal = "Alt"+mnemonic.toLowerCase();
+                }
+                break;
+            }
+            case UIA_AcceleratorKeyPropertyId: {
+                KeyCombination kc = (KeyCombination)getAttribute(ACCELERATOR);
+                if (kc != null) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_BSTR;
+                    /* Note: KeyCombination should have a getDisplayText() which encapsulates 
+                     * KeystrokeUtils.toString()
+                     */
+                    variant.bstrVal = kc.toString().replaceAll("Shortcut", "Ctrl");
+                }
+                break;
+            }
             case UIA_NamePropertyId: {
                 String name;
 
@@ -659,12 +688,6 @@ final class WinAccessible extends PlatformAccessible {
                          */
                     default:
                         name = (String)getAttribute(TITLE);
-                        if (name != null && name.length() != 0) {
-                            KeyCombination kc = (KeyCombination)getAttribute(ACCELERATOR);
-                            if (kc != null) {
-                                name += "\t" + kc.toString();
-                            }
-                        }
                 }
 
                 if (name == null || name.length() == 0) {

@@ -289,6 +289,7 @@ final public class StyleManager {
 
         final int hash;
         final byte[] checksum;
+        boolean checksumInvalid = false;
 
         StylesheetContainer(String fname, Stylesheet stylesheet) {
             this(fname, stylesheet, stylesheet != null ? calculateCheckSum(stylesheet.getUrl()) : new byte[0]);
@@ -331,6 +332,10 @@ final public class StyleManager {
             this.checksum = checksum;
         }
 
+        void invalidateChecksum() {
+            // if checksum is byte[0], then it is forever valid.
+            checksumInvalid = checksum.length > 0 ? true : false;
+        }
         @Override
         public int hashCode() {
             return hash;
@@ -463,6 +468,12 @@ final public class StyleManager {
             if (c.wasRemoved()) {
                 for (String fname : c.getRemoved()) {
                     stylesheetRemoved(scene, fname);
+
+                    StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
+                    if (stylesheetContainer != null) {
+                        stylesheetContainer.invalidateChecksum();
+                    }
+
                 }
             }
         }
@@ -513,6 +524,11 @@ final public class StyleManager {
             if (c.wasRemoved()) {
                 for (String fname : c.getRemoved()) {
                     stylesheetRemoved(parent, fname);
+
+                    StylesheetContainer stylesheetContainer = stylesheetContainerMap.get(fname);
+                    if (stylesheetContainer != null) {
+                        stylesheetContainer.invalidateChecksum();
+                    }
                 }
             }
         }
@@ -855,12 +871,7 @@ final public class StyleManager {
                     ** let's check that the css file is being requested from our
                     ** runtime jar
                     */
-                    URI styleManagerJarURI = AccessController.doPrivileged(new PrivilegedExceptionAction<URI>() {
-                            @Override
-                            public URI run() throws java.net.URISyntaxException, java.security.PrivilegedActionException {
-                            return StyleManager.class.getProtectionDomain().getCodeSource().getLocation().toURI();
-                        }
-                    });
+                    URI styleManagerJarURI = AccessController.doPrivileged((PrivilegedExceptionAction<URI>) () -> StyleManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
 
                     final String styleManagerJarPath = styleManagerJarURI.getSchemeSpecificPart();
                     String requestedFilePath = requestedFileUrI.getSchemeSpecificPart();
@@ -896,12 +907,7 @@ final public class StyleManager {
                             */
                             JarFile jar = null;
                             try {
-                                jar = AccessController.doPrivileged(new PrivilegedExceptionAction<JarFile>() {
-                                        @Override
-                                        public JarFile run() throws FileNotFoundException, IOException {
-                                            return new JarFile(styleManagerJarPath);
-                                        }
-                                    }, permsAcc);
+                                jar = AccessController.doPrivileged((PrivilegedExceptionAction<JarFile>) () -> new JarFile(styleManagerJarPath), permsAcc);
                             } catch (PrivilegedActionException pae) {
                                 /*
                                 ** we got either a FileNotFoundException or an IOException
@@ -920,10 +926,7 @@ final public class StyleManager {
                                     ** allow read access to the jar
                                     */
                                     return AccessController.doPrivileged(
-                                        new PrivilegedAction<Stylesheet>() {
-                                            @Override public Stylesheet run() {
-                                                return loadStylesheetUnPrivileged(fname);
-                                            }}, permsAcc);
+                                            (PrivilegedAction<Stylesheet>) () -> loadStylesheetUnPrivileged(fname), permsAcc);
                                 }
                             }
                         }
@@ -953,16 +956,14 @@ final public class StyleManager {
 
     private static Stylesheet loadStylesheetUnPrivileged(final String fname) {
 
-        Boolean parse = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
+        Boolean parse = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
 
-                final String bss = System.getProperty("binary.css");
-                // binary.css is true by default.
-                // parse only if the file is not a .bss
-                // and binary.css is set to false
-                return (!fname.endsWith(".bss") && bss != null) ?
-                    !Boolean.valueOf(bss) : Boolean.FALSE;
-            }
+            final String bss = System.getProperty("binary.css");
+            // binary.css is true by default.
+            // parse only if the file is not a .bss
+            // and binary.css is set to false
+            return (!fname.endsWith(".bss") && bss != null) ?
+                !Boolean.valueOf(bss) : Boolean.FALSE;
         });
 
         try {
@@ -1289,14 +1290,18 @@ final public class StyleManager {
 
                 if (!list.contains(container)) {
                     // minor optimization: if existing checksum in byte[0], then don't bother recalculating
-                    final byte[] checksum = container.checksum.length > 0 ? calculateCheckSum(fname) : container.checksum;
-                    if (checksum.length > 0 && !Arrays.equals(checksum, container.checksum)) {
-                        removeStylesheetContainer(container);
+                    if (container.checksumInvalid) {
+                        final byte[] checksum = calculateCheckSum(fname);
+                        if (!Arrays.equals(checksum, container.checksum)) {
+                            removeStylesheetContainer(container);
 
-                        // Stylesheet did change. Re-load the stylesheet and update the container map.
-                        Stylesheet stylesheet = loadStylesheet(fname);
-                        container = new StylesheetContainer(fname, stylesheet, checksum);
-                        stylesheetContainerMap.put(fname, container);
+                            // Stylesheet did change. Re-load the stylesheet and update the container map.
+                            Stylesheet stylesheet = loadStylesheet(fname);
+                            container = new StylesheetContainer(fname, stylesheet, checksum);
+                            stylesheetContainerMap.put(fname, container);
+                        } else {
+                            container.checksumInvalid = false;
+                        }
                     }
                     list.add(container);
                 }

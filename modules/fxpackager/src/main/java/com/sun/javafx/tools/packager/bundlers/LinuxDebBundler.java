@@ -51,13 +51,16 @@ public class LinuxDebBundler extends AbstractBundler {
             I18N.getString("param.app-bundler.name"),
             I18N.getString("param.app-bundler.description"),
             "linux.app.bundler",
-            LinuxAppBundler.class, null, params -> new LinuxAppBundler(), false, (s, p) -> null);
+            LinuxAppBundler.class,
+            params -> new LinuxAppBundler(),
+            (s, p) -> null);
 
     public static final BundlerParamInfo<String> BUNDLE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.bundle-name.name"),
             I18N.getString("param.bundle-name.description"),
             "linux.bundleName",
-            String.class, null, params -> {
+            String.class,
+            params -> {
                 String nm = APP_NAME.fetchFrom(params);
                 if (nm == null) return null;
 
@@ -68,72 +71,78 @@ public class LinuxDebBundler extends AbstractBundler {
                 nm = nm.toLowerCase()
                        .replaceAll("[ _]", "-")
                        .replaceAll("[^-+.a-z0-9]", "");
-                System.out.println(nm);
                 return nm;
-            }, false, (s, p) -> s);
+            },
+            (s, p) -> s);
 
     public static final BundlerParamInfo<String> FULL_PACKAGE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.full-package-name.name"),
             I18N.getString("param.full-package-name.description"),
             "linux.deb.fullPackageName",
-            String.class, null,
+            String.class,
             params -> BUNDLE_NAME.fetchFrom(params) + "-" + VERSION.fetchFrom(params),
-            false, (s, p) -> s);
+            (s, p) -> s);
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
             "configRoot",
-            File.class, null, params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
-            false, (s, p) -> new File(s));
+            File.class,
+            params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<File> DEB_IMAGE_DIR = new StandardBundlerParam<>(
-            I18N.getString("param.image-dir.name"), 
+            I18N.getString("param.image-dir.name"),
             I18N.getString("param.image-dir.description"),
             "linux.deb.imageDir",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imagesRoot = IMAGES_ROOT.fetchFrom(params);
                 if (!imagesRoot.exists()) imagesRoot.mkdirs();
                 return new File(new File(imagesRoot, "linux-deb.image"), FULL_PACKAGE_NAME.fetchFrom(params));
-            }, false, (s, p) -> new File(s));
+            },
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<File> APP_IMAGE_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.app-image-root.name"),
             I18N.getString("param.app-image-root.description"),
             "linux.deb.imageRoot",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imageDir = DEB_IMAGE_DIR.fetchFrom(params);
                 return new File(imageDir, "opt");
-            }, false, (s, p) -> new File(s));
+            },
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<File> CONFIG_DIR = new StandardBundlerParam<>(
-            I18N.getString("param.config-dir.name"), 
+            I18N.getString("param.config-dir.name"),
             I18N.getString("param.config-dir.description"),
             "linux.deb.configDir",
-            File.class, null, params ->  new File(DEB_IMAGE_DIR.fetchFrom(params), "DEBIAN"),
-            false, (s, p) -> new File(s));
+            File.class,
+            params ->  new File(DEB_IMAGE_DIR.fetchFrom(params), "DEBIAN"),
+            (s, p) -> new File(s));
 
     public static final BundlerParamInfo<String> EMAIL = new StandardBundlerParam<> (
-            I18N.getString("param.maintainer-email.name"), 
+            I18N.getString("param.maintainer-email.name"),
             I18N.getString("param.maintainer-email.description"),
             BundleParams.PARAM_EMAIL,
-            String.class, null,
+            String.class,
             params -> "Unknown",
-            false, (s, p) -> s);
+            (s, p) -> s);
 
     public static final BundlerParamInfo<String> MAINTAINER = new StandardBundlerParam<> (
-            I18N.getString("param.maintainer-name.name"), 
+            I18N.getString("param.maintainer-name.name"),
             I18N.getString("param.maintainer-name.description"),
             "linux.deb.maintainer",
-            String.class, null,
+            String.class,
             params -> VENDOR.fetchFrom(params) + " <" + EMAIL.fetchFrom(params) + ">",
-            false, (s, p) -> s);
+            (s, p) -> s);
 
     public static final BundlerParamInfo<String> LICENSE_TEXT = new StandardBundlerParam<> (
-            I18N.getString("param.license-text.name"), 
+            I18N.getString("param.license-text.name"),
             I18N.getString("param.license-text.description"),
             "linux.deb.licenseText",
-            String.class, null,
+            String.class,
             params -> {
                 try {
                     List<String> licenseFiles = LICENSE_FILE.fetchFrom(params);
@@ -149,7 +158,7 @@ public class LinuxDebBundler extends AbstractBundler {
                 }
                 return LICENSE_TYPE.fetchFrom(params);
             },
-            false, (s, p) -> s);
+            (s, p) -> s);
 
     private final static String DEFAULT_ICON = "javalogo_white_32.png";
     private final static String DEFAULT_CONTROL_TEMPLATE = "template.control";
@@ -197,6 +206,21 @@ public class LinuxDebBundler extends AbstractBundler {
                 throw new ConfigException(
                         MessageFormat.format(I18N.getString("error.tool-not-found"), TOOL_DPKG),
                         I18N.getString("error.tool-not-found.advice"));
+            }
+
+            // validate license file, if used, exists in the proper place
+            if (p.containsKey(LICENSE_FILE.getID())) {
+                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
+                for (String license : LICENSE_FILE.fetchFrom(p)) {
+                    if (!appResources.contains(license)) {
+                        throw new ConfigException(
+                                I18N.getString("error.license-missing"),
+                                MessageFormat.format(I18N.getString("error.license-missing.advice"),
+                                        license, appResources.getBaseDirectory().toString()));
+                    }
+                }
+            } else {
+                Log.info("message.debs-like-licenses");
             }
 
             return true;
@@ -358,8 +382,8 @@ public class LinuxDebBundler extends AbstractBundler {
     private boolean prepareProjectConfig(Map<String, ? super Object> params) throws IOException {
         Map<String, String> data = new HashMap<>();
 
-        data.put("APPLICATION_NAME", BUNDLE_NAME.fetchFrom(params));
-        data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params).toLowerCase());
+        data.put("APPLICATION_NAME", APP_NAME.fetchFrom(params));
+        data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params));
         data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
         data.put("APPLICATION_MAINTAINER", MAINTAINER.fetchFrom(params));
         data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
@@ -382,8 +406,8 @@ public class LinuxDebBundler extends AbstractBundler {
         Writer w = new BufferedWriter(new FileWriter(getConfig_ControlFile(params)));
         String content = preprocessTextResource(
                 LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_ControlFile(params).getName(),
-                I18N.getString("resource.deb-control-file"), 
-                DEFAULT_CONTROL_TEMPLATE, 
+                I18N.getString("resource.deb-control-file"),
+                DEFAULT_CONTROL_TEMPLATE,
                 data,
                 VERBOSE.fetchFrom(params));
         w.write(content);
@@ -436,8 +460,8 @@ public class LinuxDebBundler extends AbstractBundler {
         w = new BufferedWriter(new FileWriter(getConfig_CopyrightFile(params)));
         content = preprocessTextResource(
                 LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_CopyrightFile(params).getName(),
-                I18N.getString("resource.deb-copyright-file"), 
-                DEFAULT_COPYRIGHT_TEMPLATE, 
+                I18N.getString("resource.deb-copyright-file"),
+                DEFAULT_COPYRIGHT_TEMPLATE,
                 data,
                 VERBOSE.fetchFrom(params));
         w.write(content);
@@ -447,8 +471,8 @@ public class LinuxDebBundler extends AbstractBundler {
         w = new BufferedWriter(new FileWriter(getConfig_DesktopShortcutFile(params)));
         content = preprocessTextResource(
                 LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_DesktopShortcutFile(params).getName(),
-                I18N.getString("resource.menu-shortcut-descriptor"), 
-                DEFAULT_DESKTOP_FILE_TEMPLATE, 
+                I18N.getString("resource.menu-shortcut-descriptor"),
+                DEFAULT_DESKTOP_FILE_TEMPLATE,
                 data,
                 VERBOSE.fetchFrom(params));
         w.write(content);
@@ -456,7 +480,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
         //prepare installer icon
         File iconTarget = getConfig_IconFile(params);
-        File icon = ICON.fetchFrom(params);
+        File icon = LinuxAppBundler.ICON_PNG.fetchFrom(params);
         if (icon == null || !icon.exists()) {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.menu-icon"),
@@ -476,28 +500,28 @@ public class LinuxDebBundler extends AbstractBundler {
             w = new BufferedWriter(new FileWriter(getConfig_InitScriptFile(params)));
             content = preprocessTextResource(
                     LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_InitScriptFile(params).getName(),
-                    I18N.getString("resource.deb-init-script"), 
-                    DEFAULT_INIT_SCRIPT_TEMPLATE, 
+                    I18N.getString("resource.deb-init-script"),
+                    DEFAULT_INIT_SCRIPT_TEMPLATE,
                     data,
                     VERBOSE.fetchFrom(params));
             w.write(content);
             w.close();
             setPermissions(getConfig_InitScriptFile(params), "rwxr-xr-x");
         }
-        
+
         return true;
     }
 
     private File getConfig_DesktopShortcutFile(Map<String, ? super Object> params) {
         return new File(
                 LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
-                BUNDLE_NAME.fetchFrom(params) + ".desktop");
+                APP_NAME.fetchFrom(params) + ".desktop");
     }
 
     private File getConfig_IconFile(Map<String, ? super Object> params) {
         return new File(
                 LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
-                BUNDLE_NAME.fetchFrom(params) + ".png");
+                APP_NAME.fetchFrom(params) + ".png");
     }
 
     private File getConfig_InitScriptFile(Map<String, ? super Object> params) {
@@ -588,7 +612,7 @@ public class LinuxDebBundler extends AbstractBundler {
                 DESCRIPTION,
                 EMAIL,
                 FULL_PACKAGE_NAME,
-                ICON,
+                LinuxAppBundler.ICON_PNG,
                 DEB_IMAGE_DIR,
                 IMAGES_ROOT,
                 LICENSE_FILE,

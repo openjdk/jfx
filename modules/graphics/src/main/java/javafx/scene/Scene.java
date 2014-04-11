@@ -60,7 +60,6 @@ import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.NamedArg;
-import javafx.beans.Observable;
 import javafx.beans.property.*;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
@@ -1250,25 +1249,23 @@ public class Scene implements EventTarget {
             snapshotRunnableListB = new ArrayList<Runnable>();
             snapshotRunnableList = snapshotRunnableListA;
 
-            snapshotPulseListener = new TKPulseListener() {
-                @Override public void pulse() {
-                    if (snapshotRunnableList.size() > 0) {
-                        List<Runnable> runnables = snapshotRunnableList;
-                        if (snapshotRunnableList == snapshotRunnableListA) {
-                            snapshotRunnableList = snapshotRunnableListB;
-                        } else {
-                            snapshotRunnableList = snapshotRunnableListA;
-                        }
-                        for (Runnable r : runnables) {
-                            try {
-                                r.run();
-                            } catch (Throwable th) {
-                                System.err.println("Exception in snapshot runnable");
-                                th.printStackTrace(System.err);
-                            }
-                        }
-                        runnables.clear();
+            snapshotPulseListener = () -> {
+                if (snapshotRunnableList.size() > 0) {
+                    List<Runnable> runnables = snapshotRunnableList;
+                    if (snapshotRunnableList == snapshotRunnableListA) {
+                        snapshotRunnableList = snapshotRunnableListB;
+                    } else {
+                        snapshotRunnableList = snapshotRunnableListA;
                     }
+                    for (Runnable r : runnables) {
+                        try {
+                            r.run();
+                        } catch (Throwable th) {
+                            System.err.println("Exception in snapshot runnable");
+                            th.printStackTrace(System.err);
+                        }
+                    }
+                    runnables.clear();
                 }
             };
 
@@ -1278,15 +1275,11 @@ public class Scene implements EventTarget {
         }
 
         final AccessControlContext acc = AccessController.getContext();
-        snapshotRunnableList.add(new Runnable() {
-            @Override public void run() {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override public Void run() {
-                        runnable.run();
-                        return null;
-                    }
-                }, acc);
-            }
+        snapshotRunnableList.add(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                runnable.run();
+                return null;
+            }, acc);
         });
         Toolkit.getToolkit().requestNextPulse();
     }
@@ -1388,17 +1381,15 @@ public class Scene implements EventTarget {
         // Create a deferred runnable that will be run from a pulse listener
         // that is called after all of the scenes have been synced but before
         // any of them have been rendered.
-        final Runnable snapshotRunnable = new Runnable() {
-            @Override public void run() {
-                WritableImage img = doSnapshot(theImage);
+        final Runnable snapshotRunnable = () -> {
+            WritableImage img = doSnapshot(theImage);
 //                System.err.println("Calling snapshot callback");
-                SnapshotResult result = new SnapshotResult(img, Scene.this, null);
-                try {
-                    Void v = theCallback.call(result);
-                } catch (Throwable th) {
-                    System.err.println("Exception in snapshot callback");
-                    th.printStackTrace(System.err);
-                }
+            SnapshotResult result = new SnapshotResult(img, Scene.this, null);
+            try {
+                Void v = theCallback.call(result);
+            } catch (Throwable th) {
+                System.err.println("Exception in snapshot callback");
+                th.printStackTrace(System.err);
             }
         };
 //        System.err.println("Schedule a snapshot in the future");
@@ -3298,14 +3289,11 @@ public class Scene implements EventTarget {
             timeout = new Timeline();
             timeout.getKeyFrames().add(
                     new KeyFrame(new Duration(toolkit.getMultiClickTime()),
-                    new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    out = true;
-                    timeout = null;
-                }
-
-            }));
+                            event -> {
+                                out = true;
+                                timeout = null;
+                            }
+                    ));
             timeout.play();
             still = true;
         }
@@ -3865,11 +3853,7 @@ public class Scene implements EventTarget {
             }
         }
 
-        private final InvalidationListener sceneWindowFocusedListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
-            }
-        };
+        private final InvalidationListener sceneWindowFocusedListener = valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
 
         private void process(KeyEvent e) {
             final Node sceneFocusOwner = getFocusOwner();
@@ -4127,6 +4111,12 @@ public class Scene implements EventTarget {
         getInternalEventDispatcher().getKeyboardShortcutsHandler()
                                     .removeMnemonic(m);
     }
+
+    final void clearNodeMnemonics(Node node) {
+        getInternalEventDispatcher().getKeyboardShortcutsHandler()
+                .clearNodeMnemonics(node);
+    }
+
 
     /**
      * Gets the list of mnemonics for this {@code Scene}.
@@ -5968,11 +5958,7 @@ public class Scene implements EventTarget {
 
     private static final NodeOrientation defaultNodeOrientation =
         AccessController.doPrivileged(
-        new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("javafx.scene.nodeOrientation.RTL");
-            }
-        }) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
+                (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL")) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
 
 
 

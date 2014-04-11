@@ -88,18 +88,21 @@ jobjectArray ConvertFiles(DNTString &files)
 {
     jobjectArray ret = NULL;
     JNIEnv *env = GetEnv();
-    JLClass cls(env, env->FindClass("java/lang/String"));
+    jclass jc = env->FindClass("java/lang/String");
+    if (CheckAndClearException(env)) return NULL;
+    JLClass cls(env, jc);
 
     UINT count = files.count();
 
     if (count == 0)      // the user cancels the file chooser
     {
         ret = env->NewObjectArray(0, cls, NULL);
+        if (CheckAndClearException(env)) return NULL;
     }
     else if (count == 1) // the user selects one file
     {
         ret = env->NewObjectArray(1, cls, NULL);
-
+        if (CheckAndClearException(env)) return NULL;
         // there's no null delimiter b/w dir and file in this case
         JLString name(env, CreateJString(env, files));
 
@@ -110,6 +113,7 @@ jobjectArray ConvertFiles(DNTString &files)
     {
         // ignore one item as it's for folder
         ret = env->NewObjectArray(count-1, cls, NULL);
+        if (CheckAndClearException(env)) return NULL;
 
         JLString dir(env, CreateJString(env, files.substring(0)));
         JLString backslash(env, CreateJString(env, _T("\\")));
@@ -219,14 +223,19 @@ jobject StandardFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, L
     jobjectArray retValue;
 
     if (!ret) {
-        JLClass cls(env, env->FindClass("java/lang/String"));
+        jclass jc = env->FindClass("java/lang/String");
+        if (CheckAndClearException(env)) return NULL;
+        JLClass cls(env, jc);
         retValue = env->NewObjectArray(0, cls, NULL);
+        if (CheckAndClearException(env)) return NULL;
     } else {
         files.calculateLength();  // the result is stored in the files variable
         retValue = ConvertFiles(files);
     }
 
-    JLClass cls(env, env->FindClass("com/sun/glass/ui/CommonDialogs"));
+    jclass jc = env->FindClass("com/sun/glass/ui/CommonDialogs");
+    JLClass cls(env, jc);    
+    if (CheckAndClearException(env)) return NULL;
     return env->CallStaticObjectMethod(cls, javaIDs.CommonDialogs.createFileChooserResult,
             retValue, jFilters, (jint)(ofn.nFilterIndex - 1));
 }

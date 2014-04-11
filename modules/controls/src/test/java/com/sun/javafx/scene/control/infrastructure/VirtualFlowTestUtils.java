@@ -71,18 +71,23 @@ public class VirtualFlowTestUtils {
                     continue;
                 }
                 IndexedCell<?> childCell = (IndexedCell<?>)n;
-                new MouseEventFirer(childCell).fireMousePressAndRelease(clickCount, modifiers);
+                MouseEventFirer mouse = new MouseEventFirer(childCell);
+                mouse.fireMousePressAndRelease(clickCount, modifiers);
+                mouse.dispose();
                 break;
             }
         } else {
             if (ignoreChildren) {
                 // special case when we want to click on the row rather than its
                 // children (e.g. TableRow rather than its TableCell)
-                MouseEventFirer mef = new MouseEventFirer(cell);
-                mef.fireMousePressed(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
-                mef.fireMouseReleased(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
+                MouseEventFirer mouse = new MouseEventFirer(cell);
+                mouse.fireMousePressed(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
+                mouse.fireMouseReleased(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
+                mouse.dispose();
             } else {
-                new MouseEventFirer(cell).fireMousePressAndRelease(clickCount, modifiers);
+                MouseEventFirer mouse = new MouseEventFirer(cell);
+                mouse.fireMousePressAndRelease(clickCount, modifiers);
+                mouse.dispose();
             }
         }
     }
@@ -354,9 +359,11 @@ public class VirtualFlowTestUtils {
         return getVirtualFlowScrollbar(control, Orientation.HORIZONTAL);
     }
 
+    // this method must be called with the control having been shown in a
+    // stage (e.g. via StageLoader). Be sure to dispose too!
     public static TableHeaderRow getTableHeaderRow(final Control control) {
         if (control.getSkin() == null) {
-            new StageLoader(control);
+            throw new IllegalStateException("getTableHeaderRow requires the control to be visible in a stage");
         }
 
         TableViewSkinBase<?,?,?,?,?,?> skin = (TableViewSkinBase) control.getSkin();

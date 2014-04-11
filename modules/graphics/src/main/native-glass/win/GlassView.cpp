@@ -165,54 +165,71 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinView__1initIDs
 {
     javaIDs.View.notifyResize = env->GetMethodID(cls, "notifyResize", "(II)V");
     ASSERT(javaIDs.View.notifyResize);
-
+    if (env->ExceptionCheck()) return;
+ 
     javaIDs.View.notifyRepaint = env->GetMethodID(cls, "notifyRepaint", "(IIII)V");
     ASSERT(javaIDs.View.notifyRepaint);
+    if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyKey = env->GetMethodID(cls, "notifyKey", "(II[CI)V");
-    ASSERT(javaIDs.View.notifyKey);
+     javaIDs.View.notifyKey = env->GetMethodID(cls, "notifyKey", "(II[CI)V");
+     ASSERT(javaIDs.View.notifyKey);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyMouse = env->GetMethodID(cls, "notifyMouse", "(IIIIIIIZZ)V");
-    ASSERT(javaIDs.View.notifyMouse);
+     javaIDs.View.notifyMouse = env->GetMethodID(cls, "notifyMouse", "(IIIIIIIZZ)V");
+     ASSERT(javaIDs.View.notifyMouse);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyMenu = env->GetMethodID(cls, "notifyMenu", "(IIIIZ)V");
-    ASSERT(javaIDs.View.notifyMenu);
+     javaIDs.View.notifyMenu = env->GetMethodID(cls, "notifyMenu", "(IIIIZ)V");
+     ASSERT(javaIDs.View.notifyMenu);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyScroll = env->GetMethodID(cls, "notifyScroll", "(IIIIDDIIIIIDD)V");
-    ASSERT(javaIDs.View.notifyScroll);
+     javaIDs.View.notifyScroll = env->GetMethodID(cls, "notifyScroll", "(IIIIDDIIIIIDD)V");
+     ASSERT(javaIDs.View.notifyScroll);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyInputMethod = env->GetMethodID(cls, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
-    ASSERT(javaIDs.View.notifyInputMethod);
+     javaIDs.View.notifyInputMethod = env->GetMethodID(cls, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
+     ASSERT(javaIDs.View.notifyInputMethod);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyDragEnter = env->GetMethodID(cls, "notifyDragEnter", "(IIIII)I");
-    ASSERT(javaIDs.View.notifyDragEnter);
+     javaIDs.View.notifyDragEnter = env->GetMethodID(cls, "notifyDragEnter", "(IIIII)I");
+     ASSERT(javaIDs.View.notifyDragEnter);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyDragOver = env->GetMethodID(cls, "notifyDragOver", "(IIIII)I");
-    ASSERT(javaIDs.View.notifyDragOver);
+     javaIDs.View.notifyDragOver = env->GetMethodID(cls, "notifyDragOver", "(IIIII)I");
+     ASSERT(javaIDs.View.notifyDragOver);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyDragLeave = env->GetMethodID(cls, "notifyDragLeave", "()V");
-    ASSERT(javaIDs.View.notifyDragLeave);
+     javaIDs.View.notifyDragLeave = env->GetMethodID(cls, "notifyDragLeave", "()V");
+     ASSERT(javaIDs.View.notifyDragLeave);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyDragDrop = env->GetMethodID(cls, "notifyDragDrop", "(IIIII)I");
-    ASSERT(javaIDs.View.notifyDragDrop);
+     javaIDs.View.notifyDragDrop = env->GetMethodID(cls, "notifyDragDrop", "(IIIII)I");
+     ASSERT(javaIDs.View.notifyDragDrop);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyView = env->GetMethodID(cls, "notifyView", "(I)V");
-    ASSERT(javaIDs.View.notifyView);
+     javaIDs.View.notifyView = env->GetMethodID(cls, "notifyView", "(I)V");
+     ASSERT(javaIDs.View.notifyView);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.getWidth = env->GetMethodID(cls, "getWidth", "()I");
-    ASSERT(javaIDs.View.getWidth);
+     javaIDs.View.getWidth = env->GetMethodID(cls, "getWidth", "()I");
+     ASSERT(javaIDs.View.getWidth);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.getHeight = env->GetMethodID(cls, "getHeight", "()I");
-    ASSERT(javaIDs.View.getHeight);
+     javaIDs.View.getHeight = env->GetMethodID(cls, "getHeight", "()I");
+     ASSERT(javaIDs.View.getHeight);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.getAccessible = env->GetMethodID(cls, "getAccessible", "()J");
-    ASSERT(javaIDs.View.getAccessible);
+     javaIDs.View.getAccessible = env->GetMethodID(cls, "getAccessible", "()J");
+     ASSERT(javaIDs.View.getAccessible);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.notifyInputMethodCandidatePosRequest = env->GetMethodID(cls, "notifyInputMethodCandidatePosRequest", "(I)[D");
-    ASSERT(javaIDs.View.notifyInputMethodCandidatePosRequest);
+     javaIDs.View.notifyInputMethodCandidatePosRequest = env->GetMethodID(cls, "notifyInputMethodCandidatePosRequest", "(I)[D");
+     ASSERT(javaIDs.View.notifyInputMethodCandidatePosRequest);
+     if (env->ExceptionCheck()) return;
 
-    javaIDs.View.ptr = env->GetFieldID(cls, "ptr", "J");
-    ASSERT(javaIDs.View.ptr);
+     javaIDs.View.ptr = env->GetFieldID(cls, "ptr", "J");
+     ASSERT(javaIDs.View.ptr);
+     if (env->ExceptionCheck()) return;
 }
 
 /*

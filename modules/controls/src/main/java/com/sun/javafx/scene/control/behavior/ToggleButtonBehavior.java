@@ -26,6 +26,7 @@ package com.sun.javafx.scene.control.behavior;
 
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.collections.ObservableList;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.control.Control;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
@@ -55,38 +56,72 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
 
     @Override
     protected void callAction(String name) {
-        final ToggleGroup toggleGroup = getControl().getToggleGroup();
+        ToggleButton toggleButton = getControl();
+        final ToggleGroup toggleGroup = toggleButton.getToggleGroup();
         // A ToggleButton does not have to be in a group.
         if (toggleGroup == null) {
             super.callAction(name);
             return;
         }
         ObservableList<Toggle> toggles = toggleGroup.getToggles();
-        final int currentToggleIdx = toggles.indexOf(getControl());
+        final int currentToggleIdx = toggles.indexOf(toggleButton);
+
         switch (name) {
             case "ToggleNext-Right":
             case "ToggleNext-Down":
-                if (Utils.isTwoLevelFocus() || currentToggleIdx == toggles.size() - 1) {
-                    super.callAction(name.equals("ToggleNext-Right") ? TRAVERSE_RIGHT : TRAVERSE_DOWN);
-                } else {
-                    Toggle toggle = toggles.get(currentToggleIdx + 1);
-                    toggleGroup.selectToggle(toggle);
-                    ((Control)toggle).requestFocus();
-                }
-                break;
             case "TogglePrevious-Left":
             case "TogglePrevious-Up":
-                if (Utils.isTwoLevelFocus() ||currentToggleIdx == 0) {
-                    super.callAction(name.equals("TogglePrevious-Left") ? TRAVERSE_LEFT : TRAVERSE_UP);
+                boolean traversingToNext = traversingToNext(name, toggleButton.getEffectiveNodeOrientation());
+                if (Utils.isTwoLevelFocus()) {
+                    super.callAction(toggleToTraverseAction(name));
+                } else if (traversingToNext) {
+                    if (currentToggleIdx == toggles.size() - 1) {
+                        super.callAction(toggleToTraverseAction(name));
+                    } else {
+                        Toggle toggle = toggles.get(currentToggleIdx + 1);
+                        toggleGroup.selectToggle(toggle);
+                        ((Control)toggle).requestFocus();
+                    }
                 } else {
-                    Toggle toggle = toggles.get(currentToggleIdx - 1);
-                    toggleGroup.selectToggle(toggle);
-                    ((Control)toggle).requestFocus();
+                    if (currentToggleIdx == 0) {
+                        super.callAction(toggleToTraverseAction(name));
+                    } else {
+                        Toggle toggle = toggles.get(currentToggleIdx - 1);
+                        toggleGroup.selectToggle(toggle);
+                        ((Control)toggle).requestFocus();
+                    }
                 }
-                break;
-            default:
-                super.callAction(name);
         }
+    }
 
+    private boolean traversingToNext(String name, NodeOrientation effectiveNodeOrientation) {
+        boolean rtl = effectiveNodeOrientation == NodeOrientation.RIGHT_TO_LEFT;
+        switch (name) {
+            case "ToggleNext-Right":
+                return rtl ? false : true;
+            case "ToggleNext-Down":
+                return true;
+            case "TogglePrevious-Left":
+                return rtl ? true : false;
+            case "TogglePrevious-Up":
+                return false;
+            default:
+                throw new IllegalArgumentException("Not a toggle action");
+        }
+    }
+
+    private String toggleToTraverseAction(String name) {
+        switch (name) {
+            case "ToggleNext-Right":
+                return TRAVERSE_RIGHT;
+            case "ToggleNext-Down":
+                return TRAVERSE_DOWN;
+            case "TogglePrevious-Left":
+                return TRAVERSE_LEFT;
+            case "TogglePrevious-Up":
+                return TRAVERSE_UP;
+            default:
+                throw new IllegalArgumentException("Not a toggle action");
+        }
     }
 }

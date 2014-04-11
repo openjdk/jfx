@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import javafx.scene.control.TableColumn;
 

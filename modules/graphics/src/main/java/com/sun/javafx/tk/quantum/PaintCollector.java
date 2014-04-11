@@ -79,12 +79,10 @@ final class PaintCollector implements CompletionListener {
     /**
      * Sorts the dirty scenes such that asynchronous scenes come first
      */
-    private static final Comparator<GlassScene> DIRTY_SCENE_SORTER = new Comparator<GlassScene>() {
-        @Override public int compare(GlassScene o1, GlassScene o2) {
-            int i1 = o1.isSynchronous() ? 1 : 0;
-            int i2 = o2.isSynchronous() ? 1 : 0;
-            return i1 - i2;
-        }
+    private static final Comparator<GlassScene> DIRTY_SCENE_SORTER = (o1, o2) -> {
+        int i1 = o1.isSynchronous() ? 1 : 0;
+        int i2 = o2.isSynchronous() ? 1 : 0;
+        return i1 - i2;
     };
 
     /**
@@ -326,11 +324,7 @@ final class PaintCollector implements CompletionListener {
              ViewPainter.renderLock.unlock();
          }
          try {
-             quantum.addRenderJob(new RenderJob(viewPainter, new CompletionListener() {
-                 @Override public void done(final RenderJob rj) {
-                     latch.countDown();
-                 }
-             }));
+             quantum.addRenderJob(new RenderJob(viewPainter, rj -> latch.countDown()));
              try {
                  latch.await();
              } catch (InterruptedException e) {

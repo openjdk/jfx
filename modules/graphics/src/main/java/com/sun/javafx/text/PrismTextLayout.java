@@ -1242,6 +1242,8 @@ public class PrismTextLayout implements TextLayout {
                                 }
                             }
                         }
+                        lineX = 0;
+                        line.setAlignment(lineX);
                         line.setWidth(fullWidth);
                     }
                 }

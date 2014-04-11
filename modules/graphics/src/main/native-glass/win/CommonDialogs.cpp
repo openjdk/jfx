@@ -66,23 +66,27 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinCommonDialogs__1initIDs
 {
     cls = env->FindClass("com/sun/glass/ui/CommonDialogs");
     ASSERT(cls);
+    if (env->ExceptionCheck()) return;
 
     javaIDs.CommonDialogs.createFileChooserResult = env->GetStaticMethodID(cls,
             "createFileChooserResult",
             "([Ljava/lang/String;[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;I)Lcom/sun/glass/ui/CommonDialogs$FileChooserResult;");
     ASSERT(javaIDs.CommonDialogs.createFileChooserResult);
-
+    if (env->ExceptionCheck()) return;
 
     cls = env->FindClass("com/sun/glass/ui/CommonDialogs$ExtensionFilter");
     ASSERT(cls);
+    if (env->ExceptionCheck()) return;
 
     javaIDs.CommonDialogs.ExtensionFilter.getDescription = env->GetMethodID(cls,
                                          "getDescription", "()Ljava/lang/String;");
     ASSERT(javaIDs.CommonDialogs.ExtensionFilter.getDescription);
+    if (env->ExceptionCheck()) return;
 
     javaIDs.CommonDialogs.ExtensionFilter.extensionsToArray = env->GetMethodID(cls,
                                          "extensionsToArray", "()[Ljava/lang/String;");
     ASSERT(javaIDs.CommonDialogs.ExtensionFilter.extensionsToArray);
+    if (env->ExceptionCheck()) return;
 }
 
 /*

@@ -47,9 +47,7 @@ public class EnumeratedBundlerParam<T> extends BundlerParamInfo<T> {
                                   String description,
                                   String id,
                                   Class<T> valueType,
-                                  String[] fallbackIDs,
                                   Function<Map<String, ? super Object>, T> defaultValueFunction,
-                                  boolean requiresUserSetting,
                                   BiFunction<String, Map<String, ? super Object>, T> stringConverter,
                                   Map<String, T> possibleValues,
                                   boolean strict) {
@@ -57,9 +55,7 @@ public class EnumeratedBundlerParam<T> extends BundlerParamInfo<T> {
         this.description = description;
         this.id = id;
         this.valueType = valueType;
-        this.fallbackIDs = fallbackIDs;
         this.defaultValueFunction = defaultValueFunction;
-        this.requiresUserSetting = requiresUserSetting;
         this.stringConverter = stringConverter;
         this.possibleValues = possibleValues;
         this.strict = strict;

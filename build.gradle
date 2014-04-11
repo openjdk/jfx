@@ -1904,6 +1904,10 @@ project(":fxpackager") {
 
         doFirst {
             copy {
+                from "$projectDir/src/test/resources/hello/java-logo2.gif"
+                into project.file("$projectDir/build/tmp/tests/appResources")
+            }
+            copy {
                 from "$projectDir/../../LICENSE"
                 into project.file("$projectDir/build/tmp/tests/appResources")
             }
@@ -1918,6 +1922,7 @@ project(":fxpackager") {
     test {
         dependsOn packagerFakeJar
         systemProperty "RETAIN_PACKAGER_TESTS", RETAIN_PACKAGER_TESTS
+        systemProperty "FULL_TEST", FULL_TEST
     }
 }
 

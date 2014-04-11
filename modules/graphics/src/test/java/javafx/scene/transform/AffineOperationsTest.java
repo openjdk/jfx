@@ -210,25 +210,19 @@ public class AffineOperationsTest {
     private void testOperationIsAtomic(Affine a,
             final Runnable op, final Runnable check) {
 
-        a.setOnTransformChanged(new EventHandler<TransformChangedEvent>() {
-            @Override public void handle(TransformChangedEvent event) {
-                eventCounter++;
-                check.run();
-            }
+        a.setOnTransformChanged(event -> {
+            eventCounter++;
+            check.run();
         });
 
-        a.myxProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                listener1Counter++;
-                check.run();
-            }
+        a.myxProperty().addListener(observable -> {
+            listener1Counter++;
+            check.run();
         });
 
-        a.tyProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                listener2Counter++;
-                check.run();
-            }
+        a.tyProperty().addListener(observable -> {
+            listener2Counter++;
+            check.run();
         });
 
         memMyx = a.getMyx();
@@ -250,15 +244,9 @@ public class AffineOperationsTest {
         final Shear sh = new Shear(12, 15);
 
         testOperationIsAtomic(a,
-            new Runnable() {
-                @Override public void run() {
-                    a.setToTransform(sh);
-                }},
-            new Runnable() {
-                @Override public void run() {
-                    assertAffineOk(sh, a);
-                }
-            });
+                () -> a.setToTransform(sh),
+                () -> assertAffineOk(sh, a)
+        );
     }
 
     @Test
@@ -267,15 +255,9 @@ public class AffineOperationsTest {
         final Shear sh = new Shear(12, 15);
 
         testOperationIsAtomic(a,
-            new Runnable() {
-                @Override public void run() {
-                    a.setToTransform(1, 12, 0, 15, 1, 0);
-                }},
-            new Runnable() {
-                @Override public void run() {
-                    assertAffineOk(sh, a);
-                }
-            });
+                () -> a.setToTransform(1, 12, 0, 15, 1, 0),
+                () -> assertAffineOk(sh, a)
+        );
     }
 
     @Test
@@ -290,15 +272,9 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
 
         testOperationIsAtomic(a,
-            new Runnable() {
-                @Override public void run() {
-                    a.setToIdentity();
-                }},
-            new Runnable() {
-                @Override public void run() {
-                    assertAffineOk(new Affine(), a);
-                }
-            });
+                () -> a.setToIdentity(),
+                () -> assertAffineOk(new Affine(), a)
+        );
     }
 
     @Test
@@ -389,11 +365,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Translate(8, 9));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendTranslation(8, 9);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendTranslation(8, 9), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -423,11 +395,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Translate(8, 9), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependTranslation(8, 9);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependTranslation(8, 9), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -446,11 +414,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Translate(8, 9, 10));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendTranslation(8, 9, 10);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendTranslation(8, 9, 10), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -480,11 +444,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Translate(8, 9, 10), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependTranslation(8, 9, 10);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependTranslation(8, 9, 10), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -595,11 +555,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Scale(8, 9));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendScale(8, 9);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendScale(8, 9), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -738,11 +694,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Scale(8, 9), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependScale(8, 9);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependScale(8, 9), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -772,11 +724,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Scale(8, 9, 10, 11));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-            a.appendScale(8, 9, 10, 11);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendScale(8, 9, 10, 11), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -806,11 +754,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Scale(8, 9, 10, 11), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependScale(8, 9, 10, 11);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependScale(8, 9, 10, 11), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -882,11 +826,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Scale(8, 9, 10));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendScale(8, 9, 10);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendScale(8, 9, 10), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -929,11 +869,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Scale(8, 9, 10), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependScale(8, 9, 10);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependScale(8, 9, 10), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -963,11 +899,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Scale(8, 9, 10, 11, 12, 13));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendScale(8, 9, 10, 11, 12, 13);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendScale(8, 9, 10, 11, 12, 13), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -997,11 +929,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Scale(8, 9, 10, 11, 12, 13), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependScale(8, 9, 10, 11, 12, 13);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependScale(8, 9, 10, 11, 12, 13), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1083,11 +1011,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Shear(8, 9));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendShear(8, 9);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendShear(8, 9), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1131,11 +1055,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Shear(8, 9), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependShear(8, 9);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependShear(8, 9), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1165,11 +1085,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Shear(8, 9, 10, 11));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendShear(8, 9, 10, 11);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendShear(8, 9, 10, 11), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1199,11 +1115,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Shear(8, 9, 10, 11), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependShear(8, 9, 10, 11);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependShear(8, 9, 10, 11), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1222,11 +1134,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Rotate(37));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendRotation(37);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendRotation(37), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1245,11 +1153,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Rotate(37), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependRotation(37);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependRotation(37), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1268,11 +1172,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Rotate(90));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendRotation(90);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendRotation(90), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1291,11 +1191,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Rotate(90));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendRotation(90);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendRotation(90), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1314,11 +1210,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Rotate(180));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendRotation(180);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendRotation(180), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1337,11 +1229,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Rotate(180));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendRotation(180);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendRotation(180), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1360,11 +1248,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Rotate(270));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendRotation(270);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendRotation(270), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1383,11 +1267,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Rotate(270));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendRotation(270);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendRotation(270), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1472,11 +1352,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(a, new Rotate(37, 10, 11));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendRotation(37, 10, 11);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendRotation(37, 10, 11), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1527,11 +1403,7 @@ public class AffineOperationsTest {
         final Affine a = affine.clone();
         final Transform res = TransformHelper.concatenate(new Rotate(37, 10, 11), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependRotation(37, 10, 11);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependRotation(37, 10, 11), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1668,11 +1540,7 @@ public class AffineOperationsTest {
         final Transform res = TransformHelper.concatenate(a,
                 new Rotate(37, 8, 9, 10, new Point3D(12, 123, 521)));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.appendRotation(37, 8, 9, 10, 12, 123, 521);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.appendRotation(37, 8, 9, 10, 12, 123, 521), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1773,11 +1641,7 @@ public class AffineOperationsTest {
         final Transform res = TransformHelper.concatenate(
                 new Rotate(37, 8, 9, 10, new Point3D(12, 123, 521)), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prependRotation(37, 8, 9, 10, 12, 123, 521);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prependRotation(37, 8, 9, 10, 12, 123, 521), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1802,12 +1666,8 @@ public class AffineOperationsTest {
                 new Affine(20, 22, 24,
                            28, 30, 32));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.append(20, 22, 24,
-                             28, 30, 32);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.append(20, 22, 24,
+                 28, 30, 32), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1832,12 +1692,8 @@ public class AffineOperationsTest {
                 new Affine(20, 22, 24,
                            28, 30, 32), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prepend(20, 22, 24,
-                             28, 30, 32);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prepend(20, 22, 24,
+                 28, 30, 32), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1865,13 +1721,9 @@ public class AffineOperationsTest {
                            28, 30, 32, 34,
                            36, 38, 40, 42));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.append(20, 22, 24, 26,
-                             28, 30, 32, 34,
-                             36, 38, 40, 42);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.append(20, 22, 24, 26,
+                 28, 30, 32, 34,
+                 36, 38, 40, 42), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1899,13 +1751,9 @@ public class AffineOperationsTest {
                            28, 30, 32, 34,
                            36, 38, 40, 42), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prepend(20, 22, 24, 26,
-                             28, 30, 32, 34,
-                             36, 38, 40, 42);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prepend(20, 22, 24, 26,
+                 28, 30, 32, 34,
+                 36, 38, 40, 42), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1938,14 +1786,10 @@ public class AffineOperationsTest {
                            28, 30, 32, 34,
                            36, 38, 40, 42));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.append(new Affine(
-                             20, 22, 24, 26,
-                             28, 30, 32, 34,
-                             36, 38, 40, 42));
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.append(new Affine(
+                 20, 22, 24, 26,
+                 28, 30, 32, 34,
+                 36, 38, 40, 42)), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -1980,14 +1824,10 @@ public class AffineOperationsTest {
                            28, 30, 32, 34,
                            36, 38, 40, 42), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prepend(new Affine(
-                             20, 22, 24, 26,
-                             28, 30, 32, 34,
-                             36, 38, 40, 42));
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prepend(new Affine(
+                 20, 22, 24, 26,
+                 28, 30, 32, 34,
+                 36, 38, 40, 42)), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -2046,11 +1886,7 @@ public class AffineOperationsTest {
                            6,  7,  0,  8,
                            0,  0,  1,  0));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.append(array2d, MatrixType.MT_2D_2x3, 2);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.append(array2d, MatrixType.MT_2D_2x3, 2), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -2061,11 +1897,7 @@ public class AffineOperationsTest {
                            6,  7,  0,  8,
                            0,  0,  1,  0));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.append(array2d, MatrixType.MT_2D_3x3, 2);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.append(array2d, MatrixType.MT_2D_3x3, 2), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -2076,11 +1908,7 @@ public class AffineOperationsTest {
                            6,  7,  8,  9,
                           10, 11, 12, 13));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.append(array3d, MatrixType.MT_3D_3x4, 2);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.append(array3d, MatrixType.MT_3D_3x4, 2), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -2091,11 +1919,7 @@ public class AffineOperationsTest {
                            6,  7,  8,  9,
                           10, 11, 12, 13));
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.append(array3d, MatrixType.MT_3D_4x4, 2);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.append(array3d, MatrixType.MT_3D_4x4, 2), () -> assertAffineOk(res, a));
     }
 
     @Test(expected=IndexOutOfBoundsException.class)
@@ -2275,11 +2099,7 @@ public class AffineOperationsTest {
                            6,  7,  0,  8,
                            0,  0,  1,  0), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prepend(array2d, MatrixType.MT_2D_2x3, 2);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prepend(array2d, MatrixType.MT_2D_2x3, 2), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -2290,11 +2110,7 @@ public class AffineOperationsTest {
                            6,  7,  0,  8,
                            0,  0,  1,  0), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prepend(array2d, MatrixType.MT_2D_3x3, 2);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prepend(array2d, MatrixType.MT_2D_3x3, 2), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -2305,11 +2121,7 @@ public class AffineOperationsTest {
                            6,  7,  8,  9,
                           10, 11, 12, 13), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prepend(array3d, MatrixType.MT_3D_3x4, 2);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prepend(array3d, MatrixType.MT_3D_3x4, 2), () -> assertAffineOk(res, a));
     }
 
     @Test
@@ -2320,11 +2132,7 @@ public class AffineOperationsTest {
                            6,  7,  8,  9,
                           10, 11, 12, 13), a);
 
-        testOperationIsAtomic(a, new Runnable() { @Override public void run() {
-                    a.prepend(array3d, MatrixType.MT_3D_4x4, 2);
-                }}, new Runnable() { @Override public void run() {
-                    assertAffineOk(res, a);
-                }});
+        testOperationIsAtomic(a, () -> a.prepend(array3d, MatrixType.MT_3D_4x4, 2), () -> assertAffineOk(res, a));
     }
 
     @Test(expected=IndexOutOfBoundsException.class)
@@ -2485,15 +2293,13 @@ public class AffineOperationsTest {
 
         try {
             final Transform res = TransformHelper.invert(a);
-            testOperationIsAtomic(a, new Runnable() { @Override public void run() {
+            testOperationIsAtomic(a, () -> {
                         try {
                             a.invert();
                         } catch (NonInvertibleTransformException e) {
                             fail("Should be invertible");
                         }
-                    }}, new Runnable() { @Override public void run() {
-                        assertAffineOk(res, a);
-                    }});
+                    }, () -> assertAffineOk(res, a));
         } catch (NonInvertibleTransformException e) {
                     try {
                         a.invert();

@@ -500,8 +500,6 @@ public class DeployParams extends CommonParams {
 
             if (javaRuntimeWasSet) {
                 bundleParams.setRuntime(javaRuntimeToUse);
-            } else {
-                bundleParams.setDefaultRuntime();
             }
             bundleParams.setApplicationClass(applicationClass);
             bundleParams.setName(this.appName);

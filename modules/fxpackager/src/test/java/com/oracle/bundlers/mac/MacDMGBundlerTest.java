@@ -114,6 +114,9 @@ public class MacDMGBundlerTest {
      */
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
+        // only run with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
         AbstractBundler bundler = new MacDMGBundler();
 
         assertNotNull(bundler.getName());
@@ -159,6 +162,9 @@ public class MacDMGBundlerTest {
      */
     @Test
     public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
+        // only run with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
         Bundler bundler = new MacDMGBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();
@@ -171,5 +177,19 @@ public class MacDMGBundlerTest {
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
+    }
+
+    @Test(expected = ConfigException.class)
+    public void invalidLicenseFile() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new MacDMGBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LICENSE_FILE.getID(), "BOGUS_LICENSE");
+
+        bundler.validate(bundleParams);
     }
 }

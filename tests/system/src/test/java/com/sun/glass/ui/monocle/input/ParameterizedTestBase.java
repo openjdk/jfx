@@ -81,6 +81,7 @@ public abstract class ParameterizedTestBase {
         device.create();
         TestApplication.addMouseListeners();
         TestApplication.addTouchListeners();
+        TestApplication.addGestureListeners();
         TestLog.reset();
         Platform.runLater(
                 () -> Thread.currentThread().setUncaughtExceptionHandler(

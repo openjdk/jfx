@@ -72,10 +72,6 @@ final class MacCommonDialogs {
     static boolean isFileNSURLEnabled() {
         // The check is dynamic since an app may want to toggle it dynamically.
         // The performance is not critical for FileChoosers.
-        return AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                return Boolean.getBoolean("glass.macosx.enableFileNSURL");
-            }
-        });
+        return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("glass.macosx.enableFileNSURL"));
     }
 }

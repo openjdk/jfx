@@ -25,18 +25,18 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.traversal.Algorithm;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
@@ -49,12 +49,12 @@ import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import sun.util.logging.PlatformLogger;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
@@ -778,6 +778,98 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             startSBReleasedAnimation();
         });
 
+        setImpl_traversalEngine(new ParentTraversalEngine(this, new Algorithm() {
+
+            Node selectNextAfterIndex(int index, TraversalContext context) {
+                T nextCell;
+                while ((nextCell = getVisibleCell(++index)) != null) {
+                    if (nextCell.isFocusTraversable()) {
+                        return nextCell;
+                    }
+                    Node n = context.selectFirstInParent(nextCell);
+                    if (n != null) {
+                        return n;
+                    }
+                }
+                return null;
+            }
+
+            Node selectPreviousBeforeIndex(int index, TraversalContext context) {
+                T prevCell;
+                while ((prevCell = getVisibleCell(--index)) != null) {
+                    Node prev = context.selectLastInParent(prevCell);
+                    if (prev != null) {
+                        return prev;
+                    }
+                    if (prevCell.isFocusTraversable()) {
+                        return prevCell;
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public Node select(Node owner, Direction dir, TraversalContext context) {
+                T cell;
+                if (cells.isEmpty()) return null;
+                if (cells.contains(owner)) {
+                    cell = (T) owner;
+                } else {
+                    cell = findOwnerCell(owner);
+                    Node next = context.selectInSubtree(cell, owner, dir);
+                    if (next != null) {
+                        return next;
+                    }
+                    if (dir == Direction.NEXT) dir = Direction.NEXT_IN_LINE;
+                }
+                int cellIndex = cell.getIndex();
+                switch(dir) {
+                    case PREVIOUS:
+                        return selectPreviousBeforeIndex(cellIndex, context);
+                    case NEXT:
+                        Node n = context.selectFirstInParent(cell);
+                        if (n != null) {
+                            return n;
+                        }
+                        // Intentional fall-through
+                    case NEXT_IN_LINE:
+                        return selectNextAfterIndex(cellIndex, context);
+                }
+                return null;
+            }
+
+            private T findOwnerCell(Node owner) {
+                Parent p = owner.getParent();
+                while (!cells.contains(p)) {
+                    p = p.getParent();
+                }
+                return (T)p;
+            }
+
+            @Override
+            public Node selectFirst(TraversalContext context) {
+                T firstCell = cells.getFirst();
+                if (firstCell == null) return null;
+                if (firstCell.isFocusTraversable()) return firstCell;
+                Node n = context.selectFirstInParent(firstCell);
+                if (n != null) {
+                    return n;
+                }
+                return selectNextAfterIndex(firstCell.getIndex(), context);
+            }
+
+            @Override
+            public Node selectLast(TraversalContext context) {
+                T lastCell = cells.getLast();
+                if (lastCell == null) return null;
+                Node p = context.selectLastInParent(lastCell);
+                if (p != null) {
+                    return p;
+                }
+                if (lastCell.isFocusTraversable()) return lastCell;
+                return selectPreviousBeforeIndex(lastCell.getIndex(), context);
+            }
+        }));
 
     }
 
@@ -1187,10 +1279,31 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         boolean filledWithNonEmpty = index <= cellCount;
 
         final double viewportLength = getViewportLength();
+
+        //
+        // RT-36507: viewportLength - offset gives the maximum number of
+        // additional cells that should ever be able to fit in the viewport if
+        // every cell had a height of 1. If index ever exceeds this count,
+        // then offset is not incrementing fast enough, or at all, which means
+        // there is something wrong with the cell size calculation.
+        //
+        final double maxCellCount = viewportLength - offset;
         while (offset < viewportLength) {
             if (index >= cellCount) {
                 if (offset < viewportLength) filledWithNonEmpty = false;
                 if (! fillEmptyCells) return filledWithNonEmpty;
+                // RT-36507 - return if we've exceeded the maximum
+                if (index > maxCellCount) {
+                    final PlatformLogger logger = Logging.getControlsLogger();
+                    if (logger.isLoggable(PlatformLogger.Level.INFO)) {
+                        if (startCell != null) {
+                            logger.info("index exceeds maxCellCount. Check size calculations for " + startCell.getClass());
+                        } else {
+                            logger.info("index exceeds maxCellCount");
+                        }
+                    }
+                    return filledWithNonEmpty;
+                }
             }
             T cell = getAvailableCell(index);
             setCellIndex(cell, index);
@@ -1788,7 +1901,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // RT-34333, where the sizes were being reported incorrectly to the
         // ComboBox popup.
         if (cell.isNeedsLayout() && cell.getScene() != null) {
-            cell.impl_processCSS(false);
+            cell.applyCss();
         }
     }
 
@@ -2170,6 +2283,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
+            // Now throw away any cells that don't fit
+            // (take one - this resolves RT-36556)
+            cull();
+
             // Fix for RT-32908
             T firstCell = cells.getFirst();
             double layoutY = firstCell == null ? 0 : getCellPosition(firstCell);
@@ -2230,7 +2347,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
-        // Now throw away any cells that don't fit
+        // Now throw away any cells that don't fit (take two)
         cull();
 
         // Finally, update the scroll bars

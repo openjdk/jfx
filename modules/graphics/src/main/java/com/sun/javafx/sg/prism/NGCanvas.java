@@ -553,11 +553,9 @@ public class NGCanvas extends NGNode {
         texg.setCompositeMode(CompositeMode.SRC);
         if (cv.savedPixelData == null) {
             final PixelData pd = new PixelData(cw, ch);
-            runOnRenderThread(new Runnable() {
-                public void run() {
-                  pd.save(localTex);
-                  pd.restore(texg, tw, th);
-                }
+            runOnRenderThread(() -> {
+              pd.save(localTex);
+              pd.restore(texg, tw, th);
             });
         } else {
             cv.savedPixelData.restore(texg, tw, th);

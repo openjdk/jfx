@@ -48,6 +48,7 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -61,6 +62,8 @@ import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -1855,9 +1858,8 @@ public class TreeTableViewTest {
         treeTableView.getColumns().add(column);
 
         // show treeTableView
-        StageLoader stageLoader = new StageLoader(treeTableView);
-        stageLoader.getStage().show();
-        
+        StageLoader sl = new StageLoader(treeTableView);
+
         // expand all collapsed branches
         root.setExpanded(true);
         for (int i = 0; i < root.getChildren().size(); i++) {
@@ -1895,6 +1897,8 @@ public class TreeTableViewTest {
                 }
             }
         }
+
+        sl.dispose();
     }
     private void addLevel(TreeItem<Data> item, int level, int length) {
         for (int i = 0; i < 3; i++) {
@@ -2205,6 +2209,8 @@ public class TreeTableViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(12, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_31200_tableRow() {
@@ -2254,6 +2260,8 @@ public class TreeTableViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(17, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_31727() {
@@ -2453,7 +2461,7 @@ public class TreeTableViewTest {
         };
         col.setCellFactory(cellFactory);
 
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         assertEquals(0, rt_31015_count);
 
@@ -2462,6 +2470,8 @@ public class TreeTableViewTest {
 
         treeTableView.edit(-1, null);
         assertEquals(1, rt_31015_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_30688() {
@@ -2473,9 +2483,11 @@ public class TreeTableViewTest {
         col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         assertEquals(treeTableView.contentWidth, col.getWidth(), 0.0);
+
+        sl.dispose();
     }
 
     private int rt_29650_start_count = 0;
@@ -2501,7 +2513,7 @@ public class TreeTableViewTest {
             rt_29650_cancel_count++;
         });
 
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         treeTableView.edit(0, col);
 
@@ -2518,6 +2530,8 @@ public class TreeTableViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
     }
 
     private int rt_29849_start_count = 0;
@@ -2535,7 +2549,7 @@ public class TreeTableViewTest {
         });
 
         // load the table so the default cells are created
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         // now replace the cell factory
         Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> factory = TextFieldTreeTableCell.forTreeTableColumn();
@@ -2546,6 +2560,8 @@ public class TreeTableViewTest {
         // now start an edit and count the start edit events - it should be just 1
         treeTableView.edit(0, col);
         assertEquals(1, rt_29849_start_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_34327() {
@@ -2662,7 +2678,7 @@ public class TreeTableViewTest {
         table.getColumns().addAll(first, last, email);
 
         // load the table
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         // resize the last column
         last.impl_setWidth(400);
@@ -2675,6 +2691,8 @@ public class TreeTableViewTest {
         // the last column should still be 400px, not the default width or any
         // other value (based on the width of the content in that column)
         assertEquals(400, last.getWidth(), 0.0);
+
+        sl.dispose();
     }
 
     @Test public void test_rt26721_collapseParent_firstRootChild() {
@@ -2865,6 +2883,7 @@ public class TreeTableViewTest {
         if (useMouseToInitiateEdit) {
             MouseEventFirer mouse = new MouseEventFirer(cell);
             mouse.fireMousePressAndRelease(2, 10, 10);  // click 10 pixels in and 10 pixels down
+            mouse.dispose();
         } else {
             table.edit(0,first);
         }
@@ -2984,7 +3003,7 @@ public class TreeTableViewTest {
             test_rt_35213_eventCount++;
         });
 
-        new StageLoader(view);
+        StageLoader sl = new StageLoader(view);
 
         root.setExpanded(true);
         Toolkit.getToolkit().firePulse();
@@ -2994,6 +3013,8 @@ public class TreeTableViewTest {
 
         group2.setExpanded(false);
         Toolkit.getToolkit().firePulse();
+
+        sl.dispose();
     }
 
     @Test public void test_rt23245_itemIsInTree() {
@@ -3095,7 +3116,7 @@ public class TreeTableViewTest {
         final TreeTableView<String> treeView = new TreeTableView<>();
         treeView.setRoot(root);
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         // everything should be null to start with
         assertNull(treeView.getSelectionModel().getSelectedItem());
@@ -3108,6 +3129,8 @@ public class TreeTableViewTest {
         // that "bbc" remains selected as it is still in the list
         treeView.setRoot(root);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35039_resetRootChildren() {
@@ -3121,7 +3144,7 @@ public class TreeTableViewTest {
         final TreeTableView<String> treeView = new TreeTableView<>();
         treeView.setRoot(root);
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         // everything should be null to start with
         assertNull(treeView.getSelectionModel().getSelectedItem());
@@ -3134,6 +3157,8 @@ public class TreeTableViewTest {
         // that "bbc" remains selected as it is still in the list
         root.getChildren().setAll(aabbaa, bbc);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35763() {
@@ -3203,5 +3228,96 @@ public class TreeTableViewTest {
         assertEquals(2, root.getChildren().size());
         assertEquals("B", root.getChildren().get(0).getValue());
         assertEquals("C", root.getChildren().get(1).getValue());
+    }
+
+    private int rt36452_instanceCount = 0;
+    @Test public void test_rt36452() {
+        TreeTableColumn<String, String> myColumn = new TreeTableColumn<String,String>();
+        myColumn.setCellValueFactory((item)->(new ReadOnlyObjectWrapper<>(item.getValue().getValue())));
+        myColumn.setCellFactory(column -> new TreeTableCell<String, String>() {
+            {
+                rt36452_instanceCount++;
+            }
+        });
+
+        TreeTableView<String> ttv = new TreeTableView<>();
+        ttv.setShowRoot(false);
+        ttv.getColumns().add(myColumn);
+
+        TreeItem<String> treeRootItem = new TreeItem<>("root");
+        treeRootItem.setExpanded(true);
+
+        for (int i = 0; i < 100; i++) {
+            treeRootItem.getChildren().add(new TreeItem<>("Child: " + i));
+        }
+
+        ttv.setRoot(treeRootItem);
+        ttv.setFixedCellSize(25);
+
+        StackPane root = new StackPane();
+        root.getChildren().add(ttv);
+
+        StageLoader sl = new StageLoader(root);
+
+        final int cellCountAtStart = rt36452_instanceCount;
+
+        // start scrolling
+        for (int i = 0; i < 100; i++) {
+            ttv.scrollTo(i);
+            Toolkit.getToolkit().firePulse();
+        }
+
+        // we don't mind if an extra few cells are created. What we are really
+        // testing for here is that we don't end up with an order of magnitude
+        // extra cells.
+        // On my machine the cellCountAtStart is 16. Before this issue was fixed
+        // I would end up with 102 instances after running this test. Once the
+        // bug was fixed, I would consistently see that 17 cells had been
+        // created in total.
+        // However, for now, we'll test on the assumption that across all
+        // platforms we only get one extra cell created, and we can loosen this
+        // up if necessary.
+        assertEquals(cellCountAtStart + 1, rt36452_instanceCount);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt25679() {
+        Button focusBtn = new Button("Focus here");
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.getChildren().setAll(new TreeItem("a"), new TreeItem("b"));
+        root.setExpanded(true);
+
+        final TreeTableView<String> treeView = new TreeTableView<>(root);
+        TreeTableColumn<String, String> tableColumn = new TreeTableColumn<>();
+        tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue().getValue()));
+        treeView.getColumns().add(tableColumn);
+
+        SelectionModel sm = treeView.getSelectionModel();
+
+        VBox vbox = new VBox(focusBtn, treeView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        focusBtn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        // test initial state
+        assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
+        assertTrue(focusBtn.isFocused());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+
+        // move focus to the TreeTableView
+        treeView.requestFocus();
+
+        // ensure that there is a selection (where previously there was not one)
+        assertEquals(sl.getStage().getScene().getFocusOwner(), treeView);
+        assertTrue(treeView.isFocused());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(root, sm.getSelectedItem());
+
+        sl.dispose();
     }
 }

@@ -29,7 +29,6 @@ import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.WinExeBundler;
 import com.sun.javafx.tools.packager.bundlers.WinMsiBundler;
-import org.junit.AfterClass;
 import org.junit.Test;
 
 import java.io.File;
@@ -139,28 +138,6 @@ public class BundlersTest {
                 metadataValid &= assertMetadata(bundler, bpi, "ID is not null", param -> param.getID() != null);
                 metadataValid &= assertMetadata(bundler, bpi, "Description is not null", param -> param.getDescription() != null);
                 metadataValid &= assertMetadata(bundler, bpi, "ValueType is not null", param -> param.getValueType() != null);
-                
-                if (bpi.isRequiresUserSetting()) {
-                    metadataValid &= assertMetadata(bundler, bpi, "Required values do not return a default value", param -> {
-                        try {
-                            param.fetchFrom(new HashMap<>());
-                            return true;
-                        } catch (Exception e) {
-                            e.printStackTrace(System.err);
-                            return false;
-                        }
-                    });
-                } else {
-                    metadataValid &= assertMetadata(bundler, bpi, "Non-required values return a default value without exception", param -> {
-                        try {
-                            param.fetchFrom(new HashMap<>());
-                            return true;
-                        } catch (Exception e) {
-                            e.printStackTrace(System.err);
-                            return false;
-                        }
-                    });
-                }
             }
         }
 
@@ -234,7 +211,7 @@ public class BundlersTest {
     public List<String> getBundlerIDs() {
         Collection<Bundler> bundlers = Bundlers.createBundlersInstance().getBundlers();
 
-        return Arrays.<String>asList(
+        return Arrays.asList(
                 bundlers.stream().map(Bundler::getID).toArray(String[]::new));
     }
 

@@ -56,37 +56,37 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableCol
      **************************************************************************/          
 
     /** @{@inheritDoc} */
-    @Override TableView<S> getCellContainer() {
+    @Override protected TableView<S> getCellContainer() {
         return getControl().getTableView();
     }
 
     /** @{@inheritDoc} */
-    @Override TableColumn<S,T> getTableColumn() {
+    @Override protected TableColumn<S,T> getTableColumn() {
         return getControl().getTableColumn();
     }
 
     /** @{@inheritDoc} */
-    @Override int getItemCount() {
+    @Override protected int getItemCount() {
         return getCellContainer().getItems().size();
     }
 
     /** @{@inheritDoc} */
-    @Override TableView.TableViewSelectionModel<S> getSelectionModel() {
+    @Override protected TableView.TableViewSelectionModel<S> getSelectionModel() {
         return getCellContainer().getSelectionModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TableViewFocusModel<S> getFocusModel() {
+    @Override protected TableViewFocusModel<S> getFocusModel() {
         return getCellContainer().getFocusModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TablePositionBase getFocusedCell() {
+    @Override protected TablePositionBase getFocusedCell() {
         return getCellContainer().getFocusModel().getFocusedCell();
     }
 
     /** @{@inheritDoc} */
-    @Override boolean isTableRowSelected() {
+    @Override protected boolean isTableRowSelected() {
         return getControl().getTableRow().isSelected();
     }
 
@@ -96,12 +96,12 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableCol
     }
 
     /** @{@inheritDoc} */
-    @Override void focus(int row, TableColumnBase tc) {
+    @Override protected void focus(int row, TableColumnBase tc) {
         getFocusModel().focus(row, (TableColumn)tc);
     }
 
     /** @{@inheritDoc} */
-    @Override void edit(TableCell<S,T> cell) {
+    @Override protected void edit(TableCell<S,T> cell) {
         if (cell == null) {
             getCellContainer().edit(-1, null);
         } else {

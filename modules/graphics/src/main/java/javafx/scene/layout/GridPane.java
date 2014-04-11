@@ -411,11 +411,7 @@ public class GridPane extends Pane {
         return -1;
     }
 
-    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
-        public Insets call(Node n) {
-            return getMargin(n);
-        }
-    };
+    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
 
     /**
      * Sets the horizontal alignment for the child when contained by a gridpane.
@@ -732,12 +728,7 @@ public class GridPane extends Pane {
      */
     public GridPane() {
         super();
-        getChildren().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable o) {
-                requestLayout();
-            }
-        });
+        getChildren().addListener((Observable o) -> requestLayout());
     }
 
     /**
@@ -1749,34 +1740,26 @@ public class GridPane extends Pane {
                 if (baselineOffsets[rowIndex] == -1) {
                     baselineOffsets[rowIndex] = getAreaBaselineOffset(rowBaseline[rowIndex],
                             marginAccessor,
-                            new Function<Integer, Double>() {
-
-                                @Override
-                                public Double apply(Integer t) {
-                                    Node n = rowBaseline[rowIndex].get(t);
-                                    int c = getNodeColumnIndex(n);
-                                    int cs = getNodeColumnSpan(n);
-                                    if (cs == REMAINING) {
-                                        cs = widths.getLength() - c;
-                                    }
-                                    double w = widths.getSize(c);
-                                    for (int j = 2; j <= cs; j++) {
-                                        w += widths.getSize(c + j - 1) + snaphgap;
-                                    }
-                                    return w;
+                            t -> {
+                                Node n = rowBaseline[rowIndex].get(t);
+                                int c = getNodeColumnIndex(n);
+                                int cs = getNodeColumnSpan(n);
+                                if (cs == REMAINING) {
+                                    cs = widths.getLength() - c;
                                 }
+                                double w = widths.getSize(c);
+                                for (int j = 2; j <= cs; j++) {
+                                    w += widths.getSize(c + j - 1) + snaphgap;
+                                }
+                                return w;
                             },
                             areaH,
-                            new Function<Integer, Boolean>() {
-
-                                @Override
-                                public Boolean apply(Integer t) {
-                                    Boolean b = isFillHeight(child);
-                                    if (b != null) {
-                                        return b;
-                                    }
-                                    return shouldRowFillHeight(getNodeRowIndex(child));
+                            t -> {
+                                Boolean b = isFillHeight(child);
+                                if (b != null) {
+                                    return b;
                                 }
+                                return shouldRowFillHeight(getNodeRowIndex(child));
                             }, rowMinBaselineComplement[rowIndex]);
                 }
                 baselineOffset = baselineOffsets[rowIndex];

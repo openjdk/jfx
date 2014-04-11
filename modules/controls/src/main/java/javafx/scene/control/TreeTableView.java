@@ -395,6 +395,8 @@ public class TreeTableView<S> extends Control {
             }
         });
 
+        focusedProperty().addListener(focusedListener);
+
         isInited = true;
     }
     
@@ -746,6 +748,19 @@ public class TreeTableView<S> extends Control {
     
     private final WeakInvalidationListener weakCellSelectionModelInvalidationListener = 
             new WeakInvalidationListener(cellSelectionModelInvalidationListener);
+
+    private InvalidationListener focusedListener = observable -> {
+        // RT-25679 - we select the first item in the control if there is no
+        // current selection or focus on any other cell
+        MultipleSelectionModel<TreeItem<S>> sm = getSelectionModel();
+        FocusModel<TreeItem<S>> fm = getFocusModel();
+
+        if (getExpandedItemCount() > 0 &&
+                sm != null && sm.isEmpty() &&
+                fm != null && fm.getFocusedIndex() == -1) {
+            sm.select(0);
+        }
+    };
     
     /***************************************************************************
      *                                                                         *

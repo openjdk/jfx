@@ -65,9 +65,7 @@ public class ListViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         keyboard = new KeyEventFirer(listView);
-        
         stageLoader = new StageLoader(listView);
-        stageLoader.getStage().show();
 
         listView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
     }
@@ -1678,10 +1676,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
-
         sm.clearAndSelect(99);
         listView.scrollTo(99);
         assertEquals(99, getAnchor());
@@ -1700,10 +1694,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
-
         sm.clearAndSelect(99);
         listView.scrollTo(99);
         assertEquals(99, getAnchor());
@@ -1721,10 +1711,6 @@ public class ListViewKeyInputTest {
         for (int i = 0; i < items; i++) {
             listView.getItems().add("Row " + i);
         }
-
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
 
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor());
@@ -1767,10 +1753,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
-
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor());
         assertEquals(1, fm.getFocusedIndex());
@@ -1798,7 +1780,8 @@ public class ListViewKeyInputTest {
         }
         listView.setPrefHeight(130); // roughly room for four rows
 
-        new StageLoader(listView);
+        // this stageLoader is needed....although right now I'm not sure why
+        StageLoader sl = new StageLoader(listView);
         final FocusModel fm = listView.getFocusModel();
         final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -1827,6 +1810,8 @@ public class ListViewKeyInputTest {
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());
         assertEquals(leadSelectedIndex, fm.getFocusedIndex());
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+
+        sl.dispose();
     }
 
     @Test public void test_rt34407_up_up_down() {
@@ -1837,9 +1822,6 @@ public class ListViewKeyInputTest {
         }
         listView.setPrefHeight(130); // roughly room for four rows
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(99);
@@ -1885,9 +1867,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(5);
@@ -1914,9 +1893,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(5);
@@ -1943,9 +1919,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
 
         sm.clearAndSelect(5);
@@ -1972,9 +1945,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
 
         sm.clearAndSelect(5);

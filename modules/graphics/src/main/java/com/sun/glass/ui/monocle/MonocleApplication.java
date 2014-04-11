@@ -68,30 +68,23 @@ final class MonocleApplication extends Application {
     /** A running count of the numbers of devices with each device capability */
     private int[] deviceFlags = new int[DEVICE_MAX + 1];
 
-    private Runnable renderEndNotifier = new Runnable() {
-        public void run() {
-            platform.getScreen().swapBuffers();
-        }
-    };
+    private Runnable renderEndNotifier = () -> platform.getScreen().swapBuffers();
 
     MonocleApplication() {
         for (InputDevice device : platform.getInputDeviceRegistry().getInputDevices()) {
             updateDeviceFlags(device, true);
         }
         platform.getInputDeviceRegistry().getInputDevices().addListener(
-                new SetChangeListener<InputDevice>() {
-            @Override
-            public void onChanged(
-                    Change<? extends InputDevice> change) {
-                if (change.wasAdded()) {
-                    InputDevice device = change.getElementAdded();
-                    updateDeviceFlags(device, true);
-                } else if (change.wasRemoved()) {
-                    InputDevice device = change.getElementRemoved();
-                    updateDeviceFlags(device, false);
+                (SetChangeListener<InputDevice>) change -> {
+                    if (change.wasAdded()) {
+                        InputDevice device = change.getElementAdded();
+                        updateDeviceFlags(device, true);
+                    } else if (change.wasRemoved()) {
+                        InputDevice device = change.getElementRemoved();
+                        updateDeviceFlags(device, false);
+                    }
                 }
-            }
-        });
+        );
     }
 
     private void updateDeviceFlags(InputDevice device, boolean added) {

@@ -122,13 +122,9 @@ public abstract class PopupWindow extends Window {
      * RT-28454: When a parent node or parent window we are associated with is not
      * visible anymore, possibly because the scene was not valid anymore, we should hide.
      */
-    private ChangeListener<Boolean> changeListener = new ChangeListener<Boolean>() {
-        @Override public void changed(
-                ObservableValue<? extends Boolean> observable, 
-                Boolean oldValue, Boolean newValue) {
-            if (oldValue && !newValue) {
-                hide();
-            }
+    private ChangeListener<Boolean> changeListener = (observable, oldValue, newValue) -> {
+        if (oldValue && !newValue) {
+            hide();
         }
     };
     
@@ -866,14 +862,7 @@ public abstract class PopupWindow extends Window {
 
     private void bindOwnerFocusedProperty(final Window ownerWindowValue) {
         ownerFocusedListener =
-            new ChangeListener<Boolean>() {
-                @Override
-                public void changed(
-                        ObservableValue<? extends Boolean> observable,
-                        Boolean oldValue, Boolean newValue) {
-                    setFocused(newValue);
-                }
-            };
+                (observable, oldValue, newValue) -> setFocused(newValue);
         ownerWindowValue.focusedProperty().addListener(ownerFocusedListener);
     }
 

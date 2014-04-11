@@ -252,21 +252,9 @@ public class Hueristic2D implements Algorithm {
         }
     }
     
-    private static final Function<Bounds, Double> BOUNDS_TOP_SIDE = new Function<Bounds, Double>() {
+    private static final Function<Bounds, Double> BOUNDS_TOP_SIDE = t -> t.getMinY();
 
-        @Override
-        public Double apply(Bounds t) {
-            return t.getMinY();
-        }
-    };
-
-    private static final Function<Bounds, Double> BOUNDS_BOTTOM_SIDE = new Function<Bounds, Double>() {
-
-        @Override
-        public Double apply(Bounds t) {
-            return t.getMaxY();
-        }
-    };
+    private static final Function<Bounds, Double> BOUNDS_BOTTOM_SIDE = t -> t.getMaxY();
 
     protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
 
@@ -558,21 +546,9 @@ public class Hueristic2D implements Algorithm {
         return null;
     }
     
-    private static final Function<Bounds, Double> BOUNDS_LEFT_SIDE = new Function<Bounds, Double>() {
-
-        @Override
-        public Double apply(Bounds t) {
-            return t.getMinX();
-        }
-    };
+    private static final Function<Bounds, Double> BOUNDS_LEFT_SIDE = t -> t.getMinX();
     
-    private static final Function<Bounds, Double> BOUNDS_RIGHT_SIDE = new Function<Bounds, Double>() {
-
-        @Override
-        public Double apply(Bounds t) {
-            return t.getMaxX();
-        }
-    };
+    private static final Function<Bounds, Double> BOUNDS_RIGHT_SIDE = t -> t.getMaxX();
 
     protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
 

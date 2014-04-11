@@ -51,23 +51,28 @@ public class WinExeBundler extends AbstractBundler {
             I18N.getString("param.app-bundler.name"),
             I18N.getString("param.app-bundler.description"),
             "win.app.bundler",
-            WinAppBundler.class, null, params -> new WinAppBundler(), false, null);
+            WinAppBundler.class,
+            params -> new WinAppBundler(),
+            null);
 
     public static final BundlerParamInfo<WinServiceBundler> SERVICE_BUNDLER = new WindowsBundlerParam<>(
             I18N.getString("param.service-bundler.name"),
             I18N.getString("param.service-bundler.description"),
             "win.service.bundler",
-            WinServiceBundler.class, null, params -> new WinServiceBundler(), false, null);
+            WinServiceBundler.class,
+            params -> new WinServiceBundler(),
+            null);
     
     public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
             "configRoot",
-            File.class, null,params -> {
+            File.class, params -> {
                 File imagesRoot = new File(BUILD_ROOT.fetchFrom(params), "windows");
                 imagesRoot.mkdirs();
                 return imagesRoot;
-            }, false, (s, p) -> null);
+            },
+            (s, p) -> null);
 
     //default for .exe is user level installation
     // only do system wide if explicitly requested
@@ -77,9 +82,9 @@ public class WinExeBundler extends AbstractBundler {
                     I18N.getString("param.system-wide.description"),
                     "win.exe." + BundleParams.PARAM_SYSTEM_WIDE,
                     Boolean.class,
-                    new String[] {BundleParams.PARAM_SYSTEM_WIDE},
-                    params -> false, // EXEs default to user local install
-                    false,
+                    params -> params.containsKey(SYSTEM_WIDE.getID())
+                                ? SYSTEM_WIDE.fetchFrom(params)
+                                : false, // EXEs default to user local install
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s) // valueOf(null) is false, and we actually do want null
             );
 
@@ -87,11 +92,13 @@ public class WinExeBundler extends AbstractBundler {
             I18N.getString("param.image-dir.name"),
             I18N.getString("param.image-dir.description"),
             "win.exe.imageDir",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imagesRoot = IMAGES_ROOT.fetchFrom(params);
                 if (!imagesRoot.exists()) imagesRoot.mkdirs();
                 return new File(imagesRoot, "win-exe.image");
-            }, false, (s, p) -> null);
+            },
+            (s, p) -> null);
 
     private final static String DEFAULT_EXE_PROJECT_TEMPLATE = "template.iss";
     private static final String TOOL_INNO_SETUP_COMPILER = "iscc.exe";
@@ -100,7 +107,8 @@ public class WinExeBundler extends AbstractBundler {
             I18N.getString("param.iscc-path.name"),
             I18N.getString("param.iscc-path.description"),
             "win.exe.iscc.exe",
-            String.class, null, params -> {
+            String.class,
+            params -> {
                 for (String dirString : (System.getenv("PATH") + ";C:\\Program Files (x86)\\Inno Setup 5;C:\\Program Files\\Inno Setup 5").split(";")) {
                     File f = new File(dirString.replace("\"", ""), TOOL_INNO_SETUP_COMPILER);
                     if (f.isFile()) {
@@ -108,7 +116,8 @@ public class WinExeBundler extends AbstractBundler {
                     }
                 }
                 return null;
-            }, false, null);
+            },
+            null);
 
     public WinExeBundler() {
         super();
@@ -224,10 +233,41 @@ public class WinExeBundler extends AbstractBundler {
             //we are not interested in return code, only possible exception
             APP_BUNDLER.fetchFrom(p).validate(p);
 
-            if (SERVICE_HINT.fetchFrom(p)) {
-                SERVICE_BUNDLER.fetchFrom(p).validate(p);                
+            // make sure some key values don't have newlines
+            for (BundlerParamInfo<String> pi : Arrays.asList(
+                    APP_NAME,
+                    COPYRIGHT,
+                    DESCRIPTION,
+                    MENU_GROUP,
+                    TITLE,
+                    VENDOR,
+                    VERSION)
+            ) {
+                String v = pi.fetchFrom(p);
+                if (v.contains("\n") | v.contains("\r")) {
+                    throw new ConfigException("Parmeter '" + pi.getID() + "' cannot contain a newline.",
+                            "Change the value of '" + pi.getID() + " so that it does not contain any newlines");
+                }
             }
-            
+
+            // validate license file, if used, exists in the proper place
+            if (p.containsKey(LICENSE_FILE.getID())) {
+                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
+                for (String license : LICENSE_FILE.fetchFrom(p)) {
+                    if (!appResources.contains(license)) {
+                        throw new ConfigException(
+                                I18N.getString("error.license-missing"),
+                                MessageFormat.format(I18N.getString("error.license-missing.advice"),
+                                        license, appResources.getBaseDirectory().toString()));
+                    }
+                }
+            }
+
+
+            if (SERVICE_HINT.fetchFrom(p)) {
+                SERVICE_BUNDLER.fetchFrom(p).validate(p);
+            }
+
             double innoVersion = findToolVersion(TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(p));
 
             //Inno Setup 5+ is required
@@ -324,7 +364,7 @@ public class WinExeBundler extends AbstractBundler {
 
     //name of post-image script
     private File getConfig_Script(Map<String, ? super Object> params) {
-        return new File(EXE_IMAGE_DIR.fetchFrom(params), WinAppBundler.getAppName(params) + "-post-image.wsf");
+        return new File(EXE_IMAGE_DIR.fetchFrom(params), APP_NAME.fetchFrom(params) + "-post-image.wsf");
     }
 
     protected void saveConfigFiles(Map<String, ? super Object> params) {
@@ -373,26 +413,40 @@ public class WinExeBundler extends AbstractBundler {
         }
     }
 
+    void validateValueAndPut(Map<String, String> data, String key, BundlerParamInfo<String> param, Map<String, ? super Object> params) throws IOException {
+        String value = param.fetchFrom(params);
+        if (value.contains("\r") || value.contains("\n")) {
+            throw new IOException("Configuration Parameter " + param.getID() + " cannot contain multiple lines of text");
+        }
+        data.put(key, innosetupEscape(value));
+    }
+
+    private String innosetupEscape(String value) {
+        if (value.contains("\"") || !value.trim().equals(value)) {
+            value = "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
+    }
 
     boolean prepareMainProjectFile(Map<String, ? super Object> params) throws IOException {
         Map<String, String> data = new HashMap<>();
-        data.put("PRODUCT_APP_IDENTIFIER", getAppIdentifier(params));
+        data.put("PRODUCT_APP_IDENTIFIER", innosetupEscape(getAppIdentifier(params)));
 
-        data.put("APPLICATION_NAME", WinAppBundler.getAppName(params));
+        validateValueAndPut(data, "APPLICATION_NAME", APP_NAME, params);
 
-        data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
-        data.put("APPLICATION_VERSION", VERSION.fetchFrom(params)); // TODO make our own version paraminfo?
+        validateValueAndPut(data, "APPLICATION_VENDOR", VENDOR, params);
+        validateValueAndPut(data, "APPLICATION_VERSION", VERSION, params); // TODO make our own version paraminfo?
         
         data.put("APPLICATION_LAUNCHER_FILENAME",
-                WinAppBundler.getLauncher(EXE_IMAGE_DIR.fetchFrom(params), params).getName());
+                innosetupEscape(WinAppBundler.getLauncher(EXE_IMAGE_DIR.fetchFrom(params), params).getName()));
 
         data.put("APPLICATION_DESKTOP_SHORTCUT", SHORTCUT_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_MENU_SHORTCUT", MENU_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
-        data.put("APPLICATION_GROUP", MENU_GROUP.fetchFrom(params));
-        data.put("APPLICATION_COMMENTS", TITLE.fetchFrom(params)); // TODO this seems strange, at least in name
-        data.put("APPLICATION_COPYRIGHT", COPYRIGHT.fetchFrom(params));
+        validateValueAndPut(data, "APPLICATION_GROUP", MENU_GROUP, params);
+        validateValueAndPut(data, "APPLICATION_COMMENTS", TITLE, params); // TODO this seems strange, at least in name
+        validateValueAndPut(data, "APPLICATION_COPYRIGHT", COPYRIGHT, params);
 
-        data.put("APPLICATION_LICENSE_FILE", getLicenseFile(params));
+        data.put("APPLICATION_LICENSE_FILE", innosetupEscape(getLicenseFile(params)));
 
         if (EXE_SYSTEM_WIDE.fetchFrom(params)) {
             data.put("APPLICATION_INSTALL_ROOT", "{pf}");
@@ -409,11 +463,11 @@ public class WinExeBundler extends AbstractBundler {
         }
 
         if (SERVICE_HINT.fetchFrom(params)) {
-            data.put("RUN_FILENAME", WinServiceBundler.getAppSvcName(params));
+            data.put("RUN_FILENAME", innosetupEscape(WinServiceBundler.getAppSvcName(params)));
         } else {
-            data.put("RUN_FILENAME", WinAppBundler.getAppName(params));
+            validateValueAndPut(data, "RUN_FILENAME", APP_NAME, params);
         }
-        data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
+        validateValueAndPut(data, "APPLICATION_DESCRIPTION", DESCRIPTION, params);
         data.put("APPLICATION_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_NOT_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnFalse" : "returnTrue");
         data.put("START_ON_INSTALL", START_ON_INSTALL.fetchFrom(params) ? "-startOnInstall" : "");
@@ -453,12 +507,12 @@ public class WinExeBundler extends AbstractBundler {
 
     private File getConfig_SmallInnoSetupIcon(Map<String, ? super Object> params) {
         return new File(EXE_IMAGE_DIR.fetchFrom(params),
-                WinAppBundler.getAppName(params) + "-setup-icon.bmp");
+                APP_NAME.fetchFrom(params) + "-setup-icon.bmp");
     }
 
     private File getConfig_ExeProjectFile(Map<String, ? super Object> params) {
         return new File(EXE_IMAGE_DIR.fetchFrom(params),
-                WinAppBundler.getAppName(params) + ".iss");
+                APP_NAME.fetchFrom(params) + ".iss");
     }
 
 

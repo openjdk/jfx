@@ -21,8 +21,8 @@ FC=gfortran
 AS=as
 
 # Macros
-CND_PLATFORM=Cygwin_4.x-Windows
-CND_DLIB_EXT=dll
+CND_PLATFORM=GNU-Linux-x86
+CND_DLIB_EXT=so
 CND_CONF=Debug
 CND_DISTDIR=dist
 CND_BUILDDIR=build
@@ -65,37 +65,37 @@ LDLIBSOPTIONS=
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-font.${CND_DLIB_EXT}: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-font.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -shared
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-font.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
 
 ${OBJECTDIR}/_ext/1812479850/MacFontFinder.o: ../../modules/graphics/src/main/native-font/MacFontFinder.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
 	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/MacFontFinder.o ../../modules/graphics/src/main/native-font/MacFontFinder.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/MacFontFinder.o ../../modules/graphics/src/main/native-font/MacFontFinder.c
 
 ${OBJECTDIR}/_ext/1812479850/coretext.o: ../../modules/graphics/src/main/native-font/coretext.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
 	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/coretext.o ../../modules/graphics/src/main/native-font/coretext.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/coretext.o ../../modules/graphics/src/main/native-font/coretext.c
 
 ${OBJECTDIR}/_ext/1812479850/dfontdecoder.o: ../../modules/graphics/src/main/native-font/dfontdecoder.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
 	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/dfontdecoder.o ../../modules/graphics/src/main/native-font/dfontdecoder.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/dfontdecoder.o ../../modules/graphics/src/main/native-font/dfontdecoder.c
 
 ${OBJECTDIR}/_ext/1812479850/directwrite.o: ../../modules/graphics/src/main/native-font/directwrite.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
 	${RM} "$@.d"
-	$(COMPILE.cc) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/directwrite.o ../../modules/graphics/src/main/native-font/directwrite.cpp
+	$(COMPILE.cc) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/directwrite.o ../../modules/graphics/src/main/native-font/directwrite.cpp
 
 ${OBJECTDIR}/_ext/1812479850/fontpath.o: ../../modules/graphics/src/main/native-font/fontpath.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
 	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/fontpath.o ../../modules/graphics/src/main/native-font/fontpath.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/fontpath.o ../../modules/graphics/src/main/native-font/fontpath.c
 
 ${OBJECTDIR}/_ext/1812479850/fontpath_linux.o: ../../modules/graphics/src/main/native-font/fontpath_linux.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
 	${RM} "$@.d"
-	$(COMPILE.c) -g  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/fontpath_linux.o ../../modules/graphics/src/main/native-font/fontpath_linux.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/fontpath_linux.o ../../modules/graphics/src/main/native-font/fontpath_linux.c
 
 # Subprojects
 .build-subprojects:

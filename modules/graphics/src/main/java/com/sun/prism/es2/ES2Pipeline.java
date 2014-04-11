@@ -46,32 +46,29 @@ public class ES2Pipeline extends GraphicsPipeline {
     private static boolean isEglfb = false;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            String libName = "prism_es2";
 
-            public Void run() {
-                String libName = "prism_es2";
-
-                String eglType = PlatformUtil.getEmbeddedType();
-                if ("eglfb".equals(eglType)) {
-                    isEglfb = true;
-                    libName = "prism_es2_eglfb";
-                }
-                else if ("monocle".equals(eglType)) {
-                    isEglfb = true;
-                    libName = "prism_es2_monocle";
-                }
-                else if ("eglx11".equals(eglType))
-                    libName = "prism_es2_eglx11";
-
-                if (PrismSettings.verbose) {
-                    System.out.println("Loading ES2 native library ... " + libName);
-                }
-                NativeLibLoader.loadLibrary(libName);
-                if (PrismSettings.verbose) {
-                    System.out.println("\tsucceeded.");
-                }
-                return null;
+            String eglType = PlatformUtil.getEmbeddedType();
+            if ("eglfb".equals(eglType)) {
+                isEglfb = true;
+                libName = "prism_es2_eglfb";
             }
+            else if ("monocle".equals(eglType)) {
+                isEglfb = true;
+                libName = "prism_es2_monocle";
+            }
+            else if ("eglx11".equals(eglType))
+                libName = "prism_es2_eglx11";
+
+            if (PrismSettings.verbose) {
+                System.out.println("Loading ES2 native library ... " + libName);
+            }
+            NativeLibLoader.loadLibrary(libName);
+            if (PrismSettings.verbose) {
+                System.out.println("\tsucceeded.");
+            }
+            return null;
         });
 
         // Initialize the prism-es2 pipe and a handler of it

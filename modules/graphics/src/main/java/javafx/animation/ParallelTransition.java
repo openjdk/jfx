@@ -114,13 +114,10 @@ public final class ParallelTransition extends Transition {
     private boolean childrenChanged = true;
     private boolean toggledRate;
 
-    private final InvalidationListener childrenListener = new InvalidationListener() {
-        @Override
-        public void invalidated(Observable observable) {
-            childrenChanged = true;
-            if (getStatus() == Status.STOPPED) {
-                setCycleDuration(computeCycleDuration());
-            }
+    private final InvalidationListener childrenListener = observable -> {
+        childrenChanged = true;
+        if (getStatus() == Status.STOPPED) {
+            setCycleDuration(computeCycleDuration());
         }
     };
 

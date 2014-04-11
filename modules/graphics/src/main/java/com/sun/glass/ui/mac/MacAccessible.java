@@ -116,6 +116,7 @@ final class MacAccessible extends PlatformAccessible {
         AXMenuItemCmdGlyph(ACCELERATOR, MacVariant::createNSNumberForInt),
         AXMenuItemCmdModifiers(ACCELERATOR, MacVariant::createNSNumberForInt),
         AXMenuItemMarkChar(SELECTED, MacVariant::createNSString),
+        AXDateTimeComponents(null, MacVariant::createNSNumberForInt),
 
         // NSAccessibilityMenuRole
         NSAccessibilitySelectedChildrenAttribute(null, MacVariant::createNSArray),
@@ -197,7 +198,7 @@ final class MacAccessible extends PlatformAccessible {
     enum MacRoles {
         NSAccessibilityUnknownRole(Role.NODE, null, null),
         NSAccessibilityGroupRole(Role.PARENT, null, null),
-        NSAccessibilityButtonRole(new Role[] {Role.BUTTON, Role.INCREMENT_BUTTON, Role.DECREMENT_BUTTON, Role.HEADER},
+        NSAccessibilityButtonRole(new Role[] {Role.BUTTON, Role.INCREMENT_BUTTON, Role.DECREMENT_BUTTON, Role.HEADER, Role.SPLIT_MENU_BUTTON},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityTitleAttribute,
@@ -224,16 +225,30 @@ final class MacAccessible extends PlatformAccessible {
             new MacActions[] {MacActions.NSAccessibilityPressAction},
             null
         ),
-
-        NSAccessibilityPopUpButtonRole(new Role[] {Role.COMBOBOX},
+        NSAccessibilityComboBoxRole(new Role[] {Role.COMBOBOX},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityValueAttribute,
-                /* Expanded only needed for Combobox, and not for PopUpButton */
-//                MacAttributes.NSAccessibilityExpandedAttribute,
+                MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
+                MacAttributes.NSAccessibilitySelectedTextAttribute,
+                MacAttributes.NSAccessibilitySelectedTextRangeAttribute,
+                MacAttributes.NSAccessibilityInsertionPointLineNumberAttribute,
+                MacAttributes.NSAccessibilityVisibleCharacterRangeAttribute,
             },
             new MacActions[] {MacActions.NSAccessibilityPressAction},
-            null
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilityLineForIndexParameterizedAttribute,
+                MacAttributes.NSAccessibilityRangeForLineParameterizedAttribute,
+                MacAttributes.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
+                MacAttributes.NSAccessibilityStringForRangeParameterizedAttribute,
+            }
+        ),
+        NSAccessibilityPopUpButtonRole(Role.COMBOBOX,
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilityEnabledAttribute,
+                MacAttributes.NSAccessibilityValueAttribute,
+            },
+            new MacActions[] {MacActions.NSAccessibilityPressAction}
         ),
         NSAccessibilityTabGroupRole(new Role[] {Role.TAB_PANE, Role.PAGINATION},
             new MacAttributes[] {
@@ -252,6 +267,15 @@ final class MacAccessible extends PlatformAccessible {
                 MacAttributes.NSAccessibilityMinValueAttribute,
             },
             null
+        ),
+        NSAccessibilityMenuBarRole(Role.MENU_BAR,
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilitySelectedChildrenAttribute,
+                MacAttributes.NSAccessibilityEnabledAttribute,
+            },
+            new MacActions[] {
+                MacActions.NSAccessibilityCancelAction,
+            }
         ),
         NSAccessibilityMenuRole(Role.CONTEXT_MENU,
             new MacAttributes[] {
@@ -277,6 +301,15 @@ final class MacAccessible extends PlatformAccessible {
             new MacActions[] {
                 MacActions.NSAccessibilityPressAction,
                 MacActions.NSAccessibilityCancelAction,
+            }
+        ),
+        NSAccessibilityMenuButtonRole(Role.MENU_BUTTON,
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilityEnabledAttribute,
+                MacAttributes.NSAccessibilityTitleAttribute,
+            },
+            new MacActions[] {
+                MacActions.NSAccessibilityPressAction,
             }
         ),
         /* 
@@ -431,14 +464,15 @@ final class MacAccessible extends PlatformAccessible {
             null,
             null
         ),
-        NSAccessibilityDisclosureTriangleRole(Role.DISCLOSURE_NODE,
+        NSAccessibilityDisclosureTriangleRole(new Role[] {Role.DISCLOSURE_NODE, Role.TITLED_PANE},
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityValueAttribute
             },
             new MacActions[] {
                 MacActions.NSAccessibilityPressAction
-            }
+            },
+            null
         ),
         NSAccessibilityToolbarRole(Role.TOOLBAR,
             new MacAttributes[] {
@@ -447,6 +481,14 @@ final class MacAccessible extends PlatformAccessible {
             },
             null
         ),
+        AXDateTimeArea(Role.DATE_PICKER,
+                new MacAttributes[] {
+                    MacAttributes.NSAccessibilityEnabledAttribute,
+                    MacAttributes.NSAccessibilityValueAttribute,
+                    MacAttributes.AXDateTimeComponents,
+                },
+                null
+            ),
         ;
 
         long ptr; /* Initialized natively - treat as final */
@@ -664,9 +706,40 @@ final class MacAccessible extends PlatformAccessible {
             case SELECTED_CELLS:
                 macNotification = MacNotifications.NSAccessibilitySelectedCellsChangedNotification;
                 break;
-            case FOCUS_NODE:
-                macNotification = MacNotifications.NSAccessibilityFocusedUIElementChangedNotification;
-                break;
+            case FOCUS_NODE: {
+                Node node = (Node)getAttribute(FOCUS_NODE);
+                View view = getView();
+                if (node == null && view == null) {
+                    /* The transientFocusContainer resigns focus.
+                     * Delegate to the scene.
+                     */
+                    Scene scene = (Scene)getAttribute(SCENE);
+                    if (scene != null) {
+                        Accessible acc = scene.getAccessible();
+                        if (acc != null) {
+                            node = (Node)acc.getAttribute(FOCUS_NODE);
+                        }
+                    }
+                }
+
+                long id = 0L;
+                if (node != null) {
+                    Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
+                    id = item != null ? getAccessible(item) : getAccessible(node);
+                } else {
+                    /* No focused element. Send the notification to the scene itself.
+                     * Note, the view is NULL when the FOCUS_NODE notification is sent
+                     * by the transientFocusContainer.
+                     */
+                    if (view == null) view = getRootView((Scene)getAttribute(SCENE));
+                    if (view != null) id = view.getNativeView();
+                }
+
+                if (id != 0) {
+                    NSAccessibilityPostNotification(id, MacNotifications.NSAccessibilityFocusedUIElementChangedNotification.ptr);
+                }
+                return;
+            }
             case FOCUSED:
                 return;
             case SELECTION_START:
@@ -752,7 +825,7 @@ final class MacAccessible extends PlatformAccessible {
     private Boolean inMenu;
     private boolean isInMenu() {
         if (inMenu == null) {
-            inMenu = getContainerNode(Role.CONTEXT_MENU) != null;
+            inMenu = getContainerNode(Role.CONTEXT_MENU) != null || getContainerNode(Role.MENU_BAR) != null;
         }
         return inMenu;
     }
@@ -805,6 +878,24 @@ final class MacAccessible extends PlatformAccessible {
         return code.isLetterKey() || (code.isDigitKey() && !code.isKeypadKey());
     }
 
+    private MacRoles getRole(Role role) {
+        if (role == Role.COMBOBOX) {
+            if (Boolean.TRUE.equals(getAttribute(EDITABLE))) {
+                return MacRoles.NSAccessibilityComboBoxRole;
+            } else {
+                return MacRoles.NSAccessibilityPopUpButtonRole;
+            }
+        }
+        MacRoles macRole = MacRoles.getRole(role);
+        if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
+            Boolean state = (Boolean)getAttribute(INDETERMINATE);
+            if (Boolean.TRUE.equals(state)) {
+                macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
+            }
+        }
+        return macRole;
+    }
+
     /* NSAccessibility Protocol - JNI entry points */
     long[] accessibilityAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
@@ -828,7 +919,7 @@ final class MacAccessible extends PlatformAccessible {
             }
 
             /* Menu and MenuItem do have have Window and top-level UI Element*/
-            if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM) {
+            if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM || role == Role.MENU_BAR) {
                 attrs.remove(MacAttributes.NSAccessibilityWindowAttribute);
                 attrs.remove(MacAttributes.NSAccessibilityTopLevelUIElementAttribute);
             }
@@ -994,6 +1085,14 @@ final class MacAccessible extends PlatformAccessible {
                             jfxAttr = SELECTED;
                             map = MacVariant::createNSNumberForInt;
                             break;
+                        case DATE_PICKER:
+                            jfxAttr = DATE;
+                            map = MacVariant::createNSDate;
+                            break;
+                        case TITLED_PANE:
+                            jfxAttr = EXPANDED;
+                            map = MacVariant::createNSNumberForInt;
+                            break;
                         default:
                             /* VoiceOver can ask NSAccessibilityValueAttribute in unexpected cases, AXColumn for example. */
                             return null;
@@ -1025,7 +1124,25 @@ final class MacAccessible extends PlatformAccessible {
                             }
                         }
                     }
+                    if (role == Role.MENU_BAR) {
+                        Node focus = (Node)getAttribute(FOCUS_NODE);
+                        if (focus != null && focus.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
+                            long[] result = {getAccessible(focus)};
+                            return attr.map.apply(result);
+                        } else {
+                            return null;
+                        }
+                    }
                     return null;
+                }
+                case AXDateTimeComponents: {
+                    /* 
+                     * AXDateTimeComponents is an undocumented attribute which
+                     * is used by native DateTime controls in Cocoa.
+                     * It it used a bit vector and 224 indicates that
+                     * month, day, and year should be read out.
+                     */
+                    return attr.map.apply(224);
                 }
                 default:
               }
@@ -1044,11 +1161,6 @@ final class MacAccessible extends PlatformAccessible {
                      */
                     result = 1;
                     break;
-                case NSAccessibilityValueAttribute:
-                    if (role == Role.COMBOBOX) {
-                        result = "";
-                    }
-                    break;
                 case AXMenuItemCmdModifiers:
                     return attr.map.apply(kAXMenuItemModifierNoCommand);
                 default: return null;
@@ -1059,7 +1171,7 @@ final class MacAccessible extends PlatformAccessible {
         switch (attr) {
             case NSAccessibilityWindowAttribute:
             case NSAccessibilityTopLevelUIElementAttribute: {
-                if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM) {
+                if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM || role == Role.MENU_BAR) {
                     return null;
                 }
                 Scene scene = (Scene)result;
@@ -1074,27 +1186,27 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityRoleAttribute: {
-                MacRoles macRole = MacRoles.getRole((Role)result);
-                if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
-                    Boolean state = (Boolean)getAttribute(INDETERMINATE);
-                    if (Boolean.TRUE.equals(state)) {
-                        macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
-                    }
-                }
+                MacRoles macRole = getRole(role);
                 result = macRole != null ? macRole.ptr : 0L;
                 break;
             }
             case NSAccessibilityRoleDescriptionAttribute: {
-                MacRoles macRole = MacRoles.getRole((Role)result);
-                if (macRole == null) return null;
-                if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
-                    Boolean state = (Boolean)getAttribute(INDETERMINATE);
-                    if (Boolean.TRUE.equals(state)) {
-                        macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
-                    }
+                MacRoles macRole = getRole(role);
+                /* 
+                 * In some cases there is no proper mapping from a JFX role
+                 * to a Mac role. For example, reporting 'disclosure triangle'
+                 * for a TITLED_PANE is not appropriate.
+                 * Providing a custom role description makes it much better.
+                 */
+                switch (role) {
+                    case TITLED_PANE: result = "title pane"; break;
+                    case SPLIT_MENU_BUTTON: result = "split button"; break;
+                    case PAGE: result = "page"; break;
+                    case TAB_ITEM: result = "tab"; break;
+                    default:
+                        MacSubroles subRole = MacSubroles.getRole(role);
+                        result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
                 }
-                MacSubroles subRole = MacSubroles.getRole(role);
-                result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
                 break;
             }
             case NSAccessibilitySelectedCellsAttribute:
@@ -1130,16 +1242,23 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityValueAttribute: {
-                if (jfxAttr == SELECTED_TAB || jfxAttr == SELECTED_PAGE) {
-                    result = getAccessible((Node)result);
-                }
-                if (role == Role.CHECKBOX || role == Role.TOGGLE_BUTTON) {
-                    if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
-                        result = 2;
-                    } else {
-                        boolean selected = Boolean.TRUE.equals(result);
-                        result = selected ? 1 : 0;
-                    }
+                switch (role) {
+                    case TAB_PANE:
+                    case PAGINATION:
+                        result = getAccessible((Node)result);
+                        break;
+                    case CHECKBOX:
+                    case TOGGLE_BUTTON:
+                        if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
+                            result = 2;
+                        } else {
+                            result = Boolean.TRUE.equals(result) ? 1 : 0;
+                        }
+                        break;
+                    case TITLED_PANE:
+                        result = Boolean.TRUE.equals(result) ? 1 : 0;
+                        break;
+                    default:
                 }
                 break;
             }
@@ -1219,7 +1338,7 @@ final class MacAccessible extends PlatformAccessible {
                     if (!isCmdCharBased(code)) {
                         @SuppressWarnings("deprecation")
                         int keyCode = code.impl_getCode();
-                        result = MacApplication._GetMacKey(keyCode);
+                        result = MacApplication._getMacKey(keyCode);
                     }
                 }
                 if (result == null) return null;
@@ -1477,6 +1596,26 @@ final class MacAccessible extends PlatformAccessible {
 
     void accessibilityPerformAction(long action) {
         MacActions macAction = MacActions.getAction(action);
+        boolean expand = false;
+        if (macAction == MacActions.NSAccessibilityPressAction) {
+            Role role = (Role)getAttribute(ROLE);
+            if (role == Role.TITLED_PANE || role == Role.COMBOBOX) {
+                expand = true;
+            }
+        }
+        if (macAction == MacActions.NSAccessibilityShowMenuAction) {
+            if (getAttribute(ROLE) == Role.SPLIT_MENU_BUTTON) {
+                expand = true;
+            }
+        }
+        if (expand) {
+            if (Boolean.TRUE.equals(getAttribute(EXPANDED))) {
+                executeAction(Action.COLLAPSE);
+            } else {
+                executeAction(Action.EXPAND);
+            }
+            return;
+        }
         if (macAction != null && macAction.jfxAction != null) {
             executeAction(macAction.jfxAction);
         }
@@ -1494,7 +1633,7 @@ final class MacAccessible extends PlatformAccessible {
     boolean accessibilityIsIgnored() {
         if (isInMenu()) {
             Role role = (Role)getAttribute(ROLE);
-            return role != Role.CONTEXT_MENU && role != Role.MENU_ITEM;
+            return role != Role.CONTEXT_MENU && role != Role.MENU_ITEM && role != Role.MENU_BAR;
         } else {
             return isIgnored();
         }

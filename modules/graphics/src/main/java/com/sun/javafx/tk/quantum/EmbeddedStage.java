@@ -184,33 +184,22 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     private void notifyStageListener(final Runnable r) {
         AccessControlContext acc = getAccessControlContext();
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                r.run();
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            r.run();
+            return null;
         }, acc);
     }
     private void notifyStageListenerLater(final Runnable r) {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                notifyStageListener(r);
-            }
-        });
+        Platform.runLater(() -> notifyStageListener(r));
     }
 
     // EmbeddedStageInterface methods
 
     @Override
     public void setLocation(final int x, final int y) {
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                if (stageListener != null) {
-                    stageListener.changedLocation(x, y);
-                }
+        Runnable r = () -> {
+            if (stageListener != null) {
+                stageListener.changedLocation(x, y);
             }
         };
         // setLocation() can be called on both FX and Swing/SWT/etc threads
@@ -223,12 +212,9 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     @Override
     public void setSize(final int width, final int height) {
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                if (stageListener != null) {
-                    stageListener.changedSize(width, height);
-                }
+        Runnable r = () -> {
+            if (stageListener != null) {
+                stageListener.changedSize(width, height);
             }
         };
         // setSize() can be called on both FX and Swing/SWT/etc threads
@@ -241,13 +227,10 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     @Override
     public void setFocused(final boolean focused, final int focusCause) {
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                if (stageListener != null) {
-                    stageListener.changedFocused(focused,
-                            AbstractEvents.focusCauseToPeerFocusCause(focusCause));
-                }
+        Runnable r = () -> {
+            if (stageListener != null) {
+                stageListener.changedFocused(focused,
+                        AbstractEvents.focusCauseToPeerFocusCause(focusCause));
             }
         };
         // setFocused() can be called on both FX and Swing/SWT/etc threads
@@ -260,12 +243,9 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     
     @Override
     public void focusUngrab() {
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                if (stageListener != null) {
-                    stageListener.focusUngrab();
-                }
+        Runnable r = () -> {
+            if (stageListener != null) {
+                stageListener.focusUngrab();
             }
         };
         if (Toolkit.getToolkit().isFxUserThread()) {

@@ -29,6 +29,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -328,6 +329,8 @@ public class TreeView<T> extends Control {
         MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<T>(this);
         setSelectionModel(sm);
         setFocusModel(new TreeViewFocusModel<T>(this));
+
+        focusedProperty().addListener(focusedListener);
     }
     
     
@@ -377,6 +380,19 @@ public class TreeView<T> extends Control {
     };
     
     private WeakEventHandler<TreeModificationEvent<T>> weakRootEventListener;
+
+    private InvalidationListener focusedListener = observable -> {
+        // RT-25679 - we select the first item in the control if there is no
+        // current selection or focus on any other cell
+        MultipleSelectionModel<TreeItem<T>> sm = getSelectionModel();
+        FocusModel<TreeItem<T>> fm = getFocusModel();
+
+        if (getExpandedItemCount() > 0 &&
+                sm != null && sm.isEmpty() &&
+                fm != null && fm.getFocusedIndex() == -1) {
+            sm.select(0);
+        }
+    };
     
     
     /***************************************************************************

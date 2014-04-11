@@ -55,16 +55,14 @@ public final class swtPlatformFactory extends PlatformFactory {
     }
 
     public ClipboardDelegate createClipboardDelegate() {
-        return new ClipboardDelegate() {
-            public Clipboard createClipboard(String clipboardName) {
-                if (Clipboard.SYSTEM.equals(clipboardName)) {
-                    return new SWTClipboard(clipboardName);
-                }
-                if (Clipboard.DND.equals(clipboardName)) {
-                    return new SWTClipboard(clipboardName);
-                }
-                return null;
+        return clipboardName -> {
+            if (Clipboard.SYSTEM.equals(clipboardName)) {
+                return new SWTClipboard(clipboardName);
             }
+            if (Clipboard.DND.equals(clipboardName)) {
+                return new SWTClipboard(clipboardName);
+            }
+            return null;
         };
     }
 

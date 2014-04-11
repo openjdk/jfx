@@ -135,6 +135,7 @@ public class MacAppBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
+        bundleParams.put(ICON.getID(), "java-logo2.gif"); // force no signing
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);

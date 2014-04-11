@@ -2954,11 +2954,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
-
-        new StageLoader(tableView);
-
         sm.clearAndSelect(99);
         tableView.scrollTo(99);
         assertEquals(99, getAnchor().getRow());
@@ -2978,12 +2973,7 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
-
         sm.setCellSelectionEnabled(true);
-
-        new StageLoader(tableView);
 
         sm.clearAndSelect(99, col0);
         tableView.scrollTo(99);
@@ -3006,12 +2996,7 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
-
         sm.setCellSelectionEnabled(false);
-
-        new StageLoader(tableView);
 
         sm.clearAndSelect(99);
         tableView.scrollTo(99);
@@ -3031,10 +3016,6 @@ public class TreeTableViewKeyInputTest {
         for (int i = 0; i < items; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
-
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final MultipleSelectionModel sm = tableView.getSelectionModel();
 
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor().getRow());
@@ -3078,10 +3059,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final MultipleSelectionModel sm = tableView.getSelectionModel();
-
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor().getRow());
         assertEquals(1, fm.getFocusedIndex());
@@ -3109,9 +3086,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(6, col0);
@@ -3145,9 +3119,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(6, col0);
@@ -3184,9 +3155,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(6, col1);
@@ -3223,9 +3191,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(3, col0);
@@ -3259,9 +3224,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(3, col0);
@@ -3298,9 +3260,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(3, col1);
@@ -3337,9 +3296,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -3420,9 +3376,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -3475,9 +3428,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -3530,9 +3480,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -3585,9 +3532,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -3640,9 +3584,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -3684,9 +3625,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -3729,9 +3667,7 @@ public class TreeTableViewKeyInputTest {
         }
         tableView.setPrefHeight(130); // roughly room for four rows
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
+        StageLoader sl = new StageLoader(tableView);
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -3760,6 +3696,8 @@ public class TreeTableViewKeyInputTest {
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());
         assertEquals(leadSelectedIndex, fm.getFocusedIndex());
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+
+        sl.dispose();
     }
 
     @Test public void test_rt34407_up_up_down() {
@@ -3771,9 +3709,7 @@ public class TreeTableViewKeyInputTest {
         }
         tableView.setPrefHeight(160); // roughly room for four rows
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
+        StageLoader sl = new StageLoader(tableView);
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
@@ -3804,6 +3740,8 @@ public class TreeTableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         assertEquals(leadSelectedIndex, sm.getSelectedIndex());
         assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+
+        sl.dispose();
     }
 
     @Test public void test_rt34768() {
@@ -3824,9 +3762,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(5);
@@ -3854,9 +3789,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         sm.clearAndSelect(5);
@@ -3884,9 +3816,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
 
         sm.clearAndSelect(5);
@@ -3914,9 +3843,6 @@ public class TreeTableViewKeyInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
 
         sm.clearAndSelect(5);
@@ -3948,9 +3874,6 @@ public class TreeTableViewKeyInputTest {
         col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         tableView.getColumns().setAll(col);
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
 
@@ -3983,9 +3906,6 @@ public class TreeTableViewKeyInputTest {
         col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         tableView.getColumns().setAll(col);
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
 
@@ -4018,9 +3938,6 @@ public class TreeTableViewKeyInputTest {
         col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         tableView.getColumns().setAll(col);
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
         sm.setCellSelectionEnabled(true);
 
@@ -4053,9 +3970,6 @@ public class TreeTableViewKeyInputTest {
         col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         tableView.getColumns().setAll(col);
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
         sm.setCellSelectionEnabled(true);
 

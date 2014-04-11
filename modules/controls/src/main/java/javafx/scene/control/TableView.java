@@ -550,6 +550,8 @@ public class TableView<S> extends Control {
             }
         });
 
+        focusedProperty().addListener(focusedListener);
+
         isInited = true;
     }
 
@@ -686,6 +688,21 @@ public class TableView<S> extends Control {
     
     private final WeakInvalidationListener weakCellSelectionModelInvalidationListener = 
             new WeakInvalidationListener(cellSelectionModelInvalidationListener);
+
+    private InvalidationListener focusedListener = observable -> {
+        // RT-25679 - we select the first item in the control if there is no
+        // current selection or focus on any other cell
+        List<S> items = getItems();
+        MultipleSelectionModel<S> sm = getSelectionModel();
+        FocusModel<S> fm = getFocusModel();
+
+        if (items != null && items.size() > 0 &&
+                sm != null && sm.isEmpty() &&
+                fm != null && fm.getFocusedIndex() == -1) {
+            sm.select(0);
+        }
+    };
+
     
     /***************************************************************************
      *                                                                         *
@@ -2135,6 +2152,8 @@ public class TableView<S> extends Control {
                     //       -- add the new index to the new indices list
                     //   -- Perform batch selection (6)
 
+                    makeAtomic = true;
+
                     final int oldSelectedIndex = getSelectedIndex();
 
                     // (1)
@@ -2167,11 +2186,14 @@ public class TableView<S> extends Control {
 
                     // (6)
                     quietClearSelection();
+                    makeAtomic = false;
                     selectedCellsMap.setAll(newIndices);
                     selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<>(0, newIndices.size(), selectedCellsSeq));
 
                     if (oldSelectedIndex >= 0 && oldSelectedIndex < itemCount) {
-                        setSelectedIndex(c.getPermutation(oldSelectedIndex));
+                        int newIndex = c.getPermutation(oldSelectedIndex);
+                        setSelectedIndex(newIndex);
+                        focus(newIndex);
                     }
                 }
             }

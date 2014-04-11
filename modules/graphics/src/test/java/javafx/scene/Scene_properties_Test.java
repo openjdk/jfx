@@ -54,10 +54,7 @@ public final class Scene_properties_Test extends PropertiesTestBase {
         final TestStage testStage2 = new TestStage("STAGE_2");
         
         final EventHandler testEventHandler =
-                new EventHandler<Event>() {
-                    @Override
-                    public void handle(Event event) {
-                    }
+                event -> {
                 };
         
         final Configuration windowCfg =

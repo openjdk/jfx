@@ -540,7 +540,46 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
                 if (node instanceof Separator) {
                     overflowMenuItems.add(new SeparatorMenuItem());
                 } else {
-                    overflowMenuItems.add(new CustomMenuItem(node));
+                    CustomMenuItem customMenuItem = new CustomMenuItem(node);
+
+                    // RT-36455:
+                    // We can't be totally certain of all nodes, but for the
+                    // most common nodes we can check to see whether we should
+                    // hide the menu when the node is clicked on. The common
+                    // case is for TextField or Slider.
+                    // This list won't be exhaustive (there is no point really
+                    // considering the ListView case), but it should try to
+                    // include most common control types that find themselves
+                    // placed in menus.
+                    final String nodeType = node.getTypeSelector();
+                    switch (nodeType) {
+                        case "Button":
+                        case "Hyperlink":
+                        case "Label":
+                            customMenuItem.setHideOnClick(true);
+                            break;
+                        case "CheckBox":
+                        case "ChoiceBox":
+                        case "ColorPicker":
+                        case "ComboBox":
+                        case "DatePicker":
+                        case "MenuButton":
+                        case "PasswordField":
+                        case "RadioButton":
+                        case "ScrollBar":
+                        case "ScrollPane":
+                        case "Slider":
+                        case "SplitMenuButton":
+                        case "SplitPane":
+                        case "TextArea":
+                        case "TextField":
+                        case "ToggleButton":
+                        case "ToolBar":
+                            customMenuItem.setHideOnClick(false);
+                            break;
+                    }
+
+                    overflowMenuItems.add(customMenuItem);
                 }
             }
         }

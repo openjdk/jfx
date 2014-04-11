@@ -319,14 +319,40 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
             });
         }
 
+        @Override protected double computeMinWidth(double height) {
+            final Insets insets = getInsets();
+            final double h = height = insets.getBottom() - insets.getTop();
+            return (int)((insets.getLeft() + title.minWidth(h) + TEXT_GAP + details.minWidth(h) + insets.getRight())+ 0.5d);
+        }
+
         @Override protected double computePrefWidth(double height) {
-            return 100;
+            final Insets insets = getInsets();
+            final double h = height = insets.getBottom() - insets.getTop();
+            return (int)((insets.getLeft() + title.prefWidth(h) + TEXT_GAP + details.prefWidth(h) + insets.getRight())+ 0.5d);
+        }
+
+        @Override protected double computeMaxWidth(double height) {
+            final Insets insets = getInsets();
+            final double h = height = insets.getBottom() - insets.getTop();
+            return (int)((insets.getLeft() + title.maxWidth(h) + TEXT_GAP + details.maxWidth(h) + insets.getRight())+ 0.5d);
+        }
+
+        @Override protected double computeMinHeight(double width) {
+            final Insets insets = getInsets();
+            final double w = width - insets.getLeft() - insets.getRight();
+            return (int)((insets.getTop() + title.minHeight(w) + TEXT_GAP + details.minHeight(w) + insets.getBottom())+ 0.5d);
         }
 
         @Override protected double computePrefHeight(double width) {
             final Insets insets = getInsets();
             final double w = width - insets.getLeft() - insets.getRight();
             return (int)((insets.getTop() + title.prefHeight(w) + TEXT_GAP + details.prefHeight(w) + insets.getBottom())+ 0.5d);
+        }
+
+        @Override protected double computeMaxHeight(double width) {
+            final Insets insets = getInsets();
+            final double w = width - insets.getLeft() - insets.getRight();
+            return (int)((insets.getTop() + title.maxHeight(w) + TEXT_GAP + details.maxHeight(w) + insets.getBottom())+ 0.5d);
         }
 
         @Override protected void layoutChildren() {

@@ -25,8 +25,9 @@
 
 package com.sun.glass.ui.mac;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
-
 import javafx.geometry.Bounds;
 
 class MacVariant {
@@ -87,6 +88,16 @@ class MacVariant {
         MacVariant variant = new MacVariant();
         variant.type = NSAttributedString;
         variant.string = (String)result;
+        return variant;
+    }
+
+    static MacVariant createNSDate(Object result) {
+        /* Note: [NSDate dateWithTimeIntervalSince1970] used natively
+         * takes the number of seconds from the first instant of 1 January 1970, GMT.
+         */
+        MacVariant variant = new MacVariant();
+        variant.type = NSDate;
+        variant.long1 = ((LocalDate)result).atStartOfDay(ZoneId.systemDefault()).toEpochSecond();
         return variant;
     }
 

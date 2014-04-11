@@ -617,6 +617,8 @@ public class ListViewTest {
         Toolkit.getToolkit().firePulse();
         final double afterEmptiedWidth = listView.prefWidth(-1);
         assertEquals(initialWidth, afterEmptiedWidth, 0.00);
+
+        sl.dispose();
     }
 
     @Test public void test_rt31165() {
@@ -701,6 +703,8 @@ public class ListViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(24, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_30484() {
@@ -755,7 +759,7 @@ public class ListViewTest {
         listView.setEditable(true);
         listView.setCellFactory(TextFieldListCell.forListView());
 
-        new StageLoader(listView);
+        StageLoader sl = new StageLoader(listView);
 
         listView.edit(0);
 
@@ -772,6 +776,8 @@ public class ListViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt35039() {
@@ -782,7 +788,7 @@ public class ListViewTest {
         final ListView<String> listView = new ListView<>();
         listView.setItems(FXCollections.observableArrayList(data));
 
-        new StageLoader(listView);
+        StageLoader sl = new StageLoader(listView);
 
         // everything should be null to start with
         assertNull(listView.getSelectionModel().getSelectedItem());
@@ -795,6 +801,8 @@ public class ListViewTest {
         // that "bbc" remains selected as it is still in the list
         listView.setItems(FXCollections.observableArrayList(data));
         assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35857() {
@@ -838,5 +846,37 @@ public class ListViewTest {
         textField.getOnAction().handle(new ActionEvent());
 
         assertEquals(0, rt_35889_cancel_count);
+    }
+
+    @Test public void test_rt25679() {
+        Button focusBtn = new Button("Focus here");
+
+        final ListView<String> listView = new ListView<String>();
+        SelectionModel sm = listView.getSelectionModel();
+        listView.setItems(FXCollections.observableArrayList("A", "B", "C"));
+
+        VBox vbox = new VBox(focusBtn, listView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        focusBtn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        // test initial state
+        assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
+        assertTrue(focusBtn.isFocused());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+
+        // move focus to the listview
+        listView.requestFocus();
+
+        // ensure that there is a selection (where previously there was not one)
+        assertEquals(sl.getStage().getScene().getFocusOwner(), listView);
+        assertTrue(listView.isFocused());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("A", sm.getSelectedItem());
+
+        sl.dispose();
     }
 }

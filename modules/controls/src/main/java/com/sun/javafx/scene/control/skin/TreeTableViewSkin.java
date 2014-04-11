@@ -316,7 +316,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
             
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
                 getChildren().add(cell);
-                cell.impl_processCSS(false);
+                cell.applyCss();
                 
                 double w = cell.prefWidth(-1);
                 

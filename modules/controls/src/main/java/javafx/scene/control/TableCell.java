@@ -714,10 +714,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.TABLE_CELL;
-            case TITLE: return getText();
             case ROW_INDEX: return getIndex();
             case COLUMN_INDEX: return columnIndex;
             case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
+            case TITLE: //fall through so that mnemonic can be properly handled
             default: return super.accGetAttribute(attribute, parameters);
         }
     }

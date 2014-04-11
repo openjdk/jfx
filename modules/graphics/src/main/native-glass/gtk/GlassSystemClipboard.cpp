@@ -146,6 +146,7 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     jstring typeString;
 
     typeString = mainEnv->NewStringUTF("text/uri-list");
+    if (mainEnv->ExceptionCheck()) return;
     if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
         jurl = (jstring) mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
         CHECK_JNI_EXCEPTION(mainEnv);
@@ -153,6 +154,7 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     }
     
     typeString = mainEnv->NewStringUTF("application/x-java-file-list");
+    if (mainEnv->ExceptionCheck()) return;
     if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
         files_array = (jobjectArray) mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
         CHECK_JNI_EXCEPTION(mainEnv);
@@ -226,12 +228,14 @@ static void set_data(GdkAtom target, GtkSelectionData *selection_data, jobject d
 
     if (gtk_targets_include_text(&target, 1)) {
         typeString = mainEnv->NewStringUTF("text/plain");
+        EXCEPTION_OCCURED(mainEnv);
         result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
         if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
             set_text_data(selection_data, (jstring)result);
         }
     } else if (gtk_targets_include_image(&target, 1, TRUE)) {
         typeString = mainEnv->NewStringUTF("application/x-java-rawimage");
+        EXCEPTION_OCCURED(mainEnv);
         result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
         if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
             set_image_data(selection_data, result);
@@ -240,6 +244,7 @@ static void set_data(GdkAtom target, GtkSelectionData *selection_data, jobject d
         set_uri_data(selection_data, data);
     } else {
         typeString = mainEnv->NewStringUTF(name);
+        EXCEPTION_OCCURED(mainEnv);
         result = mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
         if (!EXCEPTION_OCCURED(mainEnv) && result != NULL) {
             if (mainEnv->IsInstanceOf(result, jStringCls)) {
@@ -277,6 +282,7 @@ static jobject get_data_text(JNIEnv *env)
         return NULL;
     }
     jstring jdata = env->NewStringUTF(data);
+    EXCEPTION_OCCURED(env);
     g_free(data);
     return jdata;
 }
@@ -313,10 +319,13 @@ static jobject get_data_image(JNIEnv* env) {
     data = (guchar*) convert_BGRA_to_RGBA((int*)data, stride, h);
 
     data_array = env->NewByteArray(stride*h);
+    EXCEPTION_OCCURED(env);
     env->SetByteArrayRegion(data_array, 0, stride*h, (jbyte*)data);
+    EXCEPTION_OCCURED(env);
 
     buffer = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, data_array);
     result = env->NewObject(jGtkPixelsCls, jGtkPixelsInit, w, h, buffer);
+    EXCEPTION_OCCURED(env);
 
     g_free(data);
     g_object_unref(pixbuf);
@@ -337,9 +346,12 @@ static jobject get_data_raw(JNIEnv *env, const char* mime, gboolean string_data)
         raw_data = glass_gtk_selection_data_get_data_with_length(data, &length);
         if (string_data) {
             result = env->NewStringUTF((const char*)raw_data);
+            EXCEPTION_OCCURED(env);
         } else {
             array = env->NewByteArray(length);
+            EXCEPTION_OCCURED(env);
             env->SetByteArrayRegion(array, 0, length, (const jbyte*)raw_data);
+            EXCEPTION_OCCURED(env);
             result = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, array);
         }
         gtk_selection_data_free(data);
@@ -557,11 +569,14 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_mime
         }
     }
 
-    result = env->NewObjectArray(convertible_ptr - convertible, jStringCls, NULL);
+    result = env->NewObjectArray(convertible_ptr - convertible, jStringCls, NULL);    
+    EXCEPTION_OCCURED(env);
     for (i = 0; convertible + i < convertible_ptr; ++i) {
         name = gdk_atom_name(convertible[i]);
         tmpString = env->NewStringUTF(name);
+        EXCEPTION_OCCURED(env);
         env->SetObjectArrayElement(result, (jsize)i, tmpString);
+        EXCEPTION_OCCURED(env);
         g_free(name);
     }
 

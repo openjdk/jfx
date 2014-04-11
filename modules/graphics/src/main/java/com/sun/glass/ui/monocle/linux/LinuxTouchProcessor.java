@@ -39,15 +39,10 @@ public abstract class LinuxTouchProcessor implements LinuxInputProcessor {
     LinuxTouchProcessor(LinuxInputDevice device) {
         transform = new LinuxTouchTransform(device);
         PrivilegedAction<String> getFilterProperty =
-                new PrivilegedAction<String>() {
-                    @Override
-                    public String run() {
-                        return System.getProperty(
-                                "monocle.input." + device.getProduct()
-                                        + ".touchFilters",
-                                "");
-                    }
-                };
+                () -> System.getProperty(
+                        "monocle.input." + device.getProduct()
+                                + ".touchFilters",
+                        "");
         pipeline = new TouchPipeline();
         pipeline.addNamedFilters(
                 AccessController.doPrivileged(getFilterProperty));

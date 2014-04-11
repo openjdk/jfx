@@ -157,8 +157,8 @@ public class WinServiceBundler extends AbstractBundler {
 
             return outputDirectory;
         } catch (IOException ex) {
-            System.out.println("Exception: "+ex);
-            ex.printStackTrace();
+            Log.info("Exception: "+ex);
+            Log.debug(ex);
             return null;
         }
         

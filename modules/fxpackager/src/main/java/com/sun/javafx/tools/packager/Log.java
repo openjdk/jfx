@@ -114,4 +114,8 @@ public class Log {
     public static boolean isDebug() {
         return debug;
     }
+
+    public static void setDebug(boolean debug) {
+        Log.debug = debug;
+    }
 }

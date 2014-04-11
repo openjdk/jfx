@@ -267,6 +267,40 @@ public class TestApplication extends Application {
         });
     }
 
+    public static void addGestureListeners() throws Exception {
+        //Zoom
+        getStage().getScene().setOnZoom((e) -> {
+            TestLog.log("Zoom, factor: " + e.getZoomFactor()
+                    + ", total factor: " + e.getTotalZoomFactor());
+        });
+
+        getStage().getScene().setOnZoomStarted((e) -> {
+            TestLog.log("Zoom started, factor: " + e.getZoomFactor()
+                    + ", total factor: " + e.getTotalZoomFactor());
+        });
+
+        getStage().getScene().setOnZoomFinished((e) -> {
+            TestLog.log("Zoom finished, factor: " + e.getZoomFactor()
+                    + ", total factor: " + e.getTotalZoomFactor());
+        });
+
+        //Rotate
+        getStage().getScene().setOnRotate((e) -> {
+            TestLog.log("Rotation, angle: " + Math.round(e.getAngle())
+                    + ", total angle: " + Math.round(e.getTotalAngle()));
+        });
+
+        getStage().getScene().setOnRotationStarted((e) -> {
+            TestLog.log("Rotation started, angle: " + Math.round(e.getAngle())
+                    + ", total angle: " + Math.round(e.getTotalAngle()));
+        });
+
+        getStage().getScene().setOnRotationFinished((e) -> {
+            TestLog.log("Rotation finished, angle: " + Math.round(e.getAngle())
+                    + ", total angle: " + Math.round(e.getTotalAngle()));
+        });
+    }
+
     public static void movePointerTo(final int targetX, final int targetY) throws Exception {
         final Semaphore released = new Semaphore(0);
         EventHandler<TouchEvent> touchHandler = (e) -> {

@@ -24,7 +24,7 @@ case "$1" in
 
         if [ "SERVICE_HINT" = "true" ]; then
             echo Installing daemon
-            cp /opt/APPLICATION_NAME/APPLICATION_NAME.init /etc/init.d/APPLICATION_PACKAGE
+            cp /opt/APPLICATION_NAME/APPLICATION_PACKAGE.init /etc/init.d/APPLICATION_PACKAGE
 
             if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
                 update-rc.d APPLICATION_PACKAGE defaults

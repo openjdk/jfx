@@ -63,6 +63,15 @@ public class RelativeFileSet {
         return result;
     }
 
+    public boolean contains(String requiredFile) {
+        if (files.contains(requiredFile)) {
+            return true;
+        } else {
+            Log.debug("  Runtime does not contain [" + requiredFile + "]");
+            return false;
+        }
+    }
+
     public File getBaseDirectory() {
         return basedir;
     }

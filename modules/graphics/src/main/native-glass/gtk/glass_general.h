@@ -46,9 +46,17 @@ extern JNIEnv* mainEnv; // Use only with main loop thread!!!
 
 struct jni_exception: public std::exception {
     jni_exception(jthrowable _th): throwable(_th), message() {
-            jmessage = (jstring)mainEnv->CallObjectMethod(throwable,
-                    mainEnv->GetMethodID(mainEnv->FindClass("java/lang/Throwable"),
-                    "getMessage", "()Ljava/lang/String;"));
+            jclass jc = mainEnv->FindClass("java/lang/Throwable");
+            if (mainEnv->ExceptionOccurred()) {
+                mainEnv->ExceptionDescribe();
+                mainEnv->ExceptionClear();
+            }
+            jmethodID jmid = mainEnv->GetMethodID(jc, "getMessage", "()Ljava/lang/String;");
+            if (mainEnv->ExceptionOccurred()) {
+                mainEnv->ExceptionDescribe();
+                mainEnv->ExceptionClear();
+            }
+            jmessage = (jstring)mainEnv->CallObjectMethod(throwable, jmid);
             message = jmessage == NULL ? "" : mainEnv->GetStringUTFChars(jmessage, NULL);
     }
     const char *what() const throw()

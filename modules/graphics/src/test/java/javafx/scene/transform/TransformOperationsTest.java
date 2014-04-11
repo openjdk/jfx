@@ -1541,16 +1541,14 @@ public class TransformOperationsTest {
         final Transform clone = t.clone();
 
         InvalidationListener l =
-                new InvalidationListener() {
-                    @Override public void invalidated(Observable valueModel) {
-                         if (is2d) {
-                             assertFalse(clone.type2DProperty().get());
-                         } else {
-                             assertTrue(clone.type2DProperty().get());
-                         }
-                         listenerCalled = true;
-                    }
-                 };
+                valueModel -> {
+                     if (is2d) {
+                         assertFalse(clone.type2DProperty().get());
+                     } else {
+                         assertTrue(clone.type2DProperty().get());
+                     }
+                     listenerCalled = true;
+                };
 
         clone.type2DProperty().addListener(l);
 
@@ -1583,10 +1581,7 @@ public class TransformOperationsTest {
         final Transform clone = t.clone();
 
         ChangeListener<Boolean> l =
-            new ChangeListener<Boolean>() {
-                @Override public void changed(
-                        ObservableValue<? extends Boolean> observable,
-                        Boolean oldValue, Boolean newValue) {
+                (observable, oldValue, newValue) -> {
 
                     if ((is2d && (eventCounter == 0 || eventCounter == 2))
                             || (!is2d && eventCounter == 1)) {
@@ -1601,8 +1596,7 @@ public class TransformOperationsTest {
 
                     listenerCalled = true;
                     eventCounter++;
-                }
-            };
+                };
 
         clone.type2DProperty().addListener(l);
 
@@ -1691,19 +1685,17 @@ public class TransformOperationsTest {
         final Transform clone = t.clone();
 
         InvalidationListener l =
-                new InvalidationListener() {
-                    @Override public void invalidated(Observable valueModel) {
-                         if (isIdentity) {
-                             if (!clone.identityProperty().get()) {
-                                listenerCalled = true;
-                             }
-                         } else {
-                             if (clone.identityProperty().get()) {
-                                listenerCalled = true;
-                             }
+                valueModel -> {
+                     if (isIdentity) {
+                         if (!clone.identityProperty().get()) {
+                            listenerCalled = true;
                          }
-                    }
-                 };
+                     } else {
+                         if (clone.identityProperty().get()) {
+                            listenerCalled = true;
+                         }
+                     }
+                };
 
         clone.identityProperty().addListener(l);
 
@@ -1738,10 +1730,7 @@ public class TransformOperationsTest {
         final Transform clone = t.clone();
 
         ChangeListener<Boolean> l =
-            new ChangeListener<Boolean>() {
-                @Override public void changed(
-                        ObservableValue<? extends Boolean> observable,
-                        Boolean oldValue, Boolean newValue) {
+                (observable, oldValue, newValue) -> {
                     if (isIdentity) {
                         if (oldValue == true && newValue == false
                                 && clone.identityProperty().get() == false) {
@@ -1754,8 +1743,7 @@ public class TransformOperationsTest {
                         }
                     }
 
-                }
-            };
+                };
 
         clone.identityProperty().addListener(l);
 
@@ -2465,11 +2453,9 @@ public class TransformOperationsTest {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> ontc =
-            new EventHandler<TransformChangedEvent>() {
-                @Override public void handle(TransformChangedEvent event) {
+                event -> {
                     eventCounter++;
-                }
-            };
+                };
 
         assertSame(null, clone.getOnTransformChanged());
         clone.setOnTransformChanged(ontc);
@@ -2502,18 +2488,14 @@ public class TransformOperationsTest {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> counting =
-            new EventHandler<TransformChangedEvent>() {
-                @Override public void handle(TransformChangedEvent event) {
+                event -> {
                     eventCounter++;
-                }
-            };
+                };
 
         EventHandler<TransformChangedEvent> checking =
-            new EventHandler<TransformChangedEvent>() {
-                @Override public void handle(TransformChangedEvent event) {
+                event -> {
                     listenerCalled = true;
-                }
-            };
+                };
 
         clone.addEventHandler(TransformChangedEvent.TRANSFORM_CHANGED, counting);
         clone.addEventHandler(TransformChangedEvent.TRANSFORM_CHANGED, checking);
@@ -2548,19 +2530,15 @@ public class TransformOperationsTest {
         Transform clone = t.clone();
 
         EventHandler<TransformChangedEvent> counting =
-            new EventHandler<TransformChangedEvent>() {
-                @Override public void handle(TransformChangedEvent event) {
+                event -> {
                     eventCounter++;
                     event.consume();
-                }
-            };
+                };
 
         EventHandler<TransformChangedEvent> checking =
-            new EventHandler<TransformChangedEvent>() {
-                @Override public void handle(TransformChangedEvent event) {
+                event -> {
                     listenerCalled = true;
-                }
-            };
+                };
 
         clone.addEventFilter(TransformChangedEvent.TRANSFORM_CHANGED, counting);
         clone.addEventHandler(TransformChangedEvent.TRANSFORM_CHANGED, checking);

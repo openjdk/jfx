@@ -101,11 +101,9 @@ final class SWTMenuDelegate implements MenuDelegate, MenuItemDelegate {
     public boolean setCallback(final MenuItem.Callback callback) {
         this.callback = callback;
         if (item !=  null) {
-            item.addListener(SWT.Selection, new Listener () {
-                public void handleEvent(Event event) {
-                    item.setSelection(false);
-                    callback.action();
-                }
+            item.addListener(SWT.Selection, event -> {
+                item.setSelection(false);
+                callback.action();
             });
         }
         return true;
@@ -158,15 +156,13 @@ final class SWTMenuDelegate implements MenuDelegate, MenuItemDelegate {
         ((SWTMenuDelegate)menu).setTitle(((SWTMenuDelegate)menu).title);
         ((SWTMenuDelegate)menu).setPixels(((SWTMenuDelegate)menu).pixels);
         ((SWTMenuDelegate)menu).setEnabled(((SWTMenuDelegate)menu).enabled);
-        ((SWTMenuDelegate)menu).item.addListener(SWT.Dispose, new Listener() {
-            public void handleEvent(Event event) {
-                Image oldImage = ((SWTMenuDelegate)menu).item.getImage();
-                if (oldImage != null) {
-                    ((SWTMenuDelegate)menu).item.setImage(null);
-                    oldImage.dispose();
-                }
-                ((SWTMenuDelegate)menu).item = null;
+        ((SWTMenuDelegate)menu).item.addListener(SWT.Dispose, event -> {
+            Image oldImage = ((SWTMenuDelegate)menu).item.getImage();
+            if (oldImage != null) {
+                ((SWTMenuDelegate)menu).item.setImage(null);
+                oldImage.dispose();
             }
+            ((SWTMenuDelegate)menu).item = null;
         });
         return true;
     }
@@ -176,15 +172,13 @@ final class SWTMenuDelegate implements MenuDelegate, MenuItemDelegate {
             new org.eclipse.swt.widgets.MenuItem(this.menu, SWT.SEPARATOR, pos);
         } else {
             ((SWTMenuDelegate)item).item = new org.eclipse.swt.widgets.MenuItem(this.menu, SWT.CHECK, pos);
-            ((SWTMenuDelegate)item).item.addListener(SWT.Dispose, new Listener() {
-                public void handleEvent(Event event) {
-                    Image oldImage = ((SWTMenuDelegate)item).item.getImage();
-                    if (oldImage != null) {
-                        ((SWTMenuDelegate)item).item.setImage(null);
-                        oldImage.dispose();
-                    }
-                    ((SWTMenuDelegate)item).item = null;
+            ((SWTMenuDelegate)item).item.addListener(SWT.Dispose, event -> {
+                Image oldImage = ((SWTMenuDelegate)item).item.getImage();
+                if (oldImage != null) {
+                    ((SWTMenuDelegate)item).item.setImage(null);
+                    oldImage.dispose();
                 }
+                ((SWTMenuDelegate)item).item = null;
             });
             ((SWTMenuDelegate)item).setTitle(((SWTMenuDelegate)item).title);
             ((SWTMenuDelegate)item).setPixels(((SWTMenuDelegate)item).pixels);

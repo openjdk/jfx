@@ -76,14 +76,11 @@ public class KeyInput {
                 } else if (key == KeyEvent.VK_NUM_LOCK) {
                     numLock = !numLock;
                 } else if (key == KeyEvent.VK_C && newState.isControlPressed()) {
-                    AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                        @Override
-                        public Void run() {
-                            if ("1".equals(System.getenv("JAVAFX_DEBUG"))) {
-                                System.exit(0);
-                            }
-                            return null;
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        if ("1".equals(System.getenv("JAVAFX_DEBUG"))) {
+                            System.exit(0);
                         }
+                        return null;
                     });
                 }
                 dispatchKeyEvent(newState, KeyEvent.PRESS, key);

@@ -48,17 +48,14 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             ResourceBundle.getBundle("com.oracle.bundlers.StandardBundlerParam");
 
     public StandardBundlerParam(String name, String description, String id,
-                                Class<T> valueType, String[] fallbackIDs,
+                                Class<T> valueType,
                                 Function<Map<String, ? super Object>, T> defaultValueFunction,
-                                boolean requiresUserSetting,
                                 BiFunction<String, Map<String, ? super Object>, T> stringConverter) {
         this.name = name;
         this.description = description;
         this.id = id;
         this.valueType = valueType;
-        this.fallbackIDs = fallbackIDs;
         this.defaultValueFunction = defaultValueFunction;
-        this.requiresUserSetting = requiresUserSetting;
         this.stringConverter = stringConverter;
     }
 
@@ -68,9 +65,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.runtime.description"),
                     BundleParams.PARAM_RUNTIME,
                     RelativeFileSet.class,
-                    null,
                     params -> null,
-                    false,
                     (s, p) -> null
             );
 
@@ -80,9 +75,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.app-resource.description"),
                     BundleParams.PARAM_APP_RESOURCES,
                     RelativeFileSet.class,
-                    null,
                     null, // no default.  Required parameter
-                    false,
                     null // no string translation, tool must provide complex type
             );
 
@@ -92,9 +85,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.icon-file.description"),
                     BundleParams.PARAM_ICON,
                     File.class,
-                    null,
                     params -> null,
-                    false,
                     (s, p) -> new File(s)
             );
 
@@ -105,12 +96,10 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.main-class.description"),
                     BundleParams.PARAM_APPLICATION_CLASS,
                     String.class,
-                    null,
                     params -> {
                         extractParamsFromAppResources(params);
                         return (String) params.get(BundleParams.PARAM_APPLICATION_CLASS);
                     },
-                    false,
                     (s, p) -> s
             );
 
@@ -120,7 +109,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.app-name.description"),
                     BundleParams.PARAM_NAME,
                     String.class,
-                    null,
                     params -> {
                         String s = MAIN_CLASS.fetchFrom(params);
                         if (s == null) return null;
@@ -131,7 +119,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         }
                         return s;
                     },
-                    true,
                     (s, p) -> s
             );
 
@@ -141,9 +128,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.vendor.description"),
                     BundleParams.PARAM_VENDOR,
                     String.class,
-                    null,
                     params -> I18N.getString("param.vendor.default"),
-                    false,
                     (s, p) -> s
             );
 
@@ -153,9 +138,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.category.description"),
                     BundleParams.PARAM_CATEGORY,
                     String.class,
-                    null,
                     params -> I18N.getString("param.category.default"),
-                    false,
                     (s, p) -> s
             );
 
@@ -165,9 +148,9 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.description.description"),
                     BundleParams.PARAM_DESCRIPTION,
                     String.class,
-                    new String[] {APP_NAME.getID()},
-                    params -> I18N.getString("param.description.default"),
-                    false,
+                    params -> params.containsKey(APP_NAME.getID())
+                            ? APP_NAME.fetchFrom(params)
+                            : I18N.getString("param.description.default"),
                     (s, p) -> s
             );
 
@@ -177,9 +160,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.copyright.description"),
                     BundleParams.PARAM_COPYRIGHT,
                     String.class,
-                    null,
                     params -> MessageFormat.format(I18N.getString("param.copyright.default"), new Date()),
-                    false,
                     (s, p) -> s
             );
 
@@ -190,12 +171,10 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.main-jar.description"),
                     "mainJar",
                     RelativeFileSet.class,
-                    null,
                     params -> {
                         extractParamsFromAppResources(params);
                         return (RelativeFileSet) params.get("mainJar");
                     },
-                    false,
                     (s, p) -> {
                         File f = new File(s);
                         return new RelativeFileSet(f.getParentFile(), new LinkedHashSet<>(Arrays.asList(f)));
@@ -208,13 +187,11 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.main-jar-classpath.description"),
                     "classpath",
                     String.class,
-                    null,
                     params -> {
                         extractParamsFromAppResources(params);
                         String cp = (String) params.get("classpath");
                         return cp == null ? "" : cp;
                     },
-                    false,
                     (s, p) -> s
             );
 
@@ -224,13 +201,11 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.use-javafx-packaging.description"),
                     "fxPackaging",
                     Boolean.class,
-                    null,
                     params -> {
                         extractParamsFromAppResources(params);
                         Boolean result = (Boolean) params.get("fxPackaging");
                         return (result == null) ? Boolean.FALSE : result;
                     },
-                    false,
                     (s, p) -> Boolean.valueOf(s)
             );
 
@@ -241,9 +216,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.jvm-options.description"),
                     "jvmOptions",
                     (Class<List<String>>) (Object) List.class,
-                    null,
                     params -> Collections.emptyList(),
-                    false,
                     (s, p) -> Arrays.asList(s.split("\\s+"))
             );
 
@@ -254,9 +227,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.jvm-system-properties.description"),
                     "jvmProperties",
                     (Class<Map<String, String>>) (Object) Map.class,
-                    null,
                     params -> Collections.emptyMap(),
-                    false,
                     (s, params) -> {
                         Map<String, String> map = new HashMap<>();
                         try {
@@ -279,9 +250,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.user-jvm-options.description"),
                     "userJvmOptions",
                     (Class<Map<String, String>>) (Object) Map.class,
-                    null,
                     params -> Collections.emptyMap(),
-                    false,
                     (s, params) -> {
                         Map<String, String> map = new HashMap<>();
                         try {
@@ -303,9 +272,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.title.description"), //?? but what does it do?
                     BundleParams.PARAM_TITLE,
                     String.class,
-                    new String[] {APP_NAME.getID()},
                     APP_NAME::fetchFrom,
-                    false,
                     (s, p) -> s
             );
 
@@ -317,9 +284,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.version.description"),
                     BundleParams.PARAM_VERSION,
                     String.class,
-                    null,
                     params -> I18N.getString("param.version.default"),
-                    false,
                     (s, p) -> s
             );
 
@@ -329,9 +294,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.system-wide.description"),
                     BundleParams.PARAM_SYSTEM_WIDE,
                     Boolean.class,
-                    null,
                     params -> null,
-                    false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s)
             );
@@ -342,9 +305,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.service-hint.description"),
                     BundleParams.PARAM_SERVICE_HINT,
                     Boolean.class,
-                    null,
                     params -> false,
-                    false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
@@ -355,9 +316,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.start-on-install.description"),
                     "startOnInstall",
                     Boolean.class,
-                    null,
                     params -> false,
-                    false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
@@ -368,9 +327,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.stop-on-uninstall.description"),
                     "stopOnUninstall",
                     Boolean.class,
-                    null,
                     params -> true,
-                    false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
@@ -381,9 +338,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.run-at-startup.description"),
                     "runAtStartup",
                     Boolean.class,
-                    null,
                     params -> false,
-                    false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
@@ -394,9 +349,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.desktop-shortcut-hint.description"),
                     BundleParams.PARAM_SHORTCUT,
                     Boolean.class,
-                    null,
                     params -> false,
-                    false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? false : Boolean.valueOf(s)
             );
@@ -407,9 +360,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.menu-shortcut-hint.description"),
                     BundleParams.PARAM_MENU,
                     Boolean.class,
-                    null,
                     params -> true,
-                    false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
@@ -421,9 +372,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.license-file.description"),
                     BundleParams.PARAM_LICENSE_FILE,
                     (Class<List<String>>)(Object)List.class,
-                    null,
                     params -> Collections.<String>emptyList(),
-                    false,
                     (s, p) -> Arrays.asList(s.split(","))
             );
 
@@ -432,9 +381,9 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.license-type.name"),
                     I18N.getString("param.license-type.description"),
                     BundleParams.PARAM_LICENSE_TYPE,
-                    String.class, null,
+                    String.class,
                     params -> I18N.getString("param.license-type.default"),
-                    false, (s, p) -> s
+                    (s, p) -> s
             );
 
     public static final StandardBundlerParam<File> BUILD_ROOT =
@@ -443,7 +392,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.build-root.description"),
                     "buildRoot",
                     File.class,
-                    null,
                     params -> {
                         try {
                             return Files.createTempDirectory("fxbundler").toFile();
@@ -451,7 +399,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                             return null;
                         }
                     },
-                    false,
                     (s, p) -> new File(s)
             );
 
@@ -461,7 +408,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.identifier.description"),
                     BundleParams.PARAM_IDENTIFIER,
                     String.class,
-                    null,
                     params -> {
                         String s = MAIN_CLASS.fetchFrom(params);
                         if (s == null) return null;
@@ -472,7 +418,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         }
                         return s;
                     },
-                    false,
                     (s, p) -> s
             );
 
@@ -482,9 +427,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.preferences-id.description"),
                     "preferencesID",
                     String.class,
-                    new String[] {IDENTIFIER.getID()},
-                    params -> null, // todo take the package of the main app class
-                    false,
+                    IDENTIFIER::fetchFrom,
                     (s, p) -> s
             );
 
@@ -494,9 +437,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.verbose.description"),
                     "verbose",
                     Boolean.class,
-                    null,
                     params -> false,
-                    false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );

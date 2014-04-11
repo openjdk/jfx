@@ -50,9 +50,9 @@ public abstract class AbstractBundler implements Bundler {
             I18N.getString("param.images-root.name"),
             I18N.getString("param.images-root.description"),
             "imagesRoot",
-            File.class, null,
+            File.class,
             params -> new File(BUILD_ROOT.fetchFrom(params), "images"),
-            false, (s, p) -> null);
+            (s, p) -> null);
 
     //do not use file separator -
     // we use it for classpath lookup and there / are not platform specific

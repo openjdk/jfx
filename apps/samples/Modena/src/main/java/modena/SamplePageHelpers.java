@@ -40,6 +40,7 @@ import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.GroupBuilder;
 import javafx.scene.Node;
@@ -69,6 +70,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.StackPaneBuilder;
 import javafx.scene.paint.Color;
@@ -170,10 +172,10 @@ public class SamplePageHelpers {
                 new Button("D")
             );
         } else {
-            toolBar.getItems().addAll(
-                new Label("Search:"),
-                new TextField()
-            );
+            Label searchLabel = new Label("Search:");
+            HBox searchBox = new HBox(10, searchLabel, new TextField());
+            searchBox.setAlignment(Pos.BASELINE_LEFT);
+            toolBar.getItems().addAll(searchBox);
         }
         if (overFlow) {
             if (vertical) {

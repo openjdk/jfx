@@ -42,35 +42,32 @@ public class LinuxInputDeviceRegistry extends InputDeviceRegistry {
             return;
         }
         Map<File, LinuxInputDevice> deviceMap = new HashMap<>();
-        UdevListener udevListener = new UdevListener() {
-            @Override
-            public void udevEvent(String action, Map<String, String> event) {
-                String subsystem = event.get("SUBSYSTEM");
-                String devPath = event.get("DEVPATH");
-                String devName = event.get("DEVNAME");
-                if (subsystem != null && subsystem.equals("input")
-                        && devPath != null && devName != null) {
-                    try {
-                        File sysPath = new File("/sys", devPath);
-                        if (action.equals("add")
-                                || (action.equals("change")
-                                && !deviceMap.containsKey(sysPath))) {
-                            File devNode = new File(devName);
-                            LinuxInputDevice device = createDevice(
-                                    devNode, sysPath, event);
-                            if (device != null) {
-                                deviceMap.put(sysPath, device);
-                            }
-                        } else if (action.equals("remove")) {
-                            LinuxInputDevice device = deviceMap.get(devPath);
-                            deviceMap.remove(devPath);
-                            if (device != null) {
-                                devices.remove(device);
-                            }
+        UdevListener udevListener = (action, event) -> {
+            String subsystem = event.get("SUBSYSTEM");
+            String devPath = event.get("DEVPATH");
+            String devName = event.get("DEVNAME");
+            if (subsystem != null && subsystem.equals("input")
+                    && devPath != null && devName != null) {
+                try {
+                    File sysPath = new File("/sys", devPath);
+                    if (action.equals("add")
+                            || (action.equals("change")
+                            && !deviceMap.containsKey(sysPath))) {
+                        File devNode = new File(devName);
+                        LinuxInputDevice device = createDevice(
+                                devNode, sysPath, event);
+                        if (device != null) {
+                            deviceMap.put(sysPath, device);
                         }
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    } else if (action.equals("remove")) {
+                        LinuxInputDevice device = deviceMap.get(devPath);
+                        deviceMap.remove(devPath);
+                        if (device != null) {
+                            devices.remove(device);
+                        }
                     }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         };

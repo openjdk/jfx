@@ -52,20 +52,19 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
      *                                                                         *
      **************************************************************************/
 
-    @Override MultipleSelectionModel<T> getSelectionModel() {
+    @Override protected MultipleSelectionModel<T> getSelectionModel() {
         return getCellContainer().getSelectionModel();
     }
 
-    @Override FocusModel<T> getFocusModel() {
+    @Override protected FocusModel<T> getFocusModel() {
         return getCellContainer().getFocusModel();
     }
 
-    @Override ListView<T> getCellContainer() {
+    @Override protected ListView<T> getCellContainer() {
         return getControl().getListView();
     }
 
-    @Override
-    void edit(ListCell<T> cell) {
+    @Override protected void edit(ListCell<T> cell) {
         int index = cell == null ? -1 : cell.getIndex();
         getCellContainer().edit(index);
     }

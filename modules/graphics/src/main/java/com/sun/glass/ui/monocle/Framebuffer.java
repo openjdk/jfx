@@ -51,7 +51,7 @@ public class Framebuffer {
         this.height = height;
         this.byteDepth = depth >>> 3;
         if (clear) {
-            clearBuffer = ByteBuffer.allocate(width * 4);
+            clearBuffer = ByteBuffer.allocate(width * byteDepth);
         }
     }
 

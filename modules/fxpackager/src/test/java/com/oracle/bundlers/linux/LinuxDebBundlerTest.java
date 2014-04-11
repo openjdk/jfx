@@ -138,6 +138,7 @@ public class LinuxDebBundlerTest {
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(LICENSE_TYPE.getID(), "GPL2 + Classpath Exception");
         bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(ICON.getID(), "java-logo2.gif"); // force no signing
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -173,4 +174,17 @@ public class LinuxDebBundlerTest {
         assertTrue(output.exists());
     }
 
+    @Test(expected = ConfigException.class)
+    public void invalidLicenseFile() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxDebBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LICENSE_FILE.getID(), "BOGUS_LICENSE");
+
+        bundler.validate(bundleParams);
+    }
 }

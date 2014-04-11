@@ -48,11 +48,9 @@ public class NativeLibLoader {
     private static String libSuffix = "";
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            public Object run() {
-                verbose = Boolean.getBoolean("javafx.verbose");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            verbose = Boolean.getBoolean("javafx.verbose");
+            return null;
         });
     }
     

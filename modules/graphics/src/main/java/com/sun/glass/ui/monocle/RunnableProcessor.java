@@ -53,14 +53,11 @@ public class RunnableProcessor implements Runnable {
 
     public void invokeAndWait(final Runnable r) {
         final CountDownLatch latch = new CountDownLatch(1);
-        queue.postRunnable(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    r.run();
-                } finally {
-                    latch.countDown();
-                }
+        queue.postRunnable(() -> {
+            try {
+                r.run();
+            } finally {
+                latch.countDown();
             }
         });
         try {

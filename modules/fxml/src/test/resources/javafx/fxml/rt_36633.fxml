@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <TableView prefHeight="200.0" prefWidth="200.0">
+            <columns>
+                <TableColumn fx:id="rt36633_tableColumn" prefWidth="599.0" text="tableColumn1" />
+            </columns>
+        </TableView>
+
+        <TabPane>
+            <tabs>
+                <Tab fx:id="rt36633_tab" text="tab1" />
+            </tabs>
+        </TabPane>
+
+        <MenuBar>
+            <menus>
+                <Menu fx:id="rt36633_menu" text="File">
+                    <items>
+                        <MenuItem fx:id="rt36633_menuItem" text="Close" />
+                    </items>
+                </Menu>
+            </menus>
+        </MenuBar>
+    </children>
+</VBox>

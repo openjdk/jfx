@@ -510,11 +510,7 @@ public abstract class BaseShaderGraphics
 
     private static final float FRINGE_FACTOR;
     static {
-        String v = (String) AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
-                return System.getProperty("prism.primshaderpad");
-            }
-        });
+        String v = (String) AccessController.doPrivileged((PrivilegedAction) () -> System.getProperty("prism.primshaderpad"));
         if (v == null) {
             FRINGE_FACTOR = -0.5f;
         } else {

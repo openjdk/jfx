@@ -54,45 +54,57 @@ public class WinMsiBundler  extends AbstractBundler {
             I18N.getString("param.app-bundler.name"),
             I18N.getString("param.app-bundler.description"),
             "win.app.bundler",
-            WinAppBundler.class, null, params -> new WinAppBundler(), false, null);
+            WinAppBundler.class,
+            params -> new WinAppBundler(),
+            null);
 
     public static final BundlerParamInfo<WinServiceBundler> SERVICE_BUNDLER = new WindowsBundlerParam<>(
             I18N.getString("param.service-bundler.name"),
             I18N.getString("param.service-bundler.description"),
             "win.service.bundler",
-            WinServiceBundler.class, null, params -> new WinServiceBundler(), false, null);
+            WinServiceBundler.class,
+            params -> new WinServiceBundler(),
+            null);
     
     public static final BundlerParamInfo<Boolean> CAN_USE_WIX36 = new WindowsBundlerParam<>(
             I18N.getString("param.can-use-wix36.name"),
             I18N.getString("param.can-use-wix36.description"),
             "win.msi.canUseWix36",
-            Boolean.class, null, params -> false, false, (s, p) -> Boolean.valueOf(s));
+            Boolean.class,
+            params -> false,
+            (s, p) -> Boolean.valueOf(s));
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
             "configRoot",
-            File.class, null,params -> {
+            File.class,
+            params -> {
                 File imagesRoot = new File(BUILD_ROOT.fetchFrom(params), "windows");
                 imagesRoot.mkdirs();
                 return imagesRoot;
-            }, false, (s, p) -> null);
+            },
+            (s, p) -> null);
 
     public static final BundlerParamInfo<File> MSI_IMAGE_DIR = new WindowsBundlerParam<>(
             I18N.getString("param.image-dir.name"),
             I18N.getString("param.image-dir.description"),
             "win.msi.imageDir",
-            File.class, null, params -> {
+            File.class,
+            params -> {
                 File imagesRoot = IMAGES_ROOT.fetchFrom(params);
                 if (!imagesRoot.exists()) imagesRoot.mkdirs();
                 return new File(imagesRoot, "win-msi.image");
-            }, false, (s, p) -> null);
+            },
+            (s, p) -> null);
 
     public static final BundlerParamInfo<File> WIN_APP_IMAGE = new WindowsBundlerParam<>(
             I18N.getString("param.app-dir.name"),
             I18N.getString("param.app-dir.description"),
             "win.app.image",
-            File.class, null, null, false, (s, p) -> null);
+            File.class,
+            null,
+            (s, p) -> null);
 
     public static final StandardBundlerParam<Boolean> MSI_SYSTEM_WIDE  =
             new StandardBundlerParam<>(
@@ -100,9 +112,9 @@ public class WinMsiBundler  extends AbstractBundler {
                     I18N.getString("param.system-wide.description"),
                     "win.msi." + BundleParams.PARAM_SYSTEM_WIDE,
                     Boolean.class,
-                    new String[] {BundleParams.PARAM_SYSTEM_WIDE},
-                    params -> true, // MSIs default to system wide
-                    false,
+                    params -> params.containsKey(SYSTEM_WIDE.getID())
+                            ? SYSTEM_WIDE.fetchFrom(params)
+                            : true, // MSIs default to system wide
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s) // valueOf(null) is false, and we actually do want null
             );
 
@@ -111,8 +123,9 @@ public class WinMsiBundler  extends AbstractBundler {
             I18N.getString("param.upgrade-uuid.name"),
             I18N.getString("param.upgrade-uuid.description"),
             "win.msi.upgradeUUID",
-            UUID.class, null, params -> UUID.randomUUID(), // TODO check to see if identifier is a valid UUID during default 
-            false, (s, p) -> UUID.fromString(s));
+            UUID.class,
+            params -> UUID.randomUUID(), // TODO check to see if identifier is a valid UUID during default
+            (s, p) -> UUID.fromString(s));
 
     private static final String TOOL_CANDLE = "candle.exe";
     private static final String TOOL_LIGHT = "light.exe";
@@ -123,7 +136,8 @@ public class WinMsiBundler  extends AbstractBundler {
             I18N.getString("param.candle-path.name"),
             I18N.getString("param.candle-path.description"),
             "win.msi.candle.exe",
-            String.class, null, params -> {
+            String.class,
+            params -> {
                 for (String dirString : (System.getenv("PATH") + AUTODETECT_DIRS).split(";")) {
                     File f = new File(dirString.replace("\"", ""), TOOL_CANDLE);
                     if (f.isFile()) {
@@ -131,13 +145,15 @@ public class WinMsiBundler  extends AbstractBundler {
                     }
                 }
                 return null;
-            }, false, null);
+            },
+            null);
 
     public static final BundlerParamInfo<String> TOOL_LIGHT_EXECUTABLE = new WindowsBundlerParam<>(
             I18N.getString("param.light-path.name"),
             I18N.getString("param.light-path.descrption"),
             "win.msi.light.exe",
-            String.class, null, params -> {
+            String.class,
+            params -> {
                 for (String dirString : (System.getenv("PATH") + AUTODETECT_DIRS).split(";")) {
                     File f = new File(dirString.replace("\"", ""), TOOL_LIGHT);
                     if (f.isFile()) {
@@ -145,7 +161,8 @@ public class WinMsiBundler  extends AbstractBundler {
                     }
                 }
                 return null;
-            }, false, null);
+            },
+            null);
 
     public WinMsiBundler() {
         super();
@@ -199,7 +216,7 @@ public class WinMsiBundler  extends AbstractBundler {
                 START_ON_INSTALL,
                 STOP_ON_UNINSTALL,
                 RUN_AT_STARTUP,
-                UPGRADE_UUID,
+                //UPGRADE_UUID,
                 VENDOR,
                 VERSION
         );
@@ -444,7 +461,7 @@ public class WinMsiBundler  extends AbstractBundler {
     //name of post-image script
     private File getConfig_Script(Map<String, ? super Object> params) {
         return new File(CONFIG_ROOT.fetchFrom(params),
-                WinAppBundler.getAppName(params) + "-post-image.wsf");
+                APP_NAME.fetchFrom(params) + "-post-image.wsf");
     }
 
     @Override
@@ -480,7 +497,7 @@ public class WinMsiBundler  extends AbstractBundler {
         data.put("PRODUCT_GUID", productGUID.toString());
         data.put("PRODUCT_UPGRADE_GUID", UPGRADE_UUID.fetchFrom(params).toString());
 
-        data.put("APPLICATION_NAME", WinAppBundler.getAppName(params));
+        data.put("APPLICATION_NAME", APP_NAME.fetchFrom(params));
         data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
         data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
         data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
@@ -583,7 +600,7 @@ public class WinMsiBundler  extends AbstractBundler {
             //has to be under HKCU to make WiX happy
             out.println(prefix + "    <RegistryKey Root=\"HKCU\" "
                     + " Key=\"Software\\" + VENDOR.fetchFrom(params) + "\\"
-                    + WinAppBundler.getAppName(params) + "\""
+                    + APP_NAME.fetchFrom(params) + "\""
                     + (CAN_USE_WIX36.fetchFrom(params)
                     ? ">" : " Action=\"createAndRemoveOnUninstall\">"));
             out.println(prefix + "     <RegistryValue Name=\"Version\" Value=\""
@@ -611,12 +628,12 @@ public class WinMsiBundler  extends AbstractBundler {
                     + (BIT_ARCH_64.fetchFrom(params) ? " ProcessorArchitecture=\"x64\"" : "") + ">");
             if (doShortcuts && desktopShortcut) {
                 out.println(prefix + "  <Shortcut Id=\"desktopShortcut\" Directory=\"DesktopFolder\""
-                        + " Name=\"" + WinAppBundler.getAppName(params) + "\" WorkingDirectory=\"INSTALLDIR\""
+                        + " Name=\"" + APP_NAME.fetchFrom(params) + "\" WorkingDirectory=\"INSTALLDIR\""
                         + " Advertise=\"no\" Icon=\"DesktopIcon.exe\" IconIndex=\"0\" />");
             }
             if (doShortcuts && menuShortcut) {
                 out.println(prefix + "     <Shortcut Id=\"ExeShortcut\" Directory=\"ProgramMenuDir\""
-                        + " Name=\"" + WinAppBundler.getAppName(params)
+                        + " Name=\"" + APP_NAME.fetchFrom(params)
                         + "\" Advertise=\"no\" Icon=\"StartMenuIcon.exe\" IconIndex=\"0\" />");
             }
             out.println(prefix + "   </File>");
@@ -651,16 +668,16 @@ public class WinMsiBundler  extends AbstractBundler {
                     + (BIT_ARCH_64.fetchFrom(params) ? " ProcessorArchitecture=\"x64\"" : "")
                     + " KeyPath=\"yes\">");
             out.println(prefix + "   </File>");
-            out.println(prefix + "   <ServiceInstall Id=\"" + WinAppBundler.getAppName(params) + "\""
-                    + " Name=\"" + WinAppBundler.getAppName(params) + "\""
+            out.println(prefix + "   <ServiceInstall Id=\"" + APP_NAME.fetchFrom(params) + "\""
+                    + " Name=\"" + APP_NAME.fetchFrom(params) + "\""
                     + " Description=\"" + DESCRIPTION.fetchFrom(params) + "\""
                     + " ErrorControl=\"normal\""
                     + " Start=\"" + (RUN_AT_STARTUP.fetchFrom(params) ? "auto" : "demand") + "\""
                     + " Type=\"ownProcess\" Vital=\"yes\" Account=\"LocalSystem\""
                     + " Arguments=\"-mainExe " + launcherFile.getName() + "\"/>");
 
-            out.println(prefix + "   <ServiceControl Id=\""+ WinAppBundler.getAppName(params) + "\""
-                    + " Name=\"" + WinAppBundler.getAppName(params) + "\""
+            out.println(prefix + "   <ServiceControl Id=\""+ APP_NAME.fetchFrom(params) + "\""
+                    + " Name=\"" + APP_NAME.fetchFrom(params) + "\""
                     + (START_ON_INSTALL.fetchFrom(params) ? " Start=\"install\"" : "")
                     + (STOP_ON_UNINSTALL.fetchFrom(params) ? " Stop=\"uninstall\"" : "")
                     + " Remove=\"uninstall\""
@@ -706,7 +723,7 @@ public class WinMsiBundler  extends AbstractBundler {
             out.println("  <Directory Name=\"AppData\" Id=\"LocalAppDataFolder\">");
         }
         out.println("   <Directory Id=\"APPLICATIONFOLDER\" Name=\""
-                + WinAppBundler.getAppName(params) + "\">");
+                + APP_NAME.fetchFrom(params) + "\">");
 
         //dynamic part
         id = 0;
@@ -734,7 +751,7 @@ public class WinMsiBundler  extends AbstractBundler {
             //and there are suggested workarounds but none of them are appealing.
             //Leave it for now
             out.println("         <RegistryValue Root=\"HKCU\" Key=\"Software\\"
-                    + VENDOR.fetchFrom(params) + "\\" + WinAppBundler.getAppName(params)
+                    + VENDOR.fetchFrom(params) + "\\" + APP_NAME.fetchFrom(params)
                     + "\" Type=\"string\" Value=\"\" />");
             out.println("      </Component>");
             out.println("    </Directory>");
@@ -757,7 +774,7 @@ public class WinMsiBundler  extends AbstractBundler {
     }
 
     private File getConfig_ProjectFile(Map<String, ? super Object> params) {
-        return new File(CONFIG_ROOT.fetchFrom(params), WinAppBundler.getAppName(params) + ".wxs");
+        return new File(CONFIG_ROOT.fetchFrom(params), APP_NAME.fetchFrom(params) + ".wxs");
     }
 
     private boolean prepareWiXConfig(Map<String, ? super Object> params) throws IOException {
@@ -769,8 +786,8 @@ public class WinMsiBundler  extends AbstractBundler {
 
     private File buildMSI(Map<String, ? super Object> params, File outdir) throws IOException {
         File tmpDir = new File(BUILD_ROOT.fetchFrom(params), "tmp");
-        File candleOut = new File(tmpDir, WinAppBundler.getAppName(params)+".wixobj");
-        File msiOut = new File(outdir, WinAppBundler.getAppName(params)
+        File candleOut = new File(tmpDir, APP_NAME.fetchFrom(params) +".wixobj");
+        File msiOut = new File(outdir, APP_NAME.fetchFrom(params)
                 + "-" + VERSION.fetchFrom(params) + ".msi");
 
         Log.verbose(MessageFormat.format(I18N.getString("message.preparing-msi-config"), msiOut.getAbsolutePath()));

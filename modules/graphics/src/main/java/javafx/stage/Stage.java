@@ -176,11 +176,7 @@ public class Stage extends Window {
                 return stages;
             }
         });
-        StageHelper.setStageAccessor(new StageHelper.StageAccessor() {
-            @Override public ObservableList<Stage> getStages() {
-                return stages;
-            }
-        });
+        StageHelper.setStageAccessor(() -> stages);
     }
     
     private static final StagePeerListener.StageAccessor STAGE_ACCESSOR = new StagePeerListener.StageAccessor() {

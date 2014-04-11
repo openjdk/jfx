@@ -313,7 +313,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         });
 
 
-        getSkinnable().setOnScroll(event -> {
+        getSkinnable().addEventHandler(ScrollEvent.SCROLL, event -> {
             /*
             ** if the tracklength isn't greater then do nothing....
             */

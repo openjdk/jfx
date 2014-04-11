@@ -30,6 +30,7 @@ import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.scene.control.test.Employee;
 import com.sun.javafx.scene.control.test.Person;
@@ -1112,6 +1113,8 @@ public class TreeViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(24, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_30484() {
@@ -1165,11 +1168,12 @@ public class TreeViewTest {
         treeView.setEditable(true);
         treeView.setCellFactory(TextFieldTreeCell.forTreeView());
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         treeView.edit(root);
         TreeCell rootCell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
         TextField textField = (TextField) rootCell.getGraphic();
+        textField.setSkin(new TextFieldSkin(textField));
         textField.setText("Testing!");
         KeyEventFirer keyboard = new KeyEventFirer(textField);
         keyboard.doKeyPress(KeyCode.ENTER);
@@ -1178,6 +1182,8 @@ public class TreeViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
     }
 
     private int rt_33559_count = 0;
@@ -1476,7 +1482,7 @@ public class TreeViewTest {
             test_rt_35213_eventCount++;
         });
 
-        new StageLoader(view);
+        StageLoader sl = new StageLoader(view);
 
         root.setExpanded(true);
         Toolkit.getToolkit().firePulse();
@@ -1486,6 +1492,8 @@ public class TreeViewTest {
 
         group2.setExpanded(false);
         Toolkit.getToolkit().firePulse();
+
+        sl.dispose();
     }
 
     @Test public void test_rt23245_itemIsInTree() {
@@ -1587,7 +1595,7 @@ public class TreeViewTest {
         final TreeView<String> treeView = new TreeView<>();
         treeView.setRoot(root);
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         // everything should be null to start with
         assertNull(treeView.getSelectionModel().getSelectedItem());
@@ -1600,6 +1608,8 @@ public class TreeViewTest {
         // that "bbc" remains selected as it is still in the list
         treeView.setRoot(root);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35039_resetRootChildren() {
@@ -1613,7 +1623,7 @@ public class TreeViewTest {
         final TreeView<String> treeView = new TreeView<>();
         treeView.setRoot(root);
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         // everything should be null to start with
         assertNull(treeView.getSelectionModel().getSelectedItem());
@@ -1626,6 +1636,8 @@ public class TreeViewTest {
         // that "bbc" remains selected as it is still in the list
         root.getChildren().setAll(aabbaa, bbc);
         assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
     }
 
     @Test public void test_rt35857() {
@@ -1701,6 +1713,40 @@ public class TreeViewTest {
         view.getSelectionModel().select(b);
         assertEquals(Arrays.asList(b), view.getSelectionModel().getSelectedItems());
         assertFalse(b.isExpanded());
+    }
 
+    @Test public void test_rt25679() {
+        Button focusBtn = new Button("Focus here");
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.getChildren().setAll(new TreeItem("a"), new TreeItem("b"));
+        root.setExpanded(true);
+
+        final TreeView<String> treeView = new TreeView<>(root);
+        SelectionModel sm = treeView.getSelectionModel();
+
+        VBox vbox = new VBox(focusBtn, treeView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        focusBtn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        // test initial state
+        assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
+        assertTrue(focusBtn.isFocused());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+
+        // move focus to the treeview
+        treeView.requestFocus();
+
+        // ensure that there is a selection (where previously there was not one)
+        assertEquals(sl.getStage().getScene().getFocusOwner(), treeView);
+        assertTrue(treeView.isFocused());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(root, sm.getSelectedItem());
+
+        sl.dispose();
     }
 }

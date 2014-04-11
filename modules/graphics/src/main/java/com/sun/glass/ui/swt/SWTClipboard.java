@@ -72,11 +72,7 @@ class SWTClipboard extends SystemClipboard {
             if (clipboard == null) {
                 clipboard = new org.eclipse.swt.dnd.Clipboard(display);
                 display.setData(CLIPBOARD_KEY, clipboard);
-                display.disposeExec(new Runnable() {
-                    public void run () {
-                        clipboard.dispose();
-                    }
-                });
+                display.disposeExec(() -> clipboard.dispose());
             }
         }
     }

@@ -254,7 +254,12 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         int itemIndex = series.getItemIndex(item);
         if (shouldAnimate()) {
             boolean animate = false;
-            if (itemIndex > 0 && itemIndex < series.getDataSize()-1) {
+            // dataSize represents size of currently visible data. After this operation, the number will decrement by 1
+            final int dataSize = series.getDataSize();
+            // This is the size of current data list in Series. Note that it might be totaly different from dataSize as
+            // some big operation might have happened on the list.
+            final int dataListSize = series.getData().size();
+            if (itemIndex > 0 && itemIndex < dataSize -1) {
                 animate = true;
                 int index=0; Data<X,Y> d;
                 for (d = series.begin; d != null && index != itemIndex - 1; d=d.next) index++;
@@ -279,25 +284,27 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 //                double y = (y3 + y1)/2;
 //                item.setCurrentX(x);
 //                item.setCurrentY(y);
-            } else if (itemIndex == 0 && series.getDataSize() > 1) {
-                animate = true;
-                item.setXValue(series.getData().get(0).getXValue());
-                item.setYValue(series.getData().get(0).getYValue());
-            } else if (itemIndex == (series.getDataSize() - 1) && series.getDataSize() > 1) {
-                animate = true;
-                int last = series.getData().size() - 1;
-                item.setXValue(series.getData().get(last).getXValue());
-                item.setYValue(series.getData().get(last).getYValue());
             } else {
-                // fade out symbol
-                symbol.setOpacity(0);
-                FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
-                ft.setToValue(0);
-                ft.setOnFinished(actionEvent -> {
-                    getPlotChildren().remove(symbol);
-                    removeDataItemFromDisplay(series, item);
-                });
-                ft.play();
+                if (itemIndex == 0 && dataListSize > 1) {
+                    animate = true;
+                    item.setXValue(series.getData().get(0).getXValue());
+                    item.setYValue(series.getData().get(0).getYValue());
+                } else if (itemIndex == (dataSize - 1) && dataListSize > 1) {
+                    animate = true;
+                    int last = dataListSize - 1;
+                    item.setXValue(series.getData().get(last).getXValue());
+                    item.setYValue(series.getData().get(last).getYValue());
+                } else {
+                    // fade out symbol
+                    symbol.setOpacity(0);
+                    FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
+                    ft.setToValue(0);
+                    ft.setOnFinished(actionEvent -> {
+                        getPlotChildren().remove(symbol);
+                        removeDataItemFromDisplay(series, item);
+                    });
+                    ft.play();
+                }
             }
             if (animate) {
                 animate( new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),

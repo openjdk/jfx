@@ -716,7 +716,7 @@ yearSpinner.setFillHeight(false);
         for (int row = 0; row < 6; row++) {
             for (int col = 0; col < daysPerWeek; col++) {
                 DateCell dayCell = createDayCell();
-                dayCell.setOnMouseClicked(dayCellActionHandler);
+                dayCell.addEventHandler(MouseEvent.MOUSE_CLICKED, dayCellActionHandler);
                 dayCells.add(dayCell);
             }
         }

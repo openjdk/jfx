@@ -89,13 +89,13 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         super(control, behavior);
 
         if (control.getOnMousePressed() == null) {
-            control.setOnMousePressed(e -> {
+            control.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
                 getBehavior().mousePressed(e, behaveLikeButton);
             });
         }
 
         if (control.getOnMouseReleased() == null) {
-            control.setOnMouseReleased(e -> {
+            control.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> {
                 getBehavior().mouseReleased(e, behaveLikeButton);
             });
         }

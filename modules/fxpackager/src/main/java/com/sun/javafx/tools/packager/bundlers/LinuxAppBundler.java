@@ -53,12 +53,28 @@ public class LinuxAppBundler extends AbstractBundler {
             BUNDLER_PREFIX + "linux" + File.separator;
     private static final String EXECUTABLE_NAME = "JavaAppLauncher";
 
+    public static final BundlerParamInfo<File> ICON_PNG = new StandardBundlerParam<>(
+            I18N.getString("param.icon-png.name"),
+            I18N.getString("param.icon-png.description"),
+            "icon.png",
+            File.class,
+            params -> {
+                File f = ICON.fetchFrom(params);
+                if (f != null && !f.getName().toLowerCase().endsWith(".png")) {
+                    Log.info(MessageFormat.format(I18N.getString("message.icon-not-png"), f));
+                    return null;
+                }
+                return f;
+            },
+            (s, p) -> new File(s));
+
     public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new StandardBundlerParam<>(
             I18N.getString("param.raw-executable-url.name"),
             I18N.getString("param.raw-executable-url.description"),
             "linux.launcher.url",
-            URL.class, null, params -> LinuxResources.class.getResource(EXECUTABLE_NAME),
-            false, (s, p) -> {
+            URL.class,
+            params -> LinuxResources.class.getResource(EXECUTABLE_NAME),
+            (s, p) -> {
                 try {
                     return new URL(s);
                 } catch (MalformedURLException e) {
@@ -76,7 +92,6 @@ public class LinuxAppBundler extends AbstractBundler {
             "",
             ".linux.runtime.rules",
             Rule[].class,
-            null,
             params -> new Rule[]{
                     Rule.prefixNeg("/bin"),
                     Rule.prefixNeg("/plugin"),
@@ -86,7 +101,6 @@ public class LinuxAppBundler extends AbstractBundler {
                     Rule.prefixNeg("/lib/desktop"),
                     Rule.substrNeg("libnpjp2.so")
             },
-            false,
             (s, p) ->  null
     );
 
@@ -95,10 +109,8 @@ public class LinuxAppBundler extends AbstractBundler {
             RUNTIME.getDescription(),
             RUNTIME.getID(),
             RelativeFileSet.class,
-            null,
             params -> JreUtils.extractJreAsRelativeFileSet(System.getProperty("java.home"),
                     LINUX_JRE_RULES.fetchFrom(params)),
-            false,
             (s, p) -> JreUtils.extractJreAsRelativeFileSet(s, LINUX_JRE_RULES.fetchFrom(p))
     );
 
@@ -171,7 +183,7 @@ public class LinuxAppBundler extends AbstractBundler {
             File appDirectory = new File(rootDirectory, "app");
             appDirectory.mkdirs();
 
-            // Copy executable to MacOS folder
+            // Copy executable to Linux folder
             File executableFile = getLauncher(outputDirectory, p);
             IOUtils.copyFromURL(
                     RAW_EXECUTABLE_URL.fetchFrom(p),
@@ -196,8 +208,8 @@ public class LinuxAppBundler extends AbstractBundler {
 
             return rootDirectory;
         } catch (IOException ex) {
-            System.out.println("Exception: "+ex);
-            ex.printStackTrace();
+            Log.info("Exception: "+ex);
+            Log.debug(ex);
             return null;
         }
     }
@@ -315,7 +327,6 @@ public class LinuxAppBundler extends AbstractBundler {
                 PREFERENCES_ID,
                 RAW_EXECUTABLE_URL,
                 LINUX_RUNTIME,
-                USE_FX_PACKAGING,
                 USER_JVM_OPTIONS,
                 VERSION
         );

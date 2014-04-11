@@ -757,17 +757,9 @@ public abstract class Node implements EventTarget, Styleable {
         return parent;
     }
 
-    private final InvalidationListener parentDisabledChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateDisabled();
-        }
-    };
+    private final InvalidationListener parentDisabledChangedListener = valueModel -> updateDisabled();
 
-    private final InvalidationListener parentTreeVisibleChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateTreeVisible(true);
-        }
-    };
+    private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
     private SubScene subScene = null;
 
@@ -846,6 +838,10 @@ public abstract class Node implements EventTarget, Styleable {
 
         if (newScene == null && peer != null) {
             peer.release();
+        }
+
+        if (oldScene != null) {
+            oldScene.clearNodeMnemonics(this);
         }
         if (getParent() == null) {
             // if we are the root we need to handle scene change
@@ -2014,17 +2010,15 @@ public abstract class Node implements EventTarget, Styleable {
         // Create a deferred runnable that will be run from a pulse listener
         // that is called after all of the scenes have been synced but before
         // any of them have been rendered.
-        final Runnable snapshotRunnable = new Runnable() {
-            @Override public void run() {
-                WritableImage img = doSnapshot(theParams, theImage);
-                SnapshotResult result = new SnapshotResult(img, Node.this, theParams);
+        final Runnable snapshotRunnable = () -> {
+            WritableImage img = doSnapshot(theParams, theImage);
+            SnapshotResult result = new SnapshotResult(img, Node.this, theParams);
 //                System.err.println("Calling snapshot callback");
-                try {
-                    Void v = theCallback.call(result);
-                } catch (Throwable th) {
-                    System.err.println("Exception in snapshot callback");
-                    th.printStackTrace(System.err);
-                }
+            try {
+                Void v = theCallback.call(result);
+            } catch (Throwable th) {
+                System.err.println("Exception in snapshot callback");
+                th.printStackTrace(System.err);
             }
         };
 
@@ -5355,12 +5349,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         private InvalidationListener getLocalToSceneInvalidationListener() {
             if (localToSceneInvLstnr == null) {
-                localToSceneInvLstnr = new InvalidationListener() {
-                    @Override
-                    public void invalidated(Observable observable) {
-                        invalidateLocalToSceneTransform();
-                    }
-                };
+                localToSceneInvLstnr = observable -> invalidateLocalToSceneTransform();
             }
             return localToSceneInvLstnr;
         }
@@ -8150,17 +8139,13 @@ public abstract class Node implements EventTarget, Styleable {
             EventDispatchChain tail) {
 
         if (preprocessMouseEventDispatcher == null) {
-            preprocessMouseEventDispatcher = new EventDispatcher() {
-                @Override
-                public Event dispatchEvent(Event event,
-                                           EventDispatchChain tail) {
-                    event = tail.dispatchEvent(event);
-                    if (event instanceof MouseEvent) {
-                        preprocessMouseEvent((MouseEvent) event);
-                    }
-
-                    return event;
+            preprocessMouseEventDispatcher = (event, tail1) -> {
+                event = tail1.dispatchEvent(event);
+                if (event instanceof MouseEvent) {
+                    preprocessMouseEvent((MouseEvent) event);
                 }
+
+                return event;
             };
         }
 
@@ -8737,11 +8722,14 @@ public abstract class Node implements EventTarget, Styleable {
         }
     }
 
-    //
-    // Create a new CssStyleHelper for this node and all of its children.
-    // After this method call, styleHelper might be null and the cssFlag will
-    // either be CLEAN or UPDATE
-    private void createStyleHelper() {
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
+    public final void impl_reapplyCSS() {
+
+        if (getScene() == null) return;
 
         if (cssFlag == CssFlags.REAPPLY) return;
 
@@ -8760,11 +8748,25 @@ public abstract class Node implements EventTarget, Styleable {
 
         // REAPPLY to my children, too.
         if (this instanceof Parent) {
-            List<Node> children = ((Parent)this).getChildren();
-            for(int n=0, nMax=children.size(); n<nMax; n++) {
-                Node child = children.get(n);
-                child.createStyleHelper();
+
+            final boolean visitChildren =
+                    (oldStyleHelper != styleHelper) ||
+                        (getParent() == null) ||
+                            (getParent().cssFlag != CssFlags.CLEAN);
+
+            if (visitChildren) {
+
+                List<Node> children = ((Parent)this).getChildren();
+                for(int n=0, nMax=children.size(); n<nMax; n++) {
+                    Node child = children.get(n);
+                    child.impl_reapplyCSS();
+                }
+
+            } else {
+                cssFlag = oldCssFlag;
+                return;
             }
+
         } else if (styleHelper == null) {
             //
             // If this is not a Parent and there is no styleHelper, then the CSS state is "CLEAN"
@@ -8776,34 +8778,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         // this branch needs update
         cssFlag = CssFlags.UPDATE;
-
-    }
-
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated
-    public final void impl_reapplyCSS() {
-
-        if (getScene() == null) return;
-
-        createStyleHelper();
-
-        // One idiom employed by developers is to, during the layout pass,
-        // add or remove nodes from the scene. For example, a ScrollPane
-        // might add scroll bars to itself if it determines during layout
-        // that it needs them, or a ListView might add cells to itself if
-        // it determines that it needs to. In such situations we must
-        // apply the CSS immediately and not add it to the scene's queue
-        // for deferred action.
-        if (cssFlag == CssFlags.UPDATE) {
-            if (getParent() != null && getParent().performingLayout) {
-                impl_processCSS(null);
-            } else {
-                notifyParentsOfInvalidatedCSS();
-            }
-        }
+        notifyParentsOfInvalidatedCSS();
 
     }
 
@@ -8824,6 +8799,8 @@ public abstract class Node implements EventTarget, Styleable {
                 break;
             }
             case REAPPLY:
+                impl_reapplyCSS();
+                // fall through to update
             case UPDATE:
             default:
                 impl_processCSS(null);
@@ -8891,41 +8868,52 @@ public abstract class Node implements EventTarget, Styleable {
         cssFlag = CssFlags.UPDATE;
 
         //
-        // RT-28394 - need to see if any ancestor has a flag other than clean
-        // If so, process css from the top-most css-dirty node
+        // RT-28394 - need to see if any ancestor has a flag UPDATE
+        // If so, process css from the top-most CssFlags.UPDATE node
+        // since my ancestor's styles may affect mine.
+        //
+        // If the scene-graph root isn't NODE_CSS dirty, then all my
+        // ancestor flags should be CLEAN and I can skip this lookup.
         //
         Node topMost = this;
-        Node _parent = getParent();
-        while (_parent != null) {
-            if (_parent.cssFlag != CssFlags.CLEAN) {
-                topMost = _parent;
+
+        final boolean dirtyRoot = getScene().getRoot().impl_isDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+        if (dirtyRoot) {
+
+            Node _parent = getParent();
+            while (_parent != null) {
+                if (_parent.cssFlag == CssFlags.UPDATE) {
+                    topMost = _parent;
+                }
+                _parent = _parent.getParent();
             }
-            _parent = _parent.getParent();
+
+            // Note: this code used to mark the parent nodes with DIRTY_BRANCH,
+            // but that isn't necessary since UPDATE will apply css to all of
+            // a Parent's children.
+
+            // If we're at the root of the scene-graph, make sure the NODE_CSS
+            // dirty bit is cleared (see Scene#doCSSPass())
+            if (topMost == getScene().getRoot()) {
+                getScene().getRoot().impl_clearDirty(DirtyBits.NODE_CSS);
+            }
         }
 
-        _parent = this;
-        while (_parent != topMost) {
-            if (_parent.cssFlag == CssFlags.CLEAN) {
-                _parent.cssFlag = CssFlags.DIRTY_BRANCH;
-            }
-            _parent = _parent.getParent();
-        }
-        // If we're at the root of the scene-graph, make sure the NODE_CSS dirty bit is cleared (see Scene#doCSSPass())
-        if (topMost == getScene().getRoot()) {
-            getScene().getRoot().impl_clearDirty(DirtyBits.NODE_CSS);
-        }
         topMost.processCSS();
 
     }
 
     /**
-     * If invoked, will update / reapply styles from here on down. This method should not be called directly. If
+     * If invoked, will update styles from here on down. This method should not be called directly. If
      * overridden, the overriding method must at some point call {@code super.impl_processCSS()} to ensure that
      * this Node's CSS state is properly updated.
      *
-     * Note that the WritableValue&lt;Boolean&gt; here has a different meaning than that of the {@link #impl_processCSS(boolean)}
-     * method. Passing a true value here does not force CSS to be reapplied. Rather, this flag is passed along
-     * to the CSS engine to decide whether or not a portion of cache should be invalidated when CSS is being reapplied.
+     * Note that the difference between this method and {@link #impl_processCSS(boolean)} is that this method
+     * updates styles for this node on down; whereas, {@code impl_processCSS(boolean)} invokes
+     * {@link #applyCss()} which will look for the top-most ancestor that needs CSS update and apply styles
+     * from that node on down.
+     *
+     * The WritableValue&lt;Boolean&gt; parameter is no longer used.
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -9076,12 +9064,7 @@ public abstract class Node implements EventTarget, Styleable {
         protected abstract Bounds computeBounds();
     }
 
-    private static final BoundsAccessor boundsAccessor = new BoundsAccessor() {
-        @Override
-        public BaseBounds getGeomBounds(BaseBounds bounds, BaseTransform tx, Node node) {
-            return node.getGeomBounds(bounds, tx);
-        }
-    };
+    private static final BoundsAccessor boundsAccessor = (bounds, tx, node) -> node.getGeomBounds(bounds, tx);
 
     /**
      * This method is used by Scene-graph JMX bean to obtain the Scene-graph structure.

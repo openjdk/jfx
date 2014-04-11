@@ -58,13 +58,10 @@ public class LinuxTouchTransform {
         this.device = device;
         Arrays.fill(axes, -1);
         String product = device.getProduct();
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                flipXY = Boolean.getBoolean("monocle.input."
-                                            + product + ".flipXY");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            flipXY = Boolean.getBoolean("monocle.input."
+                                        + product + ".flipXY");
+            return null;
         });
     }
 
@@ -143,19 +140,16 @@ public class LinuxTouchTransform {
         }
         AbsoluteInputCapabilities caps = device.getAbsoluteInputCapabilities(axis);
         String product = device.getProduct();
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                int minimum = Integer.getInteger(
-                        "monocle.input." + product + ".min" + axisName,
-                        caps.getMinimum());
-                int maximum = Integer.getInteger(
-                        "monocle.input." + product + ".max" + axisName,
-                        caps.getMaximum());
-                translates[index] = -minimum;
-                scalars[index] = ((double) (range)) / (maximum - minimum);
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            int minimum = Integer.getInteger(
+                    "monocle.input." + product + ".min" + axisName,
+                    caps.getMinimum());
+            int maximum = Integer.getInteger(
+                    "monocle.input." + product + ".max" + axisName,
+                    caps.getMaximum());
+            translates[index] = -minimum;
+            scalars[index] = ((double) (range)) / (maximum - minimum);
+            return null;
         });
     }
 
