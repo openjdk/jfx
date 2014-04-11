@@ -629,7 +629,7 @@ public abstract class Axis<T> extends Region {
     @Override protected void layoutChildren() {
         final double width = getWidth();
         final double height = getHeight();
-        final double tickMarkLength = (getTickLength() > 0) ? getTickLength() : 0;
+        final double tickMarkLength = (isTickMarkVisible() && getTickLength() > 0) ? getTickLength() : 0;
         final boolean isFirstPass = oldLength == 0;
         // auto range if it is not valid
         final Side side = getEffectiveSide();
