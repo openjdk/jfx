@@ -502,6 +502,9 @@ class WindowStage extends GlassStage {
 
     @Override
     public void setAlwaysOnTop(boolean alwaysOnTop) {
+        // The securityDialog flag takes precedence over alwaysOnTop
+        if (securityDialog) return;
+
         if (alwaysOnTop) {
             if (hasPermission(alwaysOnTopPermission)) {
                 platformWindow.setLevel(Level.FLOATING);
