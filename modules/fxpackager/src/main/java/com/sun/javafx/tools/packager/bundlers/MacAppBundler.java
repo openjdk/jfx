@@ -617,7 +617,6 @@ public class MacAppBundler extends AbstractBundler {
                 PREFERENCES_ID,
                 RAW_EXECUTABLE_URL,
                 MAC_RUNTIME,
-                USE_FX_PACKAGING,
                 USER_JVM_OPTIONS,
                 VERSION,
                 ICON,

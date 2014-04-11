@@ -452,7 +452,6 @@ public class WinAppBundler extends AbstractBundler {
                 PREFERENCES_ID,
                 RAW_EXECUTABLE_URL,
                 WIN_RUNTIME,
-                USE_FX_PACKAGING,
                 USER_JVM_OPTIONS,
                 VERSION
         );
