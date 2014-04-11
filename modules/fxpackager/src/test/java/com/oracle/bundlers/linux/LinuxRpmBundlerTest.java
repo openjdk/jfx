@@ -140,6 +140,7 @@ public class LinuxRpmBundlerTest {
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(LICENSE_TYPE.getID(), "GPL2 + Classpath Exception");
         bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(ICON.getID(), "java-logo2.gif"); // force no signing
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);

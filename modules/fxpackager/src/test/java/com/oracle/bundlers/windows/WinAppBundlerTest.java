@@ -133,6 +133,7 @@ public class WinAppBundlerTest {
         bundleParams.put(MAIN_JAR_CLASSPATH.getID(), fakeMainJar.toString());
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(ICON.getID(), "java-logo2.gif"); // force no signing
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);

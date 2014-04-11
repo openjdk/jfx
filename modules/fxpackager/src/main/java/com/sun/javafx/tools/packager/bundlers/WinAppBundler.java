@@ -136,6 +136,21 @@ public class WinAppBundler extends AbstractBundler {
             params -> Boolean.TRUE,
             (s, p) -> Boolean.valueOf(s));
 
+    public static final BundlerParamInfo<File> ICON_ICO = new StandardBundlerParam<>(
+            I18N.getString("param.icon-ico.name"),
+            I18N.getString("param.icon-ico.description"),
+            "icon.ico",
+            File.class,
+            params -> {
+                File f = ICON.fetchFrom(params);
+                if (f != null && !f.getName().toLowerCase().endsWith(".ico")) {
+                    Log.info(MessageFormat.format(I18N.getString("message.icon-not-ico"), f));
+                    return null;
+                }
+                return f;
+            },
+            (s, p) -> new File(s));
+
     public WinAppBundler() {
         super();
         baseResourceLoader = WinResources.class;
@@ -230,7 +245,7 @@ public class WinAppBundler extends AbstractBundler {
     private void prepareConfigFiles(Map<String, ? super Object> params) throws IOException {
         File iconTarget = getConfig_AppIcon(params);
 
-        File icon = ICON.fetchFrom(params);
+        File icon = ICON_ICO.fetchFrom(params);
         if (icon != null && icon.exists()) {
             fetchResource(WIN_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.application-icon"),
@@ -442,7 +457,7 @@ public class WinAppBundler extends AbstractBundler {
                 APP_RESOURCES,
                 BUILD_ROOT,
                 CONFIG_ROOT,
-                ICON,
+                ICON_ICO,
                 IDENTIFIER,
                 JVM_OPTIONS,
                 JVM_PROPERTIES,

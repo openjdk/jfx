@@ -53,6 +53,21 @@ public class LinuxAppBundler extends AbstractBundler {
             BUNDLER_PREFIX + "linux" + File.separator;
     private static final String EXECUTABLE_NAME = "JavaAppLauncher";
 
+    public static final BundlerParamInfo<File> ICON_PNG = new StandardBundlerParam<>(
+            I18N.getString("param.icon-png.name"),
+            I18N.getString("param.icon-png.description"),
+            "icon.png",
+            File.class,
+            params -> {
+                File f = ICON.fetchFrom(params);
+                if (f != null && !f.getName().toLowerCase().endsWith(".png")) {
+                    Log.info(MessageFormat.format(I18N.getString("message.icon-not-png"), f));
+                    return null;
+                }
+                return f;
+            },
+            (s, p) -> new File(s));
+
     public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new StandardBundlerParam<>(
             I18N.getString("param.raw-executable-url.name"),
             I18N.getString("param.raw-executable-url.description"),

@@ -215,7 +215,7 @@ public class MacDMGBundler extends MacBaseInstallerBundler {
                 VERBOSE.fetchFrom(params));
 
         File iconTarget = getConfig_VolumeIcon(params);
-        if (ICON.fetchFrom(params) == null || !ICON.fetchFrom(params).exists()) {
+        if (MacAppBundler.ICON_ICNS.fetchFrom(params) == null || !MacAppBundler.ICON_ICNS.fetchFrom(params).exists()) {
             fetchResource(com.sun.javafx.tools.packager.bundlers.MacAppBundler.MAC_BUNDLER_PREFIX + iconTarget.getName(),
                     "volume icon",
                     TEMPLATE_BUNDLE_ICON,
@@ -224,7 +224,7 @@ public class MacDMGBundler extends MacBaseInstallerBundler {
         } else {
             fetchResource(com.sun.javafx.tools.packager.bundlers.MacAppBundler.MAC_BUNDLER_PREFIX + iconTarget.getName(),
                     "volume icon",
-                    ICON.fetchFrom(params),
+                    MacAppBundler.ICON_ICNS.fetchFrom(params),
                     iconTarget,
                     VERBOSE.fetchFrom(params));
         }

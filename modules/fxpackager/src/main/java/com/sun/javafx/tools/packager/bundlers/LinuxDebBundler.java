@@ -480,7 +480,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
         //prepare installer icon
         File iconTarget = getConfig_IconFile(params);
-        File icon = ICON.fetchFrom(params);
+        File icon = LinuxAppBundler.ICON_PNG.fetchFrom(params);
         if (icon == null || !icon.exists()) {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.menu-icon"),
@@ -612,7 +612,7 @@ public class LinuxDebBundler extends AbstractBundler {
                 DESCRIPTION,
                 EMAIL,
                 FULL_PACKAGE_NAME,
-                ICON,
+                LinuxAppBundler.ICON_PNG,
                 DEB_IMAGE_DIR,
                 IMAGES_ROOT,
                 LICENSE_FILE,

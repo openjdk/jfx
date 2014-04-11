@@ -234,6 +234,20 @@ public class MacAppBundler extends AbstractBundler {
             },
             (s, p) -> s);
 
+    public static final BundlerParamInfo<File> ICON_ICNS = new StandardBundlerParam<>(
+            I18N.getString("param.icon-icns.name"),
+            I18N.getString("param.icon-icns.description"),
+            "icon.icns",
+            File.class,
+            params -> {
+                File f = ICON.fetchFrom(params);
+                if (f != null && !f.getName().toLowerCase().endsWith(".icns")) {
+                    Log.info(MessageFormat.format(I18N.getString("message.icon-not-icns"), f));
+                    return null;
+                }
+                return f;
+            },
+            (s, p) -> new File(s));
 
     public static RelativeFileSet extractMacRuntime(String base, Map<String, ? super Object> params) {
         if (base.endsWith("/Home")) {
@@ -443,7 +457,7 @@ public class MacAppBundler extends AbstractBundler {
     }
 
     private void prepareIcon(Map<String, ? super Object> params) throws IOException {
-        File icon = ICON.fetchFrom(params);
+        File icon = ICON_ICNS.fetchFrom(params);
         if (icon == null || !icon.exists()) {
             fetchResource(MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +".icns",
                     "icon",
