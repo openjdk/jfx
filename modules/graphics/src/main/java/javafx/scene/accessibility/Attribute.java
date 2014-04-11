@@ -33,6 +33,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.text.Font;
 
 /**
  * Experimental API - Do not use (will be removed).
@@ -52,6 +53,20 @@ public enum Attribute {
      * Type: Bounds
      */
     BOUNDS("Bounds", Bounds.class),
+
+    /**
+     * Returns the array of bounding rectangles for the given char range.
+     * Parameter: Integer range start
+     * Parameter: Integer range length
+     * Type: Bounds[]
+     */
+    BOUNDS_FOR_RANGE("BoundsForRange", Bounds[].class),
+
+    /**
+     * Returns the caret offset for the node.
+     * Type: Integer
+     */
+    CARET_OFFSET("CaretOffset", Integer.class),
 
     /**
      * Returns the children for the Node.
@@ -103,8 +118,16 @@ public enum Attribute {
      */
     DISCLOSURE_LEVEL("DisclosureLevel", Integer.class),
 
+    /**
+     * Returns the local date for the node.
+     * Type: LocalDate
+     */
     DATE("Date", LocalDate.class),
 
+    /**
+     * Returns true if the node is editable.
+     * Type: Boolean
+     */
     EDITABLE("Editable", Boolean.class),
 
     /**
@@ -144,6 +167,12 @@ public enum Attribute {
     FOCUSED("Focused", Boolean.class),
 
     /**
+     * Returns the font for the node
+     * Type: Font
+     */
+    FONT("Font", Font.class),
+
+    /**
      * Returns the header for the node
      * Type: Node
      */
@@ -178,6 +207,27 @@ public enum Attribute {
      * Type: Boolean
      */
     LEAF("Leaf", Boolean.class),
+
+    /**
+     * Returns the line start of the given line index.
+     * Parameter: Integer - line index
+     * Type: Integer
+     */
+    LINE_END("LineEnd", Integer.class),
+
+    /**
+     * Returns the line index of the given character offset.
+     * Parameter: Integer - character offset.
+     * Type: Integer
+     */
+    LINE_FOR_OFFSET("LineOffset", Integer.class),
+
+    /**
+     * Returns the line end of the given line index.
+     * Parameter: Integer - line index
+     * Type: Integer
+     */
+    LINE_START("LineStart", Integer.class),
 
     /**
      * Returns the min value for the node.
@@ -227,6 +277,13 @@ public enum Attribute {
      * Parameters: Point
      */
     NODE_AT_POINT("NodeAtPoint", Node.class),
+
+    /**
+     * Returns the char offset at the given point location.
+     * Type: Integer
+     * Parameters: Point
+     */
+    OFFSET_AT_POINT("OffsetAtPoint", Integer.class),
 
     /**
      * Returns the orientation of a node
