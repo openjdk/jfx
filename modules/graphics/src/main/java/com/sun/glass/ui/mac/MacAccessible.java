@@ -225,14 +225,30 @@ final class MacAccessible extends PlatformAccessible {
             new MacActions[] {MacActions.NSAccessibilityPressAction},
             null
         ),
-
-        NSAccessibilityPopUpButtonRole(new Role[] {Role.COMBOBOX},
+        NSAccessibilityComboBoxRole(new Role[] {Role.COMBOBOX},
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilityEnabledAttribute,
+                MacAttributes.NSAccessibilityValueAttribute,
+                MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
+                MacAttributes.NSAccessibilitySelectedTextAttribute,
+                MacAttributes.NSAccessibilitySelectedTextRangeAttribute,
+                MacAttributes.NSAccessibilityInsertionPointLineNumberAttribute,
+                MacAttributes.NSAccessibilityVisibleCharacterRangeAttribute,
+            },
+            new MacActions[] {MacActions.NSAccessibilityPressAction},
+            new MacAttributes[] {
+                MacAttributes.NSAccessibilityLineForIndexParameterizedAttribute,
+                MacAttributes.NSAccessibilityRangeForLineParameterizedAttribute,
+                MacAttributes.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
+                MacAttributes.NSAccessibilityStringForRangeParameterizedAttribute,
+            }
+        ),
+        NSAccessibilityPopUpButtonRole(Role.COMBOBOX,
             new MacAttributes[] {
                 MacAttributes.NSAccessibilityEnabledAttribute,
                 MacAttributes.NSAccessibilityValueAttribute,
             },
-            new MacActions[] {MacActions.NSAccessibilityPressAction},
-            null
+            new MacActions[] {MacActions.NSAccessibilityPressAction}
         ),
         NSAccessibilityTabGroupRole(new Role[] {Role.TAB_PANE, Role.PAGINATION},
             new MacAttributes[] {
@@ -862,6 +878,24 @@ final class MacAccessible extends PlatformAccessible {
         return code.isLetterKey() || (code.isDigitKey() && !code.isKeypadKey());
     }
 
+    private MacRoles getRole(Role role) {
+        if (role == Role.COMBOBOX) {
+            if (Boolean.TRUE.equals(getAttribute(EDITABLE))) {
+                return MacRoles.NSAccessibilityComboBoxRole;
+            } else {
+                return MacRoles.NSAccessibilityPopUpButtonRole;
+            }
+        }
+        MacRoles macRole = MacRoles.getRole(role);
+        if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
+            Boolean state = (Boolean)getAttribute(INDETERMINATE);
+            if (Boolean.TRUE.equals(state)) {
+                macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
+            }
+        }
+        return macRole;
+    }
+
     /* NSAccessibility Protocol - JNI entry points */
     long[] accessibilityAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
@@ -1152,25 +1186,12 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityRoleAttribute: {
-                MacRoles macRole = MacRoles.getRole((Role)result);
-                if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
-                    Boolean state = (Boolean)getAttribute(INDETERMINATE);
-                    if (Boolean.TRUE.equals(state)) {
-                        macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
-                    }
-                }
+                MacRoles macRole = getRole(role);
                 result = macRole != null ? macRole.ptr : 0L;
                 break;
             }
             case NSAccessibilityRoleDescriptionAttribute: {
-                MacRoles macRole = MacRoles.getRole((Role)result);
-                if (macRole == null) return null;
-                if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
-                    Boolean state = (Boolean)getAttribute(INDETERMINATE);
-                    if (Boolean.TRUE.equals(state)) {
-                        macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
-                    }
-                }
+                MacRoles macRole = getRole(role);
                 /* 
                  * In some cases there is no proper mapping from a JFX role
                  * to a Mac role. For example, reporting 'disclosure triangle'

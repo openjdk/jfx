@@ -105,6 +105,8 @@ public enum Attribute {
 
     DATE("Date", LocalDate.class),
 
+    EDITABLE("Editable", Boolean.class),
+
     /**
      * Returns true if the Node is enabled.
      * Type: Boolean
