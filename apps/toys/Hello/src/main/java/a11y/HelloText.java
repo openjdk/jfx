@@ -26,6 +26,7 @@ package a11y;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -48,9 +49,9 @@ public class HelloText extends Application {
 
 
         TextField tf = new TextField("Hello Accessiblity");
+        TextArea ta = new TextArea("TextArea can many lines.\nLine1.\nLine2 is longer.\nLine 3 is not.");
 
-
-        Scene scene = new Scene(new VBox(text, tf, new Text("Text 2"), new TextField("text field 2")), 300, 300);
+        Scene scene = new Scene(new VBox(text, tf, ta), 300, 300);
 //        scene.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 //            @Override
 //            public void handle(KeyEvent event) {

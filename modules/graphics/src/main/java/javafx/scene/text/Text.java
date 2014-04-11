@@ -1891,6 +1891,12 @@ public class Text extends Shape {
         switch (attribute) {
             case ROLE: return Role.TEXT;
             case TITLE: return getText();
+            case FONT: return getFont();
+            case CARET_OFFSET: {
+                int sel = getImpl_caretPosition();
+                if (sel >=  0) return sel;
+                return getText().length();
+            }
             case SELECTION_START: {
                 int sel = getImpl_selectionStart();
                 if (sel >=  0) return sel;

@@ -126,7 +126,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilitySelectedTextAttribute(SELECTION_START, MacVariant::createNSString),
         NSAccessibilitySelectedTextRangeAttribute(SELECTION_START, MacVariant::createNSValueForRange),
         NSAccessibilitySelectedTextRangesAttribute(null, null), //TODO Array of ranges
-        NSAccessibilityInsertionPointLineNumberAttribute(SELECTION_START, MacVariant::createNSNumberForInt),
+        NSAccessibilityInsertionPointLineNumberAttribute(CARET_OFFSET, MacVariant::createNSNumberForInt),
         NSAccessibilityVisibleCharacterRangeAttribute(TITLE, MacVariant::createNSValueForRange),
 
         // NSAccessibilityScrollAreaRole
@@ -157,9 +157,9 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityColumnIndexRangeAttribute(COLUMN_INDEX, MacVariant::createNSValueForRange),
 
         /* Parameterized Attributes */
-        NSAccessibilityLineForIndexParameterizedAttribute(SELECTION_START, MacVariant::createNSNumberForInt, MacVariant.NSNumber_Int),
+        NSAccessibilityLineForIndexParameterizedAttribute(LINE_FOR_OFFSET, MacVariant::createNSNumberForInt, MacVariant.NSNumber_Int),
         NSAccessibilityStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSString, MacVariant.NSValue_range),
-        NSAccessibilityRangeForLineParameterizedAttribute(TITLE, MacVariant::createNSValueForRange, MacVariant.NSNumber_Int),
+        NSAccessibilityRangeForLineParameterizedAttribute(LINE_START, MacVariant::createNSValueForRange, MacVariant.NSNumber_Int),
         NSAccessibilityAttributedStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSAttributedString, MacVariant.NSValue_range),
         NSAccessibilityCellForColumnAndRowParameterizedAttribute(CELL_AT_ROW_COLUMN, MacVariant::createNSObject, MacVariant.NSArray_int),
         ;
@@ -321,49 +321,13 @@ final class MacAccessible extends PlatformAccessible {
          */
         NSAccessibilityBusyIndicatorRole(Role.PROGRESS_INDICATOR, null, null),
         NSAccessibilityStaticTextRole(new Role[] {Role.TEXT, Role.TREE_TABLE_CELL},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
-                MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
-                MacAttributes.NSAccessibilitySelectedTextAttribute,
-                MacAttributes.NSAccessibilitySelectedTextRangeAttribute,
-                MacAttributes.NSAccessibilityInsertionPointLineNumberAttribute,
-                MacAttributes.NSAccessibilityVisibleCharacterRangeAttribute,
-            },
-            null,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityLineForIndexParameterizedAttribute,
-                MacAttributes.NSAccessibilityRangeForLineParameterizedAttribute,
-                MacAttributes.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
-                MacAttributes.NSAccessibilityStringForRangeParameterizedAttribute,
-            }
+            textAttributes,null, textParameterizedAttributes
         ),
         NSAccessibilityTextFieldRole(new Role[] {Role.TEXT_FIELD, Role.PASSWORD_FIELD},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
-                MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
-                MacAttributes.NSAccessibilitySelectedTextAttribute,
-                MacAttributes.NSAccessibilitySelectedTextRangeAttribute,
-                MacAttributes.NSAccessibilityInsertionPointLineNumberAttribute,
-                MacAttributes.NSAccessibilityVisibleCharacterRangeAttribute,
-            },
-            null,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityLineForIndexParameterizedAttribute,
-                MacAttributes.NSAccessibilityRangeForLineParameterizedAttribute,
-                MacAttributes.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
-                MacAttributes.NSAccessibilityStringForRangeParameterizedAttribute,
-            }
+            textAttributes, null, textParameterizedAttributes
         ),
-        NSAccessibilityTextAreaRole(Role.TEXT_AREA,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityValueAttribute,
-                MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
-                MacAttributes.NSAccessibilitySelectedTextAttribute,
-                MacAttributes.NSAccessibilitySelectedTextRangeAttribute,
-            },
-            null
+        NSAccessibilityTextAreaRole(new Role[] {Role.TEXT_AREA},
+            textAttributes, null, textParameterizedAttributes
         ),
         NSAccessibilitySliderRole(Role.SLIDER,
             new MacAttributes[] {
@@ -636,6 +600,23 @@ final class MacAccessible extends PlatformAccessible {
         MacAttributes.NSAccessibilityTopLevelUIElementAttribute,
         MacAttributes.NSAccessibilityTitleUIElementAttribute
     );
+
+    static final MacAttributes[] textAttributes = {
+        MacAttributes.NSAccessibilityEnabledAttribute,
+        MacAttributes.NSAccessibilityValueAttribute,
+        MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
+        MacAttributes.NSAccessibilitySelectedTextAttribute,
+        MacAttributes.NSAccessibilitySelectedTextRangeAttribute,
+        MacAttributes.NSAccessibilityInsertionPointLineNumberAttribute,
+        MacAttributes.NSAccessibilityVisibleCharacterRangeAttribute,
+    };
+
+    static final MacAttributes[] textParameterizedAttributes = {
+        MacAttributes.NSAccessibilityLineForIndexParameterizedAttribute,
+        MacAttributes.NSAccessibilityRangeForLineParameterizedAttribute,
+        MacAttributes.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
+        MacAttributes.NSAccessibilityStringForRangeParameterizedAttribute,
+    };
 
     /* The native peer associated with the instance */
     private long peer;
@@ -1414,10 +1395,13 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityInsertionPointLineNumberAttribute: {
-                int offset = (Integer)result;
-                if (offset < 0) result = 0;
-                //TODO multi line support
-                result = 0;
+                if (role == Role.TEXT_AREA) {
+                    Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, result /*CARET_OFFSET*/);
+                    result = lineIndex != null ? lineIndex : 0;
+                } else {
+                    /* Combo and TextArea */ 
+                    result = 0;
+                }
                 break;
             }
             case NSAccessibilityVisibleCharacterRangeAttribute: {
@@ -1536,6 +1520,28 @@ final class MacAccessible extends PlatformAccessible {
                 int[] intArray = (int[])value;
                 result = getAttribute(attr.jfxAttr, intArray[1] /*row*/, intArray[0] /*column*/);
                 break;
+            case NSAccessibilityLineForIndexParameterizedAttribute: {
+                if (getAttribute(ROLE) == Role.TEXT_AREA) {
+                    result = getAttribute(attr.jfxAttr, value /*charOffset*/);
+                } else {
+                    /* Combo and TextField */
+                    result = 0;
+                }
+                break;
+            }
+            case NSAccessibilityRangeForLineParameterizedAttribute: {
+                if (getAttribute(ROLE) == Role.TEXT_AREA) {
+                    Integer lineStart = (Integer)getAttribute(LINE_START, value /*line index*/);
+                    Integer lineEnd = (Integer)getAttribute(LINE_END, value /*line index*/);
+                    result = new int[] {lineStart != null ? lineStart : 0, 
+                                        lineEnd != null ? lineEnd : 0};
+                } else {
+                    /* Combo and TextField */
+                    String text = (String)getAttribute(TITLE);
+                    result = new int[] {0, text != null ? text.length() : 0};
+                }
+                break;
+            }
             default:
                 result = getAttribute(attr.jfxAttr, value);
         }
@@ -1545,19 +1551,6 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilityStringForRangeParameterizedAttribute: {
                 String text = (String)result;
                 result = text.substring(variant.int1, variant.int1 + variant.int2);
-                break;
-            }
-            case NSAccessibilityLineForIndexParameterizedAttribute: {
-                int offset = (Integer)result;
-                //TODO multi line support
-                if (offset < 0) result = 0;
-                result = 0;
-                break;
-            }
-            case NSAccessibilityRangeForLineParameterizedAttribute: {
-                String text = (String)result;
-                //TODO multi line support
-                result = new int[] {0, text.length()}; 
                 break;
             }
             case NSAccessibilityCellForColumnAndRowParameterizedAttribute: {

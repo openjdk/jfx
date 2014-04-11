@@ -1226,6 +1226,8 @@ public abstract class TextInputControl extends Control {
             }
             case SELECTION_START: return getSelection().getStart();
             case SELECTION_END: return getSelection().getEnd();
+            case CARET_OFFSET: return getCaretPosition();
+            case FONT: return getFont();
             default: return super.accGetAttribute(attribute, parameters);
         }
     }
