@@ -481,7 +481,7 @@ public class MacDMGBundler extends MacBaseInstallerBundler {
                     if (!appResources.contains(license)) {
                         throw new ConfigException(
                                 I18N.getString("error.license-missing"),
-                                MessageFormat.format(com.sun.imageio.plugins.common.I18N.getString("error.license-missing.advice"),
+                                MessageFormat.format(I18N.getString("error.license-missing.advice"),
                                         license, appResources.getBaseDirectory().toString()));
                     }
                 }

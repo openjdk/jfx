@@ -381,6 +381,7 @@ public class MacAppBundler extends AbstractBundler {
                 MacBaseInstallerBundler.signAppBundle(p, rootDirectory, signingIdentity, IDENTIFIER.fetchFrom(p) + ".");
             }
         } catch (IOException ex) {
+            Log.info(ex.toString());
             Log.verbose(ex);
             return null;
         } finally {
