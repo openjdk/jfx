@@ -38,10 +38,6 @@ public class CLITest {
 
     @BeforeClass
     public static void prepareApp() {
-        // on mac, require a full test
-        Assume.assumeTrue(!System.getProperty("os.name").toLowerCase().contains("os x") || Boolean.parseBoolean(System.getProperty("FULL_TEST")));
-
-
         Log.setLogger(new Log.Logger(true));
 
         String tmpBasePath = System.getProperty("tmpBase");
@@ -59,6 +55,9 @@ public class CLITest {
 
     @Test
     public void simpleTest() throws Exception {
+        // on mac, require a full test
+        Assume.assumeTrue(!System.getProperty("os.name").toLowerCase().contains("os x") || Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
         com.sun.javafx.tools.packager.Main.main("-deploy",
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
@@ -69,6 +68,19 @@ public class CLITest {
                 "-name", "SimpleTest");
     }
 
+    @Test
+    public void addRuntimeBundleParam() throws Exception {
+        com.sun.javafx.tools.packager.Main.main("-deploy",
+                "-verbose", // verbose is required or test will call System.exit() on failures and break the build
+                "-srcfiles", fakeMainJar.getCanonicalPath(),
+                "-outdir", workDir.getCanonicalPath(),
+                "-outfile", "SimpleTest",
+                "-appclass", "hello.TestPackager",
+                "-native", "image",
+                "-name", "SimpleTest",
+                "-Bruntime=" + System.getProperty("java.home"));
+    }
+
     @Test(expected = PackagerException.class)
     public void duplicateNameClash() throws Exception {
         com.sun.javafx.tools.packager.Main.main("-deploy",
@@ -77,7 +89,7 @@ public class CLITest {
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
                 "-appclass", "hello.TestPackager",
-                "-native",
+                "-native", "image",
                 "-name", "SimpleTest",
                 "-Bname=DuplicateTest");
     }
@@ -90,7 +102,7 @@ public class CLITest {
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
                 "-appclass", "hello.TestPackager",
-                "-native",
+                "-native", "image",
                 "-name", "SimpleTest",
                 "-Bname=SimpleTest");
     }
