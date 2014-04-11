@@ -399,11 +399,6 @@ public class BundleParams {
         doSetRuntime(baseDir);
     }
 
-    public void setDefaultRuntime() {
-        File f = new File(System.getProperty("java.home"));
-        doSetRuntime(f);
-    }
-
     //input dir "jdk/jre" (i.e. jre folder in the jdk)
     private void doSetRuntime(File baseDir) {
         params.put(PARAM_RUNTIME, baseDir.toString());
