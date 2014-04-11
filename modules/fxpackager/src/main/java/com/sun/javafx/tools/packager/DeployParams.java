@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,8 @@
 package com.sun.javafx.tools.packager;
 
 import com.sun.javafx.tools.ant.Callback;
-import com.sun.javafx.tools.packager.bundlers.BundleParams;
-import com.sun.javafx.tools.packager.bundlers.Bundler;
-import com.sun.javafx.tools.packager.bundlers.IOUtils;
-import com.sun.javafx.tools.packager.bundlers.RelativeFileSet;
+import com.sun.javafx.tools.packager.bundlers.*;
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import com.sun.javafx.tools.resource.DeployResource;
 import java.io.File;
 import java.io.IOException;
@@ -40,13 +38,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 public class DeployParams extends CommonParams {
     public enum RunMode {
         WEBSTART, EMBEDDED, STANDALONE, ALL
-    };
+    }
 
-    final List<DeployResource> resources = new ArrayList<DeployResource>();
+    final List<DeployResource> resources = new ArrayList<>();
 
     String id;
     String title;
@@ -58,6 +57,7 @@ public class DeployParams extends CommonParams {
     String copyright;
     String version;
     Boolean systemWide;
+    Boolean serviceHint;
 
     String applicationClass;
     String preloader;
@@ -99,7 +99,7 @@ public class DeployParams extends CommonParams {
     List<JSCallback> callbacks;
 
     //list of HTML templates to process
-    List<Template> templates = new LinkedList<Template>();
+    List<Template> templates = new LinkedList<>();
 
     String jrePlatform = "1.6+";
     String fxPlatform = PackagerLib.JAVAFX_VERSION+"+";
@@ -107,12 +107,15 @@ public class DeployParams extends CommonParams {
     boolean javaRuntimeWasSet = false;
 
     //list of jvm args (in theory string can contain spaces and need to be escaped
-    List<String> jvmargs = new LinkedList<String>();
-    Map<String, String> jvmUserArgs = new HashMap<String, String>();
+    List<String> jvmargs = new LinkedList<>();
+    Map<String, String> jvmUserArgs = new HashMap<>();
 
     //list of jvm properties (can also be passed as VM args
     // but keeping them separate make it a bit more convinient for JNLP generation)
-    Map<String, String> properties = new HashMap<String, String>();
+    Map<String, String> properties = new HashMap<>();
+    
+    // raw arguments to the bundler
+    Map<String, ? super Object> bundlerArguments = new HashMap<>();
 
     String fallbackApp = "com.javafx.main.NoJavaFXFallback";
 
@@ -147,6 +150,10 @@ public class DeployParams extends CommonParams {
 
     public void setSystemWide(Boolean systemWide) {
         this.systemWide = systemWide;
+    }
+
+    public void setServiceHint(Boolean serviceHint) {
+        this.serviceHint = serviceHint;
     }
 
     public void setJRE(String v) {
@@ -295,7 +302,7 @@ public class DeployParams extends CommonParams {
     }
 
     public void setCallbacks(List<Callback> list) {
-        List<JSCallback> jslist = new ArrayList<JSCallback>(list.size());
+        List<JSCallback> jslist = new ArrayList<>(list.size());
         for (Callback cb: list) {
             jslist.add(new JSCallback(cb.getName(), cb.getCmd()));
         }
@@ -322,11 +329,14 @@ public class DeployParams extends CommonParams {
     // everything in the given folder
     // (IOUtils.copyfiles() have recursive behavior)
     List<File> expandFileset(File root) {
-        List<File> files = new LinkedList<File>();
+        List<File> files = new LinkedList<>();
         if (IOUtils.isNotSymbolicLink(root)) {
            if (root.isDirectory()) {
-               for (File f: root.listFiles()) {
-                  files.addAll(expandFileset(f));
+               File[] children = root.listFiles();
+               if (children != null) {
+                   for (File f : children) {
+                       files.addAll(expandFileset(f));
+                   }
                }
            } else {
                files.add(root);
@@ -343,7 +353,7 @@ public class DeployParams extends CommonParams {
             // to strip things like "." in the path
             // or it can confuse symlink detection logic
             file = file.getCanonicalFile();
-        } catch (IOException ioe) {}
+        } catch (IOException ignored) {}
         for (File f: expandFileset(file)) {
            resources.add(new DeployResource(baseDir, f));
         }
@@ -356,7 +366,7 @@ public class DeployParams extends CommonParams {
             // to strip things like "." in the path
             // or it can confuse symlink detection logic
             file = file.getCanonicalFile();
-        } catch (IOException ioe) {}
+        } catch (IOException ignored) {}
         for (File f: expandFileset(file)) {
            resources.add(new DeployResource(baseDir, f));
         }
@@ -417,22 +427,29 @@ public class DeployParams extends CommonParams {
         }
     }
 
-    List<Icon> icons = new LinkedList<Icon>();
+    List<Icon> icons = new LinkedList<>();
 
     public void addIcon(String href, String kind, int w, int h, int d, RunMode m) {
         icons.add(new Icon(href, kind, w, h, d, m));
     }
 
-    BundleParams bundleParams = null;
-    Bundler.BundleType bundleType = Bundler.BundleType.NONE;
+    BundleType bundleType = BundleType.NONE;
     String targetFormat = null; //means any
 
-    public void setBundleType(Bundler.BundleType type) {
+    public void setBundleType(BundleType type) {
         bundleType = type;
+    }
+    
+    public BundleType getBundleType() {
+        return bundleType;
     }
 
     public void setTargetFormat(String t) {
         targetFormat = t;
+    }
+
+    public String getTargetFormat() {
+        return targetFormat;
     }
 
     private String getArch() {
@@ -447,14 +464,18 @@ public class DeployParams extends CommonParams {
 
         return arch;
     }
+    
+    public void addBundleArgument(String key, String value) {
+        bundlerArguments.put(key, value);
+    }
 
     public BundleParams getBundleParams() {
-        if (bundleParams == null && bundleType != Bundler.BundleType.NONE) {
-            bundleParams = new BundleParams();
+        if (bundleType != BundleType.NONE) {
+            BundleParams bundleParams = new BundleParams();
 
             //construct app resources
             //  relative to output folder!
-            Set<File> files = new HashSet<File>();
+            Set<File> files = new HashSet<>();
             String currentOS = System.getProperty("os.name").toLowerCase();
             String currentArch = getArch();
 
@@ -492,11 +513,13 @@ public class DeployParams extends CommonParams {
             bundleParams.setShortcutHint(needShortcut);
             bundleParams.setMenuHint(needMenu);
             bundleParams.setSystemWide(systemWide);
+            bundleParams.setServiceHint(serviceHint);
             bundleParams.setCopyright(copyright);
             bundleParams.setApplicationCategory(category);
             bundleParams.setLicenseType(licenseType);
             bundleParams.setDescription(description);
             bundleParams.setTitle(title);
+            bundleParams.setVerbose(verbose);
 
             bundleParams.setJvmProperties(properties);
             bundleParams.setJvmargs(jvmargs);
@@ -520,7 +543,20 @@ public class DeployParams extends CommonParams {
             }
 
             bundleParams.setIcon(appIcon);
+
+            // check for collisions
+            TreeSet<String> keys = new TreeSet<>(bundlerArguments.keySet());
+            keys.retainAll(bundleParams.getBundleParamsAsMap().keySet());
+
+            if (!keys.isEmpty()) {
+                throw new RuntimeException("Deploy Params and Bundler Arguments overlap in the following values:" + keys.toString());
+            }
+            
+            bundleParams.addAllBundleParams(bundlerArguments);
+            
+            return bundleParams;
+        } else {
+            return null;
         }
-        return bundleParams;
     }
 }

@@ -28,7 +28,11 @@ package com.sun.javafx.scene.control.skin;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.ScrollBar;
+import javafx.scene.control.Slider;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
@@ -91,114 +95,200 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         trackBackground = new StackPane();
         trackBackground.getStyleClass().setAll("track-background");
 
-        thumb = new StackPane();
+        thumb = new StackPane() {
+            @Override
+            public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                switch (attribute) {
+                    case ROLE: return Role.THUMB;
+                    case VALUE: return getSkinnable().getValue();
+                    case MAX_VALUE: {
+                        // This is required for mac-support, to convert from pixel to percent
+                        return getSkinnable().getMax();
+                    }
+                    default: return super.accGetAttribute(attribute, parameters);
+                }
+            }
+
+            @Override
+            public void accExecuteAction(Action action, Object... parameters) {
+                switch (action) {
+                    case MOVE: {
+                        // FIXME for now we just take the x/y values as value, rather than pixel value
+                        final ScrollBar scrollBar = getSkinnable();
+                        final Orientation o = scrollBar.getOrientation();
+                        double value = (double) (o == Orientation.VERTICAL ? parameters[1] : parameters[0]);
+                        scrollBar.setValue(scrollBar.getValue() + value);
+                        break;
+                    }
+                    default: super.accExecuteAction(action, parameters);
+                }
+            }
+        };
         thumb.getStyleClass().setAll("thumb");
 
 
         if (!IS_TOUCH_SUPPORTED) {
             
-            incButton = new EndButton("increment-button", "increment-arrow");
-            incButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
-               @Override public void handle(javafx.scene.input.MouseEvent me) {
-                   /*
-                   ** if the tracklenght isn't greater than do nothing....
-                   */
-                   if (!thumb.isVisible() || trackLength > thumbLength) {
-                       getBehavior().incButtonPressed(me);
-                   }
-                   me.consume();
-               }
+            incButton = new EndButton("increment-button", "increment-arrow") {
+                @Override
+                public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                    switch (attribute) {
+                        case ROLE: return Role.INCREMENT_BUTTON;
+                        default: return super.accGetAttribute(attribute, parameters);
+                    }
+                }
+
+                @Override
+                public void accExecuteAction(Action action, Object... parameters) {
+                    switch (action) {
+                        case FIRE: 
+                            getSkinnable().increment();
+                            break;
+                        default: super.accExecuteAction(action, parameters);
+                    }
+                }
+            };
+            incButton.setOnMousePressed(me -> {
+                /*
+                ** if the tracklenght isn't greater than do nothing....
+                */
+                if (!thumb.isVisible() || trackLength > thumbLength) {
+                    getBehavior().incButtonPressed();
+                }
+                me.consume();
             });
-            incButton.setOnMouseReleased(new EventHandler<javafx.scene.input.MouseEvent>() {
-               @Override public void handle(javafx.scene.input.MouseEvent me) {
-                   /*
-                   ** if the tracklenght isn't greater than do nothing....
-                   */
-                   if (!thumb.isVisible() || trackLength > thumbLength) {
-                       getBehavior().incButtonReleased(me);
-                   }
-                   me.consume();
-               }
+            incButton.setOnMouseReleased(me -> {
+                /*
+                ** if the tracklenght isn't greater than do nothing....
+                */
+                if (!thumb.isVisible() || trackLength > thumbLength) {
+                    getBehavior().incButtonReleased();
+                }
+                me.consume();
             });
 
-            decButton = new EndButton("decrement-button", "decrement-arrow");
-            decButton.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
-               @Override public void handle(javafx.scene.input.MouseEvent me) {
-                   /*
-                   ** if the tracklenght isn't greater than do nothing....
-                   */
-                   if (!thumb.isVisible() || trackLength > thumbLength) {
-                       getBehavior().decButtonPressed(me);
-                   }
-                   me.consume();
-               }
+            decButton = new EndButton("decrement-button", "decrement-arrow") {
+                @Override
+                public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                    switch (attribute) {
+                        case ROLE: return Role.DECREMENT_BUTTON;
+                        default: return super.accGetAttribute(attribute, parameters);
+                    }
+                }
+
+                @Override
+                public void accExecuteAction(Action action, Object... parameters) {
+                    switch (action) {
+                        case FIRE:
+                            getSkinnable().decrement();
+                            break;
+                        default: super.accExecuteAction(action, parameters);
+                    }
+                }
+            };
+            decButton.setOnMousePressed(me -> {
+                /*
+                ** if the tracklenght isn't greater than do nothing....
+                */
+                if (!thumb.isVisible() || trackLength > thumbLength) {
+                    getBehavior().decButtonPressed();
+                }
+                me.consume();
             });
-            decButton.setOnMouseReleased(new EventHandler<javafx.scene.input.MouseEvent>() {
-               @Override public void handle(javafx.scene.input.MouseEvent me) {
-                   /*
-                   ** if the tracklenght isn't greater than do nothing....
-                   */
-                   if (!thumb.isVisible() || trackLength > thumbLength) {
-                       getBehavior().decButtonReleased(me);
-                   }
-                   me.consume();
-               }
+            decButton.setOnMouseReleased(me -> {
+                /*
+                ** if the tracklenght isn't greater than do nothing....
+                */
+                if (!thumb.isVisible() || trackLength > thumbLength) {
+                    getBehavior().decButtonReleased();
+                }
+                me.consume();
             });
         }
 
 
-        track.setOnMousePressed( new EventHandler<javafx.scene.input.MouseEvent>() {
-           @Override public void handle(javafx.scene.input.MouseEvent me) {
-               if (!thumb.isPressed() && me.getButton() == MouseButton.PRIMARY) {
-                   if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
-                       if (trackLength != 0) {
-                           getBehavior().trackPress(me, me.getY() / trackLength);
-                           me.consume();
-                       }
-                   } else {
-                       if (trackLength != 0) {
-                           getBehavior().trackPress(me, me.getX() / trackLength);
-                           me.consume();
-                       }
-                   }
-               }
-           }
+        track.setOnMousePressed(me -> {
+            if (!thumb.isPressed() && me.getButton() == MouseButton.PRIMARY) {
+                if (getSkinnable().getOrientation() == Orientation.VERTICAL) {
+                    if (trackLength != 0) {
+                        getBehavior().trackPress(me.getY() / trackLength);
+                        me.consume();
+                    }
+                } else {
+                    if (trackLength != 0) {
+                        getBehavior().trackPress(me.getX() / trackLength);
+                        me.consume();
+                    }
+                }
+            }
         });
 
-        track.setOnMouseReleased( new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
-                getBehavior().trackRelease(me, 0.0f);
+        track.setOnMouseReleased(me -> {
+            getBehavior().trackRelease();
+            me.consume();
+        });
+
+        thumb.setOnMousePressed(me -> {
+            if (me.isSynthesized()) {
+                // touch-screen events handled by Scroll handler
+                me.consume();
+                return;
+            }
+            /*
+            ** if max isn't greater than min then there is nothing to do here
+            */
+            if (getSkinnable().getMax() > getSkinnable().getMin()) {
+                dragStart = thumb.localToParent(me.getX(), me.getY());
+                double clampedValue = Utils.clamp(getSkinnable().getMin(), getSkinnable().getValue(), getSkinnable().getMax());
+                preDragThumbPos = (clampedValue - getSkinnable().getMin()) / (getSkinnable().getMax() - getSkinnable().getMin());
                 me.consume();
             }
         });
 
-        thumb.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
-                if (me.isSynthesized()) {
-                    // touch-screen events handled by Scroll handler
-                    me.consume();
-                    return;
+
+        thumb.setOnMouseDragged(me -> {
+            if (me.isSynthesized()) {
+                // touch-screen events handled by Scroll handler
+                me.consume();
+                return;
+            }
+            /*
+            ** if max isn't greater than min then there is nothing to do here
+            */
+            if (getSkinnable().getMax() > getSkinnable().getMin()) {
+                /*
+                ** if the tracklength isn't greater then do nothing....
+                */
+                if (trackLength > thumbLength) {
+                    Point2D cur = thumb.localToParent(me.getX(), me.getY());
+                    if (dragStart == null) {
+                        // we're getting dragged without getting a mouse press
+                        dragStart = thumb.localToParent(me.getX(), me.getY());
+                    }
+                    double dragPos = getSkinnable().getOrientation() == Orientation.VERTICAL ? cur.getY() - dragStart.getY(): cur.getX() - dragStart.getX();
+                    getBehavior().thumbDragged(preDragThumbPos + dragPos / (trackLength - thumbLength));
                 }
+
+                me.consume();
+            }
+        });
+
+        thumb.setOnScrollStarted(se -> {
+            if (se.isDirect()) {
                 /*
                 ** if max isn't greater than min then there is nothing to do here
                 */
                 if (getSkinnable().getMax() > getSkinnable().getMin()) {
-                    dragStart = thumb.localToParent(me.getX(), me.getY());
+                    dragStart = thumb.localToParent(se.getX(), se.getY());
                     double clampedValue = Utils.clamp(getSkinnable().getMin(), getSkinnable().getValue(), getSkinnable().getMax());
                     preDragThumbPos = (clampedValue - getSkinnable().getMin()) / (getSkinnable().getMax() - getSkinnable().getMin());
-                    me.consume();
+                    se.consume();
                 }
             }
         });
 
-
-        thumb.setOnMouseDragged(new EventHandler<javafx.scene.input.MouseEvent>() {
-            @Override public void handle(javafx.scene.input.MouseEvent me) {
-                if (me.isSynthesized()) {
-                    // touch-screen events handled by Scroll handler
-                    me.consume();
-                    return;
-                }
+        thumb.setOnScroll(event -> {
+            if (event.isDirect()) {
                 /*
                 ** if max isn't greater than min then there is nothing to do here
                 */
@@ -207,108 +297,64 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                     ** if the tracklength isn't greater then do nothing....
                     */
                     if (trackLength > thumbLength) {
-                        Point2D cur = thumb.localToParent(me.getX(), me.getY());
+                        Point2D cur = thumb.localToParent(event.getX(), event.getY());
                         if (dragStart == null) {
                             // we're getting dragged without getting a mouse press
-                            dragStart = thumb.localToParent(me.getX(), me.getY());
+                            dragStart = thumb.localToParent(event.getX(), event.getY());
                         }
                         double dragPos = getSkinnable().getOrientation() == Orientation.VERTICAL ? cur.getY() - dragStart.getY(): cur.getX() - dragStart.getX();
-                        getBehavior().thumbDragged(me, preDragThumbPos + dragPos / (trackLength - thumbLength));
+                        getBehavior().thumbDragged(/*todo*/ preDragThumbPos + dragPos / (trackLength - thumbLength));
                     }
 
-                    me.consume();
-                }
-            }
-        });
-
-        thumb.setOnScrollStarted(new EventHandler<javafx.scene.input.ScrollEvent>() {
-            @Override public void handle(javafx.scene.input.ScrollEvent se) {
-                if (se.isDirect()) {
-                    /*
-                    ** if max isn't greater than min then there is nothing to do here
-                    */
-                    if (getSkinnable().getMax() > getSkinnable().getMin()) {
-                        dragStart = thumb.localToParent(se.getX(), se.getY());
-                        double clampedValue = Utils.clamp(getSkinnable().getMin(), getSkinnable().getValue(), getSkinnable().getMax());
-                        preDragThumbPos = (clampedValue - getSkinnable().getMin()) / (getSkinnable().getMax() - getSkinnable().getMin());
-                        se.consume();
-                    }
-                }
-            }
-        });
-
-        thumb.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                if (event.isDirect()) {
-                    /*
-                    ** if max isn't greater than min then there is nothing to do here
-                    */
-                    if (getSkinnable().getMax() > getSkinnable().getMin()) {
-                        /*
-                        ** if the tracklength isn't greater then do nothing....
-                        */
-                        if (trackLength > thumbLength) {
-                            Point2D cur = thumb.localToParent(event.getX(), event.getY());
-                            if (dragStart == null) {
-                                // we're getting dragged without getting a mouse press
-                                dragStart = thumb.localToParent(event.getX(), event.getY());
-                            }
-                            double dragPos = getSkinnable().getOrientation() == Orientation.VERTICAL ? cur.getY() - dragStart.getY(): cur.getX() - dragStart.getX();
-                            getBehavior().thumbDragged(null/*todo*/, preDragThumbPos + dragPos / (trackLength - thumbLength));
-                        }
-
-                        event.consume();
-                        return;
-                    }
+                    event.consume();
+                    return;
                 }
             }
         });
 
 
-        getSkinnable().setOnScroll(new EventHandler<javafx.scene.input.ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
+        getSkinnable().addEventHandler(ScrollEvent.SCROLL, event -> {
+            /*
+            ** if the tracklength isn't greater then do nothing....
+            */
+            if (trackLength > thumbLength) {
+
+                double dx = event.getDeltaX();
+                double dy = event.getDeltaY();
+
                 /*
-                ** if the tracklength isn't greater then do nothing....
+                ** in 2.0 a horizontal scrollbar would scroll on a vertical
+                ** drag on a tracker-pad. We need to keep this behavior.
                 */
-                if (trackLength > thumbLength) {
+                dx = (Math.abs(dx) < Math.abs(dy) ? dy : dx);
 
-                    double dx = event.getDeltaX();
-                    double dy = event.getDeltaY();
+                /*
+                ** we only consume an event that we've used.
+                */
+                ScrollBar sb = (ScrollBar) getSkinnable();
 
-                    /*
-                    ** in 2.0 a horizontal scrollbar would scroll on a vertical
-                    ** drag on a tracker-pad. We need to keep this behavior.
-                    */
-                    dx = (Math.abs(dx) < Math.abs(dy) ? dy : dx);
+                double delta = (getSkinnable().getOrientation() == Orientation.VERTICAL ? dy : dx);
 
-                    /*
-                    ** we only consume an event that we've used.
-                    */
-                    ScrollBar sb = (ScrollBar) getSkinnable();
-
-                    double delta = (getSkinnable().getOrientation() == Orientation.VERTICAL ? dy : dx);
-
-                    /*
-                    ** RT-22941 - If this is either a touch or inertia scroll
-                    ** then we move to the position of the touch point.
-                    *
-                    * TODO: this fix causes RT-23406 ([ScrollBar, touch] Dragging scrollbar from the 
-                    * track on touchscreen causes flickering)
-                    */
-                    if (event.isDirect()) {
-                        if (trackLength > thumbLength) {
-                            getBehavior().thumbDragged(null, (getSkinnable().getOrientation() == Orientation.VERTICAL ? event.getY(): event.getX()) / trackLength);
-                            event.consume();
-                        }
+                /*
+                ** RT-22941 - If this is either a touch or inertia scroll
+                ** then we move to the position of the touch point.
+                *
+                * TODO: this fix causes RT-23406 ([ScrollBar, touch] Dragging scrollbar from the
+                * track on touchscreen causes flickering)
+                */
+                if (event.isDirect()) {
+                    if (trackLength > thumbLength) {
+                        getBehavior().thumbDragged((getSkinnable().getOrientation() == Orientation.VERTICAL ? event.getY(): event.getX()) / trackLength);
+                        event.consume();
                     }
-                    else {
-                        if (delta > 0.0 && sb.getValue() > sb.getMin()) {
-                            sb.decrement();
-                            event.consume();
-                        } else if (delta < 0.0 && sb.getValue() < sb.getMax()) {
-                            sb.increment();
-                            event.consume();
-                        }
+                }
+                else {
+                    if (delta > 0.0 && sb.getValue() > sb.getMin()) {
+                        sb.decrement();
+                        event.consume();
+                    } else if (delta < 0.0 && sb.getValue() < sb.getMax()) {
+                        sb.increment();
+                        event.consume();
                     }
                 }
             }

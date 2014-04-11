@@ -18,11 +18,18 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
-
 case "$1" in
     purge|remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
         echo Removing shortcut
         rm -f /usr/share/applications/APPLICATION_NAME.desktop
+        if [ "$1" = "purge" ] ; then
+            if [ "SERVICE_HINT" = "true" ]; then
+                echo Uninstalling daemon
+                rm -f /etc/init.d/APPLICATION_PACKAGE
+
+                update-rc.d APPLICATION_PACKAGE remove
+            fi
+        fi
     ;;
 
     *)

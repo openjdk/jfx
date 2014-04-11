@@ -38,67 +38,34 @@ import com.sun.scenario.effect.impl.HeapImage;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.scenario.effect.impl.state.AccessHelper;
-import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
-import com.sun.scenario.effect.impl.state.LinearConvolveKernel.PassType;
-import com.sun.scenario.effect.impl.state.LinearConvolvePeer;
+import com.sun.scenario.effect.impl.state.LinearConvolveRenderState;
+import com.sun.scenario.effect.impl.state.LinearConvolveRenderState.PassType;
 
-public class JSWLinearConvolvePeer extends JSWEffectPeer implements LinearConvolvePeer {
+public class JSWLinearConvolvePeer extends JSWEffectPeer<LinearConvolveRenderState> {
 
     public JSWLinearConvolvePeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);
     }
 
-    @Override
-    protected final Effect getEffect() {
-        return (Effect)super.getEffect();
-    }
-
-    protected LinearConvolveKernel getKernel() {
-        return (LinearConvolveKernel) AccessHelper.getState(getEffect());
-    }
-
-    public int getPow2ScaleX(LinearConvolveKernel kernel) {
-        return kernel.getPow2ScaleX();
-    }
-
-    public int getPow2ScaleY(LinearConvolveKernel kernel) {
-        return kernel.getPow2ScaleY();
-    }
-
-    @Override
-    public Rectangle getResultBounds(BaseTransform transform,
-                                     Rectangle outputClip,
-                                     ImageData... inputDatas)
+    private Rectangle getResultBounds(LinearConvolveRenderState lcrstate,
+                                      Rectangle outputClip,
+                                      ImageData... inputDatas)
     {
         Rectangle r = inputDatas[0].getTransformedBounds(null);
-        r = getKernel().getScaledResultBounds(r, getPass());
+        r = lcrstate.getPassResultBounds(r);
         r.intersectWith(outputClip);
         return r;
     }
 
-    private int getCount() {
-        return getKernel().getScaledKernelSize(getPass());
-    }
-
-    private float[] getOffset() {
-        return getKernel().getVector(getInputNativeBounds(0),
-                                     getInputTransform(0),
-                                     getPass());
-    }
-
-    private FloatBuffer getWeights() {
-        return getKernel().getWeights(getPass());
-    }
-
     @Override
     public ImageData filter(Effect effect,
+                            LinearConvolveRenderState lcrstate,
                             BaseTransform transform,
                             Rectangle outputClip,
                             ImageData... inputs)
     {
-        setEffect(effect);
-        Rectangle dstRawBounds = getResultBounds(transform, null, inputs);
+        setRenderState(lcrstate);
+        Rectangle dstRawBounds = getResultBounds(lcrstate, null, inputs);
         Rectangle dstBounds = new Rectangle(dstRawBounds);
         dstBounds.intersectWith(outputClip);
         setDestBounds(dstBounds);
@@ -115,7 +82,7 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer implements LinearConvol
         Rectangle src0Bounds = inputs[0].getUntransformedBounds();
         BaseTransform src0Transform = inputs[0].getTransform();
         Rectangle src0NativeBounds = new Rectangle(0, 0, srcw, srch);
-        // Assert: ((FilterEffect) effect).operatesInUserSpace()...
+        // Assert: rstate.getEffectTransformSpace() == UserSpace
         setInputBounds(0, src0Bounds);
         setInputTransform(0, src0Transform);
         setInputNativeBounds(0, src0NativeBounds);
@@ -125,10 +92,10 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer implements LinearConvol
         int dstscan = dst.getScanlineStride();
         int[] dstPixels = dst.getPixelArray();
 
-        int count = getCount();
-        FloatBuffer weights_buf = getWeights();
+        int count = lcrstate.getPassKernelSize();
+        FloatBuffer weights_buf = lcrstate.getPassWeights();
 
-        PassType type = getKernel().getPassType(getPass());
+        PassType type = lcrstate.getPassType();
         if (!src0Transform.isIdentity() ||
             !dstBounds.contains(dstRawBounds.x, dstRawBounds.y))
         {
@@ -137,7 +104,10 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer implements LinearConvol
             // and transforms...
             type = PassType.GENERAL_VECTOR;
         }
-        type = PassType.GENERAL_VECTOR;
+        if (count >= 0) {
+            // REMIND: Why was this hard-coded?
+            type = PassType.GENERAL_VECTOR;
+        }
         if (type == PassType.HORIZONTAL_CENTERED) {
             float[] weights_arr = new float[count * 2];
             weights_buf.get(weights_arr, 0, count);
@@ -179,7 +149,7 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer implements LinearConvol
                 dyrow = (srcRect[7] - srcRect[1]) * srch / dstBounds.height;
             }
 
-            float[] offset_arr = getOffset();
+            float[] offset_arr = lcrstate.getPassVector();
             float deltax = offset_arr[0] * srcw;
             float deltay = offset_arr[1] * srch;
             float offsetx = offset_arr[2] * srcw;
@@ -241,7 +211,7 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer implements LinearConvol
         }
     }
 
-    /**
+    /*
      * In the nomenclature of the argument list for this method, "row" refers
      * to the coordinate which increments once for each new stream of single
      * axis data that we are blurring in a single pass.  And "col" refers to

@@ -44,8 +44,7 @@ import javafx.stage.StageStyle;
 
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.*;
-import com.sun.glass.ui.accessible.AccessibleBaseProvider;
-import com.sun.glass.ui.accessible.AccessibleRoot;
+import com.sun.glass.ui.Window.Level;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.iio.common.PushbroomScaler;
 import com.sun.javafx.iio.common.ScalerFactory;
@@ -54,8 +53,6 @@ import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.prism.Image;
 import com.sun.prism.PixelFormat;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
@@ -314,6 +311,7 @@ class WindowStage extends GlassStage {
         }
 
         if (icons == null || icons.size() < 1) { //no icons passed in
+            platformWindow.setIcon(null);
             return;
         }
 
@@ -502,6 +500,18 @@ class WindowStage extends GlassStage {
         platformWindow.maximize(maximized);
     }
 
+    @Override
+    public void setAlwaysOnTop(boolean alwaysOnTop) {
+        if (alwaysOnTop) {
+            if (hasPermission(alwaysOnTopPermission)) {
+                platformWindow.setLevel(Level.FLOATING);
+            }
+        } else {
+            platformWindow.setLevel(Level.NORMAL);
+        }
+        
+    }
+
     @Override public void setResizable(boolean resizable) {
         platformWindow.setResizable(resizable);
         // note: for child windows this is ignored and we fail silently
@@ -538,6 +548,7 @@ class WindowStage extends GlassStage {
     // now AllPermission is good enough to do the job we need, such
     // as fullscreen support for signed/unsigned application.
     private static final Permission fullScreenPermission = new AllPermission();
+    private static final Permission alwaysOnTopPermission = new AllPermission();
 
     private boolean fullScreenFromUserEvent = false;
 
@@ -669,14 +680,11 @@ class WindowStage extends GlassStage {
             isInFullScreen = true;
             activeFSWindow.set(this);
         }
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (stageListener != null) {
-                    stageListener.changedFullscreen(fs);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (stageListener != null) {
+                stageListener.changedFullscreen(fs);
             }
+            return null;
         }, getAccessControlContext());
     }
 
@@ -834,101 +842,4 @@ class WindowStage extends GlassStage {
         rtl = b;
     }
 
-    /**
-     * 
-     * Accessibility glue for native
-     * 
-     */
-    
-    /**
-     * Initialize Accessibility
-     *
-     * @param ac    the Glass accessible root object.
-     */
-    @Override public void setAccessibilityInitIsComplete(Object ac) {
-        if (ac instanceof AccessibleRoot) {
-            platformWindow.setAccessibilityInitIsComplete((AccessibleRoot)ac);
-        } else {
-            platformWindow.setAccessibilityInitIsComplete(null);
-        }
-    } 
-
-    /**
-     * Create accessible Glass object corresponding to stage
-     * 
-     * @param ac    the FX accessible root/stage node.
-     * 
-     * @return the Glass AccessibleRoot object.
-     */
-    @Override
-    public Object accessibleCreateStageProvider(AccessibleStageProvider ac) {
-        return AccessibleRoot.createAccessible(ac, platformWindow);
-    }
-
-    /**
-     * Create Glass accessible object corresponding to controls
-     * 
-     * @param ac    the FX accessible node
-     * 
-     * @return the Glass accessible Object
-     */
-    @Override public Object accessibleCreateBasicProvider(AccessibleProvider ac) {
-        return AccessibleBaseProvider.createProvider(ac);
-    }
-
-    /**
-     * Delete Glass accessible object corresponding to controls
-     *
-     * @param glassAcc the Glass accessible
-     */
-    @Override public void accessibleDestroyBasicProvider(Object glassAcc) {
-        if (glassAcc instanceof AccessibleBaseProvider) {
-            ((AccessibleBaseProvider)glassAcc).destroyAccessible();
-        }
-    }
-
-    /**
-     * Fire accessible event
-     *
-     * @param glassAcc  the Glass accessible
-     * @param eventID   identifies the event.
-     */
-    @Override public void accessibleFireEvent(Object glassAcc, int eventID) {
-        if (glassAcc instanceof AccessibleBaseProvider) {
-            ((AccessibleBaseProvider)glassAcc).fireEvent(eventID);
-        }
-    }
-    
-    /**
-     * Fire accessible property change event
-     * 
-     * @param glassAcc      the Glass accessible 
-     * @param propertyId    identifies the property
-     * @param oldProperty   the old value of the property
-     * @param newProperty   the new value of the property
-     */
-    @Override public void accessibleFirePropertyChange( Object glassAcc, int propertyId,
-                                                        int oldProperty, int newProperty ) {
-        if (glassAcc instanceof AccessibleBaseProvider) {
-            ((AccessibleBaseProvider)glassAcc).
-                firePropertyChange(propertyId, oldProperty, newProperty);
-        }
-    }
-    
-    /**
-     * Fire accessible property change event
-     * 
-     * @param glassAcc      the Glass accessible
-     * @param propertyId    identifies the property
-     * @param oldProperty   the old value of the property
-     * @param newProperty   the new value of the property
-     */
-    @Override public void accessibleFirePropertyChange( Object glassAcc, int propertyId,
-                                                        boolean oldProperty,
-                                                        boolean newProperty ) {
-        if (glassAcc instanceof AccessibleBaseProvider) {
-            ((AccessibleBaseProvider)glassAcc).
-                firePropertyChange(propertyId, oldProperty, newProperty);
-        }
-    }
 }

@@ -163,14 +163,26 @@
 .html-editor-outdent {
     -fx-graphic: url("HTMLEditor-Outdent-Yellow.png");
 }
+.html-editor-outdent:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Outdent-Yellow-rtl.png");
+}
 .html-editor-indent {
     -fx-graphic: url("HTMLEditor-Indent-Yellow.png");
+}
+.html-editor-indent:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Indent-Yellow-rtl.png");
 }
 .html-editor-bullets {
     -fx-graphic: url("HTMLEditor-Bullets-Yellow.png");
 }
+.html-editor-bullets:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Bullets-Yellow-rtl.png");
+}
 .html-editor-numbers {
     -fx-graphic: url("HTMLEditor-Numbered-Yellow.png");
+}
+.html-editor-numbers:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Numbered-Yellow-rtl.png");
 }
 .html-editor-bold {
     -fx-graphic: url("HTMLEditor-Bold-Yellow.png");

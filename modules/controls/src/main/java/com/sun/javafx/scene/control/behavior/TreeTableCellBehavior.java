@@ -59,101 +59,95 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
      **************************************************************************/          
 
     /** @{@inheritDoc} */
-    @Override TreeTableView<S> getTableControl() {
+    @Override protected TreeTableView<S> getCellContainer() {
         return getControl().getTreeTableView();
     }
 
     /** @{@inheritDoc} */
-    @Override TreeTableColumn<S,T> getTableColumn() {
+    @Override protected TreeTableColumn<S,T> getTableColumn() {
         return getControl().getTableColumn();
     }
 
     /** @{@inheritDoc} */
-    @Override int getItemCount() {
-        return getTableControl().getExpandedItemCount();
+    @Override protected int getItemCount() {
+        return getCellContainer().getExpandedItemCount();
     }
 
     /** @{@inheritDoc} */
-    @Override TreeTableView.TreeTableViewSelectionModel<S> getSelectionModel() {
-        return getTableControl().getSelectionModel();
+    @Override protected TreeTableView.TreeTableViewSelectionModel<S> getSelectionModel() {
+        return getCellContainer().getSelectionModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TreeTableView.TreeTableViewFocusModel<S> getFocusModel() {
-        return getTableControl().getFocusModel();
+    @Override protected TreeTableView.TreeTableViewFocusModel<S> getFocusModel() {
+        return getCellContainer().getFocusModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TablePositionBase getFocusedCell() {
-        return getTableControl().getFocusModel().getFocusedCell();
+    @Override protected TablePositionBase getFocusedCell() {
+        return getCellContainer().getFocusModel().getFocusedCell();
     }
 
     /** @{@inheritDoc} */
-    @Override boolean isTableRowSelected() {
+    @Override protected boolean isTableRowSelected() {
         return getControl().getTreeTableRow().isSelected();
     }
 
     /** @{@inheritDoc} */
-    @Override TableColumnBase getVisibleLeafColumn(int index) {
-        return getTableControl().getVisibleLeafColumn(index);
-    }
-
-    /** @{@inheritDoc} */
     @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
-        return getTableControl().getVisibleLeafIndex(null);
+        return getCellContainer().getVisibleLeafIndex(null);
     }
 
     /** @{@inheritDoc} */
-    @Override void focus(int row, TableColumnBase tc) {
+    @Override protected void focus(int row, TableColumnBase tc) {
         getFocusModel().focus(row, (TreeTableColumn)tc);
     }
 
     /** @{@inheritDoc} */
-    @Override void edit(int row, TableColumnBase tc) {
-        getTableControl().edit(row, (TreeTableColumn)tc);
+    @Override protected void edit(TreeTableCell<S,T> cell) {
+        if (cell == null) {
+            getCellContainer().edit(-1, null);
+        } else {
+            getCellContainer().edit(cell.getIndex(), cell.getTableColumn());
+        }
     }
 
-    @Override protected boolean checkDisclosureNodeClick(MouseEvent e) {
+    @Override protected boolean handleDisclosureNode(double x, double y) {
         final TreeItem<S> treeItem = getControl().getTreeTableRow().getTreeItem();
-        final Node disclosureNode = getControl().getTreeTableRow().getDisclosureNode();
-        if (disclosureNode != null) {
-            if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
-                if (treeItem != null) {
-                    treeItem.setExpanded(! treeItem.isExpanded());
+
+        final TreeTableView<S> treeTableView = getControl().getTreeTableView();
+        final TreeTableColumn<S,T> column = getTableColumn();
+        final TreeTableColumn<S,?> treeColumn = treeTableView.getTreeColumn() == null ?
+                treeTableView.getVisibleLeafColumn(0) : treeTableView.getTreeColumn();
+
+        if (column == treeColumn) {
+            final Node disclosureNode = getControl().getTreeTableRow().getDisclosureNode();
+            if (disclosureNode != null) {
+                if (disclosureNode.getBoundsInLocal().contains(x, y)) {
+                    if (treeItem != null) {
+                        treeItem.setExpanded(!treeItem.isExpanded());
+                    }
+                    return true;
                 }
-                return true;
             }
         }
         return false;
     }
     
-    @Override protected void simpleSelect(MouseEvent e) {
-        TreeTableView<S> tv = getControl().getTreeTableView();
-        TreeItem treeItem = getControl().getTreeTableRow().getTreeItem();
-        int index = getControl().getIndex();
-        TreeTableColumn<S,T> column = getTableColumn();
-        TableSelectionModel sm = tv.getSelectionModel();
-        
-        boolean isAlreadySelected = sm.isSelected(index, column);
-
-        if (isAlreadySelected && (e.isControlDown() || e.isMetaDown())) {
-            sm.clearSelection(index, column);
-            isAlreadySelected = false;
-        } else {
-            sm.clearAndSelect(index, column);
-        }
-
+    @Override
+    protected void handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
         // handle editing, which only occurs with the primary mouse button
-        if (e.getButton() == MouseButton.PRIMARY) {
-            if (e.getClickCount() == 1 && isAlreadySelected) {
-                tv.edit(index, column);
-            } else if (e.getClickCount() == 1) {
+        TreeItem<S> treeItem = getControl().getTreeTableRow().getTreeItem();
+        if (button == MouseButton.PRIMARY) {
+            if (clickCount == 1 && isAlreadySelected) {
+                edit(getControl());
+            } else if (clickCount == 1) {
                 // cancel editing
-                tv.edit(-1, null);
-            } else if (e.getClickCount() == 2 && treeItem.isLeaf()) {
+                edit(null);
+            } else if (clickCount == 2 && treeItem.isLeaf()) {
                 // attempt to edit
-                tv.edit(index, column);
-            } else if (e.getClickCount() % 2 == 0) {
+                edit(getControl());
+            } else if (clickCount % 2 == 0) {
                 // try to expand/collapse branch tree item
                 treeItem.setExpanded(! treeItem.isExpanded());
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,8 +34,9 @@ import com.sun.javafx.tools.packager.DeployParams;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.PackagerException;
 import com.sun.javafx.tools.packager.PackagerLib;
-import com.sun.javafx.tools.packager.bundlers.Bundler;
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import org.apache.tools.ant.BuildException;
+import org.apache.tools.ant.DynamicAttribute;
 import org.apache.tools.ant.Task;
 import org.apache.tools.ant.types.DataType;
 
@@ -80,7 +81,7 @@ import org.apache.tools.ant.types.DataType;
  *
  * @ant.task name="deploy" category="javafx"
  */
-public class DeployFXTask extends Task {
+public class DeployFXTask extends Task implements DynamicAttribute {
     private String width = null;
     private String height = null;
     private String embeddedWidth = null;
@@ -116,7 +117,7 @@ public class DeployFXTask extends Task {
 
     //default native bundle settings
     // use NONE to avoid large disk space and build time overhead
-    Bundler.BundleType nativeBundles = Bundler.BundleType.NONE;
+    BundleType nativeBundles = BundleType.NONE;
     String bundleFormat = null;
 
     private boolean verbose = false;
@@ -172,6 +173,7 @@ public class DeployFXTask extends Task {
                     app.get().embeddedIntoSwing);
             deployParams.setVersion(app.get().version);
             deployParams.setId(app.get().id);
+            deployParams.setServiceHint(app.get().daemon);
         }
 
         if (appInfo != null) {
@@ -182,7 +184,7 @@ public class DeployFXTask extends Task {
             deployParams.setLicenseType(appInfo.licenseType);
             deployParams.setCopyright(appInfo.copyright);
             deployParams.setEmail(appInfo.email);
-            
+
             for (Info.Icon i: appInfo.icons) {
                 if (i instanceof Info.Splash) {
                    deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
@@ -242,10 +244,16 @@ public class DeployFXTask extends Task {
             deployParams.addTemplate(t.infile, t.outfile);
         }
 
+        for (BundleArgument ba : bundleArgumentList) {
+            deployParams.addBundleArgument(ba.arg, ba.value);
+        }
+
         deployParams.setPlaceholder(placeholder);
 
-        for (FileSet fs: resources.getResources()) {
-               Utils.addResources(deployParams, fs);
+        if (resources != null) {
+            for (FileSet fs: resources.getResources()) {
+                   Utils.addResources(deployParams, fs);
+            }
         }
 
         deployParams.setBundleType(nativeBundles);
@@ -276,16 +284,16 @@ public class DeployFXTask extends Task {
 
     public void setNativeBundles(String v) {
         if ("false".equals(v) || "none".equals(v)) {
-            nativeBundles = Bundler.BundleType.NONE;
+            nativeBundles = BundleType.NONE;
         } else if ("all".equals(v) || "true".equals(v)) {
-            nativeBundles = Bundler.BundleType.ALL;
+            nativeBundles = BundleType.ALL;
         } else if ("image".equals(v)) {
-            nativeBundles = Bundler.BundleType.IMAGE;
+            nativeBundles = BundleType.IMAGE;
         } else if ("installer".equals(v)) {
-            nativeBundles = Bundler.BundleType.INSTALLER;
+            nativeBundles = BundleType.INSTALLER;
         } else {
             //assume it is request to build only specific format (like exe or msi)
-            nativeBundles = Bundler.BundleType.INSTALLER;
+            nativeBundles = BundleType.INSTALLER;
             bundleFormat = (v != null) ? v.toLowerCase() : null;
         }
     }
@@ -457,7 +465,7 @@ public class DeployFXTask extends Task {
         return resources;
     }
 
-    List<Template> templateList = new LinkedList();
+    List<Template> templateList = new LinkedList<>();
 
     public Template createTemplate() {
         Template t = new Template();
@@ -478,6 +486,22 @@ public class DeployFXTask extends Task {
         perms = new Permissions();
         return perms;
     }
+
+    List<BundleArgument> bundleArgumentList = new LinkedList<>();
+
+    public BundleArgument createBundleArgument() {
+        BundleArgument ba = new BundleArgument();
+        bundleArgumentList.add(ba);
+        return ba;
+    }
+
+    @Override
+    public void setDynamicAttribute(String name, String value) throws BuildException {
+        //Use qName and value - can't really validate anything until we know which bundlers we have, so this has
+        //to done (way) downstream
+        bundleArgumentList.add(new BundleArgument(name, value));
+    }
+
 
     /**
      * Definition of security permissions needed by application.
@@ -569,6 +593,51 @@ public class DeployFXTask extends Task {
          */
         public void setTofile(File f) {
             outfile = f;
+        }
+    }
+
+    /**
+     * An argument to be passed off to the bundlers.
+     *
+     * Each bundler uses a set of arguments that may be shared across
+     * the different bundlers or it may be specific to each bundler.
+     *
+     * Some bundlers declare argument types that are not known to the JDK
+     * and may be specific to the particular bundler (such as Mac App Store
+     * categories).  These arguments allow you to set and adjust these a
+     * rguments.
+     *
+     * @ant.type name="BundleArgument" category="javafx"
+     */
+    public static class BundleArgument extends DataType {
+        String arg = null;
+        String value = null;
+
+        BundleArgument() {
+
+        }
+
+        BundleArgument(String arg, String value) {
+            this.arg = arg;
+            this.value = value;
+        }
+
+        /**
+         * Name of the bundle argument.
+         *
+         * @ant.required
+         */
+        public void setArg(String arg) {
+            this.arg = arg;
+        }
+
+        /**
+         * Value for the bundle argument.
+         *
+         * @ant.not-required Default is a literal null
+         */
+        public void setValue(String value) {
+            this.value = value;
         }
     }
 }

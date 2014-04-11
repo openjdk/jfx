@@ -391,12 +391,8 @@ class D3DResourceFactory extends BaseShaderFactory {
         }
         try {
             InputStream stream = AccessController.doPrivileged(
-                new PrivilegedAction<InputStream>() {
-                    public InputStream run() {
-                        return D3DResourceFactory.class.
-                               getResourceAsStream("hlsl/" + name + ".obj");
-                    }
-                }
+                    (PrivilegedAction<InputStream>) () -> D3DResourceFactory.class.
+                           getResourceAsStream("hlsl/" + name + ".obj")
             );
             Class klass = Class.forName("com.sun.prism.shader." + name + "_Loader");
             Method m = klass.getMethod("loadShader",

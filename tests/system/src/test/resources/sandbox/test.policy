@@ -1,0 +1,7 @@
+// Policy file for sandbox tests
+// Use as follows: -Djava.security.policy=test.policy
+
+// Grant permission to read resource files
+grant {
+    permission java.io.FilePermission "<<ALL FILES>>", "read";
+};

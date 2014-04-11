@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,11 +57,7 @@ public abstract class Effect {
     private final int maxInputs;
 
     static {
-        AccessHelper.setStateAccessor(new AccessHelper.StateAccessor() {
-            public Object getState(Effect effect) {
-                return effect.getState();
-            }
-        });
+        AccessHelper.setStateAccessor(effect -> effect.getState());
     }
 
     /**
@@ -313,18 +309,6 @@ public abstract class Effect {
 //            transform(fctx, original, transform, origBounds, xformBounds);
     }
 
-    /**
-     * Returns the bounding box that will be affected by this filter
-     * operation, given the list of input {@code Effect}s.  Note that
-     * the returned bounds can be smaller or larger than one or more
-     * of the inputs.
-     *
-     * @return the bounding box of this filter
-     */
-    public final BaseBounds getBounds() {
-        return getBounds(null, null);
-    }
-    
     /**
      * Returns the dirty region container containing dirty regions affected
      * by this filter operation.

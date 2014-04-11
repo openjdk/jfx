@@ -369,11 +369,9 @@ public class MenuBarTest {
         boolean click = true;
         final Boolean firstClick = new Boolean(click);
         
-        menu.setOnShowing(new EventHandler<Event>() {
-            @Override public void handle(Event t) {
-                // we should not get here when the menu is hidden
-                assertEquals(firstClick.booleanValue(), true);
-            }
+        menu.setOnShowing(t -> {
+            // we should not get here when the menu is hidden
+            assertEquals(firstClick.booleanValue(), true);
         });
         
         MenuButton mb = MenuBarMenuButtonRetriever.getNodeForMenu(skin, 0);

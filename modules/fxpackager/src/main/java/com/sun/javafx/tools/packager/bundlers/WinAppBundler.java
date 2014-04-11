@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,116 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
+import com.oracle.bundlers.AbstractBundler;
+import com.oracle.bundlers.BundlerParamInfo;
+import com.oracle.bundlers.StandardBundlerParam;
+import com.oracle.bundlers.windows.WindowsBundlerParam;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.resource.windows.WinResources;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.prefs.Preferences;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.text.MessageFormat;
+import java.util.*;
 
-public class WinAppBundler extends Bundler {
-    private BundleParams params;
-    private File rootDirectory;
-    private File configRoot;
+import static com.oracle.bundlers.JreUtils.*;
+import static com.oracle.bundlers.StandardBundlerParam.*;
+import static com.oracle.bundlers.windows.WindowsBundlerParam.BIT_ARCH_64;
+import static com.oracle.bundlers.windows.WindowsBundlerParam.BIT_ARCH_64_RUNTIME;
+
+public class WinAppBundler extends AbstractBundler {
+
+    private static final ResourceBundle I18N = 
+            ResourceBundle.getBundle("com.oracle.bundlers.windows.WinAppBundler");
+
+    public static final BundlerParamInfo<File> CONFIG_ROOT = new WindowsBundlerParam<>(
+            I18N.getString("param.config-root.name"),
+            I18N.getString("param.config-root.description"), 
+            "configRoot",
+            File.class,
+            params -> {
+                File imagesRoot = new File(BUILD_ROOT.fetchFrom(params), "windows");
+                imagesRoot.mkdirs();
+                return imagesRoot;
+            },
+            (s, p) -> null);
+
+    //Subsetting of JRE is restricted.
+    //JRE README defines what is allowed to strip:
+    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
+    public static final BundlerParamInfo<Rule[]> WIN_JRE_RULES = new StandardBundlerParam<>(
+            "",
+            "",
+            ".win.runtime.rules",
+            Rule[].class,
+            params -> new Rule[]{
+                Rule.prefixNeg("\\bin\\new_plugin"),
+                Rule.prefixNeg("\\lib\\deploy"),
+                Rule.suffixNeg(".pdb"),
+                Rule.suffixNeg(".map"),
+                Rule.suffixNeg("axbridge.dll"),
+                Rule.suffixNeg("eula.dll"),
+                Rule.substrNeg("javacpl"),
+                Rule.suffixNeg("wsdetect.dll"),
+                Rule.substrNeg("eployjava1.dll"), //NP and IE versions
+                Rule.substrNeg("bin\\jp2"),
+                Rule.substrNeg("bin\\jpi"),
+                //Rule.suffixNeg("lib\\ext"), //need some of jars there for https to work
+                Rule.suffixNeg("ssv.dll"),
+                Rule.substrNeg("npjpi"),
+                Rule.substrNeg("npoji"),
+                Rule.suffixNeg(".exe"),
+                //keep core deploy files as JavaFX APIs use them
+                //Rule.suffixNeg("deploy.dll"),
+                Rule.suffixNeg("deploy.jar"),
+                //Rule.suffixNeg("javaws.jar"),
+                //Rule.suffixNeg("plugin.jar"),
+                Rule.suffix(".jar")
+            },
+            (s, p) -> null
+    );
+
+    public static final BundlerParamInfo<RelativeFileSet> WIN_RUNTIME = new StandardBundlerParam<>(
+            RUNTIME.getName(),
+            RUNTIME.getDescription(),
+            RUNTIME.getID(),
+            RelativeFileSet.class,
+            params -> extractJreAsRelativeFileSet(System.getProperty("java.home"),
+                    WIN_JRE_RULES.fetchFrom(params)),
+            (s, p) -> extractJreAsRelativeFileSet(s,
+                    WIN_JRE_RULES.fetchFrom(p))
+    );
 
     private final static String EXECUTABLE_NAME = "WinLauncher.exe";
+
     private static final String TOOL_ICON_SWAP="IconSwap.exe";
+
+    public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new WindowsBundlerParam<>(
+            I18N.getString("param.raw-executable-url.name"),
+            I18N.getString("param.raw-executable-url.description"),
+            "win.launcher.url",
+            URL.class,
+            params -> WinResources.class.getResource(EXECUTABLE_NAME),
+            (s, p) -> {
+                try {
+                    return new URL(s);
+                } catch (MalformedURLException e) {
+                    Log.info(e.toString());
+                    return null;
+                }
+            });
+
+    public static final BundlerParamInfo<Boolean> REBRAND_EXECUTABLE = new WindowsBundlerParam<>(
+            I18N.getString("param.rebrand-executable.name"),
+            I18N.getString("param.rebrand-executable.description"),
+            "win.launcher.rebrand",
+            Boolean.class,
+            params -> Boolean.TRUE,
+            (s, p) -> Boolean.valueOf(s));
 
     public WinAppBundler() {
         super();
@@ -52,134 +144,145 @@ public class WinAppBundler extends Bundler {
     public final static String WIN_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "windows/";
 
-    @Override
-    protected void setBuildRoot(File dir) {
-        super.setBuildRoot(dir);
-        configRoot = new File(dir, "windows");
-        configRoot.mkdirs();
+    File getConfigRoot(Map<String, ? super Object> params) {
+        return CONFIG_ROOT.fetchFrom(params);
     }
 
     @Override
-    boolean validate(BundleParams p) throws UnsupportedPlatformException, ConfigException {
-        if (p.type != Bundler.BundleType.ALL && p.type != Bundler.BundleType.IMAGE) {
-            return false;
+    public boolean validate(Map<String, ? super Object> params) throws UnsupportedPlatformException, ConfigException {
+        try {
+            if (params == null) throw new ConfigException(
+                    I18N.getString("error.parameters-null"),
+                    I18N.getString("error.parameters-null.advice"));
+
+            return doValidate(params);
+        } catch (RuntimeException re) {
+            throw new ConfigException(re);
         }
-        return doValidate(p);
     }
 
     //to be used by chained bundlers, e.g. by EXE bundler to avoid
     // skipping validation if p.type does not include "image"
-    boolean doValidate(BundleParams p) throws UnsupportedPlatformException, ConfigException {
+    boolean doValidate(Map<String, ? super Object> p) throws UnsupportedPlatformException, ConfigException {
         if (!System.getProperty("os.name").toLowerCase().startsWith("win")) {
-            throw new Bundler.UnsupportedPlatformException();
+            throw new UnsupportedPlatformException();
         }
 
-        if (WinResources.class.getResource(EXECUTABLE_NAME) == null) {
-            throw new Bundler.ConfigException(
-                    "This copy of ant-javafx.jar does not support Windows.",
-                    "Please use ant-javafx.jar coming with Oracle JDK for Windows.");
+        if (WinResources.class.getResource(TOOL_ICON_SWAP) == null) {
+            throw new ConfigException(
+                    I18N.getString("error.no-windows-resources"),
+                    I18N.getString("error.no-windows-resources.advice"));
         }
 
-        if (p.getMainApplicationJar() == null) {
-            throw new Bundler.ConfigException(
-                    "Main application jar is missing.",
-                    "Make sure to use fx:jar task to create main application jar.");
+        if (MAIN_JAR.fetchFrom(p) == null) {
+            throw new ConfigException(
+                    I18N.getString("error.no-application-jar"),
+                    I18N.getString("error.no-application-jar.advice"));
         }
 
         //validate required inputs
-        testRuntime(p, new String[] {"lib\\ext\\jfxrt.jar", "lib\\jfxrt.jar"});
+        if (USE_FX_PACKAGING.fetchFrom(p)) {
+            testRuntime(p, new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
+        }
+
+        //validate runtime bit-architectire
+        testRuntimeBitArchitecture(p);
 
         return true;
     }
 
-    static String getAppName(BundleParams p) {
-        String nm;
-        if (p.name != null) {
-            nm = p.name;
-        } else {
-            nm = p.getMainClassName();
+    private static void testRuntimeBitArchitecture(Map<String, ? super Object> params) throws ConfigException {
+        if ("true".equalsIgnoreCase(System.getProperty("fxpackager.disableBitArchitectureMismatchCheck"))) {
+            Log.debug(I18N.getString("message.disable-bit-architecture-check"));
+            return;
         }
 
-        return nm;
+        if (BIT_ARCH_64.fetchFrom(params) != BIT_ARCH_64_RUNTIME.fetchFrom(params)) {
+            throw new ConfigException(
+                    I18N.getString("error.bit-architecture-mismatch"),
+                    I18N.getString("error.bit-architecture-mismatch.advice"));
+        }
     }
 
     //it is static for the sake of sharing with "Exe" bundles
     // that may skip calls to validate/bundle in this class!
-    private static File getRootDir(File outDir, BundleParams p) {
-        return new File(outDir, getAppName(p));
+    private static File getRootDir(File outDir, Map<String, ? super Object> p) {
+        return new File(outDir, APP_NAME.fetchFrom(p));
     }
 
-    public static File getLauncher(File outDir, BundleParams p) {
-        return new File(getRootDir(outDir, p), getAppName(p)+".exe");
+    public static File getLauncher(File outDir, Map<String, ? super Object> p) {
+        return new File(getRootDir(outDir, p), APP_NAME.fetchFrom(p) +".exe");
     }
 
-    private File getConfig_AppIcon() {
-        return new File(configRoot, getAppName(params) + ".ico");
+    private File getConfig_AppIcon(Map<String, ? super Object> params) {
+        return new File(getConfigRoot(params), APP_NAME.fetchFrom(params) + ".ico");
     }
 
     private final static String TEMPLATE_APP_ICON ="javalogo_white_48.ico";
 
     //remove
-    protected void cleanupConfigFiles() {
-        if (getConfig_AppIcon() != null) {
-            getConfig_AppIcon().delete();
+    protected void cleanupConfigFiles(Map<String, ? super Object> params) {
+        if (getConfig_AppIcon(params) != null) {
+            getConfig_AppIcon(params).delete();
         }
     }
 
-    private void prepareConfigFiles() throws IOException {
-        File iconTarget = getConfig_AppIcon();
+    private void prepareConfigFiles(Map<String, ? super Object> params) throws IOException {
+        File iconTarget = getConfig_AppIcon(params);
 
-        if (params.icon != null && params.icon.exists()) {
+        File icon = ICON.fetchFrom(params);
+        if (icon != null && icon.exists()) {
             fetchResource(WIN_BUNDLER_PREFIX + iconTarget.getName(),
-                    "application icon",
-                    params.icon,
-                    iconTarget);
+                    I18N.getString("resource.application-icon"),
+                    icon,
+                    iconTarget,
+                    VERBOSE.fetchFrom(params));
         } else {
             fetchResource(WIN_BUNDLER_PREFIX + iconTarget.getName(),
-                    "application icon",
+                    I18N.getString("resource.application-icon"),
                     WinAppBundler.TEMPLATE_APP_ICON,
-                    iconTarget);
+                    iconTarget,
+                    VERBOSE.fetchFrom(params));
         }
     }
 
-    @Override
-    public boolean bundle(BundleParams p, File outputDirectory) {
-        return doBundle(p, outputDirectory, false);
+    public boolean bundle(Map<String, ? super Object> p, File outputDirectory) {
+        return doBundle(p, outputDirectory, false) != null;
     }
 
-    boolean doBundle(BundleParams p, File outputDirectory, boolean dependentTask) {
+    File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
         try {
-            params = p;
+            outputDirectory.mkdirs();
+
             if (!dependentTask) {
-               Log.info("Creating app bundle: " + getAppName(p) +" in " +
-                    outputDirectory.getAbsolutePath());
+                Log.info(MessageFormat.format(I18N.getString("message.creating-app-bundle"), APP_NAME.fetchFrom(p), outputDirectory.getAbsolutePath()));
             }
 
-            prepareConfigFiles();
+            prepareConfigFiles(p);
 
             // Create directory structure
-            rootDirectory = getRootDir(outputDirectory, p);
+            File rootDirectory = getRootDir(outputDirectory, p);
             IOUtils.deleteRecursive(rootDirectory);
             rootDirectory.mkdirs();
 
             File appDirectory = new File(rootDirectory, "app");
             appDirectory.mkdirs();
-            copyApplication(appDirectory);
+            copyApplication(p, appDirectory);
 
             // Generate PkgInfo
             File pkgInfoFile = new File(appDirectory, "package.cfg");
             pkgInfoFile.createNewFile();
-            writePkgInfo(pkgInfoFile);
+            writePkgInfo(p, pkgInfoFile);
 
             // Copy executable root folder
             File executableFile = getLauncher(outputDirectory, p);
             IOUtils.copyFromURL(
-                    WinResources.class.getResource(EXECUTABLE_NAME),
+                    RAW_EXECUTABLE_URL.fetchFrom(p),
                     executableFile);
             executableFile.setExecutable(true, false);
 
             //Update branding of exe file
-            if (getConfig_AppIcon().exists()) {
+            if (REBRAND_EXECUTABLE.fetchFrom(p) && getConfig_AppIcon(p).exists()) {
                 //extract helper tool
                 File iconSwapTool = File.createTempFile("iconswap", ".exe");
                 iconSwapTool.delete();
@@ -193,39 +296,37 @@ public class WinAppBundler extends Bundler {
                 executableFile.setWritable(true);
                 ProcessBuilder pb = new ProcessBuilder(
                         iconSwapTool.getAbsolutePath(),
-                        getConfig_AppIcon().getAbsolutePath(),
+                        getConfig_AppIcon(p).getAbsolutePath(),
                         executableFile.getAbsolutePath());
-                IOUtils.exec(pb, verbose);
+                IOUtils.exec(pb, VERBOSE.fetchFrom(p));
                 executableFile.setReadOnly();
                 iconSwapTool.delete();
             }
 
             // Copy runtime to PlugIns folder
             File runtimeDirectory = new File(rootDirectory, "runtime");
-            copyRuntime(runtimeDirectory);
+            copyRuntime(p, runtimeDirectory);
 
-            IOUtils.copyFile(getConfig_AppIcon(),
-                    new File(getRootDir(outputDirectory, p), getAppName(p) +".ico"));
+            IOUtils.copyFile(getConfig_AppIcon(p),
+                    new File(getRootDir(outputDirectory, p), APP_NAME.fetchFrom(p) + ".ico"));
 
             if (!dependentTask) {
-                 Log.info("Result application bundle: " +
-                    outputDirectory.getAbsolutePath());
+                Log.info(MessageFormat.format(I18N.getString("message.result-dir"), outputDirectory.getAbsolutePath()));
             }
+
+            return rootDirectory;
         } catch (IOException ex) {
-            System.out.println("Exception: "+ex);
-            ex.printStackTrace();
-            return false;
+            Log.info("Exception: "+ex);
+            Log.debug(ex);
+            return null;
         } finally {
-            if (verbose) {
-                Log.info("  Config files are saved to " +
-                        configRoot.getAbsolutePath()  +
-                        ". Use them to customize package.");
+            if (VERBOSE.fetchFrom(p)) {
+                Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), getConfigRoot(p).getAbsolutePath()));
             } else {
-                cleanupConfigFiles();
+                cleanupConfigFiles(p);
             }
         }
 
-        return true;
     }
 
     @Override
@@ -233,48 +334,56 @@ public class WinAppBundler extends Bundler {
         return "Windows Application Bundler";
     }
 
-    private void copyApplication(File appDirectory) throws IOException {
-        if (params.appResources == null) {
+    private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
+        RelativeFileSet appResource = APP_RESOURCES.fetchFrom(params);
+        if (appResource == null) {
             throw new RuntimeException("Null app resources?");
         }
-        File srcdir = params.appResources.getBaseDirectory();
-        for (String fname : params.appResources.getIncludedFiles()) {
+        File srcdir = appResource.getBaseDirectory();
+        for (String fname : appResource.getIncludedFiles()) {
             IOUtils.copyFile(
                     new File(srcdir, fname), new File(appDirectory, fname));
         }
     }
 
-    private void writePkgInfo(File pkgInfoFile) throws FileNotFoundException {
+    private void writePkgInfo(Map<String, ? super Object> params, File pkgInfoFile) throws FileNotFoundException {
         pkgInfoFile.delete();
-        PrintStream out = new PrintStream(pkgInfoFile);
-        out.println("app.mainjar=" + params.getMainApplicationJar());
-        out.println("app.version=" + params.appVersion);
-        //for future AU support (to be able to find app in the registry)
-        out.println("app.id="+params.identifier);
-        out.println("app.preferences.id="+params.getPreferencesID());
 
-        if (params.useJavaFXPackaging()) {
+        PrintStream out = new PrintStream(pkgInfoFile);
+        out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
+        out.println("app.version=" + VERSION.fetchFrom(params));
+        //for future AU support (to be able to find app in the registry)
+        out.println("app.id=" + IDENTIFIER.fetchFrom(params));
+        out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
+
+        if (USE_FX_PACKAGING.fetchFrom(params)) {
             out.println("app.mainclass=" +
                     JAVAFX_LAUNCHER_CLASS.replaceAll("\\.", "/"));
         } else {
             out.println("app.mainclass=" +
-                    params.applicationClass.replaceAll("\\.", "/"));
+                    MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
         }
         //This will be emtry string for correctly packaged JavaFX apps
-        out.println("app.classpath=" + params.getAppClassPath());
+        out.println("app.classpath=" + MAIN_JAR_CLASSPATH.fetchFrom(params));
 
-        List<String> jvmargs = params.getAllJvmOptions();
+        List<String> jvmargs = JVM_OPTIONS.fetchFrom(params);
         int idx = 1;
         for (String a : jvmargs) {
             out.println("jvmarg."+idx+"="+a);
             idx++;
         }
+        Map<String, String> jvmProps = JVM_PROPERTIES.fetchFrom(params);
+        for (Map.Entry<String, String> entry : jvmProps.entrySet()) {
+            out.println("jvmarg."+idx+"=-D"+entry.getKey()+"="+entry.getValue());
+            idx++;
+        }
 
-        Map<String, String> overridableJVMOptions = params.getAllJvmUserOptions();
+
+        Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
         idx = 1;
         for (Map.Entry<String, String> arg: overridableJVMOptions.entrySet()) {
             if (arg.getKey() == null || arg.getValue() == null) {
-                Log.info("WARNING: a jvmuserarg has a null name or value");
+                Log.info(I18N.getString("message.jvm-user-arg-is-null"));
             }
             else {
                 out.println("jvmuserarg."+idx+".name="+arg.getKey());
@@ -285,19 +394,72 @@ public class WinAppBundler extends Bundler {
         out.close();
     }
 
-    private void copyRuntime(File runtimeDirectory) throws IOException {
-        if (params.runtime == null) {
+    private void copyRuntime(Map<String, ? super Object> params, File runtimeDirectory) throws IOException {
+        RelativeFileSet runtime = WIN_RUNTIME.fetchFrom(params);
+        if (runtime == null) {
             //its ok, request to use system JRE
             return;
         }
         runtimeDirectory.mkdirs();
 
-        File srcdir = params.runtime.getBaseDirectory();
+        File srcdir = runtime.getBaseDirectory();
         File destDir = new File(runtimeDirectory, srcdir.getName());
-        Set<String> filesToCopy = params.runtime.getIncludedFiles();
+        Set<String> filesToCopy = runtime.getIncludedFiles();
         for (String fname : filesToCopy) {
             IOUtils.copyFile(
                     new File(srcdir, fname), new File(destDir, fname));
         }
+    }
+
+    @Override
+    public String getName() {
+        return I18N.getString("bundler.name");
+    }
+
+    @Override
+    public String getDescription() {
+        return I18N.getString("bundler.description");
+    }
+
+    @Override
+    public String getID() {
+        return "windows.app";
+    }
+
+    @Override
+    public String getBundleType() {
+        return "IMAGE";
+    }
+
+    @Override
+    public Collection<BundlerParamInfo<?>> getBundleParameters() {
+        return getAppBundleParameters();
+    }
+
+    public static Collection<BundlerParamInfo<?>> getAppBundleParameters() {
+        return Arrays.asList(
+                APP_NAME,
+                APP_RESOURCES,
+                BUILD_ROOT,
+                CONFIG_ROOT,
+                ICON,
+                IDENTIFIER,
+                JVM_OPTIONS,
+                JVM_PROPERTIES,
+                MAIN_CLASS,
+                MAIN_JAR,
+                MAIN_JAR_CLASSPATH,
+                PREFERENCES_ID,
+                RAW_EXECUTABLE_URL,
+                WIN_RUNTIME,
+                USE_FX_PACKAGING,
+                USER_JVM_OPTIONS,
+                VERSION
+        );
+    }
+
+    @Override
+    public File execute(Map<String, ? super Object> params, File outputParentDir) {
+        return doBundle(params, outputParentDir, false);
     }
 }

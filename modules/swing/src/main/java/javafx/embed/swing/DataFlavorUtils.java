@@ -74,6 +74,10 @@ final class DataFlavorUtils {
                                   final String mimeType,
                                   final Object swingData)
     {
+        if (swingData == null) {
+            return swingData;
+        }
+
         if (flavor.isFlavorJavaFileListType()) {
             // RT-12663
             final List<File> fileList = (List<File>)swingData;
@@ -174,13 +178,20 @@ final class DataFlavorUtils {
         return obj;
     }
 
+    /**
+     * Returns a Map populated with keys corresponding to all the MIME types
+     * available in the provided Transferable object. If fetchData is true,
+     * then the data is fetched as well, otherwise all the values are set to
+     * null.
+     */
     static Map<String, Object> readAllData(final Transferable t,
-                                           final Map<String, DataFlavor> fxMimeType2DataFlavor)
+                                           final Map<String, DataFlavor> fxMimeType2DataFlavor,
+                                           final boolean fetchData)
     {
         final Map<String, Object> fxMimeType2Data = new HashMap<>();
         for (DataFlavor flavor : t.getTransferDataFlavors()) {
-            Object obj = readData(t, flavor);
-            if (obj != null) {
+            Object obj = fetchData ? readData(t, flavor) : null;
+            if (obj != null || !fetchData) {
                 String mimeType = getFxMimeType(flavor);
                 obj = adjustSwingData(flavor, mimeType, obj);
                 fxMimeType2Data.put(mimeType, obj);
@@ -189,8 +200,8 @@ final class DataFlavorUtils {
         for (Map.Entry<String, DataFlavor> e: fxMimeType2DataFlavor.entrySet()) {
             String mimeType = e.getKey();
             DataFlavor flavor = e.getValue();
-            Object obj = readData(t, flavor);
-            if (obj != null) {
+            Object obj = fetchData ? readData(t, flavor) : null;
+            if (obj != null || !fetchData) {
                 obj = adjustSwingData(flavor, mimeType, obj);
                 fxMimeType2Data.put(e.getKey(), obj);
             }

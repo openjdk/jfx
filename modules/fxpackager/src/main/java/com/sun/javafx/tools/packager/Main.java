@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,18 @@
 
 package com.sun.javafx.tools.packager;
 
-import com.sun.javafx.tools.packager.bundlers.Bundler;
+import com.oracle.bundlers.Bundler;
+import com.oracle.bundlers.BundlerParamInfo;
+import com.oracle.bundlers.Bundlers;
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
+import com.sun.javafx.tools.packager.bundlers.ConfigException;
+import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.ResourceBundle;
+import java.util.*;
 
 
 public class Main {
@@ -82,7 +82,7 @@ public class Main {
         if (deployParams.arguments != null) {
             deployParams.arguments.add(argument);
         } else {
-            List<String> list = new LinkedList<String>();
+            List<String> list = new LinkedList<>();
             list.add(argument);
             deployParams.setArguments(list);
         }
@@ -92,14 +92,14 @@ public class Main {
         if (deployParams.arguments != null) {
             deployParams.arguments.add(argument);
         } else {
-            List<String> list = new LinkedList<String>();
+            List<String> list = new LinkedList<>();
             list.add(argument);
             deployParams.setArguments(list);
         }
     }
 
     private static Map<String, String> createAttrMap(String arg) {
-        Map<String, String> map = new HashMap<String, String>();
+        Map<String, String> map = new HashMap<>();
         if (arg == null || "".equals(arg)) {
             return null;
         }
@@ -118,15 +118,13 @@ public class Main {
         properties.load(in);
         in.close();
 
-        List<Param> parameters = new ArrayList<Param>(properties.size());
+        List<Param> parameters = new ArrayList<>(properties.size());
 
-        if (properties != null) {
-            for (Map.Entry en : properties.entrySet()) {
-                Param p = new Param();
-                p.setName((String)en.getKey());
-                p.setValue((String)en.getValue());
-                parameters.add(p);
-            }
+        for (Map.Entry en : properties.entrySet()) {
+            Param p = new Param();
+            p.setName((String)en.getKey());
+            p.setValue((String)en.getValue());
+            parameters.add(p);
         }
         return parameters;
     }
@@ -138,22 +136,20 @@ public class Main {
         properties.load(in);
         in.close();
 
-        List<HtmlParam> parameters = new ArrayList<HtmlParam>(properties.size());
+        List<HtmlParam> parameters = new ArrayList<>(properties.size());
 
-        if (properties != null) {
-            for (Map.Entry en : properties.entrySet()) {
-                HtmlParam p = new HtmlParam();
-                p.setName((String)en.getKey());
-                p.setValue((String)en.getValue());
-                parameters.add(p);
-            }
+        for (Map.Entry en : properties.entrySet()) {
+            HtmlParam p = new HtmlParam();
+            p.setName((String)en.getKey());
+            p.setValue((String)en.getValue());
+            parameters.add(p);
         }
         return parameters;
     }
 
     private static List<JSCallback> parseCallbacks(String param) {
         String[] callbacks = param.split(",");
-        List<JSCallback> list = new ArrayList<JSCallback>(callbacks.length);
+        List<JSCallback> list = new ArrayList<>(callbacks.length);
 
         for (String cb: callbacks) {
             String[] nameCmd = cb.split(":");
@@ -165,7 +161,7 @@ public class Main {
     }
 
 
-    public static void main(String args[]) throws Exception {
+    public static void main(String... args) throws Exception {
         if (args.length == 0 || args.length == 1 && args[0].equals("-help")) {
             System.out.println(help);
         } else if (args.length == 1 && args[0].equals("-version")) {
@@ -234,26 +230,47 @@ public class Main {
                     deployParams.setEmbedJNLP(false);
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
-                        if (arg.equalsIgnoreCase("-title")) {
+                        if (arg.startsWith("-B")) {
+                            String key;
+                            String value;
+
+                            int keyStart = 2;
+                            int equals = arg.indexOf("=");
+                            int len = arg.length();
+                            if (equals < keyStart) {
+                                if (keyStart < len) {
+                                    key = arg.substring(keyStart, len);
+                                    value = Boolean.TRUE.toString();
+                                } else {
+                                    continue;
+                                }
+                            } else if (keyStart < equals) {
+                                key = arg.substring(keyStart, equals);
+                                value = arg.substring(equals+1, len);
+                            } else {
+                                continue;
+                            }
+                            deployParams.addBundleArgument(key, value);
+                        } else if (arg.equalsIgnoreCase("-title")) {
                             deployParams.setTitle(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-vendor")) {
                             deployParams.setVendor(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-native")) {
                             //if no argument is provided we will treat it as ALL
                             // for compatibility with FX 2.2
-                            Bundler.BundleType type = Bundler.BundleType.ALL;
+                            BundleType type = BundleType.ALL;
                             String format = null; //null means ANY
                             if (i+1 < args.length && !args[i+1].startsWith("-")) {
                                 String v = args[i+1];
                                 //parsing logic is the same as in DeployFXTask
                                 if ("image".equals(v)) {
-                                    type = Bundler.BundleType.IMAGE;
+                                    type = BundleType.IMAGE;
                                 } else if ("installer".equals(v)) {
-                                    type = Bundler.BundleType.INSTALLER;
+                                    type = BundleType.INSTALLER;
                                 } else {
                                     //assume it is request to build only specific format
                                     // (like exe or msi)
-                                    type = Bundler.BundleType.INSTALLER;
+                                    type = BundleType.INSTALLER;
                                     format = (v != null) ? v.toLowerCase() : null;
                                 }
                             }
@@ -263,6 +280,8 @@ public class Main {
                             deployParams.setDescription(nextArg(args, i++));
                         } else if(arg.equalsIgnoreCase("-appclass")) {
                             deployParams.setApplicationClass(nextArg(args, i++));
+                        } else if(arg.equalsIgnoreCase("-daemon")) {
+                            deployParams.setServiceHint(true);
                         } else if (arg.equalsIgnoreCase("-preloader")) {
                             deployParams.setPreloader(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-paramFile")) {
@@ -401,6 +420,8 @@ public class Main {
                         }
                     }
                     makeAll = true;
+                } else if (args[0].equalsIgnoreCase("-help")) {
+                    showBundlerHelp(args[1], args.length > 2 && "-verbose".equals(args[2]));
                 } else {
                     System.err.println(MessageFormat.format(
                                         bundle.getString("ERR_UnknownCommand"),
@@ -441,9 +462,77 @@ public class Main {
                     throw e;
                 } else {
                     System.err.println(e.getMessage());
+                    if (e.getCause() != null && e.getCause() != e) {
+                        System.err.println(e.getCause().getMessage());
+                    }
                     System.exit(-1);
                 }
             }
+        }
+    }
+    
+    public static void showBundlerHelp(String bundlerName, boolean verbose) {
+        //TODO I18N
+        if ("bundlers".equals(bundlerName)) {
+            // enumerate bundlers
+            System.out.println("Known Bundlers -- \n");
+            for (Bundler bundler : Bundlers.createBundlersInstance().getBundlers()) {
+                try {
+                    bundler.validate(new HashMap<>());
+                } catch (UnsupportedPlatformException upe) {
+                    // don't list bundlers this platform cannot run
+                    continue;
+                } catch (ConfigException ignore) {
+                    // but requiring more than an empty map is perfectly fine.
+                //} catch (RuntimeException re) {
+                //    re.printStackTrace();
+                }
+
+                if (verbose) {
+                    System.out.printf(
+                            "%s - %s - %s\n\t%s\n",
+                            bundler.getID(),
+                            bundler.getName(),
+                            bundler.getBundleType(),
+                            bundler.getDescription()
+                    );
+                } else {
+                    System.out.printf(
+                            "%s - %s - %s\n",
+                            bundler.getID(),
+                            bundler.getName(),
+                            bundler.getBundleType()
+                    );
+                }
+            }
+        } else {
+            // enumerate parameters for a bundler
+            for (Bundler bundler : Bundlers.createBundlersInstance().getBundlers()) {
+                if (bundler.getID().equals(bundlerName)) {
+                    System.out.printf("Bundler Parameters for %s (%s) --\n", bundler.getName(), bundler.getID());
+                    for (BundlerParamInfo bpi : bundler.getBundleParameters()) {
+                        if (bpi.getStringConverter() == null) continue;
+                        if (verbose) {
+                            System.out.printf(
+                                    "%s - %s - %s\n\t%s\n",
+                                    bpi.getID(),
+                                    bpi.getName(),
+                                    bpi.getValueType().getSimpleName(),
+                                    bpi.getDescription()
+                            );
+                        } else {
+                            System.out.printf(
+                                    "%s - %s - %s\n",
+                                    bpi.getID(),
+                                    bpi.getName(),
+                                    bpi.getValueType().getSimpleName()
+                            );
+                        }
+                    }
+                    return;
+                }
+            }
+            System.out.printf("Sorry, no bundler matching the id %s was found.\n", bundlerName);
         }
     }
 }

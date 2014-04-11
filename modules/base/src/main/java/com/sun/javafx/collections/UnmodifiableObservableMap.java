@@ -51,11 +51,8 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
 
     public UnmodifiableObservableMap(ObservableMap<K, V> map) {
         this.backingMap = map;
-        listener = new MapChangeListener<K, V>() {
-            @Override
-            public void onChanged(Change<? extends K,? extends V> c) {
-                callObservers(new MapAdapterChange<K, V>(UnmodifiableObservableMap.this, c));
-            }
+        listener = c -> {
+            callObservers(new MapAdapterChange<K, V>(UnmodifiableObservableMap.this, c));
         };
         this.backingMap.addListener(new WeakMapChangeListener<K, V>(listener));
     }

@@ -158,11 +158,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>() {
-            @Override public TreeTableCell<S,T> call(TreeTableColumn<S,T> list) {
-                return new ComboBoxTreeTableCell<S,T>(converter, items);
-            }
-        };
+        return list -> new ComboBoxTreeTableCell<S,T>(converter, items);
     }
     
     

@@ -110,26 +110,24 @@ final class J2DFontFactory implements FontFactory {
      */
     public static void registerFont(final FontResource fr) {
 
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            public Object run() {
-                InputStream stream = null;
-                try {
-                    File file = new File(fr.getFileName());
-                    stream = new FileInputStream(file);
-                    Font font = Font.createFont(Font.TRUETYPE_FONT, stream);
-                    fr.setPeer(font);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    if (stream != null) {
-                        try {
-                            stream.close();
-                        } catch (Exception e2) {
-                        }
+        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            InputStream stream = null;
+            try {
+                File file = new File(fr.getFileName());
+                stream = new FileInputStream(file);
+                Font font = Font.createFont(Font.TRUETYPE_FONT, stream);
+                fr.setPeer(font);
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (stream != null) {
+                    try {
+                        stream.close();
+                    } catch (Exception e2) {
                     }
                 }
-                return null;
             }
+            return null;
         });
     }
 
@@ -172,8 +170,7 @@ final class J2DFontFactory implements FontFactory {
         synchronized (J2DFontFactory.class) {
             if (!compositeFontMethodsInitialized) {
                 AccessController.doPrivileged(
-                    new PrivilegedAction<Void>() {
-                        public Void run() {
+                        (PrivilegedAction<Void>) () -> {
                             compositeFontMethodsInitialized = true;
                             Class<?> fontMgrCls;
                             try {
@@ -194,12 +191,12 @@ final class J2DFontFactory implements FontFactory {
                                 getCompositeFontUIResource =
                                     fontMgrCls.getMethod(
                                     "getCompositeFontUIResource",
-                                    java.awt.Font.class);
+                                    Font.class);
                             } catch (NoSuchMethodException nsme) {
                             }
                             return null;
                         }
-                    });
+                );
             }
         }
     

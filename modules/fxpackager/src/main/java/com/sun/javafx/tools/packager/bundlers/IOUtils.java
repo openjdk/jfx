@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,14 +39,17 @@ public class IOUtils {
             return true;
         }
         if (path.isDirectory()) {
-            for (File f : path.listFiles()) {
-                ret = ret && deleteRecursive(f);
+            File[] children = path.listFiles();
+            if (children != null) {
+                for (File f : children) {
+                    ret = ret && deleteRecursive(f);
+                }
             }
         }
         return ret && path.delete();
     }
 
-    static void copyFromURL(URL location, File file) throws IOException {
+    public static void copyFromURL(URL location, File file) throws IOException {
         if (location == null) {
             throw new IOException("Missing input resource!");
         }
@@ -66,7 +69,7 @@ public class IOUtils {
         file.setReadable(true, false);
     }
 
-    static void copyFile(File sourceFile, File destFile)
+    public static void copyFile(File sourceFile, File destFile)
             throws IOException {
         destFile.getParentFile().mkdirs();
 
@@ -101,11 +104,14 @@ public class IOUtils {
     public static long getFolderSize(File folder) {
         long foldersize = 0;
 
-        for (File f: folder.listFiles()) {
-            if (f.isDirectory()) {
-                foldersize += getFolderSize(f);
-            } else {
-                foldersize += f.length();
+        File[] children = folder.listFiles();
+        if (children != null) {
+            for (File f : children) {
+                if (f.isDirectory()) {
+                    foldersize += getFolderSize(f);
+                } else {
+                    foldersize += f.length();
+                }
             }
         }
 

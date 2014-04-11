@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,6 +76,7 @@ jmethodID jWindowNotifyFocus;
 jmethodID jWindowNotifyFocusDisabled;
 jmethodID jWindowNotifyFocusUngrab;
 jmethodID jWindowNotifyMoveToAnotherScreen;
+jmethodID jWindowNotifyLevelChanged;
 jmethodID jWindowIsEnabled;
 jmethodID jWindowNotifyDelegatePtr;
 jfieldID jWindowPtr;
@@ -107,6 +108,8 @@ jfieldID jApplicationDisplay;
 jfieldID jApplicationScreen;
 jfieldID jApplicationVisualID;
 jmethodID jApplicationReportException;
+jmethodID jApplicationGetApplication;
+jmethodID jApplicationGetName;
 
 void init_threads() {
     if (!g_thread_supported()) {
@@ -125,108 +128,203 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
          return JNI_ERR; /* JNI version not supported */
      }
 
-    jStringCls = (jclass) env->NewGlobalRef(env->FindClass("java/lang/String"));
-    jByteBufferCls = (jclass) env->NewGlobalRef(env->FindClass("java/nio/ByteBuffer"));
+    clazz = env->FindClass("java/lang/String");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jStringCls = (jclass) env->NewGlobalRef(clazz);
+
+    clazz = env->FindClass("java/nio/ByteBuffer");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jByteBufferCls = (jclass) env->NewGlobalRef(clazz);
     jByteBufferArray = env->GetMethodID(jByteBufferCls, "array", "()[B");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jByteBufferWrap = env->GetStaticMethodID(jByteBufferCls, "wrap", "([B)Ljava/nio/ByteBuffer;");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("java/lang/Runnable");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
     jRunnableRun = env->GetMethodID(clazz, "run", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
-    jArrayListCls = (jclass) env->NewGlobalRef(env->FindClass("java/util/ArrayList"));
+    clazz = env->FindClass("java/util/ArrayList");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jArrayListCls = (jclass) env->NewGlobalRef(clazz);
     jArrayListInit = env->GetMethodID(jArrayListCls, "<init>", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jArrayListAdd = env->GetMethodID(jArrayListCls, "add", "(Ljava/lang/Object;)Z");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jArrayListGetIdx = env->GetMethodID(jArrayListCls, "get", "(I)Ljava/lang/Object;");
-
+    if (env->ExceptionCheck()) return JNI_ERR;
     clazz = env->FindClass("com/sun/glass/ui/Pixels");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jPixelsAttachData = env->GetMethodID(clazz, "attachData", "(J)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
-    jGtkPixelsCls = (jclass) env->NewGlobalRef(env->FindClass("com/sun/glass/ui/gtk/GtkPixels"));
+    clazz = env->FindClass("com/sun/glass/ui/gtk/GtkPixels");
+    if (env->ExceptionCheck()) return JNI_ERR;
+
+    jGtkPixelsCls = (jclass) env->NewGlobalRef(clazz);
     jGtkPixelsInit = env->GetMethodID(jGtkPixelsCls, "<init>", "(IILjava/nio/ByteBuffer;)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
-    jScreenCls = (jclass) env->NewGlobalRef(env->FindClass("com/sun/glass/ui/Screen"));
+    clazz = env->FindClass("com/sun/glass/ui/Screen");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jScreenCls = (jclass) env->NewGlobalRef(clazz);
     jScreenInit = env->GetMethodID(jScreenCls, "<init>", "(JIIIIIIIIIIIF)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jScreenNotifySettingsChanged = env->GetStaticMethodID(jScreenCls, "notifySettingsChanged", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/View");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyResize = env->GetMethodID(clazz, "notifyResize", "(II)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyMouse = env->GetMethodID(clazz, "notifyMouse", "(IIIIIIIZZ)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyRepaint = env->GetMethodID(clazz, "notifyRepaint", "(IIII)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyKey = env->GetMethodID(clazz, "notifyKey", "(II[CI)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyView = env->GetMethodID(clazz, "notifyView", "(I)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyDragEnter = env->GetMethodID(clazz, "notifyDragEnter", "(IIIII)I");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyDragOver = env->GetMethodID(clazz, "notifyDragOver", "(IIIII)I");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyDragDrop = env->GetMethodID(clazz, "notifyDragDrop", "(IIIII)I");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyDragLeave = env->GetMethodID(clazz, "notifyDragLeave", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyScroll = env->GetMethodID(clazz, "notifyScroll", "(IIIIDDIIIIIDD)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyInputMethod = env->GetMethodID(clazz, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyMenu = env->GetMethodID(clazz, "notifyMenu", "(IIIIZ)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewPtr = env->GetFieldID(clazz, "ptr", "J");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyInputMethodDraw = env->GetMethodID(clazz, "notifyInputMethodDraw", "(Ljava/lang/String;III)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyInputMethodCaret = env->GetMethodID(clazz, "notifyInputMethodCaret", "(III)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyPreeditMode = env->GetMethodID(clazz, "notifyPreeditMode", "(Z)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Window");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowNotifyResize = env->GetMethodID(clazz, "notifyResize", "(III)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowNotifyMove = env->GetMethodID(clazz, "notifyMove", "(II)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowNotifyDestroy = env->GetMethodID(clazz, "notifyDestroy", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowNotifyClose = env->GetMethodID(clazz, "notifyClose", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowNotifyFocus = env->GetMethodID(clazz, "notifyFocus", "(I)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowNotifyFocusDisabled = env->GetMethodID(clazz, "notifyFocusDisabled", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowNotifyFocusUngrab = env->GetMethodID(clazz, "notifyFocusUngrab", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowNotifyMoveToAnotherScreen = env->GetMethodID(clazz, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jWindowNotifyLevelChanged = env->GetMethodID(clazz, "notifyLevelChanged", "(I)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowIsEnabled = env->GetMethodID(clazz, "isEnabled", "()Z");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowNotifyDelegatePtr = env->GetMethodID(clazz, "notifyDelegatePtr", "(J)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jWindowPtr = env->GetFieldID(clazz, "ptr", "J");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkWindow");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jGtkWindowNotifyStateChanged =
             env->GetMethodID(clazz, "notifyStateChanged", "(I)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Clipboard");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jClipboardContentChanged = env->GetMethodID(clazz, "contentChanged", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Cursor");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jCursorPtr = env->GetFieldID(clazz, "ptr", "J");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("com/sun/glass/ui/Size");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jSizeInit = env->GetMethodID(clazz, "<init>", "(II)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("java/util/Map");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jMapGet = env->GetMethodID(clazz, "get", "(Ljava/lang/Object;)Ljava/lang/Object;");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jMapKeySet = env->GetMethodID(clazz, "keySet", "()Ljava/util/Set;");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jMapContainsKey = env->GetMethodID(clazz, "containsKey", "(Ljava/lang/Object;)Z");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
-    jHashSetCls = (jclass) env->NewGlobalRef(env->FindClass("java/util/HashSet"));
+    clazz = env->FindClass("java/util/HashSet");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jHashSetCls = (jclass) env->NewGlobalRef(clazz);
     jHashSetInit = env->GetMethodID(jHashSetCls, "<init>", "()V");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("java/util/Set");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jSetAdd = env->GetMethodID(clazz, "add", "(Ljava/lang/Object;)Z");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jSetSize = env->GetMethodID(clazz, "size", "()I");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jSetToArray = env->GetMethodID(clazz, "toArray", "([Ljava/lang/Object;)[Ljava/lang/Object;");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("java/lang/Iterable");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jIterableIterator = env->GetMethodID(clazz, "iterator", "()Ljava/util/Iterator;");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
     clazz = env->FindClass("java/util/Iterator");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jIteratorHasNext = env->GetMethodID(clazz, "hasNext", "()Z");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jIteratorNext = env->GetMethodID(clazz, "next", "()Ljava/lang/Object;");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
-    jApplicationCls = (jclass) env->NewGlobalRef(env->FindClass("com/sun/glass/ui/gtk/GtkApplication"));
+    clazz = env->FindClass("com/sun/glass/ui/gtk/GtkApplication");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jApplicationCls = (jclass) env->NewGlobalRef(clazz);
     jApplicationDisplay = env->GetStaticFieldID(jApplicationCls, "display", "J");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jApplicationScreen = env->GetStaticFieldID(jApplicationCls, "screen", "I");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jApplicationVisualID = env->GetStaticFieldID(jApplicationCls, "visualID", "J");
+    if (env->ExceptionCheck()) return JNI_ERR;
     jApplicationReportException = env->GetStaticMethodID(
         jApplicationCls, "reportException", "(Ljava/lang/Throwable;)V");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jApplicationGetApplication = env->GetStaticMethodID(
+        jApplicationCls, "GetApplication", "()Lcom/sun/glass/ui/Application;");
+    if (env->ExceptionCheck()) return JNI_ERR;
+    jApplicationGetName = env->GetMethodID(jApplicationCls, "getName", "()Ljava/lang/String;");
+    if (env->ExceptionCheck()) return JNI_ERR;
 
-    clazz = env->FindClass("sun/misc/GThreadHelper");
+    clazz = env->FindClass("sun/misc/GThreadHelper");    
+    if (env->ExceptionCheck()) return JNI_ERR;
     if (clazz) {
         jmethodID mid_getAndSetInitializationNeededFlag = env->GetStaticMethodID(clazz, "getAndSetInitializationNeededFlag", "()Z");
+        if (env->ExceptionCheck()) return JNI_ERR;
         jmethodID mid_lock = env->GetStaticMethodID(clazz, "lock", "()V");
-        jmethodID mid_unlock = env->GetStaticMethodID(clazz, "unlock", "()V");
-
+        if (env->ExceptionCheck()) return JNI_ERR;
+        jmethodID mid_unlock = env->GetStaticMethodID(clazz, "unlock", "()V");    
+        if (env->ExceptionCheck()) return JNI_ERR;
+        
         env->CallStaticVoidMethod(clazz, mid_lock);
 
         if (!env->CallStaticBooleanMethod(clazz, mid_getAndSetInitializationNeededFlag)) {
@@ -250,7 +348,9 @@ glass_throw_exception(JNIEnv * env,
                       const char * exceptionClass,
                       const char * exceptionMessage) {
     jclass throwableClass = env->FindClass(exceptionClass);
-    env->ThrowNew(throwableClass, exceptionMessage);
+    if (check_and_clear_exception(env)) return;
+    env->ThrowNew(throwableClass, exceptionMessage);    
+    check_and_clear_exception(env);
 }
 
 int
@@ -288,6 +388,7 @@ void dump_jstring_array(JNIEnv* env, jobjectArray arr) {
     jboolean isCopy;
     for(i = 0; i < len; i++) {
         jstring jstr = (jstring) env->GetObjectArrayElement(arr, i);
+        check_and_clear_exception(env);
         const char* str = env->GetStringUTFChars(jstr, &isCopy);
         LOG2("dump: s[%d]: %s\n", i, str)
     }
@@ -301,6 +402,21 @@ gboolean check_and_clear_exception(JNIEnv *env) {
         return TRUE;
     }
     return FALSE;
+}
+
+// The returned string should be freed with g_free().
+gchar* get_application_name() {
+    gchar* ret = NULL;
+    
+    jobject japp = mainEnv->CallStaticObjectMethod(jApplicationCls, jApplicationGetApplication);
+    CHECK_JNI_EXCEPTION_RET(mainEnv, NULL);
+    jstring jname = (jstring) mainEnv->CallObjectMethod(japp, jApplicationGetName);
+    CHECK_JNI_EXCEPTION_RET(mainEnv, NULL);
+    if (const gchar *name = mainEnv->GetStringUTFChars(jname, NULL)) {
+        ret = g_strdup(name);
+        mainEnv->ReleaseStringUTFChars(jname, name);
+    }
+    return ret;
 }
 
 gpointer glass_try_malloc_n(gsize m, gsize n, 
@@ -355,13 +471,16 @@ jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files) {
 
     if (files) {
         if (files_cnt) {
-            result = env->NewObjectArray(files_cnt, jStringCls, NULL);
+            result = env->NewObjectArray(files_cnt, jStringCls, NULL);            
+            check_and_clear_exception(env);
 
             for (gsize i = 0; i < size; ++i) {
                 if (g_str_has_prefix(uris[i], FILE_PREFIX)) {
                     gchar* path = g_filename_from_uri(uris[i], NULL, NULL);
                     jstring str = env->NewStringUTF(path);
+                    check_and_clear_exception(env);
                     env->SetObjectArrayElement((jobjectArray) result, i, str);
+                    check_and_clear_exception(env);
                     g_free(path);
                 }
             }
@@ -382,6 +501,7 @@ jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files) {
         }
 
         result = env->NewStringUTF(str->str);
+        check_and_clear_exception(env);
 
         g_string_free(str, TRUE);
     }

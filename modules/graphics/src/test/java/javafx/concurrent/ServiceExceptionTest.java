@@ -85,12 +85,7 @@ public class ServiceExceptionTest extends ServiceTestBase {
 
     @Test public void exceptionPropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.exceptionProperty().addListener(new ChangeListener<Throwable>() {
-            @Override public void changed(ObservableValue<? extends Throwable> o,
-                                          Throwable oldValue, Throwable newValue) {
-                passed.set(newValue == exception);
-            }
-        });
+        service.exceptionProperty().addListener((o, oldValue, newValue) -> passed.set(newValue == exception));
         service.start();
         handleEvents();
         assertTrue(passed.get());
@@ -115,12 +110,7 @@ public class ServiceExceptionTest extends ServiceTestBase {
 
     @Test public void runningPropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.runningProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> o,
-                                          Boolean oldValue, Boolean newValue) {
-                passed.set(!newValue);
-            }
-        });
+        service.runningProperty().addListener((o, oldValue, newValue) -> passed.set(!newValue));
         service.start();
         handleEvents();
         assertTrue(passed.get());
@@ -135,12 +125,7 @@ public class ServiceExceptionTest extends ServiceTestBase {
 
     @Test public void workDonePropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.workDoneProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                passed.set(newValue.doubleValue() == 10);
-            }
-        });
+        service.workDoneProperty().addListener((observable, oldValue, newValue) -> passed.set(newValue.doubleValue() == 10));
         service.start();
         handleEvents();
         assertTrue(passed.get());
@@ -155,12 +140,7 @@ public class ServiceExceptionTest extends ServiceTestBase {
 
     @Test public void totalWorkPropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.totalWorkProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                passed.set(newValue.doubleValue() == 20);
-            }
-        });
+        service.totalWorkProperty().addListener((observable, oldValue, newValue) -> passed.set(newValue.doubleValue() == 20));
         service.start();
         handleEvents();
         assertTrue(passed.get());
@@ -175,12 +155,7 @@ public class ServiceExceptionTest extends ServiceTestBase {
 
     @Test public void progressPropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.progressProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                passed.set(newValue.doubleValue() == .5);
-            }
-        });
+        service.progressProperty().addListener((observable, oldValue, newValue) -> passed.set(newValue.doubleValue() == .5));
         service.start();
         handleEvents();
         assertTrue(passed.get());
@@ -195,12 +170,7 @@ public class ServiceExceptionTest extends ServiceTestBase {
 
     @Test public void statePropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.stateProperty().addListener(new ChangeListener<Worker.State>() {
-            @Override
-            public void changed(ObservableValue<? extends Worker.State> observable, Worker.State oldValue, Worker.State newValue) {
-                passed.set(newValue == Worker.State.FAILED);
-            }
-        });
+        service.stateProperty().addListener((observable, oldValue, newValue) -> passed.set(newValue == Worker.State.FAILED));
         service.start();
         handleEvents();
         assertTrue(passed.get());
@@ -215,12 +185,7 @@ public class ServiceExceptionTest extends ServiceTestBase {
 
     @Test public void messagePropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.messageProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                passed.set("About to fail".equals(service.getMessage()));
-            }
-        });
+        service.messageProperty().addListener((observable, oldValue, newValue) -> passed.set("About to fail".equals(service.getMessage())));
         service.start();
         handleEvents();
         assertTrue(passed.get());
@@ -235,12 +200,7 @@ public class ServiceExceptionTest extends ServiceTestBase {
 
     @Test public void titlePropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.titleProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                passed.set("Epic Fail".equals(service.getTitle()));
-            }
-        });
+        service.titleProperty().addListener((observable, oldValue, newValue) -> passed.set("Epic Fail".equals(service.getTitle())));
         service.start();
         handleEvents();
         assertTrue(passed.get());

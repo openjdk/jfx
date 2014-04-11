@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,10 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.geom.transform.Affine3D;
+import com.sun.javafx.scene.control.skin.TextAreaSkin;
+import com.sun.javafx.scene.text.HitInfo;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
@@ -34,32 +38,18 @@ import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextArea;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
+
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.geom.transform.Affine3D;
-import com.sun.javafx.scene.control.skin.TextAreaSkin;
-import com.sun.javafx.scene.text.HitInfo;
+
 import static com.sun.javafx.PlatformUtil.isMac;
 import static com.sun.javafx.PlatformUtil.isWindows;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.PAGE_DOWN;
-import static javafx.scene.input.KeyCode.PAGE_UP;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.TAB;
-import static javafx.scene.input.KeyCode.UP;
+import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 
 
@@ -171,7 +161,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
                         double w = bounds.getWidth();
                         double h = bounds.getHeight();
                         Affine3D trans = TextFieldBehavior.calculateNodeToSceneTransform(textArea);
-                        String text = textArea.getText();
+                        String text = textArea.textProperty().getValueSafe();
 
                         // we need to display native text input component on the place where JFX component is drawn
                         // all parameters needed to do that are passed to native impl. here
@@ -247,9 +237,9 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             else if ("SelectNextLine".equals(name)) skin.nextLine(true);
 
             else if ("ParagraphStart".equals(name)) skin.paragraphStart(true, false);
-            else if ("ParagraphEnd".equals(name)) skin.paragraphEnd(true, false);
+            else if ("ParagraphEnd".equals(name)) skin.paragraphEnd(true, isWindows(), false);
             else if ("SelectParagraphStart".equals(name)) skin.paragraphStart(true, true);
-            else if ("SelectParagraphEnd".equals(name)) skin.paragraphEnd(true, true);
+            else if ("SelectParagraphEnd".equals(name)) skin.paragraphEnd(true, isWindows(), true);
 
             else if ("PreviousPage".equals(name)) skin.previousPage(false);
             else if ("NextPage".equals(name)) skin.nextPage(false);
@@ -272,7 +262,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         int start = selection.getStart();
         int end = selection.getEnd();
 
-        getUndoManager().addChange(start, textArea.getText().substring(start, end), "\n", false);
+        getUndoManager().addChange(start, textArea.textProperty().getValueSafe().substring(start, end), "\n", false);
         textArea.replaceSelection("\n");
     }
 
@@ -282,12 +272,26 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         int start = selection.getStart();
         int end = selection.getEnd();
 
-        getUndoManager().addChange(start, textArea.getText().substring(start, end), "\t", false);
+        getUndoManager().addChange(start, textArea.textProperty().getValueSafe().substring(start, end), "\t", false);
         textArea.replaceSelection("\t");
     }
 
     @Override protected void deleteChar(boolean previous) {
         skin.deleteChar(previous);
+    }
+
+    @Override protected void deleteFromLineStart() {
+        TextArea textArea = getControl();
+        int end = textArea.getCaretPosition();
+
+        if (end > 0) {
+            lineStart(false, false);
+            int start = textArea.getCaretPosition();
+            if (end > start) {
+                getUndoManager().addChange(start, textArea.textProperty().getValueSafe().substring(start, end), null);
+                replaceText(start, end, "");
+            }
+        }
     }
 
     private void lineStart(boolean select, boolean extendSelection) {
@@ -337,13 +341,13 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
             // if the primary button was pressed
             if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                HitInfo hit = skin.getIndex(e);
-                int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, textArea.getText());
+                HitInfo hit = skin.getIndex(e.getX(), e.getY());
+                int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, textArea.textProperty().getValueSafe());
 //                 int i = skin.getInsertionPoint(e.getX(), e.getY());
                 final int anchor = textArea.getAnchor();
                 final int caretPosition = textArea.getCaretPosition();
                 if (e.getClickCount() < 2 &&
-                    (IS_TOUCH_SUPPORTED ||
+                    (e.isSynthesized() ||
                      (anchor != caretPosition &&
                       ((i > anchor && i < caretPosition) || (i < anchor && i > caretPosition))))) {
                     // if there is a selection, then we will NOT handle the
@@ -392,13 +396,14 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
         final TextArea textArea = getControl();
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
-        if (!textArea.isDisabled() && !deferClick) {
-            if (e.getButton() == MouseButton.PRIMARY && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown() || e.isShortcutDown())) {
-                    skin.positionCaret(skin.getIndex(e), true, false);
-                }
+        if (!textArea.isDisabled() && !e.isSynthesized()) {
+            if (e.getButton() == MouseButton.PRIMARY &&
+                    !(e.isMiddleButtonDown() || e.isSecondaryButtonDown() ||
+                            e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
+                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true, false);
             }
         }
+        deferClick = false;
     }
 
     @Override public void mouseReleased(final MouseEvent e) {
@@ -410,66 +415,71 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             setCaretAnimating(false);
             if (deferClick) {
                 deferClick = false;
-                skin.positionCaret(skin.getIndex(e), shiftDown, false);
+                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown, false);
                 shiftDown = false;
             }
             setCaretAnimating(true);
         }
-        if (e.getButton() == MouseButton.SECONDARY) {
-            if (contextMenu.isShowing()) {
-                contextMenu.hide();
-            } else if (textArea.getContextMenu() == null) {
-                double screenX = e.getScreenX();
-                double screenY = e.getScreenY();
-                double sceneX = e.getSceneX();
+    }
 
-                if (IS_TOUCH_SUPPORTED) {
-                    Point2D menuPos;
-                    if (textArea.getSelection().getLength() == 0) {
-                        skin.positionCaret(skin.getIndex(e), false, false);
-                        menuPos = skin.getMenuPosition();
-                    } else {
-                        menuPos = skin.getMenuPosition();
-                        if (menuPos != null && (menuPos.getX() <= 0 || menuPos.getY() <= 0)) {
-                            skin.positionCaret(skin.getIndex(e), false, false);
-                            menuPos = skin.getMenuPosition();
-                        }
-                    }
+    @Override public void contextMenuRequested(ContextMenuEvent e) {
+        final TextArea textArea = getControl();
 
-                    if (menuPos != null) {
-                        Point2D p = getControl().localToScene(menuPos);
-                        Scene scene = getControl().getScene();
-                        Window window = scene.getWindow();
-                        Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
-                                                       window.getY() + scene.getY() + p.getY());
-                        screenX = location.getX();
-                        sceneX = p.getX();
-                        screenY = location.getY();
+        if (contextMenu.isShowing()) {
+            contextMenu.hide();
+        } else if (textArea.getContextMenu() == null) {
+            double screenX = e.getScreenX();
+            double screenY = e.getScreenY();
+            double sceneX = e.getSceneX();
+
+            if (IS_TOUCH_SUPPORTED) {
+                Point2D menuPos;
+                if (textArea.getSelection().getLength() == 0) {
+                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false, false);
+                    menuPos = skin.getMenuPosition();
+                } else {
+                    menuPos = skin.getMenuPosition();
+                    if (menuPos != null && (menuPos.getX() <= 0 || menuPos.getY() <= 0)) {
+                        skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false, false);
+                        menuPos = skin.getMenuPosition();
                     }
                 }
 
-                skin.populateContextMenu(contextMenu);
-                double menuWidth = contextMenu.prefWidth(-1);
-                double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
-                Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(screenX, 0);
-                Rectangle2D bounds = currentScreen.getBounds();
-
-                if (menuX < bounds.getMinX()) {
-                    getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                    getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                    contextMenu.show(getControl(), bounds.getMinX(), screenY);
-                } else if (screenX + menuWidth > bounds.getMaxX()) {
-                    double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
-                    getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                    getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                    contextMenu.show(getControl(), screenX - leftOver, screenY);
-                } else {
-                    getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
-                    getControl().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
-                    contextMenu.show(getControl(), menuX, screenY);
+                if (menuPos != null) {
+                    Point2D p = getControl().localToScene(menuPos);
+                    Scene scene = getControl().getScene();
+                    Window window = scene.getWindow();
+                    Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
+                                                   window.getY() + scene.getY() + p.getY());
+                    screenX = location.getX();
+                    sceneX = p.getX();
+                    screenY = location.getY();
                 }
             }
+
+            skin.populateContextMenu(contextMenu);
+            double menuWidth = contextMenu.prefWidth(-1);
+            double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
+            Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(screenX, 0);
+            Rectangle2D bounds = currentScreen.getBounds();
+
+            if (menuX < bounds.getMinX()) {
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getControl(), bounds.getMinX(), screenY);
+            } else if (screenX + menuWidth > bounds.getMaxX()) {
+                double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getControl(), screenX - leftOver, screenY);
+            } else {
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                contextMenu.show(getControl(), menuX, screenY);
+            }
         }
+
+        e.consume();
     }
 
     @Override protected void setCaretAnimating(boolean play) {
@@ -489,7 +499,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
     protected void mouseTripleClick(HitInfo hit) {
         // select the line
         skin.paragraphStart(false, false);
-        skin.paragraphEnd(false, true);
+        skin.paragraphEnd(false, isWindows(), true);
     }
 
     //    public function mouseWheelMove(e:MouseEvent):Void {

@@ -145,6 +145,15 @@ public final class KeyCharacterCombination extends KeyCombination {
                 .append('\'').toString();
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public String getDisplayText() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(super.getDisplayText());
+        sb.append(getCharacter());
+        return sb.toString();
+    }
+
     /**
      * Tests whether this {@code KeyCharacterCombination} equals to the
      * specified object.

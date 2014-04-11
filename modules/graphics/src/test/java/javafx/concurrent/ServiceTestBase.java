@@ -42,23 +42,21 @@ public abstract class ServiceTestBase {
     
     protected abstract TestServiceFactory setupServiceFactory();
     protected Executor createExecutor() {
-        return new Executor() {
-            @Override public void execute(final Runnable command) {
-                if (command == null) Thread.dumpStack();
-                Thread th = new Thread() {
-                    @Override public void run() {
-                        try {
-                            command.run();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        } finally {
-                            eventQueue.add(new Sentinel());
-                        }
+        return command -> {
+            if (command == null) Thread.dumpStack();
+            Thread th = new Thread() {
+                @Override public void run() {
+                    try {
+                        command.run();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    } finally {
+                        eventQueue.add(new Sentinel());
                     }
-                };
-                th.setDaemon(true);
-                th.start();
-            }
+                }
+            };
+            th.setDaemon(true);
+            th.start();
         };
     }
     

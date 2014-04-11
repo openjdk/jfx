@@ -270,9 +270,9 @@ public class UserDataDirectoryTest extends TestBase {
         assertSame(FOO, webEngine.getUserDataDirectory());
         assertNotLocked(FOO);
         assertNotLocked(BAR);
-        submit(new Runnable() {@Override public void run() {
+        submit(() -> {
             webEngine.executeScript("alert()");
-        }});
+        });
         assertSame(FOO, webEngine.getUserDataDirectory());
         assertLocked(FOO);
         assertNotLocked(BAR);
@@ -312,10 +312,8 @@ public class UserDataDirectoryTest extends TestBase {
     @Test
     public void testAlreadyInUseErrorWithRecoveringHandler() {
         webEngine.setUserDataDirectory(PRE_LOCKED);
-        EventHandler<WebErrorEvent> h = new EventHandler<WebErrorEvent>() {
-            @Override public void handle(WebErrorEvent event) {
-                webEngine.setUserDataDirectory(BAR);
-            }
+        EventHandler<WebErrorEvent> h = event -> {
+            webEngine.setUserDataDirectory(BAR);
         };
         webEngine.setOnError(h);
         assertSame(PRE_LOCKED, webEngine.getUserDataDirectory());
@@ -362,10 +360,8 @@ public class UserDataDirectoryTest extends TestBase {
         f.createNewFile();
         try {
             webEngine.setUserDataDirectory(f);
-            EventHandler<WebErrorEvent> h = new EventHandler<WebErrorEvent>() {
-                @Override public void handle(WebErrorEvent event) {
-                    webEngine.setUserDataDirectory(BAR);
-                }
+            EventHandler<WebErrorEvent> h = event -> {
+                webEngine.setUserDataDirectory(BAR);
             };
             webEngine.setOnError(h);
             assertSame(f, webEngine.getUserDataDirectory());
@@ -423,10 +419,8 @@ public class UserDataDirectoryTest extends TestBase {
         System.setSecurityManager(new CustomSecurityManager(FOO));
         try {
             webEngine.setUserDataDirectory(FOO);
-            EventHandler<WebErrorEvent> h = new EventHandler<WebErrorEvent>() {
-                @Override public void handle(WebErrorEvent event) {
-                    webEngine.setUserDataDirectory(BAR);
-                }
+            EventHandler<WebErrorEvent> h = event -> {
+                webEngine.setUserDataDirectory(BAR);
             };
             webEngine.setOnError(h);
             assertSame(FOO, webEngine.getUserDataDirectory());
@@ -479,11 +473,7 @@ public class UserDataDirectoryTest extends TestBase {
         if (Platform.isFxApplicationThread()) {
             result = new WebEngine();
         } else {
-            result = submit(new Callable<WebEngine>() {
-                @Override public WebEngine call() {
-                    return new WebEngine();
-                }
-            });
+            result = submit(() -> new WebEngine());
         }
         createdWebEngines.add(result);
         return result;
@@ -494,28 +484,28 @@ public class UserDataDirectoryTest extends TestBase {
     }
 
     private void load(final WebEngine webEngine, final String url) {
-        executeLoadJob(webEngine, new Runnable() {@Override public void run() {
+        executeLoadJob(webEngine, () -> {
             webEngine.load(url);
-        }});
+        });
     }
 
     private void loadContent(final WebEngine webEngine, final String content) {
-        executeLoadJob(webEngine, new Runnable() {@Override public void run() {
+        executeLoadJob(webEngine, () -> {
             webEngine.loadContent(content);
-        }});
+        });
     }
 
     private void loadContent(final WebEngine webEngine, final String content,
                              final String contentType)
     {
-        executeLoadJob(webEngine, new Runnable() {@Override public void run() {
+        executeLoadJob(webEngine, () -> {
             webEngine.loadContent(content, contentType);
-        }});
+        });
     }
 
     private void executeLoadJob(final WebEngine webEngine, final Runnable job) {
         final CountDownLatch latch = new CountDownLatch(1);
-        submit(new Runnable() {@Override public void run() {
+        submit(() -> {
             webEngine.getLoadWorker().runningProperty().addListener(
                     new ChangeListener<Boolean>() {
                         @Override public void changed(
@@ -528,7 +518,7 @@ public class UserDataDirectoryTest extends TestBase {
                         }
                     });
             job.run();
-        }});
+        });
         try {
             latch.await();
         } catch (InterruptedException ex) {
@@ -537,9 +527,9 @@ public class UserDataDirectoryTest extends TestBase {
     }
 
     private void dispose(final WebEngine webEngine) {
-        Runnable runnable = new Runnable() {@Override public void run() {
+        Runnable runnable = () -> {
             webEngine.dispose();
-        }};
+        };
         if (Platform.isFxApplicationThread()) {
             runnable.run();
         } else {
@@ -622,7 +612,7 @@ public class UserDataDirectoryTest extends TestBase {
     private void assertHaveSharedLocalStorage(
             final Collection<WebEngine> webEngines)
     {
-        Runnable runnable = new Runnable() {@Override public void run() {
+        Runnable runnable = () -> {
             for (WebEngine webEngine : webEngines) {
                 assertNotNull(webEngine.executeScript("localStorage"));
             }
@@ -637,7 +627,7 @@ public class UserDataDirectoryTest extends TestBase {
                     assertEquals(value1, value2);
                 }
             }
-        }};
+        };
         if (Platform.isFxApplicationThread()) {
             runnable.run();
         } else {
@@ -646,9 +636,9 @@ public class UserDataDirectoryTest extends TestBase {
     }
 
     private void assertHasNoLocalStorage(final WebEngine webEngine) {
-        Runnable runnable = new Runnable() {@Override public void run() {
+        Runnable runnable = () -> {
             assertNull(webEngine.executeScript("localStorage"));
-        }};
+        };
         if (Platform.isFxApplicationThread()) {
             runnable.run();
         } else {
@@ -664,12 +654,8 @@ public class UserDataDirectoryTest extends TestBase {
     }
 
     private File defaultDirectory() {
-        Callable<String> callable = new Callable<String>() {
-            @Override public String call() {
-                return com.sun.glass.ui.Application.GetApplication()
-                        .getDataDirectory();
-            }
-        };
+        Callable<String> callable = () -> com.sun.glass.ui.Application.GetApplication()
+                .getDataDirectory();
         String appDataDir;
         if (Platform.isFxApplicationThread()) {
             try {

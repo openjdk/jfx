@@ -79,12 +79,9 @@ public class MenuApp extends Application {
         final MenuItem menu112 = new MenuItem("foo");
         final CheckMenuItem menu113 = new CheckMenuItem("Show \"foo\" item");
         menu113.setSelected(true);
-        menu113.selectedProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable valueModel) {
-                menu112.setVisible(menu113.isSelected());
-                System.err.println("MenuItem \"foo\" is now " + (menu112.isVisible() ? "" : "not") + " visible.");
-            }
+        menu113.selectedProperty().addListener((Observable valueModel) -> {
+            menu112.setVisible(menu113.isSelected());
+            System.err.println("MenuItem \"foo\" is now " + (menu112.isVisible() ? "" : "not") + " visible.");
         });
         // Options->Submenu 1 submenu 
         Menu menu11 = new Menu("Submenu 1",
@@ -100,12 +97,9 @@ public class MenuApp extends Application {
         final String change[] = {"Change Text", "Change Back"};
         final MenuItem menu13 = new MenuItem(change[0]);
         menu13.setAccelerator(KeyCombination.keyCombination("Shortcut+C"));
-        menu13.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                menu13.setText((menu13.getText().equals(change[0])) ? change[1] : change[0]);
-                outputLabel.setText(((MenuItem) t.getTarget()).getText() + " - action called");
-            }
+        menu13.setOnAction((ActionEvent t) -> {
+            menu13.setText((menu13.getText().equals(change[0])) ? change[1] : change[0]);
+            outputLabel.setText(((MenuItem) t.getTarget()).getText() + " - action called");
         });
 
         // Options menu       
@@ -129,11 +123,8 @@ public class MenuApp extends Application {
             hbox.getChildren().add(sysMenuLabel);
             vbox.getChildren().add(hbox);
             sysMenuLabel.setVisible((menuBar.getHeight() == 0));
-            menuBar.heightProperty().addListener(new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                    sysMenuLabel.setVisible((menuBar.getHeight() == 0));
-                }
+            menuBar.heightProperty().addListener((ObservableValue<? extends Number> ov, Number t, Number t1) -> {
+                sysMenuLabel.setVisible((menuBar.getHeight() == 0));
             });
         }
 

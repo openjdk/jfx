@@ -56,11 +56,7 @@ import java.util.HashMap;
  */
 final class QuantumRenderer extends ThreadPoolExecutor  {
     private static boolean usePurgatory = // TODO - deprecate
-        AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("decora.purgatory");
-            }
-        });
+        AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("decora.purgatory"));
         
         
     private static final AtomicReference<QuantumRenderer> instanceReference =
@@ -139,20 +135,16 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
         @Override public Thread newThread(Runnable r) {
             final PipelineRunnable pipeline = new PipelineRunnable(r);
             _renderer =
-                AccessController.doPrivileged(new PrivilegedAction<Thread>() {
-                    @Override public Thread run() {
-                        Thread th = new Thread(pipeline);
-                        th.setName("QuantumRenderer-" + threadNumber.getAndIncrement());
-                        th.setDaemon(true);
-                        th.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                            @Override public void uncaughtException(Thread t, Throwable thr) {
-                                System.err.println(t.getName() + " uncaught: " + thr.getClass().getName());
-                                thr.printStackTrace();
-                            }
-                        });
-                        return th;
-                    }
-                });   
+                AccessController.doPrivileged((PrivilegedAction<Thread>) () -> {
+                    Thread th = new Thread(pipeline);
+                    th.setName("QuantumRenderer-" + threadNumber.getAndIncrement());
+                    th.setDaemon(true);
+                    th.setUncaughtExceptionHandler((t, thr) -> {
+                        System.err.println(t.getName() + " uncaught: " + thr.getClass().getName());
+                        thr.printStackTrace();
+                    });
+                    return th;
+                });
             
             assert threadNumber.get() == 1;
             
@@ -163,17 +155,11 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
     protected void createResourceFactory() {
         final CountDownLatch createLatch = new CountDownLatch(1);
         
-        final CompletionListener createDone = new CompletionListener() {
-            @Override public void done(RenderJob job) {
-                createLatch.countDown();
-            }
-        };
+        final CompletionListener createDone = job -> createLatch.countDown();
 
-        final Runnable factoryCreator = new Runnable() {
-            @Override public void run() {
-                ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
-                assert factory != null;
-            }
+        final Runnable factoryCreator = () -> {
+            ResourceFactory factory = GraphicsPipeline.getDefaultResourceFactory();
+            assert factory != null;
         };
         
         final RenderJob job = new RenderJob(factoryCreator, createDone);
@@ -197,11 +183,7 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
         if (presentable instanceof GraphicsResource) {
             final GraphicsResource resource = (GraphicsResource)presentable;
             
-            final Runnable presentableDisposer = new Runnable() {
-                @Override public void run() {
-                    resource.dispose();
-                }
-            };
+            final Runnable presentableDisposer = () -> resource.dispose();
             
             final RenderJob job = new RenderJob(presentableDisposer, null);
             
@@ -210,12 +192,10 @@ final class QuantumRenderer extends ThreadPoolExecutor  {
     }
     
     protected void stopRenderer() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override public Void run() {
-                    shutdown();
-                    return null;
-                };
-            });
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            shutdown();
+            return null;
+        });
         if (PrismSettings.verbose) {
             System.out.println("QuantumRenderer: shutdown");
         }

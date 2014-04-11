@@ -117,11 +117,8 @@ public abstract class JavaBeanPropertyTestBase<T> {
     @Test
     public void testInvalidationListener() {
         final BooleanProperty fired = new SimpleBooleanProperty(false);
-        final InvalidationListener listener = new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                fired.set(true);
-            }
+        final InvalidationListener listener = observable -> {
+            fired.set(true);
         };
 
         property.addListener(listener);
@@ -138,11 +135,8 @@ public abstract class JavaBeanPropertyTestBase<T> {
     @Test
     public void testChangeListener() {
         final BooleanProperty fired = new SimpleBooleanProperty(false);
-        final ChangeListener<Object> listener = new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
-                fired.set(true);
-            }
+        final ChangeListener<Object> listener = (observable, oldValue, newValue) -> {
+            fired.set(true);
         };
 
         property.addListener(listener);

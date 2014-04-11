@@ -94,38 +94,36 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
     }
 
     private void initializeContentListener() {
-        getSkinnable().getItems().addListener(new ListChangeListener<Node>() {
-            @Override public void onChanged(Change<? extends Node> c) {
-                while (c.next()) {
-                    if (c.wasPermutated() || c.wasUpdated()) {
-                        /**
-                         * the contents were either moved, or updated.
-                         * rebuild the contents to re-sync
-                         */
-                        getChildren().clear();
-                        contentRegions.clear();
-                        int index = 0;
-                        for (Node n : c.getList()) {
-                            addContent(index++, n);
-                        }
+        getSkinnable().getItems().addListener((ListChangeListener<Node>) c -> {
+            while (c.next()) {
+                if (c.wasPermutated() || c.wasUpdated()) {
+                    /**
+                     * the contents were either moved, or updated.
+                     * rebuild the contents to re-sync
+                     */
+                    getChildren().clear();
+                    contentRegions.clear();
+                    int index = 0;
+                    for (Node n : c.getList()) {
+                        addContent(index++, n);
+                    }
 
-                    } else {
-                        for (Node n : c.getRemoved()) {
-                            removeContent(n);
-                        }
+                } else {
+                    for (Node n : c.getRemoved()) {
+                        removeContent(n);
+                    }
 
-                        int index = c.getFrom();
-                        for (Node n : c.getAddedSubList()) {
-                            addContent(index++, n);
-                        }
+                    int index = c.getFrom();
+                    for (Node n : c.getAddedSubList()) {
+                        addContent(index++, n);
                     }
                 }
-                // TODO there may be a more efficient way than rebuilding all the dividers
-                // everytime the list changes.
-                removeAllDividers();
-                for (SplitPane.Divider d: getSkinnable().getDividers()) {
-                    addDivider(d);
-                }
+            }
+            // TODO there may be a more efficient way than rebuilding all the dividers
+            // everytime the list changes.
+            removeAllDividers();
+            for (SplitPane.Divider d: getSkinnable().getDividers()) {
+                addDivider(d);
             }
         });
     }
@@ -238,42 +236,36 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
     private void initializeDivderEventHandlers(final ContentDivider divider) {
         // TODO: do we need to consume all mouse events?
         // they only bubble to the skin which consumes them by default
-        divider.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                event.consume();
-            }
+        divider.addEventHandler(MouseEvent.ANY, event -> {
+            event.consume();
         });
 
-        divider.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {
-                if (horizontal) {
-                    divider.setInitialPos(divider.getDividerPos());
-                    divider.setPressPos(e.getSceneX());
-                    divider.setPressPos(getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT
-                            ? getSkinnable().getWidth() - e.getSceneX() : e.getSceneX());
-                } else {
-                    divider.setInitialPos(divider.getDividerPos());
-                    divider.setPressPos(e.getSceneY());
-                }
-                e.consume();
+        divider.setOnMousePressed(e -> {
+            if (horizontal) {
+                divider.setInitialPos(divider.getDividerPos());
+                divider.setPressPos(e.getSceneX());
+                divider.setPressPos(getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT
+                        ? getSkinnable().getWidth() - e.getSceneX() : e.getSceneX());
+            } else {
+                divider.setInitialPos(divider.getDividerPos());
+                divider.setPressPos(e.getSceneY());
             }
+            e.consume();
         });
 
-        divider.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {                
-                double delta = 0; 
-                if (horizontal) {
-                    delta = getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT 
-                            ? getSkinnable().getWidth() - e.getSceneX() : e.getSceneX();
-                } else {
-                    delta = e.getSceneY();
-                }
-                delta -= divider.getPressPos();
-                double newPos = Math.ceil(divider.getInitialPos() + delta);    
-                checkDividerPos = true;
-                setAbsoluteDividerPos(divider, newPos);
-                e.consume();
+        divider.setOnMouseDragged(e -> {
+            double delta = 0;
+            if (horizontal) {
+                delta = getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT
+                        ? getSkinnable().getWidth() - e.getSceneX() : e.getSceneX();
+            } else {
+                delta = e.getSceneY();
             }
+            delta -= divider.getPressPos();
+            double newPos = Math.ceil(divider.getInitialPos() + delta);
+            checkDividerPos = true;
+            setAbsoluteDividerPos(divider, newPos);
+            e.consume();
         });
     }
 
@@ -1096,7 +1088,6 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             setClip(clipRect);
             this.content = n;
             if (n != null) {
-                this.setId(n.getId());
                 getChildren().add(n);
             }
             this.x = 0;

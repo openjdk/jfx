@@ -63,7 +63,7 @@ public class Node_cssStateTransition_Test {
     }
 
 
-    @Test
+    @Test @Ignore("Pending RT-35594")
     public void testPropertiesResetOnStyleclassChange() {
 
         Rectangle rect = new Rectangle(50,50);

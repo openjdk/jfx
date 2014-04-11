@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+  <classpathentry kind="output" path="bin"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+  <classpathentry kind="src" exported="true" path="src/main/java"/>
+  <classpathentry kind="src" exported="true" path="src/test/java"/>
+  <classpathentry kind="src" exported="true" path="/graphics"/>
+  <classpathentry kind="src" exported="true" path="/media"/>
+  <classpathentry kind="src" exported="true" path="/swing"/>
+</classpath>

@@ -30,6 +30,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -50,6 +52,9 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
@@ -58,10 +63,8 @@ import javafx.css.CssMetaData;
 import com.sun.javafx.css.converters.EnumConverter;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.accessible.AccessibleList;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
 import java.lang.ref.WeakReference;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
@@ -318,6 +321,8 @@ public class ListView<T> extends Control {
 
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
+
+        focusedProperty().addListener(focusedListener);
     }
     
     
@@ -328,12 +333,24 @@ public class ListView<T> extends Control {
      *                                                                         *
      **************************************************************************/
     
-    private EventHandler<ListView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = new EventHandler<ListView.EditEvent<T>>() {
-        @Override public void handle(ListView.EditEvent<T> t) {
-            int index = t.getIndex();
-            List<T> list = getItems();
-            if (index < 0 || index >= list.size()) return;
-            list.set(index, t.getNewValue());
+    private EventHandler<ListView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
+        int index = t.getIndex();
+        List<T> list = getItems();
+        if (index < 0 || index >= list.size()) return;
+        list.set(index, t.getNewValue());
+    };
+
+    private InvalidationListener focusedListener = observable -> {
+        // RT-25679 - we select the first item in the control if there is no
+        // current selection or focus on any other cell
+        List<T> items = getItems();
+        MultipleSelectionModel<T> sm = getSelectionModel();
+        FocusModel<T> fm = getFocusModel();
+
+        if (items != null && items.size() > 0 &&
+            sm != null && sm.isEmpty() &&
+            fm != null && fm.getFocusedIndex() == -1) {
+                sm.select(0);
         }
     };
     
@@ -939,17 +956,6 @@ public class ListView<T> extends Control {
         return onScrollTo;
     }
 
-    private AccessibleList accListView ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
-        if( accListView == null)
-            accListView = new AccessibleList(this);
-        return (AccessibleProvider)accListView ;
-    }
-
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new ListViewSkin<T>(this);
@@ -1046,6 +1052,44 @@ public class ListView<T> extends Control {
             PseudoClass.getPseudoClass("vertical");
     private static final PseudoClass PSEUDO_CLASS_HORIZONTAL =
             PseudoClass.getPseudoClass("horizontal");
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.LIST_VIEW;
+            case ROW_COUNT: return getItems().size();
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case ROW_AT_INDEX: //Skin
+            case SELECTED_ROWS: //Skin
+            case VERTICAL_SCROLLBAR: //Skin
+            case HORIZONTAL_SCROLLBAR: // Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                int index = (int) parameters[0];
+                scrollTo(index);
+                break;
+            }
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
+
 
     /***************************************************************************
      *                                                                         *
@@ -1200,12 +1244,8 @@ public class ListView<T> extends Control {
         };
         
         // watching for changes to the items list
-        private final ChangeListener<ObservableList<T>> itemsObserver = new ChangeListener<ObservableList<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<T>> valueModel, 
-                ObservableList<T> oldList, ObservableList<T> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
+        private final ChangeListener<ObservableList<T>> itemsObserver = (valueModel, oldList, newList) -> {
+                updateItemsObserver(oldList, newList);
         };
         
         private WeakListChangeListener<T> weakItemsContentObserver =
@@ -1227,8 +1267,16 @@ public class ListView<T> extends Control {
 
             // when the items list totally changes, we should clear out
             // the selection and focus
-            setSelectedIndex(-1);
-            focus(-1);
+            int newValueIndex = -1;
+            if (newList != null) {
+                T selectedItem = getSelectedItem();
+                if (selectedItem != null) {
+                    newValueIndex = newList.indexOf(selectedItem);
+                }
+            }
+
+            setSelectedIndex(newValueIndex);
+            focus(newValueIndex);
         }
 
 
@@ -1362,6 +1410,8 @@ public class ListView<T> extends Control {
         @Override protected void focus(int row) {
             if (listView.getFocusModel() == null) return;
             listView.getFocusModel().focus(row);
+
+            listView.accSendNotification(Attribute.SELECTED_ROWS);
         }
 
         /** {@inheritDoc} */
@@ -1414,12 +1464,8 @@ public class ListView<T> extends Control {
             updateItemCount();
         }
 
-        private ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<ObservableList<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<T>> observable, 
-                ObservableList<T> oldList, ObservableList<T> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
+        private ChangeListener<ObservableList<T>> itemsListener = (observable, oldList, newList) -> {
+                updateItemsObserver(oldList, newList);
         };
         
         private WeakChangeListener<ObservableList<T>> weakItemsListener = 

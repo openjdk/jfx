@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import com.sun.javafx.Utils;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
@@ -37,22 +38,12 @@ import javafx.scene.control.ScrollBar;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
+
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.Utils;
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.F4;
-import static javafx.scene.input.KeyCode.HOME;
-import static javafx.scene.input.KeyCode.KP_DOWN;
-import static javafx.scene.input.KeyCode.KP_LEFT;
-import static javafx.scene.input.KeyCode.KP_RIGHT;
-import static javafx.scene.input.KeyCode.KP_UP;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.UP;
+
+import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 /**
@@ -164,7 +155,7 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
      *
      * @param position The mouse position on track with 0.0 being beginning of track and 1.0 being the end
      */
-    public void trackPress(MouseEvent e, double position) {
+    public void trackPress(double position) {
 
         /* We can get a press if someone presses an end button.  In that
          * case, we don't want to start a timeline because the end button
@@ -176,30 +167,24 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
         // determine the percentage of the way between min and max
         // represented by this mouse event
         final ScrollBar bar = getControl();
-        // If not already focused, request focus
+        if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
         final double pos = position;
-        if (!bar.isFocused()) bar.requestFocus();
         final boolean incrementing = (pos > ((bar.getValue() - bar.getMin())/(bar.getMax() - bar.getMin())));
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
 
         final EventHandler<ActionEvent> step =
-                new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+                event -> {
                     boolean i = (pos > ((bar.getValue() - bar.getMin())/(bar.getMax() - bar.getMin())));
                     if (incrementing == i) {
                         // we started incrementing and still are, or we
                         // started decrementing and still are
                         bar.adjustValue(pos);
                     }
-                    else if (timeline != null) {
-                        // we've gone to far! just stop already
-                        timeline.stop();
-                        timeline = null;
+                    else {
+                        stopTimeline();
                     }
-                }
-            };
+                };
 
         final KeyFrame kf = new KeyFrame(Duration.millis(200), step);
         timeline.getKeyFrames().add(kf);
@@ -209,42 +194,31 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
     }
 
     /**
-     * @param position The mouse position on track with 0.0 being begining of track and 1.0 being the end
      */
-    public void trackRelease(MouseEvent e, double position) {
-        if (timeline != null) {
-            timeline.stop();
-            timeline = null;
-        }
+    public void trackRelease() {
+        stopTimeline();
     }
 
     /**
      * Invoked by the ScrollBar {@link Skin} implementation whenever a mouse
      * press occurs on the decrement button of the bar.
      */
-    public void decButtonPressed(MouseEvent e) {
+    public void decButtonPressed() {
         final ScrollBar bar = getControl();
-        if (timeline != null) {
-            com.sun.javafx.Logging.getJavaFXLogger().warning("timeline is not null");
-            timeline.stop();
-            timeline = null;
-        }
+        if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
+        stopTimeline();
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
 
         final EventHandler<ActionEvent> dec =
-            new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+                event -> {
                     if (bar.getValue() > bar.getMin()) {
                         bar.decrement();
                     }
-                    else if (timeline != null) {
-                        timeline.stop();
-                        timeline = null;
+                    else {
+                        stopTimeline();
                     }
-                }
-            };
+                };
 
         final KeyFrame kf = new KeyFrame(Duration.millis(200), dec);
         timeline.getKeyFrames().add(kf);
@@ -255,40 +229,30 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
 
     /**
      */
-    public void decButtonReleased(MouseEvent e) {
-        if (timeline != null) {
-            timeline.stop();
-            timeline = null;
-        }
+    public void decButtonReleased() {
+        stopTimeline();
     }
 
     /**
      * Invoked by the ScrollBar {@link Skin} implementation whenever a mouse
      * press occurs on the increment button of the bar.
      */
-    public void incButtonPressed(MouseEvent e) {
+    public void incButtonPressed() {
         final ScrollBar bar = getControl();
-        if (timeline != null) {
-            com.sun.javafx.Logging.getJavaFXLogger().warning("timeline is not null");
-            timeline.stop();
-            timeline = null;
-        }
+        if (!bar.isFocused() && bar.isFocusTraversable()) bar.requestFocus();
+        stopTimeline();
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
 
         final EventHandler<ActionEvent> inc =
-            new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+                event -> {
                     if (bar.getValue() < bar.getMax()) {
                         bar.increment();
                     }
-                    else if (timeline != null) {
-                        timeline.stop();
-                        timeline = null;
+                    else {
+                        stopTimeline();
                     }
-                }
-            };
+                };
 
         final KeyFrame kf = new KeyFrame(Duration.millis(200), inc);
         timeline.getKeyFrames().add(kf);
@@ -299,11 +263,8 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
 
     /**
      */
-    public void incButtonReleased(MouseEvent e) {
-        if (timeline != null) {
-            timeline.stop();
-            timeline = null;
-        }
+    public void incButtonReleased() {
+        stopTimeline();
     }
 
     /**
@@ -315,20 +276,24 @@ public class ScrollBarBehavior extends BehaviorBase<ScrollBar> {
     /**
      * @param position The mouse position on track with 0.0 being begining of track and 1.0 being the end
      */
-    public void thumbDragged(MouseEvent e, double position) {
+    public void thumbDragged(double position) {
         final ScrollBar scrollbar = getControl();
+
+        // Stop the timeline for continuous increments as drags take precedence
+        stopTimeline();
+
+        if (!scrollbar.isFocused() && scrollbar.isFocusTraversable()) scrollbar.requestFocus();
         double newValue = (position * (scrollbar.getMax() - scrollbar.getMin())) + scrollbar.getMin();
         if (!Double.isNaN(newValue)) {
             scrollbar.setValue(Utils.clamp(scrollbar.getMin(), newValue, scrollbar.getMax()));
         }
     }
 
-    /**
-     * @param position The mouse position on track with 0.0 being begining of track and 1.0 being the end
-     */
-    public void thumbReleased(MouseEvent e, double position) {
-        // snap to the correct position on the scrollbar
-        (getControl()).adjustValue(position);
+    private void stopTimeline() {
+        if (timeline != null) {
+            timeline.stop();
+            timeline = null;
+        }
     }
 
     /**

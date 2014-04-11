@@ -268,12 +268,7 @@ public final class ImageCursorTest {
         final ImageCursor testCursor = new ImageCursor(testImage, 16, 16);
 
         final InvalidationListener imageCursorChecker =
-                new InvalidationListener() {
-                    @Override
-                    public void invalidated(final Observable observable) {
-                        assertCursorEquals(testCursor, testImage, 16, 16);
-                    }
-                };
+                observable -> assertCursorEquals(testCursor, testImage, 16, 16);
 
         testCursor.hotspotXProperty().addListener(imageCursorChecker);
         testCursor.hotspotYProperty().addListener(imageCursorChecker);

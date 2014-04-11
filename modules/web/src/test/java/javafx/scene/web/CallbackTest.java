@@ -16,6 +16,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.util.Callback;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -61,6 +62,7 @@ public class CallbackTest extends TestBase {
         popupUi.clear();
     }
 
+    @Ignore("RT-34508")
     @Test public void testDefaultPopup() {
         clear();
         executeScript(JS_OPEN_DEFAULT);
@@ -78,6 +80,7 @@ public class CallbackTest extends TestBase {
         popupUi.checkCalled(VISIBILITY_CHANGED, true);
     }
 
+    @Ignore("RT-34508")
     @Test public void testCustomPopup() {
         clear();
         executeScript(JS_OPEN);
@@ -117,11 +120,7 @@ public class CallbackTest extends TestBase {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         System.setErr(new PrintStream(bytes));
         
-        getEngine().setCreatePopupHandler(new Callback<PopupFeatures, WebEngine>() {
-            public WebEngine call(PopupFeatures features) {
-                return null;
-            }
-        });
+        getEngine().setCreatePopupHandler(features -> null);
         executeScript(JS_OPEN_DEFAULT);
 
         System.setErr(err);
@@ -242,61 +241,47 @@ public class CallbackTest extends TestBase {
         }
 
         public final EventHandler<WebEvent<String>> onAlert =
-                new EventHandler<WebEvent<String>>() {
-                    @Override public void handle(WebEvent<String> ev) {
-                        called(ALERT, ev.getData());
-                    }
+                ev -> {
+                    called(ALERT, ev.getData());
                 };
 
         public final EventHandler<WebEvent<String>> onStatusChanged =
-                new EventHandler<WebEvent<String>>() {
-                    @Override public void handle(WebEvent<String> ev) {
-                        called(STATUS_CHANGED, ev.getData());
-                    }
+                ev -> {
+                    called(STATUS_CHANGED, ev.getData());
                 };
 
         public final EventHandler<WebEvent<Rectangle2D>> onResized =
-                new EventHandler<WebEvent<Rectangle2D>>() {
-                    @Override public void handle(WebEvent<Rectangle2D> ev) {
-                        Rectangle2D r = ev.getData();
-                        called(RESIZED, r.getMinX(), r.getMinY(),
-                                        r.getWidth(), r.getHeight());
-                    }
+                ev -> {
+                    Rectangle2D r = ev.getData();
+                    called(RESIZED, r.getMinX(), r.getMinY(),
+                                    r.getWidth(), r.getHeight());
                 };
 
         public final EventHandler<WebEvent<Boolean>> onVisibilityChanged =
-                new EventHandler<WebEvent<Boolean>>() {
-                    @Override public void handle(WebEvent<Boolean> ev) {
-                        called(VISIBILITY_CHANGED, ev.getData());
-                    }
+                ev -> {
+                    called(VISIBILITY_CHANGED, ev.getData());
                 };
 
         public final Callback<PopupFeatures, WebEngine> createPopup =
-                new Callback<PopupFeatures, WebEngine>() {
-                    @Override public WebEngine call(PopupFeatures f) {
-                        called(CREATE_POPUP, f.hasMenu(), f.hasStatus(),
-                                f.hasToolbar(), f.isResizable());
-                        WebEngine w2 = new WebEngine();
-                        w2.setOnResized(popupUi.onResized);
-                        w2.setOnVisibilityChanged(popupUi.onVisibilityChanged);
-                        return w2;
-                    }
+                f -> {
+                    called(CREATE_POPUP, f.hasMenu(), f.hasStatus(),
+                            f.hasToolbar(), f.isResizable());
+                    WebEngine w2 = new WebEngine();
+                    w2.setOnResized(popupUi.onResized);
+                    w2.setOnVisibilityChanged(popupUi.onVisibilityChanged);
+                    return w2;
                 };
 
         public final Callback<String, Boolean> confirm =
-                new Callback<String, Boolean>() {
-                    @Override public Boolean call(String message) {
-                        called(CONFIRM, message);
-                        return false;
-                    }
+                message -> {
+                    called(CONFIRM, message);
+                    return false;
                 };
 
         public final Callback<PromptData, String> prompt =
-                new Callback<PromptData, String>() {
-                    @Override public String call(PromptData data) {
-                        called(PROMPT, data.getMessage(), data.getDefaultValue());
-                        return data.getDefaultValue();
-                    }
+                data -> {
+                    called(PROMPT, data.getMessage(), data.getDefaultValue());
+                    return data.getDefaultValue();
                 };
     }
 }

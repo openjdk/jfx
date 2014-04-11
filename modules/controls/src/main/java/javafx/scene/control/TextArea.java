@@ -49,6 +49,9 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TextAreaSkin;
 import javafx.css.Styleable;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 /**
  * Text input component that allows a user to enter multiple lines of
@@ -593,6 +596,7 @@ public class TextArea extends TextInputControl {
     public final double getScrollLeft() { return scrollLeft.getValue(); }
     public final void setScrollLeft(double value) { scrollLeft.setValue(value); }
 
+
     /***************************************************************************
      *                                                                         *
      * Methods                                                                 *
@@ -603,6 +607,7 @@ public class TextArea extends TextInputControl {
     @Override protected Skin<?> createDefaultSkin() {
         return new TextAreaSkin(this);
     }
+
 
     /***************************************************************************
      *                                                                         *
@@ -686,5 +691,20 @@ public class TextArea extends TextInputControl {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
+    }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TEXT_AREA;
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

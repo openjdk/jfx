@@ -32,6 +32,8 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
 import javafx.css.StyleableProperty;
@@ -156,6 +158,7 @@ import javafx.css.StyleableProperty;
                         }
                     }
                     pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, get());
+                    accSendNotification(Attribute.SELECTED);
                 }
 
                 @Override
@@ -257,5 +260,20 @@ import javafx.css.StyleableProperty;
     protected Pos impl_cssGetAlignmentInitialValue() {
         return Pos.CENTER;
     }
-        
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TOGGLE_BUTTON;
+            case SELECTED: return isSelected();
+            default: return super.accGetAttribute(attribute, parameters); 
+        }
+    }
 }

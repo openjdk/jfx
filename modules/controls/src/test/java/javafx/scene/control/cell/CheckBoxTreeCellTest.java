@@ -51,11 +51,7 @@ public class CheckBoxTreeCellTest {
     
     @Before public void setup() {
         booleanProperty = new SimpleBooleanProperty(false);
-        callback = new Callback<TreeItem<Object>, ObservableValue<Boolean>>() {
-            public ObservableValue<Boolean> call(TreeItem<Object> param) {
-                return booleanProperty;
-            }
-        };
+        callback = param -> booleanProperty;
         converter = new StringConverter<TreeItem<Object>>() {
             @Override public String toString(TreeItem<Object> object) {
                 return null;

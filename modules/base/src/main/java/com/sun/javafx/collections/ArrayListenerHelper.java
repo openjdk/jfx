@@ -29,6 +29,7 @@ import java.util.Arrays;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ArrayChangeListener;
 import javafx.collections.ObservableArray;
+import sun.util.logging.PlatformLogger;
 
 /**
  */
@@ -126,7 +127,11 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
 
         @Override
         protected void fireValueChangedEvent(boolean sizeChanged, int from, int to) {
-            listener.invalidated(observable);
+            try {
+                listener.invalidated(observable);
+            } catch (Exception e) {
+                PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
+            }
         }
     }
 
@@ -161,7 +166,11 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
 
         @Override
         protected void fireValueChangedEvent(boolean sizeChanged, int from, int to) {
-            listener.onChanged(observable, sizeChanged, from, to);
+            try {
+                listener.onChanged(observable, sizeChanged, from, to);
+            } catch (Exception e) {
+                PlatformLogger.getLogger("collections").warning("Exception in ArrayChangeListener", e);
+            }
         }
     }
 
@@ -317,10 +326,18 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
             try {
                 locked = true;
                 for (int i = 0; i < curInvalidationSize; i++) {
-                    curInvalidationList[i].invalidated(observable);
+                    try {
+                        curInvalidationList[i].invalidated(observable);
+                    } catch (Exception e) {
+                        PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
+                    }
                 }
                 for (int i = 0; i < curChangeSize; i++) {
-                    curChangeList[i].onChanged(observable, sizeChanged, from, to);
+                    try {
+                        curChangeList[i].onChanged(observable, sizeChanged, from, to);
+                    } catch (Exception e) {
+                        PlatformLogger.getLogger("collections").warning("Exception in ArrayChangeListener", e);
+                    }
                 }
             } finally {
                 locked = false;

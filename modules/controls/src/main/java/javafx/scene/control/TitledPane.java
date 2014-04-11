@@ -33,6 +33,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
 
 import javafx.css.PseudoClass;
@@ -43,6 +44,9 @@ import com.sun.javafx.scene.control.skin.TitledPaneSkin;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 /**
  * <p>A TitledPane is a panel with a title that can be opened and closed.</p>
@@ -140,6 +144,7 @@ public class TitledPane extends Labeled {
             final boolean active = get();
             pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED,   active);
             pseudoClassStateChanged(PSEUDO_CLASS_COLLAPSED, !active);
+            accSendNotification(Attribute.EXPANDED);
         }
 
         @Override
@@ -335,4 +340,35 @@ public class TitledPane extends Labeled {
         return getClassCssMetaData();
     }
 
+    @Override
+    public Orientation getContentBias() {
+        final Node c = getContent();
+        return c == null ? super.getContentBias() : c.getContentBias();
+    }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TITLED_PANE;
+            case TITLE: return getText();
+            case EXPANDED: return isExpanded();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case EXPAND: setExpanded(true); break;
+            case COLLAPSE: setExpanded(false); break;
+            default: super.accExecuteAction(action);
+        }
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.TitledPane;
@@ -86,7 +87,12 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
 
     @Override protected void callAction(String name) {   
         Accordion accordion = getControl();
-        if ("TraverseLeft".equals(name) || "TraverseUp".equals(name) || PAGE_UP.equals(name)) {
+        boolean rtl = (accordion.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+
+        if (("TraverseLeft".equals(name) && !rtl) ||
+            ("TraverseRight".equals(name) && rtl) ||
+            "TraverseUp".equals(name) || PAGE_UP.equals(name)) {
+
             if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
                 focusModel.focusPrevious();
                 int next = focusModel.getFocusedIndex();
@@ -95,7 +101,10 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
                     accordion.getPanes().get(next).setExpanded(true);
                 }
             }
-        } else if ("TraverseRight".equals(name) || "TraverseDown".equals(name) || PAGE_DOWN.equals(name)) {
+        } else if (("TraverseRight".equals(name) && !rtl) || 
+                   ("TraverseLeft".equals(name) && rtl) ||
+                   "TraverseDown".equals(name) || PAGE_DOWN.equals(name)) {
+
             if (focusModel.getFocusedIndex() != -1 && accordion.getPanes().get(focusModel.getFocusedIndex()).isFocused()) {
                 focusModel.focusNext();
                 int next = focusModel.getFocusedIndex();
@@ -181,17 +190,15 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
                 }
             }
         };
-        private final ListChangeListener<TitledPane> panesListener = new ListChangeListener<TitledPane>() {
-            @Override public void onChanged(Change<? extends TitledPane> c) {
-                while (c.next()) {
-                    if (c.wasAdded()) {
-                        for (final TitledPane tp: c.getAddedSubList()) {
-                            tp.focusedProperty().addListener(paneFocusListener);
-                        }
-                    } else if (c.wasRemoved()) {
-                        for (final TitledPane tp: c.getAddedSubList()) {
-                            tp.focusedProperty().removeListener(paneFocusListener);
-                        }
+        private final ListChangeListener<TitledPane> panesListener = c -> {
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    for (final TitledPane tp: c.getAddedSubList()) {
+                        tp.focusedProperty().addListener(paneFocusListener);
+                    }
+                } else if (c.wasRemoved()) {
+                    for (final TitledPane tp: c.getAddedSubList()) {
+                        tp.focusedProperty().removeListener(paneFocusListener);
                     }
                 }
             }

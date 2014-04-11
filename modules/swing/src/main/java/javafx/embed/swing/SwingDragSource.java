@@ -48,34 +48,21 @@ final class SwingDragSource implements EmbeddedSceneDSInterface {
     SwingDragSource() {
     }
     
-    void updateContents(final DropTargetDragEvent e) {
+    void updateContents(final DropTargetDragEvent e, boolean fetchData) {
         sourceActions = e.getSourceActions();
-        updateData(e.getTransferable());
+        updateData(e.getTransferable(), fetchData);
     }
 
-    void updateContents(final DropTargetDropEvent e) {
+    void updateContents(final DropTargetDropEvent e, boolean fetchData) {
         sourceActions = e.getSourceActions();
-        updateData(e.getTransferable());
+        updateData(e.getTransferable(), fetchData);
     }
 
-    private void updateData(Transferable t) {
+    private void updateData(Transferable t, boolean fetchData) {
         final Map<String, DataFlavor> mimeType2DataFlavor =
                 DataFlavorUtils.adjustSwingDataFlavors(
                 t.getTransferDataFlavors());
 
-        // Read data from the given Transferable in advance. Need to do this
-        // because we don't want Transferable#getTransferData() to be called
-        // from DropTargetListener#drop().
-        //
-        // When Transferable#getTransferData() is called from
-        // DropTargetListener#drop() it may fail with
-        // "java.awt.dnd.InvalidDnDOperationException: No drop current"
-        // error if the call takes place prior to
-        // DropTargetDropEvent#acceptDrop() call.
-        // But if Transferable#getTransferData() is called from
-        // DropTargetListener#dragEnter() and DropTargetListener#dragExit()
-        // it works flawlessly without any extra calls.
-        //
         // If we keep reference to source Transferable in SwingDragSource and
         // call Transferable#getTransferData() on it from
         // SwingDragSource#getData() we may run into
@@ -91,9 +78,17 @@ final class SwingDragSource implements EmbeddedSceneDSInterface {
         //
         // This observation is true for standard AWT Transferable-s. 
         // Things may be totally broken for custom Transferable-s though.
-        //
+
+        // For performance reasons, the DRAG_ENTERED and DRAG_OVER event
+        // handlers pass fetchData == false so as to update the set of
+        // available MIME types only. The DRAG_DROPPED handler passes
+        // fetchData == true which also fetches all the data.
+        // NOTE: Due to JDK-8028585 this code won't be able to fetch data
+        // when invoked from handlers other than DROPPED in any case.
+
         try {
-            mimeType2Data = DataFlavorUtils.readAllData(t, mimeType2DataFlavor);
+            mimeType2Data = DataFlavorUtils.readAllData(t, mimeType2DataFlavor,
+                    fetchData);
         } catch (Exception e) {
             mimeType2Data = Collections.EMPTY_MAP;
         }

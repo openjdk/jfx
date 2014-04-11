@@ -63,13 +63,9 @@ public class SettingsTest {
 
     @Test
     public void testListener() {
-        final Callback<String, Void> listener = new Callback<String, Void>() {
-
-            @Override
-            public Void call(String key) {
-                tmp =  Settings.get(key);
-                return null;
-            }
+        final Callback<String, Void> listener = key -> {
+            tmp =  Settings.get(key);
+            return null;
         };
         Settings.addPropertyChangeListener(listener);
         Settings.set("foo", "bar");

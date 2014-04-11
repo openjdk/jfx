@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,14 +76,12 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private BreakIterator charIterator;
 
-    private InvalidationListener textListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            if (!isEditing()) {
-                // Text changed, but not by user action
-                undoManager.reset();
-            }
-            invalidateBidi();
+    private InvalidationListener textListener = observable -> {
+        if (!isEditing()) {
+            // Text changed, but not by user action
+            undoManager.reset();
         }
+        invalidateBidi();
     };
 
     /**************************************************************************
@@ -118,6 +116,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     protected abstract void deleteChar(boolean previous);
     protected abstract void replaceText(int start, int end, String txt);
     protected abstract void setCaretAnimating(boolean play);
+    protected abstract void deleteFromLineStart();
 
     protected void scrollCharacterToVisible(int index) {
         // TODO this method should be removed when TextAreaSkin
@@ -149,6 +148,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             if ("InputCharacter".equals(name)) defaultKeyTyped(lastEvent);
             else if ("Cut".equals(name)) cut();
             else if ("Paste".equals(name)) paste();
+            else if ("DeleteFromLineStart".equals(name)) deleteFromLineStart();
             else if ("DeletePreviousChar".equals(name)) deletePreviousChar();
             else if ("DeleteNextChar".equals(name)) deleteNextChar();
             else if ("DeletePreviousWord".equals(name)) deletePreviousWord();
@@ -267,7 +267,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
     private Bidi getBidi() {
         if (bidi == null) {
-            bidi = new Bidi(textInputControl.getText(),
+            bidi = new Bidi(textInputControl.textProperty().getValueSafe(),
                             (textInputControl.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
                                     ? Bidi.DIRECTION_RIGHT_TO_LEFT
                                     : Bidi.DIRECTION_LEFT_TO_RIGHT);

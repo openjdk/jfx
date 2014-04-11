@@ -59,17 +59,13 @@ final class SWTTimer extends Timer implements Runnable {
                 display.timerExec(period, this);
             };
         };
-        display.asyncExec(new Runnable () {
-            public void run() {
-                display.timerExec(period, timerRunnable);
-                display.addListener(SWT.Dispose, new Listener () {
-                    public void handleEvent (Event e) {
-                        if (timerRunnable == null) return;
-                        display.timerExec(-1, timerRunnable);
-                        timerRunnable = null;
-                    }
-                });
-            }
+        display.asyncExec(() -> {
+            display.timerExec(period, timerRunnable);
+            display.addListener(SWT.Dispose, e -> {
+                if (timerRunnable == null) return;
+                display.timerExec(-1, timerRunnable);
+                timerRunnable = null;
+            });
         });
         return 1;
     }
@@ -83,12 +79,10 @@ final class SWTTimer extends Timer implements Runnable {
             return;
         }
         final Display display = Display.getDefault();
-        display.asyncExec(new Runnable () {
-            public void run() {
-                if (timerRunnable == null) return;
-                display.timerExec(-1, timerRunnable);
-                timerRunnable = null;
-            }
+        display.asyncExec(() -> {
+            if (timerRunnable == null) return;
+            display.timerExec(-1, timerRunnable);
+            timerRunnable = null;
         });
     }
 

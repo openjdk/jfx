@@ -113,14 +113,12 @@ public class Node_LocalToSceneTransform_Test {
     @Test
     public void shouldBeNotifiedWhenThisTransforms() {
         final Node n = new Rectangle(20, 20);
-        n.localToSceneTransformProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable o) {
-                notified = true;
-                TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
-                    1, 0, 0, 10,
-                    0, 1, 0, 20,
-                    0, 0, 1,  0);
-            }
+        n.localToSceneTransformProperty().addListener(o -> {
+            notified = true;
+            TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
+                1, 0, 0, 10,
+                0, 1, 0, 20,
+                0, 0, 1,  0);
         });
 
         notified = false;
@@ -132,14 +130,12 @@ public class Node_LocalToSceneTransform_Test {
     public void shouldBeNotifiedWhenParentTransforms() {
         final Node n = new Rectangle(20, 20);
         final Group g = new Group(n);
-        n.localToSceneTransformProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable o) {
-                notified = true;
-                TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
-                    1, 0, 0, 10,
-                    0, 1, 0, 20,
-                    0, 0, 1,  0);
-            }
+        n.localToSceneTransformProperty().addListener(o -> {
+            notified = true;
+            TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
+                1, 0, 0, 10,
+                0, 1, 0, 20,
+                0, 0, 1,  0);
         });
 
         notified = false;
@@ -154,20 +150,18 @@ public class Node_LocalToSceneTransform_Test {
         final Group g2 = new Group();
         g2.setTranslateX(100);
 
-        n.localToSceneTransformProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable o) {
-                if (n.getParent() != null) {
-                    notified = true;
-                    TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
-                        1, 0, 0, 100,
-                        0, 1, 0,   0,
-                        0, 0, 1,   0);
-                } else {
-                    TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
-                        1, 0, 0, 0,
-                        0, 1, 0, 0,
-                        0, 0, 1, 0);
-                }
+        n.localToSceneTransformProperty().addListener(o -> {
+            if (n.getParent() != null) {
+                notified = true;
+                TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
+                    1, 0, 0, 100,
+                    0, 1, 0,   0,
+                    0, 0, 1,   0);
+            } else {
+                TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
+                    1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0);
             }
         });
 
@@ -184,18 +178,16 @@ public class Node_LocalToSceneTransform_Test {
         g.setTranslateX(50);
         g2.setTranslateX(100);
 
-        n.localToSceneTransformProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable o) {
-                if (!notified) {
-                    notified = true;
-                    TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
-                        1, 0, 0, 60,
-                        0, 1, 0,  0,
-                        0, 0, 1,  0);
-                } else {
-                    // enable next invalidation
-                    n.getLocalToSceneTransform();
-                }
+        n.localToSceneTransformProperty().addListener(o -> {
+            if (!notified) {
+                notified = true;
+                TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
+                    1, 0, 0, 60,
+                    0, 1, 0,  0,
+                    0, 0, 1,  0);
+            } else {
+                // enable next invalidation
+                n.getLocalToSceneTransform();
             }
         });
 
@@ -214,10 +206,8 @@ public class Node_LocalToSceneTransform_Test {
         final Group p1 = new Group(n);
         final Group p2 = new Group(p1);
 
-        InvalidationListener lstnr = new InvalidationListener() {
-            public void invalidated(Observable o) {
-                n.getLocalToSceneTransform();
-            }
+        InvalidationListener lstnr = o -> {
+            n.getLocalToSceneTransform();
         };
 
         n.localToSceneTransformProperty().addListener(lstnr);
@@ -247,16 +237,48 @@ public class Node_LocalToSceneTransform_Test {
     }
 
     @Test
+    public void shouldUnregisterListenersWhenNotNeededButStillUpdate() {
+        final Node n = new Rectangle(20, 20);
+        final Group p1 = new Group(n);
+        final Group p2 = new Group(p1);
+
+        InvalidationListener lstnr = o -> {
+            n.getLocalToSceneTransform();
+        };
+
+        n.localToSceneTransformProperty().addListener(lstnr);
+
+        // with listener on leave, parents update
+        p2.setTranslateX(30);
+        TransformHelper.assertMatrix(p1.getCurrentLocalToSceneTransformState(),
+                1, 0, 0, 30,
+                0, 1, 0,  0,
+                0, 0, 1,  0);
+
+        // without listener on leave, parents don't update immediately
+        n.localToSceneTransformProperty().removeListener(lstnr);
+        p2.setTranslateX(60);
+        TransformHelper.assertMatrix(p1.getCurrentLocalToSceneTransformState(),
+                1, 0, 0, 30,
+                0, 1, 0,  0,
+                0, 0, 1,  0);
+
+        // ... but must do it on request:
+        TransformHelper.assertMatrix(p1.getLocalToSceneTransform(),
+                1, 0, 0, 60,
+                0, 1, 0,  0,
+                0, 0, 1,  0);
+    }
+
+    @Test
     public void shouldUnregisterListenersWhenReparent() {
         final Node n = new Rectangle(20, 20);
         final Group p1 = new Group(n);
         final Group p2 = new Group(p1);
         final Group g = new Group();
 
-        InvalidationListener lstnr = new InvalidationListener() {
-            public void invalidated(Observable o) {
-                n.getLocalToSceneTransform();
-            }
+        InvalidationListener lstnr = o -> {
+            n.getLocalToSceneTransform();
         };
 
         n.localToSceneTransformProperty().addListener(lstnr);
@@ -292,15 +314,11 @@ public class Node_LocalToSceneTransform_Test {
         final Group p2 = new Group(p1);
         final Group g = new Group();
 
-        InvalidationListener nlstnr = new InvalidationListener() {
-            public void invalidated(Observable o) {
-                n.getLocalToSceneTransform();
-            }
+        InvalidationListener nlstnr = o -> {
+            n.getLocalToSceneTransform();
         };
-        InvalidationListener plstnr = new InvalidationListener() {
-            public void invalidated(Observable o) {
-                p1.getLocalToSceneTransform();
-            }
+        InvalidationListener plstnr = o -> {
+            p1.getLocalToSceneTransform();
         };
 
         n.localToSceneTransformProperty().addListener(nlstnr);
@@ -385,14 +403,12 @@ public class Node_LocalToSceneTransform_Test {
         g.setTranslateX(50);
 
         // one of the nodes has listener
-        n.localToSceneTransformProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable o) {
-                notified = true;
-                TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
-                    1, 0, 0, 60,
-                    0, 1, 0,  0,
-                    0, 0, 1,  0);
-            }
+        n.localToSceneTransformProperty().addListener(o -> {
+            notified = true;
+            TransformHelper.assertMatrix(n.getLocalToSceneTransform(),
+                1, 0, 0, 60,
+                0, 1, 0,  0,
+                0, 0, 1,  0);
         });
 
         // the other node reports the value correctly

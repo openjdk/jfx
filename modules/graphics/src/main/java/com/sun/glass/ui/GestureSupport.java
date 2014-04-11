@@ -372,36 +372,32 @@ public final class GestureSupport {
 
     public TouchInputSupport.TouchCountListener createTouchCountListener() {
         Application.checkEventThread();
-        return new TouchInputSupport.TouchCountListener() {
+        return (sender, view, modifiers, isDirect) -> {
+            final boolean isInertia = false;
 
-            public void touchCountChanged(TouchInputSupport sender, View view,
-                                          int modifiers, boolean isDirect) {
-                final boolean isInertia = false;
+            if (isScrolling()) {
+                handleScrollingEnd(view, modifiers, sender.getTouchCount(),
+                                   isDirect, isInertia,
+                                   View.GESTURE_NO_VALUE,
+                                   View.GESTURE_NO_VALUE,
+                                   View.GESTURE_NO_VALUE,
+                                   View.GESTURE_NO_VALUE);
+            }
 
-                if (isScrolling()) {
-                    handleScrollingEnd(view, modifiers, sender.getTouchCount(),
-                                       isDirect, isInertia,
-                                       View.GESTURE_NO_VALUE,
-                                       View.GESTURE_NO_VALUE,
-                                       View.GESTURE_NO_VALUE,
-                                       View.GESTURE_NO_VALUE);
-                }
+            if (isRotating()) {
+                handleRotationEnd(view, modifiers, isDirect, isInertia,
+                                  View.GESTURE_NO_VALUE,
+                                  View.GESTURE_NO_VALUE,
+                                  View.GESTURE_NO_VALUE,
+                                  View.GESTURE_NO_VALUE);
+            }
 
-                if (isRotating()) {
-                    handleRotationEnd(view, modifiers, isDirect, isInertia,
-                                      View.GESTURE_NO_VALUE,
-                                      View.GESTURE_NO_VALUE,
-                                      View.GESTURE_NO_VALUE,
-                                      View.GESTURE_NO_VALUE);
-                }
-
-                if (isZooming()) {
-                    handleZoomingEnd(view, modifiers, isDirect, isInertia,
-                                     View.GESTURE_NO_VALUE,
-                                     View.GESTURE_NO_VALUE,
-                                     View.GESTURE_NO_VALUE,
-                                     View.GESTURE_NO_VALUE);
-                }
+            if (isZooming()) {
+                handleZoomingEnd(view, modifiers, isDirect, isInertia,
+                                 View.GESTURE_NO_VALUE,
+                                 View.GESTURE_NO_VALUE,
+                                 View.GESTURE_NO_VALUE,
+                                 View.GESTURE_NO_VALUE);
             }
         };
     }

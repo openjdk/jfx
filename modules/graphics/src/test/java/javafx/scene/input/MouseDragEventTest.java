@@ -757,45 +757,31 @@ public class MouseDragEventTest {
             targetParent = new HandledNode(targetParentNode);
             root = new HandledNode(rootNode);
 
-            sourceNode.setOnDragDetected(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    sourceNode.startFullDrag();
-                }
-            });
+            sourceNode.setOnDragDetected(event -> sourceNode.startFullDrag());
 
-            belowSourceNode.setOnDragDetected(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    sourceParentNode.startFullDrag();
-                }
-            });
+            belowSourceNode.setOnDragDetected(event -> sourceParentNode.startFullDrag());
 
             if (sourceDragged) {
-                sourceNode.setOnMousePressed(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        anchorX = event.getSceneX();
-                        anchorY = event.getSceneY();
-                        if (sourceMouseTransparent) {
-                            sourceNode.setMouseTransparent(true);
-                        }
+                sourceNode.setOnMousePressed(event -> {
+                    anchorX = event.getSceneX();
+                    anchorY = event.getSceneY();
+                    if (sourceMouseTransparent) {
+                        sourceNode.setMouseTransparent(true);
                     }
                 });
 
-                sourceNode.setOnMouseDragged(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        sourceNode.setTranslateX(sourceNode.getTranslateX()
-                                + event.getSceneX() - anchorX);
-                        sourceNode.setTranslateY(sourceNode.getTranslateY()
-                                + event.getSceneY() - anchorY);
-                        anchorX = event.getSceneX();
-                        anchorY = event.getSceneY();
-                    }
+                sourceNode.setOnMouseDragged(event -> {
+                    sourceNode.setTranslateX(sourceNode.getTranslateX()
+                            + event.getSceneX() - anchorX);
+                    sourceNode.setTranslateY(sourceNode.getTranslateY()
+                            + event.getSceneY() - anchorY);
+                    anchorX = event.getSceneX();
+                    anchorY = event.getSceneY();
                 });
 
-                sourceNode.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent event) {
-                        if (sourceMouseTransparent) {
-                            sourceNode.setMouseTransparent(false);
-                        }
+                sourceNode.setOnMouseReleased(event -> {
+                    if (sourceMouseTransparent) {
+                        sourceNode.setMouseTransparent(false);
                     }
                 });
             }

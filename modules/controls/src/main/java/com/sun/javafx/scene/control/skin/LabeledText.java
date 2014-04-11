@@ -289,13 +289,15 @@ public class LabeledText extends Text {
 
             //
             // if propOrigin is null, then the property is in init state
-            // if origin is null, then some code is initializing this prop
+            // if newOrigin is null, then CSS is resetting this property -
+            //    but don't let CSS overwrite a user set value
             // if propOrigin is greater than origin, then the style should
             //    not override
             //
             if (propOrigin == null ||
-                   (newOrigin != null &&
-                    propOrigin.compareTo(newOrigin) <= 0)) {
+                    (newOrigin != null
+                            ? propOrigin.compareTo(newOrigin) <= 0
+                            : propOrigin != StyleOrigin.USER)) {
                 super.applyStyle(newOrigin, value);
                 property.applyStyle(newOrigin, value);
             }

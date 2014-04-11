@@ -57,7 +57,6 @@ jmethodID jWindowNotifyFocusUngrab = NULL;
 jmethodID jWindowNotifyFocusDisabled = NULL;
 jmethodID jWindowNotifyDestroy = NULL;
 jmethodID jWindowNotifyDelegatePtr = NULL;
-jmethodID jWindowNotifyInitAccessibilityPtr = NULL;
 
 jmethodID jViewNotifyEvent = NULL;
 jmethodID jViewNotifyRepaint = NULL;
@@ -73,6 +72,7 @@ jmethodID jViewNotifyDragOver = NULL;
 jmethodID jViewNotifyDragLeave  = NULL;
 jmethodID jViewNotifyDragDrop = NULL;
 jmethodID jViewNotifyDragEnd = NULL;
+jmethodID jViewGetAccessible = NULL;
 
 jmethodID jScreenNotifySettingsChanged = NULL;
 

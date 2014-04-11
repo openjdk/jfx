@@ -471,11 +471,7 @@ public class TreeTableCellTest {
             }
         };
         TreeTableColumn col = new TreeTableColumn("TEST");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
-            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures param) {
-                return null;
-            }
-        });
+        col.setCellValueFactory(param -> null);
         tree.getColumns().add(col);
         cell.updateTreeTableColumn(col);
         cell.updateTreeTableView(tree);

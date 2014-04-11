@@ -15,7 +15,7 @@ import org.w3c.dom.Document;
 public class BindingTest extends TestBase {
     
     @Test public void testWebView() throws InterruptedException {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             WebView main = getView();
             WebView test = new WebView();
 
@@ -40,7 +40,7 @@ public class BindingTest extends TestBase {
             main.setMaxWidth(99.9);
             main.setPrefWidth(88.8);
             main.setMinWidth(77.7);
-            
+
             assertEquals("WebView.contextMenuEnabled",
                     main.isContextMenuEnabled(), test.isContextMenuEnabled());
             assertEquals("WebView.fontScale",
@@ -68,22 +68,22 @@ public class BindingTest extends TestBase {
                     main.getEngine().getPage().getZoomFactor(true),
                     test.getEngine().getPage().getZoomFactor(true),
                     0.0);
-        }});
+        });
     }
 
     @Test public void testWebEngineWritableProperties() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             WebEngine web = getEngine();
             WebEngine test = new WebEngine();
-            
+
             test.javaScriptEnabledProperty().bind(web.javaScriptEnabledProperty());
             test.userAgentProperty().bind(web.userAgentProperty());
             test.userStyleSheetLocationProperty().bind(web.userStyleSheetLocationProperty());
-            
+
             web.setJavaScriptEnabled(false);
             web.setUserAgent("JavaFX/WebView");
             web.setUserStyleSheetLocation("");
-            
+
             assertEquals("WebEngine.javaScriptEnabled",
                     web.isJavaScriptEnabled(), test.isJavaScriptEnabled());
             assertEquals("WebEngine.userAgent",
@@ -91,7 +91,7 @@ public class BindingTest extends TestBase {
             assertEquals("WebEngine.userStyleSheetLocation",
                     web.getUserStyleSheetLocation(), test.getUserStyleSheetLocation());
 
-        }});
+        });
     }
     
     @Test public void testWebEngineReadonlyProperties() {

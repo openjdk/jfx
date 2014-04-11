@@ -30,41 +30,28 @@ import java.util.Stack;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
-import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import com.sun.javafx.Logging;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 
 import static com.sun.javafx.scene.traversal.Direction.*;
 import java.util.function.Function;
-import javafx.geometry.Bounds;
 
 
 public class Hueristic2D implements Algorithm {
 
-    PlatformLogger focusLogger;
-
     Hueristic2D() {
-        focusLogger = Logging.getFocusLogger();
     }
 
     @Override
-    public Node traverse(Node node, Direction dir, TraversalEngine engine) {
+    public Node select(Node node, Direction dir, TraversalContext context) {
         Node newNode = null;
 
-        cacheTraversal(node, dir, engine);
+        cacheTraversal(node, dir);
 
-        if (focusLogger.isLoggable(Level.FINER)) {
-            focusLogger.finer("old focus owner : "+node+", bounds : "+engine.getBounds(node));
-        }
-
-        if (NEXT.equals(dir)) {
-            newNode = findNextFocusablePeer(node);
+        if (NEXT.equals(dir) || NEXT_IN_LINE.equals(dir)) {
+            newNode = TabOrderHelper.findNextFocusablePeer(node, context.getRoot(), dir == NEXT);
         }
         else if (PREVIOUS.equals(dir)) {
-            newNode = (findPreviousFocusablePeer(node));
+            newNode = TabOrderHelper.findPreviousFocusablePeer(node, context.getRoot());
         }
         else if (UP.equals(dir) || DOWN.equals(dir) || LEFT.equals(dir) || RIGHT.equals(dir) ) {
             /*
@@ -86,25 +73,16 @@ public class Hueristic2D implements Algorithm {
                     switch (dir) {
                         case UP:
                         case DOWN:
-                            newNode = getNearestNodeUpOrDown(currentB, cachedB, engine, node, dir);
+                            newNode = getNearestNodeUpOrDown(currentB, cachedB, context, dir);
                             break;
                         case LEFT:
                         case RIGHT:
-                            newNode = getNearestNodeLeftOrRight(currentB, cachedB, engine, node, dir);
+                            newNode = getNearestNodeLeftOrRight(currentB, cachedB, context, dir);
                             break;
                         default:
                             break;
                     }
                 }
-            }
-        }
-
-        if (focusLogger.isLoggable(Level.FINER)) {
-            if (newNode != null) {
-                focusLogger.finer("new focus owner : "+newNode+", bounds : "+engine.getBounds(newNode));
-            }
-            else {
-                focusLogger.finer("no focus transfer");
             }
         }
 
@@ -122,172 +100,14 @@ public class Hueristic2D implements Algorithm {
         return newNode;
     }
 
-    private Node findNextFocusablePeer(Node node) {
-        Node startNode = node;
-        Node newNode = null;
-        List<Node> parentNodes = findPeers(startNode);
-        if (parentNodes == null) {
-            if (focusLogger.isLoggable(Level.FINER)) {
-                focusLogger.finer("can't find peers for a node without a parent");
-            }
-            return null;
-        }
-
-        int ourIndex = parentNodes.indexOf(startNode);
-
-        if (ourIndex == -1) {
-            if (focusLogger.isLoggable(Level.FINER)) {
-                focusLogger.finer("index not founds, no focus transfer");
-            }
-            return null;
-        }
-
-        newNode = findNextFocusableInList(parentNodes, ourIndex+1);
-
-        /*
-        ** we've reached the end of the peer nodes, and none have been selected,
-        ** time to look at our parents peers.....
-        */
-        while (newNode == null && startNode != null) {
-            List<Node> peerNodes;
-            int parentIndex;
-
-            Parent parent = startNode.getParent();
-            if (parent != null) {
-                peerNodes = findPeers(parent);
-                if (peerNodes != null) {
-                    parentIndex = peerNodes.indexOf(parent);
-                    newNode = findNextFocusableInList(peerNodes, parentIndex+1);
-                }
-            }
-            startNode = parent;
-        }
-
-        if (newNode == null) {
-            /*
-            ** find the top-most parent which is not at it's end-of-list
-            */
-            Parent parent = null;
-            Parent p1 = node.getParent();
-            while (p1 != null) {
-                parent = p1;
-                p1 = p1.getParent();
-            }
-            parentNodes = parent.getChildrenUnmodifiable();
-            newNode = findNextFocusableInList(parentNodes, 0);
-        }
-
-        return newNode;
+    @Override
+    public Node selectFirst(TraversalContext context) {
+        return TabOrderHelper.getFirstTargetNode(context.getRoot());
     }
 
-    private Node findNextFocusableInList(List<Node> nodeList, int startIndex) {
-        Node newNode = null;
-
-        for (int i = startIndex ; i < nodeList.size() ; i++) {
-
-            Node nextNode = nodeList.get(i);
-            if (nextNode.isFocusTraversable() == true && nextNode.isDisabled() == false && nextNode.impl_isTreeVisible() == true) {
-                newNode = nextNode;
-                break;
-            }
-            else if (nextNode instanceof javafx.scene.Parent) {
-                List<Node> nextNodesList = ((Parent)nextNode).getChildrenUnmodifiable();
-                if (nextNodesList.size() > 0) {
-                    newNode = findNextFocusableInList(nextNodesList, 0);
-                    if (newNode != null) {
-                        break;
-                    }
-                }
-            }
-        }
-        return newNode;
-    }
-
-    private Node findPreviousFocusablePeer(Node node) {
-        Node startNode = node;
-        Node newNode = null;
-        List<Node> parentNodes = findPeers(startNode);
-
-        int ourIndex = parentNodes.indexOf(startNode);
-
-        if (ourIndex == -1) {
-            if (focusLogger.isLoggable(Level.FINER)) {
-                focusLogger.finer("index not founds, no focus transfer");
-            }
-            return null;
-        }
-
-        newNode = findPreviousFocusableInList(parentNodes, ourIndex-1);
-
-        /*
-        ** we've reached the end of the peer nodes, and none have been selected,
-        ** time to look at our parents peers.....
-        */
-        while (newNode == null && startNode != null) {
-            List<Node> peerNodes;
-            int parentIndex;
-
-            Parent parent = startNode.getParent();
-            if (parent != null) {
-                peerNodes = findPeers(parent);
-                if (peerNodes != null) {
-                    parentIndex = peerNodes.indexOf(parent);
-                    newNode = findPreviousFocusableInList(peerNodes, parentIndex-1);
-                }
-            }
-            startNode = parent;
-        }
-
-        if (newNode == null) {
-            /*
-            ** find the top-most parent which is not at it's end-of-list
-            */
-            Parent parent = null;
-            Parent p1 = node.getParent();
-            while (p1 != null) {
-                parent = p1;
-                p1 = p1.getParent();
-            }
-            parentNodes = parent.getChildrenUnmodifiable();
-            newNode = findPreviousFocusableInList(parentNodes, parentNodes.size()-1);
-        }
-
-        return newNode;
-    }
-
-
-    private Node findPreviousFocusableInList(List<Node> nodeList, int startIndex) {
-        Node newNode = null;
-
-        for (int i = startIndex ; i >= 0 ; i--) {
-            Node prevNode = nodeList.get(i);
-            if (prevNode.isFocusTraversable() == true && prevNode.isDisabled() == false && prevNode.impl_isTreeVisible() == true) {
-                newNode = prevNode;
-                break;
-            }
-            else if (prevNode instanceof javafx.scene.Parent) {
-                List<Node> prevNodesList = ((Parent)prevNode).getChildrenUnmodifiable();
-                if (prevNodesList.size() > 0) {
-                    newNode = findPreviousFocusableInList(prevNodesList, prevNodesList.size()-1);
-                    if (newNode != null) {
-                        break;
-                    }
-                }
-            }
-        }
-        return newNode;
-    }
-
-    private List<Node> findPeers(Node node) {
-        List<Node> parentNodes = null;
-        Parent parent = node.getParent();
-        /*
-        ** check that we haven't hit the top-level
-        */
-        if (parent != null) {
-            parentNodes = parent.getChildrenUnmodifiable();
-        }
-        return parentNodes;
+    @Override
+    public Node selectLast(TraversalContext context) {
+        return TabOrderHelper.getLastTargetNode(context.getRoot());
     }
 
     private boolean isOnAxis(Direction dir, Bounds cur, Bounds tgt) {
@@ -389,7 +209,7 @@ public class Hueristic2D implements Algorithm {
     protected Node cacheLastTraversalNode = null;
     protected Stack<Node> traversalNodeStack = new Stack();
 
-    private void cacheTraversal(Node node, Direction dir, TraversalEngine engine) {
+    private void cacheTraversal(Node node, Direction dir) {
         if (!traversalNodeStack.empty() && node != cacheLastTraversalNode) {
             /*
             ** we didn't get here by arrow key,
@@ -432,25 +252,13 @@ public class Hueristic2D implements Algorithm {
         }
     }
     
-    private static final Function<Bounds, Double> BOUNDS_TOP_SIDE = new Function<Bounds, Double>() {
+    private static final Function<Bounds, Double> BOUNDS_TOP_SIDE = t -> t.getMinY();
 
-        @Override
-        public Double apply(Bounds t) {
-            return t.getMinY();
-        }
-    };
+    private static final Function<Bounds, Double> BOUNDS_BOTTOM_SIDE = t -> t.getMaxY();
 
-    private static final Function<Bounds, Double> BOUNDS_BOTTOM_SIDE = new Function<Bounds, Double>() {
+    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
 
-        @Override
-        public Double apply(Bounds t) {
-            return t.getMaxY();
-        }
-    };
-
-    protected Node getNearestNodeUpOrDown(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Direction dir) {
-
-        List<Node> nodes = engine.getAllTargetNodes();
+        List<Node> nodes = context.getAllTargetNodes();
         
         Function<Bounds, Double> ySideInDirection = dir == DOWN ? BOUNDS_BOTTOM_SIDE : BOUNDS_TOP_SIDE;
         Function<Bounds, Double> ySideInOpositeDirection = dir == DOWN ? BOUNDS_TOP_SIDE : BOUNDS_BOTTOM_SIDE;
@@ -642,30 +450,6 @@ public class Hueristic2D implements Algorithm {
             nearestNodeAverage.originLeftCornerDistance = originLeftCorner2D.distance(nearestNodeAverage.bounds.getMinX(), ySideInOpositeDirection.apply(nearestNodeAverage.bounds));
         }
 
-        if (focusLogger.isLoggable(Level.FINER)) {
-            if (nearestNodeOriginSimple2D != null) {
-                focusLogger.finer("nearestNodeOriginSimple2D.node : "+nearestNodeOriginSimple2D.node);
-            }
-            if (nearestNodeCurrentSimple2D != null) {
-                focusLogger.finer("nearestNodeCurrentSimple2D.node : "+nearestNodeCurrentSimple2D.node);
-            }
-            if (nearestNodeOnOriginX != null) {
-                focusLogger.finer("nearestNodeOnOriginX.node : "+nearestNodeOnOriginX.node);
-            }
-            if (nearestNodeOnCurrentX != null) {
-                focusLogger.finer("nearestNodeOnCurrentX.node : "+nearestNodeOnCurrentX.node);
-            }
-            if (nearestNodeAverage != null) {
-                focusLogger.finer("nearestNodeAverageUp.node : "+nearestNodeAverage.node);
-            }
-            if (nearestNodeLeft != null) {
-                focusLogger.finer("nearestNodeTopLeft.node : "+nearestNodeLeft.node);
-            }
-            if (nearestNodeAnythingAnywhere != null) {
-                focusLogger.finer("nearestNodeAnythingAnywhereUp.node : "+nearestNodeAnythingAnywhere.node);
-            }
-        }
-
         if (nearestNodeOnOriginX != null) {
             /*
             ** there's a preference, all else being equal, to return nearestNodeOnOriginX
@@ -762,25 +546,13 @@ public class Hueristic2D implements Algorithm {
         return null;
     }
     
-    private static final Function<Bounds, Double> BOUNDS_LEFT_SIDE = new Function<Bounds, Double>() {
-
-        @Override
-        public Double apply(Bounds t) {
-            return t.getMinX();
-        }
-    };
+    private static final Function<Bounds, Double> BOUNDS_LEFT_SIDE = t -> t.getMinX();
     
-    private static final Function<Bounds, Double> BOUNDS_RIGHT_SIDE = new Function<Bounds, Double>() {
+    private static final Function<Bounds, Double> BOUNDS_RIGHT_SIDE = t -> t.getMaxX();
 
-        @Override
-        public Double apply(Bounds t) {
-            return t.getMaxX();
-        }
-    };
+    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, TraversalContext context, Direction dir) {
 
-    protected Node getNearestNodeLeftOrRight(Bounds currentB, Bounds originB, TraversalEngine engine, Node node, Direction dir) {
-
-        List<Node> nodes = engine.getAllTargetNodes();
+        List<Node> nodes = context.getAllTargetNodes();
         
         Function<Bounds, Double> xSideInDirection = dir == LEFT ? BOUNDS_LEFT_SIDE : BOUNDS_RIGHT_SIDE;
         Function<Bounds, Double> xSideInOpositeDirection = dir == LEFT ? BOUNDS_RIGHT_SIDE : BOUNDS_LEFT_SIDE;
@@ -971,30 +743,6 @@ public class Hueristic2D implements Algorithm {
             cacheStartTraversalDirection = null;
             reverseDirection = false;
             traversalNodeStack.clear();
-        }
-
-        if (focusLogger.isLoggable(Level.FINER)) {
-            if (nearestNodeOriginSimple2D != null) {
-                focusLogger.finer("nearestNodeOriginSimple2D.node : "+nearestNodeOriginSimple2D.node);
-            }
-            if (nearestNodeCurrentSimple2D != null) {
-                focusLogger.finer("nearestNodeCurrentSimple2D.node : "+nearestNodeCurrentSimple2D.node);
-            }
-            if (nearestNodeOnOriginY != null) {
-                focusLogger.finer("nearestNodeOnOriginY.node : "+nearestNodeOnOriginY.node);
-            }
-            if (nearestNodeOnCurrentY != null) {
-                focusLogger.finer("nearestNodeOnCurrentY.node : "+nearestNodeOnCurrentY.node);
-            }
-            if (nearestNodeAverage != null) {
-                focusLogger.finer("nearestNodeAverageLeft.node : "+nearestNodeAverage.node);
-            }
-            if (nearestNodeTopLeft != null) {
-                focusLogger.finer("nearestNodeTopLeft.node : "+nearestNodeTopLeft.node);
-            }
-            if (nearestNodeAnythingAnywhereLeft != null) {
-                focusLogger.finer("nearestNodeAnythingAnywhereLeft.node : "+nearestNodeAnythingAnywhereLeft.node);
-            }
         }
 
         if (nearestNodeOnOriginY != null) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css.parser;
 
+import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.scene.effect.BlurType;
@@ -157,16 +158,7 @@ final public class CSSParser {
         sourceOfInlineStyle = styleable;
     }
 
-    private static final PlatformLogger LOGGER;
-    static {
-        LOGGER = com.sun.javafx.Logging.getCSSLogger();
-        final Level level = LOGGER.level();
-        if (level == null || (
-            level.compareTo(Level.WARNING) > 0 &&
-            level != Level.OFF)) {
-            LOGGER.setLevel(Level.WARNING);
-        }
-    }
+    private static final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
 
     private static final class ParseException extends Exception {
         ParseException(String message) {
@@ -702,14 +694,24 @@ final public class CSSParser {
         }
 
         if (root.token.getType() == CSSLexer.IDENT) {
-            if ("inherit".equalsIgnoreCase(root.token.getText())) {
+            final String txt = root.token.getText();
+            if ("inherit".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("inherit", null);
-            } else if ("null".equalsIgnoreCase(root.token.getText())) {
+            } else if ("null".equalsIgnoreCase(txt)
+                    || "none".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("null", null);
             }
         }
-
-        if ("-fx-background-color".equals(property)) {
+        if ("-fx-fill".equals(property)) {
+             ParsedValueImpl pv = parse(root);
+            if (pv.getConverter() == StyleConverter.getUrlConverter()) {
+                // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
+                // Pending RT-33574
+                pv = new ParsedValueImpl(new ParsedValue[] {pv},PaintConverter.ImagePatternConverter.getInstance());
+            }
+            return pv;
+        }
+        else if ("-fx-background-color".equals(property)) {
             return parsePaintLayers(root);
         } else if ("-fx-background-image".equals(prop)) {
             return parseURILayers(root);
@@ -850,9 +852,11 @@ final public class CSSParser {
             final String text = str.toLowerCase(Locale.ROOT);
             if ("ladder".equals(text)) {
                 value = ladder(root);
-            } else if ("linear".equals(text)) {
+            } else if ("linear".equals(text) && (root.nextInSeries) != null) {
+                // if nextInSeries is null, then assume this is _not_ an old-style linear gradient
                 value = linearGradient(root);
-            } else if ("radial".equals(text)) {
+            } else if ("radial".equals(text) && (root.nextInSeries) != null) {
+                // if nextInSeries is null, then assume this is _not_ an old-style radial gradient
                 value = radialGradient(root);
             } else if ("true".equals(text)) {
                 // TODO: handling of boolean is really bogus

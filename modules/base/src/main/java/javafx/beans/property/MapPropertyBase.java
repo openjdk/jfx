@@ -50,13 +50,10 @@ import javafx.collections.*;
  */
 public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
 
-    private final MapChangeListener<K, V> mapChangeListener = new MapChangeListener<K, V>() {
-        @Override
-        public void onChanged(Change<? extends K, ? extends V> change) {
-            invalidateProperties();
-            invalidated();
-            fireValueChangedEvent(change);
-        }
+    private final MapChangeListener<K, V> mapChangeListener = change -> {
+        invalidateProperties();
+        invalidated();
+        fireValueChangedEvent(change);
     };
 
     private ObservableMap<K, V> value;

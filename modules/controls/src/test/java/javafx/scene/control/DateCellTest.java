@@ -200,18 +200,18 @@ public class DateCellTest {
         assertFalse(cell.isEditing());
     }
 
-    @Test public void updatingACellBeingEditedResultsInFirstACancelOfEdit() {
+    @Test public void updatingACellBeingEditedDoesNotResultInACancelOfEdit() {
         cell.updateItem(today, false);
         cell.startEdit();
         cell.updateItem(tomorrow, false);
-        assertFalse(cell.isEditing());
+        assertTrue(cell.isEditing());
     }
 
     @Test public void updatingACellBeingEditedResultsInFirstACancelOfEdit2() {
         cell.updateItem(today, false);
         cell.startEdit();
         cell.updateItem(null, true);
-        assertFalse(cell.isEditing());
+        assertTrue(cell.isEditing());
     }
 
     @Test public void startEditWhenEditableIsTrue() {

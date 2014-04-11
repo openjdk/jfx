@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
+
+import javafx.scene.accessibility.Accessible;
 
 public abstract class Application {
 
@@ -95,12 +97,10 @@ public abstract class Application {
     private static Application application;
     private static Thread eventThread;
     private static final boolean disableThreadChecks =
-        AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                final String str =
-                        System.getProperty("glass.disableThreadChecks", "false");
-                return "true".equalsIgnoreCase(str);
-            }
+        AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            final String str =
+                    System.getProperty("glass.disableThreadChecks", "false");
+            return "true".equalsIgnoreCase(str);
         });
     
     // May be called on any thread.
@@ -149,11 +149,9 @@ public abstract class Application {
         // on Linux - TODO
         //application.name = DEFAULT_NAME; // default
         try {
-            application.runLoop(new Runnable() {
-                @Override public void run() {
-                    Screen.initScreens();
-                    launchable.run();
-                }
+            application.runLoop(() -> {
+                Screen.initScreens();
+                launchable.run();
             });
         } catch (Throwable t) {
             t.printStackTrace();
@@ -216,7 +214,8 @@ public abstract class Application {
      */
     public String getDataDirectory() {
         checkEventThread();
-        return System.getProperty("user.home") + File.separator + "." + name + File.separator;
+        String userHome = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("user.home"));
+        return userHome + File.separator + "." + name + File.separator;
     }
 
     private void notifyWillFinishLaunching() {
@@ -362,6 +361,14 @@ public abstract class Application {
     public boolean hasWindowManager() {
         //checkEventThread(); // Prism (Mac)
         return true; // overridden in platform application class
+    }
+
+    /**
+     * Notifies the Application that rendering has completed for current pulse.
+     *
+     * This is called on the render thread.
+     */
+    public void notifyRenderingFinished() {
     }
 
     public void terminate() {
@@ -641,6 +648,8 @@ public abstract class Application {
     public final EventLoop createEventLoop() {
         return new EventLoop();
     }
+
+    public PlatformAccessible createAccessible(Accessible accessible) { return null; }
 
     protected abstract FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,
                                                      boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex);

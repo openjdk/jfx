@@ -89,11 +89,9 @@ final class WCImageDecoderImpl extends WCImageDecoder {
                     };
                 }
             };
-            this.loader.valueProperty().addListener(new ChangeListener<ImageFrame[]>() {
-                public void changed(ObservableValue<? extends ImageFrame[]> ov, ImageFrame[] old, ImageFrame[] frames) {
-                    if ((frames != null) && (loader != null)) {
-                        setFrames(frames);
-                    }
+            this.loader.valueProperty().addListener((ov, old, frames1) -> {
+                if ((frames != null) && (loader != null)) {
+                    setFrames(frames);
                 }
             });
         }

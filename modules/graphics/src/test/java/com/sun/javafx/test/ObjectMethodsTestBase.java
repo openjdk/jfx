@@ -132,113 +132,89 @@ public abstract class ObjectMethodsTestBase {
     }
 
     public static final TestInstance EQUAL_OBJECTS_EQUALS_TEST =
-            new TestInstance() {
-                @Override
-                public void test(final Object[] objects) {
-                    for (int i = 0; i < objects.length; ++i) {
-                        for (int j = 0; j < objects.length; ++j) {
-                            assertEquals(objects[i], objects[j]);
-                        }
-                        assertFalse(objects[i].equals(null));
+            objects -> {
+                for (int i = 0; i < objects.length; ++i) {
+                    for (int j = 0; j < objects.length; ++j) {
+                        assertEquals(objects[i], objects[j]);
                     }
+                    assertFalse(objects[i].equals(null));
                 }
             };
 
     public static final TestInstance EQUAL_OBJECTS_HASHCODE_TEST =
-            new TestInstance() {
-                @Override
-                public void test(final Object[] objects) {
-                    for (int i = 0; i < objects.length; ++i) {
-                        for (int j = 0; j < objects.length; ++j) {
-                            assertEquals(objects[i].hashCode(),
-                                         objects[j].hashCode());
-                        }
+            objects -> {
+                for (int i = 0; i < objects.length; ++i) {
+                    for (int j = 0; j < objects.length; ++j) {
+                        assertEquals(objects[i].hashCode(),
+                                     objects[j].hashCode());
                     }
                 }
             };
             
     public static final TestInstance EQUAL_OBJECTS_TOSTRING_TEST =
-            new TestInstance() {
-                @Override
-                public void test(final Object[] objects) {
-                    for (int i = 0; i < objects.length; ++i) {
-                        for (int j = 0; j < objects.length; ++j) {
-                            assertEquals(objects[i].toString(),
-                                         objects[j].toString());
-                        }
+            objects -> {
+                for (int i = 0; i < objects.length; ++i) {
+                    for (int j = 0; j < objects.length; ++j) {
+                        assertEquals(objects[i].toString(),
+                                     objects[j].toString());
                     }
                 }
             };
 
     public static final TestInstance DIFFERENT_OBJECTS_EQUALS_TEST =
-            new TestInstance() {
-                @Override
-                public void test(final Object[] objects) {
-                    for (int i = 0; i < objects.length; ++i) {
-                        for (int j = 0; j < objects.length; ++j) {
-                            if (i != j) {
-                                assertFalse(objects[i].equals(objects[j]));
-                            }
+            objects -> {
+                for (int i = 0; i < objects.length; ++i) {
+                    for (int j = 0; j < objects.length; ++j) {
+                        if (i != j) {
+                            assertFalse(objects[i].equals(objects[j]));
                         }
-                        assertFalse(objects[i].equals(null));
                     }
+                    assertFalse(objects[i].equals(null));
                 }
             };
 
     public static final TestInstance DIFFERENT_OBJECTS_EASY_HASHCODE_TEST =
-            new TestInstance() {
-                @Override
-                public void test(final Object[] objects) {
-                    // if objects are different, their hashcodes can return the
-                    // same or different values
-                }
+            objects -> {
+                // if objects are different, their hashcodes can return the
+                // same or different values
             };
 
     public static final TestInstance DIFFERENT_OBJECTS_MEDIUM_HASHCODE_TEST =
-            new TestInstance() {
-                @Override
-                public void test(final Object[] objects) {
-                    // we require that at least one tested object returns a
-                    // different hash code value
-                    final int firstHashCodeValue = objects[0].hashCode();
-                    for (int i = 1; i < objects.length; ++i) {
-                        if (objects[i].hashCode() != firstHashCodeValue) {
-                            return;
-                        }
+            objects -> {
+                // we require that at least one tested object returns a
+                // different hash code value
+                final int firstHashCodeValue = objects[0].hashCode();
+                for (int i = 1; i < objects.length; ++i) {
+                    if (objects[i].hashCode() != firstHashCodeValue) {
+                        return;
                     }
-
-                    // all the hash codes are same, this violates our criteria
-                    fail();
                 }
+
+                // all the hash codes are same, this violates our criteria
+                fail();
             };
 
     public static final TestInstance DIFFERENT_OBJECTS_HARD_HASHCODE_TEST =
-            new TestInstance() {
-                @Override
-                public void test(final Object[] objects) {
-                    // we require that at all tested objects returns a different
-                    // hash code value
-                    for (int i = 0; i < objects.length; ++i) {
-                        for (int j = 0; j < objects.length; ++j) {
-                            if (i != j) {
-                                assertNotSame(objects[i].hashCode(),
-                                              objects[j].hashCode());
-                            }
+            objects -> {
+                // we require that at all tested objects returns a different
+                // hash code value
+                for (int i = 0; i < objects.length; ++i) {
+                    for (int j = 0; j < objects.length; ++j) {
+                        if (i != j) {
+                            assertNotSame(objects[i].hashCode(),
+                                          objects[j].hashCode());
                         }
                     }
                 }
             };
 
     public static final TestInstance DIFFERENT_OBJECTS_TOSTRING_TEST =
-            new TestInstance() {
-                @Override
-                public void test(final Object[] objects) {
-                    for (int i = 0; i < objects.length; ++i) {
-                        for (int j = 0; j < objects.length; ++j) {
-                            if (i != j) {
-                                assertFalse(objects[i].toString().equals(
-                                                objects[j].toString()));
-                            }
+            objects -> {
+                for (int i = 0; i < objects.length; ++i) {
+                    for (int j = 0; j < objects.length; ++j) {
+                        if (i != j) {
+                            assertFalse(objects[i].toString().equals(
+                                            objects[j].toString()));
                         }
                     }
                 }

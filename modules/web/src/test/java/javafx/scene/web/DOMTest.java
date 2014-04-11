@@ -29,16 +29,16 @@ public class DOMTest extends TestBase {
 
     @Test public void testEmptyTextContent() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Element emptyP = doc.getElementById("empty-paragraph");
             String textContent = emptyP.getTextContent();
             assertEquals("Text content of an empty paragraph", "", textContent);
-        }});
+        });
     }
 
     @Test public void testAppendChild() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Node p1 = doc.getElementById("p1");
             NodeList c1 = p1.getChildNodes();
             Node left1 = c1.item(2);
@@ -63,12 +63,12 @@ public class DOMTest extends TestBase {
             verifyChildAdded(n, p1, count1);
             verifySiblings(n, left1, null);
             assertSame("Returned node", n, ret);
-        }});
+        });
     }
 
     @Test public void testInsertBeforeEnd() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Node p1 = doc.getElementById("p1");
             NodeList c1 = p1.getChildNodes();
             Node left1 = c1.item(2);
@@ -102,12 +102,12 @@ public class DOMTest extends TestBase {
             verifyChildAdded(n, p1, count1);
             verifySiblings(n, left1, null);
             assertSame("Returned node", n, ret);
-        }});
+        });
     }
 
     @Test public void testInsertBefore() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Node p1 = doc.getElementById("p1");
             NodeList c1 = p1.getChildNodes();
             Node left1 = c1.item(0);
@@ -127,12 +127,12 @@ public class DOMTest extends TestBase {
             verifyChildAdded(n, p1, count1);
             verifySiblings(n, left1, right1);
             assertEquals("Returned node", n, ret);
-        }});
+        });
     }
 
     @Test public void testReplaceChild() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Node p1 = doc.getElementById("p1");
             NodeList c1 = p1.getChildNodes();
             Node left1 = c1.item(0);
@@ -154,12 +154,12 @@ public class DOMTest extends TestBase {
             verifySiblings(n, left1, right1);
             verifyNodeRemoved(old);
             assertEquals("Returned node", old, ret);
-        }});
+        });
     }
 
     @Test public void testRemoveChild() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Node p = doc.getElementById("p1");
             NodeList c = p.getChildNodes();
             Node left = c.item(0);
@@ -172,12 +172,12 @@ public class DOMTest extends TestBase {
             verifyChildRemoved(p, count, left, right);
             verifyNodeRemoved(n);
             assertEquals("Returned node", n, ret);
-        }});
+        });
     }
 
     @Test public void testRemoveChildWithEventHandler() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Node p = doc.getElementById("p1");
             NodeList c = p.getChildNodes();
             Node left = c.item(0);
@@ -199,12 +199,12 @@ public class DOMTest extends TestBase {
             verifyChildRemoved(p, count, left, right);
             verifyNodeRemoved(n);
             assertEquals("Returned node", n, ret);
-        }});
+        });
     }
 
     @Test public void testNodeTypes() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Element p = doc.getElementById("showcase-paragraph");
             assertEquals("P element's node type", Node.ELEMENT_NODE, p.getNodeType());
             assertEquals("P element's tag name", "P", p.getTagName());
@@ -230,12 +230,12 @@ public class DOMTest extends TestBase {
             assertEquals("SPAN element child count", 1, children.getLength());
             text = children.item(0);
             assertEquals("SPAN text node type", Node.TEXT_NODE, text.getNodeType());
-        }});
+        });
     }
 
     @Test public void testNodeTypification() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             NodeList inputsp = doc.getElementsByTagName("p");
             HTMLParagraphElement elp = (HTMLParagraphElement) inputsp.item(0);
             assertEquals("P element typification", "left", elp.getAlign());
@@ -243,12 +243,12 @@ public class DOMTest extends TestBase {
             NodeList inputsi = doc.getElementsByTagName("img");
             HTMLImageElement eli = (HTMLImageElement) inputsi.item(0);
             assertEquals("Image element typification", "file:///C:/test.png", eli.getSrc());
-        }});
+        });
     }
 
     @Test public void testEventListenerCascade() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             HTMLDocument htmlDoc = (HTMLDocument)doc;
             final HTMLBodyElement body = (HTMLBodyElement)htmlDoc.getBody();
 
@@ -292,31 +292,27 @@ public class DOMTest extends TestBase {
             ((EventTarget)body).dispatchEvent(evClick);
             assertEquals("JS EventHandler does not work directly", "testClass", body.getClassName());
 
-            EventListener listener1 = new EventListener() {
-                @Override public void handleEvent(Event evt) {
-                    EventTarget src = ((MouseEvent)evt).getTarget();
-                    ((HTMLBodyElement)src).setClassName("newTestClass");
-                }
+            EventListener listener1 = evt -> {
+                EventTarget src = ((MouseEvent) evt).getTarget();
+                ((HTMLBodyElement) src).setClassName("newTestClass");
             };
             ((EventTarget)body).addEventListener("click", listener1, true);
             ((EventTarget)body).dispatchEvent(evClick);
             assertEquals("Java EventHandler does not work directly", "newTestClass", body.getClassName());
 
-            EventListener listener2 = new EventListener() {
-                @Override public void handleEvent(Event evt) {
-                    //OK: stacked ScriptExecutionContext
-                    listenerJS.handleEvent(evt);
-                }
+            EventListener listener2 = evt -> {
+                //OK: stacked ScriptExecutionContext
+                listenerJS.handleEvent(evt);
             };
             ((EventTarget)body).addEventListener("click", listener2, true);
             ((EventTarget)body).dispatchEvent(evClick);
             assertEquals("JS EventHandler does not work from Java call", "testClass", body.getClassName());
-        }});
+        });
     }
 
     @Test public void testDOMWindowAndStyleAccess() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             HTMLDocument htmlDoc = (HTMLDocument)doc;
             final HTMLBodyElement body = (HTMLBodyElement)htmlDoc.getBody();
 
@@ -328,12 +324,12 @@ public class DOMTest extends TestBase {
             //Style access
             CSSStyleDeclaration style = ((HTMLBodyElementImpl)body).getStyle();
             assertEquals("Style extraction", "blue", style.getPropertyValue("background-color"));
-        }});
+        });
     }
 
     @Test public void testDOMCSS() {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             StyleSheetList shl = ((HTMLDocumentImpl)doc).getStyleSheets();
             for (int i = 0; i < shl.getLength(); ++i ) {
                 StyleSheet sh = shl.item(i);
@@ -357,7 +353,7 @@ public class DOMTest extends TestBase {
                     String cssText = r.getCssText();
                 }
             }
-        }});
+        });
     }
 
     // helper methods

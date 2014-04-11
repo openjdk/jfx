@@ -77,87 +77,65 @@ final class CSSLexer {
     final static int FONT_FACE = 42;
     final static int URL = 43;
 
-    private final Recognizer A = new SimpleRecognizer('a','A');
-    private final Recognizer B = new SimpleRecognizer('b','B');
-    private final Recognizer C = new SimpleRecognizer('c','C');
-    private final Recognizer D = new SimpleRecognizer('d','D');
-    private final Recognizer E = new SimpleRecognizer('e','E');
-    private final Recognizer F = new SimpleRecognizer('f','F');
-    private final Recognizer G = new SimpleRecognizer('g','G');
-    private final Recognizer H = new SimpleRecognizer('h','H');
-    private final Recognizer I = new SimpleRecognizer('i','I');
-    private final Recognizer J = new SimpleRecognizer('j','J');
-    private final Recognizer K = new SimpleRecognizer('k','K');
-    private final Recognizer L = new SimpleRecognizer('l','L');
-    private final Recognizer M = new SimpleRecognizer('m','M');
-    private final Recognizer N = new SimpleRecognizer('n','N');
-    private final Recognizer O = new SimpleRecognizer('o','O');
-    private final Recognizer P = new SimpleRecognizer('p','P');
-    private final Recognizer Q = new SimpleRecognizer('q','Q');
-    private final Recognizer R = new SimpleRecognizer('r','R');
-    private final Recognizer S = new SimpleRecognizer('s','S');
-    private final Recognizer T = new SimpleRecognizer('t','T');
-    private final Recognizer U = new SimpleRecognizer('u','U');
-    private final Recognizer V = new SimpleRecognizer('v','V');
-    private final Recognizer W = new SimpleRecognizer('w','W');
-    private final Recognizer X = new SimpleRecognizer('x','X');
-    private final Recognizer Y = new SimpleRecognizer('y','Y');
-    private final Recognizer Z = new SimpleRecognizer('z','Z');
-    private final Recognizer ALPHA = new Recognizer() {
-        @Override public boolean recognize(int c) {
-            return ('a' <= c && c <= 'z') ||
-                   ('A' <= c && c <= 'Z');
-        };
-    };
+    private final Recognizer A = (c) -> c == 'a' || c == 'A';
+    private final Recognizer B = (c) -> c == 'b' || c == 'B';
+    private final Recognizer C = (c) -> c == 'c' || c == 'C';
+    private final Recognizer D = (c) -> c == 'd' || c == 'D';
+    private final Recognizer E = (c) -> c == 'e' || c == 'E';
+    private final Recognizer F = (c) -> c == 'f' || c == 'F';
+    private final Recognizer G = (c) -> c == 'g' || c == 'G';
+    private final Recognizer H = (c) -> c == 'h' || c == 'H';
+    private final Recognizer I = (c) -> c == 'i' || c == 'I';
+    private final Recognizer J = (c) -> c == 'j' || c == 'J';
+    private final Recognizer K = (c) -> c == 'k' || c == 'K';
+    private final Recognizer L = (c) -> c == 'l' || c == 'L';
+    private final Recognizer M = (c) -> c == 'm' || c == 'M';
+    private final Recognizer N = (c) -> c == 'n' || c == 'N';
+    private final Recognizer O = (c) -> c == 'o' || c == 'O';
+    private final Recognizer P = (c) -> c == 'p' || c == 'P';
+    private final Recognizer Q = (c) -> c == 'q' || c == 'Q';
+    private final Recognizer R = (c) -> c == 'r' || c == 'R';
+    private final Recognizer S = (c) -> c == 's' || c == 'S';
+    private final Recognizer T = (c) -> c == 't' || c == 'T';
+    private final Recognizer U = (c) -> c == 'u' || c == 'U';
+    private final Recognizer V = (c) -> c == 'v' || c == 'V';
+    private final Recognizer W = (c) -> c == 'w' || c == 'W';
+    private final Recognizer X = (c) -> c == 'x' || c == 'X';
+    private final Recognizer Y = (c) -> c == 'y' || c == 'Y';
+    private final Recognizer Z = (c) -> c == 'z' || c == 'Z';
+    private final Recognizer ALPHA =  (c) -> ('a' <= c && c <= 'z') ||
+           ('A' <= c && c <= 'Z');
 
-    private final Recognizer NON_ASCII = new Recognizer() {
-        @Override public boolean recognize(int c) {
-            return '\u0080' <= c && c <= '\uFFFF';
-        }
-    };
+    private final Recognizer NON_ASCII = (c) -> '\u0080' <= c && c <= '\uFFFF';
 
-    private final Recognizer DOT_CHAR = new SimpleRecognizer('.');
-    private final Recognizer GREATER_CHAR = new SimpleRecognizer('>');
-    private final Recognizer LBRACE_CHAR = new SimpleRecognizer('{');
-    private final Recognizer RBRACE_CHAR = new SimpleRecognizer( '}');
-    private final Recognizer SEMI_CHAR  = new SimpleRecognizer(';');
-    private final Recognizer COLON_CHAR = new SimpleRecognizer(':');
-    private final Recognizer SOLIDUS_CHAR = new SimpleRecognizer('/');
-    private final Recognizer MINUS_CHAR = new SimpleRecognizer('-');
-    private final Recognizer PLUS_CHAR = new SimpleRecognizer('+');
-    private final Recognizer STAR_CHAR = new SimpleRecognizer('*');
-    private final Recognizer LPAREN_CHAR = new SimpleRecognizer('(');
-    private final Recognizer RPAREN_CHAR = new SimpleRecognizer(')');
-    private final Recognizer COMMA_CHAR = new SimpleRecognizer(',');
-    private final Recognizer UNDERSCORE_CHAR = new SimpleRecognizer('_');
-    private final Recognizer HASH_CHAR = new SimpleRecognizer('#');
+    private final Recognizer DOT_CHAR =        (c) -> c == '.';
+    private final Recognizer GREATER_CHAR =    (c) -> c == '>';
+    private final Recognizer LBRACE_CHAR =     (c) -> c == '{';
+    private final Recognizer RBRACE_CHAR =     (c) -> c == '}';
+    private final Recognizer SEMI_CHAR  =      (c) -> c == ';';
+    private final Recognizer COLON_CHAR =      (c) -> c == ':';
+    private final Recognizer SOLIDUS_CHAR =    (c) -> c == '/';
+    private final Recognizer MINUS_CHAR =      (c) -> c == '-';
+    private final Recognizer PLUS_CHAR =       (c) -> c == '+';
+    private final Recognizer STAR_CHAR =       (c) -> c == '*';
+    private final Recognizer LPAREN_CHAR =     (c) -> c == '(';
+    private final Recognizer RPAREN_CHAR =     (c) -> c == ')';
+    private final Recognizer COMMA_CHAR =      (c) -> c == ',';
+    private final Recognizer UNDERSCORE_CHAR = (c) -> c == '_';
+    private final Recognizer HASH_CHAR =       (c) -> c == '#';
 
-    private final Recognizer WS_CHARS = new Recognizer() {
-        @Override public boolean recognize(int c) {
-            return c == ' '  ||
-                   c == '\t' ||
-                   c == '\r' ||
-                   c == '\n' ||
-                   c == '\f';
-        }
-    };
-    private final Recognizer NL_CHARS = new Recognizer() {
-        @Override public boolean recognize(int c) {
-            return (c == '\r' || c == '\n');
-        }
-    };
+    private final Recognizer WS_CHARS = (c) -> c == ' '  ||
+           c == '\t' ||
+           c == '\r' ||
+           c == '\n' ||
+           c == '\f';
+    private final Recognizer NL_CHARS = (c) -> (c == '\r' || c == '\n');
 
-    private final Recognizer DIGIT = new SimpleRecognizer(
-        '0','1','2','3','4','5','6','7','8','9'
-    );
+    private final Recognizer DIGIT = (c) -> '0' <= c && c <= '9';
 
-    private final Recognizer HEX_DIGIT = new Recognizer() {
-        @Override public boolean recognize(int c) {
-            return ('0' <= c && c <= '9') ||
-                   ('a' <= c && c <= 'f') ||
-                   ('A' <= c && c <= 'F');
-        }
-    };
+    private final Recognizer HEX_DIGIT = (c) -> ('0' <= c && c <= '9') ||
+           ('a' <= c && c <= 'f') ||
+           ('A' <= c && c <= 'F');
 
     // The initial accepts any character
     final LexerState initState = new LexerState("initState", null) {
@@ -630,7 +608,7 @@ final class CSSLexer {
             { P, X },
             { R, A, D },
             { T, U, R, N },
-            { new SimpleRecognizer('%') }                                
+            { (c) -> c == '%'}
             
         };
         

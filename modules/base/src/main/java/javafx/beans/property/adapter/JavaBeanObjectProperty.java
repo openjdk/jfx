@@ -79,12 +79,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
         this.descriptor = descriptor;
         this.listener = descriptor.new Listener<T>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new Runnable() {
-            @Override
-            public void run() {
-                JavaBeanObjectProperty.this.descriptor.removeListener(listener);
-            }
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
@@ -97,15 +92,13 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
     @SuppressWarnings("unchecked")
     @Override
     public T get() {
-        return AccessController.doPrivileged(new PrivilegedAction<T>() {
-            public T run() {
-                try {
-                    return (T)MethodUtil.invoke(descriptor.getGetter(), getBean(), (Object[])null);
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
+        return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
+            try {
+                return (T)MethodUtil.invoke(descriptor.getGetter(), getBean(), (Object[])null);
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
         }, acc);
     }
@@ -123,18 +116,16 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
             throw new RuntimeException("A bound value cannot be set.");
         }
 
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                try {
-                    MethodUtil.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
-                    ExpressionHelper.fireValueChangedEvent(helper);
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            try {
+                MethodUtil.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
+                ExpressionHelper.fireValueChangedEvent(helper);
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
+            return null;
         }, acc);
     }
 

@@ -99,13 +99,11 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
     private double fixedCellSize;
     private boolean fixedCellSizeEnabled;
     
-    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
-        @Override public Void call(String p) {
-            if ("EXPANDED".equals(p)) {
-                updateDisclosureNodeRotation(true);
-            }
-            return null;
+    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(p -> {
+        if ("EXPANDED".equals(p)) {
+            updateDisclosureNodeRotation(true);
         }
+        return null;
     });
     
     public TreeCellSkin(TreeCell<T> control) {
@@ -190,7 +188,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
         // RT-28668: Ensemble tree arrow disappears
         if (disclosureNode.getScene() != null) {
-            disclosureNode.impl_processCSS(true);
+            disclosureNode.applyCss();
         }
     }
 
@@ -215,7 +213,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         
         Node disclosureNode = getSkinnable().getDisclosureNode();
         
-        int level = TreeView.getNodeLevel(treeItem);
+        int level = tree.getTreeItemLevel(treeItem);
         if (! tree.isShowRoot()) level--;
         double leftMargin = getIndent() * level;
 
@@ -303,7 +301,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         pw = labelWidth;
 
         // determine the amount of indentation
-        int level = TreeView.getNodeLevel(treeItem);
+        int level = tree.getTreeItemLevel(treeItem);
         if (! tree.isShowRoot()) level--;
         pw += getIndent() * level;
 

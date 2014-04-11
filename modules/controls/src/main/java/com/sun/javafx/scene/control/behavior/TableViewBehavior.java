@@ -48,20 +48,15 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
      *                                                                        *  
      *************************************************************************/
     
-    private final ChangeListener<TableViewSelectionModel<T>> selectionModelListener = 
-            new ChangeListener<TableViewSelectionModel<T>>() {
-        @Override
-        public void changed(ObservableValue<? extends TableViewSelectionModel<T>> observable, 
-                    TableViewSelectionModel<T> oldValue, 
-                    TableViewSelectionModel<T> newValue) {
-            if (oldValue != null) {
-                oldValue.getSelectedCells().removeListener(weakSelectedCellsListener);
-            }
-            if (newValue != null) {
-                newValue.getSelectedCells().addListener(weakSelectedCellsListener);
-            }
-        }
-    };
+    private final ChangeListener<TableViewSelectionModel<T>> selectionModelListener =
+            (observable, oldValue, newValue) -> {
+                if (oldValue != null) {
+                    oldValue.getSelectedCells().removeListener(weakSelectedCellsListener);
+                }
+                if (newValue != null) {
+                    newValue.getSelectedCells().addListener(weakSelectedCellsListener);
+                }
+            };
     
     private final WeakChangeListener<TableViewSelectionModel<T>> weakSelectionModelListener = 
             new WeakChangeListener<TableViewSelectionModel<T>>(selectionModelListener);

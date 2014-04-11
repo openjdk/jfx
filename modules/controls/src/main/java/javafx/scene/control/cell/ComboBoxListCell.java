@@ -143,11 +143,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<ListView<T>, ListCell<T>>() {
-            @Override public ListCell<T> call(ListView<T> list) {
-                return new ComboBoxListCell<T>(converter, items);
-            }
-        };
+        return list -> new ComboBoxListCell<T>(converter, items);
     }
     
     

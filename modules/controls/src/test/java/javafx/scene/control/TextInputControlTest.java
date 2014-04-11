@@ -215,11 +215,8 @@ public class TextInputControlTest {
 
     @Test public void settingTextNotifiesOfChange() {
         final boolean[] passed = new boolean[] { false };
-        textInput.textProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                passed[0] = true;
-            }
+        textInput.textProperty().addListener((observable, oldValue, newValue) -> {
+            passed[0] = true;
         });
         textInput.setText("Apples");
         assertTrue(passed[0]);
@@ -303,11 +300,8 @@ public class TextInputControlTest {
 
     @Test public void settingEditableNotifiesOfChange() {
         final boolean[] passed = new boolean[] { false };
-        textInput.editableProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                passed[0] = true;
-            }
+        textInput.editableProperty().addListener((observable, oldValue, newValue) -> {
+            passed[0] = true;
         });
         textInput.setEditable(false);
         assertTrue(passed[0]);
@@ -373,11 +367,8 @@ public class TextInputControlTest {
 
     @Test public void lengthChangeNotificationWhenTextIsUpdatedToNonEmptyResult() {
         final boolean[] passed = new boolean[] { false };
-        textInput.lengthProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                passed[0] = true;
-            }
+        textInput.lengthProperty().addListener((observable, oldValue, newValue) -> {
+            passed[0] = true;
         });
         textInput.setText("Hello");
         assertTrue(passed[0]);
@@ -389,11 +380,8 @@ public class TextInputControlTest {
     @Test public void lengthChangeNotificationWhenTextIsSetToEmptyResult() {
         textInput.setText("Goodbye");
         final boolean[] passed = new boolean[] { false };
-        textInput.lengthProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                passed[0] = true;
-            }
+        textInput.lengthProperty().addListener((observable, oldValue, newValue) -> {
+            passed[0] = true;
         });
         textInput.setText("");
         assertTrue(passed[0]);
@@ -469,10 +457,8 @@ public class TextInputControlTest {
     @Test public void selectedTextChangeEvents() {
         final boolean[] passed = new boolean[] { false };
         textInput.setText("The quick brown fox");
-        textInput.selectedTextProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                passed[0] = true;
-            }
+        textInput.selectedTextProperty().addListener(observable -> {
+            passed[0] = true;
         });
         textInput.selectRange(0, 3);
         assertTrue(passed[0]);
@@ -482,10 +468,8 @@ public class TextInputControlTest {
         final boolean[] passed = new boolean[] { false };
         textInput.setText("The quick brown fox");
         textInput.selectRange(0, 3);
-        textInput.selectedTextProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                passed[0] = true;
-            }
+        textInput.selectedTextProperty().addListener(observable -> {
+            passed[0] = true;
         });
         textInput.selectRange(10, 180);
         assertTrue(passed[0]);
@@ -496,10 +480,8 @@ public class TextInputControlTest {
         StringProperty other = new SimpleStringProperty("There and back again");
         textInput.textProperty().bind(other);
         textInput.selectRange(0, 5);
-        textInput.selectedTextProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                passed[0] = true;
-            }
+        textInput.selectedTextProperty().addListener(observable -> {
+            passed[0] = true;
         });
         other.set("Cleared!");
         assertTrue(passed[0]);
@@ -538,10 +520,8 @@ public class TextInputControlTest {
 
     @Test public void selectionChangeEventsHappen() {
         final boolean[] passed = new boolean[] { false };
-        textInput.selectionProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                passed[0] = true;
-            }
+        textInput.selectionProperty().addListener(observable -> {
+            passed[0] = true;
         });
         textInput.selectRange(0, 3);
         assertTrue(passed[0]);
@@ -578,10 +558,8 @@ public class TextInputControlTest {
         StringProperty other = new SimpleStringProperty("There and back again");
         textInput.textProperty().bind(other);
         textInput.selectRange(0, 5);
-        textInput.selectionProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                passed[0] = true;
-            }
+        textInput.selectionProperty().addListener(observable -> {
+            passed[0] = true;
         });
         other.set("Cleared!");
         assertTrue(passed[0]);

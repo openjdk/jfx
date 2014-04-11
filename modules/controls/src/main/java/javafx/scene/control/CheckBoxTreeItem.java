@@ -186,10 +186,8 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      * Callbacks                                                               *
      *                                                                         *
      **************************************************************************/   
-    private final ChangeListener<Boolean> stateChangeListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean oldVal, Boolean newVal) {
-            updateState();
-        }
+    private final ChangeListener<Boolean> stateChangeListener = (ov, oldVal, newVal) -> {
+        updateState();
     };
     
     

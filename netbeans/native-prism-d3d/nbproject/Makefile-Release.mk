@@ -21,8 +21,8 @@ FC=gfortran
 AS=as
 
 # Macros
-CND_PLATFORM=Cygwin_4.x-Windows
-CND_DLIB_EXT=dll
+CND_PLATFORM=GNU-Linux-x86
+CND_DLIB_EXT=so
 CND_CONF=Release
 CND_DISTDIR=dist
 CND_BUILDDIR=build
@@ -76,92 +76,92 @@ LDLIBSOPTIONS=
 
 ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism-d3d.${CND_DLIB_EXT}: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
-	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism-d3d.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -shared
+	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism-d3d.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
 
 ${OBJECTDIR}/_ext/284623486/D3DContext.o: ../../modules/graphics/src/main/native-prism-d3d/D3DContext.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DContext.o ../../modules/graphics/src/main/native-prism-d3d/D3DContext.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DContext.o ../../modules/graphics/src/main/native-prism-d3d/D3DContext.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DContextInit.o: ../../modules/graphics/src/main/native-prism-d3d/D3DContextInit.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DContextInit.o ../../modules/graphics/src/main/native-prism-d3d/D3DContextInit.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DContextInit.o ../../modules/graphics/src/main/native-prism-d3d/D3DContextInit.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DGraphics.o: ../../modules/graphics/src/main/native-prism-d3d/D3DGraphics.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DGraphics.o ../../modules/graphics/src/main/native-prism-d3d/D3DGraphics.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DGraphics.o ../../modules/graphics/src/main/native-prism-d3d/D3DGraphics.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DLight.o: ../../modules/graphics/src/main/native-prism-d3d/D3DLight.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DLight.o ../../modules/graphics/src/main/native-prism-d3d/D3DLight.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DLight.o ../../modules/graphics/src/main/native-prism-d3d/D3DLight.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DMesh.o: ../../modules/graphics/src/main/native-prism-d3d/D3DMesh.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DMesh.o ../../modules/graphics/src/main/native-prism-d3d/D3DMesh.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DMesh.o ../../modules/graphics/src/main/native-prism-d3d/D3DMesh.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DMeshView.o: ../../modules/graphics/src/main/native-prism-d3d/D3DMeshView.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DMeshView.o ../../modules/graphics/src/main/native-prism-d3d/D3DMeshView.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DMeshView.o ../../modules/graphics/src/main/native-prism-d3d/D3DMeshView.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DPhongMaterial.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPhongMaterial.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DPhongMaterial.o ../../modules/graphics/src/main/native-prism-d3d/D3DPhongMaterial.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPhongMaterial.o ../../modules/graphics/src/main/native-prism-d3d/D3DPhongMaterial.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DPhongShader.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShader.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DPhongShader.o ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShader.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPhongShader.o ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShader.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DPhongShaderGen.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShaderGen.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DPhongShaderGen.o ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShaderGen.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPhongShaderGen.o ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShaderGen.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DPipeline.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPipeline.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DPipeline.o ../../modules/graphics/src/main/native-prism-d3d/D3DPipeline.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPipeline.o ../../modules/graphics/src/main/native-prism-d3d/D3DPipeline.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DPipelineManager.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPipelineManager.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DPipelineManager.o ../../modules/graphics/src/main/native-prism-d3d/D3DPipelineManager.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPipelineManager.o ../../modules/graphics/src/main/native-prism-d3d/D3DPipelineManager.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DResourceFactory.o: ../../modules/graphics/src/main/native-prism-d3d/D3DResourceFactory.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DResourceFactory.o ../../modules/graphics/src/main/native-prism-d3d/D3DResourceFactory.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DResourceFactory.o ../../modules/graphics/src/main/native-prism-d3d/D3DResourceFactory.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DResourceManager.o: ../../modules/graphics/src/main/native-prism-d3d/D3DResourceManager.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DResourceManager.o ../../modules/graphics/src/main/native-prism-d3d/D3DResourceManager.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DResourceManager.o ../../modules/graphics/src/main/native-prism-d3d/D3DResourceManager.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DShader.o: ../../modules/graphics/src/main/native-prism-d3d/D3DShader.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DShader.o ../../modules/graphics/src/main/native-prism-d3d/D3DShader.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DShader.o ../../modules/graphics/src/main/native-prism-d3d/D3DShader.cc
 
 ${OBJECTDIR}/_ext/284623486/D3DWindow.o: ../../modules/graphics/src/main/native-prism-d3d/D3DWindow.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/D3DWindow.o ../../modules/graphics/src/main/native-prism-d3d/D3DWindow.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DWindow.o ../../modules/graphics/src/main/native-prism-d3d/D3DWindow.cc
 
 ${OBJECTDIR}/_ext/284623486/TextureUploader.o: ../../modules/graphics/src/main/native-prism-d3d/TextureUploader.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/TextureUploader.o ../../modules/graphics/src/main/native-prism-d3d/TextureUploader.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/TextureUploader.o ../../modules/graphics/src/main/native-prism-d3d/TextureUploader.cc
 
 ${OBJECTDIR}/_ext/284623486/Trace.o: ../../modules/graphics/src/main/native-prism-d3d/Trace.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
-	${RM} $@.d
-	$(COMPILE.cc) -O2  -MMD -MP -MF $@.d -o ${OBJECTDIR}/_ext/284623486/Trace.o ../../modules/graphics/src/main/native-prism-d3d/Trace.cc
+	${RM} "$@.d"
+	$(COMPILE.cc) -O2 -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/Trace.o ../../modules/graphics/src/main/native-prism-d3d/Trace.cc
 
 # Subprojects
 .build-subprojects:

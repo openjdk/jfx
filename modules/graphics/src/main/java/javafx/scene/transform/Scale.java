@@ -54,6 +54,7 @@ public class Scale extends Transform {
 
     /**
      * Creates a two-dimensional Scale.
+     * The pivot point is set to (0,0)
      * @param x the factor by which coordinates are scaled along the X axis 
      * @param y the factor by which coordinates are scaled along the Y axis 
      */
@@ -77,6 +78,7 @@ public class Scale extends Transform {
 
     /**
      * Creates a three-dimensional Scale.
+     * The pivot point is set to (0,0,0)
      * @param x the factor by which coordinates are scaled along the X axis 
      * @param y the factor by which coordinates are scaled along the Y axis 
      * @param z the factor by which coordinates are scaled along the Z axis 
@@ -217,6 +219,8 @@ public class Scale extends Transform {
 
     /**
      * Defines the X coordinate about which point the scale occurs.
+     * 
+     * @defaultValue 0.0
      */
     private DoubleProperty pivotX;
 
@@ -254,6 +258,8 @@ public class Scale extends Transform {
 
     /**
      * Defines the Y coordinate about which point the scale occurs.
+     * 
+     * @defaultValue 0.0
      */
     private DoubleProperty pivotY;
 
@@ -291,6 +297,8 @@ public class Scale extends Transform {
 
     /**
      * Defines the Z coordinate about which point the scale occurs.
+     * 
+     * @defaultValue 0.0
      */
     private DoubleProperty pivotZ;
 

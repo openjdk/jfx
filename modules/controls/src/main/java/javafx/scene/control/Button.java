@@ -29,9 +29,9 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
-import com.sun.javafx.scene.control.accessible.AccessibleButton;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ButtonSkin;
 
@@ -191,6 +191,7 @@ public class Button extends ButtonBase {
         return new ButtonSkin(this);
     }
 
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -209,16 +210,19 @@ public class Button extends ButtonBase {
             = PseudoClass.getPseudoClass("default");
     private static final PseudoClass PSEUDO_CLASS_CANCEL
             = PseudoClass.getPseudoClass("cancel");
-    
-    private AccessibleButton accButton ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
-        if( accButton == null)
-            accButton = new AccessibleButton(this);
-        return (AccessibleProvider)accButton ;
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.BUTTON;
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
-    
 }

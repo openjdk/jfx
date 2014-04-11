@@ -161,11 +161,7 @@ public class TableCellTest {
             }
         };
         TableColumn col = new TableColumn("TEST");
-        col.setCellValueFactory(new Callback<TableColumn.CellDataFeatures, ObservableValue>() {
-            @Override public ObservableValue call(TableColumn.CellDataFeatures param) {
-                return null;
-            }
-        });
+        col.setCellValueFactory(param -> null);
         table.getColumns().add(col);
         cell.updateTableColumn(col);
         cell.updateTableView(table);

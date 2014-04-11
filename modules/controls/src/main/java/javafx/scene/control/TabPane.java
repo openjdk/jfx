@@ -28,6 +28,7 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -38,12 +39,15 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
-
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
+
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -103,19 +107,17 @@ public class TabPane extends Control {
         getStyleClass().setAll("tab-pane");
         setSelectionModel(new TabPaneSelectionModel(this));
 
-        tabs.addListener(new ListChangeListener<Tab>() {
-            @Override public void onChanged(Change<? extends Tab> c) {
-                while (c.next()) {
-                    for (Tab tab : c.getRemoved()) {
-                        if (tab != null && !getTabs().contains(tab)) {
-                            tab.setTabPane(null);
-                        }
+        tabs.addListener((ListChangeListener<Tab>) c -> {
+            while (c.next()) {
+                for (Tab tab : c.getRemoved()) {
+                    if (tab != null && !getTabs().contains(tab)) {
+                        tab.setTabPane(null);
                     }
+                }
 
-                    for (Tab tab : c.getAddedSubList()) {
-                        if (tab != null) {
-                            tab.setTabPane(TabPane.this);
-                        }
+                for (Tab tab : c.getAddedSubList()) {
+                    if (tab != null) {
+                        tab.setTabPane(TabPane.this);
                     }
                 }
             }
@@ -598,7 +600,32 @@ public class TabPane extends Control {
     private static final PseudoClass LEFT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("left");
     private static final PseudoClass RIGHT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("right");
 
-    
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TAB_PANE;
+            case TABS: //Skin
+            case SELECTED_TAB: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Support classes                                                         *
+     *                                                                         *
+     **************************************************************************/
+
     static class TabPaneSelectionModel extends SingleSelectionModel<Tab> {
         private final TabPane tabPane;
 
@@ -609,41 +636,65 @@ public class TabPane extends Control {
             this.tabPane = t;
 
             // watching for changes to the items list content
-            final ListChangeListener<Tab> itemsContentObserver = new ListChangeListener<Tab>() {
-                @Override public void onChanged(Change<? extends Tab> c) {
-                    while (c.next()) {
-                        for (Tab tab : c.getRemoved()) {
-                            if (tab != null && !tabPane.getTabs().contains(tab)) {
-                                if (getSelectedIndex() == 0 && tabPane.getTabs().size() > 0) {                                    
-                                    clearAndSelect(0);
-                                    tab.setSelected(false);
-                                }
-                                if (tab.isSelected()) {
-                                    tab.setSelected(false);
-                                    if (c.getFrom() == 0) {
-                                        if (tabPane.getTabs().size() > 1) {
-                                            clearSelection();
+            final ListChangeListener<Tab> itemsContentObserver = c -> {
+                while (c.next()) {
+                    for (Tab tab : c.getRemoved()) {
+                        if (tab != null && !tabPane.getTabs().contains(tab)) {
+                            if (tab.isSelected()) {
+                                tab.setSelected(false);
+                                final int tabIndex = c.getFrom();
+                                final int tabCount = tabPane.getTabs().size();
+
+                                // we always try to select the nearest, non-disabled
+                                // tab from the position of the closed tab.
+                                int i = 1;
+                                while (true) {
+                                    // look leftwards
+                                    int downPos = tabIndex - i;
+                                    if (downPos >= 0) {
+                                        Tab _tab = getModelItem(downPos);
+                                        System.out.println(_tab.getText() + " disabled: " + _tab.isDisabled() + ", disable: " + _tab.isDisable());
+                                        if (_tab != null && ! _tab.isDisable()) {
+                                            select(_tab);
+                                            break;
                                         }
-                                    } else {
-                                        selectPrevious();
                                     }
+
+                                    // look rightwards. We subtract one as we need
+                                    // to take into account that a tab has been removed
+                                    // and if we don't do this we'll miss the tab
+                                    // to the right of the tab (as it has moved into
+                                    // the removed tabs position).
+                                    int upPos = tabIndex + i - 1;
+                                    if (upPos < tabCount) {
+                                        Tab _tab = getModelItem(upPos);
+                                        if (_tab != null && ! _tab.isDisable()) {
+                                            select(_tab);
+                                            break;
+                                        }
+                                    }
+
+                                    if (downPos < 0 && upPos >= tabCount) {
+                                        break;
+                                    }
+                                    i++;
                                 }
                             }
                         }
-                        if (c.wasAdded() || c.wasRemoved()) {
-                            // The selected tab index can be out of sync with the list of tab if
-                            // we add or remove tabs before the selected tab.
-                            if (getSelectedIndex() != tabPane.getTabs().indexOf(getSelectedItem())) {
-                                clearAndSelect(tabPane.getTabs().indexOf(getSelectedItem()));
-                            }
+                    }
+                    if (c.wasAdded() || c.wasRemoved()) {
+                        // The selected tab index can be out of sync with the list of tab if
+                        // we add or remove tabs before the selected tab.
+                        if (getSelectedIndex() != tabPane.getTabs().indexOf(getSelectedItem())) {
+                            clearAndSelect(tabPane.getTabs().indexOf(getSelectedItem()));
                         }
                     }
-                    if (getSelectedIndex() == -1 && getSelectedItem() == null && tabPane.getTabs().size() > 0) {                        
-                        selectFirst();
-                    } else if (tabPane.getTabs().isEmpty()) {
-                        clearSelection();
-                    }
-                }                
+                }
+                if (getSelectedIndex() == -1 && getSelectedItem() == null && tabPane.getTabs().size() > 0) {
+                    selectFirst();
+                } else if (tabPane.getTabs().isEmpty()) {
+                    clearSelection();
+                }
             };
             if (this.tabPane.getTabs() != null) {
                 this.tabPane.getTabs().addListener(itemsContentObserver);
@@ -673,6 +724,9 @@ public class TabPane extends Control {
             if (getSelectedIndex() >= 0 && getSelectedIndex() < tabPane.getTabs().size()) {
                 tabPane.getTabs().get(getSelectedIndex()).setSelected(true);
             }
+
+            /* Does this get all the change events */
+            tabPane.accSendNotification(Attribute.SELECTED_TAB);
         }
 
         @Override public void select(Tab tab) {

@@ -174,7 +174,9 @@ jstring GlassInputTextInfo::MakeJavaString(JNIEnv* env, LPWSTR lpStrW, int cStrW
     if (env == NULL || lpStrW == NULL || cStrW == 0) {
         return NULL;
     } else {
-        return env->NewString(reinterpret_cast<jchar*>(lpStrW), cStrW);
+        jstring jStr = env->NewString(reinterpret_cast<jchar*>(lpStrW), cStrW);
+        if (CheckAndClearException(env)) return NULL;
+        return jStr;
     }
 }
 

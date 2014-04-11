@@ -30,12 +30,9 @@ import javafx.animation.KeyFrame;
 import javafx.animation.RotateTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.LinearGradient;
@@ -45,6 +42,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+
 import com.sun.javafx.perf.PerformanceTracker;
 
 /**
@@ -62,15 +60,12 @@ public class HelloRectangle3D extends Application {
         final Rectangle rect = rect((sceneWidth - 200) / 2, (sceneHeight - 200) / 2, 200, 200, Color.LIME);
         rect.setRotationAxis(Rotate.Y_AXIS);
         rect.setCache(true);
-        rect.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                // This is used to test that the texture gets recreated as needed
-                if (event.isShiftDown()) {
-                    rect.setStrokeWidth(Math.random() * 10);
-                } else {
-                    rect.setFill(new Color(Math.random(), Math.random(), Math.random(), 1));
-                }
+        rect.setOnMouseClicked(event -> {
+            // This is used to test that the texture gets recreated as needed
+            if (event.isShiftDown()) {
+                rect.setStrokeWidth(Math.random() * 10);
+            } else {
+                rect.setFill(new Color(Math.random(), Math.random(), Math.random(), 1));
             }
         });
 
@@ -91,12 +86,7 @@ public class HelloRectangle3D extends Application {
 
         PerformanceTracker tracker = PerformanceTracker.getSceneTracker(scene);
         Timeline t = new Timeline(
-            new KeyFrame(Duration.seconds(1), new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    System.out.println("" + tracker.getAverageFPS() + " average fps, " + tracker.getInstantFPS() + " instant fps");
-                }
-            })
+            new KeyFrame(Duration.seconds(1), event -> System.out.println("" + tracker.getAverageFPS() + " average fps, " + tracker.getInstantFPS() + " instant fps"))
         );
         t.setCycleCount(Timeline.INDEFINITE);
         t.play();

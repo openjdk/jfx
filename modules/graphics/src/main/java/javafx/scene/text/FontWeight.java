@@ -85,6 +85,7 @@ public enum FontWeight {
     private final String[] names;
     
     private FontWeight(int weight, String... names) {
+        this.weight = weight;
         this.names = names;
     }
 

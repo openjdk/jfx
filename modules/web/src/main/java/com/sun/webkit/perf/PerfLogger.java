@@ -133,30 +133,26 @@ public final class PerfLogger {
         return log.getName() + "." + probe;
     }
 
-    private final Comparator timeComparator = new Comparator() {
-        public int compare(Object arg0, Object arg1) {
-            long t0 = probes.get((String)arg0).totalTime;
-            long t1 = probes.get((String)arg1).totalTime;
-            if (t0 > t1) {
-                return 1;
-            } else if (t0 < t1) {
-                return -1;
-            }
-            return 0;
+    private final Comparator timeComparator = (arg0, arg1) -> {
+        long t0 = probes.get((String)arg0).totalTime;
+        long t1 = probes.get((String)arg1).totalTime;
+        if (t0 > t1) {
+            return 1;
+        } else if (t0 < t1) {
+            return -1;
         }
+        return 0;
     };
 
-    private final Comparator countComparator = new Comparator() {
-        public int compare(Object arg0, Object arg1) {
-            long c0 = probes.get((String)arg0).count;
-            long c1 = probes.get((String)arg1).count;
-            if (c0 > c1) {
-                return 1;
-            } else if (c0 < c1) {
-                return -1;
-            }
-            return 0;
+    private final Comparator countComparator = (arg0, arg1) -> {
+        long c0 = probes.get((String)arg0).count;
+        long c1 = probes.get((String)arg1).count;
+        if (c0 > c1) {
+            return 1;
+        } else if (c0 < c1) {
+            return -1;
         }
+        return 0;
     };
 
     /**

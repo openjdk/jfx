@@ -56,9 +56,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
     private final Path minorTickPath  = new Path();
 
-    private boolean saveMinorTickVisible = false;
-    private boolean restoreMinorTickVisiblity = false;
-    
     private double offset;
     /** This is the minimum current data value and it is used while auto ranging. */
     private double dataMinValue;
@@ -161,7 +158,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     private final ObjectProperty<StringConverter<T>> tickLabelFormatter = new ObjectPropertyBase<StringConverter<T>>(null){
         @Override protected void invalidated() {
             invalidateRange();
-            formatterValid = true;
             requestAxisLayout();
         }
 
@@ -182,10 +178,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     /** The length of minor tick mark lines. Set to 0 to not display minor tick marks. */
     private DoubleProperty minorTickLength = new StyleableDoubleProperty(5) {
         @Override protected void invalidated() {
-            // RT-16747 if tick length is negative - set it to 0
-            if (minorTickLength.get() < 0 && !minorTickLength.isBound()) {
-                minorTickLength.set(0);
-            }
             requestAxisLayout();
         }
 
@@ -214,10 +206,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      */
     private IntegerProperty minorTickCount = new StyleableIntegerProperty(5) {
         @Override protected void invalidated() {
-            // RT-16747 if the tick count is negative, set it to 0
-            if ((minorTickCount.get() - 1) < 0 && !minorTickCount.isBound()) {
-                minorTickCount.set(0);
-            }
             invalidateRange();
             requestAxisLayout();
         }
@@ -297,8 +285,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      */
     protected final double calculateNewScale(double length, double lowerBound, double upperBound) {
         double newScale = 1;
-        final Side side = getSide();
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL 
+        final Side side = getEffectiveSide();
+        if (side.isVertical()) {
             offset = length;
             newScale = ((upperBound-lowerBound) == 0) ? -length : -(length / (upperBound - lowerBound));
         } else { // HORIZONTAL
@@ -346,8 +334,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * Invoked during the layout pass to layout this axis and all its content.
      */
     @Override protected void layoutChildren() {
-        final Side side = getSide();
-        final double length = (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) ? getHeight() :getWidth() ;
+        final Side side = getEffectiveSide();
+        final double length = side.isVertical() ? getHeight() :getWidth() ;
         // if we are not auto ranging we need to calculate the new scale
         if(!isAutoRanging()) {
             // calculate new scale
@@ -357,23 +345,14 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
         // we have done all auto calcs, let Axis position major tickmarks
         super.layoutChildren();
-        int numMinorTicks = (getTickMarks().size() - 1)*(getMinorTickCount() - 1);
+        int numMinorTicks = (getTickMarks().size() - 1)*(Math.max(1, getMinorTickCount()) - 1);
         double neededLength = (getTickMarks().size()+numMinorTicks)*2;
-        if (length < neededLength) {
-            if (!restoreMinorTickVisiblity) {
-                restoreMinorTickVisiblity = true;
-                saveMinorTickVisible = isMinorTickVisible();
-                setMinorTickVisible(false);
-            }
-        } else {
-            if (restoreMinorTickVisiblity) {
-                setMinorTickVisible(saveMinorTickVisible);
-                restoreMinorTickVisiblity = false;
-            }
-        }
+
         // Update minor tickmarks
         minorTickPath.getElements().clear();
-        if (getMinorTickLength() > 0) {
+        // Don't draw minor tick marks if there isn't enough space for them!
+        double minorTickLength = Math.max(0, getMinorTickLength());
+        if ((neededLength < length) && (0 < minorTickLength)) {
             if (Side.LEFT.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(-0.5);
@@ -382,7 +361,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                     double y = getDisplayPosition(value);
                     if(y >= 0 && y <= length) {
                         minorTickPath.getElements().addAll(
-                                new MoveTo(getWidth() - getMinorTickLength(), y),
+                                new MoveTo(getWidth() - minorTickLength, y),
                                 new LineTo(getWidth()-1, y));
                     }
                 }
@@ -395,7 +374,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                     if(y >= 0 && y <= length) {
                         minorTickPath.getElements().addAll(
                                 new MoveTo(1, y),
-                                new LineTo(getMinorTickLength(), y));
+                                new LineTo(minorTickLength, y));
                     }
                 }
             } else if (Side.TOP.equals(side)) {
@@ -407,7 +386,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                     if(x >= 0 && x <= length) {
                         minorTickPath.getElements().addAll(
                                 new MoveTo(x, getHeight()-1),
-                                new LineTo(x, getHeight() - getMinorTickLength()));
+                                new LineTo(x, getHeight() - minorTickLength));
                     }
                 }
             } else { // BOTTOM
@@ -419,7 +398,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                     if(x >= 0 && x <= length) {
                         minorTickPath.getElements().addAll(
                                 new MoveTo(x, 1.0F),
-                                new LineTo(x, getMinorTickLength()));
+                                new LineTo(x, minorTickLength));
                     }
                 }
             }

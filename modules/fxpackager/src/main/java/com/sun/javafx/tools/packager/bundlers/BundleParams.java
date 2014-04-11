@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,85 +25,137 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
+import com.oracle.bundlers.BundlerParamInfo;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.PackagerLib;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-public class BundleParams {
-    boolean useDefaultRuntime = true;
-    RelativeFileSet runtime;
-    RelativeFileSet appResources;
-    Bundler.BundleType type;
-    String bundleFormat;
-    File icon;
+import static com.oracle.bundlers.StandardBundlerParam.*;
 
-    /* Name of bundle file and native launcher.
-       Also used as CFBundleName on Mac */
-    String name = null;
+public class BundleParams {
+      
+    final protected Map<String, ? super Object> params;
+    
+    public static final String PARAM_RUNTIME                = "runtime"; // RelativeFileSet
+    public static final String PARAM_APP_RESOURCES          = "appResources"; // RelativeFileSet
+    public static final String PARAM_TYPE                   = "type"; // BundlerType
+    public static final String PARAM_BUNDLE_FORMAT          = "bundleFormat"; // String
+    public static final String PARAM_ICON                   = "icon"; // String
+
+    /* Name of bundle file and native launcher */
+    public static final String PARAM_NAME                   = "name"; // String
 
     /* application vendor, used by most of the bundlers */
-    String vendor = null;
-    
+    public static final String PARAM_VENDOR                 = "vendor"; // String
+
     /* email name and email, only used for debian */
-    String email = null;
+    public static final String PARAM_EMAIL                  = "email"; // String
 
     /* Copyright. Used on Mac */
-    String copyright = null;
+    public static final String PARAM_COPYRIGHT              = "copyright"; // String
 
     /* GUID on windows for MSI, CFBundleIdentifier on Mac
        If not compatible with requirements then bundler either do not bundle
        or autogenerate */
-    String identifier = null;
+    public static final String PARAM_IDENTIFIER             = "identifier"; // String
 
     /* shortcut preferences */
-    boolean needShortcut = false;
-    boolean needMenu = false;
+    public static final String PARAM_SHORTCUT               = "shortcutHint"; // boolean
+    public static final String PARAM_MENU                   = "menuHint"; // boolean
 
     /* Application version. Format may differ for different bundlers */
-    String appVersion = null;
+    public static final String PARAM_VERSION                = "appVersion"; // String
     /* Application category. Used at least on Mac/Linux. Value is platform specific */
-    String applicationCategory;
+    public static final String PARAM_CATEGORY               = "applicationCategory"; // String
 
     /* Optional short application */
-    String title;
+    public static final String PARAM_TITLE                  = "title"; // String
 
     /* Optional application description. Used by MSI and on Linux */
-    String description = null;
+    public static final String PARAM_DESCRIPTION            = "description"; // String
 
-    /* Licence type. Needed on Linux (rpm) */
-    String licenseType = null;
+    /* License type. Needed on Linux (rpm) */
+    public static final String PARAM_LICENSE_TYPE           = "licenseType"; // String
 
     /* File(s) with license. Format is OS/bundler specific */
-    List<String> licenseFile = new LinkedList<String>();
+    public static final String PARAM_LICENSE_FILE          = "licenseFile"; // List<String>
 
     /* user or system level install.
        null means "default" */
-    Boolean systemWide = false;
+    public static final String PARAM_SYSTEM_WIDE            = "systemWide"; // Boolean
 
+    /* service/daemon install.
+       null means "default" */
+    public static final String PARAM_SERVICE_HINT           = "serviceHint"; // Boolean
+
+    
     /* Main application class. Not used directly but used to derive default values */
-    String applicationClass;
+    public static final String PARAM_APPLICATION_CLASS      = "applicationClass"; // String
 
     //list of jvm args (in theory string can contain spaces and need to be escaped
-    List<String> jvmargs = new LinkedList<String>();
+    private List<String> jvmargs = new LinkedList<>();
     //list of jvm args (in theory string can contain spaces and need to be escaped
-    Map<String, String> jvmUserArgs = new HashMap<String, String>();
+    private Map<String, String> jvmUserArgs = new HashMap<>();
 
     //list of jvm properties (can also be passed as VM args
-    Map<String, String> jvmProperties = new HashMap<String, String>();
+    private Map<String, String> jvmProperties = new HashMap<>();
+
+    /**
+     * create a new bundle with all default values
+     */
+    public BundleParams() {
+        params = new HashMap<>();
+    }
+
+    /**
+     * Create a bundle params with a copy of the params 
+     * @param params map of initial parameters to be copied in.
+     */
+    public BundleParams(Map<String, ?> params) {
+        this.params = new HashMap<>(params);
+    }
+
+    public void addAllBundleParams(Map<String, ? super Object> p) {
+        params.putAll(p);
+    }
+
+    public <C> C fetchParam(BundlerParamInfo<C> paramInfo) {
+        return paramInfo.fetchFrom(params);
+    }
+    
+    @SuppressWarnings("unchecked")
+    public <C> C fetchParamWithDefault(Class<C> klass, C defaultValue, String... keys) {
+        for (String key : keys) {
+            Object o = params.get(key);
+            if (klass.isInstance(o)) {
+                return (C) o;
+            } else if (params.containsKey(keys) && o == null) {
+                return null;
+                // } else if (o != null) {
+                // TODO log an error.
+            }
+        }
+        return defaultValue;
+    }
+
+    public <C> C fetchParam(Class<C> klass, String... keys) {
+        return fetchParamWithDefault(klass, null, keys);
+    }
 
     //NOTE: we do not care about application parameters here
     // as they will be embeded into jar file manifest and
     // java launcher will take care of them!
+    
+    public Map<String, ? super Object> getBundleParamsAsMap() {
+        return new HashMap<>(params);
+    }
 
     public void setJvmargs(List<String> jvmargs) {
         this.jvmargs = jvmargs;
@@ -118,7 +170,7 @@ public class BundleParams {
     }
 
     public List<String> getAllJvmOptions() {
-        List<String> all = new LinkedList<String>();
+        List<String> all = new LinkedList<>();
         all.addAll(jvmargs);
         for(String k: jvmProperties.keySet()) {
             all.add("-D"+k+"="+jvmProperties.get(k)); //TODO: We are not escaping values here...
@@ -127,247 +179,140 @@ public class BundleParams {
     }
 
     public Map<String, String> getAllJvmUserOptions() {
-        Map<String, String> all = new HashMap<String, String>();
+        Map<String, String> all = new HashMap<>();
         all.putAll(jvmUserArgs);
         return all;
     }
 
     public String getApplicationID() {
-        String id = "";
-        if (identifier != null) {
-            id = identifier;
-        }
-        else {
-            id = applicationClass;
-        }
-        return id;
+        return fetchParam(IDENTIFIER);
     }
 
     public String getPreferencesID() {
-        return getApplicationID().replaceAll("\\.", "/");
+        return fetchParam(PREFERENCES_ID);
+    }
+
+    public String getTitle() {
+        return fetchParam(TITLE);
     }
 
     public void setTitle(String title) {
-        this.title = title;
+        putUnlessNull(PARAM_TITLE, title);
+    }
+
+    public String getApplicationClass() {
+        return fetchParam(MAIN_CLASS);
     }
 
     public void setApplicationClass(String applicationClass) {
-        this.applicationClass = applicationClass;
+        putUnlessNull(PARAM_APPLICATION_CLASS, applicationClass);
+    }
+
+    public String getAppVersion() {
+        return fetchParam(VERSION);
     }
 
     public void setAppVersion(String version) {
-        appVersion = version;
+        putUnlessNull(PARAM_VERSION, version);
+    }
+
+    public String getDescription() {
+        return fetchParam(DESCRIPTION);
     }
 
     public void setDescription(String s) {
-        description = s;
+        putUnlessNull(PARAM_DESCRIPTION, s);
+    }
+
+    public String getLicenseType() {
+        return fetchParam(LICENSE_TYPE);
     }
 
     public void setLicenseType(String version) {
-        licenseType = version;
+        putUnlessNull(PARAM_LICENSE_TYPE, version);
     }
 
     //path is relative to the application root
     public void addLicenseFile(String path) {
-        licenseFile.add(path);
+        List<String> licenseFiles = fetchParam(LICENSE_FILE);
+        if (licenseFiles == null || licenseFiles.isEmpty()) {
+            licenseFiles = new ArrayList<>();
+            params.put(PARAM_LICENSE_FILE, licenseFiles);
+        }
+        licenseFiles.add(path);
+    }
+
+    public Boolean getSystemWide() {
+        return fetchParam(SYSTEM_WIDE);
     }
 
     public void setSystemWide(Boolean b) {
-        systemWide = b;
+        putUnlessNull(PARAM_SYSTEM_WIDE, b);
     }
 
+    public void setServiceHint(Boolean b) {
+        putUnlessNull(PARAM_SERVICE_HINT, b);
+    }
+    
     public RelativeFileSet getRuntime() {
-        return runtime;
+        return fetchParam(RUNTIME);
+    }
+
+    public boolean isShortcutHint() {
+        return fetchParam(SHORTCUT_HINT);
     }
 
     public void setShortcutHint(boolean v) {
-        needShortcut = v;
+        putUnlessNull(PARAM_SHORTCUT, v);
+    }
+
+    public boolean isMenuHint() {
+        return fetchParam(MENU_HINT);
     }
 
     public void setMenuHint(boolean v) {
-        needMenu = v;
+        putUnlessNull(PARAM_MENU, v);
+    }
+
+    public String getName() {
+        return fetchParam(APP_NAME);
     }
 
     public void setName(String name) {
-        this.name = name;
+        putUnlessNull(PARAM_NAME, name);
     }
 
-    public void setType(Bundler.BundleType type) {
-        this.type = type;
+    public BundleType getType() {
+        return fetchParam(BundleType.class, PARAM_TYPE); 
     }
 
+    public void setType(BundleType type) {
+        putUnlessNull(PARAM_TYPE, type);
+    }
+
+    public String getBundleFormat() {
+        return fetchParam(String.class, PARAM_BUNDLE_FORMAT); 
+    }
+    
     public void setBundleFormat(String t) {
-        bundleFormat = t;
+        putUnlessNull(PARAM_BUNDLE_FORMAT, t);
     }
 
-    private boolean shouldExclude(File baseDir, File f, Rule ruleset[]) {
-        if (ruleset == null) {
-            return false;
-        }
-
-        String fname = f.getAbsolutePath().toLowerCase().substring(
-                baseDir.getAbsolutePath().length());
-        //first rule match defines the answer
-        for (Rule r: ruleset) {
-            if (r.match(fname)) {
-                return !r.treatAsAccept();
-            }
-        }
-        //default is include
-        return false;
+    public boolean getVerbose() {
+        return fetchParam(VERBOSE);
     }
 
-    private void walk(File base, File root, Rule ruleset[], Set<File> files) {
-        if (!root.isDirectory()) {
-            if (root.isFile()) {
-                files.add(root);
-            }
-            return;
-        }
-
-        File[] lst = root.listFiles();
-        for (File f : lst) {
-            //ignore symbolic links!
-            if (IOUtils.isNotSymbolicLink(f) && !shouldExclude(base, f, ruleset)) {
-                if (f.isDirectory()) {
-                    walk(base, f, ruleset, files);
-                } else if (f.isFile()) {
-                    //add to list
-                    files.add(f);
-                }
-            }
-        }
+    public void setVerbose(boolean verbose) {
+        putUnlessNull(VERBOSE.getID(), verbose);
     }
 
-    static class Rule {
-        String regex;
-        boolean includeRule;
-        Type type;
-        enum Type {SUFFIX, PREFIX, SUBSTR, REGEX};
-
-        private Rule(String regex, boolean includeRule, Type type) {
-            this.regex = regex;
-            this.type = type;
-            this.includeRule = includeRule;
-        }
-
-        boolean match(String str) {
-            if (type == Type.SUFFIX) {
-                return str.endsWith(regex);
-            }
-            if (type == Type.PREFIX) {
-                return str.startsWith(regex);
-            }
-            if (type == Type.SUBSTR) {
-                return str.contains(regex);
-            }
-            return str.matches(regex);
-        }
-
-        boolean treatAsAccept() {return includeRule;}
-
-        static Rule suffix(String s) {
-            return new Rule(s, true, Type.SUFFIX);
-        }
-        static Rule suffixNeg(String s) {
-            return new Rule(s, false, Type.SUFFIX);
-        }
-        static Rule prefix(String s) {
-            return new Rule(s, true, Type.PREFIX);
-        }
-        static Rule prefixNeg(String s) {
-            return new Rule(s, false, Type.PREFIX);
-        }
-        static Rule substr(String s) {
-            return new Rule(s, true, Type.SUBSTR);
-        }
-        static Rule substrNeg(String s) {
-            return new Rule(s, false, Type.SUBSTR);
-        }
+    public List<String> getLicenseFile() {
+        return fetchParam(LICENSE_FILE);
     }
 
-    //Subsetting of JRE is restricted.
-    //JRE README defines what is allowed to strip:
-    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html
-    //
-    //In addition to this we may need to keep deploy jars and deploy.dll
-    // because JavaFX apps might need JNLP services
-    //Also, embedded launcher uses deploy.jar to access registry
-    // (although this is not needed)
-    Rule macRules[] = {
-        Rule.suffixNeg("macos/libjli.dylib"),
-        Rule.suffixNeg("resources"),
-        Rule.suffixNeg("home/bin"),
-        Rule.suffixNeg("home/db"),
-        Rule.suffixNeg("home/demo"),
-        Rule.suffixNeg("home/include"),
-        Rule.suffixNeg("home/lib"),
-        Rule.suffixNeg("home/man"),
-        Rule.suffixNeg("home/release"),
-        Rule.suffixNeg("home/sample"),
-        Rule.suffixNeg("home/src.zip"),
-        //"home/rt" is not part of the official builds
-        // but we may be creating this symlink to make older NB projects
-        // happy. Make sure to not include it into final artifact
-        Rule.suffixNeg("home/rt"),
-        Rule.suffixNeg("jre/bin"),
-        Rule.suffixNeg("jre/bin/rmiregistry"),
-        Rule.suffixNeg("jre/bin/tnameserv"),
-        Rule.suffixNeg("jre/bin/keytool"),
-        Rule.suffixNeg("jre/bin/klist"),
-        Rule.suffixNeg("jre/bin/ktab"),
-        Rule.suffixNeg("jre/bin/policytool"),
-        Rule.suffixNeg("jre/bin/orbd"),
-        Rule.suffixNeg("jre/bin/servertool"),
-        Rule.suffixNeg("jre/bin/javaws"),
-        Rule.suffixNeg("jre/bin/java"),
-//        Rule.suffixNeg("jre/lib/ext"), //need some of jars there for https to work
-        Rule.suffixNeg("jre/lib/nibs"),
-//keep core deploy APIs but strip plugin dll
-//        Rule.suffixNeg("jre/lib/deploy"),
-//        Rule.suffixNeg("jre/lib/deploy.jar"),
-//        Rule.suffixNeg("jre/lib/javaws.jar"),
-//        Rule.suffixNeg("jre/lib/libdeploy.dylib"),
-//        Rule.suffixNeg("jre/lib/plugin.jar"),
-        Rule.suffixNeg("jre/lib/libnpjp2.dylib"),
-        Rule.suffixNeg("jre/lib/security/javaws.policy")
-    };
-
-    Rule winRules[] = {
-        Rule.prefixNeg("\\bin\\new_plugin"),
-        Rule.suffix("deploy.jar"), //take deploy.jar
-        Rule.prefixNeg("\\lib\\deploy"),
-        Rule.suffixNeg(".pdb"),
-        Rule.suffixNeg(".map"),
-        Rule.suffixNeg("axbridge.dll"),
-        Rule.suffixNeg("eula.dll"),
-        Rule.substrNeg("javacpl"),
-        Rule.suffixNeg("wsdetect.dll"),
-        Rule.substrNeg("eployjava1.dll"), //NP and IE versions
-        Rule.substrNeg("bin\\jp2"),
-        Rule.substrNeg("bin\\jpi"),
-//        Rule.suffixNeg("lib\\ext"), //need some of jars there for https to work
-        Rule.suffixNeg("ssv.dll"),
-        Rule.substrNeg("npjpi"),
-        Rule.substrNeg("npoji"),
-        Rule.suffixNeg(".exe"),
-//keep core deploy files as JavaFX APIs use them
-//        Rule.suffixNeg("deploy.dll"),
-//        Rule.suffixNeg("deploy.jar"),
-//        Rule.suffixNeg("javaws.jar"),
-//        Rule.suffixNeg("plugin.jar"),
-        Rule.suffix(".jar")
-    };
-
-    Rule linuxRules[] = {
-        Rule.prefixNeg("/bin"),
-        Rule.prefixNeg("/plugin"),
-//        Rule.prefixNeg("/lib/ext"), //need some of jars there for https to work
-        Rule.suffix("deploy.jar"), //take deploy.jar
-        Rule.prefixNeg("/lib/deploy"),
-        Rule.prefixNeg("/lib/desktop"),
-        Rule.substrNeg("libnpjp2.so")
-    };
+    public List<String> getJvmargs() {
+        return jvmargs;
+    }
 
     //Validation approach:
     //  - JRE marker (rt.jar)
@@ -448,11 +393,10 @@ public class BundleParams {
         //mistake or explicit intent to use system runtime
         if (baseDir == null) {
             Log.verbose("No Java runtime to embed. Package will need system Java.");
-            runtime = null;
+            params.put(PARAM_RUNTIME, null);
             return;
         }
         doSetRuntime(baseDir);
-        useDefaultRuntime = false;
     }
 
     public void setDefaultRuntime() {
@@ -462,30 +406,7 @@ public class BundleParams {
 
     //input dir "jdk/jre" (i.e. jre folder in the jdk)
     private void doSetRuntime(File baseDir) {
-        boolean isMac = System.getProperty("os.name").toLowerCase().contains("os x");
-
-        //Normalization: on MacOS we need to point to the top of JDK dir
-        // (other platforms are fine)
-        if (isMac) {
-            //On Mac we need Bundle root, not jdk/Contents/Home
-            baseDir = baseDir.getParentFile().getParentFile().getParentFile();
-        }
-
-        Set<File> lst = new HashSet<File>();
-
-        Rule ruleset[];
-        if (System.getProperty("os.name").startsWith("Mac")) {
-            ruleset = macRules;
-        } else if (System.getProperty("os.name").startsWith("Win")) {
-            ruleset = winRules;
-        } else {
-            //must be linux
-            ruleset = linuxRules;
-        }
-
-        walk(baseDir, baseDir, ruleset, lst);
-
-        runtime = new RelativeFileSet(baseDir, lst);
+        params.put(PARAM_RUNTIME, baseDir.toString());
     }
 
     //Currently unused?
@@ -494,19 +415,33 @@ public class BundleParams {
     //       runtime = fs;
     //}
 
+    public RelativeFileSet getAppResource() {
+        return fetchParam(APP_RESOURCES);
+    }
+
     public void setAppResource(RelativeFileSet fs) {
-        appResources = fs;
+        putUnlessNull(PARAM_APP_RESOURCES, fs);
+    }
+
+    public File getIcon() {
+        return fetchParam(ICON);
     }
 
     public void setIcon(File icon) {
-        this.icon = icon;
+        putUnlessNull(PARAM_ICON, icon);
+    }
+
+    public String getApplicationCategory() {
+        return fetchParam(CATEGORY);
     }
 
     public void setApplicationCategory(String category) {
-        applicationCategory = category;
+        putUnlessNull(PARAM_CATEGORY, category);
     }
 
-    String getMainClassName() {
+    public String getMainClassName() {
+        String applicationClass = getApplicationClass();
+        
         if (applicationClass == null) {
             return null;
         }
@@ -518,12 +453,20 @@ public class BundleParams {
         return applicationClass;
     }
 
+    public String getCopyright() {
+        return fetchParam(COPYRIGHT);
+    }
+
     public void setCopyright(String c) {
-        copyright = c;
+        putUnlessNull(PARAM_COPYRIGHT, c);
+    }
+
+    public String getIdentifier() {
+        return fetchParam(IDENTIFIER);
     }
 
     public void setIdentifier(String s) {
-        identifier = s;
+        putUnlessNull(PARAM_IDENTIFIER, s);
     }
 
     private String mainJar = null;
@@ -564,6 +507,9 @@ public class BundleParams {
         if (mainJar != null) {
             return mainJar;
         }
+        
+        RelativeFileSet appResources = getAppResource();
+        String applicationClass = getApplicationClass();
 
         if (appResources == null || applicationClass == null) {
             return null;
@@ -587,21 +533,31 @@ public class BundleParams {
                         return mainJar;
                     }
                 }
-            } catch (IOException ex) {
+            } catch (IOException ignore) {
             }
         }
         return null;
     }
 
+    public String getVendor() {
+        return fetchParam(VENDOR);
+    }
+
     public void setVendor(String vendor) {
-        if (vendor != null) {
-           this.vendor = vendor;
-        }
+       putUnlessNull(PARAM_VENDOR, vendor);
+    }
+
+    public String getEmail() {
+        return fetchParam(String.class, PARAM_EMAIL);
     }
 
     public void setEmail(String email) {
-        if (email != null) {
-            this.email = email;
+        putUnlessNull(PARAM_EMAIL, email);
+    }
+    
+    public void putUnlessNull(String param, Object value) {
+        if (value != null) {
+            params.put(param, value);
         }
     }
 

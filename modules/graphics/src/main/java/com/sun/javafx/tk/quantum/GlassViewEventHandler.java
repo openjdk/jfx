@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,8 @@ import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.collections.TrackableObservableList;
+import com.sun.javafx.logging.PulseLogger;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.javafx.scene.input.KeyCodeMap;
 
 import javafx.collections.ListChangeListener;
@@ -44,6 +46,7 @@ import javafx.collections.ObservableList;
 
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
+import javafx.scene.accessibility.Accessible;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
@@ -60,6 +63,16 @@ import java.security.PrivilegedAction;
 
 class GlassViewEventHandler extends View.EventHandler {
 
+    static boolean zoomGestureEnabled;
+    static boolean rotateGestureEnabled;
+    static {
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            zoomGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.zoom", "false"));
+            rotateGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.rotate", "false"));
+            return null;
+        });
+    }    
+
     private ViewScene scene;
     private final GlassSceneDnDEventHandler dndHandler;
     private final GestureRecognizers gestures;
@@ -72,6 +85,12 @@ class GlassViewEventHandler extends View.EventHandler {
         gestures = new GestureRecognizers();
         if (PlatformUtil.isWindows() || PlatformUtil.isIOS() || PlatformUtil.isEmbedded()) {
             gestures.add(new SwipeGestureRecognizer(scene));
+        }
+        if (zoomGestureEnabled) {
+            gestures.add(new ZoomGestureRecognizer(scene));
+        }
+        if (rotateGestureEnabled) {
+            gestures.add(new RotateGestureRecognizer(scene));
         }
     }
 
@@ -130,6 +149,9 @@ class GlassViewEventHandler extends View.EventHandler {
 
         @Override
         public Void run() {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(keyEventType(type).toString());
+            }
             WindowStage stage = scene.getWindowStage();
             try {
                 if (stage != null) {
@@ -178,6 +200,9 @@ class GlassViewEventHandler extends View.EventHandler {
             } finally {
                 if (stage != null) {
                     stage.setInEventHandler(false);
+                }
+                if (PULSE_LOGGING_ENABLED) {
+                    PulseLogger.newInput(null);
                 }
             }
             return null;
@@ -252,6 +277,10 @@ class GlassViewEventHandler extends View.EventHandler {
 
         @Override
         public Void run() {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(mouseEventType(type).toString());
+            }
+                    
             int buttonMask;
             switch (button) {
                 case MouseEvent.BUTTON_LEFT:
@@ -320,6 +349,9 @@ class GlassViewEventHandler extends View.EventHandler {
                 if (stage != null) {
                     stage.setInEventHandler(false);
                 }
+                if (PULSE_LOGGING_ENABLED) {
+                    PulseLogger.newInput(null);
+                }
             }
             return null;
         }
@@ -349,23 +381,26 @@ class GlassViewEventHandler extends View.EventHandler {
                                           final int x, final int y, final int xAbs, final int yAbs,
                                           final boolean isKeyboardTrigger)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("MENU_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        scene.sceneListener.menuEvent(x, y, xAbs, yAbs, isKeyboardTrigger);
-                    }
-                    return null;
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    scene.sceneListener.menuEvent(x, y, xAbs, yAbs, isKeyboardTrigger);
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
     }
@@ -377,34 +412,37 @@ class GlassViewEventHandler extends View.EventHandler {
                                             final int defaultLines, final int defaultChars,
                                             final double xMultiplier, final double yMultiplier)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("SCROLL_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        scene.sceneListener.scrollEvent(javafx.scene.input.ScrollEvent.SCROLL,
-                            deltaX, deltaY, 0, 0,
-                            xMultiplier, yMultiplier,
-                            0, // touchCount
-                            chars, lines, defaultChars, defaultLines,
-                            x, y, xAbs, yAbs,
-                            (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                            (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                            (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                            (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                            false, // this is always indirect
-                            false); // this has no inertia
-                    }
-                    return null;
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    scene.sceneListener.scrollEvent(ScrollEvent.SCROLL,
+                        deltaX, deltaY, 0, 0,
+                        xMultiplier, yMultiplier,
+                        0, // touchCount
+                        chars, lines, defaultChars, defaultLines,
+                        x, y, xAbs, yAbs,
+                        (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                        (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                        (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                        (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                        false, // this is always indirect
+                        false); // this has no inertia
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
     }
@@ -481,29 +519,32 @@ class GlassViewEventHandler extends View.EventHandler {
                                                  final int[] attrBoundary, final byte[] attrValue,
                                                  final int commitCount, final int cursorPos)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("INPUT_METHOD_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        String t = text != null ? text : "";
-                        EventType<InputMethodEvent> eventType =
-                                javafx.scene.input.InputMethodEvent.INPUT_METHOD_TEXT_CHANGED;
-                        ObservableList<InputMethodTextRun> composed = inputMethodEventComposed(
-                                t, commitCount, clauseBoundary, attrBoundary, attrValue);
-                        String committed = t.substring(0, commitCount);
-                        scene.sceneListener.inputMethodEvent(eventType, composed, committed, cursorPos);
-                    }
-                    return null;
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    String t = text != null ? text : "";
+                    EventType<InputMethodEvent> eventType =
+                            InputMethodEvent.INPUT_METHOD_TEXT_CHANGED;
+                    ObservableList<InputMethodTextRun> composed = inputMethodEventComposed(
+                            t, commitCount, clauseBoundary, attrBoundary, attrValue);
+                    String committed = t.substring(0, commitCount);
+                    scene.sceneListener.inputMethodEvent(eventType, composed, committed, cursorPos);
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
     }
@@ -566,15 +607,33 @@ class GlassViewEventHandler extends View.EventHandler {
                                          final int recommendedDropAction,
                                          final ClipboardAssistance dropTargetAssistant)
     {
-        TransferMode action =
-            dndHandler.handleDragEnter(x, y, xAbs, yAbs,
-                actionToTransferMode(recommendedDropAction),
-                dropTargetAssistant);
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_ENTER");
+        }
+        TransferMode action;
+        try {
+            action = dndHandler.handleDragEnter(x, y, xAbs, yAbs,
+                    actionToTransferMode(recommendedDropAction),
+                    dropTargetAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
         return transferModeToAction(action);
     }
 
     @Override public void handleDragLeave(View view, final ClipboardAssistance dropTargetAssistant) {
-        dndHandler.handleDragLeave(dropTargetAssistant);
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_LEAVE");
+        }
+        try {
+            dndHandler.handleDragLeave(dropTargetAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
     }
 
     @Override public int handleDragDrop(View view,
@@ -582,10 +641,19 @@ class GlassViewEventHandler extends View.EventHandler {
                                         final int recommendedDropAction,
                                         final ClipboardAssistance dropTargetAssistant)
     {
-        TransferMode action =
-            dndHandler.handleDragDrop(x, y, xAbs, yAbs,
-                actionToTransferMode(recommendedDropAction),
-                dropTargetAssistant);
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_DROP");
+        }
+        TransferMode action;
+        try {
+            action = dndHandler.handleDragDrop(x, y, xAbs, yAbs,
+                    actionToTransferMode(recommendedDropAction),
+                    dropTargetAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
         return transferModeToAction(action);
     }
 
@@ -594,10 +662,19 @@ class GlassViewEventHandler extends View.EventHandler {
                                         final int recommendedDropAction,
                                         final ClipboardAssistance dropTargetAssistant)
     {
-        final TransferMode action =
-            dndHandler.handleDragOver(x, y, xAbs, yAbs,
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_OVER");
+        }
+        TransferMode action;
+        try {
+            action = dndHandler.handleDragOver(x, y, xAbs, yAbs,
                 actionToTransferMode(recommendedDropAction),
                 dropTargetAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
         return transferModeToAction(action);
     }
 
@@ -607,12 +684,30 @@ class GlassViewEventHandler extends View.EventHandler {
                                           final int x, final int y, final int xAbs, final int yAbs,
                                           final ClipboardAssistance assistant)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_START");
+        }
         dropSourceAssistant = assistant;
-        dndHandler.handleDragStart(button, x, y, xAbs, yAbs, assistant);
+        try {
+            dndHandler.handleDragStart(button, x, y, xAbs, yAbs, assistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
     }
 
     @Override public void handleDragEnd(View view, final int performedAction) {
-        dndHandler.handleDragEnd(actionToTransferMode(performedAction), dropSourceAssistant);
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("DRAG_END");
+        }
+        try {
+            dndHandler.handleDragEnd(actionToTransferMode(performedAction), dropSourceAssistant);
+        } finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
     }
 
     // TODO - dropTargetListener.dropActionChanged
@@ -684,11 +779,20 @@ class GlassViewEventHandler extends View.EventHandler {
     }
 
     @Override public void handleViewEvent(View view, long time, final int type) {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("VIEW_EVENT: "+ViewEvent.getTypeString(type));
+        }
         viewNotification.view = view;
         viewNotification.time = time;
         viewNotification.type = type;
-
-        AccessController.doPrivileged(viewNotification, scene.getAccessControlContext());
+        try {
+            AccessController.doPrivileged(viewNotification, scene.getAccessControlContext());
+        }
+        finally {
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
+        }
     }
 
     @Override public void handleScrollGestureEvent(
@@ -697,49 +801,52 @@ class GlassViewEventHandler extends View.EventHandler {
             final int x, final int y, final int xAbs, final int yAbs, final double dx, final double dy,
             final double totaldx, final double totaldy, final double multiplierX, final double multiplierY)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("SCROLL_GESTURE_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        EventType<ScrollEvent> eventType;
-                        switch(type) {
-                            case GestureEvent.GESTURE_STARTED:
-                                eventType = ScrollEvent.SCROLL_STARTED;
-                                break;
-                            case GestureEvent.GESTURE_PERFORMED:
-                                eventType = ScrollEvent.SCROLL;
-                                break;
-                            case GestureEvent.GESTURE_FINISHED:
-                                eventType = ScrollEvent.SCROLL_FINISHED;
-                                break;
-                            default:
-                                throw new RuntimeException("Unknown scroll event type: " + type);
-                        }
-                        scene.sceneListener.scrollEvent(eventType, dx, dy, totaldx, totaldy,
-                                multiplierX, multiplierY,
-                                touchCount,
-                                0, 0, 0, 0,
-                                x == View.GESTURE_NO_VALUE ? Double.NaN : x,
-                                y == View.GESTURE_NO_VALUE ? Double.NaN : y,
-                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs,
-                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs,
-                                (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                                (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                                isDirect, isInertia);
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    EventType<ScrollEvent> eventType;
+                    switch(type) {
+                        case GestureEvent.GESTURE_STARTED:
+                            eventType = ScrollEvent.SCROLL_STARTED;
+                            break;
+                        case GestureEvent.GESTURE_PERFORMED:
+                            eventType = ScrollEvent.SCROLL;
+                            break;
+                        case GestureEvent.GESTURE_FINISHED:
+                            eventType = ScrollEvent.SCROLL_FINISHED;
+                            break;
+                        default:
+                            throw new RuntimeException("Unknown scroll event type: " + type);
                     }
-                    return null;
+                    scene.sceneListener.scrollEvent(eventType, dx, dy, totaldx, totaldy,
+                            multiplierX, multiplierY,
+                            touchCount,
+                            0, 0, 0, 0,
+                            x == View.GESTURE_NO_VALUE ? Double.NaN : x,
+                            y == View.GESTURE_NO_VALUE ? Double.NaN : y,
+                            xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs,
+                            yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs,
+                            (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                            (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                            isDirect, isInertia);
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
     }
@@ -752,46 +859,49 @@ class GlassViewEventHandler extends View.EventHandler {
             final double scale, double expansion,
             final double totalscale, double totalexpansion)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("ZOOM_GESTURE_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        EventType<ZoomEvent> eventType;
-                        switch (type) {
-                            case GestureEvent.GESTURE_STARTED:
-                                eventType = ZoomEvent.ZOOM_STARTED;
-                                break;
-                            case GestureEvent.GESTURE_PERFORMED:
-                                eventType = ZoomEvent.ZOOM;
-                                break;
-                            case GestureEvent.GESTURE_FINISHED:
-                                eventType = ZoomEvent.ZOOM_FINISHED;
-                                break;
-                            default:
-                                throw new RuntimeException("Unknown scroll event type: " + type);
-                        }
-                        scene.sceneListener.zoomEvent(eventType, scale, totalscale,
-                                originx == View.GESTURE_NO_VALUE ? Double.NaN : originx,
-                                originy == View.GESTURE_NO_VALUE ? Double.NaN : originy,
-                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs,
-                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs,
-                                (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                                (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                                isDirect, isInertia);
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    EventType<ZoomEvent> eventType;
+                    switch (type) {
+                        case GestureEvent.GESTURE_STARTED:
+                            eventType = ZoomEvent.ZOOM_STARTED;
+                            break;
+                        case GestureEvent.GESTURE_PERFORMED:
+                            eventType = ZoomEvent.ZOOM;
+                            break;
+                        case GestureEvent.GESTURE_FINISHED:
+                            eventType = ZoomEvent.ZOOM_FINISHED;
+                            break;
+                        default:
+                            throw new RuntimeException("Unknown scroll event type: " + type);
                     }
-                    return null;
+                    scene.sceneListener.zoomEvent(eventType, scale, totalscale,
+                            originx == View.GESTURE_NO_VALUE ? Double.NaN : originx,
+                            originy == View.GESTURE_NO_VALUE ? Double.NaN : originy,
+                            originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs,
+                            originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs,
+                            (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                            (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                            isDirect, isInertia);
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
     }
@@ -803,46 +913,49 @@ class GlassViewEventHandler extends View.EventHandler {
             final int originxAbs, final int originyAbs,
             final double dangle, final double totalangle)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("ROTATE_GESTURE_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        EventType<RotateEvent> eventType;
-                        switch (type) {
-                            case GestureEvent.GESTURE_STARTED:
-                                eventType = RotateEvent.ROTATION_STARTED;
-                                break;
-                            case GestureEvent.GESTURE_PERFORMED:
-                                eventType = RotateEvent.ROTATE;
-                                break;
-                            case GestureEvent.GESTURE_FINISHED:
-                                eventType = RotateEvent.ROTATION_FINISHED;
-                                break;
-                            default:
-                                throw new RuntimeException("Unknown scroll event type: " + type);
-                        }
-                        scene.sceneListener.rotateEvent(eventType, dangle, totalangle,
-                                originx == View.GESTURE_NO_VALUE ? Double.NaN : originx,
-                                originy == View.GESTURE_NO_VALUE ? Double.NaN : originy,
-                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs,
-                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs,
-                                (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                                (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                                isDirect, isInertia);
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    EventType<RotateEvent> eventType;
+                    switch (type) {
+                        case GestureEvent.GESTURE_STARTED:
+                            eventType = RotateEvent.ROTATION_STARTED;
+                            break;
+                        case GestureEvent.GESTURE_PERFORMED:
+                            eventType = RotateEvent.ROTATE;
+                            break;
+                        case GestureEvent.GESTURE_FINISHED:
+                            eventType = RotateEvent.ROTATION_FINISHED;
+                            break;
+                        default:
+                            throw new RuntimeException("Unknown scroll event type: " + type);
                     }
-                    return null;
+                    scene.sceneListener.rotateEvent(eventType, dangle, totalangle,
+                            originx == View.GESTURE_NO_VALUE ? Double.NaN : originx,
+                            originy == View.GESTURE_NO_VALUE ? Double.NaN : originy,
+                            originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs,
+                            originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs,
+                            (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                            (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                            isDirect, isInertia);
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
     }
@@ -853,49 +966,52 @@ class GlassViewEventHandler extends View.EventHandler {
             boolean isInertia, final int touchCount,
             final int dir, final int x, final int y, final int xAbs, final int yAbs)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("SWIPE_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        EventType<SwipeEvent> eventType;
-                        switch (dir) {
-                            case SwipeGesture.DIR_UP:
-                                eventType = SwipeEvent.SWIPE_UP;
-                                break;
-                            case SwipeGesture.DIR_DOWN:
-                                eventType = SwipeEvent.SWIPE_DOWN;
-                                break;
-                            case SwipeGesture.DIR_LEFT:
-                                eventType = SwipeEvent.SWIPE_LEFT;
-                                break;
-                            case SwipeGesture.DIR_RIGHT:
-                                eventType = SwipeEvent.SWIPE_RIGHT;
-                                break;
-                            default:
-                                throw new RuntimeException("Unknown swipe event direction: " + dir);
-                        }
-                        scene.sceneListener.swipeEvent(eventType, touchCount,
-                                x == View.GESTURE_NO_VALUE ? Double.NaN : x,
-                                y == View.GESTURE_NO_VALUE ? Double.NaN : y,
-                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs,
-                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs,
-                                (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                                (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                                isDirect);
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    EventType<SwipeEvent> eventType;
+                    switch (dir) {
+                        case SwipeGesture.DIR_UP:
+                            eventType = SwipeEvent.SWIPE_UP;
+                            break;
+                        case SwipeGesture.DIR_DOWN:
+                            eventType = SwipeEvent.SWIPE_DOWN;
+                            break;
+                        case SwipeGesture.DIR_LEFT:
+                            eventType = SwipeEvent.SWIPE_LEFT;
+                            break;
+                        case SwipeGesture.DIR_RIGHT:
+                            eventType = SwipeEvent.SWIPE_RIGHT;
+                            break;
+                        default:
+                            throw new RuntimeException("Unknown swipe event direction: " + dir);
                     }
-                    return null;
+                    scene.sceneListener.swipeEvent(eventType, touchCount,
+                            x == View.GESTURE_NO_VALUE ? Double.NaN : x,
+                            y == View.GESTURE_NO_VALUE ? Double.NaN : y,
+                            xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs,
+                            yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs,
+                            (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                            (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                            isDirect);
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
     }
@@ -904,28 +1020,31 @@ class GlassViewEventHandler extends View.EventHandler {
             View view, final long time, final int modifiers,
             final boolean isDirect, final int touchEventCount)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("BEGIN_TOUCH_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        scene.sceneListener.touchEventBegin(time, touchEventCount,
-                                isDirect,
-                                (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                                (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                                (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0);
-                    }
-                    return null;
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    scene.sceneListener.touchEventBegin(time, touchEventCount,
+                            isDirect,
+                            (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                            (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                            (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0);
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
 
@@ -936,40 +1055,43 @@ class GlassViewEventHandler extends View.EventHandler {
             View view, final long time, final int type, final long touchId,
             final int x, final int y, final int xAbs, final int yAbs)
     {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("NEXT_TOUCH_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        TouchPoint.State state;
-                        switch (type) {
-                            case TouchEvent.TOUCH_PRESSED:
-                                state = TouchPoint.State.PRESSED;
-                                break;
-                            case TouchEvent.TOUCH_MOVED:
-                                state = TouchPoint.State.MOVED;
-                                break;
-                            case TouchEvent.TOUCH_STILL:
-                                state = TouchPoint.State.STATIONARY;
-                                break;
-                            case TouchEvent.TOUCH_RELEASED:
-                                state = TouchPoint.State.RELEASED;
-                                break;
-                            default:
-                                throw new RuntimeException("Unknown touch state: " + type);
-                        }
-                        scene.sceneListener.touchEventNext(state, touchId, x, y, xAbs, yAbs);
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    TouchPoint.State state;
+                    switch (type) {
+                        case TouchEvent.TOUCH_PRESSED:
+                            state = TouchPoint.State.PRESSED;
+                            break;
+                        case TouchEvent.TOUCH_MOVED:
+                            state = TouchPoint.State.MOVED;
+                            break;
+                        case TouchEvent.TOUCH_STILL:
+                            state = TouchPoint.State.STATIONARY;
+                            break;
+                        case TouchEvent.TOUCH_RELEASED:
+                            state = TouchPoint.State.RELEASED;
+                            break;
+                        default:
+                            throw new RuntimeException("Unknown touch state: " + type);
                     }
-                    return null;
+                    scene.sceneListener.touchEventNext(state, touchId, x, y, xAbs, yAbs);
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
+            }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
             }
         }
 
@@ -977,26 +1099,37 @@ class GlassViewEventHandler extends View.EventHandler {
     }
 
     @Override public void handleEndTouchEvent(View view, long time) {
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newInput("END_TOUCH_EVENT");
+        }
         WindowStage stage = scene.getWindowStage();
         try {
             if (stage != null) {
                 stage.setInEventHandler(true);
             }
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    if (scene.sceneListener != null) {
-                        scene.sceneListener.touchEventEnd();
-                    }
-                    return null;
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (scene.sceneListener != null) {
+                    scene.sceneListener.touchEventEnd();
                 }
+                return null;
             }, scene.getAccessControlContext());
         } finally {
             if (stage != null) {
                 stage.setInEventHandler(false);
             }
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newInput(null);
+            }
         }
 
         gestures.notifyEndTouchEvent(time);
+    }
+
+    @Override
+    public Accessible getSceneAccessible() {
+        if (scene != null && scene.sceneListener != null) {
+            return scene.sceneListener.getSceneAccessible();
+        }
+        return null;
     }
 }

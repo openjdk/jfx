@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,93 +25,9 @@
 
 package javafx.scene;
 
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
-import com.sun.javafx.tk.TKClipboard;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
-import javafx.application.Application;
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
-import javafx.beans.DefaultProperty;
-import javafx.beans.InvalidationListener;
-import javafx.beans.NamedArg;
-import javafx.beans.Observable;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyObjectPropertyBase;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.WritableValue;
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-import javafx.collections.ObservableMap;
-import javafx.css.CssMetaData;
-import javafx.css.StyleableObjectProperty;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
-import javafx.event.EventDispatcher;
-import javafx.event.EventHandler;
-import javafx.event.EventTarget;
-import javafx.event.EventType;
-import javafx.geometry.Bounds;
-import javafx.geometry.NodeOrientation;
-import javafx.geometry.Orientation;
-import javafx.geometry.Point2D;
-import javafx.geometry.Point3D;
-import javafx.scene.image.WritableImage;
-import javafx.scene.input.ContextMenuEvent;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.GestureEvent;
-import javafx.scene.input.InputMethodEvent;
-import javafx.scene.input.InputMethodRequests;
-import javafx.scene.input.InputMethodTextRun;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.Mnemonic;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseDragEvent;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.PickResult;
-import javafx.scene.input.RotateEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.SwipeEvent;
-import javafx.scene.input.TouchEvent;
-import javafx.scene.input.TouchPoint;
-import javafx.scene.input.TransferMode;
-import javafx.scene.input.ZoomEvent;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
-import javafx.stage.PopupWindow;
-import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-import javafx.stage.Window;
-import javafx.util.Callback;
-import javafx.util.Duration;
-
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.cursor.CursorFrame;
@@ -123,31 +39,58 @@ import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.robot.impl.FXRobotHelper;
 import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.scene.CssFlags;
+import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.SceneEventDispatcher;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.input.DragboardHelper;
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.input.InputEventUtils;
-import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalEngine;
+import com.sun.javafx.scene.traversal.SceneTraversalEngine;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
-import com.sun.javafx.tk.TKDragGestureListener;
-import com.sun.javafx.tk.TKDragSourceListener;
-import com.sun.javafx.tk.TKDropTargetListener;
-import com.sun.javafx.tk.TKPulseListener;
-import com.sun.javafx.tk.TKScene;
-import com.sun.javafx.tk.TKSceneListener;
-import com.sun.javafx.tk.TKScenePaintListener;
-import com.sun.javafx.tk.TKStage;
-import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.scene.LayoutFlags;
+import com.sun.javafx.tk.*;
 import com.sun.prism.impl.PrismSettings;
-
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
+import javafx.beans.DefaultProperty;
+import javafx.beans.InvalidationListener;
+import javafx.beans.NamedArg;
+import javafx.beans.property.*;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.css.CssMetaData;
+import javafx.css.StyleableObjectProperty;
+import javafx.event.*;
+import javafx.geometry.*;
+import javafx.scene.accessibility.Accessible;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
+import javafx.scene.image.WritableImage;
+import javafx.scene.input.*;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.stage.PopupWindow;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.Window;
+import javafx.util.Callback;
+import javafx.util.Duration;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.*;
+
+import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
@@ -211,6 +154,12 @@ public class Scene implements EventTarget {
     private final AccessControlContext acc = AccessController.getContext();
 
     private Camera defaultCamera;
+
+    /**
+     * A node that is temporarily responsible for the FOCUS_NODE
+     * accessibility attribute. E.g. a currently active MenuBar.
+     */
+    private Node transientFocusContainer;
 
     //Neither width nor height are initialized and will be calculated according to content when this Scene
     //is shown for the first time.
@@ -448,6 +397,11 @@ public class Scene implements EventTarget {
                                        }
                                    };
                         }
+
+                        @Override
+                        public void setTransientFocusContainer(Scene scene, Node node) {
+                            scene.transientFocusContainer = node;
+                        }
                     });
         }
 
@@ -566,7 +520,7 @@ public class Scene implements EventTarget {
             // The cssFlag is set to clean in either Node.processCSS or
             // Node.impl_processCSS(boolean)
             sceneRoot.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
-            sceneRoot.processCSS(null);
+            sceneRoot.processCSS();
         }
     }
 
@@ -764,6 +718,13 @@ public class Scene implements EventTarget {
 
         Toolkit tk = Toolkit.getToolkit();
         tk.removeSceneTkPulseListener(scenePulseListener);
+        if (accessible != null) {
+            disposeAccessibles();
+            Node root = getRoot();
+            if (root != null) root.releaseAccessible();
+            accessible.dispose();
+            accessible = null;
+        }
         impl_peer.dispose();
         impl_peer = null;
 
@@ -1116,12 +1077,8 @@ public class Scene implements EventTarget {
 
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
-                        oldRoot.setImpl_traversalEngine(null);
                     }
                     oldRoot = _value;
-                    if (_value.getImpl_traversalEngine() == null) {
-                        _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
-                    }
                     _value.getStyleClass().add(0, "root");
                     _value.setScenes(Scene.this, null);
                     markDirty(DirtyBits.ROOT_DIRTY);
@@ -1292,25 +1249,23 @@ public class Scene implements EventTarget {
             snapshotRunnableListB = new ArrayList<Runnable>();
             snapshotRunnableList = snapshotRunnableListA;
 
-            snapshotPulseListener = new TKPulseListener() {
-                @Override public void pulse() {
-                    if (snapshotRunnableList.size() > 0) {
-                        List<Runnable> runnables = snapshotRunnableList;
-                        if (snapshotRunnableList == snapshotRunnableListA) {
-                            snapshotRunnableList = snapshotRunnableListB;
-                        } else {
-                            snapshotRunnableList = snapshotRunnableListA;
-                        }
-                        for (Runnable r : runnables) {
-                            try {
-                                r.run();
-                            } catch (Throwable th) {
-                                System.err.println("Exception in snapshot runnable");
-                                th.printStackTrace(System.err);
-                            }
-                        }
-                        runnables.clear();
+            snapshotPulseListener = () -> {
+                if (snapshotRunnableList.size() > 0) {
+                    List<Runnable> runnables = snapshotRunnableList;
+                    if (snapshotRunnableList == snapshotRunnableListA) {
+                        snapshotRunnableList = snapshotRunnableListB;
+                    } else {
+                        snapshotRunnableList = snapshotRunnableListA;
                     }
+                    for (Runnable r : runnables) {
+                        try {
+                            r.run();
+                        } catch (Throwable th) {
+                            System.err.println("Exception in snapshot runnable");
+                            th.printStackTrace(System.err);
+                        }
+                    }
+                    runnables.clear();
                 }
             };
 
@@ -1320,15 +1275,11 @@ public class Scene implements EventTarget {
         }
 
         final AccessControlContext acc = AccessController.getContext();
-        snapshotRunnableList.add(new Runnable() {
-            @Override public void run() {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override public Void run() {
-                        runnable.run();
-                        return null;
-                    }
-                }, acc);
-            }
+        snapshotRunnableList.add(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                runnable.run();
+                return null;
+            }, acc);
         });
         Toolkit.getToolkit().requestNextPulse();
     }
@@ -1430,17 +1381,15 @@ public class Scene implements EventTarget {
         // Create a deferred runnable that will be run from a pulse listener
         // that is called after all of the scenes have been synced but before
         // any of them have been rendered.
-        final Runnable snapshotRunnable = new Runnable() {
-            @Override public void run() {
-                WritableImage img = doSnapshot(theImage);
+        final Runnable snapshotRunnable = () -> {
+            WritableImage img = doSnapshot(theImage);
 //                System.err.println("Calling snapshot callback");
-                SnapshotResult result = new SnapshotResult(img, Scene.this, null);
-                try {
-                    Void v = theCallback.call(result);
-                } catch (Throwable th) {
-                    System.err.println("Exception in snapshot callback");
-                    th.printStackTrace(System.err);
-                }
+            SnapshotResult result = new SnapshotResult(img, Scene.this, null);
+            try {
+                Void v = theCallback.call(result);
+            } catch (Throwable th) {
+                System.err.println("Exception in snapshot callback");
+                th.printStackTrace(System.err);
             }
         };
 //        System.err.println("Schedule a snapshot in the future");
@@ -1520,9 +1469,38 @@ public class Scene implements EventTarget {
 
     /**
      * Gets an observable list of string URLs linking to the stylesheets to use
-     * with this scene's contents. For additional information about using CSS
-     * with the scene graph, see the <a href="doc-files/cssref.html">CSS Reference
-     * Guide</a>.
+     * with this scene's contents.
+     * <p>
+     * The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
+     * does not have a [scheme:] component, the URL is considered to be the [path] component only.
+     * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
+     * the root of the application's classpath.
+     * </p>
+     * <code><pre>
+     *
+     * package com.example.javafx.app;
+     *
+     * import javafx.application.Application;
+     * import javafx.scene.Group;
+     * import javafx.scene.Scene;
+     * import javafx.stage.Stage;
+     *
+     * public class MyApp extends Application {
+     *
+     *     {@literal @}Override public void start(Stage stage) {
+     *         Scene scene = new Scene(new Group());
+     *         scene.getStylesheets().add("/com/example/javafx/app/mystyles.css");
+     *         stage.setScene(scene);
+     *         stage.show();
+     *     }
+     *
+     *     public static void main(String[] args) {
+     *         launch(args);
+     *     }
+     * }
+     * </pre></code>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      *
      * @return the list of stylesheets to use with this scene
      */
@@ -1926,79 +1904,16 @@ public class Scene implements EventTarget {
         return focusDirty;
     }
 
-    /**
-     * This is a map from focusTraversable nodes within this scene
-     * to instances of a traversal engine. The traversal engine is
-     * either the instance for the scene itself, or for a Parent
-     * nested somewhere within this scene.
-     *
-     * This has package access for testing purposes.
-     */
-    Map traversalRegistry; // Map<Node,TraversalEngine>
-
-    /**
-     * Searches up the scene graph for a Parent with a traversal engine.
-     */
-    private TraversalEngine lookupTraversalEngine(Node node) {
-        Parent p = node.getParent();
-
-        while (p != null) {
-            if (p.getImpl_traversalEngine() != null) {
-                return p.getImpl_traversalEngine();
-            }
-            p = p.getParent();
-        }
-
-        // This shouldn't ever occur, since walking up the tree
-        // should always find the Scene's root, which always has
-        // a traversal engine. But if for some reason we get here,
-        // just return the root's traversal engine.
-
-        return getRoot().getImpl_traversalEngine();
-    }
-
-    /**
-     * Registers a traversable node with a traversal engine
-     * on this scene.
-     */
-    void registerTraversable(Node n) {
-        initializeInternalEventDispatcher();
-
-        final TraversalEngine te = lookupTraversalEngine(n);
-        if (te != null) {
-            if (traversalRegistry == null) {
-                traversalRegistry = new HashMap();
-            }
-            traversalRegistry.put(n, te);
-            te.reg(n);
-        }
-    }
-
-    /**
-     * Unregisters a traversable node from this scene.
-     */
-    void unregisterTraversable(Node n) {
-        final TraversalEngine te = (TraversalEngine) traversalRegistry.remove(n);
-        if (te != null) {
-            te.unreg(n);
-        }
-    }
+    private TopMostTraversalEngine traversalEngine = new SceneTraversalEngine(this);
 
     /**
      * Traverses focus from the given node in the given direction.
      */
-    void traverse(Node node, Direction dir) {
-        /*
-        ** if the registry is null then there are no
-        ** registered traversable nodes in this scene
-        */
-        if (traversalRegistry != null) {
-            TraversalEngine te = (TraversalEngine) traversalRegistry.get(node);
-            if (te == null) {
-                te = lookupTraversalEngine(node);
-            }
-            te.trav(node, dir);
+    boolean traverse(Node node, Direction dir) {
+        if (node.getSubScene() != null) {
+            return node.getSubScene().traverse(node, dir);
         }
+        return traversalEngine.trav(node, dir) != null;
     }
 
     /**
@@ -2007,7 +1922,7 @@ public class Scene implements EventTarget {
      * removed from the scene.
      */
     private void focusInitial() {
-        getRoot().getImpl_traversalEngine().getTopLeftFocusableNode();
+        traversalEngine.traverseToFirst();
     }
 
     /**
@@ -2085,6 +2000,9 @@ public class Scene implements EventTarget {
                             + localOldOwner + " to " + value
                             + " canceled by nested requestFocus");
                 }
+            }
+            if (accessible != null) {
+                accessible.sendNotification(Attribute.FOCUS_NODE);
             }
         }
     };
@@ -2334,6 +2252,10 @@ public class Scene implements EventTarget {
                 cam.impl_updatePeer();
                 impl_peer.setCamera((NGCamera) cam.impl_getPeer());
             }
+            
+            if (isDirty(DirtyBits.CURSOR_DIRTY)) {
+                mouseHandler.updateCursor(getCursor());
+            }
 
             clearDirty();
             inSynchronizer = false;
@@ -2373,32 +2295,35 @@ public class Scene implements EventTarget {
 
             focusCleanup();
 
-            if (PULSE_LOGGING_ENABLED) {
-                long start = System.currentTimeMillis();
-                Scene.this.doCSSPass();
-                PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "CSS Pass");
+            disposeAccessibles();
 
-                start = System.currentTimeMillis();
-                Scene.this.doLayoutPass();
-                PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Layout Pass");
-            } else {
-                Scene.this.doCSSPass();
-                Scene.this.doLayoutPass();
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newPhase("CSS Pass");
             }
+            Scene.this.doCSSPass();
+
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newPhase("Layout Pass");
+            }
+            Scene.this.doLayoutPass();
 
             boolean dirty = dirtyNodes == null || dirtyNodesSize != 0 || !isDirtyEmpty();
             if (dirty) {
+                if (PULSE_LOGGING_ENABLED) {
+                    PulseLogger.newPhase("Update bounds");
+                }
                 getRoot().updateBounds();
                 if (impl_peer != null) {
                     try {
-                        long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+                        if (PULSE_LOGGING_ENABLED) {
+                            PulseLogger.newPhase("Waiting for previous rendering");
+                        }
                         impl_peer.waitForRenderingToComplete();
                         impl_peer.waitForSynchronization();
-                        if (PULSE_LOGGING_ENABLED) {
-                            PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Waiting for previous rendering");
-                        }
-                        start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
                         // synchronize scene properties
+                        if (PULSE_LOGGING_ENABLED) {
+                            PulseLogger.newPhase("Copy state to render graph");
+                        }
                         syncLights();
                         synchronizeSceneProperties();
                         // Run the synchronizer
@@ -2406,21 +2331,16 @@ public class Scene implements EventTarget {
                         Scene.this.mouseHandler.pulse();
                         // Tell the scene peer that it needs to repaint
                         impl_peer.markDirty();
-                        if (PULSE_LOGGING_ENABLED) {
-                            PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Copy state to render graph");
-                        }
                     } finally {
                         impl_peer.releaseSynchronization(true);
                     }
                 } else {
-                    long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+                    if (PULSE_LOGGING_ENABLED) {
+                        PulseLogger.newPhase("Synchronize with null peer");
+                    }
                     synchronizeSceneProperties();
                     synchronizeSceneNodes();
                     Scene.this.mouseHandler.pulse();
-                    if (PULSE_LOGGING_ENABLED) {
-                        PULSE_LOGGER.fxMessage(start, System.currentTimeMillis(), "Synchronize with null peer");
-                    }
-
                 }
 
                 if (Scene.this.getRoot().cssFlag != CssFlags.CLEAN) {
@@ -2758,6 +2678,11 @@ public class Scene implements EventTarget {
                 // gesture finished
                 touchEventSetId = 0;
             }
+        }
+
+        @Override
+        public Accessible getSceneAccessible() {
+            return getAccessible();
         }
     }
 
@@ -3364,14 +3289,11 @@ public class Scene implements EventTarget {
             timeout = new Timeline();
             timeout.getKeyFrames().add(
                     new KeyFrame(new Duration(toolkit.getMultiClickTime()),
-                    new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    out = true;
-                    timeout = null;
-                }
-
-            }));
+                            event -> {
+                                out = true;
+                                timeout = null;
+                            }
+                    ));
             timeout.play();
             still = true;
         }
@@ -3727,10 +3649,7 @@ public class Scene implements EventTarget {
             // enter/exit handling
             handleEnterExit(e, tmpTargetWrapper);
 
-            Cursor cursor = target.getCursor();
-
             //deliver event to the target node
-
             if (Scene.this.dndGesture != null) {
                 Scene.this.dndGesture.processDragDetection(e);
             }
@@ -3754,9 +3673,9 @@ public class Scene implements EventTarget {
             if (!onPulse) {
                 clickGenerator.postProcess(e, target, tmpTargetWrapper);
             }
-
+            
             // handle drag and drop
-
+            
             if (!PLATFORM_DRAG_GESTURE_INITIATION && !onPulse) {
                 if (Scene.this.dndGesture != null) {
                     if (!Scene.this.dndGesture.process(e, target.getEventTarget())) {
@@ -3764,14 +3683,16 @@ public class Scene implements EventTarget {
                     }
                 }
             }
+            
+            Cursor cursor = target.getCursor();
+            if (e.getEventType() != MouseEvent.MOUSE_EXITED) {
+                if (cursor == null && hover) {
+                    cursor = Scene.this.getCursor();
+                }
 
-
-            if (cursor == null && hover) {
-                cursor = Scene.this.getCursor();
+                updateCursor(cursor);
+                updateCursorFrame();
             }
-
-            updateCursor(cursor);
-            updateCursorFrame();
 
             if (gestureStarted) {
                 pdrInProgress = true;
@@ -3865,7 +3786,7 @@ public class Scene implements EventTarget {
                 currCursor = newCursor;
             }
         }
-
+        
         public void updateCursorFrame() {
             final CursorFrame newCursorFrame =
                     (currCursor != null)
@@ -3932,11 +3853,7 @@ public class Scene implements EventTarget {
             }
         }
 
-        private final InvalidationListener sceneWindowFocusedListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
-            }
-        };
+        private final InvalidationListener sceneWindowFocusedListener = valueModel -> setWindowFocused(((ReadOnlyBooleanProperty)valueModel).get());
 
         private void process(KeyEvent e) {
             final Node sceneFocusOwner = getFocusOwner();
@@ -4160,7 +4077,7 @@ public class Scene implements EventTarget {
         return internalEventDispatcher;
     }
 
-    private void initializeInternalEventDispatcher() {
+    final void initializeInternalEventDispatcher() {
         if (internalEventDispatcher == null) {
             internalEventDispatcher = createInternalEventDispatcher();
             eventDispatcher = new SimpleObjectProperty<EventDispatcher>(
@@ -4194,6 +4111,12 @@ public class Scene implements EventTarget {
         getInternalEventDispatcher().getKeyboardShortcutsHandler()
                                     .removeMnemonic(m);
     }
+
+    final void clearNodeMnemonics(Node node) {
+        getInternalEventDispatcher().getKeyboardShortcutsHandler()
+                .clearNodeMnemonics(node);
+    }
+
 
     /**
      * Gets the list of mnemonics for this {@code Scene}.
@@ -6035,11 +5958,7 @@ public class Scene implements EventTarget {
 
     private static final NodeOrientation defaultNodeOrientation =
         AccessController.doPrivileged(
-        new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                return Boolean.getBoolean("javafx.scene.nodeOrientation.RTL");
-            }
-        }) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
+                (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.nodeOrientation.RTL")) ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.INHERIT;
 
 
 
@@ -6075,7 +5994,7 @@ public class Scene implements EventTarget {
                 @Override
                 protected void invalidated() {
                     sceneEffectiveOrientationInvalidated();
-                    getRoot().impl_reapplyCSS();
+                    getRoot().applyCss();
                 }
 
                 @Override
@@ -6180,5 +6099,112 @@ public class Scene implements EventTarget {
         public void invalidate() {
             fireValueChangedEvent();
         }
+    }
+
+    private Map<Node, Accessible> accMap;
+    Accessible removeAccessible(Node node) {
+        if (accMap == null) return null;
+        return accMap.remove(node);
+    }
+
+    void addAccessible(Node node, Accessible acc) {
+        if (accMap == null) {
+            accMap = new HashMap<Node, Accessible>();
+        }
+        accMap.put(node, acc);
+    }
+
+    private void disposeAccessibles() {
+        if (accMap != null) {
+            for (Map.Entry<Node, Accessible> entry : accMap.entrySet()) {
+                Node node = entry.getKey();
+                Accessible acc = entry.getValue();
+                if (node.accessible != null) {
+                    /* This node has already been initialized to another scene.
+                     * Note an accessible can be returned to the node before the
+                     * pulse if getAccessible() is called. In which case it must 
+                     * already being removed from accMap.
+                     */
+                    if (node.accessible == acc) {
+                        System.err.println("[A11y] 'node.accessible == acc' should never happen.");
+                    }
+                    if (node.getScene() == this) {
+                        System.err.println("[A11y] 'node.getScene() == this' should never happen.");
+                    }
+                    acc.dispose();
+                } else {
+                    if (node.getScene() == this) {
+                        node.accessible = acc;
+                    } else {
+                        acc.dispose();
+                    }
+                }
+            }
+            accMap.clear();
+        }
+    }
+    
+    private Accessible accessible;
+
+    /**
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
+     */
+    public Accessible getAccessible() {
+        /*
+         * The accessible for the Scene should never be
+         * requested when the peer is not set.
+         * This can only happen in a error case where a
+         * descender of this Scene was not disposed and 
+         * it still being used by the AT client and trying
+         * to reach to the top level window.
+         */
+        if (impl_peer == null) return null;
+        if (accessible == null) {
+            accessible = new Accessible() {
+                @Override public Object getAttribute(Attribute attribute,
+                                                     Object... parameters) {
+                    switch (attribute) {
+                        case CHILDREN: {
+                            Parent root = getRoot();
+                            if (root != null) {
+                                return FXCollections.observableArrayList(root);
+                            }
+                            break;
+                        }
+                        case TITLE: {
+                            Window w = getWindow();
+                            if (w instanceof Stage) {
+                                return ((Stage)w).getTitle();
+                            }
+                            break;
+                        }
+                        case NODE_AT_POINT: {
+                            Window window = getWindow();
+                            /* is this screen to scene translation correct ? not considering camera ? */
+                            Point2D pt = (Point2D)parameters[0];
+                            PickResult res = pick(pt.getX() - getX() - window.getX(), pt.getY() - getY() - window.getY());
+                            if (res != null) {
+                                Node node = res.getIntersectedNode();
+                                if (node != null) return node;
+                            }
+                            return getRoot();//not sure
+                        }
+                        case ROLE: return Role.PARENT;
+                        case SCENE: return Scene.this;
+                        case FOCUS_NODE: {
+                            if (transientFocusContainer != null) {
+                                return transientFocusContainer.accGetAttribute(Attribute.FOCUS_NODE);
+                            }
+                            return getFocusOwner();
+                        }
+                        default:
+                    }
+                    return super.getAttribute(attribute, parameters);
+                }
+            };
+        }
+        return accessible;
     }
 }

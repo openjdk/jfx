@@ -79,12 +79,8 @@ public class ExpressionValue extends ObservableValueBase<Object> {
         private ChangeListener<Object> propertyChangeListener = new ChangeListener<Object>() {
             @Override
             public void changed(ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
-                ReadOnlyProperty<?> property = (ReadOnlyProperty<?>)observable;
-
-                if (key.equals(property.getName())) {
-                    fireValueChangedEvent();
-                    remonitor();
-                }
+                fireValueChangedEvent();
+                remonitor();
             }
         };
 

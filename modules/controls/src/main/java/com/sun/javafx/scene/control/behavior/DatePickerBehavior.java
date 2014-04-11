@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -101,41 +101,15 @@ public class DatePickerBehavior extends ComboBoxBaseBehavior<LocalDate> {
         }
     }
 
-     /**************************************************************************
-     *                                                                        *
-     * Mouse Events                                                           *
-     *                                                                        *
-     *************************************************************************/
-     /**
-     * When a mouse button is pressed, we either want to behave like a button or
-     * show the popup.  This will be called by the skin.
-     */
     @Override public void onAutoHide() {
         // when we click on some non-interactive part of the
         // calendar - we do not want to hide.
-        wasComboBoxButtonClickedForAutoHide = mouseInsideButton;
         DatePicker datePicker = (DatePicker)getControl();
         DatePickerSkin cpSkin = (DatePickerSkin)datePicker.getSkin();
         cpSkin.syncWithAutoUpdate();
+        // if the DatePicker is no longer showing, then invoke the super method
+        // to keep its show/hide state in sync.
+        if (!datePicker.isShowing()) super.onAutoHide();
     }
 
-    @Override public void mouseReleased(MouseEvent e) {
-        // Overriding to not do the usual on mouseReleased.
-        // The event is handled by the skin instead, which calls
-        // the method below.
-    }
-
-    /**
-     * Handles mouse release events.  This will be called by the skin.
-     *
-     * @param e the mouse press event
-     * @param showHidePopup if true, this should act just like a button
-     */
-    public void mouseReleased(MouseEvent e, boolean showHidePopup) {
-        if (showHidePopup) {
-            super.mouseReleased(e);
-        } else {
-            disarm();
-        }
-    }
 }
