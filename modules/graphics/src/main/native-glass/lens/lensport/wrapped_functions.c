@@ -238,12 +238,14 @@ EGLNativeDisplayType util_getNativeDisplayType() {
     }
 
     if (!cached) {
-        if (useDispman) {
-            cachedNativeDisplayType = EGL_DEFAULT_DISPLAY;
-        } else if (useVivanteFB)  {
-            cachedNativeDisplayType = wr_fbGetDisplayByIndex(0);
+        if (useVivanteFB)  {
+            if (wr_fbGetDisplayByIndex) {
+                cachedNativeDisplayType = wr_fbGetDisplayByIndex(0);
+            } else {
+               cachedNativeDisplayType = (EGLNativeDisplayType)0xBAD;
+            }
         } else {
-            cachedNativeDisplayType = (EGLNativeDisplayType)NULL;
+            cachedNativeDisplayType = EGL_DEFAULT_DISPLAY;
         }
 
         cached ++;
