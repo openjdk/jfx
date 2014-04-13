@@ -65,10 +65,12 @@ class GlassViewEventHandler extends View.EventHandler {
 
     static boolean zoomGestureEnabled;
     static boolean rotateGestureEnabled;
+    static boolean scrollGestureEnabled;
     static {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             zoomGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.zoom", "false"));
             rotateGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.rotate", "false"));
+            scrollGestureEnabled = Boolean.valueOf(System.getProperty("com.sun.javafx.gestures.scroll", "false"));
             return null;
         });
     }    
@@ -91,6 +93,9 @@ class GlassViewEventHandler extends View.EventHandler {
         }
         if (rotateGestureEnabled) {
             gestures.add(new RotateGestureRecognizer(scene));
+        }
+        if (scrollGestureEnabled) {
+            gestures.add(new ScrollGestureRecognizer(scene));
         }
     }
 
