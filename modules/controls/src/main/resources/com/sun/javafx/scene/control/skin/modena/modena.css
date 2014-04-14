@@ -2388,6 +2388,12 @@ is being used to size a border should also be in pixels.
     -fx-text-fill: -fx-selection-bar-text;
     -fx-padding: 0.166667em;
 }
+.table-view .column-header .context-menu,
+.tree-table-view .column-header .context-menu,
+.table-view > .column-header-background > .show-hide-columns-button .context-menu,
+.tree-table-view > .column-header-background > .show-hide-columns-button .context-menu {
+    -fx-font-weight: null;
+}
 .table-view .filler,
 .tree-table-view .filler,
 .table-view:constrained-resize .filler,
