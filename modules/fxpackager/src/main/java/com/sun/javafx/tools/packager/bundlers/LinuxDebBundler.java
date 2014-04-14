@@ -220,7 +220,7 @@ public class LinuxDebBundler extends AbstractBundler {
                     }
                 }
             } else {
-                Log.info("message.debs-like-licenses");
+                Log.info(I18N.getString("message.debs-like-licenses"));
             }
 
             return true;
