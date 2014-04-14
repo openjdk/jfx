@@ -59,7 +59,7 @@ public class Application extends DataType implements Cloneable {
     String id = null;
     boolean embeddedIntoSwing = false;
     String version = null;
-    boolean daemon = false;
+    Boolean daemon = null;
 
     public void setVersion(String v) {
         version = v;
