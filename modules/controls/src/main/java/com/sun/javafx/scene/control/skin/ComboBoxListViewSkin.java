@@ -538,6 +538,14 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private ListView<T> createListView() {
         final ListView<T> _listView = new ListView<T>() {
+
+            {
+                // disable selecting the first item on focus gain - this is
+                // not what is expected in the ComboBox control (unlike the
+                // ListView control, which does this).
+                getProperties().put("selectOnFocusGain", false);
+            }
+
             @Override protected double computeMinHeight(double width) {
                 return 30;
             }

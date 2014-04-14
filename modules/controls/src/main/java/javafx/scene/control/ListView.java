@@ -46,6 +46,7 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.StyleableDoubleProperty;
 import javafx.event.Event;
@@ -322,7 +323,24 @@ public class ListView<T> extends Control {
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
 
+        // Fix for RT-35679
         focusedProperty().addListener(focusedListener);
+
+        // Fix for RT-36651, which was introduced by RT-35679 (above) and resolved
+        // by having special-case code to remove the listener when requested.
+        // This is done by ComboBoxListViewSkin, so that selection is not done
+        // when a ComboBox is shown.
+        getProperties().addListener((MapChangeListener<Object, Object>) change -> {
+            if (change.wasAdded() && "selectOnFocusGain".equals(change.getKey())) {
+                Boolean selectOnFocusGain = (Boolean) change.getValueAdded();
+                if (selectOnFocusGain == null) return;
+                if (selectOnFocusGain) {
+                    focusedProperty().addListener(focusedListener);
+                } else {
+                    focusedProperty().removeListener(focusedListener);
+                }
+            }
+        });
     }
     
     
