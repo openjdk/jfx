@@ -815,12 +815,13 @@ final public class StyleManager {
             // We only care about stylesheets from file: URLs.
             if (url != null && "file".equals(url.getProtocol())) {
 
-                final InputStream stream = url.openStream();
+                try (InputStream stream = url.openStream()) {
 
-                // not looking for security, just a checksum. MD5 should be faster than SHA
-                final DigestInputStream dis = new DigestInputStream(stream, MessageDigest.getInstance("MD5"));
-                while (dis.read() != -1) { /* empty loop body is intentional */ }
-                return dis.getMessageDigest().digest();
+                    // not looking for security, just a checksum. MD5 should be faster than SHA
+                    final DigestInputStream dis = new DigestInputStream(stream, MessageDigest.getInstance("MD5"));
+                    while (dis.read() != -1) { /* empty loop body is intentional */ }
+                    return dis.getMessageDigest().digest();
+                }
 
             }
 
