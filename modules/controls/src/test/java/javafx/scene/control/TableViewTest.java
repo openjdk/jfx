@@ -3014,4 +3014,78 @@ public class TableViewTest {
 
         sl.dispose();
     }
+
+    @Test public void test_rt_36656_removeFromSortOrder() {
+        test_rt_36656(true, false, false);
+    }
+
+    @Test public void test_rt_36656_removeFromColumns() {
+        test_rt_36656(false, true, false);
+    }
+
+    @Test public void test_rt_36656_setInvisible() {
+        test_rt_36656(false, false, true);
+    }
+
+    private void test_rt_36656(boolean removeFromSortOrder, boolean removeFromColumns, boolean setInvisible) {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                        new Person("Emma", "Jones", "emma.jones@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        TableView<Person> table = new TableView<Person>();
+        table.setItems(data);
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setMinWidth(100);
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setMinWidth(100);
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setMinWidth(200);
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        new StageLoader(table);
+
+        TableColumnHeader firstNameColHeader = VirtualFlowTestUtils.getTableColumnHeader(table, firstNameCol);
+        TableColumnHeader lastNameColHeader = VirtualFlowTestUtils.getTableColumnHeader(table, lastNameCol);
+        TableColumnHeader emailColHeader = VirtualFlowTestUtils.getTableColumnHeader(table, emailCol);
+
+        // test initial state
+        assertEquals(-1, TableColumnHeaderRetriever.getSortPos(firstNameColHeader));
+        assertEquals(-1, TableColumnHeaderRetriever.getSortPos(lastNameColHeader));
+        assertEquals(-1, TableColumnHeaderRetriever.getSortPos(emailColHeader));
+
+        // set an order including all columns
+        table.getSortOrder().addAll(firstNameCol, lastNameCol, emailCol);
+        assertEquals(0, TableColumnHeaderRetriever.getSortPos(firstNameColHeader));
+        assertEquals(1, TableColumnHeaderRetriever.getSortPos(lastNameColHeader));
+        assertEquals(2, TableColumnHeaderRetriever.getSortPos(emailColHeader));
+
+        if (removeFromSortOrder) {
+            // Remove lastNameCol from the table sortOrder list, so this column
+            // is no longer part of the sort comparator
+            table.getSortOrder().remove(lastNameCol);
+        } else if (removeFromColumns) {
+            // Remove lastNameCol from the table entirely.
+            table.getColumns().remove(lastNameCol);
+        } else if (setInvisible) {
+            // Hide the lastNameColumn.
+            lastNameCol.setVisible(false);
+        }
+
+        // Regardless of action taken above, expect lastNameCol sortPos to be -1
+        // and emailCol sortPos to shift from 2 to 1.
+        assertEquals(0, TableColumnHeaderRetriever.getSortPos(firstNameColHeader));
+        assertEquals(-1, TableColumnHeaderRetriever.getSortPos(lastNameColHeader));
+        assertEquals(1, TableColumnHeaderRetriever.getSortPos(emailColHeader));
+    }
 }

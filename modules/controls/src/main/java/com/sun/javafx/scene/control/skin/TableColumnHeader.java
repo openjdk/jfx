@@ -102,7 +102,7 @@ public class TableColumnHeader extends Region {
     private Label label;
 
     // sort order
-    private int sortPos = -1;
+    int sortPos = -1;
     private Region arrow;
     private Label sortOrderLabel;
     private HBox sortOrderDots;
@@ -185,6 +185,7 @@ public class TableColumnHeader extends Region {
     
     private ListChangeListener<TableColumnBase<?,?>> visibleLeafColumnsListener = c -> {
         updateColumnIndex();
+        updateSortPosition();
     };
     
     private ListChangeListener<String> styleClassListener = c -> {
