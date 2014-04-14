@@ -457,17 +457,20 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     JNIEnv* env = GetEnv();
 
     jcharArray jKeyChars = env->NewCharArray(keyCharCount);
-    if (keyCharCount) {
-        env->SetCharArrayRegion(jKeyChars, 0, keyCharCount, keyChars);
+    if (jKeyChars) {
+        if (keyCharCount) {
+            env->SetCharArrayRegion(jKeyChars, 0, keyCharCount, keyChars);
+            CheckAndClearException(env);
+        }
+
+        env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
+                            (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
+                            com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
+                            jKeyCode, jKeyChars, jModifiers);
+        CheckAndClearException(env);
+
+        env->DeleteLocalRef(jKeyChars);
     }
-
-    env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
-                        (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
-                        com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
-                        jKeyCode, jKeyChars, jModifiers);
-    CheckAndClearException(env);
-
-    env->DeleteLocalRef(jKeyChars);
 }
 
 void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
@@ -479,19 +482,22 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     int repCount = LOWORD(lParam);
     JNIEnv* env = GetEnv();
     jcharArray jKeyChars = env->NewCharArray(repCount);
-    jchar* nKeyChars = env->GetCharArrayElements(jKeyChars, NULL);
-    for (int i = 0; i < repCount; i++) {
-        nKeyChars[i] = (jchar)wParam;
+    if (jKeyChars) {
+        jchar* nKeyChars = env->GetCharArrayElements(jKeyChars, NULL);
+        if (nKeyChars) {
+            for (int i = 0; i < repCount; i++) {
+                nKeyChars[i] = (jchar)wParam;
+            }
+            env->ReleaseCharArrayElements(jKeyChars, nKeyChars, 0);
+
+            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
+                                com_sun_glass_events_KeyEvent_TYPED,
+                                com_sun_glass_events_KeyEvent_VK_UNDEFINED, jKeyChars, 
+                                GetModifiers());
+            CheckAndClearException(env);
+        }
+        env->DeleteLocalRef(jKeyChars);
     }
-    env->ReleaseCharArrayElements(jKeyChars, nKeyChars, 0);
-
-    env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
-                        com_sun_glass_events_KeyEvent_TYPED,
-                        com_sun_glass_events_KeyEvent_VK_UNDEFINED, jKeyChars, 
-                        GetModifiers());
-    CheckAndClearException(env);
-
-    env->DeleteLocalRef(jKeyChars);
 }
 
 BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -904,7 +910,10 @@ void ViewContainer::SendInputMethodEvent(jstring text,
     if (cClause && rgClauseBoundary) {
         // convert clause boundary offset array to java array
         clauseBoundary = env->NewIntArray(cClause+1);
-        env->SetIntArrayRegion(clauseBoundary, 0, cClause+1, (jint *)rgClauseBoundary);
+        if (clauseBoundary) {
+            env->SetIntArrayRegion(clauseBoundary, 0, cClause+1, (jint *)rgClauseBoundary);
+            CheckAndClearException(env);
+        }
     }
 
     // attribute information
@@ -913,15 +922,22 @@ void ViewContainer::SendInputMethodEvent(jstring text,
     if (cAttrBlock && rgAttrBoundary && rgAttrValue) {
         // convert attribute boundary offset array to java array
         attrBoundary = env->NewIntArray(cAttrBlock+1);
-        env->SetIntArrayRegion(attrBoundary, 0, cAttrBlock+1, (jint *)rgAttrBoundary);
+        if (attrBoundary) {
+            env->SetIntArrayRegion(attrBoundary, 0, cAttrBlock+1, (jint *)rgAttrBoundary);
+            CheckAndClearException(env);
+        }
         // convert attribute value byte array to java array
         attrValue = env->NewByteArray(cAttrBlock);
-        env->SetByteArrayRegion(attrValue, 0, cAttrBlock, (jbyte *)rgAttrValue);
+        if (attrValue) {
+            env->SetByteArrayRegion(attrValue, 0, cAttrBlock, (jbyte *)rgAttrValue);
+            CheckAndClearException(env);
+        }
     }
 
     env->CallBooleanMethod(GetView(), javaIDs.View.notifyInputMethod,
                         text, clauseBoundary, attrBoundary,
                         attrValue, commitedTextLength, caretPos, visiblePos);
+    CheckAndClearException(env);
 
     if (clauseBoundary) {
         env->DeleteLocalRef(clauseBoundary);
@@ -944,11 +960,12 @@ void ViewContainer::GetCandidatePos(LPPOINT curPos)
                         javaIDs.View.notifyInputMethodCandidatePosRequest,
                         0);
     nativePos = env->GetDoubleArrayElements(pos, NULL);
+    if (nativePos) {
+        curPos->x = (int)nativePos[0];
+        curPos->y  = (int)nativePos[1];
 
-    curPos->x = (int)nativePos[0];
-    curPos->y  = (int)nativePos[1];
-
-    env->ReleaseDoubleArrayElements(pos, nativePos, 0);
+        env->ReleaseDoubleArrayElements(pos, nativePos, 0);
+    }
 }
 
 namespace {

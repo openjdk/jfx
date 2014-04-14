@@ -621,6 +621,9 @@ static gboolean dnd_source_set_utf8_string(GdkWindow *requestor, GdkAtom propert
     }
 
     const char *cstring = mainEnv->GetStringUTFChars(string, NULL);
+    if (!cstring) {
+        return FALSE;
+    }
     gint size = strlen(cstring);
     
     gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
@@ -639,16 +642,18 @@ static gboolean dnd_source_set_string(GdkWindow *requestor, GdkAtom property)
     
     gboolean is_data_set = FALSE;
     const char *cstring = mainEnv->GetStringUTFChars(string, NULL);
-    gchar *res_str = g_convert((gchar *)cstring, -1, "ISO-8859-1", "UTF-8", NULL, NULL, NULL);
-    
-    if (res_str) {
-        gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
-                8, GDK_PROP_MODE_REPLACE, (guchar *)res_str, strlen(res_str));
-        g_free(res_str);
-        is_data_set = TRUE;
+    if (cstring) {
+        gchar *res_str = g_convert((gchar *)cstring, -1, "ISO-8859-1", "UTF-8", NULL, NULL, NULL);
+
+        if (res_str) {
+            gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
+                    8, GDK_PROP_MODE_REPLACE, (guchar *)res_str, strlen(res_str));
+            g_free(res_str);
+            is_data_set = TRUE;
+        }
+
+        mainEnv->ReleaseStringUTFChars(string, cstring);
     }
-    
-    mainEnv->ReleaseStringUTFChars(string, cstring);
     return is_data_set;
 }
 
@@ -745,23 +750,26 @@ static gboolean dnd_source_set_raw(GdkWindow *requestor, GdkAtom property, GdkAt
     if (data) {
         if (mainEnv->IsInstanceOf(data, jStringCls)) {
             const char *cstring = mainEnv->GetStringUTFChars((jstring)data, NULL);
+            if (cstring) {
+                gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
+                        8, GDK_PROP_MODE_REPLACE, (guchar *) cstring, strlen(cstring));
 
-            gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
-                    8, GDK_PROP_MODE_REPLACE, (guchar *) cstring, strlen(cstring));
-        
-            mainEnv->ReleaseStringUTFChars((jstring)data, cstring);
-            is_data_set = TRUE;
+                mainEnv->ReleaseStringUTFChars((jstring)data, cstring);
+                is_data_set = TRUE;
+            }
         } else if (mainEnv->IsInstanceOf(data, jByteBufferCls)) {
             jbyteArray byteArray = (jbyteArray)mainEnv->CallObjectMethod(data, jByteBufferArray);
             if (!EXCEPTION_OCCURED(mainEnv)) {
                 jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
-                jsize nraw = mainEnv->GetArrayLength(byteArray);
+                if (raw) {
+                    jsize nraw = mainEnv->GetArrayLength(byteArray);
 
-                gdk_property_change(requestor, property, target,
-                        8, GDK_PROP_MODE_REPLACE, (guchar *) raw, nraw);
+                    gdk_property_change(requestor, property, target,
+                            8, GDK_PROP_MODE_REPLACE, (guchar *) raw, nraw);
 
-                mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
-                is_data_set = TRUE;
+                    mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
+                    is_data_set = TRUE;
+                }
             }
         }
     }
