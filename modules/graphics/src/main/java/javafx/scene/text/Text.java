@@ -41,7 +41,6 @@ import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
@@ -1910,6 +1909,35 @@ public class Text extends Shape {
                 sel = getImpl_caretPosition();
                 if (sel >=  0) return sel;
                 return getText().length();
+            }
+            case LINE_FOR_OFFSET: {
+                int offset = (Integer)parameters[0];
+                TextLine[] lines = getTextLayout().getLines();
+                int lineIndex = 0;
+                for (int i = 1; i < lines.length; i++) {
+                    TextLine line = lines[i];
+                    if (line.getStart() > offset) break;
+                    lineIndex++;
+                }
+                return lineIndex;
+            }
+            case LINE_START: {
+                int lineIndex = (Integer)parameters[0];
+                TextLine[] lines = getTextLayout().getLines();
+                if (lineIndex < lines.length) {
+                    TextLine line = lines[lineIndex];
+                    return line.getStart();
+                }
+                return 0;
+            }
+            case LINE_END: {
+                int lineIndex = (Integer)parameters[0];
+                TextLine[] lines = getTextLayout().getLines();
+                if (lineIndex < lines.length) {
+                    TextLine line = lines[lineIndex];
+                    return line.getStart() + line.getLength();
+                }
+                return 0;
             }
             default: return super.accGetAttribute(attribute, parameters);
         }

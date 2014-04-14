@@ -704,6 +704,9 @@ public class TextArea extends TextInputControl {
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.TEXT_AREA;
+            case LINE_FOR_OFFSET: //Skin
+            case LINE_START: //Skin
+            case LINE_END:  //Skin
             default: return super.accGetAttribute(attribute, parameters);
         }
     }

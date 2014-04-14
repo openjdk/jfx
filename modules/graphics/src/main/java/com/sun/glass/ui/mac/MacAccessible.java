@@ -225,19 +225,11 @@ final class MacAccessible extends PlatformAccessible {
             null
         ),
         /* ComboBox can be either a NSAccessibilityComboBoxRole or a NSAccessibilityPopUpButtonRole (Based on EDITABLE) */
-        NSAccessibilityComboBoxRole(new Role[] {Role.COMBOBOX},
+        NSAccessibilityComboBoxRole(Role.COMBOBOX,
             new MacAttribute[] {
-                MacAttribute.NSAccessibilityExpandedAttribute, /* Note, besides AXExpanded the rest is textAttributes */
-                MacAttribute.NSAccessibilityEnabledAttribute,
-                MacAttribute.NSAccessibilityValueAttribute,
-                MacAttribute.NSAccessibilityNumberOfCharactersAttribute,
-                MacAttribute.NSAccessibilitySelectedTextAttribute,
-                MacAttribute.NSAccessibilitySelectedTextRangeAttribute,
-                MacAttribute.NSAccessibilityInsertionPointLineNumberAttribute,
-                MacAttribute.NSAccessibilityVisibleCharacterRangeAttribute,
+                MacAttribute.NSAccessibilityExpandedAttribute
             },
-            new MacAction[] {MacAction.NSAccessibilityPressAction},
-            textParameterizedAttributes
+            new MacAction[] {MacAction.NSAccessibilityPressAction}
         ),
         NSAccessibilityPopUpButtonRole(Role.COMBOBOX,
             new MacAttribute[] {
@@ -317,14 +309,12 @@ final class MacAccessible extends PlatformAccessible {
             }
         ),
         NSAccessibilityStaticTextRole(new Role[] {Role.TEXT, Role.TREE_TABLE_CELL},
-            textAttributes,null, textParameterizedAttributes
+            null, null, null
         ),
         NSAccessibilityTextFieldRole(new Role[] {Role.TEXT_FIELD, Role.PASSWORD_FIELD},
-            textAttributes, null, textParameterizedAttributes
+            null, null, null
         ),
-        NSAccessibilityTextAreaRole(new Role[] {Role.TEXT_AREA},
-            textAttributes, null, textParameterizedAttributes
-        ),
+        NSAccessibilityTextAreaRole(Role.TEXT_AREA, null, null),
         NSAccessibilitySliderRole(Role.SLIDER,
             new MacAttribute[] {
                 MacAttribute.NSAccessibilityEnabledAttribute,
@@ -581,6 +571,9 @@ final class MacAccessible extends PlatformAccessible {
         ;long ptr; /* Initialized natively - treat as final */
     }
 
+    /* Do not access the following lists directly from the Mac enums.
+     * It can cause the static initialization to happen in an unexpected order.
+     */
     static final List<MacAttribute> baseAttributes = Arrays.asList(
         MacAttribute.NSAccessibilityRoleAttribute,
         MacAttribute.NSAccessibilityRoleDescriptionAttribute,
@@ -595,22 +588,22 @@ final class MacAccessible extends PlatformAccessible {
         MacAttribute.NSAccessibilityTitleUIElementAttribute
     );
 
-    static final MacAttribute[] textAttributes = {
+    static final List<MacAttribute> textAttributes = Arrays.asList(
         MacAttribute.NSAccessibilityEnabledAttribute,
         MacAttribute.NSAccessibilityValueAttribute,
         MacAttribute.NSAccessibilityNumberOfCharactersAttribute,
         MacAttribute.NSAccessibilitySelectedTextAttribute,
         MacAttribute.NSAccessibilitySelectedTextRangeAttribute,
         MacAttribute.NSAccessibilityInsertionPointLineNumberAttribute,
-        MacAttribute.NSAccessibilityVisibleCharacterRangeAttribute,
-    };
+        MacAttribute.NSAccessibilityVisibleCharacterRangeAttribute
+    );
 
-    static final MacAttribute[] textParameterizedAttributes = {
+    static final List<MacAttribute> textParameterizedAttributes = Arrays.asList(
         MacAttribute.NSAccessibilityLineForIndexParameterizedAttribute,
         MacAttribute.NSAccessibilityRangeForLineParameterizedAttribute,
         MacAttribute.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
-        MacAttribute.NSAccessibilityStringForRangeParameterizedAttribute,
-    };
+        MacAttribute.NSAccessibilityStringForRangeParameterizedAttribute
+    );
 
     /* The native peer associated with the instance */
     private long peer;
@@ -888,17 +881,28 @@ final class MacAccessible extends PlatformAccessible {
                 attrs.addAll(macSubrole.macAttributes);
             }
 
-            /* ListView is row-based, must remove all the cell-based attributes */
-            if (role == Role.LIST_VIEW || role == Role.TREE_TABLE_VIEW) {
-                attrs.remove(MacAttribute.NSAccessibilitySelectedCellsAttribute);
+            switch (role) {
+                case LIST_VIEW:
+                case TREE_TABLE_VIEW:
+                    /* ListView is row-based, must remove all the cell-based attributes */
+                    attrs.remove(MacAttribute.NSAccessibilitySelectedCellsAttribute);
+                    break;
+                case CONTEXT_MENU:
+                case MENU_ITEM:
+                case MENU_BAR:
+                    /* Menu and MenuItem do have have Window and top-level UI Element*/
+                    attrs.remove(MacAttribute.NSAccessibilityWindowAttribute);
+                    attrs.remove(MacAttribute.NSAccessibilityTopLevelUIElementAttribute);
+                    break;
+                case TEXT:
+                case TEXT_FIELD:
+                case TEXT_AREA:
+                case PASSWORD_FIELD:
+                case COMBOBOX:
+                    attrs.addAll(textAttributes);
+                    break;
+                default:
             }
-
-            /* Menu and MenuItem do have have Window and top-level UI Element*/
-            if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM || role == Role.MENU_BAR) {
-                attrs.remove(MacAttribute.NSAccessibilityWindowAttribute);
-                attrs.remove(MacAttribute.NSAccessibilityTopLevelUIElementAttribute);
-            }
-
             return attrs.stream().mapToLong(a -> a.ptr).toArray();
         }
         return null;
@@ -1486,16 +1490,27 @@ final class MacAccessible extends PlatformAccessible {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         Role role = (Role)getAttribute(ROLE);
         if (role != null) {
+            List<MacAttribute> attrs = new ArrayList<>();
             MacRole macRole = getRole(role);
             if (macRole != null && macRole.macParameterizedAttributes != null) {
-                Stream<MacAttribute> attrs = macRole.macParameterizedAttributes.stream();
-
-                /* ListView is row-based, must remove all the cell-based attributes */
-                if (role == Role.LIST_VIEW || role == Role.TREE_TABLE_VIEW) {
-                    attrs = attrs.filter(a -> a != MacAttribute.NSAccessibilityCellForColumnAndRowParameterizedAttribute);
-                }
-                return attrs.mapToLong(a -> a.ptr).toArray();
+                attrs.addAll(macRole.macParameterizedAttributes);
             }
+            switch (role) {
+                case LIST_VIEW:
+                case TREE_TABLE_VIEW:
+                    /* ListView is row-based, must remove all the cell-based attributes */
+                    attrs.remove(MacAttribute.NSAccessibilityCellForColumnAndRowParameterizedAttribute);
+                    break;
+                case TEXT:
+                case TEXT_FIELD:
+                case TEXT_AREA:
+                case PASSWORD_FIELD:
+                case COMBOBOX:
+                    attrs.addAll(textParameterizedAttributes);
+                    break;
+                default:
+            }
+            return attrs.stream().mapToLong(a -> a.ptr).toArray();
         }
         return null;
     }
@@ -1527,8 +1542,11 @@ final class MacAccessible extends PlatformAccessible {
                 if (getAttribute(ROLE) == Role.TEXT_AREA) {
                     Integer lineStart = (Integer)getAttribute(LINE_START, value /*line index*/);
                     Integer lineEnd = (Integer)getAttribute(LINE_END, value /*line index*/);
-                    result = new int[] {lineStart != null ? lineStart : 0, 
-                                        lineEnd != null ? lineEnd : 0};
+                    if (lineStart != null && lineEnd != null) {
+                        result = new int[] {lineStart, lineEnd - lineStart}; 
+                    } else {
+                        result = null;
+                    }
                 } else {
                     /* Combo and TextField */
                     String text = (String)getAttribute(TITLE);
