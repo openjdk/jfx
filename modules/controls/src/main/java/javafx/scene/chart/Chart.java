@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.javafx.scene.control.skin.Utils;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.beans.property.BooleanProperty;
@@ -355,7 +356,7 @@ public abstract class Chart extends Region {
             if (shouldShowLegend) {
                 if (getLegendSide() == Side.TOP) {
                     final double legendHeight = snapSize(legend.prefHeight(width-left-right));
-                    final double legendWidth = snapSize(legend.prefWidth(legendHeight));
+                    final double legendWidth = Utils.boundedSize(snapSize(legend.prefWidth(legendHeight)), 0, width - left - right);
                     legend.resizeRelocate(left + (((width - left - right)-legendWidth)/2), top, legendWidth, legendHeight);
                     if ((height - bottom - top - legendHeight) < MIN_HEIGHT_TO_LEAVE_FOR_CHART_CONTENT) {
                         shouldShowLegend = false;
@@ -364,7 +365,7 @@ public abstract class Chart extends Region {
                     }
                 } else if (getLegendSide() == Side.BOTTOM) {
                     final double legendHeight = snapSize(legend.prefHeight(width-left-right));
-                    final double legendWidth = snapSize(legend.prefWidth(legendHeight));
+                    final double legendWidth = Utils.boundedSize(snapSize(legend.prefWidth(legendHeight)), 0, width - left - right);
                     legend.resizeRelocate(left + (((width - left - right)-legendWidth)/2), height-bottom-legendHeight, legendWidth, legendHeight);
                     if ((height - bottom - top - legendHeight) < MIN_HEIGHT_TO_LEAVE_FOR_CHART_CONTENT) {
                         shouldShowLegend = false;
@@ -373,7 +374,7 @@ public abstract class Chart extends Region {
                     }
                 } else if (getLegendSide() == Side.LEFT) {
                     final double legendWidth = snapSize(legend.prefWidth(height-top-bottom));
-                    final double legendHeight = snapSize(legend.prefHeight(legendWidth));
+                    final double legendHeight = Utils.boundedSize(snapSize(legend.prefHeight(legendWidth)), 0, height - top - bottom);
                     legend.resizeRelocate(left,top +(((height-top-bottom)-legendHeight)/2),legendWidth,legendHeight);
                     if ((width - left - right - legendWidth) < MIN_WIDTH_TO_LEAVE_FOR_CHART_CONTENT) {
                         shouldShowLegend = false;
@@ -382,7 +383,7 @@ public abstract class Chart extends Region {
                     }
                 } else if (getLegendSide() == Side.RIGHT) {
                     final double legendWidth = snapSize(legend.prefWidth(height-top-bottom));
-                    final double legendHeight = snapSize(legend.prefHeight(legendWidth));
+                    final double legendHeight = Utils.boundedSize(snapSize(legend.prefHeight(legendWidth)), 0, height - top - bottom);
                     legend.resizeRelocate(width-right-legendWidth,top +(((height-top-bottom)-legendHeight)/2),legendWidth,legendHeight);
                     if ((width - left - right - legendWidth) < MIN_WIDTH_TO_LEAVE_FOR_CHART_CONTENT) {
                         shouldShowLegend = false;
