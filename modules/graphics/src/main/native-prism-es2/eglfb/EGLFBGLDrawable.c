@@ -60,7 +60,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_EGLFBGLDrawable_nCreateDrawable
 
     /* initialize the structure */
     initializeDrawableInfo(dInfo);
-    dInfo->egldisplay = eglGetDisplay(getNativeDisplayType());
+    EGLNativeDisplayType disptype = getNativeDisplayType();
+    if (disptype == (EGLNativeDisplayType)0xBAD) {
+        fprintf(stderr, "nCreateDrawable: Failed in getNativeDisplayType\n");
+        return 0;
+    }
+    dInfo->egldisplay = eglGetDisplay(disptype);
     dInfo->eglsurface = getSharedWindowSurface(dInfo->egldisplay,
                                                pfInfo->fbConfig,
                                                jlong_to_ptr(nativeWindow));
@@ -92,8 +97,14 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_EGLFBGLDrawable_nGetDummyDrawable
 
     /* initialize the structure */
     initializeDrawableInfo(dInfo);
+    EGLNativeDisplayType disptype = getNativeDisplayType();
+    if (disptype == (EGLNativeDisplayType)0xBAD) {
+        fprintf(stderr, "nGetDummyDrawable: Failed in getNativeDisplayType\n");
+        free(dInfo);
+        return 0;
+    }
     dInfo->egldisplay =
-        eglGetDisplay(getNativeDisplayType());
+        eglGetDisplay(disptype);
     dInfo->onScreen = JNI_FALSE;
     dInfo->eglsurface = getDummyWindowSurface(pfInfo->display,
                                               pfInfo->fbConfig);

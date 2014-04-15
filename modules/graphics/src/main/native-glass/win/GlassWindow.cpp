@@ -309,15 +309,20 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             HandleDestroyEvent();
             return 0;
         case WM_ACTIVATE:
-            if (IsInFullScreenMode()) {
-                HWND hWndInsertAfter = LOWORD(wParam) != WA_INACTIVE ? HWND_TOPMOST : HWND_BOTTOM;
-                ::SetWindowPos(GetHWND(), hWndInsertAfter, 0, 0, 0, 0,
-                        SWP_ASYNCWINDOWPOS | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE);
-            }
-            if (!GetDelegateWindow()) {
-                HandleActivateEvent(LOWORD(wParam) != WA_INACTIVE ?
-                        com_sun_glass_events_WindowEvent_FOCUS_GAINED :
-                        com_sun_glass_events_WindowEvent_FOCUS_LOST);
+            {
+                // The fActive shouldn't be WA_INACTIVE && the window shouldn't be minimized:
+                const bool isFocusGained = LOWORD(wParam) != WA_INACTIVE && HIWORD(wParam) == 0;
+
+                if (IsInFullScreenMode()) {
+                    HWND hWndInsertAfter = isFocusGained ? HWND_TOPMOST : HWND_BOTTOM;
+                    ::SetWindowPos(GetHWND(), hWndInsertAfter, 0, 0, 0, 0,
+                            SWP_ASYNCWINDOWPOS | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOSIZE);
+                }
+                if (!GetDelegateWindow()) {
+                    HandleActivateEvent(isFocusGained ?
+                            com_sun_glass_events_WindowEvent_FOCUS_GAINED :
+                            com_sun_glass_events_WindowEvent_FOCUS_LOST);
+                }
             }
             // Let the DefWindowProc() set the focus to this window
             break;

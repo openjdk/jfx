@@ -443,11 +443,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             );
 
     public static void extractParamsFromAppResources(Map<String, ? super Object> params) {
-        RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
-
-        if (appResources == null) {
-            return;
-        }
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
         boolean hasMainJarClassPath = params.containsKey(MAIN_JAR_CLASSPATH.getID());
@@ -455,12 +450,34 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         if (hasMainClass && hasMainJar && hasMainJarClassPath) {
             return;
         }
+        Iterable<String> files;
+        File srcdir;
+
+        if (hasMainJar) {
+            RelativeFileSet rfs = MAIN_JAR.fetchFrom(params);
+            files = rfs.getIncludedFiles();
+            srcdir = rfs.getBaseDirectory();
+        } else if (hasMainJarClassPath) {
+            files = Arrays.asList(MAIN_JAR_CLASSPATH.fetchFrom(params).split(File.pathSeparator));
+            srcdir = null;
+        } else {
+            RelativeFileSet rfs = APP_RESOURCES.fetchFrom(params);
+            if (rfs == null) {
+                return;
+            }
+            files = rfs.getIncludedFiles();
+            srcdir = rfs.getBaseDirectory();
+        }
+
+
         String declaredMainClass = (String) params.get(MAIN_CLASS.getID());
 
-        File srcdir = appResources.getBaseDirectory();
         // presume the set iterates in-order
-        for (String fname : appResources.getIncludedFiles()) {
+        for (String fname : files) {
             try {
+                // only sniff jars
+                if (!fname.toLowerCase().endsWith(".jar")) continue;
+
                 File file = new File(srcdir, fname);
                 JarFile jf = new JarFile(file);
                 Manifest m = jf.getManifest();
@@ -495,7 +512,10 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         }
                     }
                     if (!hasMainJar) {
-                        params.put(MAIN_JAR.getID(), new RelativeFileSet(appResources.getBaseDirectory(), new LinkedHashSet<>(Arrays.asList(file))));
+                        if (srcdir == null) {
+                            srcdir = file.getParentFile();
+                        }
+                        params.put(MAIN_JAR.getID(), new RelativeFileSet(srcdir, new LinkedHashSet<>(Arrays.asList(file))));
                     }
                     if (!hasMainJarClassPath) {
                         String cp = attrs.getValue(Attributes.Name.CLASS_PATH);

@@ -305,10 +305,21 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             //we are not interested in return code, only possible exception
             APP_BUNDLER.fetchFrom(params).doValidate(params);
 
-            // more stringent app store validations
+            // make sure we have settings for signatures
+            if (MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(params) == null) {
+                throw new ConfigException(
+                        I18N.getString("error.no-app-signing-key"),
+                        I18N.getString("error.no-app-signing-key.advice"));
+            }
+            if (MAC_APP_STORE_PKG_SIGNING_KEY.fetchFrom(params) == null) {
+                throw new ConfigException(
+                        I18N.getString("error.no-pkg-signing-key"),
+                        I18N.getString("error.no-pkg-signing-key.advice"));
+            }
+
+            // things we could check...
             // check the icons, make sure it has hidpi icons
             // check the category, make sure it fits in the list apple has provided
-            // make sure we have settings for signatures
             // validate bundle identifier is reverse dns
             //  check for \a+\.\a+\..
 

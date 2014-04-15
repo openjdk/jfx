@@ -163,10 +163,12 @@ final class WinAccessible extends PlatformAccessible {
     private static final int UIA_AutomationPropertyChangedEventId= 20004;
     private static final int UIA_AutomationFocusChangedEventId   = 20005;
     private static final int UIA_MenuClosedEventId               = 20007;
-    private static final int UIA_MenuModeEndEventId              = 20019;
-    private static final int UIA_MenuModeStartEventId            = 20018;
     private static final int UIA_SelectionItem_ElementRemovedFromSelectionEventId = 20011;
     private static final int UIA_SelectionItem_ElementSelectedEventId = 20012;
+    private static final int UIA_Text_TextSelectionChangedEventId = 20014;
+    private static final int UIA_Text_TextChangedEventId         = 20015;
+    private static final int UIA_MenuModeStartEventId            = 20018;
+    private static final int UIA_MenuModeEndEventId              = 20019;
 
     /* SupportedTextSelection */
     private static final int SupportedTextSelection_None         = 0;
@@ -363,6 +365,7 @@ final class WinAccessible extends PlatformAccessible {
             }
             case SELECTION_START:
             case SELECTION_END:
+                UiaRaiseAutomationEvent(peer, UIA_Text_TextSelectionChangedEventId);
                 selectionRangeValid = false;
                 break;
             case TITLE:
@@ -377,7 +380,8 @@ final class WinAccessible extends PlatformAccessible {
                     vn.bstrVal = value;
                     UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ValueValuePropertyId, vo, vn);
                 }
-                //TODO send ITextProvider UIA event
+
+                UiaRaiseAutomationEvent(peer, UIA_Text_TextChangedEventId);
                 documentRangeValid = false;
                 selectionRangeValid = false;
                 break;

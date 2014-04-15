@@ -1071,23 +1071,6 @@ public abstract class Parent extends Node {
                     break;
                 }
                 performingLayout = true;
-                //
-                // One idiom employed by developers is to, during the layout pass,
-                // add or remove nodes from the scene. For example, a ScrollPane
-                // might add scroll bars to itself if it determines during layout
-                // that it needs them, or a ListView might add cells to itself if
-                // it determines that it needs to. In such situations we must
-                // apply the CSS immediately and not add it to the scene's queue
-                // for deferred action.
-                //
-                // Note that we only call processCSS if the flag is update. If the
-                // flag is DIRTY_BRANCH, then the whatever children need UPDATE
-                // will be visited during this layout anyway. On the next pulse,
-                // doCSSPass will clean up the DIRTY_BRANCH nodes.
-                //
-                if (cssFlag == CssFlags.UPDATE) {
-                    processCSS();
-                }
                 layoutChildren();
                 // Intended fall-through
             case DIRTY_BRANCH:

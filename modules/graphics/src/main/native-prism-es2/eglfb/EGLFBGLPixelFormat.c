@@ -57,7 +57,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_EGLFBGLPixelFormat_nCreatePixelFo
     setEGLAttrs(attrs, eglAttrs);
     (*env)->ReleaseIntArrayElements(env, attrArr, attrs, JNI_ABORT);
 
-    EGLDisplay egldisplay = eglGetDisplay(getNativeDisplayType());
+    EGLNativeDisplayType disptype = getNativeDisplayType();
+    if (disptype == (EGLNativeDisplayType)0xBAD) {
+        fprintf(stderr, "nCreatePixelFormat: Failed in getNativeDisplayType\n");
+        return 0;
+    }
+    EGLDisplay egldisplay = eglGetDisplay(disptype);
     if (EGL_NO_DISPLAY == egldisplay) {
         fprintf(stderr, "eglGetDisplay returned EGL_NO_DISPLAY");
         return 0;

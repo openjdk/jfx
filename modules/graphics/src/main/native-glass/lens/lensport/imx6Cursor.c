@@ -117,7 +117,7 @@ static void fbImx6AdjustShift(){
     }
 }
 
-/* Writes an image into the cursor framebuffer with the given x and y shits. */
+/* Writes an image into the cursor framebuffer with the given x and y shifts. */
 static void fbImx6WriteCursor(int fd, jbyte *cursorImage, int bpp) {
     int i, j, k;
     char buffer[256];

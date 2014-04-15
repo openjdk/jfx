@@ -16,7 +16,7 @@
 
         <fx:deploy outdir="../../../../../../../tmp/tests/ant" nativeBundles="image">
 
-            <fx:application refId="rectangle"/>
+            <fx:application refId="packagerTest"/>
 
             <fx:resources refid="appRes"/>
 

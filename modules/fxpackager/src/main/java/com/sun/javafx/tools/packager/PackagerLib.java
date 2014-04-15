@@ -475,6 +475,8 @@ public class PackagerLib {
             if (bp != null) {
                 generateNativeBundles(deployParams.outdir, bp.getBundleParamsAsMap(), deployParams.getBundleType().toString(), deployParams.getTargetFormat());
             }
+        } catch (PackagerException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new PackagerException(ex, "ERR_DeployFailed", ex.getMessage());
         }
@@ -482,7 +484,7 @@ public class PackagerLib {
         this.deployParams = null;
     }
 
-    private void generateNativeBundles(File outdir, Map<String, ? super Object> params, String bundleType, String bundleFormat) {
+    private void generateNativeBundles(File outdir, Map<String, ? super Object> params, String bundleType, String bundleFormat) throws PackagerException {
         outdir = new File(outdir, "bundles");
 
         if (params.containsKey(RUNTIME.getID())) {
@@ -506,12 +508,16 @@ public class PackagerLib {
             Map<String, ? super Object> localParams = new HashMap<>(params);
             try {
                 if (bundler.validate(localParams)) {
-                    bundler.execute(localParams, outdir);
+                    File result = bundler.execute(localParams, outdir);
+                    if (result == null) {
+                        throw new PackagerException("MSG_BundlerFailed", bundler.getID(), bundler.getName());
+                    }
                 }
                 
             } catch (UnsupportedPlatformException e) {
                 Log.debug(MessageFormat.format(bundle.getString("MSG_BundlerPlatformException"), bundler.getName()));
             } catch (ConfigException e) {
+                Log.debug(e);
                 if (e.getAdvice() != null) {
                     Log.info(MessageFormat.format(bundle.getString("MSG_BundlerConfigException"), bundler.getName(), e.getMessage(), e.getAdvice()));
                 } else {

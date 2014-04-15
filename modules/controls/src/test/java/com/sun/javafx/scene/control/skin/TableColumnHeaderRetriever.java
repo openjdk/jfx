@@ -39,4 +39,8 @@ public class TableColumnHeaderRetriever {
         TableColumnHeader colHeader = VirtualFlowTestUtils.getTableColumnHeader(col.getTableView(), col);
         colHeader.moveColumn(col, newPos);
     }
+
+    public static int getSortPos(TableColumnHeader header) {
+        return header.sortPos;
+    }
 }

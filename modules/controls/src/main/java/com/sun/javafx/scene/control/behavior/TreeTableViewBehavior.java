@@ -201,7 +201,11 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
      */
     private void rightArrowPressed() {
         if (getControl().getSelectionModel().isCellSelectionEnabled()) {
-            selectRightCell();
+            if (isRTL()) {
+                selectLeftCell();
+            } else {
+                selectRightCell();
+            }
         } else {
             expandRow();
         }
@@ -209,7 +213,11 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
     
     private void leftArrowPressed() {
         if (getControl().getSelectionModel().isCellSelectionEnabled()) {
-            selectLeftCell();
+            if (isRTL()) {
+                selectRightCell();
+            } else {
+                selectLeftCell();
+            }
         } else {
             collapseRow();
         }

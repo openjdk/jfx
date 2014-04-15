@@ -1904,6 +1904,10 @@ project(":fxpackager") {
 
         doFirst {
             copy {
+                from "$projectDir/src/test/resources/hello/java-logo2.gif"
+                into project.file("$projectDir/build/tmp/tests/appResources")
+            }
+            copy {
                 from "$projectDir/../../LICENSE"
                 into project.file("$projectDir/build/tmp/tests/appResources")
             }

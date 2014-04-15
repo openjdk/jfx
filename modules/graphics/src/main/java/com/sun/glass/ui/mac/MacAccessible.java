@@ -60,27 +60,27 @@ final class MacAccessible extends PlatformAccessible {
     private native static boolean _initEnum(String enumName);
     static {
         _initIDs();
-        if (!_initEnum("MacAttributes")) {
-            System.err.println("Fail linking MacAttributes");
+        if (!_initEnum("MacAttribute")) {
+            System.err.println("Fail linking MacAttribute");
         }
-        if (!_initEnum("MacActions")) {
-            System.err.println("Fail linking MacActions");
+        if (!_initEnum("MacAction")) {
+            System.err.println("Fail linking MacAction");
         }
-        if (!_initEnum("MacRoles")) {
-            System.err.println("Fail linking MacRoles");
+        if (!_initEnum("MacRole")) {
+            System.err.println("Fail linking MacRole");
         }
-        if (!_initEnum("MacSubroles")) {
-            System.err.println("Fail linking MacSubroles");
+        if (!_initEnum("MacSubrole")) {
+            System.err.println("Fail linking MacSubrole");
         }
-        if (!_initEnum("MacNotifications")) {
-            System.err.println("Fail linking MacNotifications");
+        if (!_initEnum("MacNotification")) {
+            System.err.println("Fail linking MacNotification");
         }
-        if (!_initEnum("MacOrientations")) {
-            System.err.println("Fail linking MacOrientations");
+        if (!_initEnum("MacOrientation")) {
+            System.err.println("Fail linking MacOrientation");
         }
     }
 
-    enum MacAttributes {
+    static enum MacAttribute {
         // Dynamic mapping to FX attribute, dynamic return type
         NSAccessibilityValueAttribute(null, null),
 
@@ -90,7 +90,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityEnabledAttribute(ENABLED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityHelpAttribute(TOOLTIP, MacVariant::createNSString),
 
-        /* FOCUSED might not match the result of accessibilityFocusedUIElement() cause of FOCUS_ITEM */
+        // FOCUSED might not match the result of accessibilityFocusedUIElement() cause of FOCUS_ITEM 
         NSAccessibilityFocusedAttribute(FOCUSED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityExpandedAttribute(EXPANDED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityMaxValueAttribute(MAX_VALUE, MacVariant::createNSNumberForDouble),
@@ -126,7 +126,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilitySelectedTextAttribute(SELECTION_START, MacVariant::createNSString),
         NSAccessibilitySelectedTextRangeAttribute(SELECTION_START, MacVariant::createNSValueForRange),
         NSAccessibilitySelectedTextRangesAttribute(null, null), //TODO Array of ranges
-        NSAccessibilityInsertionPointLineNumberAttribute(SELECTION_START, MacVariant::createNSNumberForInt),
+        NSAccessibilityInsertionPointLineNumberAttribute(CARET_OFFSET, MacVariant::createNSNumberForInt),
         NSAccessibilityVisibleCharacterRangeAttribute(TITLE, MacVariant::createNSValueForRange),
 
         // NSAccessibilityScrollAreaRole
@@ -156,33 +156,32 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityRowIndexRangeAttribute(ROW_INDEX, MacVariant::createNSValueForRange),
         NSAccessibilityColumnIndexRangeAttribute(COLUMN_INDEX, MacVariant::createNSValueForRange),
 
-        /* Parameterized Attributes */
-        NSAccessibilityLineForIndexParameterizedAttribute(SELECTION_START, MacVariant::createNSNumberForInt, MacVariant.NSNumber_Int),
+        // Parameterized Attributes
+        NSAccessibilityLineForIndexParameterizedAttribute(LINE_FOR_OFFSET, MacVariant::createNSNumberForInt, MacVariant.NSNumber_Int),
         NSAccessibilityStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSString, MacVariant.NSValue_range),
-        NSAccessibilityRangeForLineParameterizedAttribute(TITLE, MacVariant::createNSValueForRange, MacVariant.NSNumber_Int),
+        NSAccessibilityRangeForLineParameterizedAttribute(LINE_START, MacVariant::createNSValueForRange, MacVariant.NSNumber_Int),
         NSAccessibilityAttributedStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSAttributedString, MacVariant.NSValue_range),
         NSAccessibilityCellForColumnAndRowParameterizedAttribute(CELL_AT_ROW_COLUMN, MacVariant::createNSObject, MacVariant.NSArray_int),
-        ;
 
-        long ptr; /* Initialized natively - treat as final */
+        ;long ptr; /* Initialized natively - treat as final */
         Attribute jfxAttr;
         Function<Object, MacVariant> map; /* Maps the object returned by JavaFX to the appropriate MacVariant */
         int inputType; /* Defined only for parameterized attributes to convert the native input parameter (id) to MacVariant */
 
-        MacAttributes(Attribute jfxAttr, Function<Object, MacVariant> map, int inputType) {
+        MacAttribute(Attribute jfxAttr, Function<Object, MacVariant> map, int inputType) {
             this.jfxAttr = jfxAttr;
             this.map = map;
             this.inputType = inputType;
         }
 
-        MacAttributes(Attribute jfxAttr, Function<Object, MacVariant> map) {
+        MacAttribute(Attribute jfxAttr, Function<Object, MacVariant> map) {
             this.jfxAttr = jfxAttr;
             this.map = map;
         }
 
-        static MacAttributes getAttribute(long ptr) {
+        static MacAttribute getAttribute(long ptr) {
             if (ptr == 0) return null;
-            for (MacAttributes attr : values()) {
+            for (MacAttribute attr : values()) {
                 if (ptr == attr.ptr || isEqualToString(attr.ptr, ptr)) {
                     return attr;
                 }
@@ -195,305 +194,271 @@ final class MacAccessible extends PlatformAccessible {
      * The Attribute and Action for roles are defined in
      * https://developer.apple.com/library/mac/documentation/UserExperience/Reference/Accessibility_RoleAttribute_Ref/Introduction.html
      */
-    enum MacRoles {
+    static enum MacRole {
         NSAccessibilityUnknownRole(Role.NODE, null, null),
         NSAccessibilityGroupRole(Role.PARENT, null, null),
         NSAccessibilityButtonRole(new Role[] {Role.BUTTON, Role.INCREMENT_BUTTON, Role.DECREMENT_BUTTON, Role.HEADER, Role.SPLIT_MENU_BUTTON},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityTitleAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityTitleAttribute,
             },
-            new MacActions[] {MacActions.NSAccessibilityPressAction},
+            new MacAction[] {MacAction.NSAccessibilityPressAction},
             null
         ),
         NSAccessibilityImageRole(Role.IMAGE, null, null),
         NSAccessibilityRadioButtonRole(new Role[] {Role.RADIO_BUTTON, Role.TAB_ITEM, Role.PAGE},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityTitleAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityTitleAttribute,
+                MacAttribute.NSAccessibilityValueAttribute,
             },
-            new MacActions[] {MacActions.NSAccessibilityPressAction},
+            new MacAction[] {MacAction.NSAccessibilityPressAction},
             null
         ),
         NSAccessibilityCheckBoxRole(new Role[] {Role.CHECKBOX, Role.TOGGLE_BUTTON},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityTitleAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityTitleAttribute,
+                MacAttribute.NSAccessibilityValueAttribute,
             },
-            new MacActions[] {MacActions.NSAccessibilityPressAction},
+            new MacAction[] {MacAction.NSAccessibilityPressAction},
             null
         ),
-
-        NSAccessibilityPopUpButtonRole(new Role[] {Role.COMBOBOX},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
+        /* ComboBox can be either a NSAccessibilityComboBoxRole or a NSAccessibilityPopUpButtonRole (Based on EDITABLE) */
+        NSAccessibilityComboBoxRole(Role.COMBOBOX,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityExpandedAttribute
             },
-            new MacActions[] {MacActions.NSAccessibilityPressAction},
-            null
+            new MacAction[] {MacAction.NSAccessibilityPressAction}
+        ),
+        NSAccessibilityPopUpButtonRole(Role.COMBOBOX,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityValueAttribute,
+            },
+            new MacAction[] {MacAction.NSAccessibilityPressAction}
         ),
         NSAccessibilityTabGroupRole(new Role[] {Role.TAB_PANE, Role.PAGINATION},
-            new MacAttributes[] {
+            new MacAttribute[] {
 //              MacAttributes.NSAccessibilityContentsAttribute,
-                MacAttributes.NSAccessibilityTabsAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
+                MacAttribute.NSAccessibilityTabsAttribute,
+                MacAttribute.NSAccessibilityValueAttribute,
             },
             null,
             null
         ),
+        /* ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole (Based on INDETERMINATE) */
         NSAccessibilityProgressIndicatorRole(Role.PROGRESS_INDICATOR,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityOrientationAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
-                MacAttributes.NSAccessibilityMaxValueAttribute,
-                MacAttributes.NSAccessibilityMinValueAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityOrientationAttribute,
+                MacAttribute.NSAccessibilityValueAttribute,
+                MacAttribute.NSAccessibilityMaxValueAttribute,
+                MacAttribute.NSAccessibilityMinValueAttribute,
+            },
+            null
+        ),
+        NSAccessibilityBusyIndicatorRole(Role.PROGRESS_INDICATOR,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityOrientationAttribute,
+                MacAttribute.NSAccessibilityValueAttribute,
             },
             null
         ),
         NSAccessibilityMenuBarRole(Role.MENU_BAR,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilitySelectedChildrenAttribute,
-                MacAttributes.NSAccessibilityEnabledAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilitySelectedChildrenAttribute,
+                MacAttribute.NSAccessibilityEnabledAttribute,
             },
-            new MacActions[] {
-                MacActions.NSAccessibilityCancelAction,
+            new MacAction[] {
+                MacAction.NSAccessibilityCancelAction,
             }
         ),
         NSAccessibilityMenuRole(Role.CONTEXT_MENU,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilitySelectedChildrenAttribute,
-                MacAttributes.NSAccessibilityEnabledAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilitySelectedChildrenAttribute,
+                MacAttribute.NSAccessibilityEnabledAttribute,
             },
-            new MacActions[] {
-                MacActions.NSAccessibilityPressAction,
-                MacActions.NSAccessibilityCancelAction,
+            new MacAction[] {
+                MacAction.NSAccessibilityPressAction,
+                MacAction.NSAccessibilityCancelAction,
             }
         ),
         NSAccessibilityMenuItemRole(Role.MENU_ITEM,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityTitleAttribute,
-                MacAttributes.NSAccessibilitySelectedAttribute,
-                MacAttributes.AXMenuItemCmdChar,
-                MacAttributes.AXMenuItemCmdVirtualKey,
-                MacAttributes.AXMenuItemCmdGlyph,
-                MacAttributes.AXMenuItemCmdModifiers,
-                MacAttributes.AXMenuItemMarkChar,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityTitleAttribute,
+                MacAttribute.NSAccessibilitySelectedAttribute,
+                MacAttribute.AXMenuItemCmdChar,
+                MacAttribute.AXMenuItemCmdVirtualKey,
+                MacAttribute.AXMenuItemCmdGlyph,
+                MacAttribute.AXMenuItemCmdModifiers,
+                MacAttribute.AXMenuItemMarkChar,
             },
-            new MacActions[] {
-                MacActions.NSAccessibilityPressAction,
-                MacActions.NSAccessibilityCancelAction,
+            new MacAction[] {
+                MacAction.NSAccessibilityPressAction,
+                MacAction.NSAccessibilityCancelAction,
             }
         ),
         NSAccessibilityMenuButtonRole(Role.MENU_BUTTON,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityTitleAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityTitleAttribute,
             },
-            new MacActions[] {
-                MacActions.NSAccessibilityPressAction,
+            new MacAction[] {
+                MacAction.NSAccessibilityPressAction,
             }
         ),
-        /* 
-         * ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole.
-         * Depending on the state of the indeterminate property.
-         * Only in NSAccessibilityRoleAttribute and NSAccessibilityRoleDescriptionAttribute
-         * the correct adjustments are made, on all other method BusyIndicatorRole reply 
-         * as a ProgressIndicatorRole.
-         */
-        NSAccessibilityBusyIndicatorRole(Role.PROGRESS_INDICATOR, null, null),
         NSAccessibilityStaticTextRole(new Role[] {Role.TEXT, Role.TREE_TABLE_CELL},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
-                MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
-                MacAttributes.NSAccessibilitySelectedTextAttribute,
-                MacAttributes.NSAccessibilitySelectedTextRangeAttribute,
-                MacAttributes.NSAccessibilityInsertionPointLineNumberAttribute,
-                MacAttributes.NSAccessibilityVisibleCharacterRangeAttribute,
-            },
-            null,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityLineForIndexParameterizedAttribute,
-                MacAttributes.NSAccessibilityRangeForLineParameterizedAttribute,
-                MacAttributes.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
-                MacAttributes.NSAccessibilityStringForRangeParameterizedAttribute,
-            }
+            null, null, null
         ),
         NSAccessibilityTextFieldRole(new Role[] {Role.TEXT_FIELD, Role.PASSWORD_FIELD},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
-                MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
-                MacAttributes.NSAccessibilitySelectedTextAttribute,
-                MacAttributes.NSAccessibilitySelectedTextRangeAttribute,
-                MacAttributes.NSAccessibilityInsertionPointLineNumberAttribute,
-                MacAttributes.NSAccessibilityVisibleCharacterRangeAttribute,
-            },
-            null,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityLineForIndexParameterizedAttribute,
-                MacAttributes.NSAccessibilityRangeForLineParameterizedAttribute,
-                MacAttributes.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
-                MacAttributes.NSAccessibilityStringForRangeParameterizedAttribute,
-            }
+            null, null, null
         ),
-        NSAccessibilityTextAreaRole(Role.TEXT_AREA,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityValueAttribute,
-                MacAttributes.NSAccessibilityNumberOfCharactersAttribute,
-                MacAttributes.NSAccessibilitySelectedTextAttribute,
-                MacAttributes.NSAccessibilitySelectedTextRangeAttribute,
-            },
-            null
-        ),
+        NSAccessibilityTextAreaRole(Role.TEXT_AREA, null, null),
         NSAccessibilitySliderRole(Role.SLIDER,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityOrientationAttribute,
-                MacAttributes.NSAccessibilityValueAttribute,
-                MacAttributes.NSAccessibilityMaxValueAttribute,
-                MacAttributes.NSAccessibilityMinValueAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityOrientationAttribute,
+                MacAttribute.NSAccessibilityValueAttribute,
+                MacAttribute.NSAccessibilityMaxValueAttribute,
+                MacAttribute.NSAccessibilityMinValueAttribute,
             },
-            new MacActions[] {
-                MacActions.NSAccessibilityDecrementAction,
-                MacActions.NSAccessibilityIncrementAction,
+            new MacAction[] {
+                MacAction.NSAccessibilityDecrementAction,
+                MacAction.NSAccessibilityIncrementAction,
             }
         ),
         NSAccessibilityScrollAreaRole(Role.SCROLL_PANE,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityContentsAttribute,
-                MacAttributes.NSAccessibilityHorizontalScrollBarAttribute,
-                MacAttributes.NSAccessibilityVerticalScrollBarAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityContentsAttribute,
+                MacAttribute.NSAccessibilityHorizontalScrollBarAttribute,
+                MacAttribute.NSAccessibilityVerticalScrollBarAttribute,
             },
             null
         ),
         NSAccessibilityScrollBarRole(Role.SCROLL_BAR,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityValueAttribute,
-                MacAttributes.NSAccessibilityMinValueAttribute,
-                MacAttributes.NSAccessibilityMaxValueAttribute,
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityOrientationAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityValueAttribute,
+                MacAttribute.NSAccessibilityMinValueAttribute,
+                MacAttribute.NSAccessibilityMaxValueAttribute,
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityOrientationAttribute,
             },
             null
         ),
         NSAccessibilityValueIndicatorRole(Role.THUMB,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityValueAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityValueAttribute,
             },
             null
         ),
         NSAccessibilityRowRole(new Role[] {Role.LIST_ITEM, Role.TABLE_ROW, Role.TREE_ITEM, Role.TREE_TABLE_ITEM},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilitySubroleAttribute,
-                MacAttributes.NSAccessibilityIndexAttribute,
-                MacAttributes.NSAccessibilitySelectedAttribute,
-                MacAttributes.NSAccessibilityVisibleChildrenAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilitySubroleAttribute,
+                MacAttribute.NSAccessibilityIndexAttribute,
+                MacAttribute.NSAccessibilitySelectedAttribute,
+                MacAttribute.NSAccessibilityVisibleChildrenAttribute,
             },
             null, null
         ),
         NSAccessibilityTableRole(new Role[] {Role.LIST_VIEW, Role.TABLE_VIEW},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityColumnsAttribute,
-                MacAttributes.NSAccessibilityHeaderAttribute,
-                MacAttributes.NSAccessibilityRowsAttribute,
-                MacAttributes.NSAccessibilitySelectedRowsAttribute,
-                MacAttributes.NSAccessibilityRowCountAttribute,
-                MacAttributes.NSAccessibilityColumnCountAttribute,
-                MacAttributes.NSAccessibilitySelectedCellsAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityColumnsAttribute,
+                MacAttribute.NSAccessibilityHeaderAttribute,
+                MacAttribute.NSAccessibilityRowsAttribute,
+                MacAttribute.NSAccessibilitySelectedRowsAttribute,
+                MacAttribute.NSAccessibilityRowCountAttribute,
+                MacAttribute.NSAccessibilityColumnCountAttribute,
+                MacAttribute.NSAccessibilitySelectedCellsAttribute,
             },
             null,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityCellForColumnAndRowParameterizedAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityCellForColumnAndRowParameterizedAttribute,
             }
         ),
         NSAccessibilityColumnRole(Role.TABLE_COLUMN,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityHeaderAttribute,
-                MacAttributes.NSAccessibilityIndexAttribute,
-                MacAttributes.NSAccessibilityRowsAttribute,
-                MacAttributes.NSAccessibilitySelectedAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityHeaderAttribute,
+                MacAttribute.NSAccessibilityIndexAttribute,
+                MacAttribute.NSAccessibilityRowsAttribute,
+                MacAttribute.NSAccessibilitySelectedAttribute,
             },
             null
         ),
         NSAccessibilityCellRole(new Role[] {Role.TABLE_CELL},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityColumnIndexRangeAttribute,
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityRowIndexRangeAttribute,
-                MacAttributes.NSAccessibilitySelectedAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityColumnIndexRangeAttribute,
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityRowIndexRangeAttribute,
+                MacAttribute.NSAccessibilitySelectedAttribute,
             },
             null,
             null
         ),
         NSAccessibilityLinkRole(Role.HYPERLINK,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.AXVisited
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.AXVisited
             },
             null
         ),
         NSAccessibilityOutlineRole(new Role[] {Role.TREE_VIEW, Role.TREE_TABLE_VIEW},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityColumnsAttribute,
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityHeaderAttribute,
-                MacAttributes.NSAccessibilityRowsAttribute,
-                MacAttributes.NSAccessibilitySelectedRowsAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityColumnsAttribute,
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityHeaderAttribute,
+                MacAttribute.NSAccessibilityRowsAttribute,
+                MacAttribute.NSAccessibilitySelectedRowsAttribute,
             },
             null,
             null
         ),
         NSAccessibilityDisclosureTriangleRole(new Role[] {Role.DISCLOSURE_NODE, Role.TITLED_PANE},
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityValueAttribute
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityValueAttribute
             },
-            new MacActions[] {
-                MacActions.NSAccessibilityPressAction
+            new MacAction[] {
+                MacAction.NSAccessibilityPressAction
             },
             null
         ),
         NSAccessibilityToolbarRole(Role.TOOLBAR,
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityEnabledAttribute,
-                MacAttributes.NSAccessibilityOverflowButtonAttribute,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityOverflowButtonAttribute,
             },
             null
         ),
         AXDateTimeArea(Role.DATE_PICKER,
-                new MacAttributes[] {
-                    MacAttributes.NSAccessibilityEnabledAttribute,
-                    MacAttributes.NSAccessibilityValueAttribute,
-                    MacAttributes.AXDateTimeComponents,
-                },
-                null
-            ),
-        ;
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityValueAttribute,
+                MacAttribute.AXDateTimeComponents,
+            },
+            null
+        ),
 
-        long ptr; /* Initialized natively - treat as final */
+        ;long ptr; /* Initialized natively - treat as final */
         Role[] jfxRoles;
-        List<MacAttributes> macAttributes;
-        List<MacAttributes> macParameterizedAttributes;
-        List<MacActions> macActions;
-        MacRoles(Role jfxRole, MacAttributes[] macAttributes, MacActions[] macActions) {
+        List<MacAttribute> macAttributes;
+        List<MacAttribute> macParameterizedAttributes;
+        List<MacAction> macActions;
+        MacRole(Role jfxRole, MacAttribute[] macAttributes, MacAction[] macActions) {
             this(new Role[] {jfxRole}, macAttributes, macActions, null);
         }
 
-        MacRoles(Role[] jfxRoles, MacAttributes[] macAttributes, MacActions[] macActions, MacAttributes[] macParameterizedAttributes) {
+        MacRole(Role[] jfxRoles, MacAttribute[] macAttributes, MacAction[] macActions, MacAttribute[] macParameterizedAttributes) {
             this.jfxRoles = jfxRoles;
             this.macAttributes = macAttributes != null ? Arrays.asList(macAttributes) : null;
             this.macActions = macActions != null ? Arrays.asList(macActions) : null;
             this.macParameterizedAttributes = macParameterizedAttributes != null ? Arrays.asList(macParameterizedAttributes) : null;
         }
 
-        static MacRoles getRole(Role targetRole) {
+        static MacRole getRole(Role targetRole) {
             if (targetRole == null) return null;
-            for (MacRoles macRole : values()) {
+            for (MacRole macRole : values()) {
                 for (Role jfxRole : macRole.jfxRoles) {
                     if (jfxRole == targetRole) {
                         return macRole;
@@ -504,46 +469,45 @@ final class MacAccessible extends PlatformAccessible {
         }
     }
 
-    enum MacSubroles {
+    static enum MacSubrole {
         NSAccessibilityTableRowSubrole(Role.LIST_ITEM, Role.TABLE_ROW),
         NSAccessibilitySortButtonSubrole(Role.HEADER),
         NSAccessibilitySecureTextFieldSubrole(Role.PASSWORD_FIELD),
         NSAccessibilityOutlineRowSubrole(new Role[] { Role.TREE_ITEM, Role.TREE_TABLE_ITEM },
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilityDisclosedByRowAttribute,
-                MacAttributes.NSAccessibilityDisclosedRowsAttribute,
-                MacAttributes.NSAccessibilityDisclosingAttribute,
-                MacAttributes.NSAccessibilityDisclosureLevelAttribute
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityDisclosedByRowAttribute,
+                MacAttribute.NSAccessibilityDisclosedRowsAttribute,
+                MacAttribute.NSAccessibilityDisclosingAttribute,
+                MacAttribute.NSAccessibilityDisclosureLevelAttribute
             }
         ),
         NSAccessibilityDecrementArrowSubrole(new Role[] { Role.DECREMENT_BUTTON },
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilitySubroleAttribute
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilitySubroleAttribute
             }
         ),
         NSAccessibilityIncrementArrowSubrole(new Role[] { Role.INCREMENT_BUTTON },
-            new MacAttributes[] {
-                MacAttributes.NSAccessibilitySubroleAttribute
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilitySubroleAttribute
             }
         )
-        ;
 
-        long ptr; /* Initialized natively - treat as final */
+        ;long ptr; /* Initialized natively - treat as final */
         Role[] jfxRoles;
-        List<MacAttributes> macAttributes;
+        List<MacAttribute> macAttributes;
 
-        MacSubroles(Role... jfxRoles) {
+        MacSubrole(Role... jfxRoles) {
             this(jfxRoles, null);
         }
 
-        MacSubroles(Role[] jfxRoles, MacAttributes[] macAttributes) {
+        MacSubrole(Role[] jfxRoles, MacAttribute[] macAttributes) {
             this.jfxRoles = jfxRoles;
             this.macAttributes = macAttributes != null ? Arrays.asList(macAttributes) : null;
         }
 
-        static MacSubroles getRole(Role targetRole) {
+        static MacSubrole getRole(Role targetRole) {
             if (targetRole == null) return null;
-            for (MacSubroles macRole : values()) {
+            for (MacSubrole macRole : values()) {
                 for (Role jfxRole : macRole.jfxRoles) {
                     if (jfxRole == targetRole) {
                         return macRole;
@@ -554,7 +518,7 @@ final class MacAccessible extends PlatformAccessible {
         }
     }
 
-    enum MacActions {
+    static enum MacAction {
         NSAccessibilityCancelAction,
         NSAccessibilityConfirmAction,
         NSAccessibilityDecrementAction(Action.DECREMENT),
@@ -563,17 +527,17 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityPickAction,
         NSAccessibilityPressAction(Action.FIRE),
         NSAccessibilityRaiseAction,
-        NSAccessibilityShowMenuAction(Action.SHOW_MENU);
+        NSAccessibilityShowMenuAction(Action.SHOW_MENU),
 
-        long ptr; /* Initialized natively - treat as final */
+        ;long ptr; /* Initialized natively - treat as final */
         Action jfxAction;
-        MacActions() {}
-        MacActions(Action jfxAction) {
+        MacAction() {}
+        MacAction(Action jfxAction) {
             this.jfxAction = jfxAction;
         }
 
-        static MacActions getAction(long ptr) {
-            for (MacActions macAction : MacActions.values()) {
+        static MacAction getAction(long ptr) {
+            for (MacAction macAction : MacAction.values()) {
                 if (macAction.ptr == ptr || isEqualToString(macAction.ptr, ptr)) {
                     return macAction;
                 }
@@ -582,7 +546,7 @@ final class MacAccessible extends PlatformAccessible {
         }
     }
 
-    enum MacNotifications {
+    static enum MacNotification {
         NSAccessibilityCreatedNotification,
         NSAccessibilityFocusedUIElementChangedNotification,
         NSAccessibilityValueChangedNotification,
@@ -597,28 +561,48 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityRowCollapsedNotification,
         AXMenuOpened,
         AXMenuClosed,
-        ;long ptr;
+        ;long ptr; /* Initialized natively - treat as final */
     }
 
-    enum MacOrientations {
+    static enum MacOrientation {
         NSAccessibilityHorizontalOrientationValue,
         NSAccessibilityVerticalOrientationValue,
-        NSAccessibilityUnknownOrientationValue;
-        long ptr;
+        NSAccessibilityUnknownOrientationValue,
+        ;long ptr; /* Initialized natively - treat as final */
     }
 
-    List<MacAttributes> baseAttributes = Arrays.asList(
-        MacAttributes.NSAccessibilityRoleAttribute,
-        MacAttributes.NSAccessibilityRoleDescriptionAttribute,
-        MacAttributes.NSAccessibilityHelpAttribute,
-        MacAttributes.NSAccessibilityFocusedAttribute,
-        MacAttributes.NSAccessibilityParentAttribute,
-        MacAttributes.NSAccessibilityChildrenAttribute,
-        MacAttributes.NSAccessibilityPositionAttribute,
-        MacAttributes.NSAccessibilitySizeAttribute,
-        MacAttributes.NSAccessibilityWindowAttribute,
-        MacAttributes.NSAccessibilityTopLevelUIElementAttribute,
-        MacAttributes.NSAccessibilityTitleUIElementAttribute
+    /* Do not access the following lists directly from the Mac enums.
+     * It can cause the static initialization to happen in an unexpected order.
+     */
+    static final List<MacAttribute> baseAttributes = Arrays.asList(
+        MacAttribute.NSAccessibilityRoleAttribute,
+        MacAttribute.NSAccessibilityRoleDescriptionAttribute,
+        MacAttribute.NSAccessibilityHelpAttribute,
+        MacAttribute.NSAccessibilityFocusedAttribute,
+        MacAttribute.NSAccessibilityParentAttribute,
+        MacAttribute.NSAccessibilityChildrenAttribute,
+        MacAttribute.NSAccessibilityPositionAttribute,
+        MacAttribute.NSAccessibilitySizeAttribute,
+        MacAttribute.NSAccessibilityWindowAttribute,
+        MacAttribute.NSAccessibilityTopLevelUIElementAttribute,
+        MacAttribute.NSAccessibilityTitleUIElementAttribute
+    );
+
+    static final List<MacAttribute> textAttributes = Arrays.asList(
+        MacAttribute.NSAccessibilityEnabledAttribute,
+        MacAttribute.NSAccessibilityValueAttribute,
+        MacAttribute.NSAccessibilityNumberOfCharactersAttribute,
+        MacAttribute.NSAccessibilitySelectedTextAttribute,
+        MacAttribute.NSAccessibilitySelectedTextRangeAttribute,
+        MacAttribute.NSAccessibilityInsertionPointLineNumberAttribute,
+        MacAttribute.NSAccessibilityVisibleCharacterRangeAttribute
+    );
+
+    static final List<MacAttribute> textParameterizedAttributes = Arrays.asList(
+        MacAttribute.NSAccessibilityLineForIndexParameterizedAttribute,
+        MacAttribute.NSAccessibilityRangeForLineParameterizedAttribute,
+        MacAttribute.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
+        MacAttribute.NSAccessibilityStringForRangeParameterizedAttribute
     );
 
     /* The native peer associated with the instance */
@@ -661,7 +645,7 @@ final class MacAccessible extends PlatformAccessible {
     public void dispose() {
         if (peer != 0L) {
             if (getView() == null) {
-                NSAccessibilityPostNotification(peer, MacNotifications.NSAccessibilityUIElementDestroyedNotification.ptr);
+                NSAccessibilityPostNotification(peer, MacNotification.NSAccessibilityUIElementDestroyedNotification.ptr);
             }
             _destroyGlassAccessible(peer);
             peer = 0L;
@@ -673,22 +657,22 @@ final class MacAccessible extends PlatformAccessible {
     public void sendNotification(Attribute notification) {
         if (isDisposed()) return;
 
-        MacNotifications macNotification = null;
+        MacNotification macNotification = null;
         switch (notification) {
             case SELECTED_TAB:
             case SELECTED_PAGE: {
                 View view = getRootView((Scene)getAttribute(SCENE));
                 if (view != null) {
                     long id = view.getNativeView();
-                    NSAccessibilityPostNotification(id, MacNotifications.NSAccessibilityFocusedUIElementChangedNotification.ptr);
+                    NSAccessibilityPostNotification(id, MacNotification.NSAccessibilityFocusedUIElementChangedNotification.ptr);
                 }
                 return;
             }
             case SELECTED_ROWS:
-                macNotification = MacNotifications.NSAccessibilitySelectedRowsChangedNotification;
+                macNotification = MacNotification.NSAccessibilitySelectedRowsChangedNotification;
                 break;
             case SELECTED_CELLS:
-                macNotification = MacNotifications.NSAccessibilitySelectedCellsChangedNotification;
+                macNotification = MacNotification.NSAccessibilitySelectedCellsChangedNotification;
                 break;
             case FOCUS_NODE: {
                 Node node = (Node)getAttribute(FOCUS_NODE);
@@ -720,7 +704,7 @@ final class MacAccessible extends PlatformAccessible {
                 }
 
                 if (id != 0) {
-                    NSAccessibilityPostNotification(id, MacNotifications.NSAccessibilityFocusedUIElementChangedNotification.ptr);
+                    NSAccessibilityPostNotification(id, MacNotification.NSAccessibilityFocusedUIElementChangedNotification.ptr);
                 }
                 return;
             }
@@ -728,14 +712,14 @@ final class MacAccessible extends PlatformAccessible {
                 return;
             case SELECTION_START:
             case SELECTION_END:
-                macNotification = MacNotifications.NSAccessibilitySelectedTextChangedNotification;
+                macNotification = MacNotification.NSAccessibilitySelectedTextChangedNotification;
                 break;
             case EXPANDED:
                 boolean expanded = Boolean.TRUE.equals(getAttribute(EXPANDED));
                 if (expanded) {
-                    macNotification = MacNotifications.NSAccessibilityRowExpandedNotification;
+                    macNotification = MacNotification.NSAccessibilityRowExpandedNotification;
                 } else {
-                    macNotification = MacNotifications.NSAccessibilityRowCollapsedNotification;
+                    macNotification = MacNotification.NSAccessibilityRowCollapsedNotification;
                 }
 
                 Role role = (Role) getAttribute(ROLE);
@@ -743,7 +727,7 @@ final class MacAccessible extends PlatformAccessible {
                     Role container = role == Role.TREE_ITEM ? Role.TREE_VIEW : Role.TREE_TABLE_VIEW;
                     long control = getAccessible(getContainerNode(container));
                     if (control != 0) {
-                        NSAccessibilityPostNotification(control, MacNotifications.NSAccessibilityRowCountChangedNotification.ptr);
+                        NSAccessibilityPostNotification(control, MacNotification.NSAccessibilityRowCountChangedNotification.ptr);
                     }
                 }
                 break;
@@ -751,9 +735,9 @@ final class MacAccessible extends PlatformAccessible {
                 if (getAttribute(ROLE) == Role.CONTEXT_MENU) {
                     Boolean visible = (Boolean)getAttribute(VISIBLE);
                     if (Boolean.TRUE.equals(visible)) {
-                        macNotification = MacNotifications.AXMenuOpened;
+                        macNotification = MacNotification.AXMenuOpened;
                     } else {
-                        macNotification = MacNotifications.AXMenuClosed;
+                        macNotification = MacNotification.AXMenuClosed;
 
                         /* When a submenu closes the focus is returned to the main
                          * window, as opposite of the previous menu.
@@ -763,15 +747,15 @@ final class MacAccessible extends PlatformAccessible {
                         Node menuItemOwner = (Node)getAttribute(MENU_FOR);
                         long menu = getAccessible(getContainerNode(menuItemOwner, Role.CONTEXT_MENU));
                         if (menu != 0) {
-                            NSAccessibilityPostNotification(menu, MacNotifications.AXMenuClosed.ptr);
-                            NSAccessibilityPostNotification(menu, MacNotifications.AXMenuOpened.ptr);
+                            NSAccessibilityPostNotification(menu, MacNotification.AXMenuClosed.ptr);
+                            NSAccessibilityPostNotification(menu, MacNotification.AXMenuOpened.ptr);
                         }
                     }
                 }
                 break;
             }
             default:
-                macNotification = MacNotifications.NSAccessibilityValueChangedNotification;
+                macNotification = MacNotification.NSAccessibilityValueChangedNotification;
         }
         if (macNotification != null) {
             View view = getView();
@@ -862,41 +846,70 @@ final class MacAccessible extends PlatformAccessible {
         return code.isLetterKey() || (code.isDigitKey() && !code.isKeypadKey());
     }
 
+    private MacRole getRole(Role role) {
+        if (role == Role.COMBOBOX) {
+            if (Boolean.TRUE.equals(getAttribute(EDITABLE))) {
+                return MacRole.NSAccessibilityComboBoxRole;
+            } else {
+                return MacRole.NSAccessibilityPopUpButtonRole;
+            }
+        }
+        MacRole macRole = MacRole.getRole(role);
+        if (macRole == MacRole.NSAccessibilityProgressIndicatorRole) {
+            Boolean state = (Boolean)getAttribute(INDETERMINATE);
+            if (Boolean.TRUE.equals(state)) {
+                macRole = MacRole.NSAccessibilityBusyIndicatorRole;
+            }
+        }
+        return macRole;
+    }
+
     /* NSAccessibility Protocol - JNI entry points */
     long[] accessibilityAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         Role role = (Role)getAttribute(ROLE);
         if (role != null) {
-            List<MacAttributes> attrs = new ArrayList<>(baseAttributes);
-            MacRoles macRole = MacRoles.getRole(role);
+            List<MacAttribute> attrs = new ArrayList<>(baseAttributes);
+            MacRole macRole = getRole(role);
             if (macRole != null && macRole.macAttributes != null) {
                 attrs.addAll(macRole.macAttributes);
             }
 
             /* Look to see if there is a subrole that we should also get the attributes of */
-            MacSubroles macSubrole = MacSubroles.getRole(role);
+            MacSubrole macSubrole = MacSubrole.getRole(role);
             if (macSubrole != null && macSubrole.macAttributes != null) {
                 attrs.addAll(macSubrole.macAttributes);
             }
 
-            /* ListView is row-based, must remove all the cell-based attributes */
-            if (role == Role.LIST_VIEW || role == Role.TREE_TABLE_VIEW) {
-                attrs.remove(MacAttributes.NSAccessibilitySelectedCellsAttribute);
+            switch (role) {
+                case LIST_VIEW:
+                case TREE_TABLE_VIEW:
+                    /* ListView is row-based, must remove all the cell-based attributes */
+                    attrs.remove(MacAttribute.NSAccessibilitySelectedCellsAttribute);
+                    break;
+                case CONTEXT_MENU:
+                case MENU_ITEM:
+                case MENU_BAR:
+                    /* Menu and MenuItem do have have Window and top-level UI Element*/
+                    attrs.remove(MacAttribute.NSAccessibilityWindowAttribute);
+                    attrs.remove(MacAttribute.NSAccessibilityTopLevelUIElementAttribute);
+                    break;
+                case TEXT:
+                case TEXT_FIELD:
+                case TEXT_AREA:
+                case PASSWORD_FIELD:
+                case COMBOBOX:
+                    attrs.addAll(textAttributes);
+                    break;
+                default:
             }
-
-            /* Menu and MenuItem do have have Window and top-level UI Element*/
-            if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM || role == Role.MENU_BAR) {
-                attrs.remove(MacAttributes.NSAccessibilityWindowAttribute);
-                attrs.remove(MacAttributes.NSAccessibilityTopLevelUIElementAttribute);
-            }
-
             return attrs.stream().mapToLong(a -> a.ptr).toArray();
         }
         return null;
     }
 
     int accessibilityArrayAttributeCount(long attribute) {
-        MacAttributes attr = MacAttributes.getAttribute(attribute);
+        MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) {
             return -1;
         }
@@ -937,7 +950,7 @@ final class MacAccessible extends PlatformAccessible {
     }
 
     long[] accessibilityArrayAttributeValues(long attribute, int index, int maxCount) {
-        MacAttributes attr = MacAttributes.getAttribute(attribute);
+        MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) {
             return null;
         }
@@ -988,7 +1001,7 @@ final class MacAccessible extends PlatformAccessible {
     }
 
     boolean accessibilityIsAttributeSettable(long attribute) {
-        MacAttributes attr = MacAttributes.getAttribute(attribute);
+        MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) return false;
         switch (attr) {
             case NSAccessibilityDisclosingAttribute:
@@ -1005,7 +1018,7 @@ final class MacAccessible extends PlatformAccessible {
     }
 
     MacVariant accessibilityAttributeValue(long attribute) {
-        MacAttributes attr = MacAttributes.getAttribute(attribute);
+        MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) {
             return null;
         }
@@ -1147,30 +1160,17 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilitySubroleAttribute: {
-                MacSubroles subRole = MacSubroles.getRole((Role)result);
+                MacSubrole subRole = MacSubrole.getRole((Role)result);
                 result = subRole != null ? subRole.ptr : 0L;
                 break;
             }
             case NSAccessibilityRoleAttribute: {
-                MacRoles macRole = MacRoles.getRole((Role)result);
-                if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
-                    Boolean state = (Boolean)getAttribute(INDETERMINATE);
-                    if (Boolean.TRUE.equals(state)) {
-                        macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
-                    }
-                }
+                MacRole macRole = getRole(role);
                 result = macRole != null ? macRole.ptr : 0L;
                 break;
             }
             case NSAccessibilityRoleDescriptionAttribute: {
-                MacRoles macRole = MacRoles.getRole((Role)result);
-                if (macRole == null) return null;
-                if (macRole == MacRoles.NSAccessibilityProgressIndicatorRole) {
-                    Boolean state = (Boolean)getAttribute(INDETERMINATE);
-                    if (Boolean.TRUE.equals(state)) {
-                        macRole = MacRoles.NSAccessibilityBusyIndicatorRole;
-                    }
-                }
+                MacRole macRole = getRole(role);
                 /* 
                  * In some cases there is no proper mapping from a JFX role
                  * to a Mac role. For example, reporting 'disclosure triangle'
@@ -1183,7 +1183,7 @@ final class MacAccessible extends PlatformAccessible {
                     case PAGE: result = "page"; break;
                     case TAB_ITEM: result = "tab"; break;
                     default:
-                        MacSubroles subRole = MacSubroles.getRole(role);
+                        MacSubrole subRole = MacSubrole.getRole(role);
                         result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
                 }
                 break;
@@ -1393,10 +1393,13 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityInsertionPointLineNumberAttribute: {
-                int offset = (Integer)result;
-                if (offset < 0) result = 0;
-                //TODO multi line support
-                result = 0;
+                if (role == Role.TEXT_AREA) {
+                    Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, result /*CARET_OFFSET*/);
+                    result = lineIndex != null ? lineIndex : 0;
+                } else {
+                    /* Combo and TextArea */ 
+                    result = 0;
+                }
                 break;
             }
             case NSAccessibilityVisibleCharacterRangeAttribute: {
@@ -1428,8 +1431,8 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilityOrientationAttribute:
                 Orientation orientation = (Orientation)result;
                 switch (orientation) {
-                    case HORIZONTAL: result = MacOrientations.NSAccessibilityHorizontalOrientationValue.ptr; break;
-                    case VERTICAL: result = MacOrientations.NSAccessibilityVerticalOrientationValue.ptr; break;
+                    case HORIZONTAL: result = MacOrientation.NSAccessibilityHorizontalOrientationValue.ptr; break;
+                    case VERTICAL: result = MacOrientation.NSAccessibilityVerticalOrientationValue.ptr; break;
                     default: return null;
                 }
                 break;
@@ -1447,7 +1450,7 @@ final class MacAccessible extends PlatformAccessible {
     }
 
     void accessibilitySetValue(long value, long attribute) {
-        MacAttributes attr = MacAttributes.getAttribute(attribute);
+        MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr != null) {
             switch (attr) {
                 case NSAccessibilitySelectedCellsAttribute:
@@ -1487,22 +1490,33 @@ final class MacAccessible extends PlatformAccessible {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         Role role = (Role)getAttribute(ROLE);
         if (role != null) {
-            MacRoles macRole = MacRoles.getRole(role);
+            List<MacAttribute> attrs = new ArrayList<>();
+            MacRole macRole = getRole(role);
             if (macRole != null && macRole.macParameterizedAttributes != null) {
-                Stream<MacAttributes> attrs = macRole.macParameterizedAttributes.stream();
-
-                /* ListView is row-based, must remove all the cell-based attributes */
-                if (role == Role.LIST_VIEW || role == Role.TREE_TABLE_VIEW) {
-                    attrs = attrs.filter(a -> a != MacAttributes.NSAccessibilityCellForColumnAndRowParameterizedAttribute);
-                }
-                return attrs.mapToLong(a -> a.ptr).toArray();
+                attrs.addAll(macRole.macParameterizedAttributes);
             }
+            switch (role) {
+                case LIST_VIEW:
+                case TREE_TABLE_VIEW:
+                    /* ListView is row-based, must remove all the cell-based attributes */
+                    attrs.remove(MacAttribute.NSAccessibilityCellForColumnAndRowParameterizedAttribute);
+                    break;
+                case TEXT:
+                case TEXT_FIELD:
+                case TEXT_AREA:
+                case PASSWORD_FIELD:
+                case COMBOBOX:
+                    attrs.addAll(textParameterizedAttributes);
+                    break;
+                default:
+            }
+            return attrs.stream().mapToLong(a -> a.ptr).toArray();
         }
         return null;
     }
 
     MacVariant accessibilityAttributeValueForParameter(long attribute, long parameter) {
-        MacAttributes attr = MacAttributes.getAttribute(attribute);
+        MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null || attr.inputType == 0 || attr.jfxAttr == null) {
             return null;
         }
@@ -1515,6 +1529,31 @@ final class MacAccessible extends PlatformAccessible {
                 int[] intArray = (int[])value;
                 result = getAttribute(attr.jfxAttr, intArray[1] /*row*/, intArray[0] /*column*/);
                 break;
+            case NSAccessibilityLineForIndexParameterizedAttribute: {
+                if (getAttribute(ROLE) == Role.TEXT_AREA) {
+                    result = getAttribute(attr.jfxAttr, value /*charOffset*/);
+                } else {
+                    /* Combo and TextField */
+                    result = 0;
+                }
+                break;
+            }
+            case NSAccessibilityRangeForLineParameterizedAttribute: {
+                if (getAttribute(ROLE) == Role.TEXT_AREA) {
+                    Integer lineStart = (Integer)getAttribute(LINE_START, value /*line index*/);
+                    Integer lineEnd = (Integer)getAttribute(LINE_END, value /*line index*/);
+                    if (lineStart != null && lineEnd != null) {
+                        result = new int[] {lineStart, lineEnd - lineStart}; 
+                    } else {
+                        result = null;
+                    }
+                } else {
+                    /* Combo and TextField */
+                    String text = (String)getAttribute(TITLE);
+                    result = new int[] {0, text != null ? text.length() : 0};
+                }
+                break;
+            }
             default:
                 result = getAttribute(attr.jfxAttr, value);
         }
@@ -1524,19 +1563,6 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilityStringForRangeParameterizedAttribute: {
                 String text = (String)result;
                 result = text.substring(variant.int1, variant.int1 + variant.int2);
-                break;
-            }
-            case NSAccessibilityLineForIndexParameterizedAttribute: {
-                int offset = (Integer)result;
-                //TODO multi line support
-                if (offset < 0) result = 0;
-                result = 0;
-                break;
-            }
-            case NSAccessibilityRangeForLineParameterizedAttribute: {
-                String text = (String)result;
-                //TODO multi line support
-                result = new int[] {0, text.length()}; 
                 break;
             }
             case NSAccessibilityCellForColumnAndRowParameterizedAttribute: {
@@ -1551,9 +1577,9 @@ final class MacAccessible extends PlatformAccessible {
     long[] accessibilityActionNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         Role role = (Role)getAttribute(ROLE);
-        List<MacActions> actions = new ArrayList<>();
+        List<MacAction> actions = new ArrayList<>();
         if (role != null) {
-            MacRoles macRole = MacRoles.getRole(role);
+            MacRole macRole = getRole(role);
             if (macRole != null && macRole.macActions != null) {
                 actions.addAll(macRole.macActions);
             }
@@ -1562,7 +1588,7 @@ final class MacAccessible extends PlatformAccessible {
              * has a menu instead of using the role.
              */
             if (role != Role.NODE && role != Role.PARENT) {
-                actions.add(MacActions.NSAccessibilityShowMenuAction);
+                actions.add(MacAction.NSAccessibilityShowMenuAction);
             }
         }
         /* Return empty array instead of null to prevent warnings in the accessibility verifier */
@@ -1574,15 +1600,15 @@ final class MacAccessible extends PlatformAccessible {
     }
 
     void accessibilityPerformAction(long action) {
-        MacActions macAction = MacActions.getAction(action);
+        MacAction macAction = MacAction.getAction(action);
         boolean expand = false;
-        if (macAction == MacActions.NSAccessibilityPressAction) {
+        if (macAction == MacAction.NSAccessibilityPressAction) {
             Role role = (Role)getAttribute(ROLE);
             if (role == Role.TITLED_PANE || role == Role.COMBOBOX) {
                 expand = true;
             }
         }
-        if (macAction == MacActions.NSAccessibilityShowMenuAction) {
+        if (macAction == MacAction.NSAccessibilityShowMenuAction) {
             if (getAttribute(ROLE) == Role.SPLIT_MENU_BUTTON) {
                 expand = true;
             }

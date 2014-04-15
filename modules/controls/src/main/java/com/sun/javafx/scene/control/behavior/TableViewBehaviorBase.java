@@ -444,7 +444,10 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             getControl().requestFocus();
         }
     }
-    
+
+    protected boolean isRTL() {
+        return (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+    }
     
     
     /**************************************************************************

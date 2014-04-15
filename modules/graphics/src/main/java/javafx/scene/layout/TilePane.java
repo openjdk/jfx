@@ -910,39 +910,42 @@ public class TilePane extends Pane {
         double insideWidth = width - left - right;
         double insideHeight = height - top - bottom;
 
+        double tileWidth = getTileWidth() > insideWidth ? insideWidth : getTileWidth();
+        double tileHeight = getTileHeight() > insideHeight ? insideHeight : getTileHeight();
+
         int lastRowRemainder = 0;
         int lastColumnRemainder = 0;
         if (getOrientation() == HORIZONTAL) {
-            actualColumns = computeColumns(insideWidth, getTileWidth());
+            actualColumns = computeColumns(insideWidth, tileWidth);
             actualRows = computeOther(managed.size(), actualColumns);
             // remainder will be 0 if last row is filled
             lastRowRemainder = hpos != HPos.LEFT?
                  actualColumns - (actualColumns*actualRows - managed.size()) : 0;
         } else {
             // vertical
-            actualRows = computeRows(insideHeight, getTileHeight());
+            actualRows = computeRows(insideHeight, tileHeight);
             actualColumns = computeOther(managed.size(), actualRows);
             // remainder will be 0 if last column is filled
             lastColumnRemainder = vpos != VPos.TOP?
                 actualRows - (actualColumns*actualRows - managed.size()) : 0;
         }
         double rowX = left + computeXOffset(insideWidth,
-                                            computeContentWidth(actualColumns, getTileWidth()),
+                                            computeContentWidth(actualColumns, tileWidth),
                                             hpos);
         double columnY = top + computeYOffset(insideHeight,
-                                            computeContentHeight(actualRows, getTileHeight()),
+                                            computeContentHeight(actualRows, tileHeight),
                                             vpos);
 
         double lastRowX = lastRowRemainder > 0?
                           left + computeXOffset(insideWidth,
-                                            computeContentWidth(lastRowRemainder, getTileWidth()),
+                                            computeContentWidth(lastRowRemainder, tileWidth),
                                             hpos) :  rowX;
         double lastColumnY = lastColumnRemainder > 0?
                           top + computeYOffset(insideHeight,
-                                            computeContentHeight(lastColumnRemainder, getTileHeight()),
+                                            computeContentHeight(lastColumnRemainder, tileHeight),
                                             vpos) : columnY;
         double baselineOffset = getTileAlignmentInternal().getVpos() == VPos.BASELINE ?
-                getAreaBaselineOffset(managed, marginAccessor, i -> getTileWidth(), getTileHeight(), false) : -1;
+                getAreaBaselineOffset(managed, marginAccessor, i -> tileWidth, tileHeight, false) : -1;
 
         int r = 0;
         int c = 0;
@@ -951,12 +954,12 @@ public class TilePane extends Pane {
             double xoffset = r == (actualRows - 1)? lastRowX : rowX;
             double yoffset = c == (actualColumns - 1)? lastColumnY : columnY;
 
-            double tileX = xoffset + (c * (getTileWidth() + hgap));
-            double tileY = yoffset + (r * (getTileHeight() + vgap));
+            double tileX = xoffset + (c * (tileWidth + hgap));
+            double tileY = yoffset + (r * (tileHeight + vgap));
 
             Pos childAlignment = getAlignment(child);
 
-            layoutInArea(child, tileX, tileY, getTileWidth(), getTileHeight(), baselineOffset,
+            layoutInArea(child, tileX, tileY, tileWidth, tileHeight, baselineOffset,
                     getMargin(child),
                     childAlignment != null? childAlignment.getHpos() : getTileAlignmentInternal().getHpos(),
                     childAlignment != null? childAlignment.getVpos() : getTileAlignmentInternal().getVpos());

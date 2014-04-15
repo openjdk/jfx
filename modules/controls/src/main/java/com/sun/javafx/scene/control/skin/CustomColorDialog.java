@@ -78,6 +78,7 @@ public class CustomColorDialog extends HBox {
         dialog.setTitle(getString("customColorDialogTitle"));
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.initStyle(StageStyle.UTILITY);
+        dialog.setResizable(false);
         colorRectPane = new ColorRectPane();
         controlsPane = new ControlsPane();
         setHgrow(controlsPane, Priority.ALWAYS);

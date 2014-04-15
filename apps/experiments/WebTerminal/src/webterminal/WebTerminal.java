@@ -128,6 +128,19 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         wrapOnLongLines = value;
     }
 
+    /** Default string to use to mark an automatic break for over-long lines.
+     * It is 'arrow pointing downwards then curving leftwards' followed by
+     * 'zero width space'.  This visually looks OK, plus is easy to
+     * recognize as it wouldn't appear in real text.
+     */
+    public static final String DEFAULT_WRAP_STRING ="\u2936\u200B";
+    /** String to use to mark an automatic break for over-long lines.
+     * TODO: On windows resize remove wrapString, and re-wrap.
+     * TODO: On copy/selection, remove wrapString.
+     */
+    String wrapString = DEFAULT_WRAP_STRING;
+    String wrapStringNewline = DEFAULT_WRAP_STRING + '\n';
+
     public void resetCursorCache() {
         currentCursorColumn = -1;
         currentCursorLine = -1;
@@ -1252,9 +1265,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
                     if (nextColumn > wrapWidth) {
                         if (wrapOnLongLines) {
                             insertSimpleOutput(str, prevEnd, i, kind, curColumn);
-                            //currentCursorColumn = column;
-                            //insertWrapBreak();
-                            cursorLineStart(1);
+                            insertWrapBreak();
                             prevEnd = i;
                         }
                         //line++;
@@ -1302,16 +1313,21 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
             outputBefore = errElement.getNextSibling();
         }
         else {
-            org.w3c.dom.Node previous = outputBefore != null ? outputBefore.getPreviousSibling()
-                : outputContainer.getLastChild();
-            if (previous instanceof Text)
-                ((Text) previous).appendData(str);
-            else {
-                Text text = documentNode.createTextNode(str);
-                insertNode(text);
-            }
+            insertRawOutput(str);
         }
         currentCursorColumn = endColumn;
+    }
+
+    void insertRawOutput(String str) {
+        org.w3c.dom.Node previous
+            = outputBefore != null ? outputBefore.getPreviousSibling()
+            : outputContainer.getLastChild();
+        if (previous instanceof Text)
+            ((Text) previous).appendData(str);
+        else {
+            Text text = documentNode.createTextNode(str);
+            insertNode(text);
+        }
     }
 
     /** Insert a node at (before) current position.
@@ -1384,7 +1400,15 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
 
     /** Insert a line break because of wrapping an over-long line. */
     protected void insertWrapBreak() {
-        insertBreak();
+        if (false) {
+            cursorLineStart(1);
+        } else {
+            int oldLine = currentCursorLine;
+            insertRawOutput(wrapStringNewline);
+            if (oldLine >= 0)
+                currentCursorLine = oldLine + 1;
+            currentCursorColumn = 0;
+        }
     }
 
     public void handleEvent(org.w3c.dom.events.Event event) {

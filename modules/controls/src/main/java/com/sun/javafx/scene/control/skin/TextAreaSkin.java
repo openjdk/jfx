@@ -51,6 +51,7 @@ import javafx.geometry.VPos;
 import javafx.geometry.VerticalDirection;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
@@ -1373,5 +1374,17 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     public Bounds getCaretBounds() {
         return getSkinnable().sceneToLocal(caretPath.localToScene(caretPath.getBoundsInLocal()));
+    }
+
+    @Override
+    protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case LINE_FOR_OFFSET:
+            case LINE_START:
+            case LINE_END:
+                Text text = getTextNode();
+                return text.accGetAttribute(attribute, parameters);
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

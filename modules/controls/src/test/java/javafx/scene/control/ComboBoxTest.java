@@ -1552,4 +1552,25 @@ public class ComboBoxTest {
         
         sl.dispose();
     }
+
+    @Test public void test_rt36651() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb.setEditable(true);
+        StageLoader sl = new StageLoader(cb);
+
+        assertNull(cb.getValue());
+        assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
+        assertNull(cb.getSelectionModel().getSelectedItem());
+
+        sl.getStage().requestFocus();
+        cb.show();
+        Toolkit.getToolkit().firePulse();
+
+        // selection should not change just by showing the popup
+        assertNull(cb.getValue());
+        assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
+        assertNull(cb.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
+    }
 }
