@@ -112,6 +112,9 @@ typedef struct _tagJavaIDs {
         jmethodID reportException;
     } Application;
     struct {
+        jmethodID notifyApplicationDidTerminate;
+    } MacApplication;
+    struct {
         jmethodID rotateGesturePerformed;
         jmethodID scrollGesturePerformed;
         jmethodID swipeGesturePerformed;

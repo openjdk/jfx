@@ -88,10 +88,13 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     native private void _finishTerminating();
     @Override
     protected void finishTerminating() {
-        setEventThread(null);
         _finishTerminating();
 
         super.finishTerminating();
+    }
+
+    private void notifyApplicationDidTerminate() {
+        setEventThread(null);
     }
 
     // Called from the native code
