@@ -3089,7 +3089,6 @@ public class TableViewTest {
         assertEquals(1, TableColumnHeaderRetriever.getSortPos(emailColHeader));
     }
 
-    @Ignore("Test written before fix was available.")
     @Test public void test_rt_36670() {
         final ObservableList<Person> data = FXCollections.observableArrayList(
                 new Person("Jacob", "Smith", "jacob.smith@example.com", true),
