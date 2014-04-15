@@ -284,6 +284,8 @@ public class MacAppBundler extends AbstractBundler {
             throw new UnsupportedPlatformException();
         }
 
+        StandardBundlerParam.validateMainClassInfoFromAppResources(p);
+
         if (getPredefinedImage(p) != null) {
             return true;
         }

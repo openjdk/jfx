@@ -133,6 +133,8 @@ public class LinuxAppBundler extends AbstractBundler {
             throw new UnsupportedPlatformException();
         }
 
+        StandardBundlerParam.validateMainClassInfoFromAppResources(p);
+
         if (RAW_EXECUTABLE_URL.fetchFrom(p) == null) {
             throw new ConfigException(
                     I18N.getString("error.no-linux-resources"),

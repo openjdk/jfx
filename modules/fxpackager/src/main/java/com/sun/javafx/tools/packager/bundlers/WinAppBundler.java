@@ -183,6 +183,8 @@ public class WinAppBundler extends AbstractBundler {
             throw new UnsupportedPlatformException();
         }
 
+        StandardBundlerParam.validateMainClassInfoFromAppResources(p);
+
         if (WinResources.class.getResource(TOOL_ICON_SWAP) == null) {
             throw new ConfigException(
                     I18N.getString("error.no-windows-resources"),
