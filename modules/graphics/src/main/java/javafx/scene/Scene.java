@@ -3124,6 +3124,7 @@ public class Scene implements EventTarget {
 
                 currentTargets.clear();
                 currentTargets.addAll(newTargets);
+                newTargets.clear();
             }
         }
 
@@ -3366,6 +3367,9 @@ public class Scene implements EventTarget {
                     i--;
                     j--;
                 }
+
+                pressedTargets.clear();
+                releasedTargets.clear();
 
                 if (clickedTarget != null) {
                     MouseEvent click = new MouseEvent(null, clickedTarget,
@@ -3753,6 +3757,7 @@ public class Scene implements EventTarget {
                 fullPDRCurrentTarget = eventTarget;
                 fullPDRCurrentEventTargets.clear();
                 fullPDRCurrentEventTargets.addAll(fullPDRNewEventTargets);
+                fullPDRNewEventTargets.clear();
             }
             // done enter/exit handling
 
