@@ -3088,4 +3088,69 @@ public class TableViewTest {
         assertEquals(-1, TableColumnHeaderRetriever.getSortPos(lastNameColHeader));
         assertEquals(1, TableColumnHeaderRetriever.getSortPos(emailColHeader));
     }
+
+    @Ignore("Test written before fix was available.")
+    @Test public void test_rt_36670() {
+        final ObservableList<Person> data = FXCollections.observableArrayList(
+                new Person("Jacob", "Smith", "jacob.smith@example.com", true),
+                new Person("Isabella", "Johnson", "isabella.johnson@example.com", false),
+                new Person("Ethan", "Williams", "ethan.williams@example.com", true),
+                new Person("Emma", "Jones", "emma.jones@example.com", true),
+                new Person("Michael", "Brown", "michael.brown@example.com", false));
+
+        TableColumn invitedCol = new TableColumn<>();
+        invitedCol.setText("Invited");
+        invitedCol.setMinWidth(70);
+        invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
+        invitedCol.setCellFactory(CheckBoxTableCell.forTableColumn(invitedCol));
+
+        TableColumn firstNameCol = new TableColumn();
+        firstNameCol.setText("First");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+
+        TableView tableView = new TableView(data);
+        tableView.getColumns().addAll(invitedCol, firstNameCol);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        // get the checkboxes
+        CheckBox row0CheckBox = (CheckBox) VirtualFlowTestUtils.getCell(tableView, 0, 0).getGraphic();
+        CheckBox row1CheckBox = (CheckBox) VirtualFlowTestUtils.getCell(tableView, 1, 0).getGraphic();
+        CheckBox row2CheckBox = (CheckBox) VirtualFlowTestUtils.getCell(tableView, 2, 0).getGraphic();
+        CheckBox row3CheckBox = (CheckBox) VirtualFlowTestUtils.getCell(tableView, 3, 0).getGraphic();
+        CheckBox row4CheckBox = (CheckBox) VirtualFlowTestUtils.getCell(tableView, 4, 0).getGraphic();
+
+        // check initial state of all checkboxes
+        assertTrue(row0CheckBox.isSelected());
+        assertFalse(row1CheckBox.isSelected());
+        assertTrue(row2CheckBox.isSelected());
+        assertTrue(row3CheckBox.isSelected());
+        assertFalse(row4CheckBox.isSelected());
+
+        // sort the table based on the invited column
+        tableView.getSortOrder().add(invitedCol);
+        Toolkit.getToolkit().firePulse();
+
+        // The sort order has changed, with unselected items at the top and
+        // selected items beneath them.
+        assertFalse(row0CheckBox.isSelected());
+        assertFalse(row1CheckBox.isSelected());
+        assertTrue(row2CheckBox.isSelected());
+        assertTrue(row3CheckBox.isSelected());
+        assertTrue(row4CheckBox.isSelected());
+
+        // now, select the 'Michael' row, which is row 1
+        row1CheckBox.setSelected(true);
+        Toolkit.getToolkit().firePulse();
+
+        // only the Michael row should have changed state - but the bug
+        // identified in RT-36670 shows that row 0 is also selected
+        assertFalse(row0CheckBox.isSelected());
+        assertTrue(row1CheckBox.isSelected());
+        assertTrue(row2CheckBox.isSelected());
+        assertTrue(row3CheckBox.isSelected());
+        assertTrue(row4CheckBox.isSelected());
+
+        sl.dispose();
+    }
 }
