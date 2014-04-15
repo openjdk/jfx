@@ -8737,10 +8737,6 @@ public abstract class Node implements EventTarget, Styleable {
         // createStyleHelper returned the same styleHelper
         final CssStyleHelper oldStyleHelper = styleHelper;
 
-        // Hang on to current cssFlags in case we have to
-        // set the state back to what it was.
-        final CssFlags oldCssFlag = cssFlag;
-
         // CSS state is "REAPPLY"
         cssFlag = CssFlags.REAPPLY;
 
@@ -8756,15 +8752,11 @@ public abstract class Node implements EventTarget, Styleable {
 
             if (visitChildren) {
 
-                List<Node> children = ((Parent)this).getChildren();
-                for(int n=0, nMax=children.size(); n<nMax; n++) {
+                List<Node> children = ((Parent) this).getChildren();
+                for (int n = 0, nMax = children.size(); n < nMax; n++) {
                     Node child = children.get(n);
                     child.impl_reapplyCSS();
                 }
-
-            } else {
-                cssFlag = oldCssFlag;
-                return;
             }
 
         } else if (styleHelper == null) {
@@ -8776,9 +8768,22 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // this branch needs update
         cssFlag = CssFlags.UPDATE;
-        notifyParentsOfInvalidatedCSS();
+
+        //
+        // One idiom employed by developers is to, during the layout pass,
+        // add or remove nodes from the scene. For example, a ScrollPane
+        // might add scroll bars to itself if it determines during layout
+        // that it needs them, or a ListView might add cells to itself if
+        // it determines that it needs to. In such situations we must
+        // apply the CSS immediately and not add it to the scene's queue
+        // for deferred action.
+        //
+        if (getParent() != null && getParent().performingLayout) {
+            impl_processCSS(null);
+        } else {
+            notifyParentsOfInvalidatedCSS();
+        }
 
     }
 
