@@ -350,6 +350,9 @@ LRESULT FullScreenWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             // Always pass the message down to the DefWindowProc() to handle
             // system keys (Alt+F4, etc.)
             break;
+        case WM_DEADCHAR:
+            HandleViewDeadKeyEvent(GetHWND(), msg, wParam, lParam);
+            break;
         case WM_CHAR:
         case WM_IME_CHAR:
             HandleViewTypedEvent(GetHWND(), msg, wParam, lParam);
