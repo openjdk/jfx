@@ -487,6 +487,16 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             CheckAndClearException(env);
         }
 
+        // MS Windows doesn't send WM_CHAR for the Delete key,
+        // so we synthesize one
+        if (jKeyCode == com_sun_glass_events_KeyEvent_VK_DELETE &&
+                (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) &&
+                GetGlassView())
+        {
+            // 0x7F == U+007F - a Unicode character for DELETE
+            SendViewTypedEvent(1, (jchar)0x7F);
+        }
+
         env->DeleteLocalRef(jKeyChars);
     }
 }
