@@ -468,11 +468,24 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             CheckAndClearException(env);
         }
 
-        env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
-                            (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
-                            com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
-                            jKeyCode, jKeyChars, jModifiers);
-        CheckAndClearException(env);
+        if (jKeyCode == com_sun_glass_events_KeyEvent_VK_PRINTSCREEN &&
+                (msg == WM_KEYUP || msg == WM_SYSKEYUP))
+        {
+            // MS Windows doesn't send WM_KEYDOWN for the PrintScreen key,
+            // so we synthesize one
+            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
+                    com_sun_glass_events_KeyEvent_PRESS,
+                    jKeyCode, jKeyChars, jModifiers);
+            CheckAndClearException(env);
+        }
+
+        if (GetGlassView()) {
+            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
+                    (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
+                    com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
+                    jKeyCode, jKeyChars, jModifiers);
+            CheckAndClearException(env);
+        }
 
         env->DeleteLocalRef(jKeyChars);
     }
