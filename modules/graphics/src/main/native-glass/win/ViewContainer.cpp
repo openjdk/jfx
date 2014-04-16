@@ -324,13 +324,15 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 
     WORD mbChar;
     UINT scancode = ::MapVirtualKeyEx(wKey, 0, m_kbLayout);
-    int converted = ::ToAsciiEx(wKey, scancode, kbState,
-                                &mbChar, 0, m_kbLayout);
 
     // Depress modifiers to map a Unicode char to a key code
     kbState[VK_CONTROL] &= ~0x80;
     kbState[VK_SHIFT]   &= ~0x80;
     kbState[VK_MENU]    &= ~0x80;
+
+    int converted = ::ToAsciiEx(wKey, scancode, kbState,
+                                &mbChar, 0, m_kbLayout);
+
     wchar_t wChar[4] = {0};
     int unicodeConverted = ::ToUnicodeEx(wKey, scancode, kbState,
                                 wChar, 4, 0, m_kbLayout);
