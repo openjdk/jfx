@@ -164,10 +164,10 @@ public class LinuxEventBuffer {
             throw new IllegalStateException("Cannot advance past the last" +
                                                     " EV_SYN EV_SYN_REPORT 0");
         }
-        if (MonocleSettings.settings.traceEventsVerbose) {
+        currentPosition += EVENT_STRUCT_SIZE;
+        if (MonocleSettings.settings.traceEventsVerbose && hasNextEvent()) {
             MonocleTrace.traceEvent("Processing %s", getEventDescription());
         }
-        currentPosition += EVENT_STRUCT_SIZE;
     }
 
     /**

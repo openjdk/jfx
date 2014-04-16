@@ -103,7 +103,7 @@ public class TouchInput {
      */
     public void setState(TouchState newState) {
         if (MonocleSettings.settings.traceEvents) {
-            MonocleTrace.traceEvent("Set %s", state);
+            MonocleTrace.traceEvent("Set %s", newState);
         }
         newState.sortPointsByID();
         newState.assignPrimaryID();
