@@ -31,6 +31,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ObservableList;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TableFocusModel;
 import javafx.scene.control.TablePositionBase;
@@ -39,6 +40,7 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.input.KeyEvent;
 import javafx.util.Callback;
 
 import java.util.ArrayList;
@@ -66,6 +68,22 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
         TREE_TABLE_VIEW_BINDINGS.add(new KeyBinding(SUBTRACT, "CollapseRow"));
 
         TREE_TABLE_VIEW_BINDINGS.addAll(TABLE_VIEW_BINDINGS);
+    }
+
+    @Override protected /*final*/ String matchActionForEvent(KeyEvent e) {
+        String action = super.matchActionForEvent(e);
+        if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            // Rather than switching the result of the action lookup in this way, the preferred
+            // way to do this according to the current architecture would be to hoist the
+            // getEffectiveNodeOrientation call up into the key bindings, the same way that ListView
+            // orientation (horizontal vs. vertical) is handled with the OrientedKeyBinding class.
+            if ("CollapseRow".equals(action) && (e.getCode() == LEFT || e.getCode() == KP_LEFT)) {
+                action = "ExpandRow";
+            } else if ("ExpandRow".equals(action) && (e.getCode() == RIGHT || e.getCode() == KP_RIGHT)) {
+                action = "CollapseRow";
+            }
+        }
+        return action;
     }
 
     @Override protected void callAction(String name) {
