@@ -168,8 +168,12 @@ public class LinuxAppBundler extends AbstractBundler {
 
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
         try {
-
-            outputDirectory.mkdirs();
+            if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
+                throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
+            }
+            if (!outputDirectory.canWrite()) {
+                throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outputDirectory.getAbsolutePath()));
+            }
 
             // Create directory structure
             File rootDirectory = new File(outputDirectory, APP_NAME.fetchFrom(p));

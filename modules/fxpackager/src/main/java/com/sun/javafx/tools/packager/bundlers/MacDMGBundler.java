@@ -58,6 +58,12 @@ public class MacDMGBundler extends MacBaseInstallerBundler {
     //@Override
     public File bundle(Map<String, ? super Object> params, File outdir) {
         Log.info("Building DMG package for " + APP_NAME.fetchFrom(params));
+        if (!outdir.isDirectory() && !outdir.mkdirs()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outdir.getAbsolutePath()));
+        }
+        if (!outdir.canWrite()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outdir.getAbsolutePath()));
+        }
 
         File appImageDir = APP_IMAGE_BUILD_ROOT.fetchFrom(params);
         try {

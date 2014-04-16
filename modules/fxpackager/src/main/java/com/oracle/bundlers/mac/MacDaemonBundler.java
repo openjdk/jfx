@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -142,7 +143,13 @@ public class MacDaemonBundler extends AbstractBundler {
      *              plist file
      */
     public File doBundle(Map<String, ? super Object> params, File outputDirectory, boolean dependentTask) {
-        
+        if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
+        }
+        if (!outputDirectory.canWrite()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outputDirectory.getAbsolutePath()));
+        }
+
         File rootDirectory = null;
 
         try {            

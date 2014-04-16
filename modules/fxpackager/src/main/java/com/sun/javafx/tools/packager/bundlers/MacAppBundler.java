@@ -324,6 +324,13 @@ public class MacAppBundler extends AbstractBundler {
 
     public File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
         File rootDirectory = null;
+        if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
+        }
+        if (!outputDirectory.canWrite()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outputDirectory.getAbsolutePath()));
+        }
+
         try {
             final File predefinedImage = getPredefinedImage(p);
             if (predefinedImage != null) {

@@ -320,6 +320,13 @@ public class WinExeBundler extends AbstractBundler {
     }
 
     public File bundle(Map<String, ? super Object> p, File outputDirectory) {
+        if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
+        }
+        if (!outputDirectory.canWrite()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outputDirectory.getAbsolutePath()));
+        }
+
         // validate we have valid tools before continuing
         String iscc = TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(p);
         if (iscc == null || !new File(iscc).isFile()) {

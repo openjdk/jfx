@@ -137,9 +137,13 @@ public class WinServiceBundler extends AbstractBundler {
      * just copies the launcher to the output folder
      */
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
+        if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
+        }
+        if (!outputDirectory.canWrite()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outputDirectory.getAbsolutePath()));
+        }
         try {
-            outputDirectory.mkdirs();
-
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.creating-service-bundle"), getAppSvcName(p), outputDirectory.getAbsolutePath()));
             }
