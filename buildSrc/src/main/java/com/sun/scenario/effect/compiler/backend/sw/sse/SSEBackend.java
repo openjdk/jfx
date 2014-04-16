@@ -82,11 +82,7 @@ public class SSEBackend extends TreeScanner {
     }
 
     private static SortedSet<Variable> getSortedVars(Collection<Variable> unsortedVars) {
-        Comparator<Variable> c = new Comparator<Variable>() {
-            public int compare(Variable v0, Variable v1) {
-                return v0.getName().compareTo(v1.getName());
-            }
-        };
+        Comparator<Variable> c = (v0, v1) -> v0.getName().compareTo(v1.getName());
         SortedSet<Variable> sortedVars = new TreeSet<Variable>(c);
         sortedVars.addAll(unsortedVars);
         return sortedVars;
