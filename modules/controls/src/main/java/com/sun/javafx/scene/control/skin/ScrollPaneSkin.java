@@ -474,11 +474,17 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         });
 
         /*
-        ** listen for ScrollEvents over the whole of the ScrollPane
-        ** area, the above dispatcher having removed the ScrollBars
-        ** scroll event handling.
-        */
-        getSkinnable().addEventHandler(ScrollEvent.SCROLL, event -> {
+         * listen for ScrollEvents over the whole of the ScrollPane
+         * area, the above dispatcher having removed the ScrollBars
+         * scroll event handling.
+         *
+         * Note that we use viewRect here, rather than setting the eventHandler
+         * on the ScrollPane itself. This is for RT-31582, and effectively
+         * allows for us to prioritise handling (and consuming) the event
+         * internally, before it is made available to users listening to events
+         * on the control. This is consistent with the VirtualFlow-based controls.
+         */
+        viewRect.addEventHandler(ScrollEvent.SCROLL, event -> {
             if (IS_TOUCH_SUPPORTED) {
                 startSBReleasedAnimation();
             }
