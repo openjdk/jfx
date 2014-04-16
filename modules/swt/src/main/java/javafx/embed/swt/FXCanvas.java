@@ -452,7 +452,20 @@ public class FXCanvas extends Canvas {
         });
         
         addMenuDetectListener(e -> {
-            FXCanvas.this.sendMenuEventToFX(e);
+            Runnable r = () -> {
+                if (isDisposed()) return;
+                FXCanvas.this.sendMenuEventToFX(e);
+            };
+            // In SWT, MenuDetect comes before the equivalent mouse event
+            // On Mac, the order is MenuDetect, MouseDown, MouseUp.  FX
+            // does not expect this order and when it gets the MouseDown,
+            // it closes the menu.  The fix is to defer the MenuDetect
+            // notification until after the MouseDown is sent to FX.
+            if ("cocoa".equals(SWT.getPlatform())) {
+                getDisplay().asyncExec(r);
+            } else {
+                r.run();
+            }
         });
     }
 
