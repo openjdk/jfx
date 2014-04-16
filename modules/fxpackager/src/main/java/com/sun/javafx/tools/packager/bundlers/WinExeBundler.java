@@ -250,6 +250,13 @@ public class WinExeBundler extends AbstractBundler {
                 }
             }
 
+            //exe bundlers trim the copyright to 100 characters, tell them this will happen
+            if (COPYRIGHT.fetchFrom(p).length() > 100) {
+                throw new ConfigException(
+                        I18N.getString("error.copyright-is-too-long"),
+                        I18N.getString("error.copyright-is-too-long.advice"));
+            }
+
             // validate license file, if used, exists in the proper place
             if (p.containsKey(LICENSE_FILE.getID())) {
                 RelativeFileSet appResources = APP_RESOURCES.fetchFrom(p);
