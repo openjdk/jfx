@@ -46,13 +46,13 @@ if (rootProject.hasProperty("X86EGL_COMPILER")) {
     logger.quiet "Using alternate X86EGL_COMPILER $rootProject.X86EGL_COMPILER"
     compilerHome=file(rootProject.X86EGL_COMPILER);
 } else {
-    compilerHome="/usr/bin"
+    compilerHome=file("/usr");
 }
 if (rootProject.hasProperty("X86EGL_COMPILER_PREFIX")) {
     logger.quiet "Using alternate X86EGL_COMPILER_PREFIX $rootProject.X86EGL_COMPILER_PREFIX"
     compilerPrefix="${rootProject.X86EGL_COMPILER_PREFIX}"
 } else {
-    compilePrefix=""
+    compilerPrefix=""
 }
 
 // Declare whether this particular target file applies to the current system
