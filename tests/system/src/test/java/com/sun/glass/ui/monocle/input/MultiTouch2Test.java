@@ -182,9 +182,6 @@ public class MultiTouch2Test extends ParameterizedTestBase {
     @Test
     public void pressReleasePressTest() throws Exception {
 
-        //Fails on monocle RT-36461
-        Assume.assumeTrue(TestApplication.isLens());
-
         Rectangle2D r = TestTouchDevices.getScreenBounds();
         final int width = (int) r.getWidth();
         final int height = (int) r.getHeight();

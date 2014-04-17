@@ -141,6 +141,7 @@ public class TouchState {
             if (points[i].id == id) {
                 if (i < pointCount - 1) {
                     System.arraycopy(points, i + 1, points, i, pointCount - i - 1);
+                    points[pointCount - 1] = null;
                 }
                 pointCount --;
             }
