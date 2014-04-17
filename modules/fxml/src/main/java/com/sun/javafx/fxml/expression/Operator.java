@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,45 +25,34 @@
 
 package com.sun.javafx.fxml.expression;
 
-import java.util.List;
 
-/**
- * Expression representing a literal value.
- */
-public class LiteralExpression<T> extends Expression<T> {
-    private T value;
 
-    public LiteralExpression(T value) {
-        this.value = value;
+enum Operator {
+    NEGATE(6),
+    NOT(6),
+    MULTIPLY(5),
+    DIVIDE(5),
+    MODULO(5),
+    ADD(4),
+    SUBTRACT(4),
+    GREATER_THAN(3),
+    GREATER_THAN_OR_EQUAL_TO(3),
+    LESS_THAN(3),
+    LESS_THAN_OR_EQUAL_TO(3),
+    EQUAL_TO(2),
+    NOT_EQUAL_TO(2),
+    AND(1),
+    OR(0);
+    private final int priority;
+
+    public static final int MAX_PRIORITY = 6;
+
+    Operator(int priority) {
+        this.priority = priority;
     }
 
-    @Override
-    public T evaluate(Object namespace) {
-        return value;
+    public int getPriority() {
+        return priority;
     }
 
-    @Override
-    public void update(Object namespace, T value) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean isDefined(Object namespace) {
-        return true;
-    }
-
-    @Override
-    public boolean isLValue() {
-        return false;
-    }
-
-    @Override
-    protected void getArguments(List<KeyPath> arguments) {
-        // No-op
-    }
-
-    @Override
-    public String toString() {
-        return String.valueOf(value);
-    }
 }

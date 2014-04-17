@@ -82,14 +82,30 @@ public class FXMLLoader_ExpressionTest {
     }
 
     @Test
+    public void testParseExpression1s() {
+        Expression expression = valueOf("1+2");
+        assertEquals(((Number)expression.evaluate(null)).intValue(), 3);
+    }
+
+    @Test
     public void testParseExpression2a() {
         Expression expression = valueOf("3 + 4 * 2");
+        assertEquals(((Number)expression.evaluate(null)).intValue(), 11);
+    }
+
+    public void testParseExpression2as() {
+        Expression expression = valueOf("3+4*2");
         assertEquals(((Number)expression.evaluate(null)).intValue(), 11);
     }
 
     @Test
     public void testParseExpression2b() {
         Expression expression = valueOf("3 + (4 * 2)");
+        assertEquals(((Number)expression.evaluate(null)).intValue(), 11);
+    }
+    @Test
+    public void testParseExpression2bs() {
+        Expression expression = valueOf("3+(4*2)");
         assertEquals(((Number)expression.evaluate(null)).intValue(), 11);
     }
 
@@ -100,14 +116,37 @@ public class FXMLLoader_ExpressionTest {
     }
 
     @Test
+    public void testParseExpression2d() {
+        Expression expression = valueOf("7.0 * 0.5 - 2 * 3.5");
+        assertEquals(expression.evaluate(null), -3.5);
+    }
+
+    @Test
+    public void testParseExpression2e() {
+        Expression expression = valueOf("(10 * 5) - 13");
+        assertEquals(expression.evaluate(null), 37L);
+    }
+
+    @Test
     public void testParseExpression3a() {
         Expression expression = valueOf("'abc' == 'abc'");
+        assertEquals(expression.evaluate(null), true);
+    }
+    @Test
+    public void testParseExpression3as() {
+        Expression expression = valueOf("'abc'=='abc'");
         assertEquals(expression.evaluate(null), true);
     }
 
     @Test
     public void testParseExpression3b() {
         Expression expression = valueOf("'abc' != 'abc'");
+        assertEquals(expression.evaluate(null), false);
+    }
+
+    @Test
+    public void testParseExpression3bc() {
+        Expression expression = valueOf("'abc'!='abc'");
         assertEquals(expression.evaluate(null), false);
     }
 
@@ -130,6 +169,12 @@ public class FXMLLoader_ExpressionTest {
     }
 
     @Test
+    public void testParseExpression3es() {
+        Expression expression = valueOf("3>2");
+        assertEquals(expression.evaluate(null), true);
+    }
+
+    @Test
     public void testParseExpression3f() {
         Expression expression = valueOf("3 < 2");
         assertEquals(expression.evaluate(null), false);
@@ -141,6 +186,7 @@ public class FXMLLoader_ExpressionTest {
         assertEquals(valueOf("true").evaluate(null), true);
         assertEquals(valueOf("false").evaluate(null), false);
     }
+
 
     @Test
     public void testParseExpression5() {
