@@ -264,8 +264,13 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         try {
             packager.generateDeploymentPackages(deployParams);
         } catch (PackagerException pe) {
-            throw new BuildException(pe.getCause().getMessage(),
-                    pe.getCause());
+            if (pe.getCause() != null) {
+               throw new BuildException(pe.getCause().getMessage(),
+                        pe.getCause());
+            } else {
+                throw new BuildException(pe.getMessage(),
+                        pe);
+            }
         } catch (Exception e) {
             throw new BuildException(e.getMessage(), e);
         } finally {

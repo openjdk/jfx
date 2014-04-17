@@ -63,7 +63,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             ResourceBundle.getBundle("com.oracle.bundlers.mac.MacBaseInstallerBundler");
 
     //This could be generalized more to be for any type of Image Bundler
-    protected final BundlerParamInfo<MacAppBundler> APP_BUNDLER = new StandardBundlerParam<>(
+    public static final BundlerParamInfo<MacAppBundler> APP_BUNDLER = new StandardBundlerParam<>(
             I18N.getString("param.app-bundler.name"),
             I18N.getString("param.app-bundle.description"),
             "mac.app.bundler",
@@ -71,7 +71,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             params -> new MacAppBundler(),
             (s, p) -> null);
 
-    protected final BundlerParamInfo<File> APP_IMAGE_BUILD_ROOT = new StandardBundlerParam<>(
+    public final BundlerParamInfo<File> APP_IMAGE_BUILD_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.app-image-build-root.name"),
             I18N.getString("param.app-image-build-root.description"),
             "mac.app.imageRoot",
@@ -92,7 +92,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             (s, p) -> new File(s));
 
 
-    protected final BundlerParamInfo<MacDaemonBundler> DAEMON_BUNDLER = new StandardBundlerParam<>(
+    public static final BundlerParamInfo<MacDaemonBundler> DAEMON_BUNDLER = new StandardBundlerParam<>(
             I18N.getString("param.daemon-bundler.name"),
             I18N.getString("param.daemon-bundler.description"),
             "mac.daemon.bundler",
@@ -101,7 +101,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             (s, p) -> null);
 
 
-    protected final BundlerParamInfo<File> DAEMON_IMAGE_BUILD_ROOT = new StandardBundlerParam<>(
+    public final BundlerParamInfo<File> DAEMON_IMAGE_BUILD_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.daemon-image-build-root.name"),
             I18N.getString("param.daemon-image-build-root.description"),
             "mac.daemon.image",
@@ -114,7 +114,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             (s, p) -> new File(s));
 
 
-    protected final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
+    public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
             I18N.getString("param.config-root.name"),
             I18N.getString("param.config-root.description"),
             "configRoot",
@@ -147,7 +147,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                         return (matcher.group(1));
                     }
                 } catch (IOException ioe) {
-                    Log.info("Error retrieving gecos name");
+                    Log.info(I18N.getString("message.could-not-retrieve-name"));
                     Log.debug(ioe);
                 }
                 return null;
@@ -192,7 +192,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
 
     protected File prepareDaemonBundle(Map<String, ? super Object> p) throws ConfigException {
         File daemonImageRoot = DAEMON_IMAGE_BUILD_ROOT.fetchFrom(p);
-        return DAEMON_BUNDLER.fetchFrom(p).doBundle(p, daemonImageRoot, true);        
+        return DAEMON_BUNDLER.fetchFrom(p).doBundle(p, daemonImageRoot, true);
     }
 
     public static void signAppBundle(Map<String, ? super Object> params, File appLocation, String signingIdentity, String identifierPrefix) throws IOException {

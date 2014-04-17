@@ -39,7 +39,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.ResourceBundle;
 
@@ -153,7 +155,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
 
     //@Override
     public File bundle(Map<String, ? super Object> p, File outdir) {
-        Log.info("Building Mac App Store Bundle for " + APP_NAME.fetchFrom(p));
+        Log.info(MessageFormat.format(I18N.getString("message.building-bundle"), APP_NAME.fetchFrom(p)));
         if (!outdir.isDirectory() && !outdir.mkdirs()) {
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outdir.getAbsolutePath()));
         }
@@ -208,8 +210,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
                 if (appImageDir != null && !Log.isDebug()) {
                     IOUtils.deleteRecursive(appImageDir);
                 } else if (appImageDir != null) {
-                    Log.info("[DEBUG] Intermediate application bundle image: "+
-                            appImageDir.getAbsolutePath());
+                    Log.info(MessageFormat.format(I18N.getString("mesasge.intermediate-bundle-location"), appImageDir.getAbsolutePath()));
                 }
                 if (!VERBOSE.fetchFrom(p)) {
                     //cleanup
@@ -293,8 +294,30 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
 
     @Override
     public Collection<BundlerParamInfo<?>> getBundleParameters() {
-        //Add PKG Specific parameters as required
-        return super.getBundleParameters();
+        Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();
+        results.addAll(MacAppBundler.getAppBundleParameters());
+        results.addAll(getPKGBundleParameters());
+        return results;
+    }
+
+    public Collection<BundlerParamInfo<?>> getPKGBundleParameters() {
+        Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();
+
+        results.addAll(MacAppBundler.getAppBundleParameters());
+        results.addAll(Arrays.asList(
+                APP_BUNDLER,
+                APP_IMAGE_BUILD_ROOT,
+                APP_NAME,
+                APP_RESOURCES,
+                CONFIG_ROOT,
+                MAC_APP_IMAGE,
+                MAC_APP_STORE_APP_SIGNING_KEY,
+                MAC_APP_STORE_ENTITLEMENTS,
+                MAC_APP_STORE_PKG_SIGNING_KEY,
+                SIGNING_KEY_USER
+        ));
+
+        return results;
     }
 
     @Override

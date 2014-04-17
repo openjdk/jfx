@@ -102,8 +102,8 @@ public class MacAppBundler extends AbstractBundler {
 
     public static final EnumeratedBundlerParam<String> MAC_CATEGORY =
             new EnumeratedBundlerParam<>(
-                    "Category",
-                    "Mac App Store Categories. Note that the key is the string to display to the user and the value is the id of the category",
+                    I18N.getString("param.category-name"),
+                    I18N.getString("param.category-name.description"),
                     "mac.category",
                     String.class,
                     params -> params.containsKey(CATEGORY.getID())
@@ -116,8 +116,8 @@ public class MacAppBundler extends AbstractBundler {
 
     public static final BundlerParamInfo<String> MAC_CF_BUNDLE_NAME =
             new StandardBundlerParam<>(
-                    "CFBundleName",
-                    "The name of the app as it appears in the Menu Bar.  This can be different from the application name.  This name should be less than 16 characters long and be suitable for displaying in the menu bar and the app’s Info window.",
+                    I18N.getString("param.cfbundle-name"),
+                    I18N.getString("param.cfbundle-name.description"),
                     "mac.CFBundleName",
                     String.class,
                     params -> null,
@@ -136,8 +136,8 @@ public class MacAppBundler extends AbstractBundler {
             (s, p) -> new File(s));
 
     public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new StandardBundlerParam<>(
-            "Launcher URL",
-            "Override the packager default launcher with a custom launcher.",
+            I18N.getString("param.raw-executable-url.name"),
+            I18N.getString("param.raw-executable-url.description"),
             "mac.launcher.url",
             URL.class,
             params -> MacResources.class.getResource(EXECUTABLE_NAME),
@@ -151,8 +151,8 @@ public class MacAppBundler extends AbstractBundler {
             });
 
     public static final BundlerParamInfo<String> DEFAULT_ICNS_ICON = new StandardBundlerParam<>(
-            "Default Icon",
-            "The Default Icon for when a user does not specify an icns file.",
+            I18N.getString("param.default-icon-icns"),
+            I18N.getString("param.default-icon-icns.description"),
             ".mac.default.icns",
             String.class,
             params -> TEMPLATE_BUNDLE_ICON,
