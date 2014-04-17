@@ -30,6 +30,7 @@ import javafx.scene.Parent;
 public final class ParentTraversalEngine extends TraversalEngine{
 
     private final Parent root;
+    private Boolean overridenTraversability;
 
     public ParentTraversalEngine(Parent root, Algorithm algorithm) {
         super(algorithm);
@@ -41,9 +42,20 @@ public final class ParentTraversalEngine extends TraversalEngine{
         this.root = root;
     }
 
+    /**
+     * @param value overridden value or null for default value
+     */
+    public void setOverriddenFocusTraversability(Boolean value) {
+        overridenTraversability = value;
+    }
+
     @Override
     protected Parent getRoot() {
         return root;
+    }
+
+    public boolean isParentTraversable() {
+        return overridenTraversability != null ? overridenTraversability : root.isFocusTraversable();
     }
 
 }
