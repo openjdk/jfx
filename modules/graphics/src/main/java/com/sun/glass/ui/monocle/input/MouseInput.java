@@ -26,6 +26,7 @@
 package com.sun.glass.ui.monocle.input;
 
 import com.sun.glass.events.MouseEvent;
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.monocle.MonocleSettings;
 import com.sun.glass.ui.monocle.MonocleTrace;
 import com.sun.glass.ui.monocle.MonocleView;
@@ -81,9 +82,13 @@ public class MouseInput {
                 int oldY = state.getY();
                 int oldRelX = oldX - oldWindow.getX();
                 int oldRelY = oldY - oldWindow.getY();
-                oldView.notifyMouse(MouseEvent.EXIT, button,
-                                    oldRelX, oldRelY, oldX, oldY,
-                                    modifiers, isPopupTrigger, synthesized);
+                try {
+                    oldView.notifyMouse(MouseEvent.EXIT, button,
+                                        oldRelX, oldRelY, oldX, oldY,
+                                        modifiers, isPopupTrigger, synthesized);
+                } catch (RuntimeException e) {
+                    Application.reportException(e);
+                }
             }
         }
         boolean newAbsoluteLocation = state.getX() != x || state.getY() != y;
@@ -102,9 +107,13 @@ public class MouseInput {
             int modifiers = state.getModifiers(); // TODO: include key modifiers
             int button = state.getButton();
             boolean isPopupTrigger = false; // TODO
-            view.notifyMouse(MouseEvent.ENTER, button,
-                             relX, relY, x, y,
-                             modifiers, isPopupTrigger, synthesized);
+            try {
+                view.notifyMouse(MouseEvent.ENTER, button,
+                                 relX, relY, x, y,
+                                 modifiers, isPopupTrigger, synthesized);
+            } catch (RuntimeException e) {
+                Application.reportException(e);
+            }
         }
         // send motion events
         if (oldWindow != window | newAbsoluteLocation) {
@@ -113,9 +122,13 @@ public class MouseInput {
             int modifiers = state.getModifiers(); // TODO: include key modifiers
             int button = state.getButton();
             boolean isPopupTrigger = false; // TODO
-            view.notifyMouse(eventType, button,
+            try {
+                view.notifyMouse(eventType, button,
                              relX, relY, x, y,
                              modifiers, isPopupTrigger, synthesized);
+            } catch (RuntimeException e) {
+                Application.reportException(e);
+            }
         }
         // send press events
         newState.getButtonsPressed().difference(buttons, state.getButtonsPressed());
@@ -127,10 +140,14 @@ public class MouseInput {
                 pressState.pressButton(button);
                 // send press event
                 boolean isPopupTrigger = false; // TODO
-                view.notifyMouse(MouseEvent.DOWN, button,
-                                 relX, relY, x, y,
-                                 pressState.getModifiers(), isPopupTrigger,
-                                 synthesized);
+                try {
+                    view.notifyMouse(MouseEvent.DOWN, button,
+                                     relX, relY, x, y,
+                                     pressState.getModifiers(), isPopupTrigger,
+                                     synthesized);
+                } catch (RuntimeException e) {
+                    Application.reportException(e);
+                }
             }
         }
         buttons.clear();
@@ -145,11 +162,14 @@ public class MouseInput {
                 releaseState.releaseButton(button);
                 // send release event
                 boolean isPopupTrigger = false; // TODO
-                view.notifyMouse(MouseEvent.UP, button,
-                                 relX, relY, x, y,
-                                 releaseState.getModifiers(), isPopupTrigger,
-                                 synthesized);
-
+                try {
+                    view.notifyMouse(MouseEvent.UP, button,
+                                     relX, relY, x, y,
+                                     releaseState.getModifiers(), isPopupTrigger,
+                                     synthesized);
+                } catch (RuntimeException e) {
+                    Application.reportException(e);
+                }
             }
         }
         buttons.clear();
@@ -162,8 +182,12 @@ public class MouseInput {
                 default: dY = 0.0; break;
             }
             if (dY != 0.0) {
-                view.notifyScroll(relX, relY, x, y, 0.0, dY,
-                                  newState.getModifiers(), 1, 0, 0, 0, 1.0, 1.0);
+                try {
+                    view.notifyScroll(relX, relY, x, y, 0.0, dY,
+                                      newState.getModifiers(), 1, 0, 0, 0, 1.0, 1.0);
+                } catch (RuntimeException e) {
+                    Application.reportException(e);
+                }
             }
         }
         newState.copyTo(state);

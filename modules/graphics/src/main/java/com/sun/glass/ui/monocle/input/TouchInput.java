@@ -26,6 +26,7 @@
 package com.sun.glass.ui.monocle.input;
 
 import com.sun.glass.events.TouchEvent;
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.GestureSupport;
 import com.sun.glass.ui.TouchInputSupport;
 import com.sun.glass.ui.View;
@@ -150,11 +151,15 @@ public class TouchInput {
                 TouchState.Point oldPoint = state.getPoint(i);
                 try {
                     dispatchPoint(window, view, eventType, oldPoint);
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (RuntimeException e) {
+                    Application.reportException(e);
                 }
             }
-            touches.notifyEndTouchEvent(view);
+            try {
+                touches.notifyEndTouchEvent(view);
+            } catch (RuntimeException e) {
+                Application.reportException(e);
+            }
         }
     }
 
@@ -193,7 +198,11 @@ public class TouchInput {
                 dispatchPoint(window, view, TouchEvent.TOUCH_PRESSED, newPoint);
             }
         }
-        touches.notifyEndTouchEvent(view);
+        try {
+            touches.notifyEndTouchEvent(view);
+        } catch (RuntimeException e) {
+            Application.reportException(e);
+        }
     }
 
 
