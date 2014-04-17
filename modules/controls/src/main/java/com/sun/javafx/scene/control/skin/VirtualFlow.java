@@ -1407,7 +1407,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 barVisibilityChanged = true;
             }
 
-            final boolean breadthBarVisible = (maxPrefBreadth > viewportBreadth) || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
+            // second conditional removed for RT-36669.
+            final boolean breadthBarVisible = (maxPrefBreadth > viewportBreadth);// || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
             if (breadthBarVisible ^ needBreadthBar) {
                 needBreadthBar = breadthBarVisible;
                 barVisibilityChanged = true;
