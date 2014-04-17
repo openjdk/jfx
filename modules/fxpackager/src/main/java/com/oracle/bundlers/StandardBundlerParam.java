@@ -28,6 +28,7 @@ package com.oracle.bundlers;
 import com.sun.javafx.tools.packager.Log;
 import com.sun.javafx.tools.packager.PackagerLib;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
+import com.sun.javafx.tools.packager.bundlers.ConfigException;
 import com.sun.javafx.tools.packager.bundlers.RelativeFileSet;
 
 import java.io.File;
@@ -97,7 +98,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     BundleParams.PARAM_APPLICATION_CLASS,
                     String.class,
                     params -> {
-                        extractParamsFromAppResources(params);
+                        extractMainClassInfoFromAppResources(params);
                         return (String) params.get(BundleParams.PARAM_APPLICATION_CLASS);
                     },
                     (s, p) -> s
@@ -172,12 +173,13 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "mainJar",
                     RelativeFileSet.class,
                     params -> {
-                        extractParamsFromAppResources(params);
+                        extractMainClassInfoFromAppResources(params);
                         return (RelativeFileSet) params.get("mainJar");
                     },
                     (s, p) -> {
-                        File f = new File(s);
-                        return new RelativeFileSet(f.getParentFile(), new LinkedHashSet<>(Arrays.asList(f)));
+                        File appResourcesRoot = APP_RESOURCES.fetchFrom(p).getBaseDirectory();
+                        File f = new File(appResourcesRoot, s);
+                        return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Arrays.asList(f)));
                     }
             );
 
@@ -188,7 +190,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "classpath",
                     String.class,
                     params -> {
-                        extractParamsFromAppResources(params);
+                        extractMainClassInfoFromAppResources(params);
                         String cp = (String) params.get("classpath");
                         return cp == null ? "" : cp;
                     },
@@ -202,7 +204,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "fxPackaging",
                     Boolean.class,
                     params -> {
-                        extractParamsFromAppResources(params);
+                        extractMainClassInfoFromAppResources(params);
                         Boolean result = (Boolean) params.get("fxPackaging");
                         return (result == null) ? Boolean.FALSE : result;
                     },
@@ -442,7 +444,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
 
-    public static void extractParamsFromAppResources(Map<String, ? super Object> params) {
+    public static void extractMainClassInfoFromAppResources(Map<String, ? super Object> params) {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
         boolean hasMainJarClassPath = params.containsKey(MAIN_JAR_CLASSPATH.getID());
@@ -459,7 +461,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             srcdir = rfs.getBaseDirectory();
         } else if (hasMainJarClassPath) {
             files = Arrays.asList(MAIN_JAR_CLASSPATH.fetchFrom(params).split(File.pathSeparator));
-            srcdir = null;
+            srcdir = APP_RESOURCES.fetchFrom(params).getBaseDirectory();
         } else {
             RelativeFileSet rfs = APP_RESOURCES.fetchFrom(params);
             if (rfs == null) {
@@ -479,6 +481,9 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                 if (!fname.toLowerCase().endsWith(".jar")) continue;
 
                 File file = new File(srcdir, fname);
+                // that actually exist
+                if (!file.exists()) continue;
+
                 JarFile jf = new JarFile(file);
                 Manifest m = jf.getManifest();
                 Attributes attrs = (m != null) ? m.getMainAttributes() : null;
@@ -525,6 +530,35 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                 }
             } catch (IOException ignore) {
                 ignore.printStackTrace();
+            }
+        }
+    }
+
+    public static void validateMainClassInfoFromAppResources(Map<String, ? super Object> params) throws ConfigException {
+        boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
+        boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
+        boolean hasMainJarClassPath = params.containsKey(MAIN_JAR_CLASSPATH.getID());
+
+        if (hasMainClass && hasMainJar && hasMainJarClassPath) {
+            return;
+        }
+
+        extractMainClassInfoFromAppResources(params);
+        if (!params.containsKey(MAIN_CLASS.getID())) {
+            if (hasMainJar) {
+                throw new ConfigException(
+                        MessageFormat.format(I18N.getString("error.no-main-class-with-main-jar"),
+                                MAIN_JAR.fetchFrom(params)),
+                        MessageFormat.format(I18N.getString("error.no-main-class-with-main-jar.advice"),
+                                MAIN_JAR.fetchFrom(params)));
+            } else if (hasMainJarClassPath) {
+                throw new ConfigException(
+                        I18N.getString("error.no-main-class-with-classpath"),
+                        I18N.getString("error.no-main-class-with-classpath.advice"));
+            } else {
+                throw new ConfigException(
+                        I18N.getString("error.no-main-class"),
+                        I18N.getString("error.no-main-class.advice"));
             }
         }
     }

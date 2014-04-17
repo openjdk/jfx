@@ -174,6 +174,13 @@ public class LinuxRPMBundler extends AbstractBundler {
     }
 
     public File bundle(Map<String, ? super Object> p, File outdir) {
+        if (!outdir.isDirectory() && !outdir.mkdirs()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outdir.getAbsolutePath()));
+        }
+        if (!outdir.canWrite()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outdir.getAbsolutePath()));
+        }
+
         File imageDir = RPM_IMAGE_DIR.fetchFrom(p);
         try {
 

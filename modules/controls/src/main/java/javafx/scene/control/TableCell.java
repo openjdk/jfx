@@ -560,6 +560,8 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     private boolean isFirstRun = true;
 
+    private WeakReference<S> oldRowItemRef;
+
     /*
      * This is called when we think that the data within this TableCell may have
      * changed. You'll note that this is a private function - it is only called
@@ -578,6 +580,9 @@ public class TableCell<S,T> extends IndexedCell<T> {
         final int index = getIndex();
         final boolean isEmpty = isEmpty();
         final T oldValue = getItem();
+
+        final TableRow<S> tableRow = getTableRow();
+        final S rowItem = tableRow == null ? null : tableRow.getItem();
 
         final boolean indexExceedsItemCount = index >= itemCount;
         
@@ -613,11 +618,19 @@ public class TableCell<S,T> extends IndexedCell<T> {
             // unless the item has changed.
             if (oldIndex == index) {
                 if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
-                    return;
+                    // RT-36670: we need to check the row item here to prevent
+                    // the issue where the cell value and index doesn't change,
+                    // but the backing row object does.
+                    S oldRowItem = oldRowItemRef != null ? oldRowItemRef.get() : null;
+                    if (oldRowItem != null && oldRowItem.equals(rowItem)) {
+                        return;
+                    }
                 }
             }
             updateItem(newValue, false);
         }
+
+        oldRowItemRef = new WeakReference<>(rowItem);
         
         if (currentObservableValue == null) {
             return;

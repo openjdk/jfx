@@ -26,6 +26,8 @@
 package com.sun.glass.ui.monocle.input;
 
 import com.sun.glass.events.MouseEvent;
+import com.sun.glass.ui.monocle.MonocleSettings;
+import com.sun.glass.ui.monocle.MonocleTrace;
 import com.sun.glass.ui.monocle.MonocleView;
 import com.sun.glass.ui.monocle.MonocleWindow;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
@@ -51,6 +53,9 @@ public class MouseInput {
     }
 
     public void setState(MouseState newState, boolean synthesized) {
+        if (MonocleSettings.settings.traceEvents) {
+            MonocleTrace.traceEvent("Set %s", newState);
+        }
         // Restrict new state coordinates to screen bounds
         NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
         int x = Math.min(newState.getX(), screen.getWidth() - 1);

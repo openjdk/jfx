@@ -2760,7 +2760,6 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.getShortcutKey());
-        Toolkit.getToolkit().firePulse();
         assertEquals(3, getAnchor().getRow());
         assertEquals(1, getAnchor().getColumn());
         assertTrue(fm.isFocused(6, col0));
@@ -2768,7 +2767,6 @@ public class TableViewKeyInputTest {
         assertFalse(sm.isSelected(6, col0));
 
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-        Toolkit.getToolkit().firePulse();
         assertEquals(3, getAnchor().getRow());
         assertEquals(1, getAnchor().getColumn());
         assertTrue(fm.isFocused(6, col0));

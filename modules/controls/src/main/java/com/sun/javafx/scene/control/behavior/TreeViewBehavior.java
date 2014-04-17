@@ -126,7 +126,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(ESCAPE, "CancelEdit"));
     }
 
-    protected /*final*/ String matchActionForEvent(KeyEvent e) {
+    @Override protected /*final*/ String matchActionForEvent(KeyEvent e) {
         String action = super.matchActionForEvent(e);
         if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
             // Rather than switching the result of the action lookup in this way, the preferred

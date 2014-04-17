@@ -3089,7 +3089,6 @@ public class TableViewTest {
         assertEquals(1, TableColumnHeaderRetriever.getSortPos(emailColHeader));
     }
 
-    @Ignore("Test written before fix was available.")
     @Test public void test_rt_36670() {
         final ObservableList<Person> data = FXCollections.observableArrayList(
                 new Person("Jacob", "Smith", "jacob.smith@example.com", true),
@@ -3150,6 +3149,52 @@ public class TableViewTest {
         assertTrue(row2CheckBox.isSelected());
         assertTrue(row3CheckBox.isSelected());
         assertTrue(row4CheckBox.isSelected());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_36669() {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                        new Person("Emma", "Jones", "emma.jones@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        TableView<Person> table = new TableView<Person>();
+        table.setItems(data);
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setMinWidth(100);
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setMinWidth(100);
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setMinWidth(200);
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        StageLoader sl = new StageLoader(table);
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(table);
+        ScrollBar hbar = VirtualFlowTestUtils.getVirtualFlowHorizontalScrollbar(table);
+
+        // firstly test case where the TableView is tall enough to not need a vbar
+        assertFalse(vbar.isVisible());
+        assertFalse(hbar.isVisible());
+
+        // now make the table quite narrow and ensure that even if a vbar appears
+        // that the hbar does not appear
+        table.setMaxHeight(30);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(vbar.isVisible());
+        assertFalse(hbar.isVisible());
 
         sl.dispose();
     }

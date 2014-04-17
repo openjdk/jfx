@@ -458,6 +458,9 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
                 }
             }
             break;
+        case WM_DEADCHAR:
+            if (IsEnabled()) HandleViewDeadKeyEvent(GetHWND(), msg, wParam, lParam);
+            break;
         case WM_CHAR:
         case WM_IME_CHAR:
             if (IsEnabled()) {

@@ -62,6 +62,7 @@ public class MX6Cursor implements NativeCursor {
     private MXCFBPos pos = new MXCFBPos();
     private MXCFBGblAlpha alpha = new MXCFBGblAlpha();
     private long fd = -1;
+    private boolean isVisible = false;
 
     private static class MXCFBColorKey extends C.Structure {
         private final IntBuffer data;
@@ -174,24 +175,28 @@ public class MX6Cursor implements NativeCursor {
         alpha.setAlpha(visibility ? 255 : 0);
         int MXCFB_SET_GBL_ALPHA = system.IOW('F', 0x21, alpha.sizeof());
         system.ioctl(fd, MXCFB_SET_GBL_ALPHA, alpha.p);
+        isVisible = visibility;
+        updateImage(true);
     }
 
     private void updateImage(boolean always) {
-        int newOffsetX, newOffsetY;
-        newOffsetX = Math.max(0, CURSOR_WIDTH + cursorX - screenWidth);
-        newOffsetY = Math.max(0, CURSOR_HEIGHT + cursorY - screenHeight);
-        if (newOffsetX != offsetX || newOffsetY != offsetY || always) {
-            NativeCursors.offsetCursor(cursorBuffer, offsetCursorBuffer,
-                                       newOffsetX, newOffsetY,
-                                       CURSOR_WIDTH, CURSOR_HEIGHT,
-                                       16, SHORT_KEY);
-            offsetX = newOffsetX;
-            offsetY = newOffsetY;
-            system.lseek(fd, 0, LinuxSystem.SEEK_SET);
-            if (system.write(fd, offsetCursorByteBuffer,
-                             0, offsetCursorByteBuffer.capacity()) < 0) {
-                System.err.println("Failed to write to i.MX6 cursor: "
-                                   + system.getErrorMessage());
+        if (isVisible && cursorBuffer != null) { //skip until cursor is fully initialized
+            int newOffsetX, newOffsetY;
+            newOffsetX = Math.max(0, CURSOR_WIDTH + cursorX - screenWidth);
+            newOffsetY = Math.max(0, CURSOR_HEIGHT + cursorY - screenHeight);
+            if (newOffsetX != offsetX || newOffsetY != offsetY || always) {
+                NativeCursors.offsetCursor(cursorBuffer, offsetCursorBuffer,
+                                           newOffsetX, newOffsetY,
+                                           CURSOR_WIDTH, CURSOR_HEIGHT,
+                                           16, SHORT_KEY);
+                offsetX = newOffsetX;
+                offsetY = newOffsetY;
+                system.lseek(fd, 0, LinuxSystem.SEEK_SET);
+                if (system.write(fd, offsetCursorByteBuffer,
+                                 0, offsetCursorByteBuffer.capacity()) < 0) {
+                    System.err.println("Failed to write to i.MX6 cursor: "
+                                       + system.getErrorMessage());
+                }
             }
         }
     }

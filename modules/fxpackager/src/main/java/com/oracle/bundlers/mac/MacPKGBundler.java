@@ -114,6 +114,12 @@ public class MacPKGBundler extends MacBaseInstallerBundler {
     //@Override
     public File bundle(Map<String, ? super Object> p, File outdir) {
         Log.info(MessageFormat.format(I18N.getString("message.building-pkg"), APP_NAME.fetchFrom(p)));
+        if (!outdir.isDirectory() && !outdir.mkdirs()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outdir.getAbsolutePath()));
+        }
+        if (!outdir.canWrite()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outdir.getAbsolutePath()));
+        }
 
         File appImageDir = APP_IMAGE_BUILD_ROOT.fetchFrom(p);
         File daemonImageDir = DAEMON_IMAGE_BUILD_ROOT.fetchFrom(p);

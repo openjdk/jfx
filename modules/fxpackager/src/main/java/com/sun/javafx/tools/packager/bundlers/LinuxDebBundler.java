@@ -237,6 +237,13 @@ public class LinuxDebBundler extends AbstractBundler {
 
     //@Override
     public File bundle(Map<String, ? super Object> p, File outdir) {
+        if (!outdir.isDirectory() && !outdir.mkdirs()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outdir.getAbsolutePath()));
+        }
+        if (!outdir.canWrite()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outdir.getAbsolutePath()));
+        }
+
         //we want to create following structure
         //   <package-name>
         //        DEBIAN

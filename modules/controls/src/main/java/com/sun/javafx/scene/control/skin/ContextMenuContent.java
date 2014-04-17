@@ -264,6 +264,9 @@ public class ContextMenuContent extends Region {
             final MenuItem item = getItems().get(0);
             getProperties().put(Menu.class, item.getParentMenu());
         }
+
+        // RT-36513
+        applyCss();
     }
 
     /**

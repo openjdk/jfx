@@ -345,33 +345,36 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
         // we have done all auto calcs, let Axis position major tickmarks
         super.layoutChildren();
-        int numMinorTicks = (getTickMarks().size() - 1)*(Math.max(1, getMinorTickCount()) - 1);
-        double neededLength = (getTickMarks().size()+numMinorTicks)*2;
 
         // Update minor tickmarks
         minorTickPath.getElements().clear();
-        // Don't draw minor tick marks if there isn't enough space for them!
+
         double minorTickLength = Math.max(0, getMinorTickLength());
-        if ((neededLength < length) && (0 < minorTickLength)) {
+        if (minorTickLength > 0) {
+            // Strip factor is >= 1. When == 1, all minor ticks will fit.
+            // It's computed as number of minor tick marks divided by available length
+            int stripFactor = (int)Math.ceil(2 * minorTickMarkValues.size() / (length - 2 * getTickMarks().size()));
             if (Side.LEFT.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(-0.5);
                 minorTickPath.setLayoutY(0.5);
-                for (T value : minorTickMarkValues) {
+                for (int i = 0; i < minorTickMarkValues.size(); i += stripFactor) {
+                    T value = minorTickMarkValues.get(i);
                     double y = getDisplayPosition(value);
-                    if(y >= 0 && y <= length) {
+                    if (y >= 0 && y <= length) {
                         minorTickPath.getElements().addAll(
                                 new MoveTo(getWidth() - minorTickLength, y),
-                                new LineTo(getWidth()-1, y));
+                                new LineTo(getWidth() - 1, y));
                     }
                 }
             } else if (Side.RIGHT.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(0.5);
                 minorTickPath.setLayoutY(0.5);
-                for (T value : minorTickMarkValues) {
+                for (int i = 0; i < minorTickMarkValues.size(); i += stripFactor) {
+                    T value = minorTickMarkValues.get(i);
                     double y = getDisplayPosition(value);
-                    if(y >= 0 && y <= length) {
+                    if (y >= 0 && y <= length) {
                         minorTickPath.getElements().addAll(
                                 new MoveTo(1, y),
                                 new LineTo(minorTickLength, y));
@@ -381,11 +384,12 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(0.5);
                 minorTickPath.setLayoutY(-0.5);
-                for (T value : minorTickMarkValues) {
+                for (int i = 0; i < minorTickMarkValues.size(); i += stripFactor) {
+                    T value = minorTickMarkValues.get(i);
                     double x = getDisplayPosition(value);
-                    if(x >= 0 && x <= length) {
+                    if (x >= 0 && x <= length) {
                         minorTickPath.getElements().addAll(
-                                new MoveTo(x, getHeight()-1),
+                                new MoveTo(x, getHeight() - 1),
                                 new LineTo(x, getHeight() - minorTickLength));
                     }
                 }
@@ -393,9 +397,10 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(0.5);
                 minorTickPath.setLayoutY(0.5);
-                for (T value : minorTickMarkValues) {
+                for (int i = 0; i < minorTickMarkValues.size(); i += stripFactor) {
+                    T value = minorTickMarkValues.get(i);
                     double x = getDisplayPosition(value);
-                    if(x >= 0 && x <= length) {
+                    if (x >= 0 && x <= length) {
                         minorTickPath.getElements().addAll(
                                 new MoveTo(x, 1.0F),
                                 new LineTo(x, minorTickLength));

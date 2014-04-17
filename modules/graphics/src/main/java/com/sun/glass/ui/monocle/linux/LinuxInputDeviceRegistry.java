@@ -60,8 +60,8 @@ public class LinuxInputDeviceRegistry extends InputDeviceRegistry {
                             deviceMap.put(sysPath, device);
                         }
                     } else if (action.equals("remove")) {
-                        LinuxInputDevice device = deviceMap.get(devPath);
-                        deviceMap.remove(devPath);
+                        LinuxInputDevice device = deviceMap.get(sysPath);
+                        deviceMap.remove(sysPath);
                         if (device != null) {
                             devices.remove(device);
                         }

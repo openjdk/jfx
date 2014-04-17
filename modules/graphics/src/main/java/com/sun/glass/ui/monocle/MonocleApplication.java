@@ -67,7 +67,7 @@ final class MonocleApplication extends Application {
     private static final int DEVICE_MAX = 4;
     /** A running count of the numbers of devices with each device capability */
     private int[] deviceFlags = new int[DEVICE_MAX + 1];
-
+    private Thread shutdownHookThread;
     private Runnable renderEndNotifier = () -> platform.getScreen().swapBuffers();
 
     MonocleApplication() {
@@ -97,6 +97,11 @@ final class MonocleApplication extends Application {
         }
         if (device.isRelative()) {
             deviceFlags[DEVICE_POINTER] += modifier;
+            if (deviceFlags[DEVICE_POINTER] >= 1  && added) {
+                staticCursor_setVisible(true);
+            } else if (deviceFlags[DEVICE_POINTER] < 1 && !added) {
+                staticCursor_setVisible(false);
+            }
         }
         if (device.isFullKeyboard()) {
             deviceFlags[DEVICE_PC_KEYBOARD] += modifier;
@@ -112,6 +117,12 @@ final class MonocleApplication extends Application {
         Thread t = new Thread(runnableProcessor);
         setEventThread(t);
         t.start();
+        shutdownHookThread = new Thread("Monocle shutdown hook") {
+            @Override public void run() {
+            platform.shutdown();
+            }
+        };
+        Runtime.getRuntime().addShutdownHook(shutdownHookThread);
     }
 
     @Override
@@ -161,8 +172,11 @@ final class MonocleApplication extends Application {
 
     @Override
     protected void staticCursor_setVisible(boolean visible) {
-        NativeCursor cursor = NativePlatformFactory.getNativePlatform().getCursor();
-        cursor.setVisibility(visible);
+        if ((visible && deviceFlags[DEVICE_POINTER] >= 1) ||
+            (!visible && deviceFlags[DEVICE_POINTER] < 1)) {
+                NativeCursor cursor = NativePlatformFactory.getNativePlatform().getCursor();
+                cursor.setVisibility(visible);
+        }
     }
 
     @Override
@@ -343,6 +357,8 @@ final class MonocleApplication extends Application {
 
     @Override
     protected void finishTerminating() {
+        //if this method is getting called, we don't need the shutdown hook
+        Runtime.getRuntime().removeShutdownHook(shutdownHookThread);
         setEventThread(null);
         platform.shutdown();
         super.finishTerminating();

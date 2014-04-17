@@ -86,7 +86,8 @@ ViewContainer::ViewContainer() :
     m_manipEventSink(NULL),
     m_gestureSupportCls(NULL),
     m_lastMouseMovePosition(-1),
-    m_mouseButtonDownCounter(0)
+    m_mouseButtonDownCounter(0),
+    m_deadKeyWParam(0)
 {
     m_kbLayout = ::GetKeyboardLayout(0);
     m_idLang = LOWORD(m_kbLayout);
@@ -188,6 +189,8 @@ void ViewContainer::HandleViewInputLangChange(HWND hwnd, UINT msg, WPARAM wParam
     m_kbLayout = reinterpret_cast<HKL>(lParam);
     m_idLang = LOWORD(m_kbLayout);
     m_codePage = LangToCodePage(m_idLang);
+
+    m_deadKeyWParam = 0;
 }
 
 void ViewContainer::NotifyViewSize(HWND hwnd)
@@ -321,13 +324,15 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
 
     WORD mbChar;
     UINT scancode = ::MapVirtualKeyEx(wKey, 0, m_kbLayout);
-    int converted = ::ToAsciiEx(wKey, scancode, kbState,
-                                &mbChar, 0, m_kbLayout);
 
     // Depress modifiers to map a Unicode char to a key code
     kbState[VK_CONTROL] &= ~0x80;
     kbState[VK_SHIFT]   &= ~0x80;
     kbState[VK_MENU]    &= ~0x80;
+
+    int converted = ::ToAsciiEx(wKey, scancode, kbState,
+                                &mbChar, 0, m_kbLayout);
+
     wchar_t wChar[4] = {0};
     int unicodeConverted = ::ToUnicodeEx(wKey, scancode, kbState,
                                 wChar, 4, 0, m_kbLayout);
@@ -463,30 +468,52 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             CheckAndClearException(env);
         }
 
-        env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
-                            (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
-                            com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
-                            jKeyCode, jKeyChars, jModifiers);
-        CheckAndClearException(env);
+        if (jKeyCode == com_sun_glass_events_KeyEvent_VK_PRINTSCREEN &&
+                (msg == WM_KEYUP || msg == WM_SYSKEYUP))
+        {
+            // MS Windows doesn't send WM_KEYDOWN for the PrintScreen key,
+            // so we synthesize one
+            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
+                    com_sun_glass_events_KeyEvent_PRESS,
+                    jKeyCode, jKeyChars, jModifiers);
+            CheckAndClearException(env);
+        }
+
+        if (GetGlassView()) {
+            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
+                    (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
+                    com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
+                    jKeyCode, jKeyChars, jModifiers);
+            CheckAndClearException(env);
+        }
+
+        // MS Windows doesn't send WM_CHAR for the Delete key,
+        // so we synthesize one
+        if (jKeyCode == com_sun_glass_events_KeyEvent_VK_DELETE &&
+                (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) &&
+                GetGlassView())
+        {
+            // 0x7F == U+007F - a Unicode character for DELETE
+            SendViewTypedEvent(1, (jchar)0x7F);
+        }
 
         env->DeleteLocalRef(jKeyChars);
     }
 }
 
-void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
+void ViewContainer::SendViewTypedEvent(int repCount, jchar wChar) 
 {
     if (!GetGlassView()) {
         return;
     }
 
-    int repCount = LOWORD(lParam);
     JNIEnv* env = GetEnv();
     jcharArray jKeyChars = env->NewCharArray(repCount);
     if (jKeyChars) {
         jchar* nKeyChars = env->GetCharArrayElements(jKeyChars, NULL);
         if (nKeyChars) {
             for (int i = 0; i < repCount; i++) {
-                nKeyChars[i] = (jchar)wParam;
+                nKeyChars[i] = wChar;
             }
             env->ReleaseCharArrayElements(jKeyChars, nKeyChars, 0);
 
@@ -498,6 +525,99 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
         }
         env->DeleteLocalRef(jKeyChars);
     }
+}
+
+void ViewContainer::HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
+{
+    if (!GetGlassView()) {
+        return;
+    }
+
+    if (!m_deadKeyWParam) {
+        // HandleViewKeyEvent() calls ::ToAsciiEx and ::ToUnicodeEx which clear
+        // the dead key status from the keyboard layout. We store the current dead
+        // key here to use it when processing WM_CHAR in order to get the
+        // actual character typed.
+
+        m_deadKeyWParam = wParam;
+    } else {
+        // There already was another dead key pressed previously. Clear it
+        // and send two separate TYPED events instead to emulate native behavior.
+
+        SendViewTypedEvent(1, (jchar)m_deadKeyWParam);
+        SendViewTypedEvent(1, (jchar)wParam);
+
+        m_deadKeyWParam = 0;
+    }
+
+    // Since we handle dead keys ourselves, reset the keyboard dead key status (if any)
+    static BYTE kbState[256];
+    ::GetKeyboardState(kbState);
+    WORD ignored;
+    ::ToAsciiEx(VK_SPACE, ::MapVirtualKey(VK_SPACE, 0),
+            kbState, &ignored, 0, m_kbLayout);
+}
+
+void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
+{
+    if (!GetGlassView()) {
+        return;
+    }
+
+    int repCount = LOWORD(lParam);
+    jchar wChar;
+    
+    if (!m_deadKeyWParam) {
+        wChar = (jchar)wParam;
+    } else {
+        wchar_t deadKey;
+
+        // Some dead keys need additional translation:
+        // http://www.fileformat.info/info/unicode/block/combining_diacritical_marks/images.htm
+        // Also see awt_Component.cpp for the original dead keys table
+        switch (m_deadKeyWParam) {
+            case L'`':   deadKey = 0x300; break;
+            case L'\'':  deadKey = 0x301; break;
+            case 0x00B4: deadKey = 0x301; break;
+            case L'^':   deadKey = 0x302; break;
+            case L'~':   deadKey = 0x303; break;
+            case 0x02DC: deadKey = 0x303; break;
+            case 0x00AF: deadKey = 0x304; break;
+            case 0x02D8: deadKey = 0x306; break;
+            case 0x02D9: deadKey = 0x307; break;
+            case L'"':   deadKey = 0x308; break;
+            case 0x00A8: deadKey = 0x308; break;
+            case 0x02DA: deadKey = 0x30A; break;
+            case 0x02DD: deadKey = 0x30B; break;
+            case 0x02C7: deadKey = 0x30C; break;
+            case L',':   deadKey = 0x327; break;
+            case 0x00B8: deadKey = 0x327; break;
+            case 0x02DB: deadKey = 0x328; break;
+            default:     deadKey = static_cast<wchar_t>(m_deadKeyWParam); break;
+        }
+
+        wchar_t in[3] = {(wchar_t)wParam, deadKey, L'\0'};
+        wchar_t out[3];
+        int res = ::FoldString(MAP_PRECOMPOSED, (LPWSTR)in, 3, (LPWSTR)out, 3);
+        
+        if (res > 0) {
+            wChar = (jchar)out[0];
+
+            if (res == 3) {
+                // The character cannot be accented, so we send a TYPED event
+                // for the dead key itself first.
+                SendViewTypedEvent(1, (jchar)m_deadKeyWParam);
+            }
+        } else {
+            // Folding failed. Use the untranslated original character then
+            wChar = (jchar)wParam;
+        }
+
+        // Clear the dead key
+        m_deadKeyWParam = 0;
+    }
+
+    SendViewTypedEvent(repCount, wChar);
 }
 
 BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)

@@ -244,4 +244,18 @@ public class WinEXEBundlerTest {
 
         bundler.validate(bundleParams);
     }
+
+    @Test(expected = ConfigException.class)
+    public void longCopyright() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(COPYRIGHT.getID(), "Copyright (c) 2014 Way to many people to name because there are just so may of them I don't know where to start but I will just start with Alice, Bob, Charlie, Dave, Eve, well, there are just too many to say.");
+
+        bundler.validate(bundleParams);
+    }
 }

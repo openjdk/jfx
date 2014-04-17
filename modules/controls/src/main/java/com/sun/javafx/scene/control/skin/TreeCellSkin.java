@@ -276,8 +276,9 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         final Node d = cell.getDisclosureNode();
         final double prefHeight = (d == null) ? pref : Math.max(d.prefHeight(-1), pref);
         
-        // RT-30212: TreeCell does not honor minSize of cells
-        return Math.max(cell.getMinHeight(), prefHeight);
+        // RT-30212: TreeCell does not honor minSize of cells.
+        // snapSize for RT-36460
+        return snapSize(Math.max(cell.getMinHeight(), prefHeight));
     }
 
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {

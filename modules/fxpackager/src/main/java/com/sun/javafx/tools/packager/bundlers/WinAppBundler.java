@@ -183,6 +183,8 @@ public class WinAppBundler extends AbstractBundler {
             throw new UnsupportedPlatformException();
         }
 
+        StandardBundlerParam.validateMainClassInfoFromAppResources(p);
+
         if (WinResources.class.getResource(TOOL_ICON_SWAP) == null) {
             throw new ConfigException(
                     I18N.getString("error.no-windows-resources"),
@@ -266,9 +268,13 @@ public class WinAppBundler extends AbstractBundler {
     }
 
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
+        if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
+        }
+        if (!outputDirectory.canWrite()) {
+            throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outputDirectory.getAbsolutePath()));
+        }
         try {
-            outputDirectory.mkdirs();
-
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.creating-app-bundle"), APP_NAME.fetchFrom(p), outputDirectory.getAbsolutePath()));
             }
