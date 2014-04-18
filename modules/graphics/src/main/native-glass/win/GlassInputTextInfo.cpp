@@ -195,7 +195,7 @@ int GlassInputTextInfo::GetClauseInfo(int*& lpBndClauseW) {
 
     int*    bndClauseW = NULL;
 
-    //Convert ANSI string caluse information to UNICODE string clause information.
+    //Convert ANSI string clause information to UNICODE string clause information.
     try {
         bndClauseW = new int[m_cClauseW + 1];
     } catch (std::bad_alloc&) {
@@ -242,13 +242,16 @@ int GlassInputTextInfo::GetClauseInfo(int*& lpBndClauseW) {
         retVal = m_cClauseW;
     } else { /* partial commit case */
         int* bndResultClauseW = NULL;
-        int cResultClauseW = m_pResultTextInfo->GetClauseInfo(bndResultClauseW); 
-        // Concatenate Clause information.
-        int cMergedClauseW = m_cClauseW + cResultClauseW;
         int* bndMergedClauseW = NULL;
+        int cResultClauseW = 0, cMergedClauseW = 0;
         try {
+            cResultClauseW = m_pResultTextInfo->GetClauseInfo(bndResultClauseW);
+            // Concatenate Clause information.
+            cMergedClauseW = m_cClauseW + cResultClauseW;
             bndMergedClauseW = new int[cMergedClauseW+1];
         } catch (std::bad_alloc&) {
+            delete [] bndClauseW;
+            delete [] bndResultClauseW;
             delete [] bndMergedClauseW;
             throw;
         }
@@ -266,6 +269,7 @@ int GlassInputTextInfo::GetClauseInfo(int*& lpBndClauseW) {
             }
         }
         delete [] bndClauseW;
+        delete [] bndResultClauseW;
         bndMergedClauseW[cMergedClauseW] = m_cStrW + cCommittedStrW;
         lpBndClauseW = bndMergedClauseW;
         retVal = cMergedClauseW;
@@ -279,10 +283,11 @@ int GlassInputTextInfo::GetClauseInfo(int*& lpBndClauseW) {
 //  *lpBndAttrW and *lpValAttrW  must be deleted by caller.
 //
 int GlassInputTextInfo::GetAttributeInfo(int*& lpBndAttrW, BYTE*& lpValAttrW) {
-    if (m_cStrW == 0 || m_cAttrW != m_cStrW) {
-        lpBndAttrW = NULL;
-        lpValAttrW = NULL;
 
+    lpBndAttrW = NULL;    
+    lpValAttrW = NULL;
+
+    if (m_cStrW == 0 || m_cAttrW != m_cStrW) {
         return 0;
     }
 
@@ -294,9 +299,8 @@ int GlassInputTextInfo::GetAttributeInfo(int*& lpBndAttrW, BYTE*& lpValAttrW) {
         bndAttrW = new int[m_cAttrW + 1];
         valAttrW = new BYTE[m_cAttrW];
     } catch (std::bad_alloc&) {
-        lpBndAttrW = NULL;
-        lpValAttrW = NULL;
         delete [] bndAttrW;
+        delete [] valAttrW;
         throw;
     }
 
@@ -329,7 +333,10 @@ int GlassInputTextInfo::GetAttributeInfo(int*& lpBndAttrW, BYTE*& lpValAttrW) {
             bndMergedAttrW = new int[cMergedAttrW+1];
             valMergedAttrW = new BYTE[cMergedAttrW];
         } catch (std::bad_alloc&) {
+            delete [] bndAttrW;
+            delete [] valAttrW;
             delete [] bndMergedAttrW;
+            delete [] valMergedAttrW;
             throw;
         }
         bndMergedAttrW[0] = 0;
