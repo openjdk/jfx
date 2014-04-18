@@ -190,6 +190,8 @@ avcdecoder_init (AvcDecoder * decode,
     }
 
     gst_pad_use_fixed_caps (decode->srcpad);
+    
+    decode->mutex = g_mutex_new();
 }
 
 static void
@@ -198,6 +200,11 @@ avcdecoder_dispose(GObject* object)
     AvcDecoder* decode = AVCDECODER(object);
     
     avcdecoder_state_destroy (decode);
+    
+    if (NULL != decode->mutex) {
+        g_mutex_free(decode->mutex);
+        decode->mutex = NULL;
+    }
     
     G_OBJECT_CLASS(parent_class)->dispose(object);
 }
@@ -440,7 +447,6 @@ avcdecoder_state_init(AvcDecoder *decode)
     decode->is_stride_set = FALSE;
     decode->frame_duration = GST_CLOCK_TIME_NONE;
     decode->ordered_frames = g_queue_new();
-    decode->mutex = g_mutex_new();
     decode->segment_start = 0;
 }
 
