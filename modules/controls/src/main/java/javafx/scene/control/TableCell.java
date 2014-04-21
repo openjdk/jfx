@@ -505,13 +505,14 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
 
         final TableView<S> tableView = getTableView();
-        if (getIndex() == -1 || tableView == null) return;
+        final TableRow<S> tableRow = getTableRow();
+        final int index = getIndex();
+        if (index == -1 || tableView == null || tableRow == null) return;
 
         final TableViewFocusModel<S> fm = tableView.getFocusModel();
         if (fm == null) return;
-        
-        boolean isFocusedNow = fm != null &&
-                            fm.isFocused(getIndex(), getTableColumn());
+
+        boolean isFocusedNow = fm != null && fm.isFocused(index, getTableColumn());
 
         setFocused(isFocusedNow);
     }
