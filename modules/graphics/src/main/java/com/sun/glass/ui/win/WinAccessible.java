@@ -474,9 +474,9 @@ final class WinAccessible extends PlatformAccessible {
             case TEXT_AREA: return UIA_TextControlTypeId;
             case TABLE_VIEW: return UIA_TableControlTypeId;
             case LIST_VIEW: return UIA_ListControlTypeId;
-            case TREE_TABLE_CELL:
-            case TABLE_CELL:
             case LIST_ITEM: return UIA_ListItemControlTypeId;
+            case TREE_TABLE_CELL:
+            case TABLE_CELL: return UIA_DataItemControlTypeId;
             case IMAGE: return UIA_ImageControlTypeId;
             case RADIO_BUTTON: return UIA_RadioButtonControlTypeId;
             case CHECKBOX: return UIA_CheckBoxControlTypeId;
