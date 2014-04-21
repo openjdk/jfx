@@ -162,7 +162,9 @@ public:
     // IScrollItemProvider
     IFACEMETHODIMP ScrollIntoView();
 
-    static void copyVariant(JNIEnv *env, jobject jVariant, VARIANT* pRetVal);
+    static HRESULT copyVariant(JNIEnv *env, jobject jVariant, VARIANT* pRetVal);
+    static HRESULT copyString(JNIEnv *env, jstring jString, BSTR* pbstrVal);
+    static HRESULT copyList(JNIEnv *env, jarray list, SAFEARRAY** pparrayVal, VARTYPE vt);
 
 private:
     virtual ~GlassAccessible();

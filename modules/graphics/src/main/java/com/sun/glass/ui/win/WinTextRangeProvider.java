@@ -25,6 +25,9 @@
 
 package com.sun.glass.ui.win;
 
+import static javafx.scene.accessibility.Attribute.*;
+import javafx.scene.accessibility.Attribute;
+
 /*
  * This class is the Java peer for GlassTextRangeProvider.
  * GlassTextRangeProvider implements ITextRangeProvider.
@@ -84,13 +87,16 @@ class WinTextRangeProvider {
         return "Range(start: "+start+", end: "+end+", id: " + id + ")";
     }
 
+    private Object getAttribute(Attribute attribute, Object... parameters) {
+        return accessible.getAttribute(attribute, parameters);
+    }
+
     /***********************************************/
     /*            ITextRangeProvider               */
     /***********************************************/
     long Clone() {
         WinTextRangeProvider clone = new WinTextRangeProvider(accessible);
         clone.setRange(start, end);
-        System.out.println("Cloning " + id + " to " + clone.id);
 
         /* Note: Currently Clone() natively does not call AddRef() no the returned object.
          * This mean we don't keep a reference of our own and we don't 
@@ -101,20 +107,54 @@ class WinTextRangeProvider {
     }
 
     boolean Compare(WinTextRangeProvider range) {
-        System.out.println("Compare " + this + " to " + range);
+        System.out.println("+Compare " + this + " to " + range);
         if (range == null) return false;
         return accessible == range.accessible && start == range.start && end == range.end;
     }
 
     int CompareEndpoints(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
-        System.out.println("CompareEndpoints " + endpoint + " " + this + " " + targetRange + " " + targetEndpoint);
+        System.out.println("+CompareEndpoints " + endpoint + " " + this + " " + targetRange + " " + targetEndpoint);
         int offset = endpoint == TextPatternRangeEndpoint_Start ? start : end;
         int targetOffset = targetEndpoint == TextPatternRangeEndpoint_Start ? targetRange.start : targetRange.end;
         return targetOffset - offset;
     }
 
     void ExpandToEnclosingUnit(int unit) {
-        System.out.println("ExpandToEnclosingUnit " + this + " unit " + unit);
+        switch (unit) {
+            case TextUnit_Character: {
+                Integer caretOffset = (Integer)getAttribute(CARET_OFFSET);
+                if (caretOffset == null) return;
+                start = end = caretOffset;
+                break;
+            }
+            case TextUnit_Word:
+                //TODO
+                break;
+            case TextUnit_Line:
+            case TextUnit_Paragraph: {
+                Integer caretOffset = (Integer)getAttribute(CARET_OFFSET);
+                if (caretOffset == null) return;
+                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, caretOffset);
+                if (lineIndex == null) return;
+                Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
+                if (lineStart == null) return;
+                Integer lineEnd = (Integer)getAttribute(LINE_START, lineIndex);
+                if (lineEnd == null) return;
+                start = lineStart;
+                end = lineEnd;
+                break;
+            }
+            case TextUnit_Document:
+            case TextUnit_Page:
+            case TextUnit_Format: {
+                String text = (String)getAttribute(TITLE);
+                if (text == null) return;
+                start = 0;
+                end = text.length();
+                break;
+            }
+        }
+        System.out.println("+ExpandToEnclosingUnit " + this + " unit " + unit);
     }
 
     long FindAttribute(int attributeId, WinVariant val, boolean backward) {
@@ -138,13 +178,16 @@ class WinTextRangeProvider {
     }
 
     long GetEnclosingElement() {
-        System.out.println("GetEnclosingElement");
-        return 0;
+        System.out.println("+GetEnclosingElement");
+        return accessible.getNativeAccessible();
     }
 
     String GetText(int maxLength) {
-        System.out.println("GetText");
-        return null;
+        String text = (String)getAttribute(TITLE);
+        if (text == null) return null;
+        int endOffset = maxLength != -1 ? Math.min(end, start + maxLength) : end;
+        System.out.println("+GetText " + text.substring(start, endOffset));
+        return text.substring(start, endOffset);
     }
 
     int Move(int unit, int count) {

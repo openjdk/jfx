@@ -419,6 +419,12 @@ final class WinAccessible extends PlatformAccessible {
         return peer;
     }
 
+    /* Overwritten in order to make is visible to WinTextRangeProvider */
+    @Override
+    protected Object getAttribute(Attribute attribute, Object... parameters) {
+        return super.getAttribute(attribute, parameters);
+    }
+
     private long getContainer(Role targetRole) {
         Node node = getContainerNode(targetRole);
         return node == null ? 0 : getAccessible(node);

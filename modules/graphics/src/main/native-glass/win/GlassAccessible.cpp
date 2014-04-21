@@ -125,13 +125,57 @@ static jfieldID fid_boolVal;
 static jfieldID fid_bstrVal;
 static jfieldID fid_pDblVal;
 
-/* static */ void GlassAccessible::copyVariant(JNIEnv *env, jobject jVariant, VARIANT* pRetVal)
+
+/* static */ HRESULT GlassAccessible::copyString(JNIEnv *env, jstring jString, BSTR* pbstrVal)
 {
-    if (pRetVal == NULL) return;
+    if (pbstrVal != NULL) {
+        UINT length = env->GetStringLength(jString);
+        const jchar* ptr = env->GetStringCritical(jString, NULL);
+        if (ptr != NULL) {
+            *pbstrVal = SysAllocStringLen(reinterpret_cast<const OLECHAR *>(ptr), length);
+            env->ReleaseStringCritical(jString, ptr);
+            return S_OK;
+        }
+    }
+    return E_FAIL;
+}
+
+/* static */ HRESULT GlassAccessible::copyList(JNIEnv *env, jarray list, SAFEARRAY** pparrayVal, VARTYPE vt)
+{
+    if (list) {
+        jsize size = env->GetArrayLength(list);
+        SAFEARRAY *psa = SafeArrayCreateVector(vt, 0, size);
+        if (psa) {
+            void* listPtr = env->GetPrimitiveArrayCritical(list, 0);
+            jint* intPtr = (jint*)listPtr;
+            jlong* longPtr = (jlong*)listPtr;
+            jdouble* doublePtr = (jdouble*)listPtr;
+            for (LONG i = 0; i < size; i++) {
+                if (vt == VT_UNKNOWN) {
+                    //TODO make sure AddRef on elements is not required ?
+                    SafeArrayPutElement(psa, &i,  (void*)longPtr[i]);
+                } else if (vt == VT_I4){
+                    SafeArrayPutElement(psa, &i, (void*)&(intPtr[i]));
+                } else if (vt == VT_R8){
+                    SafeArrayPutElement(psa, &i, (void*)&(doublePtr[i]));
+                }
+            }
+            env->ReleasePrimitiveArrayCritical(list, listPtr, 0);
+            *pparrayVal = psa;
+            return S_OK;
+        }
+    }
+    return E_FAIL;
+}
+
+/* static */ HRESULT GlassAccessible::copyVariant(JNIEnv *env, jobject jVariant, VARIANT* pRetVal)
+{
+    if (pRetVal == NULL) return E_FAIL;
     if (jVariant == NULL) {
         pRetVal->vt = VT_EMPTY;
-        return;
+        return E_FAIL;
     }
+    HRESULT hr = S_OK;
     pRetVal->vt = (VARTYPE)env->GetShortField(jVariant, fid_vt);
     switch (pRetVal->vt) {
         case VT_I2:
@@ -145,7 +189,7 @@ static jfieldID fid_pDblVal;
             if (pRetVal->punkVal != NULL) {
                 pRetVal->punkVal->AddRef();
             } else {
-                pRetVal->vt = VT_EMPTY;
+                hr = E_FAIL;
             }
             break;
         case VT_R4:
@@ -161,42 +205,17 @@ static jfieldID fid_pDblVal;
         }
         case VT_BSTR: {
             jstring str = (jstring)env->GetObjectField(jVariant, fid_bstrVal);
-            if (str != NULL) {
-                UINT length = env->GetStringLength(str);
-                const jchar* ptr = env->GetStringCritical(str, NULL);
-                if (ptr != NULL) {
-					pRetVal->bstrVal = SysAllocStringLen(reinterpret_cast<const OLECHAR *>(ptr), length);
-					env->ReleaseStringCritical(str, ptr);
-                }
-            }
-            if (pRetVal->parray == NULL) {
-                pRetVal->vt = VT_EMPTY;
-            }
+            hr = GlassAccessible::copyString(env, str, &(pRetVal->bstrVal));
             break;
         }
         case VT_R8 | VT_ARRAY: {
             jarray list = (jarray)env->GetObjectField(jVariant, fid_pDblVal);
-            pRetVal->parray = NULL;
-            if (list) {
-                jsize size = env->GetArrayLength(list);
-                SAFEARRAY *psa = SafeArrayCreateVector(VT_R8, 0, size);
-                if (psa) {
-                    jdouble* listPtr = (jdouble*)env->GetPrimitiveArrayCritical(list, 0);
-                    if (listPtr != NULL) {
-						for (LONG i = 0; i < size; i++) {
-							SafeArrayPutElement(psa, &i, (void*)&(listPtr[i]));
-						}
-						env->ReleasePrimitiveArrayCritical(list, listPtr, 0);
-						pRetVal->parray = psa;
-                    }
-                }
-            }
-            if (pRetVal->parray == NULL) {
-                pRetVal->vt = VT_EMPTY;
-            }
+            hr = GlassAccessible::copyList(env, list, &(pRetVal->parray), VT_R8);
             break;
         }
     }
+    if (FAILED(hr)) pRetVal->vt = VT_EMPTY;
+    return hr;
 }
 
 jlong GlassAccessible::callLongMethod(jmethodID mid, ...)
@@ -221,25 +240,9 @@ SAFEARRAY* GlassAccessible::callArrayMethod(jmethodID mid, VARTYPE vt)
     jarray list = (jarray)env->CallObjectMethod(m_jAccessible, mid);
     CheckAndClearException(env);
 
-    if (list) {
-        jsize size = env->GetArrayLength(list);
-        SAFEARRAY *psa = SafeArrayCreateVector(vt, 0, size);
-        if (psa) {
-            jint* listPtr = (jint*)env->GetPrimitiveArrayCritical(list, 0);
-            for (LONG i = 0; i < size; i++) {
-                if (vt == VT_UNKNOWN) {
-                    //TODO make sure AddRef on elements is not required ?
-                    SafeArrayPutElement(psa, &i, (void*)listPtr[i]);
-                } else {
-                    SafeArrayPutElement(psa, &i, (void*)&(listPtr[i]));
-                }
-
-            }
-            env->ReleasePrimitiveArrayCritical(list, listPtr, 0);
-        }
-        return psa;
-    }
-    return NULL;
+    SAFEARRAY *psa=NULL;
+    GlassAccessible::copyList(env, list, &psa, vt);
+    return psa;
 }
 
 GlassAccessible::GlassAccessible(JNIEnv* env, jobject jAccessible)
@@ -1172,7 +1175,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinAccessible__1destroyGlassAcc
 {
     GlassAccessible* acc = reinterpret_cast<GlassAccessible*>(winAccessible);
     acc->Release();
-//    delete acc;
 }
 
 /*
@@ -1197,9 +1199,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinAccessible_UiaRaiseAutomati
 {
     IRawElementProviderSimple* pProvider = reinterpret_cast<IRawElementProviderSimple*>(jAccessible);
     VARIANT ov = {0}, nv = {0};
+    HRESULT hr = E_FAIL;
 
-    GlassAccessible::copyVariant(env, oldV, &ov);
-    GlassAccessible::copyVariant(env, newV, &nv);
+    hr = GlassAccessible::copyVariant(env, oldV, &ov);
+    if (FAILED(hr)) return (jlong)hr;
+    hr = GlassAccessible::copyVariant(env, newV, &nv);
+    if (FAILED(hr)) return (jlong)hr;
 
     return (jlong)UiaRaiseAutomationPropertyChangedEvent(pProvider, (PROPERTYID)id, ov, nv);
 }
