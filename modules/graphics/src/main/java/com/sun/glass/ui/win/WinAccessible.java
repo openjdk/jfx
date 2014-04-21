@@ -123,6 +123,7 @@ final class WinAccessible extends PlatformAccessible {
     private static final int UIA_EditControlTypeId               = 50004;
     private static final int UIA_HyperlinkControlTypeId          = 50005;
     private static final int UIA_ImageControlTypeId              = 50006;
+    private static final int UIA_ListItemControlTypeId           = 50007;
     private static final int UIA_ListControlTypeId               = 50008;
     private static final int UIA_MenuControlTypeId               = 50009;
     private static final int UIA_MenuBarControlTypeId            = 50010;
@@ -475,7 +476,7 @@ final class WinAccessible extends PlatformAccessible {
             case LIST_VIEW: return UIA_ListControlTypeId;
             case TREE_TABLE_CELL:
             case TABLE_CELL:
-            case LIST_ITEM: return UIA_DataItemControlTypeId;
+            case LIST_ITEM: return UIA_ListItemControlTypeId;
             case IMAGE: return UIA_ImageControlTypeId;
             case RADIO_BUTTON: return UIA_RadioButtonControlTypeId;
             case CHECKBOX: return UIA_CheckBoxControlTypeId;
@@ -1059,17 +1060,17 @@ final class WinAccessible extends PlatformAccessible {
 
     boolean get_CanSelectMultiple() {
         if (isDisposed()) return false;
-
         Role role = (Role)getAttribute(ROLE);
-        switch (role) {
-            case LIST_VIEW:
-            case TABLE_VIEW:
-            case TREE_VIEW:
-            case TREE_TABLE_VIEW:
-                return (boolean)getAttribute(MULTIPLE_SELECTION);
-            default:
+        if (role != null) {
+            switch (role) {
+                case LIST_VIEW:
+                case TABLE_VIEW:
+                case TREE_VIEW:
+                case TREE_TABLE_VIEW:
+                    return Boolean.TRUE.equals(getAttribute(MULTIPLE_SELECTION));
+                default:
+            }
         }
-
         return false;
     }
 
