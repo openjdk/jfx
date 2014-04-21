@@ -450,8 +450,6 @@ public class LinuxRPMBundler extends AbstractBundler {
                 IMAGES_ROOT,
                 LICENSE_FILE,
                 LICENSE_TYPE,
-                MENU_HINT,
-                SHORTCUT_HINT,
                 TITLE,
                 VENDOR,
                 VERSION
