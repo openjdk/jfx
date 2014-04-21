@@ -353,11 +353,6 @@ public class LinuxDebBundler extends AbstractBundler {
         }
     }
 
-    @Override
-    public String toString() {
-        return getName();
-    }
-
     private String getArch() {
         String arch = System.getProperty("os.arch");
         if ("i386".equals(arch))

@@ -220,11 +220,6 @@ public class LinuxAppBundler extends AbstractBundler {
         }
     }
 
-    @Override
-    public String toString() {
-        return getName();
-    }
-
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
         RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
         if (appResources == null) {

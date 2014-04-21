@@ -471,11 +471,6 @@ public class WinMsiBundler  extends AbstractBundler {
                 APP_NAME.fetchFrom(params) + "-post-image.wsf");
     }
 
-    @Override
-    public String toString() {
-        return getName();
-    }
-
     private boolean prepareBasicProjectConfig(Map<String, ? super Object> params) throws IOException {
         fetchResource(WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_Script(params).getName(),
                 I18N.getString("resource.post-install-script"),

@@ -402,11 +402,6 @@ public class WinExeBundler extends AbstractBundler {
         }
     }
 
-    @Override
-    public String toString() {
-        return "Exe Bundler (based on Inno Setup)";
-    }
-
     private String getAppIdentifier(Map<String, ? super Object> params) {
         String nm = IDENTIFIER.fetchFrom(params);
 

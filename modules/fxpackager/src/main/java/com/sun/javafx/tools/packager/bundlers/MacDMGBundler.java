@@ -122,19 +122,6 @@ public class MacDMGBundler extends MacBaseInstallerBundler {
         APP_BUNDLER.fetchFrom(params).cleanupConfigFiles(params);
     }
 
-    @Override
-    public String toString() {
-        return getName();
-    }
-
-//    @Override
-//    protected void setBuildRoot(File dir) {
-//        super.setBuildRoot(dir);
-//        configRoot = new File(dir, "macosx");
-//        configRoot.mkdirs();
-//        APP_BUNDLER.fetchFrom(params).setBuildRoot(dir);
-//    }
-
     private static final String hdiutil = "/usr/bin/hdiutil";
 
     private void prepareDMGSetupScript(String volumeName, Map<String, ? super Object> p) throws IOException {

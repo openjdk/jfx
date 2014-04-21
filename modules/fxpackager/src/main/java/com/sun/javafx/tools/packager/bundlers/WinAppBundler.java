@@ -350,11 +350,6 @@ public class WinAppBundler extends AbstractBundler {
 
     }
 
-    @Override
-    public String toString() {
-        return "Windows Application Bundler";
-    }
-
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
         RelativeFileSet appResource = APP_RESOURCES.fetchFrom(params);
         if (appResource == null) {

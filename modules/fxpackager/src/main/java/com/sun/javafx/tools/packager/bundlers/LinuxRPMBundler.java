@@ -261,11 +261,6 @@ public class LinuxRPMBundler extends AbstractBundler {
         }
     }
 
-    @Override
-    public String toString() {
-        return getName();
-    }
-
     private String getLicenseFileString(Map<String, ? super Object> params) {
         StringBuilder sb = new StringBuilder();
         for (String f: LICENSE_FILE.fetchFrom(params)) {
