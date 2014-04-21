@@ -1573,4 +1573,18 @@ public class ComboBoxTest {
 
         sl.dispose();
     }
+
+    @Test public void test_rt36717() {
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        StageLoader sl = new StageLoader(cb);
+
+        // the stack overflow only occurs when a ComboBox changes from non-editable to editable
+        cb.setEditable(false);
+        cb.setEditable(true);
+        assertNotNull(cb.getEditor());
+        KeyEventFirer tfKeyboard = new KeyEventFirer(cb.getEditor());
+        tfKeyboard.doKeyPress(KeyCode.ENTER);   // Stack overflow here
+
+        sl.dispose();
+    }
 }

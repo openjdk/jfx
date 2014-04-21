@@ -43,6 +43,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
@@ -98,6 +99,23 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private final WeakListChangeListener<T> weakListViewItemsListener =
             new WeakListChangeListener<T>(listViewItemsListener);
+
+    private EventHandler<KeyEvent> textFieldKeyEventHandler = event -> {
+        if (textField == null || ! getSkinnable().isEditable()) return;
+        handleKeyEvent(event, true);
+    };
+    private EventHandler<MouseEvent> textFieldMouseEventHandler = event -> {
+        ComboBoxBase<T> comboBox = getSkinnable();
+        if (event.getTarget().equals(comboBox)) return;
+        comboBox.fireEvent(event.copyFor(comboBox, comboBox));
+        event.consume();
+    };
+    private EventHandler<DragEvent> textFieldDragEventHandler = event -> {
+        ComboBoxBase<T> comboBox = getSkinnable();
+        if (event.getTarget().equals(comboBox)) return;
+        comboBox.fireEvent(event.copyFor(comboBox, comboBox));
+        event.consume();
+    };
     
     
     
@@ -144,7 +162,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         });
 
         comboBox.addEventFilter(KeyEvent.ANY, ke -> {
-            if (textField == null) {
+            if (textField == null || ! comboBox.isEditable()) {
                 handleKeyEvent(ke, false);
             } else {
                 // This prevents a stack overflow from our rebroadcasting of the
@@ -160,27 +178,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
 
-        if (textField != null) {
-            textField.addEventFilter(KeyEvent.ANY, ke -> {
-                if (textField == null) return;
-                handleKeyEvent(ke, true);
-            });
-        }
-
-        // Fix for RT-31093 - drag events from the textfield were not surfacing
-        // properly for the ComboBox.
-        if (textField != null) {
-            textField.addEventFilter(MouseEvent.DRAG_DETECTED, event -> {
-                if (event.getTarget().equals(comboBox)) return;
-                comboBox.fireEvent(event.copyFor(comboBox, comboBox));
-                event.consume();
-            });
-            textField.addEventFilter(DragEvent.ANY, event -> {
-                if (event.getTarget().equals(comboBox)) return;
-                    comboBox.fireEvent(event.copyFor(comboBox, comboBox));
-                    event.consume();
-            });
-        }
+        updateEditable();
         
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
         updateValue();
@@ -192,6 +190,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         registerChangeListener(comboBox.converterProperty(), "CONVERTER");
         registerChangeListener(comboBox.buttonCellProperty(), "BUTTON_CELL");
         registerChangeListener(comboBox.valueProperty(), "VALUE");
+        registerChangeListener(comboBox.editableProperty(), "EDITABLE");
     }
 
 
@@ -234,7 +233,32 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateButtonCell();
         } else if ("VALUE".equals(p)) {
             updateValue();
+        } else if ("EDITABLE".equals(p)) {
+            updateEditable();
         }
+    }
+
+    private void updateEditable() {
+        TextField newTextField = comboBox.getEditor();
+
+        if (!comboBox.isEditable()) {
+            // remove event filters
+            if (textField != null) {
+                textField.removeEventFilter(KeyEvent.ANY, textFieldKeyEventHandler);
+                textField.removeEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
+                textField.removeEventFilter(DragEvent.ANY, textFieldDragEventHandler);
+            }
+        } else if (newTextField != null) {
+            // add event filters
+            newTextField.addEventFilter(KeyEvent.ANY, textFieldKeyEventHandler);
+
+            // Fix for RT-31093 - drag events from the textfield were not surfacing
+            // properly for the ComboBox.
+            newTextField.addEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
+            newTextField.addEventFilter(DragEvent.ANY, textFieldDragEventHandler);
+        }
+
+        textField = newTextField;
     }
     
     /** {@inheritDoc} */
