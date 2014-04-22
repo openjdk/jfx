@@ -63,6 +63,9 @@ public class SingleTouchTest extends ParameterizedTestBase {
         TestLog.waitForLog("Mouse clicked: %d, %d", x, y);
         TestLog.waitForLog("Touch pressed: %d, %d", x, y);
         TestLog.waitForLog("Touch released: %d, %d", x, y);
+
+        // Check that the touch event has no more than one touch point.
+        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint(2):"));
     }
 
     /**
@@ -91,6 +94,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         // same location, so make sure they are filtered out.
         Assert.assertEquals(0, TestLog.countLogContaining("Mouse pressed:"));
         Assert.assertEquals(0, TestLog.countLogContaining("Touch pressed:"));
+        // Check that the touch event has no more than one touch point.
+        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint(2):"));
     }
 
     /**
@@ -118,6 +123,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         TestLog.waitForLog("Touch pressed: %d, %d", x1, y1);
         TestLog.waitForLog("Touch moved: %d, %d", x2, y2);
         TestLog.waitForLog("Touch released: %d, %d", x2, y2);
+        // Check that the touch event has no more than one touch point.
+        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint(2):"));
     }
 
     /**
@@ -144,6 +151,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         TestLog.waitForLog("Touch pressed: %d, %d", x1, y1);
         TestLog.waitForLog("Touch moved: %d, %d", x2, y1);
         TestLog.waitForLog("Touch released: %d, %d", x2, y1);
+        // Check that the touch event has no more than one touch point.
+        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint(2):"));
     }
 
     /**
@@ -170,6 +179,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         TestLog.waitForLog("Touch pressed: %d, %d", x1, y1);
         TestLog.waitForLog("Touch moved: %d, %d", x1, y2);
         TestLog.waitForLog("Touch released: %d, %d", x1, y2);
+        // Check that the touch event has no more than one touch point.
+        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint(2):"));
     }
 
     /**
@@ -198,6 +209,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         TestLog.waitForLog("Touch released: %d, %d", x1, y1);
         Assert.assertEquals(0l, TestLog.countLogContaining("Mouse dragged"));
         Assert.assertEquals(0l, TestLog.countLogContaining("Touch moved"));
+        // Check that the touch event has no more than one touch point.
+        Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint(2):"));
     }
 
 

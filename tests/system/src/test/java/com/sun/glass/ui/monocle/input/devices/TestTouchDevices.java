@@ -60,7 +60,8 @@ public class TestTouchDevices {
         devices.addAll(Arrays.asList(new TestTouchDevice[] {
                 new SingleTouchDevice1(),
                 new SingleTouchDevice2(),
-                new EGalaxSingleTouchDevice(),
+                new EGalaxSingleTouchDevice1(),
+                new EGalaxSingleTouchDevice2(),
                 new EGalaxMultiTouchDevice1(),
                 new EGalaxMultiTouchDevice2(),
                 new TouchRevolutionFusionDevice(),

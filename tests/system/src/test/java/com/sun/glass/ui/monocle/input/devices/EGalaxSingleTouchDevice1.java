@@ -29,41 +29,10 @@ import com.sun.glass.ui.monocle.input.TestApplication;
 import com.sun.glass.ui.monocle.input.UInput;
 import org.junit.Assume;
 
-/**
- * EGalaxSingleTouchDevice sends ABS_X and ABS_Y events. It uses BTN_TOUCH to notify
- * presses and releases. It does not send ABS_X or ABS_Y if that coordinate has
- * not changed. Before the first touch it sends coordinates with no EV_KEY
- * event.
- */
-public class EGalaxSingleTouchDevice extends TestTouchDevice {
+
+public class EGalaxSingleTouchDevice1 extends EGalaxSingleTouchDeviceBase {
 
     private boolean firstPress = true;
-
-    public EGalaxSingleTouchDevice() {
-        super(1);
-    }
-
-    @Override
-    public void create() {
-        Assume.assumeTrue(TestApplication.isMonocle());
-        ui = new UInput();
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("KEYBIT BTN_TOUCH");
-        ui.processLine("EVBIT EV_ABS");
-        ui.processLine("ABSBIT ABS_X");
-        ui.processLine("ABSBIT ABS_Y");
-        ui.processLine("ABSMIN ABS_X 0");
-        ui.processLine("ABSMAX ABS_X 4095");
-        ui.processLine("ABSMIN ABS_Y 0");
-        ui.processLine("ABSMAX ABS_Y 4095");
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-        setAbsScale(4096, 4096);
-    }
 
     @Override
     public int addPoint(double x, double y) {
@@ -85,28 +54,4 @@ public class EGalaxSingleTouchDevice extends TestTouchDevice {
         super.removePoint(p);
         ui.processLine("EV_KEY BTN_TOUCH 0");
     }
-
-    @Override
-    public void setPoint(int p, double x, double y) {
-        int oldX = transformedXs[p];
-        int oldY = transformedYs[p];
-        super.setPoint(p, x, y);
-        // if neither X nor Y have changed, we send X
-        if (oldX != transformedXs[p] || oldY == transformedYs[p]) {
-            ui.processLine("EV_ABS ABS_X " + transformedXs[p]);
-        }
-        if (oldY != transformedYs[p]) {
-            ui.processLine("EV_ABS ABS_Y " + transformedYs[p]);
-        }
-    }
-
-    @Override
-    public void resendStateAndSync() {
-        if (points[0]) {
-            ui.processLine("EV_ABS ABS_X " + transformedXs[0]);
-            ui.processLine("EV_ABS ABS_Y " + transformedYs[0]);
-        }
-        sync();
-    }
-
 }
