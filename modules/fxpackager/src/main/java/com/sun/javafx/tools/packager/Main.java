@@ -263,7 +263,7 @@ public class Main {
                             BundleType type = BundleType.ALL;
                             String format = null; //null means ANY
                             if (i+1 < args.length && !args[i+1].startsWith("-")) {
-                                String v = args[i+1];
+                                String v = args[++i];
                                 //parsing logic is the same as in DeployFXTask
                                 if ("image".equals(v)) {
                                     type = BundleType.IMAGE;
