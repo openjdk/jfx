@@ -607,17 +607,8 @@ IFACEMETHODIMP GlassAccessible::get_Value(BSTR *pRetVal)
     JNIEnv* env = GetEnv();
     jstring str = (jstring)env->CallObjectMethod(m_jAccessible, mid_get_ValueString);
     if (CheckAndClearException(env)) return E_FAIL;
-    if (str) {
-        UINT length = env->GetStringLength(str);
-        const jchar* ptr = env->GetStringCritical(str, NULL);
-        if (ptr != NULL) {
-        	*pRetVal = SysAllocStringLen(reinterpret_cast<const OLECHAR *>(ptr), length);
-        	env->ReleaseStringCritical(str, ptr);
-        }
-    } else {
-        *pRetVal = NULL;
-    }
-    return S_OK;
+
+    return GlassAccessible::copyString(env, str, pRetVal);
 }
 
 /***********************************************/
