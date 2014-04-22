@@ -221,7 +221,7 @@ static jfieldID fid_pDblVal;
 HRESULT GlassAccessible::callLongMethod(jmethodID mid,  IUnknown **pRetVal, ...)
 {
     va_list vl;
-    va_start(vl, mid);
+    va_start(vl, pRetVal);
     JNIEnv* env = GetEnv();
     jlong ptr = env->CallLongMethodV(m_jAccessible, mid, vl);
     va_end(vl);
