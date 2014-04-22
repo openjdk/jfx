@@ -3282,7 +3282,15 @@ public class TreeTableViewTest {
         sl.dispose();
     }
 
-    @Test public void test_rt25679() {
+    @Test public void test_rt25679_rowSelection() {
+        test_rt25679(true);
+    }
+
+    @Test public void test_rt25679_cellSelection() {
+        test_rt25679(false);
+    }
+
+    private void test_rt25679(boolean rowSelection) {
         Button focusBtn = new Button("Focus here");
 
         TreeItem<String> root = new TreeItem<>("Root");
@@ -3294,7 +3302,8 @@ public class TreeTableViewTest {
         tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue().getValue()));
         treeView.getColumns().add(tableColumn);
 
-        SelectionModel sm = treeView.getSelectionModel();
+        TreeTableView.TreeTableViewSelectionModel<String> sm = treeView.getSelectionModel();
+        sm.setCellSelectionEnabled(! rowSelection);
 
         VBox vbox = new VBox(focusBtn, treeView);
 
@@ -3315,8 +3324,25 @@ public class TreeTableViewTest {
         // ensure that there is a selection (where previously there was not one)
         assertEquals(sl.getStage().getScene().getFocusOwner(), treeView);
         assertTrue(treeView.isFocused());
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals(root, sm.getSelectedItem());
+
+        if (rowSelection) {
+            assertEquals(1, sm.getSelectedIndices().size());
+            assertEquals(root, sm.getSelectedItem());
+            assertTrue(sm.isSelected(0));
+
+            assertEquals(1, sm.getSelectedCells().size());
+            TreeTablePosition selectedCell = sm.getSelectedCells().get(0);
+            assertEquals(0, selectedCell.getRow());
+            assertEquals(-1, selectedCell.getColumn());
+            assertNull(selectedCell.getTableColumn());
+        } else {
+            assertTrue(sm.isSelected(0, tableColumn));
+            assertEquals(1, sm.getSelectedCells().size());
+            TreeTablePosition selectedCell = sm.getSelectedCells().get(0);
+            assertEquals(0, selectedCell.getRow());
+            assertEquals(0, selectedCell.getColumn());
+            assertEquals(tableColumn, selectedCell.getTableColumn());
+        }
 
         sl.dispose();
     }

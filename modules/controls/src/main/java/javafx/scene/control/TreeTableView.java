@@ -752,13 +752,20 @@ public class TreeTableView<S> extends Control {
     private InvalidationListener focusedListener = observable -> {
         // RT-25679 - we select the first item in the control if there is no
         // current selection or focus on any other cell
-        MultipleSelectionModel<TreeItem<S>> sm = getSelectionModel();
+        TableSelectionModel<TreeItem<S>> sm = getSelectionModel();
         FocusModel<TreeItem<S>> fm = getFocusModel();
 
         if (getExpandedItemCount() > 0 &&
                 sm != null && sm.isEmpty() &&
-                fm != null && fm.getFocusedIndex() == -1) {
-            sm.select(0);
+                fm != null && fm.getFocusedItem() == null) {
+            if (sm.isCellSelectionEnabled()) {
+                TreeTableColumn<S,?> firstVisibleColumn = getVisibleLeafColumn(0);
+                if (firstVisibleColumn != null) {
+                    sm.select(0, firstVisibleColumn);
+                }
+            } else {
+                sm.select(0);
+            }
         }
     };
     
