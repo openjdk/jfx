@@ -130,6 +130,7 @@ public class LinuxRpmBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(LinuxRPMBundler.BUNDLE_NAME.getID(), "smokeybundlename");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),

@@ -1,11 +1,11 @@
 Summary: APPLICATION_SUMMARY
-Name: APPLICATION_NAME
+Name: APPLICATION_PACKAGE
 Version: APPLICATION_VERSION
 Release: 1
 License: APPLICATION_LICENSE_TYPE
 Vendor: APPLICATION_VENDOR
 Prefix: /opt
-Provides: APPLICATION_NAME
+Provides: APPLICATION_PACKAGE
 Requires: ld-linux.so.2 libX11.so.6 libXext.so.6 libXi.so.6 libXrender.so.1 libXtst.so.6 libasound.so.2 libc.so.6 libdl.so.2 libgcc_s.so.1 libm.so.6 libpthread.so.0 libthread_db.so.1
 Autoprov: 0
 Autoreq: 0
