@@ -707,6 +707,8 @@ public class TextArea extends TextInputControl {
             case LINE_FOR_OFFSET: //Skin
             case LINE_START: //Skin
             case LINE_END:  //Skin
+            case BOUNDS_FOR_RANGE: //Skin
+            case OFFSET_AT_POINT: //Skin
             default: return super.accGetAttribute(attribute, parameters);
         }
     }

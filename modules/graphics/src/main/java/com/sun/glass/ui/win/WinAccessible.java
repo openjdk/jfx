@@ -1221,7 +1221,13 @@ final class WinAccessible extends PlatformAccessible {
 
     long RangeFromPoint(double x, double y) {
         if (isDisposed()) return 0;
-        return get_DocumentRange();
+        Integer offset = (Integer)getAttribute(OFFSET_AT_POINT, new Point2D(x, y));
+        if (offset != null) {
+            WinTextRangeProvider range = new WinTextRangeProvider(this);
+            range.setRange(offset, offset);
+            return range.getNativeProvider();
+        }
+        return 0;
     }
 
     long get_DocumentRange() {

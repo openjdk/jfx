@@ -106,7 +106,8 @@ IFACEMETHODIMP GlassTextRangeProvider::Clone(ITextRangeProvider **pRetVal)
     if (CheckAndClearException(env)) return E_FAIL;
 
     /* This code is intentionally commented.
-     * The refcount of the a new object is one. Keep it one means JavaFX holds no reference to it.
+     * JavaFX returns a new ITextRangeProvider instance each time.
+     * The caller holds the only reference to this object.
      */
 //    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
 //    if (iUnknown) iUnknown->AddRef();
@@ -158,9 +159,12 @@ IFACEMETHODIMP GlassTextRangeProvider::FindAttribute(TEXTATTRIBUTEID attributeId
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_FindAttribute, attributeId, jVal, backward);
     if (CheckAndClearException(env)) return E_FAIL;
 
-    /* AddRef the result */
-    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-    if (iUnknown) iUnknown->AddRef();
+    /* This code is intentionally commented.
+     * JavaFX returns a new ITextRangeProvider instance each time.
+     * The caller holds the only reference to this object.
+     */
+//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
+//    if (iUnknown) iUnknown->AddRef();
 
     *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
     return S_OK;
@@ -174,9 +178,12 @@ IFACEMETHODIMP GlassTextRangeProvider::FindText(BSTR text, BOOL backward, BOOL i
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_FindText, jText, backward, ignoreCase);
     if (CheckAndClearException(env)) return E_FAIL;
 
-    /* AddRef the result */
-    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-    if (iUnknown) iUnknown->AddRef();
+    /* This code is intentionally commented.
+     * JavaFX returns a new ITextRangeProvider instance each time.
+     * The caller holds the only reference to this object.
+     */
+//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
+//    if (iUnknown) iUnknown->AddRef();
 
     *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
     return S_OK;
@@ -209,7 +216,7 @@ IFACEMETHODIMP GlassTextRangeProvider::GetEnclosingElement(IRawElementProviderSi
     IUnknown* iUnknown = reinterpret_cast<IUnknown*>(ptr);
     if (iUnknown) iUnknown->AddRef();
 
-    *pRetVal = reinterpret_cast<IRawElementProviderSimple*>(iUnknown);
+    *pRetVal = reinterpret_cast<IRawElementProviderSimple*>(ptr);
     return S_OK;
 }
 

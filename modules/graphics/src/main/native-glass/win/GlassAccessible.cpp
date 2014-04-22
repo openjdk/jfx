@@ -623,19 +623,37 @@ IFACEMETHODIMP GlassAccessible::GetVisibleRanges(SAFEARRAY **pRetVal)
 IFACEMETHODIMP GlassAccessible::RangeFromChild(IRawElementProviderSimple *childElement,  ITextRangeProvider **pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
-    HRESULT hr = callLongMethod(mid_RangeFromChild, &ptr, (jlong)childElement);
+    JNIEnv* env = GetEnv();
+    jlong ptr = env->CallLongMethod(m_jAccessible, mid_RangeFromChild, (jlong)childElement);
+    if (CheckAndClearException(env)) return E_FAIL;
+
+    /* This code is intentionally commented.
+     * JavaFX returns a new ITextRangeProvider instance each time.
+     * The caller holds the only reference to this object.
+     */
+//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
+//    if (iUnknown) iUnknown->AddRef();
+
     *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
-    return hr;
+    return S_OK;
 }
 
 IFACEMETHODIMP GlassAccessible::RangeFromPoint(UiaPoint point, ITextRangeProvider **pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
-    HRESULT hr = callLongMethod(mid_RangeFromPoint, &ptr, point.x, point.y);
+    JNIEnv* env = GetEnv();
+    jlong ptr = env->CallLongMethod(m_jAccessible, mid_RangeFromPoint, point.x, point.y);
+    if (CheckAndClearException(env)) return E_FAIL;
+
+    /* This code is intentionally commented.
+     * JavaFX returns a new ITextRangeProvider instance each time.
+     * The caller holds the only reference to this object.
+     */
+//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
+//    if (iUnknown) iUnknown->AddRef();
+
     *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
-    return hr;
+    return S_OK;
 }
 
 IFACEMETHODIMP GlassAccessible::get_DocumentRange(ITextRangeProvider **pRetVal)

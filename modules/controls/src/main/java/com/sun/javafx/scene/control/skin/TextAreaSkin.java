@@ -1382,6 +1382,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             case LINE_FOR_OFFSET:
             case LINE_START:
             case LINE_END:
+            case BOUNDS_FOR_RANGE:
+            case OFFSET_AT_POINT:
                 Text text = getTextNode();
                 return text.accGetAttribute(attribute, parameters);
             default: return super.accGetAttribute(attribute, parameters);

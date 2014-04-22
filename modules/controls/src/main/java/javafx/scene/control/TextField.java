@@ -344,6 +344,8 @@ public class TextField extends TextInputControl {
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.TEXT_FIELD;
+            case BOUNDS_FOR_RANGE: //Skin
+            case OFFSET_AT_POINT: //Skin
             default: return super.accGetAttribute(attribute, parameters);
         }
     }
