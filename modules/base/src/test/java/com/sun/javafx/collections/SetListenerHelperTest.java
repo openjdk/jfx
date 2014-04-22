@@ -38,6 +38,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.BitSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -671,5 +673,70 @@ public class SetListenerHelperTest {
         assertTrue(called.get(3));
     }
 
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInSingleInvalidation() {
+        AtomicBoolean called = new AtomicBoolean(false);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.set(true));
+
+        helper = SetListenerHelper.addListener(helper,(Observable o) -> {throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+
+        assertTrue(called.get());
+    }
+
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInMultipleInvalidation() {
+        AtomicInteger called = new AtomicInteger(0);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.incrementAndGet());
+
+        helper = SetListenerHelper.addListener(helper, (Observable o) -> {throw new RuntimeException();});
+        helper = SetListenerHelper.addListener(helper, (Observable o) -> {throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+
+        assertEquals(2, called.get());
+    }
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInSingleChange() {
+        AtomicBoolean called = new AtomicBoolean(false);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.set(true));
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> {throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+
+        assertTrue(called.get());
+    }
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInMultipleChange() {
+        AtomicInteger called = new AtomicInteger(0);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.incrementAndGet());
+
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> {throw new RuntimeException();});
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> {throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+
+        assertEquals(2, called.get());
+    }
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInMultipleChangeAndInvalidation() {
+        AtomicInteger called = new AtomicInteger(0);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.incrementAndGet());
+
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> { throw new RuntimeException();});
+        helper = SetListenerHelper.addListener(helper, (SetChangeListener.Change<? extends Object> c) -> { throw new RuntimeException();});
+        helper = SetListenerHelper.addListener(helper, (Observable o) -> { throw new RuntimeException();});
+        helper = SetListenerHelper.addListener(helper, (Observable o) -> {throw new RuntimeException();});
+        helper.fireValueChangedEvent(change);
+
+        assertEquals(4, called.get());
+    }
 
 }

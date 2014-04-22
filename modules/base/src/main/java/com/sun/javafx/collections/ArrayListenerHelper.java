@@ -130,7 +130,7 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
             try {
                 listener.invalidated(observable);
             } catch (Exception e) {
-                PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
             }
         }
     }
@@ -169,7 +169,7 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
             try {
                 listener.onChanged(observable, sizeChanged, from, to);
             } catch (Exception e) {
-                PlatformLogger.getLogger("collections").warning("Exception in ArrayChangeListener", e);
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
             }
         }
     }
@@ -329,14 +329,14 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
                     try {
                         curInvalidationList[i].invalidated(observable);
                     } catch (Exception e) {
-                        PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                     }
                 }
                 for (int i = 0; i < curChangeSize; i++) {
                     try {
                         curChangeList[i].onChanged(observable, sizeChanged, from, to);
                     } catch (Exception e) {
-                        PlatformLogger.getLogger("collections").warning("Exception in ArrayChangeListener", e);
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                     }
                 }
             } finally {
