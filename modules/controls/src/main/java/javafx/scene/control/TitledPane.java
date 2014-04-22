@@ -58,6 +58,13 @@ import javafx.scene.accessibility.Role;
  * for this control.  Unexpected behavior will occur because the
  * TitledPane's height changes when it is opened or closed.</p>
  *
+ * <p>Note that whilst TitledPane extends from Labeled, the inherited properties
+ * are used to manipulate the TitledPane header, not the content area itself. If
+ * the intent is to modify the content area, consider using a layout container
+ * such as {@link javafx.scene.layout.StackPane} and setting your actual content
+ * inside of that. You can then manipulate the StackPane to get the layout
+ * results you are after.</p>
+ *
  * <p>Example:</p>
  * <pre><code>
  *  TitledPane t1 = new TitledPane("T1", new Button("B1"));

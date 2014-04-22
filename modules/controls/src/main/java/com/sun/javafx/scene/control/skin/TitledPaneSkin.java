@@ -91,11 +91,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             {
                 getStyleClass().setAll("content");
 
-                // RT-20266: We want to align the content container so the bottom of the content
-                // is at the bottom of the title region.  If we do not do this the
-                // content will be center aligned.
-                setAlignment(Pos.BOTTOM_CENTER);
-
                 if (content != null) {
                     getChildren().setAll(content);
                 }
