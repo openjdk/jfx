@@ -441,7 +441,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * @return display position or Double.NaN if zero is not in current range;
      */
     @Override public double getDisplayPosition(T value) {
-        return Math.ceil(offset + ((value.doubleValue() - currentLowerBound.get()) * getScale()));
+        return Math.round(offset + ((value.doubleValue() - currentLowerBound.get()) * getScale()));
     }
 
     /**
