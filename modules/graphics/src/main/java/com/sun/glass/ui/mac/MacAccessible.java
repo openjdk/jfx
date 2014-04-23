@@ -866,6 +866,17 @@ final class MacAccessible extends PlatformAccessible {
         return macRole;
     }
 
+    private Bounds flipBounds(Bounds bounds) {
+        View view = getRootView((Scene)getAttribute(SCENE));
+        if (view == null) return null;
+        Screen screen = view.getWindow().getScreen();
+        float height = screen.getHeight();
+        return new BoundingBox(bounds.getMinX(),
+                               height - bounds.getMinY() - bounds.getHeight(),
+                               bounds.getWidth(),
+                               bounds.getHeight());
+    }
+
     /* NSAccessibility Protocol - JNI entry points */
     long[] accessibilityAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
@@ -1248,16 +1259,7 @@ final class MacAccessible extends PlatformAccessible {
                  * NSAccessibilityPositionAttribute requires the point relative
                  * to the lower-left corner in screen.
                  */
-                View view = getRootView((Scene)getAttribute(SCENE));
-                if (view != null) {
-                    Screen screen = view.getWindow().getScreen();
-                    float height = screen.getHeight();
-                    Bounds bounds = (Bounds)result;
-                    result = new BoundingBox(bounds.getMinX(),
-                                             height - bounds.getMinY() - bounds.getHeight(),
-                                             bounds.getWidth(),
-                                             bounds.getHeight());
-                }
+                result = flipBounds((Bounds)result);
                 break;
             }
             case NSAccessibilityTitleAttribute: {
@@ -1527,10 +1529,11 @@ final class MacAccessible extends PlatformAccessible {
         Object value = variant.getValue();
         Object result;
         switch (attr) {
-            case NSAccessibilityCellForColumnAndRowParameterizedAttribute:
+            case NSAccessibilityCellForColumnAndRowParameterizedAttribute: {
                 int[] intArray = (int[])value;
                 result = getAttribute(attr.jfxAttr, intArray[1] /*row*/, intArray[0] /*column*/);
                 break;
+            }
             case NSAccessibilityLineForIndexParameterizedAttribute: {
                 if (getAttribute(ROLE) == Role.TEXT_AREA) {
                     result = getAttribute(attr.jfxAttr, value /*charOffset*/);
@@ -1557,13 +1560,34 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityBoundsForRangeParameterizedAttribute: {
-                //TODO
-                result = null;
+                int[] intArray = (int[])value; /* range.location, range.length */
+                Bounds[] bounds = (Bounds[])getAttribute(attr.jfxAttr, intArray[0], intArray[0] + intArray[1] - 1);
+                double left = Double.POSITIVE_INFINITY;
+                double top = Double.POSITIVE_INFINITY;
+                double right = Double.NEGATIVE_INFINITY;
+                double bottom = Double.NEGATIVE_INFINITY;
+                if (bounds != null) {
+                    for (int i = 0; i < bounds.length; i++) {
+                        Bounds b = bounds[i];
+                        if (b != null) {
+                            if (b.getMinX() < left) left = b.getMinX();
+                            if (b.getMinY() < top) top = b.getMinY();
+                            if (b.getMaxX() > right) right = b.getMaxX();
+                            if (b.getMaxY() > bottom) bottom = b.getMaxY();
+                        }
+                    }
+                }
+                result = flipBounds(new BoundingBox(left, top, right - left, bottom - top));
                 break;
             }
             case NSAccessibilityRangeForPositionParameterizedAttribute: {
-                //TODO
-                result = null;
+                float[] floatArray = (float[])value;
+                Integer offset = (Integer)getAttribute(attr.jfxAttr, new Point2D(floatArray[0], floatArray[1]));
+                if (offset != null) {
+                    result = new int[] {offset, 1};
+                } else {
+                    result = null;
+                }
                 break;
             }
             default:

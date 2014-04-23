@@ -171,6 +171,9 @@ class MacVariant {
             case NSArray_id: return longArray;
             case NSArray_int: return intArray;
             case NSValue_range: return new int[] {int1, int2};
+            case NSValue_point: return new float[] {float1, float2};
+            case NSValue_size: return new float[] {float1, float2};
+            case NSValue_rectangle: return new float[] {float1, float2, float3, float4};
             //TODO REST
         }
         return null;
