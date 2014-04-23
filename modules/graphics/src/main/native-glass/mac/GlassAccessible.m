@@ -299,6 +299,13 @@ id variantToID(JNIEnv *env, jobject variant) {
         jfloat height = (*env)->GetFloatField(env, variant, jVariantFloat2);
         return [NSValue valueWithSize: NSMakeSize(width, height)];
     }
+    case com_sun_glass_ui_mac_MacVariant_NSValue_rectangle: {
+        jfloat x = (*env)->GetFloatField(env, variant, jVariantFloat1);
+        jfloat y = (*env)->GetFloatField(env, variant, jVariantFloat2);
+        jfloat width = (*env)->GetFloatField(env, variant, jVariantFloat3);
+        jfloat height = (*env)->GetFloatField(env, variant, jVariantFloat4);
+        return [NSValue valueWithRect: NSMakeRect(x, y, width, height)];
+    }
     case com_sun_glass_ui_mac_MacVariant_NSValue_range: {
         jint start = (*env)->GetIntField(env, variant, jVariantInt1);
         jint length = (*env)->GetIntField(env, variant, jVariantInt2);
@@ -441,6 +448,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initIDs
         if ((*env)->ExceptionCheck(env)) return;
         jVariantFloat2 = (*env)->GetFieldID(env, jVariantClass, "float2", "F");
         if ((*env)->ExceptionCheck(env)) return;
+        jVariantFloat3 = (*env)->GetFieldID(env, jVariantClass, "float3", "F");
+        if ((*env)->ExceptionCheck(env)) return;
+        jVariantFloat4 = (*env)->GetFieldID(env, jVariantClass, "float4", "F");
+        if ((*env)->ExceptionCheck(env)) return;
         jVariantDouble1 = (*env)->GetFieldID(env, jVariantClass, "double1", "D");
         if ((*env)->ExceptionCheck(env)) return;
         jVariantString = (*env)->GetFieldID(env, jVariantClass, "string", "Ljava/lang/String;");
@@ -559,18 +570,30 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacAccessible_idToMacVariant
         NSPoint value = [n pointValue];
         (*env)->SetFloatField(env, jVariant, jVariantFloat1, value.x);
         (*env)->SetFloatField(env, jVariant, jVariantFloat2, value.y);
+        break;
     }
     case com_sun_glass_ui_mac_MacVariant_NSValue_size: {
         NSValue* n = (NSValue*)id;
         NSSize value = [n sizeValue];
         (*env)->SetFloatField(env, jVariant, jVariantFloat1, value.width);
         (*env)->SetFloatField(env, jVariant, jVariantFloat2, value.height);
+        break;
+    }
+    case com_sun_glass_ui_mac_MacVariant_NSValue_rectangle: {
+        NSValue* n = (NSValue*)id;
+        NSRect value = [n rectValue];
+        (*env)->SetFloatField(env, jVariant, jVariantFloat1, value.origin.x);
+        (*env)->SetFloatField(env, jVariant, jVariantFloat2, value.origin.y);
+        (*env)->SetFloatField(env, jVariant, jVariantFloat3, value.size.width);
+        (*env)->SetFloatField(env, jVariant, jVariantFloat4, value.size.height);
+        break;
     }
     case com_sun_glass_ui_mac_MacVariant_NSValue_range: {
         NSValue* n = (NSValue*)id;
         NSRange value = [n rangeValue];
         (*env)->SetIntField(env, jVariant, jVariantInt1, value.location);
         (*env)->SetIntField(env, jVariant, jVariantInt2, value.length);
+        break;
     }
     }
     return jVariant;

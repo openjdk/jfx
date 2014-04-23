@@ -33,23 +33,23 @@ import javafx.geometry.Bounds;
 class MacVariant {
     final static int NSArray_id = 1;
     final static int NSArray_NSString = 2;
-    final static int NSArray_int = 18;
-    final static int NSArray_range = 19;
-    final static int NSAttributedString = 3;
-    final static int NSData = 4;
-    final static int NSDate = 5;
-    final static int NSDictionary = 6;
-    final static int NSNumber_Boolean = 7;
-    final static int NSNumber_Int = 8;
-    final static int NSNumber_Float = 9;
-    final static int NSNumber_Double = 10;
-    final static int NSString = 11;
-    final static int NSURL = 12;
-    final static int NSValue_point = 13;
-    final static int NSValue_size = 14;
-    final static int NSValue_rectangle = 15;
-    final static int NSValue_range = 15;
-    final static int NSObject = 17; /* id */
+    final static int NSArray_int = 3;
+    final static int NSArray_range = 4;
+    final static int NSAttributedString = 5;
+    final static int NSData = 6;
+    final static int NSDate = 7;
+    final static int NSDictionary = 8;
+    final static int NSNumber_Boolean = 9;
+    final static int NSNumber_Int = 10;
+    final static int NSNumber_Float = 11;
+    final static int NSNumber_Double = 12;
+    final static int NSString = 13;
+    final static int NSURL = 14;
+    final static int NSValue_point = 15;
+    final static int NSValue_size = 16;
+    final static int NSValue_rectangle = 17;
+    final static int NSValue_range = 18;
+    final static int NSObject = 19; /* id */
 
     int type;
     long[] longArray;
@@ -57,6 +57,8 @@ class MacVariant {
     String[] stringArray;
     float float1;
     float float2;
+    float float3;
+    float float4;
     int int1;
     int int2;
     String string;
@@ -116,6 +118,17 @@ class MacVariant {
         variant.type = NSValue_point;
         variant.float1 = (float)bounds.getMinX();
         variant.float2 = (float)bounds.getMinY();
+        return variant;
+    }
+
+    static MacVariant createNSValueForRectangle(Object result) {
+        Bounds bounds = (Bounds)result;
+        MacVariant variant = new MacVariant();
+        variant.type = NSValue_rectangle;
+        variant.float1 = (float)bounds.getMinX();
+        variant.float2 = (float)bounds.getMinY();
+        variant.float3 = (float)bounds.getWidth();
+        variant.float4 = (float)bounds.getHeight();
         return variant;
     }
 

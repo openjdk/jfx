@@ -72,6 +72,8 @@ jfieldID jVariantInt2;
 jfieldID jVariantLong1;
 jfieldID jVariantFloat1;
 jfieldID jVariantFloat2;
+jfieldID jVariantFloat3;
+jfieldID jVariantFloat4;
 jfieldID jVariantDouble1;
 jfieldID jVariantString;
 

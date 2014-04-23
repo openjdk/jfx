@@ -162,6 +162,8 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityRangeForLineParameterizedAttribute(LINE_START, MacVariant::createNSValueForRange, MacVariant.NSNumber_Int),
         NSAccessibilityAttributedStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSAttributedString, MacVariant.NSValue_range),
         NSAccessibilityCellForColumnAndRowParameterizedAttribute(CELL_AT_ROW_COLUMN, MacVariant::createNSObject, MacVariant.NSArray_int),
+        NSAccessibilityRangeForPositionParameterizedAttribute(OFFSET_AT_POINT, MacVariant::createNSValueForRange, MacVariant.NSValue_point),
+        NSAccessibilityBoundsForRangeParameterizedAttribute(BOUNDS_FOR_RANGE, MacVariant::createNSValueForRectangle, MacVariant.NSValue_range),
 
         ;long ptr; /* Initialized natively - treat as final */
         Attribute jfxAttr;
@@ -1552,6 +1554,16 @@ final class MacAccessible extends PlatformAccessible {
                     String text = (String)getAttribute(TITLE);
                     result = new int[] {0, text != null ? text.length() : 0};
                 }
+                break;
+            }
+            case NSAccessibilityBoundsForRangeParameterizedAttribute: {
+                //TODO
+                result = null;
+                break;
+            }
+            case NSAccessibilityRangeForPositionParameterizedAttribute: {
+                //TODO
+                result = null;
                 break;
             }
             default:
