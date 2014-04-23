@@ -127,6 +127,7 @@ public class MacAppBundlerTest {
         bundleParams.put(APP_NAME.getID(), "Smoke Test App");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Smoke");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
@@ -165,6 +166,7 @@ public class MacAppBundlerTest {
         bundleParams.put(APP_NAME.getID(), "Quarantined Test App");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Quarantine");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
 
