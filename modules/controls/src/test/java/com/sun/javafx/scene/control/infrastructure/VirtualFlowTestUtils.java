@@ -392,7 +392,7 @@ public class VirtualFlowTestUtils {
         return scrollBar;
     }
 
-    public static TableColumnHeader getTableColumnHeader(Control table, TableColumn<?,?> column) {
+    public static TableColumnHeader getTableColumnHeader(Control table, TableColumnBase<?,?> column) {
         TableHeaderRow headerRow = VirtualFlowTestUtils.getTableHeaderRow(table);
         return findColumnHeader(headerRow.getRootHeader(), column);
     }

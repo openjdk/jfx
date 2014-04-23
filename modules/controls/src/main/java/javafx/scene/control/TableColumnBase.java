@@ -269,6 +269,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * The id of this TableColumnBase. This simple string identifier is useful 
      * for finding a specific TableColumnBase within a UI control that uses 
      * TableColumnBase instances. The default value is {@code null}.
+     *
+     * @defaultValue null
      */
     private StringProperty id;
     public final void setId(String value) { idProperty().set(value); }
@@ -291,10 +293,12 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * <p>
      * Parsing this style might not be supported on some limited
      * platforms. It is recommended to use a standalone CSS file instead.
+     *
+     * @defaultValue empty string
      */
     private StringProperty style;
     public final void setStyle(String value) { styleProperty().set(value); }
-    @Override public final String getStyle() { return style == null ? null : style.get(); }
+    @Override public final String getStyle() { return style == null ? "" : style.get(); }
     public final StringProperty styleProperty() {
         if (style == null) {
             style = new SimpleStringProperty(this, "style");

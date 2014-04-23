@@ -153,6 +153,18 @@ public class TableCell<S,T> extends IndexedCell<T> {
             }
         }
     };
+
+    private final InvalidationListener columnStyleListener = value -> {
+        if (getTableColumn() != null) {
+            possiblySetStyle(getTableColumn().getStyle());
+        }
+    };
+
+    private final InvalidationListener columnIdListener = value -> {
+        if (getTableColumn() != null) {
+            possiblySetId(getTableColumn().getId());
+        }
+    };
     
     private final WeakListChangeListener<TablePosition> weakSelectedListener =
             new WeakListChangeListener<>(selectedListener);
@@ -162,6 +174,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
             new WeakInvalidationListener(tableRowUpdateObserver);
     private final WeakInvalidationListener weakEditingListener = 
             new WeakInvalidationListener(editingListener);
+    private final WeakInvalidationListener weakColumnStyleListener =
+            new WeakInvalidationListener(columnStyleListener);
+    private final WeakInvalidationListener weakColumnIdListener =
+            new WeakInvalidationListener(columnIdListener);
     private final WeakListChangeListener<TableColumn<S,?>> weakVisibleLeafColumnsListener =
             new WeakListChangeListener<>(visibleLeafColumnsListener);
     private final WeakListChangeListener<String> weakColumnStyleClassListener =
@@ -694,6 +710,18 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (oldCol != null) {
             oldCol.getStyleClass().removeListener(weakColumnStyleClassListener);
             getStyleClass().removeAll(oldCol.getStyleClass());
+
+            oldCol.idProperty().removeListener(weakColumnIdListener);
+            oldCol.styleProperty().removeListener(weakColumnStyleListener);
+
+            String id = getId();
+            String style = getStyle();
+            if (id != null && id.equals(oldCol.getId())) {
+                setId(null);
+            }
+            if (style != null && style.equals(oldCol.getStyle())) {
+                setStyle("");
+            }
         }
         
         setTableColumn(col);
@@ -701,6 +729,12 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (col != null) {
             getStyleClass().addAll(col.getStyleClass());
             col.getStyleClass().addListener(weakColumnStyleClassListener);
+
+            col.idProperty().addListener(weakColumnIdListener);
+            col.styleProperty().addListener(weakColumnStyleListener);
+
+            possiblySetId(col.getId());
+            possiblySetStyle(col.getStyle());
         }
     }
 
@@ -715,6 +749,18 @@ public class TableCell<S,T> extends IndexedCell<T> {
     private static final String DEFAULT_STYLE_CLASS = "table-cell";
     private static final PseudoClass PSEUDO_CLASS_LAST_VISIBLE = 
             PseudoClass.getPseudoClass("last-visible");
+
+    private void possiblySetId(String idCandidate) {
+        if (getId() == null || getId().isEmpty()) {
+            setId(idCandidate);
+        }
+    }
+
+    private void possiblySetStyle(String styleCandidate) {
+        if (getStyle() == null || getStyle().isEmpty()) {
+            setStyle(styleCandidate);
+        }
+    }
 
 
 

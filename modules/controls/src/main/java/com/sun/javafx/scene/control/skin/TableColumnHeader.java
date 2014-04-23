@@ -165,6 +165,9 @@ public class TableColumnHeader extends Region {
             changeListenerHandler.registerChangeListener(column.graphicProperty(), "TABLE_COLUMN_GRAPHIC");
 
             column.getStyleClass().addListener(weakStyleClassListener);
+
+            setId(column.getId());
+            setStyle(column.getStyle());
             updateStyleClass();
         }
     }

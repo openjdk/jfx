@@ -25,7 +25,9 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import com.sun.javafx.scene.control.skin.TableViewSkin;
 import com.sun.javafx.scene.control.skin.TreeTableViewSkin;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
@@ -62,6 +64,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  */
@@ -1241,6 +1244,71 @@ public class TreeTableColumnTest {
         assertNull(cell.getText());
     }
 
+    @Test public void test_rt36715_idIsNullAtStartup() {
+        assertNull(column.getId());
+    }
+
+    @Test public void test_rt36715_idIsSettable() {
+        column.setId("test-id");
+        assertEquals("test-id", column.getId());
+    }
+
+    @Test public void test_rt36715_columnHeaderIdMirrorsTableColumnId_setIdBeforeHeaderInstantiation() {
+        test_rt36715_columnHeaderPropertiesMirrorTableColumnProperties(true, true, false, false);
+    }
+
+    @Test public void test_rt36715_columnHeaderIdMirrorsTableColumnId_setIdAfterHeaderInstantiation() {
+        test_rt36715_columnHeaderPropertiesMirrorTableColumnProperties(true, false, false, false);
+    }
+
+    @Test public void test_rt36715_styleIsEmptyStringAtStartup() {
+        assertEquals("", column.getStyle());
+    }
+
+    @Test public void test_rt36715_styleIsSettable() {
+        column.setStyle("-fx-border-color: red");
+        assertEquals("-fx-border-color: red", column.getStyle());
+    }
+
+    @Test public void test_rt36715_columnHeaderStyleMirrorsTableColumnStyle_setStyleBeforeHeaderInstantiation() {
+        test_rt36715_columnHeaderPropertiesMirrorTableColumnProperties(false, false, true, true);
+    }
+
+    @Test public void test_rt36715_columnHeaderStyleMirrorsTableColumnStyle_setStyleAfterHeaderInstantiation() {
+        test_rt36715_columnHeaderPropertiesMirrorTableColumnProperties(false, false, true, false);
+    }
+
+    private void test_rt36715_columnHeaderPropertiesMirrorTableColumnProperties(
+            boolean setId, boolean setIdBeforeHeaderInstantiation,
+            boolean setStyle, boolean setStyleBeforeHeaderInstantiation) {
+        table.getColumns().add(column);
+
+        if (setId && setIdBeforeHeaderInstantiation) {
+            column.setId("test-id");
+        }
+        if (setStyle && setStyleBeforeHeaderInstantiation) {
+            column.setStyle("-fx-border-color: red");
+        }
+
+        StageLoader sl = new StageLoader(table);
+        TableColumnHeader header = VirtualFlowTestUtils.getTableColumnHeader(table, column);
+
+        if (setId && ! setIdBeforeHeaderInstantiation) {
+            column.setId("test-id");
+        }
+        if (setStyle && ! setStyleBeforeHeaderInstantiation) {
+            column.setStyle("-fx-border-color: red");
+        }
+
+        if (setId) {
+            assertEquals("test-id", header.getId());
+        }
+        if (setStyle) {
+            assertEquals("-fx-border-color: red", header.getStyle());
+        }
+
+        sl.dispose();
+    }
     
 
 
