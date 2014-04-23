@@ -35,10 +35,10 @@ class MacVariant {
     final static int NSArray_NSString = 2;
     final static int NSArray_int = 3;
     final static int NSArray_range = 4;
-    final static int NSAttributedString = 5;
+    final static int NSAttributedString = 5; /* Uses string for the text and variantArray for the styles */
     final static int NSData = 6;
     final static int NSDate = 7;
-    final static int NSDictionary = 8;
+    final static int NSDictionary = 8; /* Uses longArray for keys (NSString) and variantArray for values */
     final static int NSNumber_Boolean = 9;
     final static int NSNumber_Int = 10;
     final static int NSNumber_Float = 11;
@@ -55,6 +55,7 @@ class MacVariant {
     long[] longArray;
     int[] intArray;
     String[] stringArray;
+    MacVariant[] variantArray; /* Used by NSAttributedString and NSDictionary */
     float float1;
     float float2;
     float float3;
@@ -64,6 +65,11 @@ class MacVariant {
     String string;
     long long1;
     double double1;
+
+    /* Used when the Variant represents an attribute within a NSAttributedString */
+    int location;
+    int length;
+    long key;
 
     static MacVariant createNSArray(Object result) {
         MacVariant variant = new MacVariant();
@@ -174,6 +180,8 @@ class MacVariant {
             case NSValue_point: return new float[] {float1, float2};
             case NSValue_size: return new float[] {float1, float2};
             case NSValue_rectangle: return new float[] {float1, float2, float3, float4};
+            case NSString: return string;
+            case NSAttributedString: return string;
             //TODO REST
         }
         return null;
@@ -186,6 +194,8 @@ class MacVariant {
             case NSArray_id: v = Arrays.toString((long[])v); break;
             case NSArray_int: v = Arrays.toString((int[])v); break;
             case NSValue_range: v = Arrays.toString((int[])v); break;
+            case NSAttributedString: v += Arrays.toString(variantArray); break;
+            case NSDictionary: v = "keys: " + Arrays.toString(longArray) + " values: " + Arrays.toString(variantArray);
         }
         return "MacVariant type: " + type + " value " + v;
     }

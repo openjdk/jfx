@@ -224,13 +224,23 @@
 
 @end
 
-NSArray* jArrayToNSArray(JNIEnv *env, jarray srcArray, id (^mapper)(void*, CFIndex)) {
+NSArray* jArrayToNSArray(JNIEnv *env, jarray srcArray, jMapper mapper) {
     if (srcArray == NULL) return NULL;
     jsize size = (*env)->GetArrayLength(env, srcArray);
 
     // Create an autoreleased mutable array
     NSMutableArray *array = [NSMutableArray arrayWithCapacity: size];
     if (size <= 0) return array;
+
+    /* Do not use GetPrimitiveArrayCritical, variantToID() can be used recursively */
+    if (mapper == jVariantToID) {
+        for (CFIndex index = 0; index < size; index++) {
+            jobject element = (*env)->GetObjectArrayElement(env, srcArray, index);
+            if ((*env)->ExceptionCheck(env)) return NULL;
+            [array addObject: variantToID(env, element)];
+        }
+        return array;
+    }
 
     void* ptr = (*env)->GetPrimitiveArrayCritical(env, srcArray, 0);
     if (ptr) {
@@ -281,11 +291,41 @@ id variantToID(JNIEnv *env, jobject variant) {
         jstring string = (*env)->GetObjectField(env, variant, jVariantString);
         return jStringToNSString(env, string);
     }
+    case com_sun_glass_ui_mac_MacVariant_NSDictionary: {
+        jlongArray longArray = (*env)->GetObjectField(env, variant, jVariantLongArray);
+        jobjectArray objectArray = (*env)->GetObjectField(env, variant, jVariantVariantArray);
+        NSArray* keys = jArrayToNSArray(env, longArray, jLongToID);
+        NSArray* values = jArrayToNSArray(env, objectArray, jVariantToID);
+        if (keys != NULL && values != NULL && [keys count] == [values count]) {
+            return [NSDictionary dictionaryWithObjects: values forKeys: keys]; 
+        }
+        return NULL;
+    }
     case com_sun_glass_ui_mac_MacVariant_NSAttributedString: {
         jstring string = (*env)->GetObjectField(env, variant, jVariantString);
         NSString* nsString = jStringToNSString(env, string);
         if (nsString == NULL) return NULL;
-        NSAttributedString *attrString = [[NSAttributedString alloc] initWithString:nsString];
+        NSMutableAttributedString *attrString = [[NSMutableAttributedString alloc] initWithString:nsString];
+        jobjectArray stylesArray = (*env)->GetObjectField(env, variant, jVariantVariantArray);
+        if (stylesArray) {
+            /* Do not use GetPrimitiveArrayCritical for stylesArray */
+            jsize stylesCount = (*env)->GetArrayLength(env, stylesArray);
+
+            for (jsize index = 0; index < stylesCount; index++) {
+                /* jStyle is a special MacVariant with key, location, and length */
+                jobject jStyle = (*env)->GetObjectArrayElement(env, stylesArray, index);
+                if ((*env)->ExceptionCheck(env)) return NULL;
+                id value = variantToID(env, jStyle);
+                if (value) {
+                    jint location = (*env)->GetIntField(env, jStyle, jVariantLocation);
+                    jint length = (*env)->GetIntField(env, jStyle, jVariantLength);
+                    jlong key = (*env)->GetLongField(env, jStyle, jVariantKey);
+                    if (key) {
+                        [attrString addAttribute: (NSString *)key value: value range: NSMakeRange(location, length)];
+                    }
+                }
+            }
+        }
         return [attrString autorelease];
     }
     case com_sun_glass_ui_mac_MacVariant_NSValue_point: {
@@ -455,6 +495,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initIDs
         if ((*env)->ExceptionCheck(env)) return;
         jVariantString = (*env)->GetFieldID(env, jVariantClass, "string", "Ljava/lang/String;");
         if ((*env)->ExceptionCheck(env)) return;
+        jVariantVariantArray = (*env)->GetFieldID(env, jVariantClass, "variantArray", "[Lcom/sun/glass/ui/mac/MacVariant;");
+        if ((*env)->ExceptionCheck(env)) return;
+        jVariantLocation = (*env)->GetFieldID(env, jVariantClass, "location", "I");
+        if ((*env)->ExceptionCheck(env)) return;
+        jVariantLength = (*env)->GetFieldID(env, jVariantClass, "length", "I");
+        if ((*env)->ExceptionCheck(env)) return;
+        jVariantKey = (*env)->GetFieldID(env, jVariantClass, "key", "J");
+        if ((*env)->ExceptionCheck(env)) return;
     }
 
     jLongToID = ^(void* data, CFIndex index) {
@@ -464,6 +512,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initIDs
     jIntToNSNumber = ^(void* data, CFIndex index) {
         return (id)[NSNumber numberWithInt: ((jint*)data)[index]];
     };
+
+    /* Special case, handled internally in jArrayToNSArray() */
+    jVariantToID = NULL;
 }
 
 /*

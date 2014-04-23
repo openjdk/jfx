@@ -34,11 +34,17 @@
 - (jobject)getJAccessible;
 @end
 
-id (^jLongToID)(void*, CFIndex);
-id (^jIntToNSNumber)(void*, CFIndex);
+/* The following blocks are used by jArrayToNSArray() to convert java types
+ * within a java array to a native type to be stored in the resulting NSArray.
+ */
+typedef id (^jMapper)(void*, CFIndex);
+jMapper jLongToID;
+jMapper jIntToNSNumber;
+jMapper jVariantToID;
+
 id variantToID(JNIEnv *env, jobject variant);
 NSString* jStringToNSString(JNIEnv *env, jstring string);
-NSArray* jArrayToNSArray(JNIEnv *env, jarray srcArray, id (^)(void*, CFIndex));
+NSArray* jArrayToNSArray(JNIEnv *env, jarray srcArray, jMapper);
 
 /* Accessible class IDs for classes, methods, and fields (this could be in GlassStatics.h) */
 
@@ -76,4 +82,8 @@ jfieldID jVariantFloat3;
 jfieldID jVariantFloat4;
 jfieldID jVariantDouble1;
 jfieldID jVariantString;
+jfieldID jVariantVariantArray;
+jfieldID jVariantLocation;
+jfieldID jVariantLength;
+jfieldID jVariantKey;
 

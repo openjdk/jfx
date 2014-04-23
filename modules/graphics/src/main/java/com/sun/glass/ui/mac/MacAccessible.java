@@ -45,6 +45,7 @@ import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.text.Font;
 import com.sun.glass.ui.PlatformAccessible;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
@@ -77,6 +78,9 @@ final class MacAccessible extends PlatformAccessible {
         }
         if (!_initEnum("MacOrientation")) {
             System.err.println("Fail linking MacOrientation");
+        }
+        if (!_initEnum("MacText")) {
+            System.err.println("Fail linking MacText");
         }
     }
 
@@ -570,6 +574,20 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityHorizontalOrientationValue,
         NSAccessibilityVerticalOrientationValue,
         NSAccessibilityUnknownOrientationValue,
+        ;long ptr; /* Initialized natively - treat as final */
+    }
+
+    static enum MacText {
+        NSAccessibilityBackgroundColorTextAttribute,
+        NSAccessibilityForegroundColorTextAttribute,
+        NSAccessibilityUnderlineTextAttribute,
+        NSAccessibilityStrikethroughTextAttribute,
+        NSAccessibilityMarkedMisspelledTextAttribute,
+        NSAccessibilityFontTextAttribute,
+        NSAccessibilityFontNameKey,
+        NSAccessibilityFontFamilyKey,
+        NSAccessibilityVisibleNameKey,
+        NSAccessibilityFontSizeKey,
         ;long ptr; /* Initialized natively - treat as final */
     }
 
@@ -1595,7 +1613,36 @@ final class MacAccessible extends PlatformAccessible {
         }
         if (result == null) return null;
         switch (attr) {
-            case NSAccessibilityAttributedStringForRangeParameterizedAttribute:
+            case NSAccessibilityAttributedStringForRangeParameterizedAttribute: {
+                String text = (String)result;
+                text = text.substring(variant.int1, variant.int1 + variant.int2);
+                List<MacVariant> styles = new ArrayList<>();
+                Font font = (Font)getAttribute(FONT);
+                if (font != null) {
+                    MacVariant fontDict = new MacVariant();
+                    fontDict.type = MacVariant.NSDictionary;
+                    fontDict.longArray = new long[] {
+                        MacText.NSAccessibilityFontNameKey.ptr,
+                        MacText.NSAccessibilityFontFamilyKey.ptr,
+                        MacText.NSAccessibilityVisibleNameKey.ptr,
+                        MacText.NSAccessibilityFontSizeKey.ptr,
+                    };
+                    fontDict.variantArray = new MacVariant[] {
+                        MacVariant.createNSString(font.getName()),
+                        MacVariant.createNSString(font.getFamily()),
+                        MacVariant.createNSString(font.getName()),
+                        MacVariant.createNSNumberForDouble(font.getSize()),
+                    };
+
+                    fontDict.key = MacText.NSAccessibilityFontTextAttribute.ptr;
+                    fontDict.location = 0;
+                    fontDict.length = text.length();
+                    styles.add(fontDict);
+                }
+                MacVariant attrString = attr.map.apply(text);
+                attrString.variantArray = styles.toArray(new MacVariant[0]);
+                return attrString;
+            }
             case NSAccessibilityStringForRangeParameterizedAttribute: {
                 String text = (String)result;
                 result = text.substring(variant.int1, variant.int1 + variant.int2);
