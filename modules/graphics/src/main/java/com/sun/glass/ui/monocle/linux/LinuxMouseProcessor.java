@@ -34,14 +34,18 @@ public class LinuxMouseProcessor implements LinuxInputProcessor {
     private MouseInput mouse = MouseInput.getInstance();
     private MouseState previousState = new MouseState();
     private MouseState state = new MouseState();
-    private boolean processedFirstEvent;
+    /**
+     * does previousState hold an update that has not yet been sent to
+     * MouseInput?
+     */
+    private boolean hasPendingState;
 
     @Override
     public void processEvents(LinuxInputDevice device) {
         LinuxEventBuffer buffer = device.getBuffer();
         mouse.getState(previousState);
         mouse.getState(state);
-        processedFirstEvent = false;
+        hasPendingState = false;
         while (buffer.hasNextEvent()) {
             switch (buffer.getEventType()) {
                 case Input.EV_REL:
@@ -95,26 +99,24 @@ public class LinuxMouseProcessor implements LinuxInputProcessor {
             }
             buffer.nextEvent();
         }
-        mouse.setState(previousState, false);
+        if (hasPendingState) {
+            mouse.setState(previousState, false);
+        }
     }
 
     private void sendEvent() {
-        if (!processedFirstEvent) {
-            mouse.getState(previousState);
-            if (state.canBeFoldedWith(previousState)) {
-                processedFirstEvent = true;
-            } else {
-                mouse.setState(state, false);
-            }
-        }
-        if (processedFirstEvent) {
+        if (state.canBeFoldedWith(previousState)) {
             // fold together MouseStates that differ only in their coordinates
-            if (!state.canBeFoldedWith(previousState)) {
-                // the events are different. Send "previousState".
-                mouse.setState(previousState, false);
-            }
+            hasPendingState = true;
         } else {
-            processedFirstEvent = true;
+            // the events are different.
+            if (hasPendingState) {
+                // send and clear the pending state
+                mouse.setState(previousState, false);
+                hasPendingState = false;
+            }
+            // send this event
+            mouse.setState(state, false);
         }
         state.copyTo(previousState);
     }
