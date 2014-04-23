@@ -40,8 +40,9 @@ import javafx.scene.layout.*;
 import org.w3c.dom.events.EventTarget;
 import netscape.javascript.JSObject;
 import javafx.application.Platform;
-import javafx.scene.input.KeyCode;
 import javafx.scene.control.Control;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.KeyCode;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Worker.State;
@@ -92,6 +93,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     /** The element (normally a div or pre) which cursor navigation is relative to.
      * Cursor motion is relative to the start of this element.
      * "Erase screen" only erases in this element.
+     * @return the cursor home location is the start of this element
      */
     public Element getCursorHome() { return cursorHome; }
     public void setCursorHome(Element cursorHome) { this.cursorHome = cursorHome; }
@@ -194,17 +196,20 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
  
     /** The output position (cursor).
      * Insert output before this node.
-     * (For now always (???) equal to inputLine except for temporary updates,
-     * but in the future they may be separated.)
-     * (For now, never null, but in the future, if it is null, it means
-     * append output to the end of the output container's children.)
+     * Usually equal to inputLine except for temporary updates.
+     * @return the current output position. If null, this means append
+     * output to the end of the output container's children.
+     * (FIXME: The null case is not fully debugged.)
      */
     public Node getOutputPosition() { return outputBefore; }
     org.w3c.dom.Node outputBefore;
     public void setOutputPosition(Node node) {
         outputBefore = node; }
 
-    /** The parent node of the output position. */
+    /** The parent node of the output position.
+     * @return the output container - new output is by default inserted into
+     * this Node, at the position indicated by {@code getOutputPostion()}.
+     */
     public Node getOutputContainer() { return outputContainer; }
     Node outputContainer;
 
@@ -359,10 +364,6 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     protected String handleEnter (KeyEvent ke) {
-        /*
-        javafx.scene.input.Clipboard cc = javafx.scene.input.Clipboard.getSystemClipboard();
-        System.err.println("SCLIP has-h:"+cc.hasHtml()+" has-s:"+cc.hasString()+" str:"+cc.getString());
-        */
         String text = grabInput(inputLine);
         nextInputLine();
         //super.processKeyEvent(ke);
@@ -370,11 +371,16 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     protected void nextInputLine() {
+        Node outputSave = outputBefore;
+        Node containerSave = outputContainer;
+        boolean normal = outputSave == inputLine;
         outputBefore = inputLine.getNextSibling();
+        outputContainer = inputLine.getParentNode();
         setEditable(false);
         insertBreak();
         addInputLine();
-        outputBefore = inputLine;
+        outputBefore = normal ? inputLine : outputSave;
+        outputContainer = containerSave;
     }
 
     public void insertOutput (final String str, final char kind) {
@@ -1095,7 +1101,8 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     /** Return column number following a tab at initial {@code col}.
-     * Both {@code col} and result are 0-origin.
+     * @param col initial column, 0-origin
+     * @return column number (0-origin) after a tab
      * Default implementation assumes tabs every 8 columns.
      */
     protected int nextTabCol(int col) {
@@ -1223,8 +1230,16 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
                     break;
                 case '\n':
                     insertSimpleOutput(str, prevEnd, i, kind, curColumn);
-                    if (outputLFasCRLF())
-                        cursorLineStart(1);
+                    if (outputLFasCRLF()) {
+                        if (inInsertMode()) {
+                            insertRawOutput("\n");
+                            if (currentCursorLine >= 0)
+                                currentCursorLine++;
+                            currentCursorColumn = 0;
+                        } else {
+                            cursorLineStart(1);
+                        }
+                    }
                     // Only scroll if scrollRegionBottom explicitly set to a value >= 0.
                     else if (getCursorLine() == scrollRegionBottom-1)
                         scrollForward(1);
@@ -1453,10 +1468,18 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
                     processInputCharacters(chars);
             }
             ke.consume();
-        } else if (ke.getEventType() == KeyEvent.KEY_TYPED
-                   && "\r".equals(ke.getCharacter())) {
-            enter(ke);
-            ke.consume();
+        } else {
+            if (ke.getEventType() == KeyEvent.KEY_TYPED
+                && "\r".equals(ke.getCharacter())) {
+                enter(ke);
+                ke.consume();
+            } else if (ke.getEventType() == KeyEvent.KEY_PRESSED && code == KeyCode.V && ke.isControlDown()) {
+                javafx.scene.input.Clipboard cc = javafx.scene.input.Clipboard.getSystemClipboard();
+                System.err.println("SCLIP has-h:"+cc.hasHtml()+" has-s:"+cc.hasString()+" str:"+cc.getString());
+                //ke.consume();
+            } else {
+                //WTDebug.println("handle "+ke+" char:"+WTDebug.toQuoted(ke.getCharacter())+" code:"+ke.getCode());
+            }
         }
     }
 
@@ -1497,13 +1520,20 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         return "span".equals(tag);
     }
 
-    /** Move forwards relative to cursorHome. */
+    /** Move forwards relative to cursorHome.
+     * Add spaces as needed.
+     * @param goalLine number of lines (non-negative) to move down from startNode
+     * @param goalColumn number of columns to move right from the start of teh goalLine
+     */
     public void moveTo(int goalLine, int goalColumn) {
         moveTo(cursorHome, goalLine, goalColumn, true);
     }
 
     /** Move forwards relative to startNode.
-     * Currently, assumes startNode==cursorHome; that may change.
+     * @param startNode the origin (zero) location - usually this is {@code cursorHome}
+     * @param goalLine number of lines (non-negative) to move down from startNode
+     * @param goalColumn number of columns to move right from the start of teh goalLine
+     * @param addSpaceAsNeeded if we should add blank linesor spaces if needed to move as requested; otherwise stop at the last existing line, or (just past the) last existing contents of the goalLine
      */
     public void moveTo(Node startNode, int goalLine, int goalColumn, boolean addSpaceAsNeeded) {
         //WTDebug.println("move start:"+WTDebug.pnode(startNode)+" gl:"+goalLine+" gc:"+goalColumn+" inputL:"+WTDebug.pnode(inputLine));
@@ -1707,7 +1737,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     /** Returns number of columns needed for argument.
-     * Currently always returns 1.
+     * Currently always returns 1 (except for 'zero width space').
      * However, in the future we should handle zero-width characters
      * as well as double-width characters, and composing charcters.
      */
