@@ -156,6 +156,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
      * we want selection/copy to not include the inserted newline.  Better
      * would be for windows re-size to re-calculate the breaks.)
      * Initial value is true.
+     * @param value iff if we should automatically wrap
      */
     public void setWrapOnLongLines(boolean value) {
         wrapOnLongLines = value;
@@ -185,14 +186,18 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         currentCursorColumn = (int) (lcol >> 1) & 0x7fffffff;
     }
 
-    /** Get line of current cursor position, starting with 0 at the top. */
+    /** Get line of current cursor position.
+     * @return current line number, 0-origin (i.e. 0 is the top line),
+     *   relative to cursorHome. */
     public int getCursorLine() {
         if (currentCursorLine < 0)
             updateCursorCache();
         return currentCursorLine;
     }
 
-    /** Get column of current cursor position, starting with 0 at the left. */
+    /** Get column of current cursor position.
+     * @return current column number, 0-origin (i.e. 0 is the left column),
+     *   relative to cursorHome. */
     public int getCursorColumn() {
         if (currentCursorColumn < 0)
             updateCursorCache();
@@ -288,7 +293,9 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     public static final String XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
     public static final String htmlNamespace = USE_XHTML ? XHTML_NAMESPACE : "";
 
-    /** URL for the initial page to be loaded. */
+    /** URL for the initial page to be loaded.
+     * @return the URL of the initial page resource as a String
+     */
     protected String pageUrl() {
         String rname = USE_XHTML ? "repl.xml" : "repl.html";
         java.net.URL rurl = WebTerminal.class.getResource(rname);
@@ -300,6 +307,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     /** Load the start page.  Do not call directly.
      * Can be overridden to load a start page from a String:
      * webEngibe.loadContent("initialContent", "MIME/type");
+     * @param webEngine the WebEngin this WebView is using.
      */
     protected void loadPage(WebEngine webEngine) {
         webEngine.load(pageUrl());
@@ -318,7 +326,9 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         outputContainer = initial;
     }
 
-    /** For debugging.*/
+    /** Get current contents as an HTML string. For debugging.
+     * @return the contents of teh {@code bodyNode} as HTML/XML.
+     */
     public String getHTMLText() {
         if (true) {
             return NodeWriter.writeNodeToString(bodyNode);
@@ -1378,12 +1388,19 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     /** Insert a node at (before) current position.
-     * Caller needs to update cursor cache or call resetCursorCache. */
+     * Caller needs to update cursor cache or call resetCursorCache.
+     * @param node to be inserted at current output position.
+     *   (Should not have any parents or siblings.)
+     */
     public void insertNode (org.w3c.dom.Node node) {
         outputContainer.insertBefore(node, outputBefore);
     }
 
-    /** Insert element at current position, and move to start of element. */
+    /** Insert element at current position, and move to start of element.
+     * @param element to be inserted at current output position.
+     *  This element should have no parents *or* children.
+     *  It becomes the new outputContainer.
+     */
     public void pushIntoElement(Element element) {
         resetCursorCache(); // FIXME - not needed if element is span, say.
         insertNode(element);
@@ -1528,7 +1545,13 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
 
     /** True if an img/object/a element.
      * These are treated as black boxes similar to a single
-     * 1-column character. */
+     * 1-column character.
+     * @param node an Element we want to check
+     * @return true iff the {@code node} shoudl be treated as a
+     *  block-box embedded object.
+     *  For now returns true for {@code img}, {@code a}, and {@code object}.
+     *  (We should perhaps treat {@code a} as text.)
+     */
     public boolean isObjectElement(Element node) {
         String tag = node.getTagName();
         return "a".equals(tag) || "object".equals(tag) || "img".equals(tag);
@@ -1787,6 +1810,12 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
      * initial part of a compound character, including a start surrogate.
      * Compound character support is not implemented yet,
      * nor is support for zero-width or double-width characters.
+     * @param ch the next character to output
+     * @param startState the column state before emitting {@code ch}
+     *   This is basically the number of columns, but in the future we
+     *   might use the high-order bits for flags, fractional columns etc.
+     * @return the column state after {@code ch} is appended,
+     *  or -1 after a character that starts a new line
      */
     protected int updateColumn(char ch, int startState) {
         if (ch == '\n' || ch == '\r' || ch == '\f')
