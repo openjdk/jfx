@@ -75,15 +75,46 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
 
     public boolean outputLFasCRLF() { return isLineEditing(); }
 
+    /** Input lines that have not been processed yet.
+     * In some modes we support enhanced type-ahead: Input lines are queued
+     * up and only released when requested.  This allows output from an
+     * earlier command, as well as prompt text for a later command, to
+     * be inserted before a later input-line.
+     */
+    Node pendingInput;
+
     /** The current input line.
      * Note there is always a current (active) input line, even if the
      * inferior isn't ready for it, and hasn't emitted a prompt.
      * This is to support type-ahead, as well as application code
-     * reading from standard input.  (FUTURE - untested.)
+     * reading from standard input.
+     * @return the currently active input line
      */
     public Element getInputLine() { return inputLine; }
     public void setInputLine(Element inputLine) { this.inputLine = inputLine; }
     Element inputLine;
+
+    public String getPendingInput() {
+	String text = null;
+	while (pendingInput != getInputLine() && text == null) {
+	    if (isSpanNode(pendingInput)) {
+		text = grabInput((Element) pendingInput);
+		if (text.length() == 0)
+		    text = null;
+	    } else if (isBreakNode(pendingInput)) {
+		text = "\n";
+	    } else if (pendingInput instanceof Text) {
+		text = ((Text) pendingInput).getData();
+		if (text.length() == 0)
+		    text = null;
+	    } else {
+		//WTDebug.println("UNEXPECTED NODE: "+WTDebug.pnode(pendingInput));
+	    }
+	    pendingInput = pendingInput.getNextSibling();
+	}
+	setOutputPosition(pendingInput);
+	return text;
+    }
 
     Document documentNode;
     Element bodyNode;
@@ -224,6 +255,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     protected void loadSucceeded() {
         addInputLine();
         outputBefore = inputLine;
+        pendingInput = inputLine;
     }
 
     public WebTerminal() {
