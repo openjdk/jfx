@@ -990,7 +990,7 @@ public class PackagerLib {
             out.println("</security>");
         }
 
-        if (deployParams.needShortcut) {
+        if (Boolean.TRUE.equals(deployParams.needShortcut)) {
             out.println("  <shortcut><desktop/></shortcut>");
 
 //            //TODO: Add support for a more sophisticated shortcut tag.

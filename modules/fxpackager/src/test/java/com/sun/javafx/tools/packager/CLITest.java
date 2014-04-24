@@ -69,7 +69,7 @@ public class CLITest {
     }
 
     @Test
-    public void addRuntimeBundleParam() throws Exception {
+    public void smokeParams() throws Exception {
         com.sun.javafx.tools.packager.Main.main("-deploy",
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
@@ -78,6 +78,9 @@ public class CLITest {
                 "-appclass", "hello.TestPackager",
                 "-native", "image",
                 "-name", "SimpleTest",
+                "-BOptionThatWillNeverExist=true",
+                "-BdesktopHint=false",
+                "-BshortcutHint=true",
                 "-Bruntime=" + System.getProperty("java.home"));
     }
 
