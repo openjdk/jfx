@@ -161,7 +161,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     protected void init(final C control) {
         // init the VirtualFlow
         flow.setPannable(IS_PANNABLE);
-        flow.setFocusTraversable(control.isFocusTraversable());
         flow.setCreateCell(flow1 -> TableViewSkinBase.this.createCell());
         
         /*
@@ -217,7 +216,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
 
         registerChangeListener(rowFactoryProperty(), "ROW_FACTORY");
         registerChangeListener(placeholderProperty(), "PLACEHOLDER");
-        registerChangeListener(control.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(control.widthProperty(), "WIDTH");
         registerChangeListener(flow.getVbar().visibleProperty(), "VBAR_VISIBLE");
     }
@@ -385,8 +383,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             }
         } else if ("PLACEHOLDER".equals(p)) {
             updatePlaceholderRegionVisibility();
-        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
-            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
 //        } else if ("WIDTH".equals(p)) {
 //            tableHeaderRow.setTablePadding(getSkinnable().getInsets());
         } else if ("VBAR_VISIBLE".equals(p)) {
