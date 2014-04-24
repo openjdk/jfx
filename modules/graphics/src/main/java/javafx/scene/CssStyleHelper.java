@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.sun.javafx.scene.CssFlags;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
@@ -109,7 +108,7 @@ final class CssStyleHelper {
         final PseudoClassState[] triggerStates = new PseudoClassState[depth];
 
         final StyleMap styleMap =
-                StyleManager.getInstance().findMatchingStyles(node, triggerStates);
+                StyleManager.getInstance().findMatchingStyles(node, node.getSubScene(), triggerStates);
 
         //
         // reuse the existing styleHelper if possible.
@@ -392,7 +391,8 @@ final class CssStyleHelper {
 
         private StyleMap getStyleMap(Styleable styleable) {
             if (styleable != null) {
-                return StyleManager.getInstance().getStyleMap(styleable, smapId);
+                SubScene subScene =  (styleable instanceof Node) ? ((Node) styleable).getSubScene() : null;
+                return StyleManager.getInstance().getStyleMap(styleable, subScene, smapId);
             } else {
                 return StyleMap.EMPTY_MAP;
             }
@@ -578,7 +578,7 @@ final class CssStyleHelper {
         // Styles that need lookup can be cached provided none of the styles
         // are from Node.style.
         //
-        final StyleCache sharedCache = StyleManager.getInstance().getSharedCache(node, cacheContainer.styleCacheKey);
+        final StyleCache sharedCache = StyleManager.getInstance().getSharedCache(node, node.getSubScene(), cacheContainer.styleCacheKey);
 
         if (sharedCache == null) {
             // Shared cache was blown away by StyleManager.

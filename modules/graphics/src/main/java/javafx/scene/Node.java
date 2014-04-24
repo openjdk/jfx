@@ -8759,6 +8759,13 @@ public abstract class Node implements EventTarget, Styleable {
                 }
             }
 
+        } else if (this instanceof SubScene) {
+
+            final Parent subSceneRoot = ((SubScene)this).getRoot();
+            if (subSceneRoot != null) {
+                subSceneRoot.impl_reapplyCSS();
+            }
+
         } else if (styleHelper == null) {
             //
             // If this is not a Parent and there is no styleHelper, then the CSS state is "CLEAN"

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,12 @@ import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import javafx.scene.control.Button;
-import javafx.scene.control.Separator;
+import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
@@ -75,7 +77,15 @@ public class HelloCSS extends Application {
         swapTest.setLayoutX(25);
         swapTest.setLayoutY(110);
 
-        ((Group)scene.getRoot()).getChildren().addAll(rect,rect2,swapTest);
+        VBox subSceneRoot = new VBox(5, new Label("Caspian style button in a SubScene"), new Button("CASPIAN"));
+        subSceneRoot.setStyle("-fx-border-color: white; -fx-alignment: center;");
+        SubScene caspianSubScene = new SubScene(subSceneRoot, 300, 100);
+        caspianSubScene.setUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
+
+        caspianSubScene.setLayoutX(25);
+        caspianSubScene.setLayoutY(210);
+
+        ((Group)scene.getRoot()).getChildren().addAll(rect,rect2,swapTest,caspianSubScene);
         stage.setScene(scene);
         stage.show();
     }

@@ -1506,6 +1506,56 @@ public class Scene implements EventTarget {
      */
     public final ObservableList<String> getStylesheets() { return stylesheets; }
 
+    private ObjectProperty<String> userAgentStylesheet = null;
+
+    /**
+     * @return the userAgentStylesheet property.
+     * @see #getUserAgentStylesheet()
+     * @see #setUserAgentStylesheet(String)
+     */
+    public ObjectProperty<String> userAgentStylesheetProperty() {
+        if (userAgentStylesheet == null) {
+            userAgentStylesheet = new SimpleObjectProperty<String>(Scene.this, "userAgentStylesheet", null) {
+                @Override protected void invalidated() {
+                    StyleManager.getInstance().forget(Scene.this);
+                    getRoot().impl_reapplyCSS();
+                }
+            };
+        }
+        return userAgentStylesheet;
+    }
+
+    /**
+     * Get the URL of the user-agent stylesheet that will be used by this Scene. If the URL has not been set,
+     * the platform-default user-agent stylesheet will be used.
+     * <p>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
+     * </p>
+     * @return The URL of the user-agent stylesheet that will be used by this Scene,
+     * or null if has not been set.
+     */
+    public String getUserAgentStylesheet() {
+        return userAgentStylesheet == null ? null : userAgentStylesheet.get();
+    }
+
+    /**
+     * Set the URL of the user-agent stylesheet that will be used by this Scene in place of the
+     * the platform-default user-agent stylesheet. If the URL does not resolve to a valid location,
+     * the platform-default user-agent stylesheet will be used.
+     * <p>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
+     * </p>
+     * @param url The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
+     * does not have a [scheme:] component, the URL is considered to be the [path] component only.
+     * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
+     * the root of the application's classpath.
+     */
+    public void setUserAgentStylesheet(String url) {
+        userAgentStylesheetProperty().set(url);
+    }
+
     /**
      * Retrieves the depth buffer attribute for this scene.
      * @return the depth buffer attribute.

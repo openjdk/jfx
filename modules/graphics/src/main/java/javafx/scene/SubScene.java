@@ -25,16 +25,14 @@
 
 package javafx.scene;
 
+import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.SubSceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.*;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
@@ -242,6 +240,7 @@ public class SubScene extends Node {
                     _value.setDisabled(isDisabled());
 
                     if (oldRoot != null) {
+                        cssForget(StyleManager.getInstance(),oldRoot);
                         oldRoot.setScenes(null, null);
                     }
                     oldRoot = _value;
@@ -576,6 +575,68 @@ public class SubScene extends Node {
             if (cssFlag == CssFlags.CLEAN) { cssFlag = CssFlags.UPDATE; }
         }
         super.processCSS();
+    }
+
+    private ObjectProperty<String> userAgentStylesheet = null;
+    /**
+     * @return the userAgentStylesheet property.
+     * @see #getUserAgentStylesheet()
+     * @see #setUserAgentStylesheet(String)
+     */
+    public ObjectProperty<String> userAgentStylesheetProperty() {
+        if (userAgentStylesheet == null) {
+            userAgentStylesheet = new SimpleObjectProperty<String>(SubScene.this, "userAgentStylesheet", null) {
+                @Override protected void invalidated() {
+                    cssForget(StyleManager.getInstance(), getRoot());
+                    impl_reapplyCSS();
+                }
+            };
+        }
+        return userAgentStylesheet;
+    }
+
+    private void cssForget(final StyleManager styleManager, final Parent parent) {
+
+        if (parent == null) return;
+        styleManager.forget(parent);
+
+        for(Node child : parent.getChildren()) {
+            if (child instanceof Parent) {
+                cssForget(styleManager, (Parent)child);
+            }
+        }
+
+     }
+
+    /**
+     * Get the URL of the user-agent stylesheet that will be used by this SubScene. If the URL has not been set,
+     * the platform-default user-agent stylesheet will be used.
+     * <p>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
+     * </p>
+     * @return The URL of the user-agent stylesheet that will be used by this SubScene,
+     * or null if has not been set.
+     */
+    public String getUserAgentStylesheet() {
+        return userAgentStylesheet == null ? null : userAgentStylesheet.get();
+    }
+
+    /**
+     * Set the URL of the user-agent stylesheet that will be used by this SubScene in place of the
+     * the platform-default user-agent stylesheet. If the URL does not resolve to a valid location,
+     * the platform-default user-agent stylesheet will be used.
+     * <p>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
+     * </p>
+     * @param url The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
+     * does not have a [scheme:] component, the URL is considered to be the [path] component only.
+     * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
+     * the root of the application's classpath.
+     */
+    public void setUserAgentStylesheet(String url) {
+        userAgentStylesheetProperty().set(url);
     }
 
     @Override void updateBounds() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,6 +76,7 @@ final class CSSLexer {
     final static int NL = 41;
     final static int FONT_FACE = 42;
     final static int URL = 43;
+    final static int IMPORT = 44;
 
     private final Recognizer A = (c) -> c == 'a' || c == 'A';
     private final Recognizer B = (c) -> c == 'b' || c == 'B';
@@ -350,7 +351,7 @@ final class CSSLexer {
         return map;
     }
 
-    private CSSLexer() {
+    CSSLexer() {
         this.stateMap = createStateMap();
         this.text = new StringBuilder(64);
         this.currentState = initState;
@@ -970,8 +971,11 @@ final class CSSLexer {
                         if ("font-face".equalsIgnoreCase(keyword)) {
                             token = new Token(FONT_FACE,"@font-face", line, offset);
                             offset = pos;
+                        } else if ("import".equalsIgnoreCase(keyword)) {
+                            token = new Token(IMPORT,"@import", line, offset);
+                            offset = pos;
                         } else {
-                            // Skip over @IMPORT, etc.
+                            // Skip over other at-rules
                             do {
                                 ch = readChar();
                             } while (ch != ';' &&

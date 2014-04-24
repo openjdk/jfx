@@ -101,12 +101,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 final public class CSSParser {
 
@@ -248,7 +243,8 @@ final public class CSSParser {
     /* All of the other function calls should wind up here */
     private void parse(final Stylesheet stylesheet, final Reader reader) {
 
-        CSSLexer lex = CSSLexer.getInstance();
+//        CSSLexer lex = CSSLexer.getInstance();
+        CSSLexer lex = new CSSLexer();
         lex.setReader(reader);
 
         try {
@@ -3789,6 +3785,9 @@ final public class CSSParser {
 
     }
 
+    // keep track of what is in process of being parsed to avoid import loops
+    private static Stack<String> imports;
+
     private void parse(Stylesheet stylesheet, CSSLexer lexer) {
 
         // need to read the first token
@@ -3801,6 +3800,55 @@ final public class CSSParser {
                 FontFace fontFace = fontFace(lexer);
                 if (fontFace != null) stylesheet.getFontFaces().add(fontFace);
                 currentToken = nextToken(lexer);
+                continue;
+
+            } else if (currentToken.getType() == CSSLexer.IMPORT) {
+
+                if (CSSParser.imports == null) {
+                    CSSParser.imports = new Stack<>();
+                }
+
+                if (!imports.contains(sourceOfStylesheet)) {
+
+                    imports.push(sourceOfStylesheet);
+
+                    Stylesheet importedStylesheet = handleImport(lexer);
+
+                    if (importedStylesheet != null) {
+                        List<Rule> importedRules = importedStylesheet.getRules();
+                        if (importedRules != null && !importedRules.isEmpty()) {
+                            stylesheet.getRules().addAll(importedRules);
+                        }
+                    }
+
+                    imports.pop();
+
+                    if (CSSParser.imports.isEmpty()) {
+                        CSSParser.imports = null;
+                    }
+
+                } else {
+                    // Import imports import!
+                    final int line = currentToken.getLine();
+                    final int pos = currentToken.getOffset();
+                    final String msg =
+                            MessageFormat.format("Recursive @import at {2} [{0,number,#},{1,number,#}]",
+                                    line,pos,imports.peek());
+                    CssError error = createError(msg);
+                    if (LOGGER.isLoggable(Level.WARNING)) {
+                        LOGGER.warning(error.toString());
+                    }
+                    reportError(error);
+                }
+
+                // get past EOL or SEMI
+                do {
+                    currentToken = lexer.nextToken();
+                } while ((currentToken != null) &&
+                        (currentToken.getType() == CSSLexer.SEMI) ||
+                        (currentToken.getType() == CSSLexer.WS) ||
+                        (currentToken.getType() == CSSLexer.NL));
+
                 continue;
             }
 
@@ -4011,6 +4059,45 @@ final public class CSSParser {
         return new FontFace(descriptors, sources);
     }
 
+    private Stylesheet handleImport(CSSLexer lexer) {
+        currentToken = nextToken(lexer);
+
+        if (currentToken == null || currentToken.getType() == Token.EOF) {
+            return null;
+        }
+
+        int ttype = currentToken.getType();
+
+        String fname = null;
+        if (ttype == CSSLexer.STRING || ttype == CSSLexer.URL) {
+            fname = currentToken.getText();
+        }
+
+        Stylesheet importedStylesheet = null;
+
+        if (fname != null) {
+            // let URLConverter do the conversion
+            ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
+                    new ParsedValueImpl<String,String>(fname, StringConverter.getInstance()),
+                    new ParsedValueImpl<String,String>(sourceOfStylesheet, null)
+            };
+            ParsedValue<ParsedValue[], String> parsedValue =
+                    new ParsedValueImpl<ParsedValue[], String>(uriValues, URLConverter.getInstance());
+
+            String urlString = parsedValue.convert(null);
+
+            try {
+                URL url = new URL(urlString);
+                return new CSSParser().parse(url);
+            } catch (MalformedURLException malf) {
+
+            } catch (IOException ioe) {
+
+            }
+        }
+
+        return null;
+    }
 
     private List<Selector> selectors(CSSLexer lexer) {
 
