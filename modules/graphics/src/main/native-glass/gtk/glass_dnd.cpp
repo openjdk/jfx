@@ -84,7 +84,7 @@ static void init_target_atoms()
     TARGET_MIME_JPEG_ATOM = gdk_atom_intern_static_string("image/jpeg");
     TARGET_MIME_TIFF_ATOM = gdk_atom_intern_static_string("image/tiff");
     TARGET_MIME_BMP_ATOM = gdk_atom_intern_static_string("image/bmp");
-    
+
     target_atoms_initialized = TRUE;
 }
 
@@ -563,6 +563,7 @@ static gboolean dnd_finish_callback() {
 
         gdk_window_destroy(dnd_window);
         dnd_window = NULL;
+        DragView::reset_drag_view();
     }
     
     return FALSE;
@@ -815,12 +816,14 @@ static void process_dnd_source_mouse_release(GdkWindow *window, GdkEventButton *
 
 static void process_drag_motion(gint x_root, gint y_root, guint state)
 {
+    DragView::move(x_root, y_root);
+
     GdkWindow *dest_window;
     GdkDragProtocol prot;
 
     gdk_drag_find_window_for_screen(get_drag_context(), NULL, gdk_screen_get_default(),
             x_root, y_root, &dest_window, &prot);
-    
+
     if (prot != GDK_DRAG_PROTO_NONE) {
         GdkDragAction action, possible_actions;
         determine_actions(state, &action, &possible_actions);
@@ -1002,7 +1005,9 @@ static void dnd_source_push_data(JNIEnv *env, jobject data, jint supported)
     
     g_object_set_data_full(G_OBJECT(src_window), SOURCE_DND_DATA, data, clear_global_ref);
     g_object_set_data(G_OBJECT(src_window), SOURCE_DND_ACTIONS, (gpointer)translate_glass_action_to_gdk(supported));
-    
+
+    DragView::set_drag_view();
+
     ctx = gdk_drag_begin(src_window, targets);
     
     g_list_free(targets);
@@ -1026,5 +1031,240 @@ jint execute_dnd(JNIEnv *env, jobject data, jint supported) {
     }
 
     return dnd_get_performed_action();
+}
+
+ /******************** DRAG VIEW ***************************/
+DragView::View* DragView::view = NULL;
+
+void DragView::reset_drag_view() {
+    delete view;
+    view = NULL;
+}
+
+gboolean DragView::get_drag_image_offset(int* x, int* y) {
+    gboolean offset_set = FALSE;
+    jobject bb = dnd_source_get_data("application/x-java-drag-image-offset");
+    if (bb) {
+        jbyteArray byteArray = (jbyteArray)mainEnv->CallObjectMethod(bb, jByteBufferArray);
+        if (!EXCEPTION_OCCURED(mainEnv)) {
+            jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
+            jsize nraw = mainEnv->GetArrayLength(byteArray);
+
+            if ((size_t) nraw >= sizeof(jint) * 2) {
+                jint* r = (jint*) raw;
+                *x = BSWAP_32(r[0]);
+                *y = BSWAP_32(r[1]);
+                offset_set = TRUE;
+            }
+
+            mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
+        }
+    }
+    return offset_set;
+}
+
+GdkPixbuf* DragView::get_drag_image(gboolean* is_raw_image, gint* width, gint* height) {
+    GdkPixbuf *pixbuf = NULL;
+    gboolean is_raw = FALSE;
+
+    jobject drag_image = dnd_source_get_data("application/x-java-drag-image");
+
+    if (drag_image) {
+        jbyteArray byteArray = (jbyteArray) mainEnv->CallObjectMethod(drag_image, jByteBufferArray);
+        if (!EXCEPTION_OCCURED(mainEnv)) {
+
+            jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
+            jsize nraw = mainEnv->GetArrayLength(byteArray);
+
+            int w = 0, h = 0;
+            int whsz = sizeof(jint) * 2; // Pixels are stored right after two ints
+                                         // in this byteArray: width and height
+            if (nraw > whsz) {
+                jint* int_raw = (jint*) raw;
+                w = BSWAP_32(int_raw[0]);
+                h = BSWAP_32(int_raw[1]);
+
+                // We should have enough pixels for requested width and height
+                if ((nraw - whsz) / 4 - w * h >= 0 ) {
+                    guchar* data = (guchar*) g_try_malloc0(nraw - whsz);
+                    if (data) {
+                        memcpy(data, (raw + whsz), nraw - whsz);
+                        pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8,
+                                w, h, w * 4, (GdkPixbufDestroyNotify) g_free, NULL);
+                    }
+                }
+            }
+            mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
+        }
+    }
+
+    if (!GDK_IS_PIXBUF(pixbuf)) {
+        jobject pixels = dnd_source_get_data("application/x-java-rawimage");
+        if (pixels) {
+            is_raw = TRUE;
+            mainEnv->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
+            CHECK_JNI_EXCEPTION_RET(mainEnv, NULL)
+        }
+    }
+
+    if (!GDK_IS_PIXBUF(pixbuf)) {
+        return NULL;
+    }
+
+    int w = gdk_pixbuf_get_width(pixbuf);
+    int h = gdk_pixbuf_get_height(pixbuf);
+
+    if (w > DRAG_IMAGE_MAX_WIDTH || h > DRAG_IMAGE_MAX_HEIGH) {
+        double rw = DRAG_IMAGE_MAX_WIDTH / (double)w;
+        double rh =  DRAG_IMAGE_MAX_HEIGH / (double)h;
+        double r = MIN(rw, rh);
+
+
+        int new_w = w * r;
+        int new_h = h * r;
+
+        w = new_w;
+        h = new_h;
+
+        GdkPixbuf *tmp_pixbuf = gdk_pixbuf_scale_simple(pixbuf, new_w, new_h, GDK_INTERP_TILES);
+        g_object_unref(pixbuf);
+        if (!GDK_IS_PIXBUF(tmp_pixbuf)) {
+            return NULL;
+        }
+        pixbuf = tmp_pixbuf;
+    }
+
+    *is_raw_image = is_raw;
+    *width = w;
+    *height = h;
+
+    return pixbuf;
+}
+
+void DragView::set_drag_view() {
+    reset_drag_view();
+
+    gboolean is_raw_image = FALSE;
+    gint w = 0, h = 0;
+    GdkPixbuf* pixbuf = get_drag_image(&is_raw_image, &w, &h);
+
+    if (GDK_IS_PIXBUF(pixbuf)) {
+        gint offset_x = w / 2;
+        gint offset_y = h / 2;
+
+        gboolean is_offset_set = get_drag_image_offset(&offset_x, &offset_y);
+
+        DragView::view = new DragView::View(pixbuf, is_raw_image, is_offset_set, offset_x, offset_y);
+    }
+}
+void DragView::move(gint x, gint y) {
+    if (view) {
+        view->move(x, y);
+    }
+}
+
+static void on_screen_changed(GtkWidget *widget, GdkScreen *previous_screen, gpointer view) {
+    ((DragView::View*) view)->screen_changed();
+}
+
+static gboolean on_expose(GtkWidget *widget, GdkEventExpose *event, gpointer view) {
+    ((DragView::View*) view)->expose();
+    return FALSE;
+}
+
+DragView::View::View(GdkPixbuf* _pixbuf, gboolean _is_raw_image,
+                                gboolean _is_offset_set, gint _offset_x, gint _offset_y) :
+        pixbuf(_pixbuf),
+        is_raw_image(_is_raw_image),
+        is_offset_set(_is_offset_set),
+        offset_x(_offset_x),
+        offset_y(_offset_y)
+{
+    width = gdk_pixbuf_get_width(pixbuf);
+    height = gdk_pixbuf_get_height(pixbuf);
+
+    widget = gtk_window_new(GTK_WINDOW_POPUP);
+    gtk_window_set_type_hint(GTK_WINDOW(widget), GDK_WINDOW_TYPE_HINT_DND);
+
+    screen_changed();
+
+    gtk_widget_realize(widget);
+
+    GdkRegion* region = gdk_region_new();
+    gdk_window_input_shape_combine_region(gtk_widget_get_window(widget), region, 0,0);
+    gdk_region_destroy(region);
+
+    gtk_widget_set_app_paintable(widget, TRUE);
+
+    g_signal_connect(G_OBJECT(widget), "expose-event", G_CALLBACK(on_expose), this);
+    g_signal_connect(G_OBJECT(widget), "screen-changed", G_CALLBACK(on_screen_changed), this);
+
+    gtk_widget_set_size_request(widget, width, height);
+
+    gtk_window_set_decorated(GTK_WINDOW(widget), FALSE);
+    gtk_window_move(GTK_WINDOW(widget), -10000, -10000);
+    gtk_window_set_opacity(GTK_WINDOW(widget), .7);
+    gtk_widget_show_all(widget);
+}
+
+void DragView::View::screen_changed() {
+    GdkScreen *screen = gtk_widget_get_screen(widget);
+    GdkColormap *colormap = gdk_screen_get_rgba_colormap(screen);
+
+    if (!colormap || !gdk_screen_is_composited(screen)) {
+        if (!is_offset_set) {
+            offset_x = 1;
+            offset_y = 1;
+        }
+    }
+
+    if (!colormap) {
+        colormap = gdk_screen_get_rgb_colormap(screen);
+    }
+    gtk_widget_set_colormap(widget, colormap);
+}
+
+void DragView::View::expose() {
+    cairo_t *context = gdk_cairo_create(widget->window);
+
+    cairo_surface_t* cairo_surface;
+
+    guchar* pixels = is_raw_image
+            ? (guchar*) convert_BGRA_to_RGBA((const int*) gdk_pixbuf_get_pixels(pixbuf),
+                                                gdk_pixbuf_get_rowstride(pixbuf),
+                                                height)
+            : gdk_pixbuf_get_pixels(pixbuf);
+
+    cairo_surface = cairo_image_surface_create_for_data(
+            pixels,
+            CAIRO_FORMAT_ARGB32,
+            width, height, width * 4);
+
+    cairo_set_source_surface(context, cairo_surface, 0, 0);
+    cairo_set_operator(context, CAIRO_OPERATOR_SOURCE);
+    cairo_paint(context);
+
+    if (is_raw_image) {
+        g_free(pixels);
+    }
+    cairo_destroy(context);
+    cairo_surface_destroy(cairo_surface);
+}
+
+void DragView::View::move(gint x, gint y) {
+    if (!gtk_events_pending()) { // avoid sluggish window move
+        gtk_window_move(GTK_WINDOW(widget), x - offset_x, y - offset_y);
+    }
+}
+
+DragView::View::~View() {
+    if (widget) {
+        gtk_widget_destroy(widget);
+        widget == NULL;
+    }
+    if (pixbuf) {
+        g_object_unref(pixbuf);
+        pixbuf == NULL;
+    }
 }
 
