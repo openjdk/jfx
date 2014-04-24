@@ -285,6 +285,9 @@ jpeg_make_d_derived_tbl (j_decompress_ptr cinfo, boolean isDC, int tblno,
   unsigned int huffcode[257];
   unsigned int code;
 
+  MEMZERO(huffsize, SIZEOF(huffsize));
+  MEMZERO(huffcode, SIZEOF(huffcode));
+
   /* Note that huffsize[] and huffcode[] are filled in code-length order,
    * paralleling the order of the symbols themselves in htbl->huffval[].
    */

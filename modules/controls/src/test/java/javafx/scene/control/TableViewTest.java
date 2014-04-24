@@ -2906,7 +2906,15 @@ public class TableViewTest {
         sl.dispose();
     }
 
-    @Test public void test_rt25679() {
+    @Test public void test_rt25679_rowSelection() {
+        test_rt25679(true);
+    }
+
+    @Test public void test_rt25679_cellSelection() {
+        test_rt25679(false);
+    }
+
+    private void test_rt25679(boolean rowSelection) {
         Button focusBtn = new Button("Focus here");
 
         TableView<String> tableView = new TableView<>(FXCollections.observableArrayList("A", "B", "C"));
@@ -2914,7 +2922,8 @@ public class TableViewTest {
         TableColumn<String, String> tableColumn = new TableColumn<>();
         tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue()));
         tableView.getColumns().add(tableColumn);
-        SelectionModel sm = tableView.getSelectionModel();
+        TableView.TableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(! rowSelection);
 
         VBox vbox = new VBox(focusBtn, tableView);
 
@@ -2935,8 +2944,25 @@ public class TableViewTest {
         // ensure that there is a selection (where previously there was not one)
         assertEquals(sl.getStage().getScene().getFocusOwner(), tableView);
         assertTrue(tableView.isFocused());
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals("A", sm.getSelectedItem());
+
+        if (rowSelection) {
+            assertEquals(1, sm.getSelectedIndices().size());
+            assertEquals("A", sm.getSelectedItem());
+            assertTrue(sm.isSelected(0));
+
+            assertEquals(1, sm.getSelectedCells().size());
+            TablePosition selectedCell = sm.getSelectedCells().get(0);
+            assertEquals(0, selectedCell.getRow());
+            assertEquals(-1, selectedCell.getColumn());
+            assertNull(selectedCell.getTableColumn());
+        } else {
+            assertTrue(sm.isSelected(0, tableColumn));
+            assertEquals(1, sm.getSelectedCells().size());
+            TablePosition selectedCell = sm.getSelectedCells().get(0);
+            assertEquals(0, selectedCell.getRow());
+            assertEquals(0, selectedCell.getColumn());
+            assertEquals(tableColumn, selectedCell.getTableColumn());
+        }
 
         sl.dispose();
     }

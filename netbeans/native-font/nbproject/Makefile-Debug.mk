@@ -40,7 +40,9 @@ OBJECTFILES= \
 	${OBJECTDIR}/_ext/1812479850/dfontdecoder.o \
 	${OBJECTDIR}/_ext/1812479850/directwrite.o \
 	${OBJECTDIR}/_ext/1812479850/fontpath.o \
-	${OBJECTDIR}/_ext/1812479850/fontpath_linux.o
+	${OBJECTDIR}/_ext/1812479850/fontpath_linux.o \
+	${OBJECTDIR}/_ext/1812479850/freetype.o \
+	${OBJECTDIR}/_ext/1812479850/pango.o
 
 
 # C Compiler Flags
@@ -96,6 +98,16 @@ ${OBJECTDIR}/_ext/1812479850/fontpath_linux.o: ../../modules/graphics/src/main/n
 	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
 	${RM} "$@.d"
 	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/fontpath_linux.o ../../modules/graphics/src/main/native-font/fontpath_linux.c
+
+${OBJECTDIR}/_ext/1812479850/freetype.o: ../../modules/graphics/src/main/native-font/freetype.c 
+	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
+	${RM} "$@.d"
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/freetype.o ../../modules/graphics/src/main/native-font/freetype.c
+
+${OBJECTDIR}/_ext/1812479850/pango.o: ../../modules/graphics/src/main/native-font/pango.c 
+	${MKDIR} -p ${OBJECTDIR}/_ext/1812479850
+	${RM} "$@.d"
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1812479850/pango.o ../../modules/graphics/src/main/native-font/pango.c
 
 # Subprojects
 .build-subprojects:

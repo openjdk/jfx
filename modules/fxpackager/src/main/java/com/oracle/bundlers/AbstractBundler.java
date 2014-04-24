@@ -158,11 +158,8 @@ public abstract class AbstractBundler implements Bundler {
         return result;
     }
 
-    //For dev testing
-    public void logParameters(Map<String, ? super Object> p) {
-        Log.info("###### Parameters for " + getName());
-        for(Map.Entry<String, ? super Object> e: p.entrySet()) {
-            Log.info("    id: " + e.getKey() + " value: " + e.getValue());
-        }
+    @Override
+    public String toString() {
+        return getName();
     }
 }

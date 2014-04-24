@@ -162,16 +162,18 @@ public:
     // IScrollItemProvider
     IFACEMETHODIMP ScrollIntoView();
 
-    static void copyVariant(JNIEnv *env, jobject jVariant, VARIANT* pRetVal);
+    static HRESULT copyVariant(JNIEnv *env, jobject jVariant, VARIANT* pRetVal);
+    static HRESULT copyString(JNIEnv *env, jstring jString, BSTR* pbstrVal);
+    static HRESULT copyList(JNIEnv *env, jarray list, SAFEARRAY** pparrayVal, VARTYPE vt);
 
 private:
     virtual ~GlassAccessible();
 
     /* Call the method specified by 'mid', AddRef the returning ptr (expects result to be IUnkonwn) */
-    virtual jlong callLongMethod(jmethodID mid, ...);
+    virtual HRESULT callLongMethod(jmethodID mid, IUnknown **pRetVal, ...);
 
     /* Call the method specified by 'mid' and converts the returning jarray to a SAFEARRAY */
-    virtual SAFEARRAY* callArrayMethod(jmethodID mid, VARTYPE vt);
+    virtual HRESULT callArrayMethod(jmethodID mid, VARTYPE vt, SAFEARRAY **pRetVal);
 
     ULONG m_refCount;
     jobject m_jAccessible;  // The GlobalRef Java side object

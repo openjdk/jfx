@@ -25,6 +25,12 @@
 
 package com.sun.glass.ui.win;
 
+import static javafx.scene.accessibility.Attribute.*;
+import javafx.geometry.Bounds;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+
 /*
  * This class is the Java peer for GlassTextRangeProvider.
  * GlassTextRangeProvider implements ITextRangeProvider.
@@ -48,6 +54,14 @@ class WinTextRangeProvider {
     private static final int TextUnit_Paragraph = 4;
     private static final int TextUnit_Page = 5;
     private static final int TextUnit_Document = 6;
+
+    /* Text Attribute Identifiers */
+    private static final int UIA_FontNameAttributeId = 40005;
+    private static final int UIA_FontSizeAttributeId = 40006;
+    private static final int UIA_FontWeightAttributeId = 40007;
+    private static final int UIA_IsHiddenAttributeId = 40013;
+    private static final int UIA_IsItalicAttributeId = 40014;
+    private static final int UIA_IsReadOnlyAttributeId = 40015;
 
     private static int idCount = 1;
     private int id;
@@ -84,13 +98,16 @@ class WinTextRangeProvider {
         return "Range(start: "+start+", end: "+end+", id: " + id + ")";
     }
 
+    private Object getAttribute(Attribute attribute, Object... parameters) {
+        return accessible.getAttribute(attribute, parameters);
+    }
+
     /***********************************************/
     /*            ITextRangeProvider               */
     /***********************************************/
     long Clone() {
         WinTextRangeProvider clone = new WinTextRangeProvider(accessible);
         clone.setRange(start, end);
-        System.out.println("Cloning " + id + " to " + clone.id);
 
         /* Note: Currently Clone() natively does not call AddRef() no the returned object.
          * This mean we don't keep a reference of our own and we don't 
@@ -101,20 +118,54 @@ class WinTextRangeProvider {
     }
 
     boolean Compare(WinTextRangeProvider range) {
-        System.out.println("Compare " + this + " to " + range);
+        System.out.println("+Compare " + this + " to " + range);
         if (range == null) return false;
         return accessible == range.accessible && start == range.start && end == range.end;
     }
 
     int CompareEndpoints(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
-        System.out.println("CompareEndpoints " + endpoint + " " + this + " " + targetRange + " " + targetEndpoint);
+        System.out.println("+CompareEndpoints " + endpoint + " " + this + " " + targetRange + " " + targetEndpoint);
         int offset = endpoint == TextPatternRangeEndpoint_Start ? start : end;
         int targetOffset = targetEndpoint == TextPatternRangeEndpoint_Start ? targetRange.start : targetRange.end;
         return targetOffset - offset;
     }
 
     void ExpandToEnclosingUnit(int unit) {
-        System.out.println("ExpandToEnclosingUnit " + this + " unit " + unit);
+        switch (unit) {
+            case TextUnit_Character: {
+                Integer caretOffset = (Integer)getAttribute(CARET_OFFSET);
+                if (caretOffset == null) return;
+                start = end = caretOffset;
+                break;
+            }
+            case TextUnit_Format:
+            case TextUnit_Word:
+                //TODO
+                break;
+            case TextUnit_Line:
+            case TextUnit_Paragraph: {
+                Integer caretOffset = (Integer)getAttribute(CARET_OFFSET);
+                if (caretOffset == null) return;
+                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, caretOffset);
+                if (lineIndex == null) return;
+                Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
+                if (lineStart == null) return;
+                Integer lineEnd = (Integer)getAttribute(LINE_START, lineIndex);
+                if (lineEnd == null) return;
+                start = lineStart;
+                end = lineEnd;
+                break;
+            }
+            case TextUnit_Document:
+            case TextUnit_Page: {
+                String text = (String)getAttribute(TITLE);
+                if (text == null) return;
+                start = 0;
+                end = text.length();
+                break;
+            }
+        }
+        System.out.println("+ExpandToEnclosingUnit " + this + " unit " + unit);
     }
 
     long FindAttribute(int attributeId, WinVariant val, boolean backward) {
@@ -128,28 +179,120 @@ class WinTextRangeProvider {
     }
 
     WinVariant GetAttributeValue(int attributeId) {
-        System.out.println("GetAttributeValue");
-        return null;
+//        System.out.println("+GetAttributeValue " + attributeId);
+        WinVariant variant = null;
+        switch (attributeId) {
+            case UIA_FontNameAttributeId: {
+                Font font = (Font)getAttribute(FONT);
+                if (font != null) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_BSTR;
+                    variant.bstrVal = font.getName();
+                }
+                break;
+            }
+            case UIA_FontSizeAttributeId: {
+                Font font = (Font)getAttribute(FONT);
+                if (font != null) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_R8;
+                    variant.dblVal = font.getSize();
+                }
+                break;
+            }
+            case UIA_FontWeightAttributeId: {
+                Font font = (Font)getAttribute(FONT);
+                if (font != null) {
+                    boolean bold = font.getStyle().toLowerCase().contains("bold");
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_I4;
+                    variant.lVal = bold ? FontWeight.BOLD.getWeight() : FontWeight.NORMAL.getWeight();
+                }
+                break;
+            }
+            case UIA_IsHiddenAttributeId:
+            case UIA_IsReadOnlyAttributeId:
+                variant = new WinVariant();
+                variant.vt = WinVariant.VT_BOOL;
+                variant.boolVal = false;
+                break;
+            case UIA_IsItalicAttributeId: {
+                Font font = (Font)getAttribute(FONT);
+                if (font != null) {
+                    boolean italic = font.getStyle().toLowerCase().contains("italic");
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_BOOL;
+                    variant.boolVal = italic;   
+                }
+                break;
+            }
+            default:
+//                System.out.println("GetAttributeValue " + attributeId + " Not implemented");
+        }
+        return variant;
     }
 
     double[] GetBoundingRectangles() {
-        System.out.println("GetBoundingRectangles");
+        Bounds[] bounds = (Bounds[])getAttribute(BOUNDS_FOR_RANGE, start, end);
+        if (bounds != null) {
+            double[] result = new double[bounds.length * 4];
+            int index = 0;
+            for (int i = 0; i < bounds.length; i++) {
+                Bounds b = bounds[i];
+                result[index++] = b.getMinX();
+                result[index++] = b.getMinY();
+                result[index++] = b.getWidth();
+                result[index++] = b.getHeight();
+            }
+            return result;
+        }
         return null;
     }
 
     long GetEnclosingElement() {
-        System.out.println("GetEnclosingElement");
-        return 0;
+        return accessible.getNativeAccessible();
     }
 
     String GetText(int maxLength) {
-        System.out.println("GetText");
-        return null;
+        String text = (String)getAttribute(TITLE);
+        if (text == null) return null;
+        int endOffset = maxLength != -1 ? Math.min(end, start + maxLength) : end;
+        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
+        return text.substring(start, endOffset);
     }
 
     int Move(int unit, int count) {
-        System.out.println("Move");
-        return 0;
+        System.out.println("+Move " + unit + " " + count + " " + this);
+
+        int offset = start;
+        switch (unit) {
+            case TextUnit_Character: {
+                start = offset + count; //check range
+                end = start + 1;
+                break;
+            }
+            case TextUnit_Format:
+            case TextUnit_Word:
+                //TODO
+                break;
+            case TextUnit_Line:
+            case TextUnit_Paragraph: {
+                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, offset);
+                lineIndex += count;//check range;
+                Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
+                if (lineStart == null) return 0;
+                Integer lineEnd = (Integer)getAttribute(LINE_START, lineIndex);
+                if (lineEnd == null) return 0;
+                start = lineStart;
+                end = lineEnd;
+                break;
+            }
+            case TextUnit_Document:
+            case TextUnit_Page: {
+               return 0;
+            }
+        }
+        return count;
     }
 
     int MoveEndpointByUnit(int endpoint, int unit, int count) {
@@ -158,7 +301,16 @@ class WinTextRangeProvider {
     }
 
     void MoveEndpointByRange(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
-        System.out.println("MoveEndpointByRange");
+        int offset = targetEndpoint == TextPatternRangeEndpoint_Start ? targetRange.start : targetRange.end;
+        if (endpoint == TextPatternRangeEndpoint_Start) {
+            start = offset;
+        } else {
+            end = offset;
+        }
+        if (start > end) {
+            start = end = offset;
+        }
+        System.out.println("+MoveEndpointByRange");
     }
 
     void Select() {
@@ -178,8 +330,7 @@ class WinTextRangeProvider {
     }
 
     long[] GetChildren() {
-        System.out.println("GetChildren");
-        return null;
+        return new long[0];
     }
 
 }

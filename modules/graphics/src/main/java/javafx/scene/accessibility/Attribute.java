@@ -274,14 +274,14 @@ public enum Attribute {
     /**
      * Returns the Node at the given point location.
      * Type: Node
-     * Parameters: Point
+     * Parameters: Point2D
      */
     NODE_AT_POINT("NodeAtPoint", Node.class),
 
     /**
      * Returns the char offset at the given point location.
      * Type: Integer
-     * Parameters: Point
+     * Parameters: Point2D
      */
     OFFSET_AT_POINT("OffsetAtPoint", Integer.class),
 

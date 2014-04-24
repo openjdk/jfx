@@ -129,6 +129,7 @@ public class MacPKGBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Smoke");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
@@ -171,6 +172,7 @@ public class MacPKGBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Quarantine");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
 

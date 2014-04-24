@@ -83,14 +83,8 @@ public class CreateDeviceTest {
         ui.processLine("EV_SYN");
         TestLog.waitForLog("Key typed: A", 3000);
         // make sure only two key typed events were received
-        String[] log = TestLog.getLog();
-        int typedEvents = 0;
-        for (int i = 0; i < log.length; i++) {
-            if (log[i].startsWith("Key typed")) {
-                typedEvents ++;
-            }
-        }
-        Assert.assertEquals("Expected two typed events", 2, typedEvents);
+        Assert.assertEquals("Expected two typed events", 2,
+                             TestLog.getLog().stream().filter(s -> s.startsWith("Key typed")).count());
     }
 
     @Test

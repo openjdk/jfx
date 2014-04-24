@@ -231,6 +231,7 @@ public class TestApplication extends Application {
 
     public static void addTouchListeners() throws Exception {
         Consumer<List<TouchPoint>> logTouchPoints = (tps) -> {
+            TestLog.log("Touch points count: [" + tps.size() +"]"); 
             for (TouchPoint tp : tps) {
                 TestLog.log("TouchPoint: " + tp.getState() + " "
                         + (int) tp.getScreenX() + ", " + (int) tp.getScreenY()

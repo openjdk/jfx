@@ -40,8 +40,9 @@ import javafx.scene.layout.*;
 import org.w3c.dom.events.EventTarget;
 import netscape.javascript.JSObject;
 import javafx.application.Platform;
-import javafx.scene.input.KeyCode;
 import javafx.scene.control.Control;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.KeyCode;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Worker.State;
@@ -74,15 +75,46 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
 
     public boolean outputLFasCRLF() { return isLineEditing(); }
 
+    /** Input lines that have not been processed yet.
+     * In some modes we support enhanced type-ahead: Input lines are queued
+     * up and only released when requested.  This allows output from an
+     * earlier command, as well as prompt text for a later command, to
+     * be inserted before a later input-line.
+     */
+    Node pendingInput;
+
     /** The current input line.
      * Note there is always a current (active) input line, even if the
      * inferior isn't ready for it, and hasn't emitted a prompt.
      * This is to support type-ahead, as well as application code
-     * reading from standard input.  (FUTURE - untested.)
+     * reading from standard input.
+     * @return the currently active input line
      */
     public Element getInputLine() { return inputLine; }
     public void setInputLine(Element inputLine) { this.inputLine = inputLine; }
     Element inputLine;
+
+    public String getPendingInput() {
+	String text = null;
+	while (pendingInput != getInputLine() && text == null) {
+	    if (isSpanNode(pendingInput)) {
+		text = grabInput((Element) pendingInput);
+		if (text.length() == 0)
+		    text = null;
+	    } else if (isBreakNode(pendingInput)) {
+		text = "\n";
+	    } else if (pendingInput instanceof Text) {
+		text = ((Text) pendingInput).getData();
+		if (text.length() == 0)
+		    text = null;
+	    } else {
+		//WTDebug.println("UNEXPECTED NODE: "+WTDebug.pnode(pendingInput));
+	    }
+	    pendingInput = pendingInput.getNextSibling();
+	}
+	setOutputPosition(pendingInput);
+	return text;
+    }
 
     Document documentNode;
     Element bodyNode;
@@ -92,6 +124,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     /** The element (normally a div or pre) which cursor navigation is relative to.
      * Cursor motion is relative to the start of this element.
      * "Erase screen" only erases in this element.
+     * @return the cursor home location is the start of this element
      */
     public Element getCursorHome() { return cursorHome; }
     public void setCursorHome(Element cursorHome) { this.cursorHome = cursorHome; }
@@ -123,6 +156,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
      * we want selection/copy to not include the inserted newline.  Better
      * would be for windows re-size to re-calculate the breaks.)
      * Initial value is true.
+     * @param value iff if we should automatically wrap
      */
     public void setWrapOnLongLines(boolean value) {
         wrapOnLongLines = value;
@@ -152,14 +186,18 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         currentCursorColumn = (int) (lcol >> 1) & 0x7fffffff;
     }
 
-    /** Get line of current cursor position, starting with 0 at the top. */
+    /** Get line of current cursor position.
+     * @return current line number, 0-origin (i.e. 0 is the top line),
+     *   relative to cursorHome. */
     public int getCursorLine() {
         if (currentCursorLine < 0)
             updateCursorCache();
         return currentCursorLine;
     }
 
-    /** Get column of current cursor position, starting with 0 at the left. */
+    /** Get column of current cursor position.
+     * @return current column number, 0-origin (i.e. 0 is the left column),
+     *   relative to cursorHome. */
     public int getCursorColumn() {
         if (currentCursorColumn < 0)
             updateCursorCache();
@@ -194,17 +232,20 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
  
     /** The output position (cursor).
      * Insert output before this node.
-     * (For now always (???) equal to inputLine except for temporary updates,
-     * but in the future they may be separated.)
-     * (For now, never null, but in the future, if it is null, it means
-     * append output to the end of the output container's children.)
+     * Usually equal to inputLine except for temporary updates.
+     * @return the current output position. If null, this means append
+     * output to the end of the output container's children.
+     * (FIXME: The null case is not fully debugged.)
      */
     public Node getOutputPosition() { return outputBefore; }
     org.w3c.dom.Node outputBefore;
     public void setOutputPosition(Node node) {
         outputBefore = node; }
 
-    /** The parent node of the output position. */
+    /** The parent node of the output position.
+     * @return the output container - new output is by default inserted into
+     * this Node, at the position indicated by {@code getOutputPostion()}.
+     */
     public Node getOutputContainer() { return outputContainer; }
     Node outputContainer;
 
@@ -219,6 +260,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     protected void loadSucceeded() {
         addInputLine();
         outputBefore = inputLine;
+        pendingInput = inputLine;
     }
 
     public WebTerminal() {
@@ -251,7 +293,9 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     public static final String XHTML_NAMESPACE = "http://www.w3.org/1999/xhtml";
     public static final String htmlNamespace = USE_XHTML ? XHTML_NAMESPACE : "";
 
-    /** URL for the initial page to be loaded. */
+    /** URL for the initial page to be loaded.
+     * @return the URL of the initial page resource as a String
+     */
     protected String pageUrl() {
         String rname = USE_XHTML ? "repl.xml" : "repl.html";
         java.net.URL rurl = WebTerminal.class.getResource(rname);
@@ -263,6 +307,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     /** Load the start page.  Do not call directly.
      * Can be overridden to load a start page from a String:
      * webEngibe.loadContent("initialContent", "MIME/type");
+     * @param webEngine the WebEngin this WebView is using.
      */
     protected void loadPage(WebEngine webEngine) {
         webEngine.load(pageUrl());
@@ -281,7 +326,9 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         outputContainer = initial;
     }
 
-    /** For debugging.*/
+    /** Get current contents as an HTML string. For debugging.
+     * @return the contents of teh {@code bodyNode} as HTML/XML.
+     */
     public String getHTMLText() {
         if (true) {
             return NodeWriter.writeNodeToString(bodyNode);
@@ -359,10 +406,6 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     protected String handleEnter (KeyEvent ke) {
-        /*
-        javafx.scene.input.Clipboard cc = javafx.scene.input.Clipboard.getSystemClipboard();
-        System.err.println("SCLIP has-h:"+cc.hasHtml()+" has-s:"+cc.hasString()+" str:"+cc.getString());
-        */
         String text = grabInput(inputLine);
         nextInputLine();
         //super.processKeyEvent(ke);
@@ -370,11 +413,16 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     protected void nextInputLine() {
+        Node outputSave = outputBefore;
+        Node containerSave = outputContainer;
+        boolean normal = outputSave == inputLine;
         outputBefore = inputLine.getNextSibling();
+        outputContainer = inputLine.getParentNode();
         setEditable(false);
         insertBreak();
         addInputLine();
-        outputBefore = inputLine;
+        outputBefore = normal ? inputLine : outputSave;
+        outputContainer = containerSave;
     }
 
     public void insertOutput (final String str, final char kind) {
@@ -1095,7 +1143,8 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     /** Return column number following a tab at initial {@code col}.
-     * Both {@code col} and result are 0-origin.
+     * @param col initial column, 0-origin
+     * @return column number (0-origin) after a tab
      * Default implementation assumes tabs every 8 columns.
      */
     protected int nextTabCol(int col) {
@@ -1223,8 +1272,16 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
                     break;
                 case '\n':
                     insertSimpleOutput(str, prevEnd, i, kind, curColumn);
-                    if (outputLFasCRLF())
-                        cursorLineStart(1);
+                    if (outputLFasCRLF()) {
+                        if (inInsertMode()) {
+                            insertRawOutput("\n");
+                            if (currentCursorLine >= 0)
+                                currentCursorLine++;
+                            currentCursorColumn = 0;
+                        } else {
+                            cursorLineStart(1);
+                        }
+                    }
                     // Only scroll if scrollRegionBottom explicitly set to a value >= 0.
                     else if (getCursorLine() == scrollRegionBottom-1)
                         scrollForward(1);
@@ -1331,12 +1388,19 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     /** Insert a node at (before) current position.
-     * Caller needs to update cursor cache or call resetCursorCache. */
+     * Caller needs to update cursor cache or call resetCursorCache.
+     * @param node to be inserted at current output position.
+     *   (Should not have any parents or siblings.)
+     */
     public void insertNode (org.w3c.dom.Node node) {
         outputContainer.insertBefore(node, outputBefore);
     }
 
-    /** Insert element at current position, and move to start of element. */
+    /** Insert element at current position, and move to start of element.
+     * @param element to be inserted at current output position.
+     *  This element should have no parents *or* children.
+     *  It becomes the new outputContainer.
+     */
     public void pushIntoElement(Element element) {
         resetCursorCache(); // FIXME - not needed if element is span, say.
         insertNode(element);
@@ -1453,10 +1517,18 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
                     processInputCharacters(chars);
             }
             ke.consume();
-        } else if (ke.getEventType() == KeyEvent.KEY_TYPED
-                   && "\r".equals(ke.getCharacter())) {
-            enter(ke);
-            ke.consume();
+        } else {
+            if (ke.getEventType() == KeyEvent.KEY_TYPED
+                && "\r".equals(ke.getCharacter())) {
+                enter(ke);
+                ke.consume();
+            } else if (ke.getEventType() == KeyEvent.KEY_PRESSED && code == KeyCode.V && ke.isControlDown()) {
+                javafx.scene.input.Clipboard cc = javafx.scene.input.Clipboard.getSystemClipboard();
+                System.err.println("SCLIP has-h:"+cc.hasHtml()+" has-s:"+cc.hasString()+" str:"+cc.getString());
+                //ke.consume();
+            } else {
+                //WTDebug.println("handle "+ke+" char:"+WTDebug.toQuoted(ke.getCharacter())+" code:"+ke.getCode());
+            }
         }
     }
 
@@ -1473,7 +1545,13 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
 
     /** True if an img/object/a element.
      * These are treated as black boxes similar to a single
-     * 1-column character. */
+     * 1-column character.
+     * @param node an Element we want to check
+     * @return true iff the {@code node} shoudl be treated as a
+     *  block-box embedded object.
+     *  For now returns true for {@code img}, {@code a}, and {@code object}.
+     *  (We should perhaps treat {@code a} as text.)
+     */
     public boolean isObjectElement(Element node) {
         String tag = node.getTagName();
         return "a".equals(tag) || "object".equals(tag) || "img".equals(tag);
@@ -1497,13 +1575,20 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
         return "span".equals(tag);
     }
 
-    /** Move forwards relative to cursorHome. */
+    /** Move forwards relative to cursorHome.
+     * Add spaces as needed.
+     * @param goalLine number of lines (non-negative) to move down from startNode
+     * @param goalColumn number of columns to move right from the start of teh goalLine
+     */
     public void moveTo(int goalLine, int goalColumn) {
         moveTo(cursorHome, goalLine, goalColumn, true);
     }
 
     /** Move forwards relative to startNode.
-     * Currently, assumes startNode==cursorHome; that may change.
+     * @param startNode the origin (zero) location - usually this is {@code cursorHome}
+     * @param goalLine number of lines (non-negative) to move down from startNode
+     * @param goalColumn number of columns to move right from the start of teh goalLine
+     * @param addSpaceAsNeeded if we should add blank linesor spaces if needed to move as requested; otherwise stop at the last existing line, or (just past the) last existing contents of the goalLine
      */
     public void moveTo(Node startNode, int goalLine, int goalColumn, boolean addSpaceAsNeeded) {
         //WTDebug.println("move start:"+WTDebug.pnode(startNode)+" gl:"+goalLine+" gc:"+goalColumn+" inputL:"+WTDebug.pnode(inputLine));
@@ -1707,7 +1792,7 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
     }
 
     /** Returns number of columns needed for argument.
-     * Currently always returns 1.
+     * Currently always returns 1 (except for 'zero width space').
      * However, in the future we should handle zero-width characters
      * as well as double-width characters, and composing charcters.
      */
@@ -1725,6 +1810,12 @@ public abstract class WebTerminal extends VBox // FIXME should extend Control
      * initial part of a compound character, including a start surrogate.
      * Compound character support is not implemented yet,
      * nor is support for zero-width or double-width characters.
+     * @param ch the next character to output
+     * @param startState the column state before emitting {@code ch}
+     *   This is basically the number of columns, but in the future we
+     *   might use the high-order bits for flags, fractional columns etc.
+     * @return the column state after {@code ch} is appended,
+     *  or -1 after a character that starts a new line
      */
     protected int updateColumn(char ch, int startState) {
         if (ch == '\n' || ch == '\r' || ch == '\f')

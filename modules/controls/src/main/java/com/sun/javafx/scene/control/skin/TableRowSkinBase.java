@@ -156,6 +156,7 @@ public abstract class TableRowSkinBase<T,
         // --- end init bindings
 
         registerChangeListener(control.itemProperty(), "ITEM");
+        registerChangeListener(control.indexProperty(), "INDEX");
 
         if (fixedCellSizeProperty() != null) {
             registerChangeListener(fixedCellSizeProperty(), "FIXED_CELL_SIZE");
@@ -223,20 +224,16 @@ public abstract class TableRowSkinBase<T,
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
 
-        if ("ITEM".equals(p)) {
-            updateCells = true;
-            getSkinnable().requestLayout();
-
-            // update the index of all children cells (RT-29849).
-            // Note that we do this after the TableRow item has been updated,
-            // rather than when the TableRow index has changed (as this will be
-            // before the row has updated its item). This will result in the
-            // issue highlighted in RT-33602, where the table cell had the correct
-            // item whilst the row had the old item.
-            final int newIndex = getSkinnable().getIndex();
-            for (int i = 0, max = cells.size(); i < max; i++) {
-                cells.get(i).updateIndex(newIndex);
+        if ("INDEX".equals(p)) {
+            // Fix for RT-36661, where empty table cells were showing content, as they
+            // had incorrect table cell indices (but the table row index was correct).
+            // Note that we only do the update on empty cells to avoid the issue
+            // noted below in requestCellUpdate().
+            if (getSkinnable().isEmpty()) {
+                requestCellUpdate();
             }
+        } else if ("ITEM".equals(p)) {
+            requestCellUpdate();
         } else if ("FIXED_CELL_SIZE".equals(p)) {
             fixedCellSize = fixedCellSizeProperty().get();
             fixedCellSizeEnabled = fixedCellSize > 0;
@@ -625,6 +622,22 @@ public abstract class TableRowSkinBase<T,
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    private void requestCellUpdate() {
+        updateCells = true;
+        getSkinnable().requestLayout();
+
+        // update the index of all children cells (RT-29849).
+        // Note that we do this after the TableRow item has been updated,
+        // rather than when the TableRow index has changed (as this will be
+        // before the row has updated its item). This will result in the
+        // issue highlighted in RT-33602, where the table cell had the correct
+        // item whilst the row had the old item.
+        final int newIndex = getSkinnable().getIndex();
+        for (int i = 0, max = cells.size(); i < max; i++) {
+            cells.get(i).updateIndex(newIndex);
+        }
+    }
 
     private void recreateCells() {
         // This function is smart in the sense that we don't recreate all

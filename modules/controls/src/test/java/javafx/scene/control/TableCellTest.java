@@ -25,18 +25,17 @@
 
 package javafx.scene.control;
 
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.ObservableValue;
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
+import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.util.Callback;
 
-import com.sun.javafx.tk.Toolkit;
 import org.junit.Before;
 import org.junit.Test;
 
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  */
@@ -193,5 +192,108 @@ public class TableCellTest {
         cell.updateTableView(table);
         table.setItems(null);
         cell.updateIndex(1);
+    }
+
+    @Test public void test_rt36715_idIsNullAtStartup() {
+        assertNull(cell.getId());
+    }
+
+    @Test public void test_rt36715_idIsSettable() {
+        cell.setId("test-id");
+        assertEquals("test-id", cell.getId());
+    }
+
+    @Test public void test_rt36715_columnHeaderIdMirrorsTableColumnId_setIdBeforeHeaderInstantiation() {
+        test_rt36715_cellPropertiesMirrorTableColumnProperties(true, true, false, false, false);
+    }
+
+    @Test public void test_rt36715_columnHeaderIdMirrorsTableColumnId_setIdAfterHeaderInstantiation() {
+        test_rt36715_cellPropertiesMirrorTableColumnProperties(true, false, false, false, false);
+    }
+
+    @Test public void test_rt36715_columnHeaderIdMirrorsTableColumnId_setIdBeforeHeaderInstantiation_setValueOnCell() {
+        test_rt36715_cellPropertiesMirrorTableColumnProperties(true, true, false, false, true);
+    }
+
+    @Test public void test_rt36715_columnHeaderIdMirrorsTableColumnId_setIdAfterHeaderInstantiation_setValueOnCell() {
+        test_rt36715_cellPropertiesMirrorTableColumnProperties(true, false, false, false, true);
+    }
+
+    @Test public void test_rt36715_styleIsEmptyStringAtStartup() {
+        assertEquals("", cell.getStyle());
+    }
+
+    @Test public void test_rt36715_styleIsSettable() {
+        cell.setStyle("-fx-border-color: red");
+        assertEquals("-fx-border-color: red", cell.getStyle());
+    }
+
+    @Test public void test_rt36715_columnHeaderStyleMirrorsTableColumnStyle_setStyleBeforeHeaderInstantiation() {
+        test_rt36715_cellPropertiesMirrorTableColumnProperties(false, false, true, true, false);
+    }
+
+    @Test public void test_rt36715_columnHeaderStyleMirrorsTableColumnStyle_setStyleAfterHeaderInstantiation() {
+        test_rt36715_cellPropertiesMirrorTableColumnProperties(false, false, true, false, false);
+    }
+
+    @Test public void test_rt36715_columnHeaderStyleMirrorsTableColumnStyle_setStyleBeforeHeaderInstantiation_setValueOnCell() {
+        test_rt36715_cellPropertiesMirrorTableColumnProperties(false, false, true, true, true);
+    }
+
+    @Test public void test_rt36715_columnHeaderStyleMirrorsTableColumnStyle_setStyleAfterHeaderInstantiation_setValueOnCell() {
+        test_rt36715_cellPropertiesMirrorTableColumnProperties(false, false, true, false, true);
+    }
+
+    private void test_rt36715_cellPropertiesMirrorTableColumnProperties(
+            boolean setId, boolean setIdBeforeHeaderInstantiation,
+            boolean setStyle, boolean setStyleBeforeHeaderInstantiation,
+            boolean setValueOnCell) {
+
+        TableColumn column = new TableColumn("Column");
+        table.getColumns().add(column);
+
+        if (setId && setIdBeforeHeaderInstantiation) {
+            column.setId("test-id");
+        }
+        if (setStyle && setStyleBeforeHeaderInstantiation) {
+            column.setStyle("-fx-border-color: red");
+        }
+
+        StageLoader sl = new StageLoader(table);
+        TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+
+        // the default value takes precedence over the value set in the TableColumn
+        if (setValueOnCell) {
+            if (setId) {
+                cell.setId("cell-id");
+            }
+            if (setStyle) {
+                cell.setStyle("-fx-border-color: green");
+            }
+        }
+
+        if (setId && ! setIdBeforeHeaderInstantiation) {
+            column.setId("test-id");
+        }
+        if (setStyle && ! setStyleBeforeHeaderInstantiation) {
+            column.setStyle("-fx-border-color: red");
+        }
+
+        if (setId) {
+            if (setValueOnCell) {
+                assertEquals("cell-id", cell.getId());
+            } else {
+                assertEquals("test-id", cell.getId());
+            }
+        }
+        if (setStyle) {
+            if (setValueOnCell) {
+                assertEquals("-fx-border-color: green", cell.getStyle());
+            } else {
+                assertEquals("-fx-border-color: red", cell.getStyle());
+            }
+        }
+
+        sl.dispose();
     }
 }

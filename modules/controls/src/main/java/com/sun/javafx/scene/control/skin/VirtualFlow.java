@@ -57,6 +57,7 @@ import javafx.util.Duration;
 import sun.util.logging.PlatformLogger;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 /**
@@ -937,6 +938,22 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             addAllToPile();
             releaseAllPrivateCells();
         } else if (needsReconfigureCells) {
+            setMaxPrefBreadth(-1);
+            lastWidth = -1;
+            lastHeight = -1;
+        }
+
+        if (! dirtyCells.isEmpty()) {
+            for (int count = 0; count < dirtyCells.cardinality(); count++) {
+                int index = dirtyCells.nextSetBit(0);
+                T cell = cells.get(index);
+                // updateIndex(-1) works for TableView, but breaks ListView.
+                // For now, the TableView just does not use the dirtyCells API
+//                cell.updateIndex(-1);
+                cell.requestLayout();
+                dirtyCells.clear(index);
+            }
+
             setMaxPrefBreadth(-1);
             lastWidth = -1;
             lastHeight = -1;
@@ -2364,6 +2381,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private boolean needsRebuildCells = false; // when cell contents have changed
     private boolean needsCellsLayout = false;
     private boolean sizeChanged = false;
+    private final BitSet dirtyCells = new BitSet();
     
     public void reconfigureCells() {
         needsReconfigureCells = true;
@@ -2382,6 +2400,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     public void requestCellLayout() {
         needsCellsLayout = true;
+        requestLayout();
+    }
+
+    public void setCellDirty(int index) {
+        dirtyCells.set(index);
         requestLayout();
     }
 

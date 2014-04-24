@@ -300,7 +300,7 @@ public final class CategoryAxis extends Axis<String> {
      * @return A range object that can be passed to setRange() and calculateTickValues()
      */
     @Override protected Object getRange() {
-        return new Object[]{ getCategories(), categorySpacing.get(), firstCategoryPos.get(), getTickLabelRotation() };
+        return new Object[]{ getCategories(), categorySpacing.get(), firstCategoryPos.get(), getEffectiveTickLabelRotation() };
     }
 
     /**
@@ -316,8 +316,8 @@ public final class CategoryAxis extends Axis<String> {
 //        if (categories.isEmpty()) new java.lang.Throwable().printStackTrace();
         double newCategorySpacing = (Double)rangeArray[1];
         double newFirstCategoryPos = (Double)rangeArray[2];
-        double tickLabelRotation = (Double)rangeArray[3];
-        setTickLabelRotation(tickLabelRotation);
+        setEffectiveTickLabelRotation((Double)rangeArray[3]);
+
         changeIsLocal = true;
         setCategories(FXCollections.<String>observableArrayList(categories));
         changeIsLocal = false;

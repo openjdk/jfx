@@ -33,35 +33,43 @@ import javafx.geometry.Bounds;
 class MacVariant {
     final static int NSArray_id = 1;
     final static int NSArray_NSString = 2;
-    final static int NSArray_int = 18;
-    final static int NSArray_range = 19;
-    final static int NSAttributedString = 3;
-    final static int NSData = 4;
-    final static int NSDate = 5;
-    final static int NSDictionary = 6;
-    final static int NSNumber_Boolean = 7;
-    final static int NSNumber_Int = 8;
-    final static int NSNumber_Float = 9;
-    final static int NSNumber_Double = 10;
-    final static int NSString = 11;
-    final static int NSURL = 12;
-    final static int NSValue_point = 13;
-    final static int NSValue_size = 14;
-    final static int NSValue_rectangle = 15;
-    final static int NSValue_range = 15;
-    final static int NSObject = 17; /* id */
+    final static int NSArray_int = 3;
+    final static int NSArray_range = 4;
+    final static int NSAttributedString = 5; /* Uses string for the text and variantArray for the styles */
+    final static int NSData = 6;
+    final static int NSDate = 7;
+    final static int NSDictionary = 8; /* Uses longArray for keys (NSString) and variantArray for values */
+    final static int NSNumber_Boolean = 9;
+    final static int NSNumber_Int = 10;
+    final static int NSNumber_Float = 11;
+    final static int NSNumber_Double = 12;
+    final static int NSString = 13;
+    final static int NSURL = 14;
+    final static int NSValue_point = 15;
+    final static int NSValue_size = 16;
+    final static int NSValue_rectangle = 17;
+    final static int NSValue_range = 18;
+    final static int NSObject = 19; /* id */
 
     int type;
     long[] longArray;
     int[] intArray;
     String[] stringArray;
+    MacVariant[] variantArray; /* Used by NSAttributedString and NSDictionary */
     float float1;
     float float2;
+    float float3;
+    float float4;
     int int1;
     int int2;
     String string;
     long long1;
     double double1;
+
+    /* Used when the Variant represents an attribute within a NSAttributedString */
+    int location;
+    int length;
+    long key;
 
     static MacVariant createNSArray(Object result) {
         MacVariant variant = new MacVariant();
@@ -119,6 +127,17 @@ class MacVariant {
         return variant;
     }
 
+    static MacVariant createNSValueForRectangle(Object result) {
+        Bounds bounds = (Bounds)result;
+        MacVariant variant = new MacVariant();
+        variant.type = NSValue_rectangle;
+        variant.float1 = (float)bounds.getMinX();
+        variant.float2 = (float)bounds.getMinY();
+        variant.float3 = (float)bounds.getWidth();
+        variant.float4 = (float)bounds.getHeight();
+        return variant;
+    }
+
     static MacVariant createNSValueForRange(Object result) {
         int[] range = (int[])result;
         MacVariant variant = new MacVariant();
@@ -158,6 +177,11 @@ class MacVariant {
             case NSArray_id: return longArray;
             case NSArray_int: return intArray;
             case NSValue_range: return new int[] {int1, int2};
+            case NSValue_point: return new float[] {float1, float2};
+            case NSValue_size: return new float[] {float1, float2};
+            case NSValue_rectangle: return new float[] {float1, float2, float3, float4};
+            case NSString: return string;
+            case NSAttributedString: return string;
             //TODO REST
         }
         return null;
@@ -170,6 +194,8 @@ class MacVariant {
             case NSArray_id: v = Arrays.toString((long[])v); break;
             case NSArray_int: v = Arrays.toString((int[])v); break;
             case NSValue_range: v = Arrays.toString((int[])v); break;
+            case NSAttributedString: v += Arrays.toString(variantArray); break;
+            case NSDictionary: v = "keys: " + Arrays.toString(longArray) + " values: " + Arrays.toString(variantArray);
         }
         return "MacVariant type: " + type + " value " + v;
     }

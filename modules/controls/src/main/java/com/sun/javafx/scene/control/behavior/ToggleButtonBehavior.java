@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.behavior;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;
+import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
@@ -75,18 +76,24 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
                 if (Utils.isTwoLevelFocus()) {
                     super.callAction(toggleToTraverseAction(name));
                 } else if (traversingToNext) {
-                    if (currentToggleIdx == toggles.size() - 1) {
+                    int nextToggleIndex = currentToggleIdx;
+                    Toggle toggle = null;
+                    while (++nextToggleIndex < toggles.size() && (toggle = toggles.get(nextToggleIndex)) instanceof Node &&
+                            ((Node)toggle).isDisabled());
+                    if (nextToggleIndex == toggles.size()) {
                         super.callAction(toggleToTraverseAction(name));
                     } else {
-                        Toggle toggle = toggles.get(currentToggleIdx + 1);
                         toggleGroup.selectToggle(toggle);
                         ((Control)toggle).requestFocus();
                     }
                 } else {
-                    if (currentToggleIdx == 0) {
+                    int prevToggleIndex = currentToggleIdx;
+                    Toggle toggle = null;
+                    while (--prevToggleIndex >= 0 && (toggle = toggles.get(prevToggleIndex)) instanceof Node &&
+                            ((Node)toggle).isDisabled());
+                    if (prevToggleIndex < 0) {
                         super.callAction(toggleToTraverseAction(name));
                     } else {
-                        Toggle toggle = toggles.get(currentToggleIdx - 1);
                         toggleGroup.selectToggle(toggle);
                         ((Control)toggle).requestFocus();
                     }

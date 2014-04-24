@@ -65,7 +65,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
 
         // init the VirtualFlow
         flow.setPannable(IS_PANNABLE);
-        flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         flow.setCreateCell(flow1 -> TreeViewSkin.this.createCell());
         flow.setFixedCellSize(treeView.getFixedCellSize());
         getChildren().add(flow);
@@ -102,7 +101,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         registerChangeListener(treeView.rootProperty(), "ROOT");
         registerChangeListener(treeView.showRootProperty(), "SHOW_ROOT");
         registerChangeListener(treeView.cellFactoryProperty(), "CELL_FACTORY");
-        registerChangeListener(treeView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(treeView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
         
         updateRowCount();
@@ -124,8 +122,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             updateRowCount();
         } else if ("CELL_FACTORY".equals(p)) {
             flow.recreateCells();
-        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
-            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         } else if ("FIXED_CELL_SIZE".equals(p)) {
             flow.setFixedCellSize(getSkinnable().getFixedCellSize());
         }

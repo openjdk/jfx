@@ -55,8 +55,8 @@ public class TestLog {
         log(new Formatter().format(format, args).toString());
     }
 
-    public static String[] getLog() {
-        return log.toArray(new String[log.size()]);
+    public static  List<String> getLog() {
+        return new ArrayList<>(log);
     }
 
     public static void clear() {

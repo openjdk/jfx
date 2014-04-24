@@ -71,7 +71,7 @@ public class LinuxSimpleTouchProcessor extends LinuxTouchProcessor {
                         case Input.BTN_TOUCH:
                             if (buffer.getEventValue() == 0) {
                                 touchReleased = true;
-                            } else {
+                            } else if (state.getPointCount() == 0) {
                                 // restore an old point
                                 state.addPoint(null);
                             }

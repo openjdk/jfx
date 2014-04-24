@@ -47,6 +47,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ListViewKeyInputTest {
     private ListView<String> listView;
@@ -1962,5 +1963,44 @@ public class ListViewKeyInputTest {
         assertTrue(fm.isFocused(4));
         assertTrue(sm.isSelected(4));
         assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt36800() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        final int items = 10;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 4
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 3
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 2
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 1
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 0
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // bug time?
+
+        assertEquals(0, getAnchor());
+        assertTrue(fm.isFocused(0));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+        assertFalse(sm.isSelected(3));
+        assertFalse(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
 }

@@ -262,7 +262,7 @@ public class BundleParams {
         return fetchParam(SHORTCUT_HINT);
     }
 
-    public void setShortcutHint(boolean v) {
+    public void setShortcutHint(Boolean v) {
         putUnlessNull(PARAM_SHORTCUT, v);
     }
 
@@ -270,7 +270,7 @@ public class BundleParams {
         return fetchParam(MENU_HINT);
     }
 
-    public void setMenuHint(boolean v) {
+    public void setMenuHint(Boolean v) {
         putUnlessNull(PARAM_MENU, v);
     }
 
@@ -302,7 +302,7 @@ public class BundleParams {
         return fetchParam(VERBOSE);
     }
 
-    public void setVerbose(boolean verbose) {
+    public void setVerbose(Boolean verbose) {
         putUnlessNull(VERBOSE.getID(), verbose);
     }
 

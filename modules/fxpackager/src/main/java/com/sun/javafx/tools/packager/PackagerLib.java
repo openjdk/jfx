@@ -91,7 +91,7 @@ import sun.misc.BASE64Encoder;
 import static com.oracle.bundlers.StandardBundlerParam.*;
 
 public class PackagerLib {
-    public static final String JAVAFX_VERSION = "2.2";
+    public static final String JAVAFX_VERSION = "8.0";
 
     private static final ResourceBundle bundle =
             ResourceBundle.getBundle("com/sun/javafx/tools/packager/Bundle");
@@ -990,7 +990,7 @@ public class PackagerLib {
             out.println("</security>");
         }
 
-        if (deployParams.needShortcut) {
+        if (Boolean.TRUE.equals(deployParams.needShortcut)) {
             out.println("  <shortcut><desktop/></shortcut>");
 
 //            //TODO: Add support for a more sophisticated shortcut tag.

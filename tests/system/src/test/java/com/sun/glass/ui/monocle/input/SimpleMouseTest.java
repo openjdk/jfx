@@ -25,7 +25,11 @@
 
 package com.sun.glass.ui.monocle.input;
 
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
 import org.junit.After;
+import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -110,6 +114,127 @@ public class SimpleMouseTest {
         ui.processLine("EV_REL REL_WHEEL 0");
         ui.processLine("EV_SYN");
         TestLog.waitForLog("Scroll: -1");
+    }
+
+    @Test
+    public void testClickLeft() throws Exception {
+        ui.processLine("EV_KEY BTN_LEFT 1");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+        ui.processLine("EV_KEY BTN_LEFT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+        TestLog.waitForLogContaining("Mouse pressed: 300, 300");
+        TestLog.waitForLogContaining("Mouse released: 300, 300");
+        TestLog.waitForLogContaining("Mouse clicked: 300, 300");
+    }
+
+    @Test
+    public void testClickRight() throws Exception {
+        ui.processLine("EV_KEY BTN_RIGHT 1");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+        ui.processLine("EV_KEY BTN_RIGHT 0");
+        ui.processLine("EV_SYN SYN_REPORT 0");
+        TestLog.waitForLogContaining("Mouse pressed: 300, 300");
+        TestLog.waitForLogContaining("Mouse released: 300, 300");
+        TestLog.waitForLogContaining("Mouse clicked: 300, 300");
+    }
+
+    @Test
+    public void testDragLookahead() throws Exception {
+        Assume.assumeTrue(TestApplication.isMonocle());
+        TestApplication.showFullScreenScene();
+        TestApplication.addMouseListeners();
+        TestLog.reset();
+        Rectangle2D r = Screen.getPrimary().getBounds();
+        final int width = (int) r.getWidth();
+        final int height = (int) r.getHeight();
+        final int x1 = (int) Math.round(width * 0.1);
+        final int y1 = (int) Math.round(height * 0.1);
+        final int delta = (int) Math.min(width / 2.0, height / 2.0);
+        final int x2 = x1 + delta;
+        final int y2 = y1 + delta;
+        final int x3 = (int) Math.round(width * 0.9);
+        final int y3 = (int) Math.round(height * 0.9);
+        // Move the mouse to 0, 0
+        ui.processLine("EV_REL REL_X " + -width);
+        ui.processLine("EV_REL REL_Y " + -height);
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Mouse moved: 0, 0");
+        // Move to x1, y1
+        ui.processLine("EV_REL REL_X " + x1);
+        ui.processLine("EV_REL REL_Y " + y1);
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Mouse moved: %d, %d", x1, y1);
+        // Push events while on the event thread, making sure that events
+        // will be buffered up and enabling filtering to take place
+        TestRunnable.invokeAndWait(() -> {
+            ui.processLine("EV_KEY BTN_LEFT 1");
+            ui.processLine("EV_SYN");
+            for (int i = 0; i < delta; i++) {
+                ui.processLine("EV_REL REL_X 1");
+                ui.processLine("EV_REL REL_Y 1");
+                ui.processLine("EV_SYN");
+            }
+            ui.processLine("EV_REL REL_X " + (x3 - x2));
+            ui.processLine("EV_REL REL_Y " + (y3 - y2));
+            ui.processLine("EV_SYN");
+            ui.processLine("EV_KEY BTN_LEFT 0");
+            ui.processLine("EV_SYN");
+        });
+        // Check that the initial point reported is correct
+        TestLog.waitForLog("Mouse pressed: %d, %d", x1, y1);
+        // Check that the final point reported is correct
+        TestLog.waitForLog("Mouse released: %d, %d", x3, y3);
+        TestLog.waitForLog("Mouse dragged: %d, %d", x3, y3);
+        // Check that moves in between were filtered
+        Assert.assertTrue(TestLog.countLogContaining("Mouse dragged") <= (x2 - x1) / 10);
+    }
+
+    @Test
+    public void testMoveLookahead() throws Exception {
+        Assume.assumeTrue(TestApplication.isMonocle());
+        TestApplication.showFullScreenScene();
+        TestApplication.addMouseListeners();
+        TestLog.reset();
+        Rectangle2D r = Screen.getPrimary().getBounds();
+        final int width = (int) r.getWidth();
+        final int height = (int) r.getHeight();
+        final int x1 = (int) Math.round(width * 0.1);
+        final int y1 = (int) Math.round(height * 0.1);
+        final int delta = (int) Math.min(width / 2.0, height / 2.0);
+        final int x2 = x1 + delta;
+        final int y2 = y1 + delta;
+        final int x3 = (int) Math.round(width * 0.9);
+        final int y3 = (int) Math.round(height * 0.9);
+        // Move the mouse to 0, 0
+        ui.processLine("EV_REL REL_X " + -width);
+        ui.processLine("EV_REL REL_Y " + -height);
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Mouse moved: 0, 0");
+        // Move to x1, y1
+        ui.processLine("EV_REL REL_X " + x1);
+        ui.processLine("EV_REL REL_Y " + y1);
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Mouse moved: %d, %d", x1, y1);
+        // Push events while on the event thread, making sure that events
+        // will be buffered up and enabling filtering to take place
+        TestRunnable.invokeAndWait(() -> {
+            for (int i = 0; i < delta; i++) {
+                ui.processLine("EV_REL REL_X 1");
+                ui.processLine("EV_REL REL_Y 1");
+                ui.processLine("EV_SYN");
+            }
+            ui.processLine("EV_REL REL_X " + (x3 - x2));
+            ui.processLine("EV_REL REL_Y " + (y3 - y2));
+            ui.processLine("EV_SYN");
+        });
+        // Check that the final point reported is correct
+        TestLog.waitForLog("Mouse moved: %d, %d", x3, y3);
+        // Check that moves in between were filtered
+        Assert.assertTrue(TestLog.countLogContaining("Mouse moved") <= (x2 - x1) / 10);
+        // Check that we didn't get any other events
+        Assert.assertEquals(0, TestLog.countLogContaining("Mouse pressed"));
+        Assert.assertEquals(0, TestLog.countLogContaining("Mouse released"));
+        Assert.assertEquals(0, TestLog.countLogContaining("Mouse clicked"));
     }
 
 }

@@ -81,8 +81,8 @@ public class DeployParams extends CommonParams {
     boolean isExtension = false;
     boolean isSwingApp = false;
 
-    boolean needShortcut = false;
-    boolean needMenu = false;
+    Boolean needShortcut = null;
+    Boolean needMenu = null;
     boolean needInstall = false;
 
     String outfile;
@@ -172,11 +172,11 @@ public class DeployParams extends CommonParams {
         offlineAllowed = b;
     }
 
-    public void setNeedShortcut(boolean b) {
+    public void setNeedShortcut(Boolean b) {
         needShortcut = b;
     }
 
-    public void setNeedMenu(boolean b) {
+    public void setNeedMenu(Boolean b) {
         needMenu = b;
     }
 
@@ -517,7 +517,7 @@ public class DeployParams extends CommonParams {
             bundleParams.setLicenseType(licenseType);
             bundleParams.setDescription(description);
             bundleParams.setTitle(title);
-            bundleParams.setVerbose(verbose);
+            if (verbose) bundleParams.setVerbose(verbose);
 
             bundleParams.setJvmProperties(properties);
             bundleParams.setJvmargs(jvmargs);

@@ -85,9 +85,15 @@ public class LinuxRPMBundler extends AbstractBundler {
             params -> {
                 String nm = APP_NAME.fetchFrom(params);
                 if (nm == null) return null;
-        
-                //spaces are not allowed in RPM package names
-                nm = nm.replaceAll(" ", "");
+
+                // Fedora rules are used here
+                // https://fedoraproject.org/wiki/Packaging:NamingGuidelines?rd=Packaging/NamingGuidelines
+                // The net effect is to lowercase the app name,
+                // change spaces and underscores to dashes,
+                // and to remove all alphanum+dashes
+                nm = nm.toLowerCase()
+                        .replaceAll("[ _]", "-")
+                        .replaceAll("[^-abcdefghijklmnopqrstuvwxyz0123456789]", "");
                 return nm;
             },
             (s, p) -> s);
@@ -261,11 +267,6 @@ public class LinuxRPMBundler extends AbstractBundler {
         }
     }
 
-    @Override
-    public String toString() {
-        return getName();
-    }
-
     private String getLicenseFileString(Map<String, ? super Object> params) {
         StringBuilder sb = new StringBuilder();
         for (String f: LICENSE_FILE.fetchFrom(params)) {
@@ -273,7 +274,7 @@ public class LinuxRPMBundler extends AbstractBundler {
                 sb.append("\n");
             }
             sb.append("%doc /opt/");
-            sb.append(BUNDLE_NAME.fetchFrom(params));
+            sb.append(APP_NAME.fetchFrom(params));
             sb.append("/app/");
             sb.append(f);
         }
@@ -283,8 +284,8 @@ public class LinuxRPMBundler extends AbstractBundler {
     private boolean prepareProjectConfig(Map<String, ? super Object> params) throws IOException {
         Map<String, String> data = new HashMap<>();
 
-        data.put("APPLICATION_NAME", BUNDLE_NAME.fetchFrom(params));
-        data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params).toLowerCase());
+        data.put("APPLICATION_NAME", APP_NAME.fetchFrom(params));
+        data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params));
         data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
         data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
         data.put("APPLICATION_LAUNCHER_FILENAME",
@@ -392,7 +393,9 @@ public class LinuxRPMBundler extends AbstractBundler {
         pb = pb.directory(RPM_IMAGE_DIR.fetchFrom(params));
         IOUtils.exec(pb, VERBOSE.fetchFrom(params));
 
-        IOUtils.deleteRecursive(broot);
+        if (!Log.isDebug()) {
+            IOUtils.deleteRecursive(broot);
+        }
 
         Log.info(MessageFormat.format(I18N.getString("message.output-bundle-location"), outdir.getAbsolutePath()));
 
@@ -455,8 +458,6 @@ public class LinuxRPMBundler extends AbstractBundler {
                 IMAGES_ROOT,
                 LICENSE_FILE,
                 LICENSE_TYPE,
-                MENU_HINT,
-                SHORTCUT_HINT,
                 TITLE,
                 VENDOR,
                 VERSION

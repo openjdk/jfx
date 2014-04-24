@@ -125,7 +125,7 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
             try {
             listener.invalidated(change.getList());
             } catch (Exception e) {
-                PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
             }
         }
     }
@@ -163,7 +163,7 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
             try {
                 listener.onChanged(change);
             } catch (Exception e) {
-                PlatformLogger.getLogger("collections").warning("Exception in ListChangeListener", e);
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
             }
         }
     }
@@ -320,7 +320,7 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
                     try {
                         curInvalidationList[i].invalidated(change.getList());
                     } catch (Exception e) {
-                        PlatformLogger.getLogger("collections").warning("Exception in InvalidationListener", e);
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                     }
                 }
                 for (int i = 0; i < curChangeSize; i++) {
@@ -328,7 +328,7 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
                     try {
                         curChangeList[i].onChanged(change);
                     } catch (Exception e) {
-                        PlatformLogger.getLogger("collections").warning("Exception in ListChangeListenerListener", e);
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                     }
                 }
             } finally {

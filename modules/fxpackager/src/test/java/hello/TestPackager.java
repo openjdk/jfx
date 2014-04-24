@@ -41,25 +41,28 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
+import javax.swing.WindowConstants;
 
 public class TestPackager {
 
     private static void createAndShowGUI() {
         //Create and set up the window.
         try {
-            String preferencesId = System.getProperty("jvm.preferences.id");
+            String preferencesId = System.getProperty("app.preferences.id");
             Preferences node = Preferences.userRoot().node(preferencesId);
             Preferences jvmOptions = node.node("JVMUserOptions");
             String[] keys = jvmOptions.keys();
             for (String key: keys) {
                 System.out.println("key:" + key);
             }
+            jvmOptions.putLong("lastRunMs", System.currentTimeMillis());
+            node.flush();
         } catch (Exception ex) {
             Logger.getLogger(TestPackager.class.getName()).log(Level.WARNING, null, ex);
         }
 
         JFrame frame = new JFrame("Display Parameters");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
         frame.setBounds(0, 0, dim.width / 4, dim.height / 4);
@@ -76,7 +79,7 @@ public class TestPackager {
         RuntimeMXBean RuntimemxBean = ManagementFactory.getRuntimeMXBean();
         List<String> arguments = RuntimemxBean.getInputArguments();
 
-        JList list = new JList(arguments.toArray(new String[arguments.size()]));
+        JList<String> list = new JList<>(arguments.toArray(new String[arguments.size()]));
         list.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
         list.setLayoutOrientation(JList.HORIZONTAL_WRAP);
         list.setVisibleRowCount(-1);
@@ -98,10 +101,6 @@ public class TestPackager {
     public static void main(String[] args) {
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
-        javax.swing.SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                createAndShowGUI();
-            }
-        });
+        javax.swing.SwingUtilities.invokeLater(TestPackager::createAndShowGUI);
     }
 }

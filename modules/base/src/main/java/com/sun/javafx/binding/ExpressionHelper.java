@@ -136,7 +136,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             try {
                 listener.invalidated(observable);
             } catch (Exception e) {
-                PlatformLogger.getLogger("beans").warning("Exception in InvalidationListener", e);
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
             }
         }
     }
@@ -181,7 +181,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                 try {
                     listener.changed(observable, oldValue, currentValue);
                 } catch (Exception e) {
-                    PlatformLogger.getLogger("beans").warning("Exception in ChangeListener", e);
+                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                 }
             }
         }
@@ -348,7 +348,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                     try {
                         curInvalidationList[i].invalidated(observable);
                     } catch (Exception e) {
-                        PlatformLogger.getLogger("beans").warning("Exception in InvalidationListener", e);
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                     }
                 }
                 if (curChangeSize > 0) {
@@ -360,7 +360,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                             try {
                                 curChangeList[i].changed(observable, oldValue, currentValue);
                             } catch (Exception e) {
-                                PlatformLogger.getLogger("beans").warning("Exception in ChangeListener", e);
+                                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
                             }
                         }
                     }

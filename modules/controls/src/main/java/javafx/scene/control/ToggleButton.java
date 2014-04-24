@@ -154,6 +154,10 @@ import javafx.css.StyleableProperty;
                 @Override protected void invalidated() {
                     final boolean selected = get();
                     final ToggleGroup tg = getToggleGroup();
+                    // Note: these changes need to be done before selectToggle/clearSelectedToggle since
+                    // those operations change properties and can execute user code, possibly modifying selected property again
+                    pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, selected);
+                    accSendNotification(Attribute.SELECTED);
                     if (tg != null) {
                         if (selected) {
                             tg.selectToggle(ToggleButton.this);
@@ -161,8 +165,6 @@ import javafx.css.StyleableProperty;
                             tg.clearSelectedToggle();
                         }
                     }
-                    pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, selected);
-                    accSendNotification(Attribute.SELECTED);
                 }
 
                 @Override

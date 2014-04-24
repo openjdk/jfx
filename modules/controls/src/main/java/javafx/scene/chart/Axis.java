@@ -83,6 +83,7 @@ public abstract class Axis<T> extends Region {
 
     Text measure = new Text();
     private Orientation effectiveOrientation;
+    private double effectiveTickLabelRotation = Double.NaN;
     private Label axisLabel = new Label();
     private final Path tickMarkPath = new Path();
     private double oldLength = 0;
@@ -731,6 +732,7 @@ public abstract class Axis<T> extends Region {
         // clear tick mark path elements as we will recreate
         tickMarkPath.getElements().clear();
         // do layout of axis label, tick mark lines and text
+        double effectiveLabelRotation = getEffectiveTickLabelRotation();
         if (Side.LEFT.equals(side)) {
             // offset path to make strokes snap to pixel
             tickMarkPath.setLayoutX(-0.5);
@@ -746,7 +748,7 @@ public abstract class Axis<T> extends Region {
             for (TickMark<T> tick : tickMarks) {
                 tick.setPosition(getDisplayPosition(tick.getValue()));
                 positionTextNode(tick.textNode, width - getTickLabelGap() - tickMarkLength,
-                                 tick.getPosition(),getTickLabelRotation(),side);
+                                 tick.getPosition(), effectiveLabelRotation,side);
 
                 // check if position is inside bounds
                 if(tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
@@ -771,7 +773,7 @@ public abstract class Axis<T> extends Region {
             for (TickMark<T> tick : tickMarks) {
                 tick.setPosition(getDisplayPosition(tick.getValue()));
                 positionTextNode(tick.textNode, getTickLabelGap() + tickMarkLength,
-                                 tick.getPosition(),getTickLabelRotation(),side);
+                                 tick.getPosition(), effectiveLabelRotation,side);
                 // check if position is inside bounds
                 if(tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
@@ -809,7 +811,7 @@ public abstract class Axis<T> extends Region {
             for (TickMark<T> tick : tickMarks) {
                 tick.setPosition(getDisplayPosition(tick.getValue()));
                 positionTextNode(tick.textNode, tick.getPosition(), height - tickMarkLength - getTickLabelGap(),
-                        getTickLabelRotation(), side);
+                        effectiveLabelRotation, side);
                 // check if position is inside bounds
                 if(tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
@@ -836,7 +838,7 @@ public abstract class Axis<T> extends Region {
                 tick.setPosition(xPos);
 //                System.out.println("tick pos at : "+tickIndex+" = "+xPos);
                 positionTextNode(tick.textNode,xPos, tickMarkLength + getTickLabelGap(),
-                                getTickLabelRotation(),side);
+                        effectiveLabelRotation,side);
                 // check if position is inside bounds
                 if(xPos >= 0 && xPos <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
@@ -873,23 +875,24 @@ public abstract class Axis<T> extends Region {
      * @param side The side to place text next to position x,y at
      */
     private void positionTextNode(Text node, double posX, double posY, double angle, Side side) {
-        node.setLayoutX(0);
-        node.setLayoutY(0);
-        node.setRotate(angle);
-        final Bounds bounds = node.getBoundsInParent();
+        Bounds bounds = node.getLayoutBounds();
+        double tX, tY;
         if (Side.LEFT.equals(side)) {
-            node.setLayoutX(posX-bounds.getWidth()-bounds.getMinX());
-            node.setLayoutY(posY - (bounds.getHeight() / 2d) - bounds.getMinY());
+            tX = posX-bounds.getWidth()-bounds.getMinX();
+            tY = posY - (bounds.getHeight() / 2d) - bounds.getMinY();
         } else if (Side.RIGHT.equals(side)) {
-            node.setLayoutX(posX-bounds.getMinX());
-            node.setLayoutY(posY-(bounds.getHeight()/2d)-bounds.getMinY());
+            tX = posX-bounds.getMinX();
+            tY = posY-(bounds.getHeight()/2d)-bounds.getMinY();
         } else if (Side.TOP.equals(side)) {
-            node.setLayoutX(posX-(bounds.getWidth()/2d)-bounds.getMinX());
-            node.setLayoutY(posY-bounds.getHeight()-bounds.getMinY());
+            tX = posX-(bounds.getWidth()/2d)-bounds.getMinX();
+            tY = posY-bounds.getHeight()-bounds.getMinY();
         } else {
-            node.setLayoutX(posX-(bounds.getWidth()/2d)-bounds.getMinX());
-            node.setLayoutY(posY-bounds.getMinY());
+            tX = posX-(bounds.getWidth()/2d)-bounds.getMinX();
+            tY = posY-bounds.getMinY();
         }
+        node.getTransforms().setAll(
+                new Rotate(angle, tX + bounds.getWidth() + bounds.getHeight(), tY + bounds.getHeight()),
+                new Translate(tX, tY - bounds.getHeight()));
     }
 
     /**
@@ -934,7 +937,19 @@ public abstract class Axis<T> extends Region {
      * @return size of tick mark label for given value
      */
     protected Dimension2D measureTickMarkSize(T value, Object range) {
-        return measureTickMarkSize(value,getTickLabelRotation());
+        return measureTickMarkSize(value, getEffectiveTickLabelRotation());
+    }
+
+    final double getEffectiveTickLabelRotation() {
+        return Double.isNaN(effectiveTickLabelRotation) ? getTickLabelRotation() : effectiveTickLabelRotation;
+    }
+
+    /**
+     *
+     * @param rotation NaN for using the tickLabelRotationProperty()
+     */
+    final void setEffectiveTickLabelRotation(double rotation) {
+        effectiveTickLabelRotation = rotation;
     }
 
     // -------------- TICKMARK INNER CLASS -----------------------------------------------------------------------------

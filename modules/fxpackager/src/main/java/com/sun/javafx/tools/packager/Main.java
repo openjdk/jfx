@@ -210,6 +210,8 @@ public class Main {
                             addArgument(createJarParams, nextArg(args, i++));
                         }  else if (arg.equalsIgnoreCase("-paramFile")) {
                             createJarParams.setParams(parseParams(nextArg(args, i++)));
+                        } else {
+                            throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
                     if (!srcfilesSet) {
@@ -261,7 +263,7 @@ public class Main {
                             BundleType type = BundleType.ALL;
                             String format = null; //null means ANY
                             if (i+1 < args.length && !args[i+1].startsWith("-")) {
-                                String v = args[i+1];
+                                String v = args[++i];
                                 //parsing logic is the same as in DeployFXTask
                                 if ("image".equals(v)) {
                                     type = BundleType.IMAGE;
@@ -328,6 +330,8 @@ public class Main {
                             srcfilesSet = true;
                         } else if (arg.equalsIgnoreCase("-argument")) {
                             addArgument(deployParams, nextArg(args, i++));
+                        } else {
+                            throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
                     if (templateInFile != null) {
@@ -355,6 +359,8 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-srcfiles")) {
                             addResources(createBssParams, srcdir, nextArg(args, i++));
                             srcfilesSet = true;
+                        } else {
+                            throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
                     if (!srcfilesSet) {
@@ -390,6 +396,8 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-srcfiles")) {
                             addResources(signJarParams, srcdir, nextArg(args, i++));
                             srcfilesSet = true;
+                        } else {
+                            throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
                     if (!srcfilesSet) {
@@ -417,6 +425,8 @@ public class Main {
                             makeAllParams.setHeight(Integer.parseInt(nextArg(args, i++)));
                         } else if(arg.equalsIgnoreCase("-v")) {
                             makeAllParams.setVerbose(true);
+                        } else {
+                            throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
                     makeAll = true;

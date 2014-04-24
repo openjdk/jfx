@@ -429,7 +429,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.preferences-id.description"),
                     "preferencesID",
                     String.class,
-                    IDENTIFIER::fetchFrom,
+                    p -> IDENTIFIER.fetchFrom(p).replace('.', '/'),
                     (s, p) -> s
             );
 

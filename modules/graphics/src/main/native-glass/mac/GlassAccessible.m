@@ -122,7 +122,6 @@
     return jresult;
 }
 
-
 - (NSArray *)accessibilityArrayAttributeValues:(NSString *)attribute index:(NSUInteger)index maxCount:(NSUInteger)maxCount
 {
     jlongArray jresult = NULL;
@@ -225,7 +224,7 @@
 
 @end
 
-NSArray* jArrayToNSArray(JNIEnv *env, jarray srcArray, id (^mapper)(void*, CFIndex)) {
+NSArray* jArrayToNSArray(JNIEnv *env, jarray srcArray, jMapper mapper) {
     if (srcArray == NULL) return NULL;
     jsize size = (*env)->GetArrayLength(env, srcArray);
 
@@ -233,17 +232,27 @@ NSArray* jArrayToNSArray(JNIEnv *env, jarray srcArray, id (^mapper)(void*, CFInd
     NSMutableArray *array = [NSMutableArray arrayWithCapacity: size];
     if (size <= 0) return array;
 
+    /* Do not use GetPrimitiveArrayCritical, variantToID() can be used recursively */
+    if (mapper == jVariantToID) {
+        for (CFIndex index = 0; index < size; index++) {
+            jobject element = (*env)->GetObjectArrayElement(env, srcArray, index);
+            if ((*env)->ExceptionCheck(env)) return NULL;
+            [array addObject: variantToID(env, element)];
+        }
+        return array;
+    }
+
     void* ptr = (*env)->GetPrimitiveArrayCritical(env, srcArray, 0);
     if (ptr) {
-	    @try {
-	        for (CFIndex index = 0; index < size; index++) {
-	            [array addObject: mapper(ptr, index)];
-	        }
-	    }
-	    @finally {
-	        (*env)->ReleasePrimitiveArrayCritical(env, srcArray, ptr, 0);
-	    }
-	}
+        @try {
+            for (CFIndex index = 0; index < size; index++) {
+                [array addObject: mapper(ptr, index)];
+            }
+        }
+        @finally {
+            (*env)->ReleasePrimitiveArrayCritical(env, srcArray, ptr, 0);
+        }
+    }
     return array;
 }
 
@@ -253,13 +262,13 @@ NSString* jStringToNSString(JNIEnv *env, jstring string) {
     NSString *result = NULL;
     const jchar *chars =(*env)->GetStringCritical(env, string, 0);
     if (chars) {
-	    @try {
-	        result = [NSString stringWithCharacters: chars length: length];
-	    }
-	    @finally {
-	        (*env)->ReleaseStringCritical(env, string, chars);
-	    }
-	}
+        @try {
+            result = [NSString stringWithCharacters: chars length: length];
+        }
+        @finally {
+            (*env)->ReleaseStringCritical(env, string, chars);
+        }
+    }
     return result;
 }
 
@@ -282,11 +291,41 @@ id variantToID(JNIEnv *env, jobject variant) {
         jstring string = (*env)->GetObjectField(env, variant, jVariantString);
         return jStringToNSString(env, string);
     }
+    case com_sun_glass_ui_mac_MacVariant_NSDictionary: {
+        jlongArray longArray = (*env)->GetObjectField(env, variant, jVariantLongArray);
+        jobjectArray objectArray = (*env)->GetObjectField(env, variant, jVariantVariantArray);
+        NSArray* keys = jArrayToNSArray(env, longArray, jLongToID);
+        NSArray* values = jArrayToNSArray(env, objectArray, jVariantToID);
+        if (keys != NULL && values != NULL && [keys count] == [values count]) {
+            return [NSDictionary dictionaryWithObjects: values forKeys: keys]; 
+        }
+        return NULL;
+    }
     case com_sun_glass_ui_mac_MacVariant_NSAttributedString: {
         jstring string = (*env)->GetObjectField(env, variant, jVariantString);
         NSString* nsString = jStringToNSString(env, string);
         if (nsString == NULL) return NULL;
-        NSAttributedString *attrString = [[NSAttributedString alloc] initWithString:nsString];
+        NSMutableAttributedString *attrString = [[NSMutableAttributedString alloc] initWithString:nsString];
+        jobjectArray stylesArray = (*env)->GetObjectField(env, variant, jVariantVariantArray);
+        if (stylesArray) {
+            /* Do not use GetPrimitiveArrayCritical for stylesArray */
+            jsize stylesCount = (*env)->GetArrayLength(env, stylesArray);
+
+            for (jsize index = 0; index < stylesCount; index++) {
+                /* jStyle is a special MacVariant with key, location, and length */
+                jobject jStyle = (*env)->GetObjectArrayElement(env, stylesArray, index);
+                if ((*env)->ExceptionCheck(env)) return NULL;
+                id value = variantToID(env, jStyle);
+                if (value) {
+                    jint location = (*env)->GetIntField(env, jStyle, jVariantLocation);
+                    jint length = (*env)->GetIntField(env, jStyle, jVariantLength);
+                    jlong key = (*env)->GetLongField(env, jStyle, jVariantKey);
+                    if (key) {
+                        [attrString addAttribute: (NSString *)key value: value range: NSMakeRange(location, length)];
+                    }
+                }
+            }
+        }
         return [attrString autorelease];
     }
     case com_sun_glass_ui_mac_MacVariant_NSValue_point: {
@@ -298,6 +337,13 @@ id variantToID(JNIEnv *env, jobject variant) {
         jfloat width = (*env)->GetFloatField(env, variant, jVariantFloat1);
         jfloat height = (*env)->GetFloatField(env, variant, jVariantFloat2);
         return [NSValue valueWithSize: NSMakeSize(width, height)];
+    }
+    case com_sun_glass_ui_mac_MacVariant_NSValue_rectangle: {
+        jfloat x = (*env)->GetFloatField(env, variant, jVariantFloat1);
+        jfloat y = (*env)->GetFloatField(env, variant, jVariantFloat2);
+        jfloat width = (*env)->GetFloatField(env, variant, jVariantFloat3);
+        jfloat height = (*env)->GetFloatField(env, variant, jVariantFloat4);
+        return [NSValue valueWithRect: NSMakeRect(x, y, width, height)];
     }
     case com_sun_glass_ui_mac_MacVariant_NSValue_range: {
         jint start = (*env)->GetIntField(env, variant, jVariantInt1);
@@ -441,9 +487,21 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initIDs
         if ((*env)->ExceptionCheck(env)) return;
         jVariantFloat2 = (*env)->GetFieldID(env, jVariantClass, "float2", "F");
         if ((*env)->ExceptionCheck(env)) return;
+        jVariantFloat3 = (*env)->GetFieldID(env, jVariantClass, "float3", "F");
+        if ((*env)->ExceptionCheck(env)) return;
+        jVariantFloat4 = (*env)->GetFieldID(env, jVariantClass, "float4", "F");
+        if ((*env)->ExceptionCheck(env)) return;
         jVariantDouble1 = (*env)->GetFieldID(env, jVariantClass, "double1", "D");
         if ((*env)->ExceptionCheck(env)) return;
         jVariantString = (*env)->GetFieldID(env, jVariantClass, "string", "Ljava/lang/String;");
+        if ((*env)->ExceptionCheck(env)) return;
+        jVariantVariantArray = (*env)->GetFieldID(env, jVariantClass, "variantArray", "[Lcom/sun/glass/ui/mac/MacVariant;");
+        if ((*env)->ExceptionCheck(env)) return;
+        jVariantLocation = (*env)->GetFieldID(env, jVariantClass, "location", "I");
+        if ((*env)->ExceptionCheck(env)) return;
+        jVariantLength = (*env)->GetFieldID(env, jVariantClass, "length", "I");
+        if ((*env)->ExceptionCheck(env)) return;
+        jVariantKey = (*env)->GetFieldID(env, jVariantClass, "key", "J");
         if ((*env)->ExceptionCheck(env)) return;
     }
 
@@ -453,7 +511,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacAccessible__1initIDs
 
     jIntToNSNumber = ^(void* data, CFIndex index) {
         return (id)[NSNumber numberWithInt: ((jint*)data)[index]];
-    };    
+    };
+
+    /* Special case, handled internally in jArrayToNSArray() */
+    jVariantToID = NULL;
 }
 
 /*
@@ -517,7 +578,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacAccessible_idToMacVariant
         NSString* n = (NSString*)id;
         jstring value = (*env)->NewStringUTF(env, [n UTF8String]);
         if (value) {
-        	(*env)->SetObjectField(env, jVariant, jVariantString, value);
+            (*env)->SetObjectField(env, jVariant, jVariantString, value);
         }
         break;
     }
@@ -526,14 +587,14 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacAccessible_idToMacVariant
         NSUInteger count = [n count];
         jlongArray result = (*env)->NewLongArray(env, count);
         if (result) {
-	        jlong* data = (*env)->GetPrimitiveArrayCritical(env, result, 0);
-	        if (data) {
-		        for (NSUInteger index = 0; index < count; index++) {
-		            data[index] = (jlong) [n objectAtIndex: index];
-		        }
-		        (*env)->ReleasePrimitiveArrayCritical(env, result, data, 0);
-     	        (*env)->SetObjectField(env, jVariant, jVariantLongArray, result);
-		    }
+            jlong* data = (*env)->GetPrimitiveArrayCritical(env, result, 0);
+            if (data) {
+                for (NSUInteger index = 0; index < count; index++) {
+                    data[index] = (jlong) [n objectAtIndex: index];
+                }
+                (*env)->ReleasePrimitiveArrayCritical(env, result, data, 0);
+                (*env)->SetObjectField(env, jVariant, jVariantLongArray, result);
+            }
         }
         break;
     }
@@ -542,16 +603,16 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacAccessible_idToMacVariant
         NSUInteger count = [n count];
         jintArray result = (*env)->NewIntArray(env, count);
         if (result) {
-	        jint* data = (*env)->GetPrimitiveArrayCritical(env, result, 0);
-	        if (data) {
-		        for (NSUInteger index = 0; index < count; index++) {
-		            NSNumber* value = (NSNumber*)[n objectAtIndex: index];
-		            data[index] = [value intValue];
-		        }
-		        (*env)->ReleasePrimitiveArrayCritical(env, result, data, 0);
-		        (*env)->SetObjectField(env, jVariant, jVariantIntArray, result);
-		    }
-	    }
+            jint* data = (*env)->GetPrimitiveArrayCritical(env, result, 0);
+            if (data) {
+                for (NSUInteger index = 0; index < count; index++) {
+                    NSNumber* value = (NSNumber*)[n objectAtIndex: index];
+                    data[index] = [value intValue];
+                }
+                (*env)->ReleasePrimitiveArrayCritical(env, result, data, 0);
+                (*env)->SetObjectField(env, jVariant, jVariantIntArray, result);
+            }
+        }
         break;
     }
     case com_sun_glass_ui_mac_MacVariant_NSValue_point: {
@@ -559,18 +620,30 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacAccessible_idToMacVariant
         NSPoint value = [n pointValue];
         (*env)->SetFloatField(env, jVariant, jVariantFloat1, value.x);
         (*env)->SetFloatField(env, jVariant, jVariantFloat2, value.y);
+        break;
     }
     case com_sun_glass_ui_mac_MacVariant_NSValue_size: {
         NSValue* n = (NSValue*)id;
         NSSize value = [n sizeValue];
         (*env)->SetFloatField(env, jVariant, jVariantFloat1, value.width);
         (*env)->SetFloatField(env, jVariant, jVariantFloat2, value.height);
+        break;
+    }
+    case com_sun_glass_ui_mac_MacVariant_NSValue_rectangle: {
+        NSValue* n = (NSValue*)id;
+        NSRect value = [n rectValue];
+        (*env)->SetFloatField(env, jVariant, jVariantFloat1, value.origin.x);
+        (*env)->SetFloatField(env, jVariant, jVariantFloat2, value.origin.y);
+        (*env)->SetFloatField(env, jVariant, jVariantFloat3, value.size.width);
+        (*env)->SetFloatField(env, jVariant, jVariantFloat4, value.size.height);
+        break;
     }
     case com_sun_glass_ui_mac_MacVariant_NSValue_range: {
         NSValue* n = (NSValue*)id;
         NSRange value = [n rangeValue];
         (*env)->SetIntField(env, jVariant, jVariantInt1, value.location);
         (*env)->SetIntField(env, jVariant, jVariantInt2, value.length);
+        break;
     }
     }
     return jVariant;
@@ -603,14 +676,14 @@ JNIEXPORT jlongArray JNICALL Java_com_sun_glass_ui_mac_MacAccessible_NSAccessibi
     NSUInteger count = [n count];
     jlongArray result = (*env)->NewLongArray(env, count);
     if (result) {
-	    jlong* data = (*env)->GetPrimitiveArrayCritical(env, result, 0);
-	    if (data) {
-		    for (NSUInteger index = 0; index < count; index++) {
-		        data[index] = (jlong) [n objectAtIndex: index];
-		    }
-		}
-	    (*env)->ReleasePrimitiveArrayCritical(env, result, data, 0);
-	}
+        jlong* data = (*env)->GetPrimitiveArrayCritical(env, result, 0);
+        if (data) {
+            for (NSUInteger index = 0; index < count; index++) {
+                data[index] = (jlong) [n objectAtIndex: index];
+            }
+        }
+        (*env)->ReleasePrimitiveArrayCritical(env, result, data, 0);
+    }
     return result;
 }
 

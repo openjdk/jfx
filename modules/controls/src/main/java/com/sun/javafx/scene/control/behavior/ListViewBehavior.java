@@ -466,6 +466,8 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         
         if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() - 1;
+            if (newRow < 0) return;
+
             int anchor = getAnchor();
             
             if (! hasAnchor()) {
