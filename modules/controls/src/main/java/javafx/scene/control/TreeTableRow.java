@@ -540,7 +540,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
         switch (attribute) {
             case ROLE: return Role.TREE_TABLE_ITEM;
             case TREE_ITEM_PARENT: {
-                if (treeTableView == null) return null;
                 if (treeItem == null) return null;
                 TreeItem<T> parent = treeItem.getParent();
                 if (parent == null) return null;
