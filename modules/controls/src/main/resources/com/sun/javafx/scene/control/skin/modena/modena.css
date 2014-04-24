@@ -362,6 +362,15 @@ is being used to size a border should also be in pixels.
     -fx-page-bullet-border: #acacac;
     -fx-page-indicator-hover-border: #accee5;
 
+    -fx-focused-text-base-color : ladder(
+        -fx-selection-bar,
+        -fx-light-text-color 45%,
+        -fx-dark-text-color 46%,
+        -fx-dark-text-color 59%,
+        -fx-mid-text-color 60%
+    );
+    -fx-focused-mark-color : -fx-focused-text-base-color ;
+
     /***************************************************************************
      *                                                                         *
      * Set the default background color for the scene                          *
@@ -1449,7 +1458,7 @@ is being used to size a border should also be in pixels.
     -fx-scale-shape: false;
 }
 .menu:focused > .right-container > .arrow {
-    -fx-background-color: white;
+    -fx-background-color: -fx-focused-mark-color;
 }
 .menu-up-arrow {
     -fx-padding: 0.666667em 0.416667em 0.0em 0.416667em;  /* 8 5 0 5 */
@@ -1540,7 +1549,7 @@ is being used to size a border should also be in pixels.
      -fx-text-fill:  -fx-text-background-color;
 }
 .menu-item:focused > .label {
-    -fx-text-fill: white;
+    -fx-text-fill: -fx-focused-text-base-color;
 }
 .menu-item > .right-container {
     -fx-padding: 0em 0em 0em 0.5em;
@@ -1554,7 +1563,7 @@ is being used to size a border should also be in pixels.
     -fx-scale-shape: false;
 }
 .radio-menu-item:focused:checked > .left-container > .radio {
-    -fx-background-color: white;
+    -fx-background-color: -fx-focused-mark-color;
 }
 .check-menu-item:checked > .left-container > .check {
     -fx-background-color: -fx-mark-color;
@@ -1562,7 +1571,7 @@ is being used to size a border should also be in pixels.
     -fx-scale-shape: false;
 }
 .check-menu-item:focused:checked > .left-container > .check {
-    -fx-background-color: white;
+    -fx-background-color: -fx-focused-mark-color;
 }
 /*******************************************************************************
  *                                                                             *
