@@ -35,7 +35,9 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 public class HelloTitledPane extends Application {
@@ -60,39 +62,43 @@ public class HelloTitledPane extends Application {
         grid.add(new TextField(), 1, 1);
         grid.add(new Label("Email: "), 0, 2);
         grid.add(new TextField(), 1, 2);
-        gridTitlePane.setText("Grid");
+        gridTitlePane.setText("Hello World!");
         gridTitlePane.setContent(grid);
         
         // --- Label test
         TitledPane normalText = new TitledPane();
         Label lbl = new Label("This is a collapsible TitledPane\nthat allows for text to be wrapped.\n\nIt should be the perfect height to fit all text provided.\n\nIs it?");
-        normalText.setText("NORMAL");
+        normalText.setText("Hello World!");
+        normalText.setFont(Font.font(20));
         normalText.setContent(lbl);
         
         // --- Big button test
         TitledPane normal = new TitledPane();
         Button bn = new Button("Button");
         bn.setPrefSize(75, 50);
-        normal.setText("NORMAL");
-        normal.setContent(bn);
+        StackPane pane = new StackPane(bn);
+        pane.setPadding(new Insets(5));
+        normal.setText("Hello World!");
+        normal.setFont(Font.font(5));
+        normal.setContent(pane);
 
         TitledPane unanimated = new TitledPane();
         unanimated.setAnimated(false);
-        unanimated.setText("NOT ANIMATED");
+        unanimated.setText("Not Animated");
         Button bs = new Button("Button");
         bs.setPrefSize(75, 50);
         unanimated.setContent(bs);
 
         TitledPane uncollapsible = new TitledPane();
         uncollapsible.setCollapsible(false);
-        uncollapsible.setText("NOT COLLAPSIBLE");
+        uncollapsible.setText("Not Collapsible");
         Button bf = new Button("Button");
         bf.setPrefSize(75, 50);
         uncollapsible.setContent(bf);
         
         HBox hbox = new HBox(10);
         hbox.setPadding(new Insets(20, 0, 0, 20));
-        hbox.getChildren().setAll(gridTitlePane, normalText, normal, unanimated, uncollapsible);
+        hbox.getChildren().setAll(normal, gridTitlePane, normalText, unanimated, uncollapsible);
 
         Group root = (Group)scene.getRoot();
         root.getChildren().add(hbox);

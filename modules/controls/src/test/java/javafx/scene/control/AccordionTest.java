@@ -176,7 +176,7 @@ public class AccordionTest {
                                          0;
         
         assertEquals(expectedPrefWidth, accordion.prefWidth(-1), 1e-100);
-        assertEquals(66, accordion.prefHeight(-1), 1e-100);
+        assertEquals(60, accordion.prefHeight(-1), 1e-100);
 
         accordion.setExpandedPane(b);
         root.applyCss();
@@ -186,7 +186,7 @@ public class AccordionTest {
         assertEquals(expectedPrefWidth, accordion.prefWidth(-1), 1e-100);
         
         final double expectedPrefHeight = PlatformImpl.isCaspian() ? 170 : 
-                                          PlatformImpl.isModena()  ? 167 :
+                                          PlatformImpl.isModena()  ? 161 :
                                           0;
         assertEquals(expectedPrefHeight, accordion.prefHeight(-1), 1e-100);
     }

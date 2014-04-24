@@ -60,7 +60,6 @@ import javafx.scene.text.Font;
 
 public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavior>  {
 
-    public static final int MIN_HEADER_HEIGHT = 22;
     public static final Duration TRANSITION_DURATION = new Duration(350.0);
 
     // caching results in poorer looking text (it is blurry), so we don't do it
@@ -212,7 +211,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             final double w, final double h) {
         
         // header
-        double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
+        double headerHeight = snapSize(titleRegion.prefHeight(-1));
 
         titleRegion.resize(w, headerHeight);
         positionInArea(titleRegion, x, y,
@@ -241,7 +240,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(width)));
+        return snapSize(titleRegion.prefHeight(width));
     }
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -251,7 +250,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(width)));
+        double headerHeight = snapSize(titleRegion.prefHeight(width));
         double contentHeight = contentContainer.prefHeight(width) * getTransition();
         return headerHeight + snapSize(contentHeight) + topInset + bottomInset;
     }
@@ -266,7 +265,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     double getTitledPaneHeightForAccordion() {
-        double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
+        double headerHeight = snapSize(titleRegion.prefHeight(-1));
         double contentHeight = (prefHeightFromAccordion - headerHeight) * getTransition();
         return headerHeight + snapSize(contentHeight) + snappedTopInset() + snappedBottomInset();
     }
