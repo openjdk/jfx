@@ -1914,6 +1914,7 @@ public class Text extends Shape {
             }
             case LINE_FOR_OFFSET: {
                 int offset = (Integer)parameters[0];
+                if (offset > getTextInternal().length()) return null;
                 TextLine[] lines = getTextLayout().getLines();
                 int lineIndex = 0;
                 for (int i = 1; i < lines.length; i++) {
@@ -1926,20 +1927,20 @@ public class Text extends Shape {
             case LINE_START: {
                 int lineIndex = (Integer)parameters[0];
                 TextLine[] lines = getTextLayout().getLines();
-                if (lineIndex < lines.length) {
+                if (0 <= lineIndex && lineIndex < lines.length) {
                     TextLine line = lines[lineIndex];
                     return line.getStart();
                 }
-                return 0;
+                return null;
             }
             case LINE_END: {
                 int lineIndex = (Integer)parameters[0];
                 TextLine[] lines = getTextLayout().getLines();
-                if (lineIndex < lines.length) {
+                if (0 <= lineIndex && lineIndex < lines.length) {
                     TextLine line = lines[lineIndex];
                     return line.getStart() + line.getLength();
                 }
-                return 0;
+                return null;
             }
             case OFFSET_AT_POINT: {
                 Point2D point = (Point2D)parameters[0];

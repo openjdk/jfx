@@ -26,6 +26,7 @@
 package com.sun.glass.ui.win;
 
 import static javafx.scene.accessibility.Attribute.*;
+import java.text.BreakIterator;
 import javafx.geometry.Bounds;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.text.Font;
@@ -102,6 +103,13 @@ class WinTextRangeProvider {
         return accessible.getAttribute(attribute, parameters);
     }
 
+    private boolean isWordStart(BreakIterator bi, String text, int offset) {
+        if (offset == 0) return true;
+        if (offset == text.length()) return true;
+        if (offset == BreakIterator.DONE) return true;
+        return bi.isBoundary(offset) && Character.isLetterOrDigit(text.charAt(offset)); 
+    }
+
     /***********************************************/
     /*            ITextRangeProvider               */
     /***********************************************/
@@ -109,77 +117,111 @@ class WinTextRangeProvider {
         WinTextRangeProvider clone = new WinTextRangeProvider(accessible);
         clone.setRange(start, end);
 
-        /* Note: Currently Clone() natively does not call AddRef() no the returned object.
-         * This mean we don't keep a reference of our own and we don't 
+        /* Note: Currently Clone() natively does not call AddRef() on the returned object.
+         * This mean JFX does not keep a reference to this object, consequently it does not
          * need to free it.
-         * TODO make sure this works...
+         * TODO Test for leaks.
          */
         return clone.getNativeProvider();
     }
 
     boolean Compare(WinTextRangeProvider range) {
-        System.out.println("+Compare " + this + " to " + range);
         if (range == null) return false;
         return accessible == range.accessible && start == range.start && end == range.end;
     }
 
     int CompareEndpoints(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
-        System.out.println("+CompareEndpoints " + endpoint + " " + this + " " + targetRange + " " + targetEndpoint);
         int offset = endpoint == TextPatternRangeEndpoint_Start ? start : end;
         int targetOffset = targetEndpoint == TextPatternRangeEndpoint_Start ? targetRange.start : targetRange.end;
-        return targetOffset - offset;
+        return offset - targetOffset;
     }
 
     void ExpandToEnclosingUnit(int unit) {
+        String text = (String)getAttribute(TITLE);
+        if (text == null) return;
+        int length = text.length();
+        if (length == 0) return;
+        
         switch (unit) {
             case TextUnit_Character: {
-                Integer caretOffset = (Integer)getAttribute(CARET_OFFSET);
-                if (caretOffset == null) return;
-                start = end = caretOffset;
+                if (start == length) start--;
+                end = start + 1;
                 break;
             }
             case TextUnit_Format:
-            case TextUnit_Word:
-                //TODO
-                break;
-            case TextUnit_Line:
-            case TextUnit_Paragraph: {
-                Integer caretOffset = (Integer)getAttribute(CARET_OFFSET);
-                if (caretOffset == null) return;
-                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, caretOffset);
-                if (lineIndex == null) return;
-                Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
-                if (lineStart == null) return;
-                Integer lineEnd = (Integer)getAttribute(LINE_START, lineIndex);
-                if (lineEnd == null) return;
-                start = lineStart;
-                end = lineEnd;
+            case TextUnit_Word: {
+                BreakIterator bi = BreakIterator.getWordInstance();
+                bi.setText(text);
+                if (!isWordStart(bi, text, start)) {
+                    int offset = bi.preceding(start);
+                    while (!isWordStart(bi, text, offset)) {
+                        offset = bi.previous();
+                    }
+                    start = offset != BreakIterator.DONE ? offset : 0;
+                }
+                int offset = bi.following(start); /* Assumes a word end always follows a word start */
+                end = offset != BreakIterator.DONE ? offset : length;
                 break;
             }
-            case TextUnit_Document:
-            case TextUnit_Page: {
-                String text = (String)getAttribute(TITLE);
-                if (text == null) return;
+            case TextUnit_Line: {
+                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
+                Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
+                Integer lineEnd = (Integer)getAttribute(LINE_END, lineIndex);
+                if (lineIndex == null || lineEnd == null || lineStart == null) {
+                    /* Text Field */
+                    start = 0;
+                    end = length;
+                } else {
+                    /* Text Area */
+                    start = lineStart;
+                    end = lineEnd;
+                }
+                
+                break;
+            }
+            case TextUnit_Paragraph: {
+                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
+                if (lineIndex == null) {
+                    /* Text Field */
+                    start = 0;
+                    end = length;
+                } else {
+                    /* Text Area */
+                    BreakIterator bi = BreakIterator.getSentenceInstance();
+                    bi.setText(text);
+                    if (!bi.isBoundary(start)) {
+                        int offset = bi.preceding(start);
+                        start = offset != BreakIterator.DONE ? offset : 0;
+                    }
+                    int offset = bi.following(start);
+                    end = offset != BreakIterator.DONE ? offset : length;
+                }
+                break;
+            }
+            case TextUnit_Page:
+            case TextUnit_Document: {
                 start = 0;
-                end = text.length();
+                end = length;
                 break;
             }
         }
-        System.out.println("+ExpandToEnclosingUnit " + this + " unit " + unit);
+
+        /* Always ensure range consistency */
+        start = Math.max(0, Math.min(start, length));
+        end = Math.max(start, Math.min(end, length));
     }
 
     long FindAttribute(int attributeId, WinVariant val, boolean backward) {
-        System.out.println("FindAttribute");
+        System.err.println("FindAttribute NOT IMPLEMENTED");
         return 0;
     }
 
     long FindText(String text, boolean backward, boolean ignoreCase) {
-        System.out.println("FindText");
+        System.err.println("FindText NOT IMPLEMENTED");
         return 0;
     }
 
     WinVariant GetAttributeValue(int attributeId) {
-//        System.out.println("+GetAttributeValue " + attributeId);
         WinVariant variant = null;
         switch (attributeId) {
             case UIA_FontNameAttributeId: {
@@ -233,7 +275,18 @@ class WinTextRangeProvider {
     }
 
     double[] GetBoundingRectangles() {
-        Bounds[] bounds = (Bounds[])getAttribute(BOUNDS_FOR_RANGE, start, end);
+        String text = (String)getAttribute(TITLE);
+        if (text == null) return null;
+        int length = text.length();
+        if (length == 0) return null;
+        int endOffset = end;
+        if (endOffset > 0 && endOffset > start && text.charAt(endOffset - 1) == '\n') {
+            endOffset--;
+        }
+        if (endOffset > 0 && endOffset > start && text.charAt(endOffset - 1) == '\r') {
+            endOffset--;
+        }
+        Bounds[] bounds = (Bounds[])getAttribute(BOUNDS_FOR_RANGE, start, endOffset);
         if (bounds != null) {
             double[] result = new double[bounds.length * 4];
             int index = 0;
@@ -261,46 +314,172 @@ class WinTextRangeProvider {
         return text.substring(start, endOffset);
     }
 
-    int Move(int unit, int count) {
-        System.out.println("+Move " + unit + " " + count + " " + this);
+    int Move(int unit, final int requestedCount) {
+        if (requestedCount == 0) return 0;
+        String text = (String)getAttribute(TITLE);
+        if (text == null) return 0;
+        int length = text.length();
+        if (length == 0) return 0;
 
-        int offset = start;
+        int actualCount = 0;
         switch (unit) {
             case TextUnit_Character: {
-                start = offset + count; //check range
+                int oldStart = start;
+                start = Math.max(0, Math.min(start + requestedCount, length - 1));
                 end = start + 1;
+                actualCount = start - oldStart; 
                 break;
             }
             case TextUnit_Format:
-            case TextUnit_Word:
-                //TODO
-                break;
-            case TextUnit_Line:
-            case TextUnit_Paragraph: {
-                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, offset);
-                lineIndex += count;//check range;
-                Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
-                if (lineStart == null) return 0;
-                Integer lineEnd = (Integer)getAttribute(LINE_START, lineIndex);
-                if (lineEnd == null) return 0;
-                start = lineStart;
-                end = lineEnd;
+            case TextUnit_Word: {
+                BreakIterator bi = BreakIterator.getWordInstance();
+                bi.setText(text);
+                int offset = start;
+                while (!isWordStart(bi, text, offset)) {
+                    offset = bi.preceding(start);
+                }
+                while (offset != BreakIterator.DONE && actualCount != requestedCount) {
+                    if (requestedCount > 0) {
+                        offset = bi.following(offset);
+                        while (!isWordStart(bi, text, offset)) {
+                            offset = bi.next();
+                        }
+                        actualCount++;
+                    } else {
+                        offset = bi.preceding(offset);
+                        while (!isWordStart(bi, text, offset)) {
+                            offset = bi.previous();
+                        }
+                        actualCount--;
+                    }
+                }
+                if (actualCount != 0) {
+                    if (offset != BreakIterator.DONE) {
+                        start = offset;
+                    } else {
+                        start = requestedCount > 0 ? length : 0;
+                    }
+                }
+                offset = bi.following(start); /* Assumes a word end always follows a word start */
+                end = offset != BreakIterator.DONE ? offset : length;
                 break;
             }
-            case TextUnit_Document:
-            case TextUnit_Page: {
-               return 0;
+            case TextUnit_Line: {
+                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
+                if (lineIndex == null) return 0;
+                while (requestedCount != actualCount) {
+                    if (requestedCount > 0) {
+                        if (getAttribute(LINE_START, lineIndex + 1) == null) break;
+                        lineIndex++;
+                        actualCount++;
+                    } else {
+                        if (getAttribute(LINE_START, lineIndex - 1) == null) break;
+                        lineIndex--;
+                        actualCount--;
+                    }
+                }
+                if (actualCount != 0) {
+                    Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
+                    Integer lineEnd = (Integer)getAttribute(LINE_END, lineIndex);
+                    if (lineStart == null || lineEnd == null) return 0;
+                    start = lineStart;
+                    end = lineEnd;
+                }
+                break;
+            }
+            case TextUnit_Paragraph: {
+                BreakIterator bi = BreakIterator.getSentenceInstance();
+                bi.setText(text);
+                int offset = bi.isBoundary(start) ? start : bi.preceding(start);
+                while (offset != BreakIterator.DONE && actualCount != requestedCount) {
+                    if (requestedCount > 0) {
+                        offset = bi.following(offset);
+                        actualCount++;
+                    } else {
+                        offset = bi.preceding(offset);
+                        actualCount--;
+                    }
+                }
+                if (actualCount != 0) {
+                    start = offset != BreakIterator.DONE ? offset : 0;
+                    offset = bi.following(start);
+                    end = offset != BreakIterator.DONE ? offset : length;
+                }
+                break;
+            }
+            case TextUnit_Page:
+            case TextUnit_Document: {
+                /* Move not allowed/implemented - do not alter the range */
+                break;
             }
         }
-        return count;
+
+        /* Always ensure range consistency */
+        start = Math.max(0, Math.min(start, length));
+        end = Math.max(start, Math.min(end, length));
+        return actualCount;
     }
 
     int MoveEndpointByUnit(int endpoint, int unit, int count) {
         System.out.println("MoveEndpointByUnit");
+        String text = (String)getAttribute(TITLE);
+        if (text == null) return 0;
+        int length = text.length();
+
+        switch (unit) {
+            case TextUnit_Character: {
+                end = start + 1;
+                break;
+            }
+            case TextUnit_Format:
+            case TextUnit_Word: {
+                BreakIterator bi = BreakIterator.getWordInstance();
+                bi.setText(text);
+                int offset = bi.preceding(start);
+                if (offset != BreakIterator.DONE) start = offset;
+                offset = bi.next();
+                if (offset != BreakIterator.DONE) end = offset;
+                break;
+            }
+            case TextUnit_Line: {
+                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
+                if (lineIndex == null) return 0;
+                Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
+                if (lineStart == null) return 0;
+                Integer lineEnd = (Integer)getAttribute(LINE_END, lineIndex);
+                if (lineEnd == null) return 0;//remove \n from line
+                start = lineStart;
+                end = lineEnd;
+                break;
+            }
+            case TextUnit_Paragraph: {
+                BreakIterator bi = BreakIterator.getSentenceInstance();
+                bi.setText(text);
+                int offset = bi.preceding(start);
+                if (offset != BreakIterator.DONE) start = offset;
+                offset = bi.next();
+                if (offset != BreakIterator.DONE) end = offset;
+                break;
+            }
+            case TextUnit_Page:
+            case TextUnit_Document: {
+                start = 0;
+                end = length;
+                break;
+            }
+        }
+
+        /* Always ensure range consistency */
+        start = Math.max(0, Math.min(start, length));
+        end = Math.max(start, Math.min(end, length));
         return 0;
     }
 
     void MoveEndpointByRange(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
+        String text = (String)getAttribute(TITLE);
+        if (text == null) return;
+        int length = text.length();
+
         int offset = targetEndpoint == TextPatternRangeEndpoint_Start ? targetRange.start : targetRange.end;
         if (endpoint == TextPatternRangeEndpoint_Start) {
             start = offset;
@@ -310,7 +489,10 @@ class WinTextRangeProvider {
         if (start > end) {
             start = end = offset;
         }
-        System.out.println("+MoveEndpointByRange");
+
+        /* Always ensure range consistency */
+        start = Math.max(0, Math.min(start, length));
+        end = Math.max(start, Math.min(end, length));
     }
 
     void Select() {
