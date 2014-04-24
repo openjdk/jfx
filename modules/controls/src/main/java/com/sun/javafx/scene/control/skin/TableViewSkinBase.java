@@ -246,7 +246,17 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         while (c.next()) {
             if (c.wasReplaced()) {
                 // RT-28397: Support for when an item is replaced with itself (but
-                // updated internal values that should be shown visually)
+                // updated internal values that should be shown visually).
+
+                // The ListViewSkin equivalent code here was updated to use the
+                // flow.setDirtyCell(int) API, but it was left alone here, otherwise
+                // our unit test for RT-36220 fails as we do not handle the case
+                // where the TableCell gets updated (only the TableRow does).
+                // Ideally we would use the dirtyCell API:
+                //
+                // for (int i = c.getFrom(); i < c.getTo(); i++) {
+                //     flow.setCellDirty(i);
+                // }
                 itemCount = 0;
                 break;
             } else if (c.getRemovedSize() == itemCount) {
