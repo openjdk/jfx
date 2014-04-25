@@ -27,7 +27,7 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.Size;
 
-public class NullCursor implements NativeCursor {
+public class NullCursor extends NativeCursor {
 
     @Override
     public Size getBestSize() {

@@ -38,6 +38,9 @@ public final class MonocleView extends View {
     MonocleView() {
     }
 
+    private boolean cursorVisibility;
+    private boolean resetCursorVisibility = false;
+
     // Constants
     private static long multiClickTime =  500;
     private static int multiClickMaxX = 20;
@@ -188,11 +191,30 @@ public final class MonocleView extends View {
     protected boolean _enterFullscreen(long ptr, boolean animate,
                                        boolean keepRatio,
                                        boolean hideCursor) {
+        MonocleWindowManager wm = MonocleWindowManager.getInstance();
+        MonocleWindow focusedWindow = wm.getFocusedWindow();
+        focusedWindow.setFullScreen(true);
+        if (hideCursor) {
+            resetCursorVisibility = true;
+            NativeCursor nativeCursor =
+                NativePlatformFactory.getNativePlatform().getCursor();
+            cursorVisibility = nativeCursor.getVisiblity();
+            nativeCursor.setVisibility(false);
+        }
         return true;
     }
 
     @Override
     protected void _exitFullscreen(long ptr, boolean animate) {
+        MonocleWindowManager wm = MonocleWindowManager.getInstance();
+        MonocleWindow focusedWindow = wm.getFocusedWindow();
+        focusedWindow.setFullScreen(false);
+        if (resetCursorVisibility) {
+            resetCursorVisibility = false;
+            NativeCursor nativeCursor =
+                    NativePlatformFactory.getNativePlatform().getCursor();
+            nativeCursor.setVisibility(cursorVisibility);
+        }
     }
 
     @Override

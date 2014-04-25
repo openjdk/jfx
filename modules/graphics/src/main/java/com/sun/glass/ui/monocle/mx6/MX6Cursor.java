@@ -42,7 +42,7 @@ import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 
 /** Cursor using a framebuffer overlay on Freescale i.MX6. */
-public class MX6Cursor implements NativeCursor {
+public class MX6Cursor extends NativeCursor {
 
     private int hotspotX;
     private int hotspotY;
@@ -62,7 +62,6 @@ public class MX6Cursor implements NativeCursor {
     private MXCFBPos pos = new MXCFBPos();
     private MXCFBGblAlpha alpha = new MXCFBGblAlpha();
     private long fd = -1;
-    private boolean isVisible = false;
 
     private static class MXCFBColorKey extends C.Structure {
         private final IntBuffer data;

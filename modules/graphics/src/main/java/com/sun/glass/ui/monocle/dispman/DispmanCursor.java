@@ -31,10 +31,11 @@ import com.sun.glass.ui.Size;
 /** Cursor using dispman API.
  * TODO: Can we mmap the image and location files?
  */
-public class DispmanCursor implements NativeCursor {
+public class DispmanCursor extends NativeCursor {
 
     private static final int CURSOR_WIDTH = 16;
     private static final int CURSOR_HEIGHT = 16;
+
 
     private native void _initDispmanCursor(int cursorWidth, int cursorHeight);
     private native void _setVisible(boolean visible);
@@ -52,6 +53,7 @@ public class DispmanCursor implements NativeCursor {
 
     @Override
     public void setVisibility(boolean visibility) {
+        isVisible = visibility;
         _setVisible(visibility);
     }
 

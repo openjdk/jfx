@@ -39,7 +39,7 @@ import java.nio.ByteBuffer;
 /** Cursor using a framebuffer overlay on OMAP3.
  * TODO: Can we mmap the image and location files?
  */
-public class OMAPCursor implements NativeCursor {
+public class OMAPCursor extends NativeCursor {
 
     private int hotspotX;
     private int hotspotY;
@@ -105,6 +105,7 @@ public class OMAPCursor implements NativeCursor {
             System.err.format("Failed to %s OMAP cursor\n",
                               (visibility ? "enable" : "disable"));
         }
+        isVisible = visibility;
     }
 
     private void updateImage(boolean always) {
