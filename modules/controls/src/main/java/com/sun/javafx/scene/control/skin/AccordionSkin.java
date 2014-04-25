@@ -81,7 +81,7 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
             firstTitledPane.getStyleClass().add("first-titled-pane");
         }
 
-        clipRect = new Rectangle();
+        clipRect = new Rectangle(accordion.getWidth(), accordion.getHeight());
         getSkinnable().setClip(clipRect);
 
         initTitledPaneListeners(accordion.getPanes());
