@@ -875,24 +875,23 @@ public abstract class Axis<T> extends Region {
      * @param side The side to place text next to position x,y at
      */
     private void positionTextNode(Text node, double posX, double posY, double angle, Side side) {
-        Bounds bounds = node.getLayoutBounds();
-        double tX, tY;
+        node.setLayoutX(0);
+        node.setLayoutY(0);
+        node.setRotate(angle);
+        final Bounds bounds = node.getBoundsInParent();
         if (Side.LEFT.equals(side)) {
-            tX = posX-bounds.getWidth()-bounds.getMinX();
-            tY = posY - (bounds.getHeight() / 2d) - bounds.getMinY();
+            node.setLayoutX(posX-bounds.getWidth()-bounds.getMinX());
+            node.setLayoutY(posY - (bounds.getHeight() / 2d) - bounds.getMinY());
         } else if (Side.RIGHT.equals(side)) {
-            tX = posX-bounds.getMinX();
-            tY = posY-(bounds.getHeight()/2d)-bounds.getMinY();
+            node.setLayoutX(posX-bounds.getMinX());
+            node.setLayoutY(posY-(bounds.getHeight()/2d)-bounds.getMinY());
         } else if (Side.TOP.equals(side)) {
-            tX = posX-(bounds.getWidth()/2d)-bounds.getMinX();
-            tY = posY-bounds.getHeight()-bounds.getMinY();
+            node.setLayoutX(posX-(bounds.getWidth()/2d)-bounds.getMinX());
+            node.setLayoutY(posY-bounds.getHeight()-bounds.getMinY());
         } else {
-            tX = posX-(bounds.getWidth()/2d)-bounds.getMinX();
-            tY = posY-bounds.getMinY();
+            node.setLayoutX(posX-(bounds.getWidth()/2d)-bounds.getMinX());
+            node.setLayoutY(posY-bounds.getMinY());
         }
-        node.getTransforms().setAll(
-                new Rotate(angle, tX + bounds.getWidth() + bounds.getHeight(), tY + bounds.getHeight()),
-                new Translate(tX, tY - bounds.getHeight()));
     }
 
     /**
