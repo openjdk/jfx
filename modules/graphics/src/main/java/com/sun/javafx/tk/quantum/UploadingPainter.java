@@ -84,6 +84,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 if (QuantumToolkit.verbose) {
                     System.err.println("UploadingPainter: validateStageGraphics failed");
                 }
+                paintImpl(null);
                 return;
             }
             
@@ -175,10 +176,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         } finally {
             if (rttexture != null && rttexture.isLocked()) {
                 rttexture.unlock();
-            }            
-            if (valid) {
-                Disposer.cleanUp();
             }
+
+            Disposer.cleanUp();
 
             sceneState.getScene().setPainting(false);
 

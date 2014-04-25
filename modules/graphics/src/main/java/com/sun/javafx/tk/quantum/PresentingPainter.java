@@ -55,6 +55,7 @@ final class PresentingPainter extends ViewPainter {
                 if (QuantumToolkit.verbose) {
                     System.err.println("PresentingPainter: validateStageGraphics failed");
                 }
+                paintImpl(null);
                 return;
             }
             
@@ -111,9 +112,8 @@ final class PresentingPainter extends ViewPainter {
             errored = true;
             th.printStackTrace(System.err);
         } finally {
-            if (valid) {
-                Disposer.cleanUp();
-            }
+            Disposer.cleanUp();
+
             if (locked) {
                 sceneState.unlock();
             }

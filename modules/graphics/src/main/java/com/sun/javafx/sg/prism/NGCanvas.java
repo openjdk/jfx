@@ -50,6 +50,7 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
+import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.Image;
 import com.sun.prism.PrinterGraphics;
 import com.sun.prism.RTTexture;
@@ -192,7 +193,9 @@ public class NGCanvas extends NGNode {
             }
             if (create) {
                 RTTexture oldtex = tex;
-                ResourceFactory factory = resg.getResourceFactory();
+                ResourceFactory factory = (resg == null)
+                    ? GraphicsPipeline.getDefaultResourceFactory()
+                    : resg.getResourceFactory();
                 RTTexture newtex =
                     factory.createRTTexture(tw, th, WrapMode.CLAMP_TO_ZERO);
                 this.tex = newtex;
@@ -223,7 +226,9 @@ public class NGCanvas extends NGNode {
                     this.g = tex.createGraphics();
                     if (this.g == null) {
                         tex.dispose();
-                        ResourceFactory factory = resg.getResourceFactory();
+                        ResourceFactory factory = (resg == null)
+                            ? GraphicsPipeline.getDefaultResourceFactory()
+                            : resg.getResourceFactory();
                         tex = factory.createRTTexture(tw, th, WrapMode.CLAMP_TO_ZERO);
                         this.g = tex.createGraphics();
                         this.input = new EffectInput(tex);
@@ -585,6 +590,20 @@ public class NGCanvas extends NGNode {
             cv.save(tw, th);
         }
         this.temp.g = this.clip.g = this.cv.g = null;
+    }
+
+    @Override
+    public void renderForcedContent(Graphics gOptional) {
+        if (thebuf != null) {
+            initCanvas(gOptional);
+            if (cv.tex != null) {
+                renderStream(thebuf);
+                GrowableDataBuffer.returnBuffer(thebuf);
+                thebuf = null;
+                cv.save(tw, th);
+            }
+            this.temp.g = this.clip.g = this.cv.g = null;
+        }
     }
 
     private void initCanvas(Graphics g) {

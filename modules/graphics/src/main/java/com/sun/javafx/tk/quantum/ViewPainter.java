@@ -164,7 +164,10 @@ abstract class ViewPainter implements Runnable {
     protected void paintImpl(final Graphics backBufferGraphics) {
         // We should not be painting anything with a width / height
         // that is <= 0, so we might as well bail right off.
-        if (width <= 0 || height <= 0) return;
+        if (width <= 0 || height <= 0 || backBufferGraphics == null) {
+            root.renderForcedContent(backBufferGraphics);
+            return;
+        }
 
         // This "g" variable might represent the back buffer graphics, or it
         // might be reassigned to the sceneBuffer graphics.
@@ -321,6 +324,7 @@ abstract class ViewPainter implements Runnable {
             g.setClipRect(null);
             this.doPaint(g, null);
         }
+        root.renderForcedContent(g);
 
         // If we have an overlay then we need to render it too.
         if (overlayRoot != null) {

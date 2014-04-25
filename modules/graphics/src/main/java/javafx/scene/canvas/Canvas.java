@@ -114,6 +114,7 @@ public class Canvas extends Node {
 
     GrowableDataBuffer getBuffer() {
         impl_markDirty(DirtyBits.NODE_CONTENTS);
+        impl_markDirty(DirtyBits.NODE_FORCE_SYNC);
         if (current == null) {
             int vsize = max(recentvalsizes, DEFAULT_VAL_BUF_SIZE);
             int osize = max(recentobjsizes, DEFAULT_OBJ_BUF_SIZE);

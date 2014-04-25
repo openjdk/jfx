@@ -1959,6 +1959,22 @@ public abstract class NGNode {
         doRender(g);
     }
 
+    /**
+     * Called on every render pulse for all nodes in case they have render-time
+     * operations that must be completed on a pulse, but were not otherwise
+     * rendered by the ordinary damage management logic.
+     * The graphics argument will be the graphics that was used to render the
+     * scene if it is available, but may be null for cases when the scene
+     * required no visible updates and thus no back buffer graphics was
+     * actually obtained.  Implementors must have a backup plan for that
+     * case when the Graphics object is null.
+     * 
+     * @param gOptional the Graphics object that was used to render the
+     *                  Scene, or null
+     */
+    public void renderForcedContent(Graphics gOptional) {
+    }
+
     // This node requires 2D graphics state for rendering
     boolean isShape3D() {
         return false;
