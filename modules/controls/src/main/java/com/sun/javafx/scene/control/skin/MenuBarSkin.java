@@ -27,10 +27,8 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
@@ -66,12 +64,9 @@ import com.sun.javafx.menu.MenuBase;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.control.GlobalMenuAdapter;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.scene.traversal.Direction.DOWN;
 import javafx.stage.Window;
 
 
@@ -463,8 +458,24 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         }
         unSelectMenus();
     };
-    
+
+    private ListChangeListener<MenuItem> menuItemListener = (c) -> {
+        while (c.next()) {
+            for (MenuItem mi : c.getAddedSubList()) {
+                mi.addEventHandler(ActionEvent.ACTION, menuActionEventHandler);
+            }
+            for (MenuItem mi: c.getRemoved()) {
+                mi.removeEventHandler(ActionEvent.ACTION, menuActionEventHandler);
+            }
+        }
+    };
+
     private void updateActionListeners(Menu m, boolean add) {
+        if (add) {
+            m.getItems().addListener(menuItemListener);
+        } else {
+            m.getItems().removeListener(menuItemListener);
+        }
         for (MenuItem mi : m.getItems()) {
             if (mi instanceof Menu) {
                 updateActionListeners((Menu)mi, add);
