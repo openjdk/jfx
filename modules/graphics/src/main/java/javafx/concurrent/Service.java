@@ -273,9 +273,8 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the READY state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * state of the Service has transitioned to the READY state.
+     * This method is invoked after the Service has been fully transitioned to the new state.
      * @since JavaFX 2.1
      */
     protected void ready() { }
@@ -318,9 +317,8 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the SCHEDULED state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * state of the Service has transitioned to the SCHEDULED state.
+     * This method is invoked after the Service has been fully transitioned to the new state.
      * @since JavaFX 2.1
      */
     protected void scheduled() { }
@@ -363,9 +361,8 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the RUNNING state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * state of the Service has transitioned to the RUNNING state.
+     * This method is invoked after the Service has been fully transitioned to the new state.
      * @since JavaFX 2.1
      */
     protected void running() { }
@@ -408,9 +405,8 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the SUCCEEDED state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * state of the Service has transitioned to the SUCCEEDED state.
+     * This method is invoked after the Service has been fully transitioned to the new state.
      * @since JavaFX 2.1
      */
     protected void succeeded() { }
@@ -453,9 +449,8 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the CANCELLED state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * state of the Service has transitioned to the CANCELLED state.
+     * This method is invoked after the Service has been fully transitioned to the new state.
      * @since JavaFX 2.1
      */
     protected void cancelled() { }
@@ -498,9 +493,8 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
 
     /**
      * A protected convenience method for subclasses, called whenever the
-     * state of the Task has transitioned to the FAILED state.
-     * This method is invoked after any listeners of the state property
-     * and after the Task has been fully transitioned to the new state.
+     * state of the Service has transitioned to the FAILED state.
+     * This method is invoked after the Service has been fully transitioned to the new state.
      * @since JavaFX 2.1
      */
     protected void failed() { }

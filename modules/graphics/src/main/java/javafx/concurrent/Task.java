@@ -766,8 +766,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the SCHEDULED state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
@@ -812,8 +811,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the RUNNING state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
@@ -858,8 +856,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the SUCCEEDED state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
@@ -904,8 +901,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the CANCELLED state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
@@ -950,8 +946,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the FAILED state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
