@@ -936,7 +936,7 @@ public abstract class Control extends Region implements Skinnable {
             default:
         }
         if (skinBase != null) {
-            skinBase.accExecuteAction(action);
+            skinBase.accExecuteAction(action, parameters);
         }
         super.accExecuteAction(action, parameters);
     }

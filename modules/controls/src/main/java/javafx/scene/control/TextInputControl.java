@@ -1239,6 +1239,15 @@ public abstract class TextInputControl extends Control {
                 String value = (String) parameters[0];
                 if (value != null) setText(value);
             }
+            case SELECT: {
+                Integer start = (Integer) parameters[0];
+                Integer end = (Integer) parameters[1];
+                if (start != null && end != null) {
+                    selectRange(start,  end);
+                }
+                break;
+            }
+            case SCROLL_TO_INDEX: //Skin
             default: super.accExecuteAction(action, parameters);
         }
     }

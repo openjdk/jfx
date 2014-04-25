@@ -426,6 +426,12 @@ final class WinAccessible extends PlatformAccessible {
         return super.getAttribute(attribute, parameters);
     }
 
+    /* Overwritten in order to make is visible to WinTextRangeProvider */
+    @Override
+    protected void executeAction(Action action, Object... parameters) {
+        super.executeAction(action, parameters);
+    }
+
     private long getContainer(Role targetRole) {
         Node node = getContainerNode(targetRole);
         return node == null ? 0 : getAccessible(node);
@@ -1245,6 +1251,10 @@ final class WinAccessible extends PlatformAccessible {
 
     int get_SupportedTextSelection() {
         if (isDisposed()) return 0;
+        /* Before this can be done extra API for multiple selection will be required. */
+//        if (Boolean.TRUE.equals(getAttribute(MULTIPLE_SELECTION))) {
+//            return SupportedTextSelection_Multiple;
+//        }
         return SupportedTextSelection_Single;
     }
 

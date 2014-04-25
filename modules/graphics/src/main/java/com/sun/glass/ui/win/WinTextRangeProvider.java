@@ -28,6 +28,7 @@ package com.sun.glass.ui.win;
 import static javafx.scene.accessibility.Attribute.*;
 import java.text.BreakIterator;
 import javafx.geometry.Bounds;
+import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -571,22 +572,25 @@ class WinTextRangeProvider {
     }
 
     void Select() {
-        System.out.println("Select");
+        accessible.executeAction(Action.SELECT, start, end);
     }
 
     void AddToSelection() {
-        System.out.println("AddToSelection");
+        /* Only possible for multi selection text view */
+//        accessible.executeAction(Action.ADD_TO_SELECTION, start, end);
     }
 
     void RemoveFromSelection() {
-        System.out.println("RemoveFromSelection");
+        /* Only possible for multi selection text view */
+//        accessible.executeAction(Action.REMOVE_FROM_SELECTION, start, end);
     }
 
     void ScrollIntoView(boolean alignToTop) {
-        System.out.println("ScrollIntoView");
+        accessible.executeAction(Action.SCROLL_TO_INDEX, start, end);
     }
 
     long[] GetChildren() {
+        /* Not embedded object support currently */
         return new long[0];
     }
 
