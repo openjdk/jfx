@@ -43,8 +43,6 @@ import java.util.List;
 import java.util.Locale;
 
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;

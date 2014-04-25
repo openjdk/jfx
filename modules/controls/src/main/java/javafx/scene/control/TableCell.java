@@ -27,7 +27,6 @@ package javafx.scene.control;
 
 import javafx.css.PseudoClass;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;

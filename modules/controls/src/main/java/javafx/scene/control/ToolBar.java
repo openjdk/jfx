@@ -195,8 +195,6 @@ public class ToolBar extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "tool-bar";
-    private static final String PSEUDO_CLASS_VERTICAL = "vertical";
-    private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
         private static final CssMetaData<ToolBar,Orientation> ORIENTATION = 

@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.behavior;
 
 import javafx.application.ConditionalFeature;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.TextInputControl;

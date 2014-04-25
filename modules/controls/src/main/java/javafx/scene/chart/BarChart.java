@@ -42,8 +42,6 @@ import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
@@ -67,8 +65,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PRIVATE FIELDS -------------------------------------------
     
-    private Map<Series, Map<String, Data<X,Y>>> seriesCategoryMap = 
-                                new HashMap<Series, Map<String, Data<X,Y>>>();
+    private Map<Series<X,Y>, Map<String, Data<X,Y>>> seriesCategoryMap = new HashMap<>();
     private Legend legend = new Legend();
     private final Orientation orientation;
     private CategoryAxis categoryAxis;
@@ -210,7 +207,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             categoryAxis.getCategories().add(itemIndex, category);
         } else if (categoryMap.containsKey(category)){
             // RT-21162 : replacing the previous data, first remove the node from scenegraph.
-            Data data = categoryMap.get(category);
+            Data<X,Y> data = categoryMap.get(category);
             getPlotChildren().remove(data.getNode());
             removeDataItemFromDisplay(series, data);
             requestChartLayout();
@@ -385,7 +382,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         legend.getItems().clear();
         if (getData() != null) {
             for (int seriesIndex=0; seriesIndex < getData().size(); seriesIndex++) {
-                Series series = getData().get(seriesIndex);
+                Series<X,Y> series = getData().get(seriesIndex);
                 LegendItem legenditem = new LegendItem(series.getName());
                 legenditem.getSymbol().getStyleClass().addAll("chart-bar","series"+seriesIndex,"bar-legend-symbol",
                         series.defaultColorStyleClass);
@@ -403,7 +400,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     
     // -------------- PRIVATE METHODS ------------------------------------------
     
-    private void updateMap(Series series, Data item) {
+    private void updateMap(Series<X,Y> series, Data<X,Y> item) {
         final String category = (orientation == Orientation.VERTICAL) ? (String)item.getXValue() :
                                      (String)item.getYValue();
         Map<String, Data<X,Y>> categoryMap = seriesCategoryMap.get(series);
@@ -484,7 +481,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         return t;
     }
     
-    @Override void dataBeingRemovedIsAdded(Data item, Series series) {
+    @Override void dataBeingRemovedIsAdded(Data<X,Y> item, Series<X,Y> series) {
         if (dataRemoveTimeline != null) {
             dataRemoveTimeline.setOnFinished(null);
             dataRemoveTimeline.stop();
@@ -518,7 +515,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                     a.setOnFinished(null);
                 }
             }
-            for (Data item : series.getData()) {
+            for (Data<X,Y> item : series.getData()) {
                 processDataRemove(series, item);
                 if (!lastSeries) {
                     restoreDataValues(item);
@@ -542,7 +539,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    private Node createBar(Series series, int seriesIndex, final Data item, int itemIndex) {
+    private Node createBar(Series<X,Y> series, int seriesIndex, final Data<X,Y> item, int itemIndex) {
         Node bar = item.getNode();
         if (bar == null) {
             bar = new StackPane();

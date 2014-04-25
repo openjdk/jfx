@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TableColumn;

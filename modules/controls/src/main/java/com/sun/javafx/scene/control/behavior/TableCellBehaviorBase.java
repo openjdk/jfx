@@ -34,9 +34,7 @@ import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.MouseButton;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 
 public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, ?>, C extends IndexedCell<T>> extends CellBehaviorBase<C> {
     
@@ -54,7 +52,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      **************************************************************************/    
 
     public TableCellBehaviorBase(C control) {
-        super(control, Collections.EMPTY_LIST);
+        super(control, Collections.emptyList());
     }
     
     

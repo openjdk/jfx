@@ -38,6 +38,6 @@ public class ProgressBarBehavior<C extends ProgressBar> extends BehaviorBase<C> 
      **************************************************************************/
 
     public ProgressBarBehavior(final C progress) {
-        super(progress, Collections.EMPTY_LIST);
+        super(progress, Collections.emptyList());
     }
 }

@@ -26,18 +26,13 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.scene.control.DatePicker;
-import javafx.scene.input.MouseEvent;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.scene.control.skin.DatePickerSkin;
 import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.ENTER;
-import static javafx.scene.input.KeyCode.ESCAPE;
 import static javafx.scene.input.KeyCode.F4;
-import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
-import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 
 

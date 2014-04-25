@@ -28,15 +28,12 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Cell;
 import javafx.scene.control.Control;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableSelectionModel;
-import javafx.scene.control.TreeItem;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -49,7 +46,7 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
      **************************************************************************/
 
     public TableRowBehaviorBase(T control) {
-        super(control, Collections.EMPTY_LIST);
+        super(control, Collections.emptyList());
     }
 
 
@@ -112,7 +109,7 @@ public abstract class TableRowBehaviorBase<T extends Cell> extends CellBehaviorB
                 } else if (shiftDown) {
                     // we add all rows between the current focus and
                     // this row (inclusive) to the current selection.
-                    TablePositionBase anchor = TableCellBehavior.getAnchor(table, getFocusedCell());
+                    TablePositionBase<?> anchor = TableCellBehavior.getAnchor(table, getFocusedCell());
                     final int anchorRow = anchor.getRow();
                     selectRows(anchorRow, index);
                 } else {

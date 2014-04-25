@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
@@ -35,12 +34,8 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.StackPane;
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.scene.control.skin.TabPaneSkin;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 
 public class TabPaneBehavior extends BehaviorBase<TabPane> {
 

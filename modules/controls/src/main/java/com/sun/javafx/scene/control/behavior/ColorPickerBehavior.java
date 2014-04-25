@@ -34,7 +34,6 @@ import java.util.List;
 import javafx.scene.control.ColorPicker;
 import com.sun.javafx.scene.control.skin.ColorPickerSkin;
 
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
 public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {

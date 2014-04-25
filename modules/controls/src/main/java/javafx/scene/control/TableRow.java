@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.accessibility.Action;

@@ -37,6 +37,6 @@ public class ProgressIndicatorBehavior<C extends ProgressIndicator> extends Beha
      **************************************************************************/
 
     public ProgressIndicatorBehavior(final C progress) {
-        super(progress, Collections.EMPTY_LIST);
+        super(progress, Collections.emptyList());
     }
 }

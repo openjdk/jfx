@@ -53,7 +53,6 @@ import java.util.*;
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -65,7 +64,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -79,7 +77,6 @@ import javafx.scene.Node;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
@@ -420,7 +417,7 @@ public class TreeTableView<S> extends Control {
         return (EventType<TreeTableView.EditEvent<S>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType(Event.ANY, "TREE_TABLE_VIEW_EDIT");
+            new EventType<>(Event.ANY, "TREE_TABLE_VIEW_EDIT");
 
     /**
      * An EventType used to indicate that an edit event has started within the
@@ -433,7 +430,7 @@ public class TreeTableView<S> extends Control {
         return (EventType<TreeTableView.EditEvent<S>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            new EventType(editAnyEvent(), "EDIT_START");
+            new EventType<>(editAnyEvent(), "EDIT_START");
 
     /**
      * An EventType used to indicate that an edit event has just been canceled
@@ -447,7 +444,7 @@ public class TreeTableView<S> extends Control {
         return (EventType<TreeTableView.EditEvent<S>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            new EventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType<>(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * An EventType that is used to indicate that an edit in a TreeTableView has been
@@ -462,7 +459,7 @@ public class TreeTableView<S> extends Control {
         return (EventType<TreeTableView.EditEvent<S>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            new EventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType<>(editAnyEvent(), "EDIT_COMMIT");
 
     /**
      * Returns the number of levels of 'indentation' of the given TreeItem, 
@@ -2479,7 +2476,7 @@ public class TreeTableView<S> extends Control {
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
             int changeIndex = selectedCellsSeq.indexOf(new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column));
-            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<TreeTablePosition<S,?>>(
+            ListChangeListener.Change<TreeTablePosition<S,?>> change = new NonIterableChange.GenericAddRemoveChange<>(
                     changeIndex, changeIndex+1, previousSelection, selectedCellsSeq);
             handleSelectedCellsListChangeEvent(change);
         }

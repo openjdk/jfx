@@ -28,7 +28,6 @@ package com.sun.javafx.scene.control.behavior;
 import static javafx.scene.input.KeyCode.*;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.NodeOrientation;

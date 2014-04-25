@@ -29,8 +29,6 @@ import javafx.css.CssMetaData;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -142,7 +140,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType(Event.ANY, "TREE_TABLE_COLUMN_EDIT");
+            new EventType<>(Event.ANY, "TREE_TABLE_COLUMN_EDIT");
 
     /**
      * Indicates that the user has performed some interaction to start an edit
@@ -155,7 +153,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            new EventType(editAnyEvent(), "EDIT_START");
+            new EventType<>(editAnyEvent(), "EDIT_START");
 
     /**
      * Indicates that the editing has been canceled, meaning that no change should
@@ -166,7 +164,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            new EventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType<>(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * Indicates that the editing has been committed by the user, meaning that
@@ -178,7 +176,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            new EventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType<>(editAnyEvent(), "EDIT_COMMIT");
     
     
     
@@ -280,7 +278,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
                 }
             };
     
-    private ListChangeListener columnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
+    private ListChangeListener<TreeTableColumn<S, ?>> columnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
             while (c.next()) {
                 // update the TreeTableColumn.treeTableView property
@@ -306,8 +304,8 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         }
     };
     
-    private WeakListChangeListener weakColumnsListener = 
-            new WeakListChangeListener(columnsListener);
+    private WeakListChangeListener<TreeTableColumn<S, ?>> weakColumnsListener = 
+            new WeakListChangeListener<>(columnsListener);
     
     
     /***************************************************************************
@@ -410,9 +408,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         new SimpleObjectProperty<Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>>(
             this, "cellFactory", (Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
-                    TreeTableView table = getTreeTableView();
+                    TreeTableView<S> table = getTreeTableView();
                     if (table == null) return;
-                    Map properties = table.getProperties();
+                    Map<Object,Object> properties = table.getProperties();
                     if (properties.containsKey(TableViewSkinBase.RECREATE)) {
                         properties.remove(TableViewSkinBase.RECREATE);
                     }
@@ -812,7 +810,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 //            List<S> items = getTreeTableView().getItems();
 //            if (items == null) return null;
 
-            TreeTableView treeTable = getTreeTableView();
+            TreeTableView<S> treeTable = getTreeTableView();
             int row = pos.getRow();
             if (row < 0 || row >= treeTable.getExpandedItemCount()) return null;
 

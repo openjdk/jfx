@@ -155,7 +155,7 @@ public class BehaviorBase<C extends Control> {
         // Don't need to explicitly check for null because Collections.unmodifiableList
         // will die on null, as will the adding of listeners
         this.control = control;
-        this.keyBindings = keyBindings == null ? Collections.EMPTY_LIST
+        this.keyBindings = keyBindings == null ? Collections.emptyList()
                 : Collections.unmodifiableList(new ArrayList<>(keyBindings));
         control.addEventHandler(KeyEvent.ANY, keyEventListener);
         control.focusedProperty().addListener(focusListener);

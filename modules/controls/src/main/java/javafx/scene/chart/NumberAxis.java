@@ -39,7 +39,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Side;
 import javafx.util.Duration;
@@ -487,7 +486,7 @@ public final class NumberAxis extends ValueAxis<Number> {
          */
         public DefaultFormatter(final NumberAxis axis) {
             formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
-            final ChangeListener axisListener = (observable, oldValue, newValue) -> {
+            final ChangeListener<Object> axisListener = (observable, oldValue, newValue) -> {
                 formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
             };
             axis.currentRangeIndexProperty.addListener(axisListener);

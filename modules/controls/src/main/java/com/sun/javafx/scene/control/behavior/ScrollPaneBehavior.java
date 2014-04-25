@@ -26,14 +26,11 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.geometry.NodeOrientation;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.F4;
@@ -45,7 +42,6 @@ import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
 import static javafx.scene.input.KeyCode.HOME;
 import static javafx.scene.input.KeyCode.END;
-import static javafx.scene.input.KeyCode.TAB;
 
 
 /**

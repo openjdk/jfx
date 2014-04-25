@@ -120,7 +120,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
      **************************************************************************/
 
     protected int getIndex() {
-        return getControl() instanceof IndexedCell ? ((IndexedCell)getControl()).getIndex() : -1;
+        return getControl() instanceof IndexedCell ? ((IndexedCell<?>)getControl()).getIndex() : -1;
     }
 
     @Override public void mousePressed(MouseEvent e) {

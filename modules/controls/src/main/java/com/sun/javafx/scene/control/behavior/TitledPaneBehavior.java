@@ -25,17 +25,12 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.scene.control.skin.TitledPaneSkin;
-import com.sun.javafx.scene.traversal.Direction;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.SPACE;
-import static javafx.scene.input.KeyCode.TAB;
 
 public class TitledPaneBehavior extends BehaviorBase<TitledPane> {
 

@@ -34,8 +34,6 @@ import javafx.animation.ParallelTransition;
 import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Ellipse;
@@ -179,7 +177,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     @Override protected  void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
         for (int j=0; j<series.getData().size(); j++) {
-            Data item = series.getData().get(j);
+            Data<X,Y> item = series.getData().get(j);
             Node bubble = createBubble(series, seriesIndex, item, j);
             if (shouldAnimate()) {
                 bubble.setOpacity(0);
@@ -233,7 +231,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
      * @param itemIndex   The index of the data item in the series
      * @return Node used for given data item
      */
-    private Node createBubble(Series<X, Y> series, int seriesIndex, final Data item, int itemIndex) {
+    private Node createBubble(Series<X, Y> series, int seriesIndex, final Data<X,Y> item, int itemIndex) {
         Node bubble = item.getNode();
         // check if bubble has already been created
         if (bubble == null) {

@@ -30,7 +30,6 @@ import com.sun.javafx.scene.NodeHelper;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 import javafx.scene.accessibility.Attribute;

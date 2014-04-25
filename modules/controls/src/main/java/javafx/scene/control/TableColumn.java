@@ -51,8 +51,6 @@ import java.util.Collections;
 
 import java.util.List;
 import java.util.Map;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
@@ -151,7 +149,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return (EventType<CellEditEvent<S,T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType(Event.ANY, "TABLE_COLUMN_EDIT");
+            new EventType<>(Event.ANY, "TABLE_COLUMN_EDIT");
 
     /**
      * Indicates that the user has performed some interaction to start an edit
@@ -163,7 +161,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return (EventType<CellEditEvent<S,T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            new EventType(editAnyEvent(), "EDIT_START");
+            new EventType<>(editAnyEvent(), "EDIT_START");
 
     /**
      * Indicates that the editing has been canceled, meaning that no change should
@@ -174,7 +172,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return (EventType<CellEditEvent<S,T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            new EventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType<>(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * Indicates that the editing has been committed by the user, meaning that
@@ -186,7 +184,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return (EventType<CellEditEvent<S,T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            new EventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType<>(editAnyEvent(), "EDIT_COMMIT");
     
     
     
@@ -417,7 +415,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         new SimpleObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>>(
             this, "cellFactory", (Callback<TableColumn<S,T>, TableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
-                    TableView table = getTableView();
+                    TableView<S> table = getTableView();
                     if (table == null) return;
                     Map<Object,Object> properties = table.getProperties();
                     if (properties.containsKey(TableViewSkinBase.RECREATE)) {

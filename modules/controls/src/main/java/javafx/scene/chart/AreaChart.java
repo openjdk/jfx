@@ -41,8 +41,6 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
@@ -73,7 +71,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     // -------------- PRIVATE FIELDS ------------------------------------------
 
     /** A multiplier for teh Y values that we store for each series, it is used to animate in a new series */
-    private Map<Series, DoubleProperty> seriesYMultiplierMap = new HashMap<Series, DoubleProperty>();
+    private Map<Series<X,Y>, DoubleProperty> seriesYMultiplierMap = new HashMap<>();
     private Legend legend = new Legend();
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
@@ -343,7 +341,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             seriesLine.getStyleClass().setAll("chart-series-area-line", "series" + i, s.defaultColorStyleClass);
             fillPath.getStyleClass().setAll("chart-series-area-fill", "series" + i, s.defaultColorStyleClass);
             for (int j=0; j < s.getData().size(); j++) {
-                final Data item = s.getData().get(j);
+                final Data<X,Y> item = s.getData().get(j);
                 final Node node = item.getNode();
                 if(node!=null) node.getStyleClass().setAll("chart-area-symbol", "series" + i, "data" + j, s.defaultColorStyleClass);
             }
@@ -382,7 +380,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             ));
         }
         for (int j=0; j<series.getData().size(); j++) {
-            Data item = series.getData().get(j);
+            Data<X,Y> item = series.getData().get(j);
             final Node symbol = createSymbol(series, seriesIndex, item, j);
             if (symbol != null) {
                 if (shouldAnimate()) {
@@ -427,7 +425,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             nodes.add(series.getNode());
             if (getCreateSymbols()) { // RT-22124
                 // done need to fade the symbols if createSymbols is false
-                for (Data d: series.getData()) nodes.add(d.getNode());
+                for (Data<X,Y> d: series.getData()) nodes.add(d.getNode());
             }
             // fade out old and symbols
             KeyValue[] startValues = new KeyValue[nodes.size()];
@@ -447,7 +445,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             tl.play();
         } else {
             getPlotChildren().remove(series.getNode());
-            for (Data d:series.getData()) getPlotChildren().remove(d.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
             removeSeriesFromDisplay(series);
         }
     }
@@ -491,7 +489,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    private Node createSymbol(Series series, int seriesIndex, final Data item, int itemIndex) {
+    private Node createSymbol(Series<X,Y> series, int seriesIndex, final Data<X,Y> item, int itemIndex) {
         Node symbol = item.getNode();
         // check if symbol has already been created
         if (symbol == null && getCreateSymbols()) {
@@ -536,12 +534,12 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(AreaChart node) {
+            public boolean isSettable(AreaChart<?,?> node) {
                 return node.createSymbols == null || !node.createSymbols.isBound();
 }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(AreaChart node) {
+            public StyleableProperty<Boolean> getStyleableProperty(AreaChart<?,?> node) {
                 return (StyleableProperty<Boolean>)node.createSymbolsProperty();
             }
         };

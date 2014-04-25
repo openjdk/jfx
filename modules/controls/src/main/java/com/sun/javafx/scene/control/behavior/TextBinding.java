@@ -25,10 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.Locale;
-import java.util.StringTokenizer;
-
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.KeyCombination;
 

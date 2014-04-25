@@ -41,7 +41,7 @@ public class ListCellBehavior<T> extends CellBehaviorBase<ListCell<T>> {
      **************************************************************************/
 
     public ListCellBehavior(ListCell<T> control) {
-        super(control, Collections.EMPTY_LIST);
+        super(control, Collections.emptyList());
     }
 
 

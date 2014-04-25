@@ -41,7 +41,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -1114,7 +1113,7 @@ public class TreeView<T> extends Control {
         switch (attribute) {
             case ROLE: return Role.TREE_VIEW;
             case MULTIPLE_SELECTION: {
-                MultipleSelectionModel sm = getSelectionModel();
+                MultipleSelectionModel<TreeItem<T>> sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
             }
             case ROW_COUNT: return getExpandedItemCount();

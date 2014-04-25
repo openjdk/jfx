@@ -89,7 +89,7 @@ public abstract class XYChart<X,Y> extends Chart {
     // to indicate which colors are being used for the series
     private final BitSet colorBits = new BitSet(8);
     static String DEFAULT_COLOR = "default-color";
-    final Map<Series, Integer> seriesColorMap = new HashMap<Series, Integer>();
+    final Map<Series<X,Y>, Integer> seriesColorMap = new HashMap<>();
     private boolean rangeValid = false;
     private final Line verticalZeroLine = new Line();
     private final Line horizontalZeroLine = new Line();
@@ -134,7 +134,7 @@ public abstract class XYChart<X,Y> extends Chart {
                         getData().get(0).next = XYChart.this.begin;
                         begin = getData().get(0);
                     } else {
-                        Series ptr = begin;
+                        Series<X,Y> ptr = begin;
                         for (int j = 0; j < i -1 && ptr!=null ; j++) {
                             ptr = ptr.next;
                         }
@@ -888,9 +888,9 @@ public abstract class XYChart<X,Y> extends Chart {
      * @param series The series to find index for
      * @return index of the series in series list
      */
-    int getSeriesIndex(Series series) {
+    int getSeriesIndex(Series<X,Y> series) {
         int itemIndex = 0;
-        for (Series s = XYChart.this.begin; s != null; s = s.next) {
+        for (Series<X,Y> s = XYChart.this.begin; s != null; s = s.next) {
             if (s == series) break;
             itemIndex++;
         }
@@ -903,7 +903,7 @@ public abstract class XYChart<X,Y> extends Chart {
      */
     int getSeriesSize() {
         int count = 0;
-        for (Series d = XYChart.this.begin; d != null; d = d.next) {
+        for (Series<X,Y> d = XYChart.this.begin; d != null; d = d.next) {
             count++;
         }
         return count;
@@ -920,7 +920,7 @@ public abstract class XYChart<X,Y> extends Chart {
         if (begin == series) {
             begin = series.next;
         } else {
-            Series ptr = begin;
+            Series<X,Y> ptr = begin;
             while(ptr != null && ptr.next != series) {
                 ptr = ptr.next;
             }

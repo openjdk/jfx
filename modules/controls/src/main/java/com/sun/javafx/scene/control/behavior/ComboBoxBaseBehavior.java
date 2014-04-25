@@ -28,13 +28,11 @@ package com.sun.javafx.scene.control.behavior;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBoxBase;
-import javafx.scene.control.Control;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.Utils;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.F4;
@@ -79,7 +77,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     @Override protected void focusChanged() {
         // If we did have the key down, but are now not focused, then we must
         // disarm the box.
-        final ComboBoxBase box = getControl();
+        final ComboBoxBase<T> box = getControl();
         if (keyDown && !box.isFocused()) {
             keyDown = false;
             box.disarm();

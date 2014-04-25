@@ -51,7 +51,6 @@ public class Legend extends TilePane {
 
     // -------------- PRIVATE FIELDS ------------------------------------------
 
-    private int rows = 0, columns = 0;
     private ListChangeListener<LegendItem> itemsListener = c -> {
         getChildren().clear();
         for (LegendItem item : getItems()) getChildren().add(item.label);

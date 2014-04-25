@@ -44,7 +44,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
      **************************************************************************/
 
     public TreeCellBehavior(final TreeCell<T> control) {
-        super(control, Collections.EMPTY_LIST);
+        super(control, Collections.emptyList());
     }
 
 
@@ -72,7 +72,7 @@ public class TreeCellBehavior<T> extends CellBehaviorBase<TreeCell<T>> {
 
     @Override
     protected void edit(TreeCell<T> cell) {
-        TreeItem treeItem = cell == null ? null : cell.getTreeItem();
+        TreeItem<T> treeItem = cell == null ? null : cell.getTreeItem();
         getCellContainer().edit(treeItem);
     }
 

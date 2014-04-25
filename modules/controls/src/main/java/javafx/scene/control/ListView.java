@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -41,7 +40,6 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -240,7 +238,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType(Event.ANY, "LIST_VIEW_EDIT");
+            new EventType<>(Event.ANY, "LIST_VIEW_EDIT");
     
     /**
      * An EventType used to indicate that an edit event has started within the
@@ -251,7 +249,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            new EventType(editAnyEvent(), "EDIT_START");
+            new EventType<>(editAnyEvent(), "EDIT_START");
 
     /**
      * An EventType used to indicate that an edit event has just been canceled
@@ -262,7 +260,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            new EventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType<>(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * An EventType used to indicate that an edit event has been committed
@@ -273,7 +271,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            new EventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType<>(editAnyEvent(), "EDIT_COMMIT");
     
     
 
@@ -1085,7 +1083,7 @@ public class ListView<T> extends Control {
             case ROLE: return Role.LIST_VIEW;
             case ROW_COUNT: return getItems().size();
             case MULTIPLE_SELECTION: {
-                MultipleSelectionModel sm = getSelectionModel();
+                MultipleSelectionModel<T> sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
             }
             case ROW_AT_INDEX: //Skin
