@@ -1042,6 +1042,7 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilitySelectedAttribute:
             case NSAccessibilitySelectedRowsAttribute:
             case NSAccessibilitySelectedCellsAttribute:
+            case NSAccessibilitySelectedTextRangeAttribute:
                 return true;
             default:
         }
@@ -1486,6 +1487,15 @@ final class MacAccessible extends PlatformAccessible {
                                 acc.executeAction(Action.SELECT);
                             }
                         }
+                    }
+                    break;
+                }
+                case NSAccessibilitySelectedTextRangeAttribute: {
+                    MacVariant variant = idToMacVariant(value, MacVariant.NSValue_range);
+                    if (variant != null) {
+                        int start = variant.int1; /* range.location */
+                        int end = variant.int1 + variant.int2; /* range.location + range.length */
+                        executeAction(Action.SELECT, start, end);
                     }
                     break;
                 }
