@@ -217,8 +217,24 @@ class WinTextRangeProvider {
     }
 
     long FindText(String text, boolean backward, boolean ignoreCase) {
-        System.err.println("FindText NOT IMPLEMENTED");
-        return 0;
+        if (text == null) return 0;
+        String documentText = (String)getAttribute(TITLE);
+        if (documentText == null) return 0;
+        String rangeText = documentText.substring(start, end);
+        if (ignoreCase) {
+            rangeText = rangeText.toLowerCase();
+            text = text.toLowerCase();
+        }
+        int index = -1;
+        if (backward) {
+            index = rangeText.lastIndexOf(text);
+        } else {
+            index = rangeText.indexOf(text);
+        }
+        if (index == -1) return 0;
+        WinTextRangeProvider result = new WinTextRangeProvider(accessible);
+        result.setRange(start + index, start + index + text.length());
+        return result.getNativeProvider();
     }
 
     WinVariant GetAttributeValue(int attributeId) {
