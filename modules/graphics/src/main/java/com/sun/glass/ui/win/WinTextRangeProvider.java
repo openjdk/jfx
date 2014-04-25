@@ -286,6 +286,9 @@ class WinTextRangeProvider {
         if (endOffset > 0 && endOffset > start && text.charAt(endOffset - 1) == '\r') {
             endOffset--;
         }
+        if (endOffset > 0 && endOffset > start && endOffset == length) {
+            endOffset--;
+        }
         Bounds[] bounds = (Bounds[])getAttribute(BOUNDS_FOR_RANGE, start, endOffset);
         if (bounds != null) {
             double[] result = new double[bounds.length * 4];
@@ -367,16 +370,11 @@ class WinTextRangeProvider {
             case TextUnit_Line: {
                 Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
                 if (lineIndex == null) return 0;
+                int step = requestedCount > 0 ? + 1 : -1;
                 while (requestedCount != actualCount) {
-                    if (requestedCount > 0) {
-                        if (getAttribute(LINE_START, lineIndex + 1) == null) break;
-                        lineIndex++;
-                        actualCount++;
-                    } else {
-                        if (getAttribute(LINE_START, lineIndex - 1) == null) break;
-                        lineIndex--;
-                        actualCount--;
-                    }
+                    if (getAttribute(LINE_START, lineIndex + step) == null) break;
+                    lineIndex += step;
+                    actualCount += step;
                 }
                 if (actualCount != 0) {
                     Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
@@ -410,7 +408,7 @@ class WinTextRangeProvider {
             case TextUnit_Page:
             case TextUnit_Document: {
                 /* Move not allowed/implemented - do not alter the range */
-                break;
+                return 0;
             }
         }
 
@@ -420,59 +418,120 @@ class WinTextRangeProvider {
         return actualCount;
     }
 
-    int MoveEndpointByUnit(int endpoint, int unit, int count) {
-        System.out.println("MoveEndpointByUnit");
+    int MoveEndpointByUnit(int endpoint, int unit, final int requestedCount) {
         String text = (String)getAttribute(TITLE);
         if (text == null) return 0;
         int length = text.length();
 
+        int actualCount = 0;
+        int offset = endpoint == TextPatternRangeEndpoint_Start ? start : end;
         switch (unit) {
             case TextUnit_Character: {
-                end = start + 1;
+                int oldOffset = offset;
+                offset = Math.max(0, Math.min(offset + requestedCount, length));
+                actualCount = offset - oldOffset; 
                 break;
             }
             case TextUnit_Format:
             case TextUnit_Word: {
                 BreakIterator bi = BreakIterator.getWordInstance();
                 bi.setText(text);
-                int offset = bi.preceding(start);
-                if (offset != BreakIterator.DONE) start = offset;
-                offset = bi.next();
-                if (offset != BreakIterator.DONE) end = offset;
+                if (requestedCount > 0) {
+                    int next = bi.following(offset);
+                    while (next != BreakIterator.DONE && requestedCount != actualCount) {
+                        /* Always keep start offset at a word start, and end offset at a word end */
+                        if (endpoint == TextPatternRangeEndpoint_Start) {
+                            while (isWordStart(bi, text, next)) next = bi.next();
+                        } else {
+                            while (!isWordStart(bi, text, next)) next = bi.next();
+                        }
+                        actualCount++;
+                        next = bi.next();
+                    }
+                    offset = next != BreakIterator.DONE ? next : length;
+                } else {
+                    int prev = bi.preceding(offset);
+                    while (prev != BreakIterator.DONE && requestedCount != actualCount) {
+                        /* Always keep start offset at a word start, and end offset at a word end */
+                        if (endpoint == TextPatternRangeEndpoint_Start) {
+                            while (isWordStart(bi, text, prev)) prev = bi.previous();
+                        } else {
+                            while (!isWordStart(bi, text, prev)) prev = bi.previous();
+                        }
+                        actualCount--;
+                        prev = bi.previous();
+                    }
+                    offset = prev != BreakIterator.DONE ? prev : 0;
+                }
                 break;
             }
             case TextUnit_Line: {
-                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, start);
-                if (lineIndex == null) return 0;
+                Integer lineIndex = (Integer)getAttribute(LINE_FOR_OFFSET, offset);
                 Integer lineStart = (Integer)getAttribute(LINE_START, lineIndex);
-                if (lineStart == null) return 0;
                 Integer lineEnd = (Integer)getAttribute(LINE_END, lineIndex);
-                if (lineEnd == null) return 0;//remove \n from line
-                start = lineStart;
-                end = lineEnd;
+                if (lineIndex == null || lineStart == null || lineEnd == null) {
+                    /* Text field - move within the text */
+                    offset = requestedCount > 0 ? length : 0;
+                    break;
+                }
+                int step = requestedCount > 0 ? + 1 : -1;
+                int endOffset = requestedCount > 0 ? lineEnd : lineStart;
+                if (offset != endOffset) {
+                    /* Count current line when not traversal start in middle of the line */
+                    actualCount += step;
+                }
+                while (requestedCount != actualCount) {
+                    if (getAttribute(LINE_START, lineIndex + step) == null) break;
+                    lineIndex += step;
+                    actualCount += step;
+                }
+                if (actualCount != 0) {
+                    lineStart = (Integer)getAttribute(LINE_START, lineIndex);
+                    lineEnd = (Integer)getAttribute(LINE_END, lineIndex);
+                    if (lineStart == null || lineEnd == null) return 0;
+                    offset = requestedCount > 0 ? lineEnd : lineStart;
+                }
                 break;
             }
             case TextUnit_Paragraph: {
                 BreakIterator bi = BreakIterator.getSentenceInstance();
                 bi.setText(text);
-                int offset = bi.preceding(start);
-                if (offset != BreakIterator.DONE) start = offset;
-                offset = bi.next();
-                if (offset != BreakIterator.DONE) end = offset;
+                if (requestedCount > 0) {
+                    int next = bi.following(offset);
+                    while (next != BreakIterator.DONE && requestedCount != actualCount) {
+                        actualCount++;
+                        next = bi.next();
+                    }
+                    offset = next != BreakIterator.DONE ? next : length;
+                } else {
+                    int prev = bi.preceding(offset);
+                    while (prev != BreakIterator.DONE && requestedCount != actualCount) {
+                        actualCount--;
+                        prev = bi.previous();
+                    }
+                    offset = prev != BreakIterator.DONE ? prev : 0;
+                }
                 break;
             }
             case TextUnit_Page:
             case TextUnit_Document: {
-                start = 0;
-                end = length;
-                break;
+                /* Move not allowed/implemented - do not alter the range */
+                return 0;
             }
+        }
+        if (endpoint == TextPatternRangeEndpoint_Start) {
+            start = offset;
+        } else {
+            end = offset;
+        }
+        if (start > end) {
+            start = end = offset;
         }
 
         /* Always ensure range consistency */
         start = Math.max(0, Math.min(start, length));
         end = Math.max(start, Math.min(end, length));
-        return 0;
+        return actualCount;
     }
 
     void MoveEndpointByRange(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
