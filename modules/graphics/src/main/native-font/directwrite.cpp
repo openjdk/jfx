@@ -1772,13 +1772,13 @@ JNIEXPORT jobject JNICALL OS_NATIVE(GetGlyphRunOutline)
         jclass tmpClass = env->FindClass("com/sun/javafx/geom/Path2D");
         if (env->ExceptionOccurred() || !tmpClass) {
             fprintf(stderr, "OS_NATIVE error: JNI exception or tmpClass == NULL");
-            return NULL;
+            goto fail;
         }
         path2DClass = (jclass)env->NewGlobalRef(tmpClass);
         path2DCtr = env->GetMethodID(path2DClass, "<init>", "(I[BI[FI)V");
         if (env->ExceptionOccurred() || !path2DCtr) {
             fprintf(stderr, "OS_NATIVE error: JNI exception or path2DCtr == NULL");
-            return NULL;
+            goto fail;
         }
     }
 
@@ -1794,6 +1794,7 @@ JNIEXPORT jobject JNICALL OS_NATIVE(GetGlyphRunOutline)
                                     coords, sink->numCoords());
           }
     }
+fail:
     delete sink;
     return result;
 }

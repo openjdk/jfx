@@ -134,10 +134,11 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
     PangoAnalysis analysis = item->analysis;
     const gchar *text= (const gchar *)(str + item->offset);
     PangoGlyphString *glyphString = pango_glyph_string_new();
+    if (!glyphString) return NULL;
 
     pango_shape(text, item->length, &analysis, glyphString);
     int count = glyphString->num_glyphs;
-    if(count == 0) return NULL;
+    if(count == 0) goto fail;
 
     jintArray glyphsArray = (*env)->NewIntArray(env, count);
     jintArray widthsArray = (*env)->NewIntArray(env, count);
@@ -157,17 +158,17 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
         (*env)->SetIntArrayRegion(env, glyphsArray, 0, count, glyphs); 
         if ((*env)->ExceptionOccurred(env)) {   
             fprintf(stderr, "OS_NATIVE error: JNI exception");
-            return NULL;
+            goto fail;
         }
         (*env)->SetIntArrayRegion(env, widthsArray, 0, count, widths);
         if ((*env)->ExceptionOccurred(env)) {   
             fprintf(stderr, "OS_NATIVE error: JNI exception");
-            return NULL;
+            goto fail;
         }
         (*env)->SetIntArrayRegion(env, clusterArray, 0, count, cluster);
         if ((*env)->ExceptionOccurred(env)) {   
             fprintf(stderr, "OS_NATIVE error: JNI exception");
-            return NULL;
+            goto fail;
         }
         if (!PangoGlyphStringFc.cached) cachePangoGlyphStringFields(env);
         result = (*env)->NewObject(env, PangoGlyphStringFc.clazz, PangoGlyphStringFc.init);
@@ -182,6 +183,8 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
             (*env)->SetLongField(env, result, PangoGlyphStringFc.font, (jlong)analysis.font);
         }
     }
+
+fail:
     pango_glyph_string_free(glyphString);
     return result;
 }

@@ -906,17 +906,13 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
         jclass tmpClass = (*env)->FindClass(env, "com/sun/javafx/geom/Path2D");
         if ((*env)->ExceptionOccurred(env) || !tmpClass) {   
             fprintf(stderr, "OS_NATIVE error: JNI exception or tmpClass == NULL");
-            free(data.pointTypes);
-            free(data.pointCoords);
-            return NULL;
+            goto fail;
         }
         path2DClass = (jclass)(*env)->NewGlobalRef(env, tmpClass);
         path2DCtr = (*env)->GetMethodID(env, path2DClass, "<init>", "(I[BI[FI)V");
         if ((*env)->ExceptionOccurred(env) || !path2DCtr) {   
             fprintf(stderr, "OS_NATIVE error: JNI exception or path2DCtr == NULL");
-            free(data.pointTypes);
-            free(data.pointCoords);
-            return NULL;
+            goto fail;
         }
     }
 
@@ -926,28 +922,22 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathApply)
         (*env)->SetByteArrayRegion(env, types, 0, data.numTypes, data.pointTypes);
         if ((*env)->ExceptionOccurred(env)) {   
             fprintf(stderr, "OS_NATIVE error: JNI exception");
-            free(data.pointTypes);
-            free(data.pointCoords);
-            return NULL;
+            goto fail;
         }
         (*env)->SetFloatArrayRegion(env, coords, 0, data.numCoords, data.pointCoords);
         if ((*env)->ExceptionOccurred(env)) {   
             fprintf(stderr, "OS_NATIVE error: JNI exception");
-            free(data.pointTypes);
-            free(data.pointCoords);
-            return NULL;
+            goto fail;
         }
         path2D = (*env)->NewObject(env, path2DClass, path2DCtr,
                                    0 /*winding rule*/,
                                    types, data.numTypes,
                                    coords, data.numCoords);
         if ((*env)->ExceptionOccurred(env) || !path2D) {   
-            fprintf(stderr, "OS_NATIVE error: JNI exception or path2D == NULL");
-            free(data.pointTypes);
-            free(data.pointCoords);
-            return NULL;
+            goto fail;
         }
     }
+fail:
     free(data.pointTypes);
     free(data.pointCoords);
     return path2D;
