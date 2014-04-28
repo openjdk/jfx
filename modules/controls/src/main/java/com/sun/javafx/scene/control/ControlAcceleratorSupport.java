@@ -49,49 +49,16 @@ import java.util.Map;
 
 public class ControlAcceleratorSupport {
 
+    // --- Add
+
     public static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, Tab anchor) {
         // with Tab, we first need to wait until the Tab has a TabPane associated with it
-        if (anchor == null) {
-            throw new IllegalArgumentException("Anchor cannot be null");
-        }
-
-        TabPane tabPane = anchor.getTabPane();
-        if (tabPane == null) {
-            anchor.tabPaneProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    TabPane tabPane = anchor.getTabPane();
-                    if (tabPane != null) {
-                        anchor.tabPaneProperty().removeListener(this);
-                        addAcceleratorsIntoScene(items, tabPane);
-                    }
-                }
-            });
-        } else {
-            addAcceleratorsIntoScene(items, tabPane);
-        }
+        addAcceleratorsIntoScene(items, (Object)anchor);
     }
 
     public static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, TableColumnBase<?,?> anchor) {
-        // with Tab, we first need to wait until the Tab has a TabPane associated with it
-        if (anchor == null) {
-            throw new IllegalArgumentException("Anchor cannot be null");
-        }
-
-        final ReadOnlyObjectProperty<Control> controlProperty = getTableControlProperty(anchor);
-        final Control control = controlProperty.get();
-        if (control == null) {
-            controlProperty.addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    final Control control = controlProperty.get();
-                    if (control != null) {
-                        controlProperty.removeListener(this);
-                        addAcceleratorsIntoScene(items, control);
-                    }
-                }
-            });
-        } else {
-            addAcceleratorsIntoScene(items, control);
-        }
+        // with TableColumnBase, we first need to wait until it has a TableView/TreeTableView associated with it
+        addAcceleratorsIntoScene(items, (Object)anchor);
     }
 
     public static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, Node anchor) {
@@ -121,49 +88,28 @@ public class ControlAcceleratorSupport {
         }
     }
 
-    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Tab anchor) {
-        Scene scene = anchor.getTabPane().getScene();
-        removeAcceleratorsFromScene(items, scene);
-    }
-
-    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, TableColumnBase<?,?> anchor) {
-        ReadOnlyObjectProperty<Control> controlProperty = getTableControlProperty(anchor);
-        if (controlProperty == null) return;
-
-        Control control = controlProperty.get();
-        if (control == null) return;
-
-        Scene scene = control.getScene();
-        removeAcceleratorsFromScene(items, scene);
-    }
-
-    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Node anchor) {
-        Scene scene = anchor.getScene();
-        removeAcceleratorsFromScene(items, scene);
-    }
-
-    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Scene scene) {
-        if (scene == null) {
-            return;
+    private static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, Object anchor) {
+        // with TableColumnBase, we first need to wait until it has a TableView/TreeTableView associated with it
+        if (anchor == null) {
+            throw new IllegalArgumentException("Anchor cannot be null");
         }
 
-        for (final MenuItem menuitem : items) {
-            if (menuitem instanceof Menu) {
-                // TODO remove the menu listener from the menu.items list
-
-                // remove the accelerators of items contained within the menu
-                removeAcceleratorsFromScene(((Menu)menuitem).getItems(), scene);
-            } else {
-                // remove the removed MenuItem accelerator KeyCombination from
-                // the scene accelerators map
-                final Map<KeyCombination, Runnable> accelerators = scene.getAccelerators();
-                accelerators.remove(menuitem.getAccelerator());
-            }
+        final ReadOnlyObjectProperty<? extends Control> controlProperty = getControlProperty(anchor);
+        final Control control = controlProperty.get();
+        if (control == null) {
+            controlProperty.addListener(new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    final Control control = controlProperty.get();
+                    if (control != null) {
+                        controlProperty.removeListener(this);
+                        addAcceleratorsIntoScene(items, control);
+                    }
+                }
+            });
+        } else {
+            addAcceleratorsIntoScene(items, control);
         }
     }
-
-
-
 
     private static void doAcceleratorInstall(final ObservableList<MenuItem> items, final Scene scene) {
         // we're given an observable list of menu items, which we will add an observer to
@@ -237,12 +183,64 @@ public class ControlAcceleratorSupport {
         }
     }
 
-    private static ReadOnlyObjectProperty<Control> getTableControlProperty(TableColumnBase<?,?> column) {
-        if (column instanceof TableColumn) {
-            return ((TableColumn)column).tableViewProperty();
-        } else if (column instanceof TreeTableColumn) {
-            return ((TreeTableColumn)column).treeTableViewProperty();
+
+
+    // --- Remove
+
+    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Tab anchor) {
+        Scene scene = anchor.getTabPane().getScene();
+        removeAcceleratorsFromScene(items, scene);
+    }
+
+    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, TableColumnBase<?,?> anchor) {
+        ReadOnlyObjectProperty<? extends Control> controlProperty = getControlProperty(anchor);
+        if (controlProperty == null) return;
+
+        Control control = controlProperty.get();
+        if (control == null) return;
+
+        Scene scene = control.getScene();
+        removeAcceleratorsFromScene(items, scene);
+    }
+
+    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Node anchor) {
+        Scene scene = anchor.getScene();
+        removeAcceleratorsFromScene(items, scene);
+    }
+
+    public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Scene scene) {
+        if (scene == null) {
+            return;
         }
+
+        for (final MenuItem menuitem : items) {
+            if (menuitem instanceof Menu) {
+                // TODO remove the menu listener from the menu.items list
+
+                // remove the accelerators of items contained within the menu
+                removeAcceleratorsFromScene(((Menu)menuitem).getItems(), scene);
+            } else {
+                // remove the removed MenuItem accelerator KeyCombination from
+                // the scene accelerators map
+                final Map<KeyCombination, Runnable> accelerators = scene.getAccelerators();
+                accelerators.remove(menuitem.getAccelerator());
+            }
+        }
+    }
+
+
+
+    // --- Utilities
+
+    private static ReadOnlyObjectProperty<? extends Control> getControlProperty(Object obj) {
+        if (obj instanceof TableColumn) {
+            return ((TableColumn)obj).tableViewProperty();
+        } else if (obj instanceof TreeTableColumn) {
+            return ((TreeTableColumn)obj).treeTableViewProperty();
+        } else if (obj instanceof Tab) {
+            return ((Tab)obj).tabPaneProperty();
+        }
+
         return null;
     }
 }
