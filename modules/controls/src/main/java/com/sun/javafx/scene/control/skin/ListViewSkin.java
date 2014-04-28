@@ -153,13 +153,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             while (c.next()) {
                 if (c.wasReplaced()) {
                     // RT-28397: Support for when an item is replaced with itself (but
-                    // updated internal values that should be shown visually).
-                    // This code was updated for RT-36714 to not update all cells,
-                    // just those affected by the change
-                    for (int i = c.getFrom(); i < c.getTo(); i++) {
-                        flow.setCellDirty(i);
-                    }
-
+                    // updated internal values that should be shown visually)
+                    itemCount = 0;
                     break;
                 } else if (c.getRemovedSize() == itemCount) {
                     // RT-22463: If the user clears out an items list then we
