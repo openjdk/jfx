@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
@@ -69,13 +70,7 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
     protected boolean behaveLikeButton = false;
     private ListChangeListener<MenuItem> itemsChangedListener;
 
-    private final ChangeListener<KeyCombination> acceleratorListener = (observable, oldValue, newValue) -> {
-        Map<KeyCombination, Runnable> accelerators = getSkinnable().getScene().getAccelerators();
-        if (accelerators != null) {
-            Runnable acceleratorRunnable = accelerators.remove(oldValue);
-            accelerators.put(newValue, acceleratorRunnable);
-        }
-    };
+
 
 
 
@@ -134,11 +129,11 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         control.getItems().addListener(itemsChangedListener);
         
         if (getSkinnable().getScene() != null) {
-            addAccelerators(getSkinnable().getItems());
+            ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
         }
         control.sceneProperty().addListener((scene, oldValue, newValue) -> {
             if (getSkinnable() != null && getSkinnable().getScene() != null) {
-                addAccelerators(getSkinnable().getItems());
+                ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
             }
         });
 
@@ -291,46 +286,6 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         label.resizeRelocate(x, y, w - arrowButtonWidth, h);
         arrowButton.resizeRelocate(x+(w-arrowButtonWidth), y, arrowButtonWidth, h);
     }
-
-    private void addAccelerators(javafx.collections.ObservableList<javafx.scene.control.MenuItem> mItems) {
-        for (final MenuItem menuitem : mItems) {
-            if (menuitem instanceof Menu) {
-                // add accelerators for this Menu's menuitems, by calling recursively.
-                addAccelerators(((Menu)menuitem).getItems());
-            } else {
-                /*
-                ** check is there are any accelerators in this menuitem
-                */
-                if (menuitem.getAccelerator() != null) {
-                    Map<KeyCombination, Runnable> accelerators = getSkinnable().getScene().getAccelerators();
-                    if (accelerators != null) {
-                        Runnable acceleratorRunnable = () -> {
-                            if (menuitem.getOnMenuValidation() != null) {
-                                Event.fireEvent(menuitem, new Event(MenuItem.MENU_VALIDATION_EVENT));
-                            }
-                            Menu target = (Menu)menuitem.getParentMenu();
-                            if(target!= null && target.getOnMenuValidation() != null) {
-                                Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
-                            }
-                            if (!menuitem.isDisable()) {
-                                if (menuitem instanceof RadioMenuItem) {
-                                    ((RadioMenuItem)menuitem).setSelected(!((RadioMenuItem)menuitem).isSelected());
-                                }
-                                else if (menuitem instanceof CheckMenuItem) {
-                                    ((CheckMenuItem)menuitem).setSelected(!((CheckMenuItem)menuitem).isSelected());
-                                }
-
-                                menuitem.fire();
-                            }
-                        };
-                        accelerators.put(menuitem.getAccelerator(), acceleratorRunnable);
-                        menuitem.acceleratorProperty().addListener(acceleratorListener);
-                    }
-                }
-            }
-        }
-    }
-
 
     private class MenuLabeledImpl extends LabeledImpl {
         MenuButton button;

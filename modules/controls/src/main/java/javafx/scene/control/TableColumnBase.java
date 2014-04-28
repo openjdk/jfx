@@ -25,10 +25,12 @@
 
 package javafx.scene.control;
 
+import java.lang.ref.WeakReference;
 import java.text.Collator;
 import java.util.Comparator;
 
 import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -258,7 +260,27 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final ContextMenu getContextMenu() { return contextMenu == null ? null : contextMenu.get(); }
     public final ObjectProperty<ContextMenu> contextMenuProperty() {
         if (contextMenu == null) {
-            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu");
+            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu") {
+                private WeakReference<ContextMenu> contextMenuRef;
+
+                @Override protected void invalidated() {
+                    ContextMenu oldMenu = contextMenuRef == null ? null : contextMenuRef.get();
+                    if (oldMenu != null) {
+                        ControlAcceleratorSupport.removeAcceleratorsFromScene(oldMenu.getItems(), TableColumnBase.this);
+                    }
+
+                    ContextMenu ctx = get();
+                    contextMenuRef = new WeakReference<>(ctx);
+
+                    if (ctx != null) {
+                        // if a context menu is set, we need to install any accelerators
+                        // belonging to its menu items ASAP into the scene that this
+                        // Control is in (if the control is not in a Scene, we will need
+                        // to wait until it is and then do it).
+                        ControlAcceleratorSupport.addAcceleratorsIntoScene(ctx.getItems(), TableColumnBase.this);
+                    }
+                }
+            };
         }
         return contextMenu;
     }

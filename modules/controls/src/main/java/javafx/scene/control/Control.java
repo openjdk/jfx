@@ -25,11 +25,14 @@
 
 package javafx.scene.control;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -380,18 +383,27 @@ public abstract class Control extends Region implements Skinnable {
      * The ContextMenu to show for this control.
      */
     private ObjectProperty<ContextMenu> contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu") {
+        private WeakReference<ContextMenu> contextMenuRef;
+
         @Override protected void invalidated() {
-            // set this flag so contextmenu show will be relative to parent window not anchor
+            ContextMenu oldMenu = contextMenuRef == null ? null : contextMenuRef.get();
+            if (oldMenu != null) {
+                ControlAcceleratorSupport.removeAcceleratorsFromScene(oldMenu.getItems(), Control.this);
+            }
+
             ContextMenu ctx = get();
-            if (ctx != null) ctx.setImpl_showRelativeToWindow(true); //RT-15160
-        }
-        @Override
-        public Object getBean() {
-            return Control.this;
-        }
-        @Override
-        public String getName() {
-            return "contextMenu";
+            contextMenuRef = new WeakReference<>(ctx);
+
+            if (ctx != null) {
+                // set this flag so contextmenu show will be relative to parent window not anchor
+                ctx.setImpl_showRelativeToWindow(true); //RT-15160
+
+                // if a context menu is set, we need to install any accelerators
+                // belonging to its menu items ASAP into the scene that this
+                // Control is in (if the control is not in a Scene, we will need
+                // to wait until it is and then do it).
+                ControlAcceleratorSupport.addAcceleratorsIntoScene(ctx.getItems(), Control.this);
+            }
         }
     };
     public final ObjectProperty<ContextMenu> contextMenuProperty() { return contextMenu; }

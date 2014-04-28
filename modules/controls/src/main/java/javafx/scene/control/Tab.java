@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.collections.ObservableSet;
 import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
@@ -372,7 +373,27 @@ public class Tab implements EventTarget, Styleable {
      */
     public final ObjectProperty<ContextMenu> contextMenuProperty() {
         if (contextMenu == null) {
-            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu");
+            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu") {
+                private WeakReference<ContextMenu> contextMenuRef;
+
+                @Override protected void invalidated() {
+                    ContextMenu oldMenu = contextMenuRef == null ? null : contextMenuRef.get();
+                    if (oldMenu != null) {
+                        ControlAcceleratorSupport.removeAcceleratorsFromScene(oldMenu.getItems(), Tab.this);
+                    }
+
+                    ContextMenu ctx = get();
+                    contextMenuRef = new WeakReference<>(ctx);
+
+                    if (ctx != null) {
+                        // if a context menu is set, we need to install any accelerators
+                        // belonging to its menu items ASAP into the scene that this
+                        // Control is in (if the control is not in a Scene, we will need
+                        // to wait until it is and then do it).
+                        ControlAcceleratorSupport.addAcceleratorsIntoScene(ctx.getItems(), Tab.this);
+                    }
+                }
+            };
         }
         return contextMenu;
     }
