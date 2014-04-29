@@ -327,14 +327,23 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
 
         // dispose of the cell to prevent it retaining listeners (see RT-31015)
         cell.updateIndex(-1);
+
+        // RT-36855 - take into account the column header text / graphic widths.
+        // Magic 10 is to allow for sort arrow to appear without text truncation.
+        TableColumnHeader header = getTableHeaderRow().getColumnHeaderFor(tc);
+        double headerTextWidth = Utils.computeTextWidth(header.label.getFont(), tc.getText(), -1);
+        Node graphic = header.label.getGraphic();
+        double headerGraphicWidth = graphic == null ? 0 : graphic.prefWidth(-1) + header.label.getGraphicTextGap();
+        double headerWidth = headerTextWidth + headerGraphicWidth + 10 + header.snappedLeftInset() + header.snappedRightInset();
+        maxWidth = Math.max(maxWidth, headerWidth);
         
         // RT-23486
-        double widthMax = maxWidth + padding;
+        maxWidth += padding;
         if(treeTableView.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY) {
-             widthMax = Math.max(widthMax, col.getWidth());
+            maxWidth = Math.max(maxWidth, col.getWidth());
         }
 
-        col.impl_setWidth(widthMax); 
+        col.impl_setWidth(maxWidth);
     }
     
     /** {@inheritDoc} */
