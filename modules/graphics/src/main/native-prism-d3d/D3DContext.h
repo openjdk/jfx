@@ -33,6 +33,9 @@
     #define PERF_COUNTERS
 #endif
 
+//see com.sun.prism.PixelFormat enum
+#define NUM_TEXTURE_CACHE 8
+
 // allow for 256 quads to match the size of the D3DVertexBuffer's nio buffer
 
 #define MAX_BATCH_QUADS 256
@@ -83,7 +86,7 @@ class D3DContext {
 public:
 
     HRESULT drawIndexedQuads(struct PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numVerts);
-    void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
+    void stretchRect(IDirect3DSurface9* pSrcSurface,
                                 int srcX0, int srcY0, int srcX1, int srcY1,
                                 IDirect3DSurface9* pDstSurface,
                                 int dstX0, int dstY0, int dstX1, int dstY1);
@@ -239,7 +242,7 @@ public:
     } state;
 
 private:
-     ~D3DContext();
+    ~D3DContext();
 
 
     IDirect3DVertexShader9 *pPassThroughVS;
@@ -291,6 +294,16 @@ private:
      * 3D implementation
      */
     D3DPhongShader *phongShader;
+
+    struct TextureUpdateCache {
+        IDirect3DTexture9 *texture;
+        IDirect3DSurface9 *surface;
+        int width, height;
+        IDirect3DTexture9 *getTexture(D3DFORMAT format, int width, int height, IDirect3DSurface9 **pSurface, IDirect3DDevice9 *dev);
+    } textureCache[NUM_TEXTURE_CACHE];
+
+public:
+    IDirect3DTexture9 *getTextureCache(int formatIndex, D3DFORMAT format, int width, int height, IDirect3DSurface9 **pSurface);
 };
 
 #define DEVICE_RESET           0

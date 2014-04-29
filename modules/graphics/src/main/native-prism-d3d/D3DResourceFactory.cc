@@ -248,13 +248,14 @@ inline HRESULT updateTexture(
 
     RETURN_STATUS_IF_NULL(paramsOK, E_INVALIDARG);
 
+    TraceLn7(NWT_TRACE_VERBOSE, "updateTexture src = [%d, %d]-[%dx%d], pixels = %p, dst = [%dx%d]", srcx, srcy, srcw, srch, pixels, dstx, dsty);
+
     TextureUpdater updater;
-    updater.setTarget(pTexResource->GetTexture(), desc, dstx, dsty);
+    updater.setTarget(pTexResource->GetTexture(), pTexResource->GetSurface(), desc, dstx, dsty);
     updater.setSource(pixels, size, PFormat(format), srcx, srcy, srcw, srch, srcscan);
 
-    IDirect3DDevice9Ex *pDev = pCtx->Get3DExDevice();
-    int nBytes = pDev
-        ? updater.updateD3D9ExTexture(pDev)
+    int nBytes = pCtx->Get3DExDevice()
+        ? updater.updateD3D9ExTexture(pCtx)
         : updater.updateLockableTexture();
 
 #if defined PERF_COUNTERS
