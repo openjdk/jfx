@@ -84,6 +84,7 @@ abstract class ViewPainter implements Runnable {
 
     protected Presentable presentable;
     protected ResourceFactory factory;
+    protected boolean freshBackBuffer;
 
     private int width;
     private int height;
@@ -177,6 +178,7 @@ abstract class ViewPainter implements Runnable {
         // Initialize renderEverything based on various conditions that will cause us to render
         // the entire scene every time.
         boolean renderEverything = overlayRoot != null ||
+                freshBackBuffer ||
                 sceneState.getScene().isEntireSceneDirty() ||
                 sceneState.getScene().getDepthBuffer() ||
                 !PrismSettings.dirtyOptsEnabled;

@@ -110,6 +110,12 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             stableBackbuffer.lock();
             if (stableBackbuffer.isSurfaceLost()) {
                 stableBackbuffer = null;
+                // For resizes we can keep the back buffer, but if we lose
+                // the back buffer then we need the caller to know that a
+                // new buffer is coming so that the entire scene can be
+                // redrawn.  To force this, we return true and the Presentable
+                // is recreated and repainted in its entirety.
+                return true;
             }
         }
         return false;
@@ -211,6 +217,9 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             stableBackbuffer = factory.createRTTexture(w, h,
                                                        WrapMode.CLAMP_NOT_NEEDED,
                                                        antiAliasing);
+            if (PrismSettings.dirtyOptsEnabled) {
+                stableBackbuffer.contentsUseful();
+            }
             copyFullBuffer = true;
         }
         ES2Graphics g = ES2Graphics.create(context, stableBackbuffer);

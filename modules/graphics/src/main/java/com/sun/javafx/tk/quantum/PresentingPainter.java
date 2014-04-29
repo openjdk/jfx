@@ -81,6 +81,7 @@ final class PresentingPainter extends ViewPainter {
                 presentable = factory.createPresentable(sceneState);
                 penWidth  = viewWidth;
                 penHeight = viewHeight;
+                freshBackBuffer = true;
             }
             
             if (presentable != null) {
@@ -89,6 +90,7 @@ final class PresentingPainter extends ViewPainter {
                 ViewScene vs = (ViewScene) sceneState.getScene();
                 if (g != null) {
                     paintImpl(g);
+                    freshBackBuffer = false;
                 }
 
                 if (PULSE_LOGGING_ENABLED) {
