@@ -739,17 +739,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 }
                 return title;
             }
-            case FOCUS_ITEM: if (!comboBox.isShowing()) return super.accGetAttribute(attribute, parameters);
-            //fall through
-            case ROW_COUNT:
-            case MULTIPLE_SELECTION:
-            case ROW_AT_INDEX:
-            case LEAF:
-            case SELECTED_ROWS: {
-                Object o = listView.accGetAttribute(attribute, parameters);
-                //if (o != null) return o;
-                return o;
-            }
+            case SELECTION_START: return textField.getSelection().getStart();
+            case SELECTION_END: return textField.getSelection().getEnd();
+
             //fall through
             default: return super.accGetAttribute(attribute, parameters);
         }

@@ -34,7 +34,6 @@ import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 
 /**
  * Abstract base class for ComboBox-like controls. A ComboBox typically has
@@ -472,9 +471,10 @@ public abstract class ComboBoxBase<T> extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.COMBOBOX;
             case EXPANDED: return isShowing();
-            /* list attributes handled by the skin */
+            case EDITABLE: return isEditable();
+            case SELECTION_START: //skin
+            case SELECTION_END: //skin
             default: return super.accGetAttribute(attribute, parameters);
         }
     }
