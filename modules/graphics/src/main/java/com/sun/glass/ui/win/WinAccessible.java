@@ -1119,6 +1119,7 @@ final class WinAccessible extends PlatformAccessible {
                 case SCROLL_BAR:
                 case TEXT_FIELD:
                 case TEXT_AREA: return false;
+                case COMBOBOX: return Boolean.FALSE.equals(getAttribute(EDITABLE));
                 default:
             }
         }

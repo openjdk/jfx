@@ -605,13 +605,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             @Override protected double computePrefHeight(double width) {
                 return getListViewPrefHeight();
             }
-
-            @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-                switch (attribute) {
-                    case PARENT: return comboBox;
-                    default: return super.accGetAttribute(attribute, parameters);
-                }
-            }
         };
 
         _listView.setId("list-view");
@@ -725,13 +718,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case CHILDREN: {
-                ObservableList<Node> children = comboBox.getChildrenUnmodifiable();
-                ObservableList<Node> list =  FXCollections.observableArrayList();
-                list.addAll(children);
-                if (!list.contains(listView)) list.add(listView);
-                return list;
-            }
+            case FOCUS_ITEM: {
+              if (comboBox.isShowing()) {
+                  /* On Mac, for some reason, changing the selection on the list is not 
+                   * reported by VoiceOver the first time it shows.
+                   * Note that this fix returns a child of the PopupWindow back to the main
+                   * Stage, which doesn't seem to cause problems.
+                   */
+                  return listView.accGetAttribute(attribute, parameters);
+              }
+              return null;
+          }
             case TITLE: {
                 String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();
                 if (title == null || title.isEmpty()) {
