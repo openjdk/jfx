@@ -951,4 +951,17 @@ public class TabPaneTest {
 
         sl.dispose();
     }
+
+    @Test public void test_rt_36908() {
+        TabPane pane = new TabPane();
+        final Tab disabled = new Tab("Disabled");
+        disabled.setDisable(true);
+
+        Tab tab1 = new Tab("Tab 1");
+        Tab tab2 = new Tab("Tab 2");
+        pane.getTabs().addAll(disabled, tab1, tab2);
+
+        assertEquals(1, pane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab1, pane.getSelectionModel().getSelectedItem());
+    }
 }
