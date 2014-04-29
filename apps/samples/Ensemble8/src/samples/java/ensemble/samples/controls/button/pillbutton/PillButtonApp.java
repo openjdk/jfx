@@ -32,9 +32,12 @@
 package ensemble.samples.controls.button.pillbutton;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
@@ -65,12 +68,21 @@ public class PillButtonApp extends Application {
         tb3.setPrefSize(76, 45);
         tb3.getStyleClass().add("right-pill");
 
-        ToggleGroup group = new ToggleGroup();
+        final ToggleGroup group = new ToggleGroup();
         tb1.setToggleGroup(group);
         tb2.setToggleGroup(group);
         tb3.setToggleGroup(group);
         // select the first button to start with
         group.selectToggle(tb1);
+
+        // enforce rule that one of the ToggleButtons must be selected at any
+        // time (that is, it is not valid to have zero ToggleButtons selected).
+        // (Fix for RT-34920 that considered this to be a bug)
+        group.selectedToggleProperty().addListener((ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle newValue) -> {
+            if (newValue == null) {
+                group.selectToggle(oldValue);
+            }
+        });
 
         HBox hBox = new HBox();
         hBox.setAlignment(Pos.CENTER);

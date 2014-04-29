@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,9 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.collections.ListChangeListener;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
 import javafx.collections.WeakListChangeListener;
@@ -95,25 +98,18 @@ public class TableRow<T> extends IndexedCell<T> {
      * be mutated, we create this observer here, and add/remove it from the
      * storeTableView method.
      */
-    private ListChangeListener<TablePosition> selectedListener = new ListChangeListener<TablePosition>() {
-        @Override
-        public void onChanged(Change<? extends TablePosition> c) {
-            updateSelection();
-        }
+    private ListChangeListener<TablePosition> selectedListener = c -> {
+        updateSelection();
     };
 
     // Same as selectedListener, but this time for focus events
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateFocus();
-        }
+    private final InvalidationListener focusedListener = valueModel -> {
+        updateFocus();
     };
 
     // same as above, but for editing events
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateEditing();
-        }
+    private final InvalidationListener editingListener = valueModel -> {
+        updateEditing();
     };
 
     private final WeakListChangeListener<TablePosition> weakSelectedListener = new WeakListChangeListener<>(selectedListener);
@@ -223,27 +219,17 @@ public class TableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    private int oldIndex = -1;
-    
     /** {@inheritDoc} */
-    @Override void indexChanged() {
-        int newIndex = getIndex();
-        
-        super.indexChanged();
-        
-        // Below we check if the index has changed, but we always call updateItem,
-        // as the value in the given index may have changed.
-        updateItem(newIndex);
-        
-        if (oldIndex == newIndex) return;
-        oldIndex = newIndex;
-        
+    @Override void indexChanged(int oldIndex, int newIndex) {
+        super.indexChanged(oldIndex, newIndex);
+
+        updateItem(oldIndex);
         updateSelection();
         updateFocus();
     }
 
     private boolean isFirstRun = true;
-    private void updateItem(int newIndex) {
+    private void updateItem(int oldIndex) {
         TableView<T> tv = getTableView();
         if (tv == null || tv.getItems() == null) return;
         
@@ -251,6 +237,7 @@ public class TableRow<T> extends IndexedCell<T> {
         final int itemCount = items == null ? -1 : items.size();
 
         // Compute whether the index for this cell is for a real item
+        final int newIndex = getIndex();
         boolean valid = newIndex >= 0 && newIndex < itemCount;
 
         final T oldValue = getItem();
@@ -260,11 +247,13 @@ public class TableRow<T> extends IndexedCell<T> {
         if (valid) {
             final T newValue = items.get(newIndex);
 
-            // There used to be conditional code here to prevent updateItem from
-            // being called when the value didn't change, but that led us to
-            // issues such as RT-33108, where the value didn't change but the item
-            // we needed to be listening to did. Without calling updateItem we
-            // were breaking things, so once again the conditionals are gone.
+            // RT-34566 - if the index didn't change, then avoid calling updateItem
+            // unless the item has changed.
+            if (oldIndex == newIndex) {
+                if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
+                    return;
+                }
+            }
             updateItem(newValue, false);
         } else {
             // RT-30484 We need to allow a first run to be special-cased to allow
@@ -365,4 +354,45 @@ public class TableRow<T> extends IndexedCell<T> {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "table-row-cell";
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TABLE_ROW;
+            case INDEX: return getIndex();
+            case FOCUS_ITEM: //Skin
+            case SELECTED_CELLS: //Skin
+            case CELL_AT_ROW_COLUMN: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        final TableView<T> tableView = getTableView();
+        final MultipleSelectionModel<T> sm = tableView == null ? null : tableView.getSelectionModel();
+
+        switch (action) {
+            case SELECT: {
+                if (sm != null) sm.clearAndSelect(getIndex());
+                break;
+            }
+            case ADD_TO_SELECTION: {
+                if (sm != null) sm.select(getIndex());
+                break;
+            }
+            case REMOVE_FROM_SELECTION: {
+                if (sm != null) sm.clearSelection(getIndex());
+                break;
+            }
+            default: super.accExecuteAction(action);
+        }
+    }
 }

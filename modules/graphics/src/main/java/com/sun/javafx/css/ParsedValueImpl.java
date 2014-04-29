@@ -364,10 +364,11 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         } else {
 
-            if (other.value instanceof ParsedValueImpl[][]
-                    || other.value instanceof ParsedValueImpl[]) return false;
+            // RT-24614 - "CENTER" should equal "center"
+            if (this.value instanceof String && other.value instanceof String) {
+                return this.value.toString().equalsIgnoreCase(other.value.toString());
+            }
 
-            // we know other is not null because of the instanceof check
             return (this.value != null
                     ? this.value.equals(other.value)
                     : other.value == null);

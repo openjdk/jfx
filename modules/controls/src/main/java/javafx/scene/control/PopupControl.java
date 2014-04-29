@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,11 +34,9 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 import javafx.scene.Group;
@@ -47,7 +45,6 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.PopupWindow;
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.CssError;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -113,27 +110,15 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     public PopupControl() {
         super();
         this.bridge = new CSSBridge();
-
-        // Bind up these two properties. Note that the third, styleClass, is
-        // handled in the onChange listener for that list.
-        bridge.idProperty().bind(idProperty());
-        bridge.styleProperty().bind(styleProperty());
-
         setAnchorLocation(AnchorLocation.CONTENT_TOP_LEFT);
         getContent().add(bridge);
-
-        // TODO the fact that PopupWindow uses a group for auto-moving things
-        // around means that the scene resize semantics don't work if the
-        // child is a resizable. I will need to replicate those semantics
-        // here sometime, such that if the Skin provides a resizable, it is
-        // given to match the popup window's width & height.
     }
 
-    // TODO we should have some interface which has id, styleClass, style, etc
-    // which is in common between PopupControl and Node.
-
-    // TODO we should have some interface for minWidth, maxWidth, etc which are
-    // both here and on Node.
+    // TODO the fact that PopupWindow uses a group for auto-moving things
+    // around means that the scene resize semantics don't work if the
+    // child is a resizable. I will need to replicate those semantics
+    // here sometime, such that if the Skin provides a resizable, it is
+    // given to match the popup window's width & height.
 
     /**
      * The id of this {@code PopupControl}. This simple string identifier is useful for
@@ -144,8 +129,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      * @defaultValue null
      */
-    private final StringProperty id = new SimpleStringProperty(this, "id");
-    public final StringProperty idProperty() { return id; }
+    public final StringProperty idProperty() { return bridge.idProperty(); }
 
     /**
      * Sets the id of this {@code PopupControl}. This simple string identifier is useful for
@@ -158,7 +142,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *         method or {@code null}, if no id has been assigned.
      * @defaultValue null
      */
-    public final void setId(String value) { id.set(value); }
+    public final void setId(String value) { idProperty().set(value); }
 
     /**
      * The id of this {@code PopupControl}. This simple string identifier is useful for
@@ -171,62 +155,13 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *         method or {@code null}, if no id has been assigned.
      * @defaultValue null
      */
-    @Override public final String getId() { return id.get(); }
-
-    /**
-     * A list of String identifiers which can be used to logically group
-     * Nodes, specifically for an external style engine. This variable is
-     * analogous to the "class" attribute on an HTML element and, as such,
-     * each element of the list is a style class to which this Node belongs.
-     *
-     * @see <a href="http://www.w3.org/TR/css3-selectors/#class-html">CSS3 class selectors</a>
-     * @defaultValue null
-     */
-    private final ObservableList<String> styleClass = new TrackableObservableList<String>() {
-        // TODO we can save one class if we factor this into a StyleClassList, and reuse it between
-        // here and in Node.
-        @Override protected void onChanged(Change<String> c) {
-            // Push the change along to the bridge group
-            bridge.getStyleClass().setAll(styleClass);
-        }
-
-        @Override public String toString() {
-            if (size() == 0) {
-                return "";
-            } else if (size() == 1) {
-                return get(0);
-            } else {
-                StringBuilder buf = new StringBuilder();
-                for (int i = 0; i < size(); i++) {
-                    buf.append(get(i));
-                    if (i + 1 < size()) {
-                        buf.append(' ');
-                    }
-                }
-                return buf.toString();
-            }
-        }
-    };
+    @Override public final String getId() { return idProperty().get(); }
 
     /**
      * Returns the list of String identifiers that make up the styleClass
      * for this PopupControl.
      */
-    @Override public final ObservableList<String> getStyleClass() { return styleClass; }
-
-    /**
-     * A string representation of the CSS style associated with this
-     * specific PopupControl. This is analogous to the "style" attribute of an
-     * HTML element. Note that, like the HTML style attribute, this
-     * variable contains style properties and values and not the
-     * selector portion of a style rule.
-     * <p>
-     * Parsing this style might not be supported on some limited
-     * platforms. It is recommended to use a standalone CSS file instead.
-     *
-     * @defaultValue empty string
-     */
-    private final StringProperty style = new SimpleStringProperty(this, "style");
+    @Override public final ObservableList<String> getStyleClass() { return bridge.getStyleClass(); }
 
     /**
      * A string representation of the CSS style associated with this
@@ -238,7 +173,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *         {@code null} is implicitly converted to an empty String.
      * @defaultValue empty string
      */
-    public final void setStyle(String value) { style.set(value); }
+    public final void setStyle(String value) { styleProperty().set(value); }
 
     // TODO: javadoc copied from property for the sole purpose of providing a return tag
     /**
@@ -252,16 +187,175 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *         If this {@code PopupControl} does not have an inline style,
      *         an empty String is returned.
      */
-    @Override public final String getStyle() { return style.get(); }
-    public final StringProperty styleProperty() { return style; }
+    @Override public final String getStyle() { return styleProperty().get(); }
+    public final StringProperty styleProperty() { return bridge.styleProperty(); }
 
+    /**
+     * Skin is responsible for rendering this {@code PopupControl}. From the
+     * perspective of the {@code PopupControl}, the {@code Skin} is a black box.
+     * It listens and responds to changes in state in a {@code PopupControl}.
+     * <p>
+     * There is a one-to-one relationship between a {@code PopupControl} and its
+     * {@code Skin}. Every {@code Skin} maintains a back reference to the
+     * {@code PopupControl}.
+     * <p>
+     * A skin may be null.
+     */
     @Override public final ObjectProperty<Skin<?>> skinProperty() {
-        return bridge.skin; }
-    @Override public final void setSkin(Skin<?> value) {
-        skinProperty().set(value);
+        return skin;
     }
+
+    @Override public final void setSkin(Skin<?> value) {
+        skinProperty().setValue(value);
+    }
+
     @Override public final Skin<?> getSkin() {
         return skinProperty().getValue();
+    }
+
+    private final ObjectProperty<Skin<?>> skin = new ObjectPropertyBase<Skin<?>>() {
+        // We store a reference to the oldValue so that we can handle
+        // changes in the skin properly in the case of binding. This is
+        // only needed because invalidated() does not currently take
+        // a reference to the old value.
+        private Skin<?> oldValue;
+
+        @Override
+        public void set(Skin<?> v) {
+
+            if (v == null
+                    ? oldValue == null
+                    : oldValue != null && v.getClass().equals(oldValue.getClass()))
+                return;
+
+            super.set(v);
+
+        }
+
+        @Override protected void invalidated() {
+            Skin<?> skin = get();
+
+            // Collect the name of the currently installed skin class. We do this
+            // so that subsequent updates from CSS to the same skin class will not
+            // result in reinstalling the skin
+            currentSkinClassName = skin == null ? null : skin.getClass().getName();
+
+            // if someone calls setSkin, we need to make it look like they
+            // called set on skinClassName in order to keep CSS from overwriting
+            // the skin.
+            skinClassNameProperty().set(currentSkinClassName);
+
+            // Let CSS know that this property has been manually changed
+            // Dispose of the old skin
+            if (oldValue != null) {
+                oldValue.dispose();
+            }
+
+            // Get the new value, and save it off as the new oldValue
+            oldValue = getValue();
+
+            prefWidthCache = -1;
+            prefHeightCache = -1;
+            minWidthCache = -1;
+            minHeightCache = -1;
+            maxWidthCache = -1;
+            maxHeightCache = -1;
+            skinSizeComputed = false;
+
+            final Node n = getSkinNode();
+            if (n != null) {
+                bridge.getChildren().setAll(n);
+            } else {
+                bridge.getChildren().clear();
+            }
+
+            // calling impl_reapplyCSS() as the styleable properties may now
+            // be different, as we will now be able to return styleable properties
+            // belonging to the skin. If impl_reapplyCSS() is not called, the
+            // getCssMetaData() method is never called, so the
+            // skin properties are never exposed.
+            bridge.impl_reapplyCSS();
+
+            // DEBUG: Log that we've changed the skin
+            final PlatformLogger logger = Logging.getControlsLogger();
+            if (logger.isLoggable(Level.FINEST)) {
+                logger.finest("Stored skin[" + getValue() + "] on " + this);
+            }
+        }
+
+        @Override
+        public Object getBean() {
+            return PopupControl.this;
+        }
+
+        @Override
+        public String getName() {
+            return "skin";
+        }
+    };
+    /**
+     * Keeps a reference to the name of the class currently acting as the skin.
+     */
+    private String currentSkinClassName = null;
+    /**
+     * A property that acts as a proxy between the skin property and css.
+     */
+    private StringProperty skinClassName = null;
+    private StringProperty skinClassNameProperty() {
+        if (skinClassName == null) {
+            skinClassName = new StyleableStringProperty() {
+
+                @Override
+                public void set(String v) {
+                    // do not allow the skin to be set to null through CSS
+                    if (v == null || v.isEmpty() || v.equals(get())) return;
+                    super.set(v);
+                }
+
+                @Override
+                public void invalidated() {
+
+                    //
+                    // if the current skin is not null, then
+                    // see if then check to see if the current skin's class name
+                    // is the same as skinClassName. If it is, then there is
+                    // no need to load the skin class. Note that the only time
+                    // this would be the case is if someone called setSkin since
+                    // the skin would be set ahead of the skinClassName
+                    // (skinClassName is set from the skinProperty's invalidated
+                    // method, so the skin would be set, then the skinClassName).
+                    // If the skinClassName is set first (via CSS), then this
+                    // invalidated method won't get called unless the value
+                    // has changed (thus, we won't reload the same skin).
+                    //
+                    if (get() != null) {
+                        if (!get().equals(currentSkinClassName)) {
+                            Control.loadSkinClass(PopupControl.this, get());
+                        }
+                        // CSS should not set skin to null
+                        //                    } else {
+                        //                        setSkin(null);
+                    }
+                }
+
+                @Override
+                public Object getBean() {
+                    return PopupControl.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "skinClassName";
+                }
+
+                @Override
+                public CssMetaData<CSSBridge,String> getCssMetaData() {
+                    return SKIN;
+                }
+
+            };
+        }
+        return skinClassName;
     }
 
     /**
@@ -863,12 +957,12 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
     }
 
     private void recomputeSkinSize() {
-        if (!skinSizeComputed && getOwnerWindow() != null) { //getScene() != null && getScene().getRoot() != null) {
+        if (!skinSizeComputed) {
             // RT-14094, RT-16754: We need the skins of the popup
             // and it children before the stage is visible so we
             // can calculate the popup position based on content
             // size.
-            getScene().getRoot().impl_processCSS(true);
+            bridge.applyCss();
             skinSizeComputed = true;
         }
     }
@@ -892,31 +986,29 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *                                                                         *
      **************************************************************************/
 
-    private static class StyleableProperties {
-        private static final CssMetaData<CSSBridge,String> SKIN =
+    private static final CssMetaData<CSSBridge,String> SKIN =
             new CssMetaData<CSSBridge,String>("-fx-skin",
-                StringConverter.getInstance()) {
+                    StringConverter.getInstance()) {
 
-            @Override
-            public boolean isSettable(CSSBridge n) {
-                return n.skin == null || !n.skin.isBound();
-            }
+                @Override
+                public boolean isSettable(CSSBridge cssBridge) {
+                    return !cssBridge.popupControl.skinProperty().isBound();
+                }
 
-            @Override
-            public StyleableProperty<String> getStyleableProperty(CSSBridge n) {
-                return (StyleableProperty)n.skinClassNameProperty();
-            }
-        };
+                @Override
+                public StyleableProperty<String> getStyleableProperty(CSSBridge cssBridge) {
+                    return (StyleableProperty)cssBridge.popupControl.skinClassNameProperty();
+                }
+            };
 
-        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-        static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables =
+    private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+    static {
+        final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>();
-            Collections.addAll(styleables,
+        Collections.addAll(styleables,
                 SKIN
-            );
-            STYLEABLES = Collections.unmodifiableList(styleables);
-        }
+        );
+        STYLEABLES = Collections.unmodifiableList(styleables);
     }
 
     /**
@@ -925,16 +1017,14 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
-        return StyleableProperties.STYLEABLES;
+        return STYLEABLES;
     }
 
     /**
-     * This method should delegate to {@link Node#getClassCssMetaData()} so that
-     * a Node's CssMetaData can be accessed without the need for reflection.
-     * @return The CssMetaData associated with this node, which may include the
-     * CssMetaData of its super classes.
+     * {@inheritDoc}
      * @since JavaFX 8.0
      */
+    @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
@@ -977,7 +1067,6 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
         final Node ownerNode = getOwnerNode();
         if (ownerNode != null) {
-
             return ownerNode;
 
         } else {
@@ -987,13 +1076,13 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
 
                 final Scene ownerScene = ownerWindow.getScene();
                 if (ownerScene != null) {
-
                     return ownerScene.getRoot();
                 }
             }
         }
 
-        return null;
+        return bridge.getParent();
+
     }
 
     /**
@@ -1020,16 +1109,8 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * @since JavaFX 2.1
      */
     protected class CSSBridge extends Group {
-        private String currentSkinClassName = null;
 
-        /**
-         * {@inheritDoc}
-         * @since JavaFX 8.0
-         */
-        public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
-            // see RT-19263
-            return PopupControl.this.getCssMetaData();
-        }
+        private final PopupControl popupControl = PopupControl.this;
 
         /**
          * Requests a layout pass to be performed before the next scene is
@@ -1047,161 +1128,26 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             minHeightCache = -1;
             maxWidthCache = -1;
             maxHeightCache = -1;
-            skinSizeComputed = false;
+            //skinSizeComputed = false; -- RT-33073 disabled this
             super.requestLayout();
         }
 
-        /**
-        * Skin is responsible for rendering this {@code PopupControl}. From the
-        * perspective of the {@code PopupControl}, the {@code Skin} is a black box.
-        * It listens and responds to changes in state in a {@code PopupControl}.
-        * <p>
-        * There is a one-to-one relationship between a {@code PopupControl} and its
-        * {@code Skin}. Every {@code Skin} maintains a back reference to the
-        * {@code PopupControl}.
-        * <p>
-        * A skin may be null.
-        */
-        private ObjectProperty<Skin<?>> skin = new ObjectPropertyBase<Skin<?>>() {
-            // We store a reference to the oldValue so that we can handle
-            // changes in the skin properly in the case of binding. This is
-            // only needed because invalidated() does not currently take
-            // a reference to the old value.
-            private Skin<?> oldValue;
-
-            @Override
-            public void set(Skin<?> v) {
-
-                if (v == null
-                    ? oldValue == null
-                    : oldValue != null && v.getClass().equals(oldValue.getClass()))
-                    return;
-
-                super.set(v);
-
-            }
-
-            @Override protected void invalidated() {
-                Skin<?> skin = get();
-                
-                // Collect the name of the currently installed skin class. We do this
-                // so that subsequent updates from CSS to the same skin class will not
-                // result in reinstalling the skin
-                currentSkinClassName = skin == null ? null : skin.getClass().getName();
-
-                // if someone calls setSkin, we need to make it look like they
-                // called set on skinClassName in order to keep CSS from overwriting
-                // the skin.
-                skinClassNameProperty().set(currentSkinClassName);
-                
-                // Let CSS know that this property has been manually changed
-                // Dispose of the old skin
-                if (oldValue != null) oldValue.dispose();
-                // Get the new value, and save it off as the new oldValue
-                oldValue = getValue();
-
-                prefWidthCache = -1;
-                prefHeightCache = -1;
-                minWidthCache = -1;
-                minHeightCache = -1;
-                maxWidthCache = -1;
-                maxHeightCache = -1;
-                skinSizeComputed = false;
-                final Node n = getSkinNode();
-                if (n != null) bridge.getChildren().setAll(n);
-                else bridge.getChildren().clear();
-
-                // calling impl_reapplyCSS() as the styleable properties may now
-                // be different, as we will now be able to return styleable properties
-                // belonging to the skin. If impl_reapplyCSS() is not called, the
-                // getCssMetaData() method is never called, so the
-                // skin properties are never exposed.
-                impl_reapplyCSS();
-
-                // DEBUG: Log that we've changed the skin
-                final PlatformLogger logger = Logging.getControlsLogger();
-                if (logger.isLoggable(Level.FINEST)) {
-                    logger.finest("Stored skin[" + getValue() + "] on " + this);
-                }
-            }
-
-            @Override
-            public Object getBean() {
-                return PopupControl.CSSBridge.this;
-            }
-
-            @Override
-            public String getName() {
-                return "skin";
-            }
-        };
-
-        /**
-        * Keeps a reference to the name of the class currently acting as the skin.
-        */
-        private StringProperty skinClassName = null;
-        private StringProperty skinClassNameProperty() {
-            if (skinClassName == null) {
-                skinClassName = new StyleableStringProperty() {
-
-                    @Override
-                    public void set(String v) {
-                        // do not allow the skin to be set to null through CSS
-                        if (v == null || v.isEmpty() || v.equals(get())) return;
-                        super.set(v);
-                    }
-
-                    @Override
-                    public void invalidated() {
-
-                        //
-                        // if the current skin is not null, then
-                        // see if then check to see if the current skin's class name
-                        // is the same as skinClassName. If it is, then there is
-                        // no need to load the skin class. Note that the only time
-                        // this would be the case is if someone called setSkin since
-                        // the skin would be set ahead of the skinClassName
-                        // (skinClassName is set from the skinProperty's invalidated
-                        // method, so the skin would be set, then the skinClassName).
-                        // If the skinClassName is set first (via CSS), then this
-                        // invalidated method won't get called unless the value
-                        // has changed (thus, we won't reload the same skin).
-                        //
-                        if (get() != null) {
-                            if (!get().equals(currentSkinClassName)) {
-                                Control.loadSkinClass(PopupControl.this, skinClassName.get());
-                            }
-                        // CSS should not set skin to null
-    //                    } else {
-    //                        setSkin(null);
-                        }
-                    }
-
-                    @Override
-                    public Object getBean() {
-                        return PopupControl.CSSBridge.this;
-                    }
-
-                    @Override
-                    public String getName() {
-                        return "skinClassName";
-                    }
-
-                    @Override
-                    public CssMetaData<CSSBridge,String> getCssMetaData() {
-                        return StyleableProperties.SKIN;
-                    }
-
-                };
-            }
-            return skinClassName;
+        @Override
+        public final Styleable getStyleableParent() {
+            return PopupControl.this.getStyleableParent();
         }
 
-        /**
-         * Sets a reference to the name of the class currently acting as the skin.
-         */
-        protected void setSkinClassName(String skinClassName) {
-            skinClassNameProperty().set(skinClassName);
+        @Override
+        public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+            return PopupControl.this.getCssMetaData();
+        }
+
+        @Override public List<String> impl_getAllParentStylesheets() {
+            Styleable styleable = getStyleableParent();
+            if (styleable instanceof Parent) {
+                return ((Parent)styleable).impl_getAllParentStylesheets();
+            }
+            return null;
         }
 
         /**
@@ -1209,16 +1155,15 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
          * @deprecated This is an internal API that is not intended for use and will be removed in the next version
          */
         @Deprecated
-        @Override protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
-            super.impl_processCSS(cacheHint);
+        @Override protected void impl_processCSS(WritableValue<Boolean> unused) {
+            super.impl_processCSS(unused);
 
             if (getSkin() == null) {
                 // try to create default skin
                 final Skin<?> defaultSkin = createDefaultSkin();
                 if (defaultSkin != null) {
                     skinProperty().set(defaultSkin);
-                    // we have to reapply css again so that the newly set skin gets css applied as well.
-                    super.impl_processCSS(cacheHint);
+                    super.impl_processCSS(unused);
                 } else {
                     final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                             " and createDefaultSkin() returned null.";
@@ -1232,19 +1177,6 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             }
         }
 
-
-        @Override
-        public Styleable getStyleableParent() {
-            return PopupControl.this.getStyleableParent();
-        }
-
-        @Override public List<String> impl_getAllParentStylesheets() {
-            Styleable styleable = getStyleableParent();
-            if (styleable instanceof Parent) {
-                return ((Parent)styleable).impl_getAllParentStylesheets();
-            }
-            return null;
-        }
     }
 
 }

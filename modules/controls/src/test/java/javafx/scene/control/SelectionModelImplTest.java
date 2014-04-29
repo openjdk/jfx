@@ -500,10 +500,8 @@ public class SelectionModelImplTest {
 
     private int rt32618_count = 0;
     @Test public void test_rt32618_singleSelection() {
-        model.selectedItemProperty().addListener(new ChangeListener<Object>() {
-            @Override public void changed(ObservableValue<? extends Object> ov, Object t, Object t1) {
-                rt32618_count++;
-            }
+        model.selectedItemProperty().addListener((ov, t, t1) -> {
+            rt32618_count++;
         });
 
         assertEquals(0, rt32618_count);

@@ -97,21 +97,17 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
         }
     }
 
-    Runnable defaultButtonRunnable = new Runnable() {
-            public void run() {
-                if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
-                    getSkinnable().fire();
-                }
-            }
-        };
+    Runnable defaultButtonRunnable = () -> {
+        if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
+            getSkinnable().fire();
+        }
+    };
 
-    Runnable cancelButtonRunnable = new Runnable() {
-            public void run() {
-                if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
-                    getSkinnable().fire();
-                }
-            }
-        };
+    Runnable cancelButtonRunnable = () -> {
+        if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
+            getSkinnable().fire();
+        }
+    };
 
     private KeyCodeCombination defaultAcceleratorKeyCodeCombination;
     

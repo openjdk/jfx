@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import javafx.scene.control.Cell;
 
 import javafx.css.StyleableDoubleProperty;
@@ -40,6 +41,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.control.IndexedCell;
 import javafx.scene.control.SkinBase;
 
 
@@ -48,21 +50,20 @@ import javafx.scene.control.SkinBase;
  * This might not be a suitable base class for TreeCellSkin or some other
  * such skins.
  */
-public class CellSkinBase<C extends Cell, B extends CellBehaviorBase<C>> extends LabeledSkinBase<C, B> {
+public class CellSkinBase<C extends Cell, B extends BehaviorBase<C>> extends LabeledSkinBase<C, B> {
     /**
      * The default cell size. For vertical ListView or a TreeView or TableView
      * this is the height, for a horizontal ListView this is the width. This
      * is settable from CSS
      */
     private DoubleProperty cellSize;
-//    boolean cellSizeSet = false;
 
     public final double getCellSize() {
         return cellSize == null ? DEFAULT_CELL_SIZE : cellSize.get();
     }
 
     public final ReadOnlyDoubleProperty cellSizeProperty() {
-        return (ReadOnlyDoubleProperty)cellSizePropertyImpl();
+        return cellSizePropertyImpl();
     }
 
     private DoubleProperty cellSizePropertyImpl() {

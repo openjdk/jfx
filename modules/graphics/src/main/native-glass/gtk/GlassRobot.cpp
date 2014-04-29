@@ -57,7 +57,9 @@ static void checkXTest(JNIEnv* env) {
         checkDone = TRUE;
     }
     if (!isXTestAvailable) {
-        env->ThrowNew(env->FindClass("java/lang/UnsupportedOperationException"), "Glass Robot needs XTest extension to work");
+        jclass cls = env->FindClass("java/lang/UnsupportedOperationException");
+        if (env->ExceptionCheck()) return;
+        env->ThrowNew(cls, "Glass Robot needs XTest extension to work");
     }
 }
 

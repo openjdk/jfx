@@ -132,19 +132,19 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawIndexedQuads
  * Method:    nDrawTriangleList
 */
 JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DVertexBuffer_nDrawTriangleList
-  (JNIEnv *env, jclass, jlong ctx, jfloatArray fbuf, jbyteArray bbuf, jint numTrinagles)
+  (JNIEnv *env, jclass, jlong ctx, jfloatArray fbuf, jbyteArray bbuf, jint numTriangles)
 {
     TraceLn(NWT_TRACE_INFO, "D3DVertexBuffer_nDrawTriangleList");
 
     D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
-    
+
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
-    
+
     PrismSourceVertex *pSrcFloats = (PrismSourceVertex *)env->GetPrimitiveArrayCritical(fbuf, 0);
     BYTE *pSrcColors = (BYTE *)env->GetPrimitiveArrayCritical(bbuf, 0);
 
-    HRESULT hr = (pSrcFloats && pSrcColors && numTrinagles > 0) ?
-        pCtx->drawTriangleList(pSrcFloats, pSrcColors, numTrinagles) : E_FAIL;
+    HRESULT hr = (pSrcFloats && pSrcColors && numTriangles > 0) ?
+        pCtx->drawTriangleList(pSrcFloats, pSrcColors, numTriangles) : E_FAIL;
 
     if (pSrcColors) env->ReleasePrimitiveArrayCritical(bbuf, pSrcColors, JNI_ABORT);
     if (pSrcFloats) env->ReleasePrimitiveArrayCritical(fbuf, pSrcFloats, JNI_ABORT);

@@ -70,22 +70,18 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
 
         bindMenuItemProperties(this, menu);
 
-        menu.showingProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable property) {
-                if (menu.isShowing() && !isShowing()) {
-                    show();
-                } else if (!menu.isShowing() && isShowing()) {
-                    hide();
-                }
+        menu.showingProperty().addListener(property -> {
+            if (menu.isShowing() && !isShowing()) {
+                show();
+            } else if (!menu.isShowing() && isShowing()) {
+                hide();
             }
         });
-        showingProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable property) {
-                if (isShowing() && !menu.isShowing()) {
-                    menu.show();
-                } else if (!isShowing() && menu.isShowing()) {
-                    menu.hide();
-                }
+        showingProperty().addListener(property -> {
+            if (isShowing() && !menu.isShowing()) {
+                menu.show();
+            } else if (!isShowing() && menu.isShowing()) {
+                menu.hide();
             }
         });
 
@@ -153,10 +149,8 @@ public class GlobalMenuAdapter extends Menu implements MenuBase {
         adapter.acceleratorProperty().bind(menuItem.acceleratorProperty());
         adapter.mnemonicParsingProperty().bind(menuItem.mnemonicParsingProperty());
 
-        adapter.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent ev) {
-                menuItem.fire();
-            }
+        adapter.setOnAction(ev -> {
+            menuItem.fire();
         });
     }
 

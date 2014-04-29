@@ -137,13 +137,12 @@ public class TooltipTest {
     /*********************************************************************
      * Tests for property binding                                        *
      ********************************************************************/
-    @Ignore("TODO: Please remove ignore annotation after RT-15799 is fixed.")
     @Test public void checkTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         toolTip.textProperty().bind(strPr);
-        assertTrue("Text cannot be bound", toolTip.textProperty().equals("value"));
+        assertTrue("Text cannot be bound", toolTip.textProperty().getValue().equals("value"));
         strPr.setValue("newvalue");
-        assertTrue("Text cannot be bound", toolTip.textProperty().equals("newvalue"));
+        assertTrue("Text cannot be bound", toolTip.textProperty().getValue().equals("newvalue"));
     }
     
     @Test public void checkTextAlignmentPropertyBind() {
@@ -213,7 +212,7 @@ public class TooltipTest {
     }
 
     @Test public void textAlignmentPropertyHasBeanReference() {
-        assertSame(toolTip.bridge, toolTip.textAlignmentProperty().getBean());
+        assertSame(toolTip, toolTip.textAlignmentProperty().getBean());
     }
 
     @Test public void textAlignmentPropertyHasName() {
@@ -221,7 +220,7 @@ public class TooltipTest {
     }
 
     @Test public void textOverrunPropertyHasBeanReference() {
-        assertSame(toolTip.bridge, toolTip.textOverrunProperty().getBean());
+        assertSame(toolTip, toolTip.textOverrunProperty().getBean());
     }
 
     @Test public void textOverrunPropertyHasName() {
@@ -229,7 +228,7 @@ public class TooltipTest {
     }
 
     @Test public void wrapTextPropertyHasBeanReference() {
-        assertSame(toolTip.bridge, toolTip.wrapTextProperty().getBean());
+        assertSame(toolTip, toolTip.wrapTextProperty().getBean());
     }
 
     @Test public void wrapTextPropertyHasName() {
@@ -237,7 +236,7 @@ public class TooltipTest {
     }
     
     @Test public void fontPropertyHasBeanReference() {
-        assertSame(toolTip.bridge, toolTip.fontProperty().getBean());
+        assertSame(toolTip, toolTip.fontProperty().getBean());
     }
 
     @Test public void fontPropertyHasName() {
@@ -253,7 +252,7 @@ public class TooltipTest {
     }
 
     @Test public void contentDisplayPropertyHasBeanReference() {
-        assertSame(toolTip.bridge, toolTip.contentDisplayProperty().getBean());
+        assertSame(toolTip, toolTip.contentDisplayProperty().getBean());
     }
 
     @Test public void contentDisplayPropertyHasName() {
@@ -261,7 +260,7 @@ public class TooltipTest {
     }
 
     @Test public void graphicTextGapPropertyHasBeanReference() {
-        assertSame(toolTip.bridge, toolTip.graphicTextGapProperty().getBean());
+        assertSame(toolTip, toolTip.graphicTextGapProperty().getBean());
     }
 
     @Test public void graphicTextGapPropertyHasName() {
@@ -345,7 +344,6 @@ public class TooltipTest {
         assertSame(Font.getDefault(), toolTip.getFont());
     }
     
-    @Ignore("getCssMetaData returns null for graphicProperty")
     @Test public void whenGraphicIsBound_impl_cssSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(toolTip.bridge));
@@ -354,19 +352,18 @@ public class TooltipTest {
           assertFalse(styleable.isSettable(toolTip.bridge));
     }
     
-    @Ignore("getCssMetaData returns null for graphicProperty")
     @Test public void whenGraphicIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.graphicProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.bridge));
     }
-    
-    @Ignore("getCssMetaData returns null for graphicProperty")
+
+    @Ignore("CSS sets graphicProperty indirectly")
     @Test public void canSpecifyGraphicViaCSS() {
         ((StyleableProperty)toolTip.graphicProperty())
                 .applyStyle(null , "../../../../build/classes/com/sun/javafx/scene/control/skin/caspian/menu-shadow.png");
         assertNotNull(toolTip.getGraphic());
     }
-    
+
     @Test public void whenContentDisplayIsBound_impl_cssSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.bridge));
@@ -374,8 +371,7 @@ public class TooltipTest {
         toolTip.contentDisplayProperty().bind(other);
           assertFalse(styleable.isSettable(toolTip.bridge));
     }
-    
-    @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
+     @Test public void whenContentDisplayIsSpecifiedViaCSSAndIsNotBound_impl_cssSettable_ReturnsTrue() {
         CssMetaData styleable = ((StyleableProperty)toolTip.contentDisplayProperty()).getCssMetaData();
           assertTrue(styleable.isSettable(toolTip.bridge));
     }

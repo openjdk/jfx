@@ -175,11 +175,7 @@ public final class SWTApplication extends Application {
             runCocoaLoop(launchable);
         } else {
             // the current thread can't block as the caller is waiting on it
-            new Thread(new Runnable() {
-                @Override public void run() {
-                    runSWTEventLoop(launchable);
-                }
-            }).start();
+            new Thread(() -> runSWTEventLoop(launchable)).start();
         }
     }
 
@@ -758,6 +754,19 @@ public final class SWTApplication extends Application {
     static long getHandleCocoa(Control control) {
         try {
             Field field = control.getClass().getField("view");
+            field.setAccessible(true);
+            Object view = field.get(control);
+            Class clazz = Class.forName("org.eclipse.swt.internal.cocoa.id");
+            return getHandle(clazz, view, "id");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    static long getHandleCocoa(Shell control) {
+        try {
+            Field field = control.getClass().getDeclaredField("window");
             field.setAccessible(true);
             Object view = field.get(control);
             Class clazz = Class.forName("org.eclipse.swt.internal.cocoa.id");

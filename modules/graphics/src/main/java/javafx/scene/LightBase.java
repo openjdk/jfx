@@ -87,12 +87,7 @@ public abstract class LightBase extends Node {
         }
         
         setColor(color);
-        this.localToSceneTransformProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                impl_markDirty(DirtyBits.NODE_LIGHT_TRANSFORM);
-            }
-        });
+        this.localToSceneTransformProperty().addListener(observable -> impl_markDirty(DirtyBits.NODE_LIGHT_TRANSFORM));
     }
 
     /**

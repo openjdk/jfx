@@ -67,6 +67,7 @@ public class Shear extends Transform {
 
     /**
      * Creates a new instance of Shear.
+     * The pivot point is set to (0,0)
      * @param x the multiplier by which coordinates are shifted in the direction
      * of the positive X axis as a factor of their Y coordinate
      * @param y the multiplier by which coordinates are shifted in the direction
@@ -177,6 +178,8 @@ public class Shear extends Transform {
 
     /**
      * Defines the X coordinate of the shear pivot point.
+     * 
+     * @defaultValue 0.0
      */
     private DoubleProperty pivotX;
 
@@ -214,6 +217,8 @@ public class Shear extends Transform {
 
     /**
      * Defines the Y coordinate of the shear pivot point.
+     * 
+     * @defaultValue 0.0
      */
     private DoubleProperty pivotY;
 

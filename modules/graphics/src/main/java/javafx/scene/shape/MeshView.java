@@ -81,17 +81,12 @@ public class MeshView extends Shape3D {
                 
                 private Mesh old = null;
                 private final ChangeListener<Boolean> meshChangeListener =
-                        new ChangeListener<Boolean>() {
-                            
-                    @Override
-                    public void changed(ObservableValue<? extends Boolean> observable,
-                            Boolean oldValue, Boolean newValue) {
-                        if (newValue) {
-                            impl_markDirty(DirtyBits.MESH_GEOM);
-                            impl_geomChanged();
-                        }
-                    }
-                };
+                        (observable, oldValue, newValue) -> {
+                            if (newValue) {
+                                impl_markDirty(DirtyBits.MESH_GEOM);
+                                impl_geomChanged();
+                            }
+                        };
                 private final WeakChangeListener<Boolean> weakMeshChangeListener =
                         new WeakChangeListener(meshChangeListener);
 

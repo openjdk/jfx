@@ -1,0 +1,79 @@
+.rect {
+    -fx-fill: #0000ff;
+}
+
+.rect:hover {
+    -fx-fill: #ff0000;
+}
+
+.hellostack-stack {
+    -fx-padding: 25 25 25 25;
+    -fx-background-color: black;
+    -fx-border-color: yellow;
+    -fx-border-style: dotted;
+    -fx-border-width: 3px;
+}
+
+.hellohbox-hbox {
+    -fx-padding: 30 30 30 30;
+    -fx-background-color: blue;
+    -fx-border-color: yellow;
+    -fx-border-style: segments(4, 2);
+    -fx-border-width: 10px;
+}
+
+.hellovbox-vbox {
+    -fx-padding: 10 9 8 7;
+    -fx-background-color: purple;
+    -fx-background-radius: 20;
+    /*-fx-border-color: purple;
+    -fx-border-style: solid;
+    -fx-border-width: 3px;*/
+}
+
+.hellotile-tile {
+    -fx-padding: 20 20 20 20;
+    -fx-background-color: beige;
+    -fx-background-radius: 18;
+    -fx-border-color: purple;
+    /*-fx-border-style: solid;
+    -fx-border-width: 3px;*/
+}
+
+.helloflow-flow {
+    -fx-padding: 12 12 12 12;
+    -fx-background-color: pink;
+    -fx-background-radius: 24;
+    -fx-shape: "M 0,0 H1 L 4,3 7,0 H8 V1 L 5,4 8,7 V8 H7 L 4,5 1,8 H0 V7 L 3,4 0,1 Z";
+    -fx-scale-shape: true;
+}
+
+ /* for HelloFontSize as regards RT-28635 */
+.special-button:mouse_pressed {-fx-font-size : 20;}
+
+/* For HelloControls */
+#cbox .combo-box-popup .list-cell, #menu1 .menu-item, #mbutton .menu-item {
+    -fx-border-color: red;
+    -fx-background-color: yellow
+}
+#yellow-tooltip .tooltip {
+    -fx-background-color: yellow;
+    -fx-text-fill: black;
+}
+
+/* For HelloDatePicker */
+.date-cell.weekend {
+    -fx-text-fill: red;
+}
+
+/*
+ * In HelloLabelBorders, the borders are set on the ListCell.
+ * These styles push the border in from the edges of the ListCell
+ * which makes the border easier to distinguish.
+ */
+.hello-label-borders .list-cell {
+    -fx-border-insets: 5px;
+    -fx-border-image-insets: 5px;
+    -fx-padding: 10 5 10 5;
+    -fx-alignment: center;
+}

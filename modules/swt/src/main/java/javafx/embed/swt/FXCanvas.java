@@ -158,18 +158,16 @@ public class FXCanvas extends Canvas {
     private IntBuffer pixelsBuf = null;
     
     // This filter runs when any widget is moved
-    Listener moveFilter = new Listener() {
-        public void handleEvent(Event event) {
-            // If a parent has moved, send a move event to FX
-            Control control = FXCanvas.this;
-            while (control != null) {
-                if (control == event.widget) {
-                    sendMoveEventToFX();
-                    break;
-                }
-                control = control.getParent();
-            };
-        }
+    Listener moveFilter = event -> {
+        // If a parent has moved, send a move event to FX
+        Control control = FXCanvas.this;
+        while (control != null) {
+            if (control == event.widget) {
+                sendMoveEventToFX();
+                break;
+            }
+            control = control.getParent();
+        };
     };
     
     private double scaleFactor = 1.0;
@@ -248,11 +246,9 @@ public class FXCanvas extends Canvas {
     }
 
     private static void initFx() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                System.setProperty("javafx.embed.isEventThread", "true");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            System.setProperty("javafx.embed.isEventThread", "true");
+            return null;
         });
         Map map = Application.getDeviceDetails();
         if (map == null) {
@@ -276,11 +272,8 @@ public class FXCanvas extends Canvas {
             map.put("javafx.embed.eventProc", eventProc);
         }
         // Note that calling PlatformImpl.startup more than once is OK
-        PlatformImpl.startup(new Runnable() {
-            @Override
-            public void run() {
-                Application.GetApplication().setName(Display.getAppName());
-            }
+        PlatformImpl.startup(() -> {
+            Application.GetApplication().setName(Display.getAppName());
         });
     }
     
@@ -378,11 +371,8 @@ public class FXCanvas extends Canvas {
             }
         });
 
-        addPaintListener(new PaintListener() {
-            @Override
-            public void paintControl(PaintEvent pe) {
-                FXCanvas.this.paintControl(pe);
-            }
+        addPaintListener(pe -> {
+            FXCanvas.this.paintControl(pe);
         });
 
         addMouseListener(new MouseListener() {
@@ -400,22 +390,16 @@ public class FXCanvas extends Canvas {
             }
         });
 
-        addMouseMoveListener(new MouseMoveListener() {
-            @Override
-            public void mouseMove(MouseEvent me) {
-                if ((me.stateMask & SWT.BUTTON_MASK) != 0) {
-                    FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_DRAGGED);
-                } else {
-                    FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_MOVED);
-                }
+        addMouseMoveListener(me -> {
+            if ((me.stateMask & SWT.BUTTON_MASK) != 0) {
+                FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_DRAGGED);
+            } else {
+                FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_MOVED);
             }
         });
 
-        addMouseWheelListener(new MouseWheelListener() {
-            @Override
-            public void mouseScrolled(MouseEvent me) {
-                FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_WHEEL);
-            }
+        addMouseWheelListener(me -> {
+            FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_WHEEL);
         });
 
         addMouseTrackListener(new MouseTrackListener() {
@@ -467,10 +451,20 @@ public class FXCanvas extends Canvas {
             }
         });
         
-        addMenuDetectListener(new MenuDetectListener() {
-            @Override
-            public void menuDetected(MenuDetectEvent e) {
+        addMenuDetectListener(e -> {
+            Runnable r = () -> {
+                if (isDisposed()) return;
                 FXCanvas.this.sendMenuEventToFX(e);
+            };
+            // In SWT, MenuDetect comes before the equivalent mouse event
+            // On Mac, the order is MenuDetect, MouseDown, MouseUp.  FX
+            // does not expect this order and when it gets the MouseDown,
+            // it closes the menu.  The fix is to defer the MenuDetect
+            // notification until after the MouseDown is sent to FX.
+            if ("cocoa".equals(SWT.getPlatform())) {
+                getDisplay().asyncExec(r);
+            } else {
+                r.run();
             }
         });
     }
@@ -891,11 +885,9 @@ public class FXCanvas extends Canvas {
                     data = null;
                     //transferData = null;
                     currentTransferData = null;
-                    getDisplay().asyncExec(new Runnable () {
-                        public void run () {
-                            if (ignoreLeave) return;
-                            fxDropTarget.handleDragLeave();
-                        }
+                    getDisplay().asyncExec(() -> {
+                        if (ignoreLeave) return;
+                        fxDropTarget.handleDragLeave();
                     });
                 }
                 public void dragOperationChanged(DropTargetEvent event) {
@@ -950,21 +942,16 @@ public class FXCanvas extends Canvas {
             if (pWidth > 0 && pHeight > 0) {
                 scenePeer.setSize(pWidth, pHeight);
             }
-            scenePeer.setDragStartListener(new HostDragStartListener() {
-                @Override
-                public void dragStarted(final EmbeddedSceneDSInterface fxDragSource, final TransferMode dragAction) {
-                    Platform.runLater(new Runnable ()  {
-                        public void run () {
-                            DragSource dragSource = createDragSource(fxDragSource, dragAction);
-                            if (dragSource == null) {
-                                fxDragSource.dragDropEnd(null);
-                            } else {
-                                updateDropTarget();
-                                FXCanvas.this.notifyListeners(SWT.DragDetect, null);
-                            }
-                        }
-                    });
-                }
+            scenePeer.setDragStartListener((fxDragSource, dragAction) -> {
+                Platform.runLater(() -> {
+                    DragSource dragSource = createDragSource(fxDragSource, dragAction);
+                    if (dragSource == null) {
+                        fxDragSource.dragDropEnd(null);
+                    } else {
+                        updateDropTarget();
+                        FXCanvas.this.notifyListeners(SWT.DragDetect, null);
+                    }
+                });
             });
             //Force the old drop target to be disposed before creating a new one
             setDropTarget(null);
@@ -973,12 +960,9 @@ public class FXCanvas extends Canvas {
 
         @Override
         public boolean requestFocus() {
-            Display.getDefault().asyncExec(new Runnable() {
-                @Override
-                public void run() {
-                    if (isDisposed()) return;
-                    FXCanvas.this.forceFocus();
-                }
+            Display.getDefault().asyncExec(() -> {
+                if (isDisposed()) return;
+                FXCanvas.this.forceFocus();
             });
             return true;
         }
@@ -995,16 +979,13 @@ public class FXCanvas extends Canvas {
             synchronized (lock) {
                 if (queued) return;
                 queued = true;
-                Display.getDefault().asyncExec(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            if (isDisposed()) return;
-                            FXCanvas.this.redraw();
-                        } finally {
-                            synchronized (lock) {
-                                queued = false;
-                            }
+                Display.getDefault().asyncExec(() -> {
+                    try {
+                        if (isDisposed()) return;
+                        FXCanvas.this.redraw();
+                    } finally {
+                        synchronized (lock) {
+                            queued = false;
                         }
                     }
                 });

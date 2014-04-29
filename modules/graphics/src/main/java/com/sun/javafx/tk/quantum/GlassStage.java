@@ -117,12 +117,7 @@ abstract class GlassStage implements TKStage {
         // JDK doesn't provide public APIs to get ACC intersection,
         // so using this ugly workaround
         accessCtrlCtx = javaSecurityAccess.doIntersectionPrivilege(
-            new PrivilegedAction<AccessControlContext>() {
-                @Override
-                public AccessControlContext run() {
-                    return AccessController.getContext();
-                }
-            }, acc, ctx);
+                () -> AccessController.getContext(), acc, ctx);
     }
 
     @Override public void requestFocus() {
@@ -195,12 +190,9 @@ abstract class GlassStage implements TKStage {
             // In case of child windows some of them could already be closed
             // so check if list still contains an object
             if (windows.contains(window) && window.isVisible() && window.stageListener != null) {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override
-                    public Void run() {
-                        window.stageListener.closing();
-                        return null;
-                    }
+                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                    window.stageListener.closing();
+                    return null;
                 }, window.getAccessControlContext());
             }
         }

@@ -63,7 +63,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
     @Override
     public void setValue(Number v) {
         if (v == null) {
-            Logging.getLogger().info("Attempt to set float property to null, using default value instead.", new NullPointerException());
+            Logging.getLogger().fine("Attempt to set float property to null, using default value instead.", new NullPointerException());
             set(0.0f);
         } else {
             set(v.floatValue());

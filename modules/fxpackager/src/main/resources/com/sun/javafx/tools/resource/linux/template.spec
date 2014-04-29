@@ -36,8 +36,26 @@ APPLICATION_LICENSE_FILE
 
 %post
 cp /opt/APPLICATION_NAME/APPLICATION_NAME.desktop /usr/share/applications/
+if [ "SERVICE_HINT" = "true" ]; then
+    cp /opt/APPLICATION_NAME/APPLICATION_PACKAGE.init /etc/init.d/APPLICATION_PACKAGE
+    if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
+        /sbin/chkconfig --add APPLICATION_PACKAGE
+        if [ "START_ON_INSTALL" = "true" ]; then
+            /etc/init.d/APPLICATION_PACKAGE start
+        fi
+    fi
+fi
 
 %preun
 rm -f /usr/share/applications/APPLICATION_NAME.desktop
+if [ "SERVICE_HINT" = "true" ]; then
+    if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
+        if [ "STOP_ON_UNINSTALL" = "true" ]; then
+            /etc/init.d/APPLICATION_PACKAGE stop
+        fi
+        /sbin/chkconfig --del APPLICATION_PACKAGE
+        rm -f /etc/init.d/APPLICATION_PACKAGE
+    fi
+fi
 
 %clean

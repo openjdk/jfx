@@ -112,9 +112,9 @@
 <p>Class instances can be constructed in FXML in several ways. The most common is via instance declaration elements, which simply create a new instance of a class by name. Other ways of creating class instances include referencing existing values, copying existing values, and including external FXML files. Each is discussed in more detail below.</p>
 
 <h4><a name="instance_declaration_elements">Instance Declarations</a></h4>
-<p><assert id="instance_declaration" group="instance_declarations">If an element's tag name begins with an uppercase letter (and it is not a "static" property setter, described later), it is considered an instance declaration.</assert> When the FXML loader (also introduced later) encounters such an element, it creates an instance of that class.</p>
+<p><assert id="instance_declaration" group="instance_declarations">If an element's tag is considered an instance declaration if the tag begins with uppercase letter (and the class is imported)</assert> or, as in Java, <assert id="fully_qualified_name" group="instance_declarations">it denotes a fully-qualified (including the package name) name of a class.</assert> When the FXML loader (also introduced later) encounters such an element, it creates an instance of that class.</p>
 
-<p><assert id="fully_qualified_name" group="instance_declarations">As in Java, class names can be fully-qualified (including the package name)</assert>, <assert id="import" group="instance_declarations">or they can be imported using the "import" processing instruction (PI). For example, the following PI imports the <span class="code">javafx.scene.control.Label</span> class into the current FXML document’s namespace:</p>
+<p><assert id="import" group="instance_declarations">Importing a class is done using the "import" processing instruction (PI). For example, the following PI imports the <span class="code">javafx.scene.control.Label</span> class into the current FXML document’s namespace:</p>
 
 <pre class="code">
 &lt;?import javafx.scene.control.Label?&gt;

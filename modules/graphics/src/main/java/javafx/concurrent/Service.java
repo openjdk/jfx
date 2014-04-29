@@ -162,36 +162,23 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     };
 
     // Addition of doPrivileged added due to RT-19580
-    private static final ThreadGroup THREAD_GROUP = AccessController.doPrivileged(new PrivilegedAction<ThreadGroup>() {
-        @Override public ThreadGroup run() {
-            return new ThreadGroup("javafx concurrent thread pool");
-        }
-    });
-    private static final Thread.UncaughtExceptionHandler UNCAUGHT_HANDLER = new Thread.UncaughtExceptionHandler() {
-        @Override public void uncaughtException(Thread thread, Throwable throwable) {
-            // Ignore IllegalMonitorStateException, these are thrown from the ThreadPoolExecutor
-            // when a browser navigates away from a page hosting an applet that uses
-            // asynchronous tasks. These exceptions generally do not cause loss of functionality.
-            if (!(throwable instanceof IllegalMonitorStateException)) {
-                LOG.warning("Uncaught throwable in " + THREAD_GROUP.getName(), throwable);
-            }
+    private static final ThreadGroup THREAD_GROUP = AccessController.doPrivileged((PrivilegedAction<ThreadGroup>) () -> new ThreadGroup("javafx concurrent thread pool"));
+    private static final Thread.UncaughtExceptionHandler UNCAUGHT_HANDLER = (thread, throwable) -> {
+        // Ignore IllegalMonitorStateException, these are thrown from the ThreadPoolExecutor
+        // when a browser navigates away from a page hosting an applet that uses
+        // asynchronous tasks. These exceptions generally do not cause loss of functionality.
+        if (!(throwable instanceof IllegalMonitorStateException)) {
+            LOG.warning("Uncaught throwable in " + THREAD_GROUP.getName(), throwable);
         }
     };
     
-    private static final ThreadFactory THREAD_FACTORY = new ThreadFactory() {
-        @Override public Thread newThread(final Runnable run) {
-            // Addition of doPrivileged added due to RT-19580
-            return AccessController.doPrivileged(new PrivilegedAction<Thread>() {
-                @Override public Thread run() {
-                    final Thread th = new Thread(THREAD_GROUP, run);
-                    th.setUncaughtExceptionHandler(UNCAUGHT_HANDLER);
-                    th.setPriority(Thread.MIN_PRIORITY);
-                    th.setDaemon(true);
-                    return th;
-                }
-            });
-        }
-    };
+    private static final ThreadFactory THREAD_FACTORY = run -> AccessController.doPrivileged((PrivilegedAction<Thread>) () -> {
+        final Thread th = new Thread(THREAD_GROUP, run);
+        th.setUncaughtExceptionHandler(UNCAUGHT_HANDLER);
+        th.setPriority(Thread.MIN_PRIORITY);
+        th.setDaemon(true);
+        return th;
+    });
 
     private static final ThreadPoolExecutor EXECUTOR = new ThreadPoolExecutor(
             2, THREAD_POOL_SIZE,
@@ -538,38 +525,35 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     protected Service() {
         // Add a listener to the state, such that we can fire the correct event
         // notifications whenever the state of the Service has changed.
-        state.addListener(new ChangeListener<State>() {
-            @Override public void changed(ObservableValue<? extends State> observableValue,
-                                          State old, State value) {
+        state.addListener((observableValue, old, value1) -> {
 
-                // Invoke the appropriate event handler
-                switch (value) {
-                    case CANCELLED:
-                        fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_CANCELLED));
-                        cancelled();
-                        break;
-                    case FAILED:
-                        fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_FAILED));
-                        failed();
-                        break;
-                    case READY:
-                        fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_READY));
-                        ready();
-                        break;
-                    case RUNNING:
-                        fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_RUNNING));
-                        running();
-                        break;
-                    case SCHEDULED:
-                        fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_SCHEDULED));
-                        scheduled();
-                        break;
-                    case SUCCEEDED:
-                        fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_SUCCEEDED));
-                        succeeded();
-                        break;
-                    default: throw new AssertionError("Should be unreachable");
-                }
+            // Invoke the appropriate event handler
+            switch (value1) {
+                case CANCELLED:
+                    fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_CANCELLED));
+                    cancelled();
+                    break;
+                case FAILED:
+                    fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_FAILED));
+                    failed();
+                    break;
+                case READY:
+                    fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_READY));
+                    ready();
+                    break;
+                case RUNNING:
+                    fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_RUNNING));
+                    running();
+                    break;
+                case SCHEDULED:
+                    fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_SCHEDULED));
+                    scheduled();
+                    break;
+                case SUCCEEDED:
+                    fireEvent(new WorkerStateEvent(Service.this, WORKER_STATE_SUCCEEDED));
+                    succeeded();
+                    break;
+                default: throw new AssertionError("Should be unreachable");
             }
         });
     }
@@ -688,14 +672,12 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
         startedOnce = true;
 
         if (!isFxApplicationThread()) {
-            runLater(new Runnable() {
-                @Override public void run() {
-                    // Advance the task to the "SCHEDULED" state
-                    task.setState(State.SCHEDULED);
+            runLater(() -> {
+                // Advance the task to the "SCHEDULED" state
+                task.setState(State.SCHEDULED);
 
-                    // Start the task
-                    executeTask(task);
-                }
+                // Start the task
+                executeTask(task);
             });
         } else {
             // Advance the task to the "SCHEDULED" state
@@ -737,15 +719,11 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
     protected void executeTask(final Task<V> task) {
         final AccessControlContext acc = AccessController.getContext();
         final Executor e = getExecutor() != null ? getExecutor() : EXECUTOR;
-        e.execute(new Runnable() {
-            @Override public void run() {
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override public Void run() {
-                        task.run();
-                        return null;
-                    }
-                }, acc);
-            }
+        e.execute(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                task.run();
+                return null;
+            }, acc);
         });
     }
 

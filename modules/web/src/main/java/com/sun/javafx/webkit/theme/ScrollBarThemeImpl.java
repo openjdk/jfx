@@ -78,11 +78,9 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
     public ScrollBarThemeImpl(final Accessor accessor) {
         this.accessor = accessor;
         pool = new Pool<ScrollBarWidget>(
-            new Pool.Notifier<ScrollBarWidget>() {
-                @Override public void notifyRemoved(ScrollBarWidget sb) {
+                sb -> {
                     accessor.removeChild(sb);
-                }
-            }, ScrollBarWidget.class);
+                }, ScrollBarWidget.class);
         accessor.addViewListener(new ViewListener(pool, accessor) {
             @Override public void invalidated(Observable ov) {
                 super.invalidated(ov);

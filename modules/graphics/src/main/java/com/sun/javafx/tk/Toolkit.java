@@ -135,18 +135,12 @@ public abstract class Toolkit {
             return TOOLKIT;
         }
 
-        final boolean verbose = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                return Boolean.getBoolean("javafx.verbose");
-            }
-        });
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            public Object run() {
-                // Get the javafx.version and javafx.runtime.version from a preconstructed
-                // java class, VersionInfo, created at build time.
-                VersionInfo.setupSystemProperties();
-                return null;
-            }
+        final boolean verbose = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.verbose"));
+        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            // Get the javafx.version and javafx.runtime.version from a preconstructed
+            // java class, VersionInfo, created at build time.
+            VersionInfo.setupSystemProperties();
+            return null;
         });
 
         boolean userSpecifiedToolkit = true;
@@ -316,11 +310,9 @@ public abstract class Toolkit {
             throw new IllegalStateException("Invalid AccessControlContext");
         }
 
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override public Void run() {
-                listener.pulse();
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            listener.pulse();
+            return null;
         }, acc);
     }
 
@@ -356,6 +348,9 @@ public abstract class Toolkit {
         }
     }
     public void addStageTkPulseListener(TKPulseListener listener) {
+        if (listener == null) {
+            return;
+        }
         synchronized (this) {
             AccessControlContext acc = AccessController.getContext();
             stagePulseListeners.put(listener, acc);
@@ -367,6 +362,9 @@ public abstract class Toolkit {
         }
     }
     public void addSceneTkPulseListener(TKPulseListener listener) {
+        if (listener == null) {
+            return;
+        }
         synchronized (this) {
             AccessControlContext acc = AccessController.getContext();
             scenePulseListeners.put(listener, acc);
@@ -378,6 +376,9 @@ public abstract class Toolkit {
         }
     }
     public void addPostSceneTkPulseListener(TKPulseListener listener) {
+        if (listener == null) {
+            return;
+        }
         synchronized (this) {
             AccessControlContext acc = AccessController.getContext();
             postScenePulseListeners.put(listener, acc);
@@ -390,6 +391,9 @@ public abstract class Toolkit {
     }
 
     public void addTkListener(TKListener listener) {
+        if (listener == null) {
+            return;
+        }
         AccessControlContext acc = AccessController.getContext();
         toolkitListeners.put(listener, acc);
     }
@@ -406,6 +410,9 @@ public abstract class Toolkit {
     }
 
     public void addShutdownHook(Runnable hook) {
+        if (hook == null) {
+            return;
+        }
         synchronized (shutdownHooks) {
             shutdownHooks.add(hook);
         }
@@ -437,11 +444,9 @@ public abstract class Toolkit {
                 throw new IllegalStateException("Invalid AccessControlContext");
             }
 
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override public Void run() {
-                    listener.changedTopLevelWindows(windows);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                listener.changedTopLevelWindows(windows);
+                return null;
             }, acc);
         }
     }

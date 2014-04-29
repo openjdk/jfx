@@ -54,6 +54,7 @@ import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Text;
 import javafx.stage.Popup;
@@ -161,6 +162,20 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     private static FXVK secondaryVK;
     private static Timeline secondaryVKDelay;
     private static CharKey secondaryVKKey;
+    private static TextInputKey repeatKey;
+
+    private static Timeline repeatInitialDelay;
+    private static Timeline repeatSubsequentDelay;
+
+    // key repeat initial delay (ms)
+    private static double KEY_REPEAT_DELAY = 400;
+    private static double KEY_REPEAT_DELAY_MIN = 100;
+    private static double KEY_REPEAT_DELAY_MAX = 1000;
+
+    // key repeat rate (cps)
+    private static double KEY_REPEAT_RATE = 25;
+    private static double KEY_REPEAT_RATE_MIN = 2;
+    private static double KEY_REPEAT_RATE_MAX = 50;
 
     private Node attachedNode;
     private String vkType = null;
@@ -176,29 +191,40 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     static boolean vkLookup = false;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override public Void run() {
-                String s = System.getProperty("com.sun.javafx.vk.adjustwindow");
-                if (s != null) {
-                    vkAdjustWindow = Boolean.valueOf(s);
-                }
-                s = System.getProperty("com.sun.javafx.sqe.vk.lookup");
-                if (s != null) {
-                    vkLookup = Boolean.valueOf(s);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            String s = System.getProperty("com.sun.javafx.vk.adjustwindow");
+            if (s != null) {
+                vkAdjustWindow = Boolean.valueOf(s);
             }
+            s = System.getProperty("com.sun.javafx.sqe.vk.lookup");
+            if (s != null) {
+                vkLookup = Boolean.valueOf(s);
+            }
+            s = System.getProperty("com.sun.javafx.virtualKeyboard.backspaceRepeatDelay");
+            if (s != null) {
+                Double delay = Double.valueOf(s);
+                KEY_REPEAT_DELAY = Math.min(Math.max(delay, KEY_REPEAT_DELAY_MIN), KEY_REPEAT_DELAY_MAX);
+            }
+            s = System.getProperty("com.sun.javafx.virtualKeyboard.backspaceRepeatRate");
+            if (s != null) {
+                Double rate = Double.valueOf(s);
+                if (rate <= 0) {
+                    //disable key repeat
+                    KEY_REPEAT_RATE = 0;
+                } else {
+                    KEY_REPEAT_RATE = Math.min(Math.max(rate, KEY_REPEAT_RATE_MIN), KEY_REPEAT_RATE_MAX);
+                }
+            }
+            return null;
         });
     }    
     
     // Proxy for read-only Window.yProperty() so we can animate.
     private static DoubleProperty winY = new SimpleDoubleProperty();
     static {
-        winY.addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                if (vkPopup != null) {
-                    vkPopup.setY(winY.get());
-                }
+        winY.addListener(valueModel -> {
+            if (vkPopup != null) {
+                vkPopup.setY(winY.get());
             }
         });
     }
@@ -302,21 +328,19 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     
     private void registerUnhideHandler(final Node node) {
         if (unHideEventHandler == null) {
-            unHideEventHandler = new EventHandler<InputEvent> () {
-                public void handle(InputEvent event) {
-                    if (attachedNode != null && isVKHidden) {
-                        double screenHeight = com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getHeight();
-                        if (fxvk.getHeight() > 0 && (vkPopup.getY() > screenHeight - fxvk.getHeight())) {
-                            if (slideInTimeline.getStatus() != Animation.Status.RUNNING) {
-                                startSlideIn();
-                                if (vkAdjustWindow) {
-                                    adjustWindowPosition(attachedNode);
-                                }
+            unHideEventHandler = event -> {
+                if (attachedNode != null && isVKHidden) {
+                    double screenHeight = com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getHeight();
+                    if (fxvk.getHeight() > 0 && (vkPopup.getY() > screenHeight - fxvk.getHeight())) {
+                        if (slideInTimeline.getStatus() != Animation.Status.RUNNING) {
+                            startSlideIn();
+                            if (vkAdjustWindow) {
+                                adjustWindowPosition(attachedNode);
                             }
                         }
                     }
-                    isVKHidden = false;
-                }                    
+                }
+                isVKHidden = false;
             };
         }
         node.addEventHandler(TOUCH_PRESSED, unHideEventHandler);
@@ -375,13 +399,11 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                                       Interpolator.EASE_BOTH)));
         slideOutTimeline.getKeyFrames().setAll(
             new KeyFrame(Duration.millis(VK_SLIDE_MILLIS),
-                new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
+                    event -> {
                         if (hideAfterSlideOut && vkPopup.isShowing()) {
                             vkPopup.hide();
                         }
-                    }
-                },
+                    },
                 new KeyValue(winY, screenHeight, Interpolator.EASE_BOTH)));
 
         //Set VK size
@@ -399,14 +421,33 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         if (secondaryVKDelay == null) {
             secondaryVKDelay = new Timeline();
         }
-        KeyFrame kf = new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                if (secondaryVKKey != null) {
-                    showSecondaryVK(secondaryVKKey);
-                }
+        KeyFrame kf = new KeyFrame(Duration.millis(500), event -> {
+            if (secondaryVKKey != null) {
+                showSecondaryVK(secondaryVKKey);
             }
         });
         secondaryVKDelay.getKeyFrames().setAll(kf);
+
+        //Setup key repeat animations
+        if (KEY_REPEAT_RATE > 0) {
+            repeatInitialDelay = new Timeline(new KeyFrame(
+                    Duration.millis(KEY_REPEAT_DELAY),
+                    event -> {
+                        //fire current key
+                        repeatKey.sendKeyEvents();
+                        //Start repeat animation
+                        repeatSubsequentDelay.playFromStart();
+                    }
+            ));
+            repeatSubsequentDelay = new Timeline(new KeyFrame(
+                    Duration.millis(1000.0 / KEY_REPEAT_RATE),
+                    event -> {
+                        //fire current key
+                        repeatKey.sendKeyEvents();
+                    }
+            ));
+            repeatSubsequentDelay.setCycleCount(Animation.INDEFINITE);
+        }
     }
 
     void prerender(Node node) {
@@ -633,13 +674,13 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             altText.setTextOrigin(VPos.TOP);
             getChildren().setAll(text, altText, icon);
             getStyleClass().setAll("key");
-            addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    if (event.getEventType() == MouseEvent.MOUSE_PRESSED)
-                        press();
-                    else if (event.getEventType() == MouseEvent.MOUSE_RELEASED)
-                        release();
-                }
+            addEventHandler(MouseEvent.MOUSE_PRESSED, event -> {
+                if (event.getButton() == MouseButton.PRIMARY)
+                    press();
+            });
+            addEventHandler(MouseEvent.MOUSE_RELEASED, event -> {
+                if (event.getButton() == MouseButton.PRIMARY)
+                    release();
             });
         }
         protected void press() { }
@@ -730,36 +771,31 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             if (vkLookup) {
                 setId((id != null ? id : chars).replaceAll("\\.", ""));
             }
-
-            handleSecondaryVK(letter, alt, moreChars);
         }
 
         private CharKey(String letter, String alt, String[] moreChars) {
             this(letter, alt, moreChars, null);
         }
 
-
-        private void handleSecondaryVK(String letter, String alt, String[] moreChars) {
-            // If key has only one char (alternative char is the same, and it has no more chars),
-            // secondaryVK will not pop-up
-            if (letter.equals(alt) && moreChars == null) {
+        protected void press() {
+            super.press();
+            if (letterChars.equals(altChars) && moreChars == null) {
                 return;
-            } else {
-                if (fxvk != secondaryVK) {
-                    setOnMousePressed(new EventHandler<MouseEvent>() {
-                        @Override public void handle(MouseEvent event) {
-                            showSecondaryVK(null);
-                            secondaryVKKey = CharKey.this;
-                            secondaryVKDelay.playFromStart();
-                        }
-                    });
+            }
+            if (fxvk == primaryVK) {
+                showSecondaryVK(null);
+                secondaryVKKey = CharKey.this;
+                secondaryVKDelay.playFromStart();
+            }
+        }
 
-                    setOnMouseReleased(new EventHandler<MouseEvent>() {
-                        @Override public void handle(MouseEvent event) {
-                            secondaryVKDelay.stop();
-                        }
-                    });
-                }
+        protected void release() {
+            super.release();
+            if (letterChars.equals(altChars) && moreChars == null) {
+                return;
+            }
+            if (fxvk == primaryVK) {
+                secondaryVKDelay.stop();
             }
         }
 
@@ -943,18 +979,16 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                 secondaryVK.setMinWidth(USE_PREF_SIZE);
                 secondaryVK.setPrefHeight(h);
                 secondaryVK.setMinHeight(USE_PREF_SIZE);
-                Platform.runLater(new Runnable() {
-                    public void run() {
-                        // Position popup on screen
-                        Point2D nodePoint =
-                            com.sun.javafx.Utils.pointRelativeTo(key, w, h, HPos.CENTER, VPos.TOP,
-                                                                 5, -3, true);
-                        double x = nodePoint.getX();
-                        double y = nodePoint.getY();
-                        Scene scene = key.getScene();
-                        x = Math.min(x, scene.getWindow().getX() + scene.getWidth() - w);
-                        secondaryPopup.show(key.getScene().getWindow(), x, y);
-                    }
+                Platform.runLater(() -> {
+                    // Position popup on screen
+                    Point2D nodePoint =
+                        com.sun.javafx.Utils.pointRelativeTo(key, w, h, HPos.CENTER, VPos.TOP,
+                                                             5, -3, true);
+                    double x = nodePoint.getX();
+                    double y = nodePoint.getY();
+                    Scene scene = key.getScene();
+                    x = Math.min(x, scene.getWindow().getX() + scene.getWidth() - w);
+                    secondaryPopup.show(key.getScene().getWindow(), x, y);
                 });
             }
         } else {
@@ -1061,7 +1095,26 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                                     }
                                 };
                             } else if ("$backspace".equals(chars)) {
-                                key = new KeyCodeKey("backspace", "\b", KeyCode.BACK_SPACE);
+                                key = new KeyCodeKey("backspace", "\b", KeyCode.BACK_SPACE) {
+                                    @Override protected void press() {
+                                        if (KEY_REPEAT_RATE > 0) {
+                                            clearShift();
+                                            sendKeyEvents();
+                                            repeatKey = this;
+                                            repeatInitialDelay.playFromStart();
+                                        } else {
+                                            super.press();
+                                        }
+                                    }
+                                    @Override protected void release() {
+                                        if (KEY_REPEAT_RATE > 0) {
+                                            repeatInitialDelay.stop();
+                                            repeatSubsequentDelay.stop();
+                                        } else {
+                                            super.release();
+                                        }
+                                    }
+                                };
                                 key.getStyleClass().add("backspace");
                             } else if ("$enter".equals(chars)) {
                                 key = new KeyCodeKey("enter", "\n", KeyCode.ENTER);

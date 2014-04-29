@@ -856,18 +856,14 @@ public class PseudoClassTest {
         nObservations = 0;
 
         ObservableSet<PseudoClass> pseudoClasses = new PseudoClassState();
-        pseudoClasses.addListener(new SetChangeListener<PseudoClass>() {
-
-            @Override
-            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
-                if (change.wasAdded()) {
-                    assert (nObservations < nObservationsExpected);
-                    PseudoClass observed = change.getElementAdded();
-                    assertSame(expectedObservations[nObservations], observed);
-                    nObservations += 1;
-                } else {
-                    fail();
-                }
+        pseudoClasses.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+            if (change.wasAdded()) {
+                assert (nObservations < nObservationsExpected);
+                PseudoClass observed = change.getElementAdded();
+                assertSame(expectedObservations[nObservations], observed);
+                nObservations += 1;
+            } else {
+                fail();
             }
         });
 
@@ -896,18 +892,14 @@ public class PseudoClassTest {
             pseudoClasses.add(expectedObservations[n]);
         };
 
-        pseudoClasses.addListener(new SetChangeListener<PseudoClass>() {
-
-            @Override
-            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
-                if (change.wasRemoved()) {
-                    assert (nObservations < nObservationsExpected);
-                    PseudoClass observed = change.getElementRemoved();
-                    assertSame(expectedObservations[nObservations], observed);
-                    nObservations += 1;
-                } else {
-                    fail();
-                }
+        pseudoClasses.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+            if (change.wasRemoved()) {
+                assert (nObservations < nObservationsExpected);
+                PseudoClass observed = change.getElementRemoved();
+                assertSame(expectedObservations[nObservations], observed);
+                nObservations += 1;
+            } else {
+                fail();
             }
         });
 
@@ -936,18 +928,14 @@ public class PseudoClassTest {
             pseudoClasses.add(expectedObservations[n]);
         };
 
-        pseudoClasses.addListener(new SetChangeListener<PseudoClass>() {
-
-            @Override
-            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
-                if (change.wasRemoved()) {
-                    assert (nObservations < nObservationsExpected);
-                    PseudoClass observed = change.getElementRemoved();
-                    assertSame(expectedObservations[nObservations], observed);
-                    nObservations += 1;
-                } else {
-                    fail();
-                }
+        pseudoClasses.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+            if (change.wasRemoved()) {
+                assert (nObservations < nObservationsExpected);
+                PseudoClass observed = change.getElementRemoved();
+                assertSame(expectedObservations[nObservations], observed);
+                nObservations += 1;
+            } else {
+                fail();
             }
         });
 
@@ -977,18 +965,14 @@ public class PseudoClassTest {
         };
 
         ObservableSet<PseudoClass> pseudoClasses = new PseudoClassState();
-        pseudoClasses.addListener(new SetChangeListener<PseudoClass>() {
-
-            @Override
-            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
-                if (change.wasAdded()) {
-                    assert (nObservations < nObservationsExpected);
-                    PseudoClass observed = change.getElementAdded();
-                    assertSame(expectedObservations[nObservations], observed);
-                    nObservations += 1;
-                } else {
-                    fail();
-                }
+        pseudoClasses.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+            if (change.wasAdded()) {
+                assert (nObservations < nObservationsExpected);
+                PseudoClass observed = change.getElementAdded();
+                assertSame(expectedObservations[nObservations], observed);
+                nObservations += 1;
+            } else {
+                fail();
             }
         });
 
@@ -1028,18 +1012,14 @@ public class PseudoClassTest {
             master.add(pseudoClasses[n]);
         };
 
-        master.addListener(new SetChangeListener<PseudoClass>() {
-
-            @Override
-            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
-                if (change.wasRemoved()) {
-                    assert (nObservations < nObservationsExpected);
-                    PseudoClass observed = change.getElementRemoved();
-                    assertSame(pseudoClassesToRemove[nObservations], observed);
-                    nObservations += 1;
-                } else {
-                    fail();
-                }
+        master.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+            if (change.wasRemoved()) {
+                assert (nObservations < nObservationsExpected);
+                PseudoClass observed = change.getElementRemoved();
+                assertSame(pseudoClassesToRemove[nObservations], observed);
+                nObservations += 1;
+            } else {
+                fail();
             }
         });
 
@@ -1086,18 +1066,14 @@ public class PseudoClassTest {
             master.add(pseudoClasses[n]);
         };
 
-        master.addListener(new SetChangeListener<PseudoClass>() {
-
-            @Override
-            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
-                if (change.wasRemoved()) {
-                    assert (nObservations < nObservationsExpected);
-                    PseudoClass observed = change.getElementRemoved();
-                    assertSame(removedPseudoClasses[nObservations], observed);
-                    nObservations += 1;
-                } else {
-                    fail();
-                }
+        master.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+            if (change.wasRemoved()) {
+                assert (nObservations < nObservationsExpected);
+                PseudoClass observed = change.getElementRemoved();
+                assertSame(removedPseudoClasses[nObservations], observed);
+                nObservations += 1;
+            } else {
+                fail();
             }
         });
 
@@ -1127,18 +1103,14 @@ public class PseudoClassTest {
             master.add(pseudoClasses[n]);
         };
 
-        master.addListener(new SetChangeListener<PseudoClass>() {
-
-            @Override
-            public void onChanged(SetChangeListener.Change<? extends PseudoClass> change) {
-                if (change.wasRemoved()) {
-                    assert (nObservations < nObservationsExpected);
-                    PseudoClass observed = change.getElementRemoved();
-                    assertSame(pseudoClasses[nObservations], observed);
-                    nObservations += 1;
-                } else {
-                    fail();
-                }
+        master.addListener((SetChangeListener.Change<? extends PseudoClass> change) -> {
+            if (change.wasRemoved()) {
+                assert (nObservations < nObservationsExpected);
+                PseudoClass observed = change.getElementRemoved();
+                assertSame(pseudoClasses[nObservations], observed);
+                nObservations += 1;
+            } else {
+                fail();
             }
         });
 

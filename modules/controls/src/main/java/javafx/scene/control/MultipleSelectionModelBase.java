@@ -61,25 +61,19 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      **********************************************************************/
 
     public MultipleSelectionModelBase() {
-        selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                // we used to lazily retrieve the selected item, but now we just
-                // do it when the selection changes. This is hardly likely to be
-                // expensive, and we still lazily handle the multiple selection
-                // cases over in MultipleSelectionModel.
-                setSelectedItem(getModelItem(getSelectedIndex()));
-            }
+        selectedIndexProperty().addListener(valueModel -> {
+            // we used to lazily retrieve the selected item, but now we just
+            // do it when the selection changes. This is hardly likely to be
+            // expensive, and we still lazily handle the multiple selection
+            // cases over in MultipleSelectionModel.
+            setSelectedItem(getModelItem(getSelectedIndex()));
         });
         
         selectedIndices = new BitSet();
 
         selectedIndicesSeq = createListFromBitSet(selectedIndices);
         
-        final MappingChange.Map<Integer,T> map = new MappingChange.Map<Integer,T>() {
-            @Override public T map(Integer f) {
-                return getModelItem(f);
-            }
-        };
+        final MappingChange.Map<Integer,T> map = f -> getModelItem(f);
         
         selectedIndicesSeq.addListener(new ListChangeListener<Integer>() {
             @Override public void onChanged(final Change<? extends Integer> c) {
@@ -458,6 +452,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // we may have requested to select row 5, and the selectedIndices
             // list may therefore have the following: [1,4,5], meaning row 5
             // is in position 2 of the selectedIndices list
+            Collections.sort(actualSelectedRows);
             Change<Integer> change = createRangeChange(selectedIndicesSeq, actualSelectedRows);
             selectedIndicesSeq.callObservers(change);
         }
@@ -503,18 +498,19 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 
                 // starting from pos, we keep going until the value is
                 // not the next value
-                from = pos;
                 int startValue = addedItems.get(pos++);
+                from = list.indexOf(startValue);
+                to = from + 1;
                 int endValue = startValue;
                 while (pos < addedSize) {
                     int previousEndValue = endValue;
                     endValue = addedItems.get(pos++);
+                    ++to;
                     if (previousEndValue != (endValue - 1)) {
                         break;
                     }
                 }
-                to = pos;
-                
+
                 if (invalid) {
                     invalid = false;
                     return true; 
@@ -595,8 +591,10 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             clearSelection();
         }
 
+        // we pass in (index, index) here to represent that nothing was added
+        // in this change.
         selectedIndicesSeq.callObservers(
-                new NonIterableChange.GenericAddRemoveChange<Integer>(index, index+1, 
+                new NonIterableChange.GenericAddRemoveChange<>(index, index,
                 Collections.singletonList(index), selectedIndicesSeq));
     }
 

@@ -201,17 +201,17 @@ final public class SimpleSelector extends Selector {
         // handle functional pseudo-class :dir()
         // INHERIT applies to both :dir(rtl) and :dir(ltr)
         if (nodeOrientation != INHERIT && styleable instanceof Node) {
-            
-            final Scene scene = ((Node)styleable).getScene();
-            final NodeOrientation effectiveNodeOrientation =
-                    scene.getEffectiveNodeOrientation();
-            
-            if (effectiveNodeOrientation != INHERIT &&
-                    effectiveNodeOrientation != nodeOrientation) {
+            final Node node = (Node)styleable;
+            final NodeOrientation orientation = node.getNodeOrientation();
+
+            if (orientation == INHERIT
+                    ? node.getEffectiveNodeOrientation() != nodeOrientation
+                    : orientation != nodeOrientation)
+            {
                 return false;
             }
         }
-        
+
         // if the selector has an id,
         // then bail if it doesn't match the node's id
         // (do this first since it is potentially the cheapest check)
@@ -225,8 +225,8 @@ final public class SimpleSelector extends Selector {
         // then bail if it doesn't match the node's class name
         // if not wildcard, then match name with node's class name
         if (matchOnName) {
-            final String otherName = styleable.getClass().getName();
-            final boolean classMatch = nameMatchesAtEnd(otherName);
+            final String otherName = styleable.getTypeSelector();
+            final boolean classMatch = this.name.equals(otherName);
             if (!classMatch) return false;
         }
 
@@ -271,40 +271,11 @@ final public class SimpleSelector extends Selector {
         return applies;
     }
 
-    // todo - is this used?
-    private boolean mightApply(final String className, final String id, StyleClassSet styleClasses) {
-        if (matchOnName && nameMatchesAtEnd(className)) return true;
-        if (matchOnId   && this.id.equals(id)) return true;
-        if (matchOnStyleClass) return matchStyleClasses(styleClasses);
-        return false;
-    }
-    
     @Override
     public boolean stateMatches(final Styleable styleable, Set<PseudoClass> states) {
         // [foo bar] matches [foo bar bang], 
         // but [foo bar bang] doesn't match [foo bar]
         return states != null ? states.containsAll(pseudoClassState) : false;
-    }
-
-    /*
-     * Optimized className.equals(name) || className.endsWith(".".concat(name)).
-     */
-    private boolean nameMatchesAtEnd(final String className) {
-        // if name is null or empty, why bother?
-        if (!matchOnName) return false;
-
-        final int nameLen = this.name.length();
-
-        // take a guess that '.name' starts at this offset in className
-        final int dotPos = className.length() - nameLen - 1;
-
-        // If dotPos is -1, then className and name are
-        // equal length and may match. Anything less than -1 and
-        // className is shorter than name and no match is possible.
-        if ((dotPos == -1) || (dotPos > -1 && className.charAt(dotPos) == '.')) {
-            return className.regionMatches(dotPos+1, this.name, 0, nameLen);
-        }
-        return false;
     }
 
     // Are the Selector's style classes a subset of the Node's style classes?

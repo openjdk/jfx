@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css.parser;
 
+import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.scene.effect.BlurType;
@@ -196,8 +197,11 @@ final public class CSSParser {
         final Stylesheet stylesheet = new Stylesheet();
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
             setInputSource(stylesheetText);
-            Reader reader = new CharArrayReader(stylesheetText.toCharArray());
-            parse(stylesheet, reader);
+            try (Reader reader = new CharArrayReader(stylesheetText.toCharArray())) {
+                parse(stylesheet, reader);
+            } catch (IOException ioe) {
+                // this method doesn't explicitly throw IOException
+            }
         }
         return stylesheet;
     }
@@ -213,8 +217,9 @@ final public class CSSParser {
         final Stylesheet stylesheet = new Stylesheet(docbase);
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
             setInputSource(docbase, stylesheetText);
-            Reader reader = new CharArrayReader(stylesheetText.toCharArray());
-            parse(stylesheet, reader);
+            try (Reader reader = new CharArrayReader(stylesheetText.toCharArray())) {
+                parse(stylesheet, reader);
+            }
         }
         return stylesheet;
     }
@@ -233,8 +238,9 @@ final public class CSSParser {
         final Stylesheet stylesheet = new Stylesheet(path);
         if (url != null) {
             setInputSource(path, null);
-            Reader reader = new BufferedReader(new InputStreamReader(url.openStream()));
-            parse(stylesheet, reader);
+            try (Reader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
+                parse(stylesheet, reader);
+            }
         }
         return stylesheet;
     }
@@ -247,8 +253,6 @@ final public class CSSParser {
 
         try {
             this.parse(stylesheet, lex);
-            reader.close();
-        } catch (IOException ioe) {
         } catch (Exception ex) {
             // Sometimes bad syntax causes an exception. The code should be
             // fixed to handle the bad syntax, but the fallback is
@@ -268,10 +272,9 @@ final public class CSSParser {
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
             setInputSource(node);
             final List<Rule> rules = new ArrayList<Rule>();
-            final Reader reader = new CharArrayReader(stylesheetText.toCharArray());
-            final CSSLexer lexer = CSSLexer.getInstance();
-            lexer.setReader(reader);
-            try {
+            try (Reader reader = new CharArrayReader(stylesheetText.toCharArray())) {
+                final CSSLexer lexer = CSSLexer.getInstance();
+                lexer.setReader(reader);
                 currentToken = nextToken(lexer);
                 final List<Declaration> declarations = declarations(lexer);
                 if (declarations != null && !declarations.isEmpty()) {
@@ -282,7 +285,6 @@ final public class CSSParser {
                     );
                     rules.add(rule);
                 }
-                reader.close();
             } catch (IOException ioe) {
             } catch (Exception ex) {
                 // Sometimes bad syntax causes an exception. The code should be
@@ -302,22 +304,21 @@ final public class CSSParser {
 
     /** convenience method for unit tests */
     public ParsedValueImpl parseExpr(String property, String expr) {
-        ParsedValueImpl value = null;
-        try {
-            setInputSource(null, property + ": " + expr);
-            char buf[] = new char[expr.length() + 1];
-            System.arraycopy(expr.toCharArray(), 0, buf, 0, expr.length());
-            buf[buf.length-1] = ';';
+        if (property == null || expr == null) return null;
 
-            Reader reader = new CharArrayReader(buf);
+        ParsedValueImpl value = null;
+        setInputSource(null, property + ": " + expr);
+        char buf[] = new char[expr.length() + 1];
+        System.arraycopy(expr.toCharArray(), 0, buf, 0, expr.length());
+        buf[buf.length-1] = ';';
+
+        try (Reader reader = new CharArrayReader(buf)) {
             CSSLexer lex = CSSLexer.getInstance();
             lex.setReader(reader);
 
             currentToken = nextToken(lex);
             CSSParser.Term term = this.expr(lex);
             value = valueFor(property, term);
-
-            reader.close();
         } catch (IOException ioe) {
         } catch (ParseException e) {
             if (LOGGER.isLoggable(Level.WARNING)) {
@@ -693,14 +694,24 @@ final public class CSSParser {
         }
 
         if (root.token.getType() == CSSLexer.IDENT) {
-            if ("inherit".equalsIgnoreCase(root.token.getText())) {
+            final String txt = root.token.getText();
+            if ("inherit".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("inherit", null);
-            } else if ("null".equalsIgnoreCase(root.token.getText())) {
+            } else if ("null".equalsIgnoreCase(txt)
+                    || "none".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("null", null);
             }
         }
-
-        if ("-fx-background-color".equals(property)) {
+        if ("-fx-fill".equals(property)) {
+             ParsedValueImpl pv = parse(root);
+            if (pv.getConverter() == StyleConverter.getUrlConverter()) {
+                // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
+                // Pending RT-33574
+                pv = new ParsedValueImpl(new ParsedValue[] {pv},PaintConverter.ImagePatternConverter.getInstance());
+            }
+            return pv;
+        }
+        else if ("-fx-background-color".equals(property)) {
             return parsePaintLayers(root);
         } else if ("-fx-background-image".equals(prop)) {
             return parseURILayers(root);
@@ -841,9 +852,11 @@ final public class CSSParser {
             final String text = str.toLowerCase(Locale.ROOT);
             if ("ladder".equals(text)) {
                 value = ladder(root);
-            } else if ("linear".equals(text)) {
+            } else if ("linear".equals(text) && (root.nextInSeries) != null) {
+                // if nextInSeries is null, then assume this is _not_ an old-style linear gradient
                 value = linearGradient(root);
-            } else if ("radial".equals(text)) {
+            } else if ("radial".equals(text) && (root.nextInSeries) != null) {
+                // if nextInSeries is null, then assume this is _not_ an old-style radial gradient
                 value = radialGradient(root);
             } else if ("true".equals(text)) {
                 // TODO: handling of boolean is really bogus

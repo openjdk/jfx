@@ -33,12 +33,10 @@ public final class ContextMenuImpl extends com.sun.webkit.ContextMenu {
         }
         final ContextMenu popupMenu = new ContextMenu();
 
-        popupMenu.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                MenuItem item = (MenuItem) t.getTarget();
-                log.log(Level.FINE, "onAction: item={0}", item);
-                showContext.notifyItemSelected(((MenuItemPeer)item).getItemPeer().getAction());
-            }
+        popupMenu.setOnAction(t -> {
+            MenuItem item = (MenuItem) t.getTarget();
+            log.log(Level.FINE, "onAction: item={0}", item);
+            showContext.notifyItemSelected(((MenuItemPeer)item).getItemPeer().getAction());
         });
 
         popupMenu.getItems().addAll(fillMenu());

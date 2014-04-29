@@ -118,13 +118,11 @@ public final class DumpRenderTree {
     private static void initPlatform() throws Exception {
         // initialize default toolkit
         final CountDownLatch latch = new CountDownLatch(1);
-        PlatformImpl.startup(new Runnable() {
-            public void run() {
-                new WebEngine();    // initialize Webkit classes
-                System.loadLibrary("DumpRenderTreeJava");
-                PageCache.setCapacity(1);
-                latch.countDown();
-            }
+        PlatformImpl.startup(() -> {
+            new WebEngine();    // initialize Webkit classes
+            System.loadLibrary("DumpRenderTreeJava");
+            PageCache.setCapacity(1);
+            latch.countDown();
         });
         // wait for libraries to load
         latch.await();
@@ -132,18 +130,16 @@ public final class DumpRenderTree {
 
     private static void runTest(final String testString) throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-            public void run() {
-                new DumpRenderTree(testString, latch).run();
-            }});
+        Invoker.getInvoker().invokeOnEventThread(() -> {
+            new DumpRenderTree(testString, latch).run();
+        });
         // wait until test is finished
         latch.await();
-        Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-            public void run() {
-                mlog("dispose");
-                drt.uiClient.closePage();
-                dispose();
-            }});
+        Invoker.getInvoker().invokeOnEventThread(() -> {
+            mlog("dispose");
+            drt.uiClient.closePage();
+            dispose();
+        });
     }
 
     // called from native

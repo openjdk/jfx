@@ -71,17 +71,4 @@
     nbproject/build-impl.xml file. 
 
     -->
-    <target name="-pre-init">
-	<condition property="osname" value="win">
-            <os family="windows"/>
-	</condition>
-	<condition property="osname" value="mac">
-            <os family="mac"/>
-	</condition>
-	<condition property="osname" value="linux">
-            <os name="linux"/>
-	</condition>
-
-        <property name="file.reference.jfxrt.jar" value="../../../build/${osname}-sdk/rt/lib/ext/jfxrt.jar"/>
-    </target>
 </project>

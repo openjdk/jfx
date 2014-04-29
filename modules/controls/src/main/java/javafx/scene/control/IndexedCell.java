@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,16 +110,19 @@ public class IndexedCell<T> extends Cell<T> {
      *         by those implementing new Skins. It is not common
      *         for developers or designers to access this function directly.
      */
-    public void updateIndex(int i) { 
+    public void updateIndex(int i) {
+        final int oldIndex = index.get();
         index.set(i);
-        indexChanged();
+        indexChanged(oldIndex, i);
     }
     
     /** 
      * This method is called whenever the index is changed, regardless of whether
-     * the new index is the same as the old index. 
+     * the new index is the same as the old index.
+     * @param oldIndex
+     * @param newIndex
      */
-    void indexChanged() { 
+    void indexChanged(int oldIndex, int newIndex) {
         // no-op
     }
     

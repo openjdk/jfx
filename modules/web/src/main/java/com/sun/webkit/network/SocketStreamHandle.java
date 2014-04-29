@@ -78,10 +78,8 @@ final class SocketStreamHandle {
         final SocketStreamHandle ssh =
                 new SocketStreamHandle(host, port, ssl, webPage, data);
         logger.log(Level.FINEST, "Starting {0}", ssh);
-        threadPool.submit(new Runnable() {
-            @Override public void run() {
-                ssh.run();
-            }
+        threadPool.submit(() -> {
+            ssh.run();
         });
         return ssh;
     }
@@ -98,11 +96,9 @@ final class SocketStreamHandle {
             didClose();
             return;
         }
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override public Void run() {
-                doRun();
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            doRun();
+            return null;
         }, webPage.getAccessControlContext());
     }
 
@@ -197,11 +193,7 @@ final class SocketStreamHandle {
         IOException lastException = null;
         boolean triedDirectConnection = false;
         ProxySelector proxySelector = AccessController.doPrivileged(
-                new PrivilegedAction<ProxySelector>() {
-                    public ProxySelector run() {
-                        return ProxySelector.getDefault();
-                    }
-                });
+                (PrivilegedAction<ProxySelector>) () -> ProxySelector.getDefault());
         if (proxySelector != null) {
             URI uri;
             try {
@@ -318,41 +310,33 @@ final class SocketStreamHandle {
     }
 
     private void didOpen() {
-        Invoker.getInvoker().postOnEventThread(new Runnable() {
-            @Override public void run() {
-                if (state == State.ACTIVE) {
-                    notifyDidOpen();
-                }
+        Invoker.getInvoker().postOnEventThread(() -> {
+            if (state == State.ACTIVE) {
+                notifyDidOpen();
             }
         });
     }
 
     private void didReceiveData(final byte[] buffer, final int len) {
-        Invoker.getInvoker().postOnEventThread(new Runnable() {
-            @Override public void run() {
-                if (state == State.ACTIVE) {
-                    notifyDidReceiveData(buffer, len);
-                }
+        Invoker.getInvoker().postOnEventThread(() -> {
+            if (state == State.ACTIVE) {
+                notifyDidReceiveData(buffer, len);
             }
         });
     }
 
     private void didFail(final int errorCode, final String errorDescription) {
-        Invoker.getInvoker().postOnEventThread(new Runnable() {
-            @Override public void run() {
-                if (state == State.ACTIVE) {
-                    notifyDidFail(errorCode, errorDescription);
-                }
+        Invoker.getInvoker().postOnEventThread(() -> {
+            if (state == State.ACTIVE) {
+                notifyDidFail(errorCode, errorDescription);
             }
         });
     }
 
     private void didClose() {
-        Invoker.getInvoker().postOnEventThread(new Runnable() {
-            @Override public void run() {
-                if (state != State.DISPOSED) {
-                    notifyDidClose();
-                }
+        Invoker.getInvoker().postOnEventThread(() -> {
+            if (state != State.DISPOSED) {
+                notifyDidClose();
             }
         });
     }

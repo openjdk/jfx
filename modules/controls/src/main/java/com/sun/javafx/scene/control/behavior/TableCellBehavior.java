@@ -56,57 +56,56 @@ public class TableCellBehavior<S,T> extends TableCellBehaviorBase<S, T, TableCol
      **************************************************************************/          
 
     /** @{@inheritDoc} */
-    @Override TableView<S> getTableControl() {
+    @Override protected TableView<S> getCellContainer() {
         return getControl().getTableView();
     }
 
     /** @{@inheritDoc} */
-    @Override TableColumn<S,T> getTableColumn() {
+    @Override protected TableColumn<S,T> getTableColumn() {
         return getControl().getTableColumn();
     }
 
     /** @{@inheritDoc} */
-    @Override int getItemCount() {
-        return getTableControl().getItems().size();
+    @Override protected int getItemCount() {
+        return getCellContainer().getItems().size();
     }
 
     /** @{@inheritDoc} */
-    @Override TableView.TableViewSelectionModel<S> getSelectionModel() {
-        return getTableControl().getSelectionModel();
+    @Override protected TableView.TableViewSelectionModel<S> getSelectionModel() {
+        return getCellContainer().getSelectionModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TableViewFocusModel<S> getFocusModel() {
-        return getTableControl().getFocusModel();
+    @Override protected TableViewFocusModel<S> getFocusModel() {
+        return getCellContainer().getFocusModel();
     }
 
     /** @{@inheritDoc} */
-    @Override TablePositionBase getFocusedCell() {
-        return getTableControl().getFocusModel().getFocusedCell();
+    @Override protected TablePositionBase getFocusedCell() {
+        return getCellContainer().getFocusModel().getFocusedCell();
     }
 
     /** @{@inheritDoc} */
-    @Override boolean isTableRowSelected() {
+    @Override protected boolean isTableRowSelected() {
         return getControl().getTableRow().isSelected();
     }
 
     /** @{@inheritDoc} */
-    @Override TableColumnBase getVisibleLeafColumn(int index) {
-        return getTableControl().getVisibleLeafColumn(index);
-    }
-
-    /** @{@inheritDoc} */
     @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
-        return getTableControl().getVisibleLeafIndex((TableColumn) tc);
+        return getCellContainer().getVisibleLeafIndex((TableColumn) tc);
     }
 
     /** @{@inheritDoc} */
-    @Override void focus(int row, TableColumnBase tc) {
+    @Override protected void focus(int row, TableColumnBase tc) {
         getFocusModel().focus(row, (TableColumn)tc);
     }
 
     /** @{@inheritDoc} */
-    @Override void edit(int row, TableColumnBase tc) {
-        getTableControl().edit(row, (TableColumn)tc);
+    @Override protected void edit(TableCell<S,T> cell) {
+        if (cell == null) {
+            getCellContainer().edit(-1, null);
+        } else {
+            getCellContainer().edit(cell.getIndex(), cell.getTableColumn());
+        }
     }
 }

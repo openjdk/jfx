@@ -24,6 +24,7 @@
  */
 
 #include "common.h"
+#include <UIAutomation.h>
 
 #include "GlassApplication.h"
 #include "ViewContainer.h"
@@ -33,6 +34,7 @@
 #include "GlassDnD.h"
 #include "GlassInputTextInfo.h"
 #include "ManipulationEvents.h"
+#include "BaseWnd.h"
 
 #include "com_sun_glass_events_ViewEvent.h"
 #include "com_sun_glass_events_KeyEvent.h"
@@ -59,14 +61,17 @@ namespace {
 
 bool IsTouchEvent()
 {
+    // Read this link if you wonder why we need to hard code the mask and signature:
     // http://msdn.microsoft.com/en-us/library/windows/desktop/ms703320(v=vs.85).aspx
+    //"The lower 8 bits returned from GetMessageExtraInfo are variable.
+    // Of those bits, 7 (the lower 7, masked by 0x7F) are used to represent the cursor ID,
+    // zero for the mouse or a variable value for the pen ID.
+    // Additionally, in Windows Vista, the eighth bit, masked by 0x80, is used to
+    // differentiate touch input from pen input (0 = pen, 1 = touch)."
+    UINT SIGNATURE = 0xFF515780;
+    UINT MASK = 0xFFFFFF80;
 
-    enum {
-        SIGNATURE = 0xFF515780,
-        MASK = 0xFFFFFF80
-    };
-
-    const LPARAM v = GetMessageExtraInfo();
+    UINT v = (UINT) GetMessageExtraInfo();
 
     return ((v & MASK) == SIGNATURE);
 }
@@ -81,7 +86,8 @@ ViewContainer::ViewContainer() :
     m_manipEventSink(NULL),
     m_gestureSupportCls(NULL),
     m_lastMouseMovePosition(-1),
-    m_mouseButtonDownCounter(0)
+    m_mouseButtonDownCounter(0),
+    m_deadKeyWParam(0)
 {
     m_kbLayout = ::GetKeyboardLayout(0);
     m_idLang = LOWORD(m_kbLayout);
@@ -183,6 +189,8 @@ void ViewContainer::HandleViewInputLangChange(HWND hwnd, UINT msg, WPARAM wParam
     m_kbLayout = reinterpret_cast<HKL>(lParam);
     m_idLang = LOWORD(m_kbLayout);
     m_codePage = LangToCodePage(m_idLang);
+
+    m_deadKeyWParam = 0;
 }
 
 void ViewContainer::NotifyViewSize(HWND hwnd)
@@ -216,6 +224,28 @@ void ViewContainer::HandleViewPaintEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
             r.left, r.top, r.right-r.left, r.bottom-r.top);
     CheckAndClearException(env);
 }
+
+
+LRESULT ViewContainer::HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM lParam)
+{
+    if (!GetGlassView()) {
+        return NULL;
+    }
+
+    LRESULT lr = NULL;
+    /* WM_GETOBJECT  is sent to request different object types. Make sure the
+     * request is for 'UI Automation provider' before calling getAccessible() */
+    if (static_cast<long>(lParam) == static_cast<long>(UiaRootObjectId)) {
+        JNIEnv* env = GetEnv();
+        jlong pProvider = env->CallLongMethod(GetView(), javaIDs.View.getAccessible);
+        CheckAndClearException(env);
+        if (pProvider) {
+            lr = UiaReturnRawElementProvider(hwnd, wParam, lParam, reinterpret_cast<IRawElementProviderSimple*>(pProvider));
+        }
+    }
+    return lr;
+}
+
 
 void ViewContainer::HandleViewSizeEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -293,9 +323,102 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     }
 
     WORD mbChar;
-    UINT scancode = ::MapVirtualKey(wKey, 0);
+    UINT scancode = ::MapVirtualKeyEx(wKey, 0, m_kbLayout);
+
+    // Depress modifiers to map a Unicode char to a key code
+    kbState[VK_CONTROL] &= ~0x80;
+    kbState[VK_SHIFT]   &= ~0x80;
+    kbState[VK_MENU]    &= ~0x80;
+
     int converted = ::ToAsciiEx(wKey, scancode, kbState,
                                 &mbChar, 0, m_kbLayout);
+
+    wchar_t wChar[4] = {0};
+    int unicodeConverted = ::ToUnicodeEx(wKey, scancode, kbState,
+                                wChar, 4, 0, m_kbLayout);
+    
+    // Some virtual codes require special handling
+    switch (wKey) {
+        case 0x00BA:// VK_OEM_1
+        case 0x00BB:// VK_OEM_PLUS
+        case 0x00BC:// VK_OEM_COMMA
+        case 0x00BD:// VK_OEM_MINUS
+        case 0x00BE:// VK_OEM_PERIOD
+        case 0x00BF:// VK_OEM_2
+        case 0x00C0:// VK_OEM_3
+        case 0x00DB:// VK_OEM_4
+        case 0x00DC:// VK_OEM_5
+        case 0x00DD:// VK_OEM_6
+        case 0x00DE:// VK_OEM_7
+        case 0x00DF:// VK_OEM_8
+        case 0x00E2:// VK_OEM_102
+            if (unicodeConverted < 0) {
+                // Dead key
+                switch (wChar[0]) {
+                    case L'`':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_GRAVE; break;
+                    case L'\'':  jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_ACUTE; break;
+                    case 0x00B4: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_ACUTE; break;
+                    case L'^':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_CIRCUMFLEX; break;
+                    case L'~':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_TILDE; break;
+                    case 0x02DC: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_TILDE; break;
+                    case 0x00AF: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_MACRON; break;
+                    case 0x02D8: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_BREVE; break;
+                    case 0x02D9: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_ABOVEDOT; break;
+                    case L'"':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_DIAERESIS; break;
+                    case 0x00A8: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_DIAERESIS; break;
+                    case 0x02DA: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_ABOVERING; break;
+                    case 0x02DD: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_DOUBLEACUTE; break;
+                    case 0x02C7: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_CARON; break;            // aka hacek
+                    case L',':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_CEDILLA; break;
+                    case 0x00B8: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_CEDILLA; break;
+                    case 0x02DB: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_OGONEK; break;
+                    case 0x037A: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_IOTA; break;             // ASCII ???
+                    case 0x309B: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_VOICED_SOUND; break;
+                    case 0x309C: jKeyCode = com_sun_glass_events_KeyEvent_VK_DEAD_SEMIVOICED_SOUND; break;
+
+                    default:     jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED; break;
+                };
+            } else if (unicodeConverted == 1) {
+                switch (wChar[0]) {
+                    case L'!':   jKeyCode = com_sun_glass_events_KeyEvent_VK_EXCLAMATION; break;
+                    case L'"':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DOUBLE_QUOTE; break;
+                    case L'#':   jKeyCode = com_sun_glass_events_KeyEvent_VK_NUMBER_SIGN; break;
+                    case L'$':   jKeyCode = com_sun_glass_events_KeyEvent_VK_DOLLAR; break;
+                    case L'&':   jKeyCode = com_sun_glass_events_KeyEvent_VK_AMPERSAND; break;
+                    case L'\'':  jKeyCode = com_sun_glass_events_KeyEvent_VK_QUOTE; break;
+                    case L'(':   jKeyCode = com_sun_glass_events_KeyEvent_VK_LEFT_PARENTHESIS; break;
+                    case L')':   jKeyCode = com_sun_glass_events_KeyEvent_VK_RIGHT_PARENTHESIS; break;
+                    case L'*':   jKeyCode = com_sun_glass_events_KeyEvent_VK_ASTERISK; break;
+                    case L'+':   jKeyCode = com_sun_glass_events_KeyEvent_VK_PLUS; break;
+                    case L',':   jKeyCode = com_sun_glass_events_KeyEvent_VK_COMMA; break;
+                    case L'-':   jKeyCode = com_sun_glass_events_KeyEvent_VK_MINUS; break;
+                    case L'.':   jKeyCode = com_sun_glass_events_KeyEvent_VK_PERIOD; break;
+                    case L'/':   jKeyCode = com_sun_glass_events_KeyEvent_VK_SLASH; break;
+                    case L':':   jKeyCode = com_sun_glass_events_KeyEvent_VK_COLON; break;
+                    case L';':   jKeyCode = com_sun_glass_events_KeyEvent_VK_SEMICOLON; break;
+                    case L'<':   jKeyCode = com_sun_glass_events_KeyEvent_VK_LESS; break;
+                    case L'=':   jKeyCode = com_sun_glass_events_KeyEvent_VK_EQUALS; break;
+                    case L'>':   jKeyCode = com_sun_glass_events_KeyEvent_VK_GREATER; break;
+                    case L'@':   jKeyCode = com_sun_glass_events_KeyEvent_VK_AT; break;
+                    case L'[':   jKeyCode = com_sun_glass_events_KeyEvent_VK_OPEN_BRACKET; break;
+                    case L'\\':  jKeyCode = com_sun_glass_events_KeyEvent_VK_BACK_SLASH; break;
+                    case L']':   jKeyCode = com_sun_glass_events_KeyEvent_VK_CLOSE_BRACKET; break;
+                    case L'^':   jKeyCode = com_sun_glass_events_KeyEvent_VK_CIRCUMFLEX; break;
+                    case L'_':   jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDERSCORE; break;
+                    case L'`':   jKeyCode = com_sun_glass_events_KeyEvent_VK_BACK_QUOTE; break;
+                    case L'{':   jKeyCode = com_sun_glass_events_KeyEvent_VK_BRACELEFT; break;
+                    case L'}':   jKeyCode = com_sun_glass_events_KeyEvent_VK_BRACERIGHT; break;
+                    case 0x00A1: jKeyCode = com_sun_glass_events_KeyEvent_VK_INV_EXCLAMATION; break;
+                    case 0x20A0: jKeyCode = com_sun_glass_events_KeyEvent_VK_EURO_SIGN; break;
+
+                    default:     jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED; break;
+                }
+            } else if (unicodeConverted == 0 || unicodeConverted > 1) {
+                jKeyCode = com_sun_glass_events_KeyEvent_VK_UNDEFINED;
+            }
+            break;
+    };
+
 
     int keyCharCount = 0;
     jchar keyChars[4];
@@ -339,17 +462,100 @@ void ViewContainer::HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARA
     JNIEnv* env = GetEnv();
 
     jcharArray jKeyChars = env->NewCharArray(keyCharCount);
-    if (keyCharCount) {
-        env->SetCharArrayRegion(jKeyChars, 0, keyCharCount, keyChars);
+    if (jKeyChars) {
+        if (keyCharCount) {
+            env->SetCharArrayRegion(jKeyChars, 0, keyCharCount, keyChars);
+            CheckAndClearException(env);
+        }
+
+        if (jKeyCode == com_sun_glass_events_KeyEvent_VK_PRINTSCREEN &&
+                (msg == WM_KEYUP || msg == WM_SYSKEYUP))
+        {
+            // MS Windows doesn't send WM_KEYDOWN for the PrintScreen key,
+            // so we synthesize one
+            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
+                    com_sun_glass_events_KeyEvent_PRESS,
+                    jKeyCode, jKeyChars, jModifiers);
+            CheckAndClearException(env);
+        }
+
+        if (GetGlassView()) {
+            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
+                    (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
+                    com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
+                    jKeyCode, jKeyChars, jModifiers);
+            CheckAndClearException(env);
+        }
+
+        // MS Windows doesn't send WM_CHAR for the Delete key,
+        // so we synthesize one
+        if (jKeyCode == com_sun_glass_events_KeyEvent_VK_DELETE &&
+                (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) &&
+                GetGlassView())
+        {
+            // 0x7F == U+007F - a Unicode character for DELETE
+            SendViewTypedEvent(1, (jchar)0x7F);
+        }
+
+        env->DeleteLocalRef(jKeyChars);
+    }
+}
+
+void ViewContainer::SendViewTypedEvent(int repCount, jchar wChar) 
+{
+    if (!GetGlassView()) {
+        return;
     }
 
-    env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
-                        (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) ?
-                        com_sun_glass_events_KeyEvent_PRESS : com_sun_glass_events_KeyEvent_RELEASE,
-                        jKeyCode, jKeyChars, jModifiers);
-    CheckAndClearException(env);
+    JNIEnv* env = GetEnv();
+    jcharArray jKeyChars = env->NewCharArray(repCount);
+    if (jKeyChars) {
+        jchar* nKeyChars = env->GetCharArrayElements(jKeyChars, NULL);
+        if (nKeyChars) {
+            for (int i = 0; i < repCount; i++) {
+                nKeyChars[i] = wChar;
+            }
+            env->ReleaseCharArrayElements(jKeyChars, nKeyChars, 0);
 
-    env->DeleteLocalRef(jKeyChars);
+            env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
+                                com_sun_glass_events_KeyEvent_TYPED,
+                                com_sun_glass_events_KeyEvent_VK_UNDEFINED, jKeyChars, 
+                                GetModifiers());
+            CheckAndClearException(env);
+        }
+        env->DeleteLocalRef(jKeyChars);
+    }
+}
+
+void ViewContainer::HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
+{
+    if (!GetGlassView()) {
+        return;
+    }
+
+    if (!m_deadKeyWParam) {
+        // HandleViewKeyEvent() calls ::ToAsciiEx and ::ToUnicodeEx which clear
+        // the dead key status from the keyboard layout. We store the current dead
+        // key here to use it when processing WM_CHAR in order to get the
+        // actual character typed.
+
+        m_deadKeyWParam = wParam;
+    } else {
+        // There already was another dead key pressed previously. Clear it
+        // and send two separate TYPED events instead to emulate native behavior.
+
+        SendViewTypedEvent(1, (jchar)m_deadKeyWParam);
+        SendViewTypedEvent(1, (jchar)wParam);
+
+        m_deadKeyWParam = 0;
+    }
+
+    // Since we handle dead keys ourselves, reset the keyboard dead key status (if any)
+    static BYTE kbState[256];
+    ::GetKeyboardState(kbState);
+    WORD ignored;
+    ::ToAsciiEx(VK_SPACE, ::MapVirtualKey(VK_SPACE, 0),
+            kbState, &ignored, 0, m_kbLayout);
 }
 
 void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
@@ -359,21 +565,59 @@ void ViewContainer::HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
     }
 
     int repCount = LOWORD(lParam);
-    JNIEnv* env = GetEnv();
-    jcharArray jKeyChars = env->NewCharArray(repCount);
-    jchar* nKeyChars = env->GetCharArrayElements(jKeyChars, NULL);
-    for (int i = 0; i < repCount; i++) {
-        nKeyChars[i] = (jchar)wParam;
+    jchar wChar;
+    
+    if (!m_deadKeyWParam) {
+        wChar = (jchar)wParam;
+    } else {
+        wchar_t deadKey;
+
+        // Some dead keys need additional translation:
+        // http://www.fileformat.info/info/unicode/block/combining_diacritical_marks/images.htm
+        // Also see awt_Component.cpp for the original dead keys table
+        switch (m_deadKeyWParam) {
+            case L'`':   deadKey = 0x300; break;
+            case L'\'':  deadKey = 0x301; break;
+            case 0x00B4: deadKey = 0x301; break;
+            case L'^':   deadKey = 0x302; break;
+            case L'~':   deadKey = 0x303; break;
+            case 0x02DC: deadKey = 0x303; break;
+            case 0x00AF: deadKey = 0x304; break;
+            case 0x02D8: deadKey = 0x306; break;
+            case 0x02D9: deadKey = 0x307; break;
+            case L'"':   deadKey = 0x308; break;
+            case 0x00A8: deadKey = 0x308; break;
+            case 0x02DA: deadKey = 0x30A; break;
+            case 0x02DD: deadKey = 0x30B; break;
+            case 0x02C7: deadKey = 0x30C; break;
+            case L',':   deadKey = 0x327; break;
+            case 0x00B8: deadKey = 0x327; break;
+            case 0x02DB: deadKey = 0x328; break;
+            default:     deadKey = static_cast<wchar_t>(m_deadKeyWParam); break;
+        }
+
+        wchar_t in[3] = {(wchar_t)wParam, deadKey, L'\0'};
+        wchar_t out[3];
+        int res = ::FoldString(MAP_PRECOMPOSED, (LPWSTR)in, 3, (LPWSTR)out, 3);
+        
+        if (res > 0) {
+            wChar = (jchar)out[0];
+
+            if (res == 3) {
+                // The character cannot be accented, so we send a TYPED event
+                // for the dead key itself first.
+                SendViewTypedEvent(1, (jchar)m_deadKeyWParam);
+            }
+        } else {
+            // Folding failed. Use the untranslated original character then
+            wChar = (jchar)wParam;
+        }
+
+        // Clear the dead key
+        m_deadKeyWParam = 0;
     }
-    env->ReleaseCharArrayElements(jKeyChars, nKeyChars, 0);
 
-    env->CallVoidMethod(GetView(), javaIDs.View.notifyKey,
-                        com_sun_glass_events_KeyEvent_TYPED,
-                        com_sun_glass_events_KeyEvent_VK_UNDEFINED, jKeyChars, 
-                        GetModifiers());
-    CheckAndClearException(env);
-
-    env->DeleteLocalRef(jKeyChars);
+    SendViewTypedEvent(repCount, wChar);
 }
 
 BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -535,6 +779,12 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
             // Mouse tracking will be canceled automatically upon receiving WM_MOUSELEAVE
             m_bTrackingMouse = TRUE;
         }
+
+        // Note that (ViewContainer*)this != (BaseWnd*)this. We could use
+        // dynamic_case<>() instead, but it would fail later if 'this' is
+        // already deleted. So we use FromHandle() which is safe.
+        const BaseWnd *origWnd = BaseWnd::FromHandle(hwnd);
+
         env->CallVoidMethod(GetView(), javaIDs.View.notifyMouse,
                 com_sun_glass_events_MouseEvent_ENTER,
                 com_sun_glass_events_MouseEvent_BUTTON_NONE,
@@ -542,7 +792,11 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
                 jModifiers, JNI_FALSE, isSynthesized);
         CheckAndClearException(env);
 
-        if (!GetGlassView()) {
+        // At this point 'this' might have already been deleted if the app
+        // closed the window while processing the ENTER event. Hence the check:
+        if (!::IsWindow(hwnd) || BaseWnd::FromHandle(hwnd) != origWnd ||
+                !GetGlassView())
+        {
             return TRUE;
         }
     }
@@ -558,13 +812,17 @@ BOOL ViewContainer::HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPA
 
     if (type == com_sun_glass_events_MouseEvent_WHEEL) {
         jdouble dx, dy;
-        if (msg == WM_MOUSEWHEEL) {
-            dx = 0.0;
-            dy = wheelRotation;
-        } else { // WM_MOUSEHWHEEL
+        if (msg == WM_MOUSEHWHEEL) { // native horizontal scroll
             // Negate the value to be more "natural"
             dx = -wheelRotation;
             dy = 0.0;
+        } else if (msg == WM_MOUSEWHEEL && LOWORD(wParam) & MK_SHIFT) {
+            // Do not negate the emulated horizontal scroll amount
+            dx = wheelRotation;
+            dy = 0.0;
+        } else { // vertical scroll
+            dx = 0.0;
+            dy = wheelRotation;
         }
 
         jint ls, cs;
@@ -772,7 +1030,10 @@ void ViewContainer::SendInputMethodEvent(jstring text,
     if (cClause && rgClauseBoundary) {
         // convert clause boundary offset array to java array
         clauseBoundary = env->NewIntArray(cClause+1);
-        env->SetIntArrayRegion(clauseBoundary, 0, cClause+1, (jint *)rgClauseBoundary);
+        if (clauseBoundary) {
+            env->SetIntArrayRegion(clauseBoundary, 0, cClause+1, (jint *)rgClauseBoundary);
+            CheckAndClearException(env);
+        }
     }
 
     // attribute information
@@ -781,15 +1042,22 @@ void ViewContainer::SendInputMethodEvent(jstring text,
     if (cAttrBlock && rgAttrBoundary && rgAttrValue) {
         // convert attribute boundary offset array to java array
         attrBoundary = env->NewIntArray(cAttrBlock+1);
-        env->SetIntArrayRegion(attrBoundary, 0, cAttrBlock+1, (jint *)rgAttrBoundary);
+        if (attrBoundary) {
+            env->SetIntArrayRegion(attrBoundary, 0, cAttrBlock+1, (jint *)rgAttrBoundary);
+            CheckAndClearException(env);
+        }
         // convert attribute value byte array to java array
         attrValue = env->NewByteArray(cAttrBlock);
-        env->SetByteArrayRegion(attrValue, 0, cAttrBlock, (jbyte *)rgAttrValue);
+        if (attrValue) {
+            env->SetByteArrayRegion(attrValue, 0, cAttrBlock, (jbyte *)rgAttrValue);
+            CheckAndClearException(env);
+        }
     }
 
     env->CallBooleanMethod(GetView(), javaIDs.View.notifyInputMethod,
                         text, clauseBoundary, attrBoundary,
                         attrValue, commitedTextLength, caretPos, visiblePos);
+    CheckAndClearException(env);
 
     if (clauseBoundary) {
         env->DeleteLocalRef(clauseBoundary);
@@ -812,11 +1080,12 @@ void ViewContainer::GetCandidatePos(LPPOINT curPos)
                         javaIDs.View.notifyInputMethodCandidatePosRequest,
                         0);
     nativePos = env->GetDoubleArrayElements(pos, NULL);
+    if (nativePos) {
+        curPos->x = (int)nativePos[0];
+        curPos->y  = (int)nativePos[1];
 
-    curPos->x = (int)nativePos[0];
-    curPos->y  = (int)nativePos[1];
-
-    env->ReleaseDoubleArrayElements(pos, nativePos, 0);
+        env->ReleaseDoubleArrayElements(pos, nativePos, 0);
+    }
 }
 
 namespace {

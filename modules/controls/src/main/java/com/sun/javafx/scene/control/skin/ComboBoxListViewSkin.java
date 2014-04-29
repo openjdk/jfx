@@ -28,9 +28,6 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
 
-import com.sun.javafx.scene.control.behavior.TextFieldBehavior;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
@@ -44,6 +41,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -138,75 +136,49 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         updateButtonCell();
 
         // move fake focus in to the textfield if the comboBox is editable
-        comboBox.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (comboBox.isEditable()) {
-                    // Fix for the regression noted in a comment in RT-29885.
-                    ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
-                }
+        comboBox.focusedProperty().addListener((ov, t, hasFocus) -> {
+            if (comboBox.isEditable()) {
+                // Fix for the regression noted in a comment in RT-29885.
+                ((FakeFocusTextField)textField).setFakeFocus(hasFocus);
             }
         });
-        
-        comboBox.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent ke) {
-                if (textField == null) return;
 
+        comboBox.addEventFilter(KeyEvent.ANY, ke -> {
+            if (textField == null) {
+                handleKeyEvent(ke, false);
+            } else {
                 // This prevents a stack overflow from our rebroadcasting of the
                 // event to the textfield that occurs in the final else statement
                 // of the conditions below.
                 if (ke.getTarget().equals(textField)) return;
 
-                // When the user hits the enter or F4 keys, we respond before 
-                // ever giving the event to the TextField.
-                if (ke.getCode() == KeyCode.ENTER) {
-                    setTextFromTextFieldIntoComboBoxValue();
-                    /*
-                    ** don't consume this if we're on an embedded
-                    ** platform that supports 5-button navigation 
-                    */
-                    if (!Utils.isTwoLevelFocus()) {
-                        ke.consume();
-                    }
-                    return;
-                } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
-                    if (comboBox.isShowing()) comboBox.hide();
-                    else comboBox.show();
-                    ke.consume();
-                    return;
-                } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
-                    // RT-23275: The TextField fires F10 and ESCAPE key events
-                    // up to the parent, which are then fired back at the 
-                    // TextField, and this ends up in an infinite loop until
-                    // the stack overflows. So, here we consume these two
-                    // events and stop them from going any further.
-                    ke.consume();
-                    return;
-                } else {
-                    // Fix for the regression noted in a comment in RT-29885.
-                    // This forwards the event down into the TextField when
-                    // the key event is actually received by the ComboBox.
-                    textField.fireEvent(ke.copyFor(textField, textField));
-                    ke.consume();
-                }
+                // Fix for the regression noted in a comment in RT-29885.
+                // This forwards the event down into the TextField when
+                // the key event is actually received by the ComboBox.
+                textField.fireEvent(ke.copyFor(textField, textField));
+                ke.consume();
             }
         });
+
+        if (textField != null) {
+            textField.addEventFilter(KeyEvent.ANY, ke -> {
+                if (textField == null) return;
+                handleKeyEvent(ke, true);
+            });
+        }
 
         // Fix for RT-31093 - drag events from the textfield were not surfacing
         // properly for the ComboBox.
         if (textField != null) {
-            textField.addEventFilter(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    if (event.getTarget().equals(comboBox)) return;
+            textField.addEventFilter(MouseEvent.DRAG_DETECTED, event -> {
+                if (event.getTarget().equals(comboBox)) return;
+                comboBox.fireEvent(event.copyFor(comboBox, comboBox));
+                event.consume();
+            });
+            textField.addEventFilter(DragEvent.ANY, event -> {
+                if (event.getTarget().equals(comboBox)) return;
                     comboBox.fireEvent(event.copyFor(comboBox, comboBox));
                     event.consume();
-                }
-            });
-            textField.addEventFilter(DragEvent.ANY, new EventHandler<DragEvent>() {
-                @Override public void handle(DragEvent event) {
-                    if (event.getTarget().equals(comboBox)) return;
-                        comboBox.fireEvent(event.copyFor(comboBox, comboBox));
-                        event.consume();
-                }
             });
         }
         
@@ -221,9 +193,9 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         registerChangeListener(comboBox.buttonCellProperty(), "BUTTON_CELL");
         registerChangeListener(comboBox.valueProperty(), "VALUE");
     }
-    
-    
-    
+
+
+
     /***************************************************************************
      *                                                                         *
      * Public API                                                              *
@@ -290,7 +262,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         }
 
         this.listViewItems = comboBoxItems;
-        listView.setItems(null);
         listView.setItems(listViewItems);
 
         if (listViewItems != null) {
@@ -348,8 +319,31 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
      *                                                                         *
      * Private methods                                                         *
      *                                                                         *
-     **************************************************************************/    
-    
+     **************************************************************************/
+
+    private void handleKeyEvent(KeyEvent ke, boolean doConsume) {
+        // When the user hits the enter or F4 keys, we respond before
+        // ever giving the event to the TextField.
+        if (ke.getCode() == KeyCode.ENTER) {
+            setTextFromTextFieldIntoComboBoxValue();
+
+            if (doConsume) ke.consume();
+        } else if (ke.getCode() == KeyCode.F4) {
+            if (ke.getEventType() == KeyEvent.KEY_RELEASED) {
+                if (comboBox.isShowing()) comboBox.hide();
+                else comboBox.show();
+            }
+            ke.consume(); // we always do a consume here (otherwise unit tests fail)
+        } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
+            // RT-23275: The TextField fires F10 and ESCAPE key events
+            // up to the parent, which are then fired back at the
+            // TextField, and this ends up in an infinite loop until
+            // the stack overflows. So, here we consume these two
+            // events and stop them from going any further.
+            if (doConsume) ke.consume();
+        }
+    }
+
     private void updateValue() {
         T newValue = comboBox.getValue();
         
@@ -395,7 +389,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         if (textField != null) return textField;
         
         textField = comboBox.getEditor();
-        textField.setFocusTraversable(true);
+        textField.focusTraversableProperty().bindBidirectional(comboBox.focusTraversableProperty());
         textField.promptTextProperty().bind(comboBox.promptTextProperty());
         textField.tooltipProperty().bind(comboBox.tooltipProperty());
 
@@ -403,23 +397,21 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         initialTextFieldValue = textField.getText();
         // End of fix (see updateDisplayNode below for the related code)
 
-        textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (! comboBox.isEditable()) return;
+        textField.focusedProperty().addListener((ov, t, hasFocus) -> {
+            if (! comboBox.isEditable()) return;
 
-                // Fix for RT-29885
-                comboBox.getProperties().put("FOCUSED", hasFocus);
-                // --- end of RT-29885
+            // Fix for RT-29885
+            comboBox.getProperties().put("FOCUSED", hasFocus);
+            // --- end of RT-29885
 
-                // RT-21454 starts here
-                if (! hasFocus) {
-                    setTextFromTextFieldIntoComboBoxValue();
-                    pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, false);
-                } else {
-                    pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
-                }
-                // --- end of RT-21454
+            // RT-21454 starts here
+            if (! hasFocus) {
+                setTextFromTextFieldIntoComboBoxValue();
+                pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, false);
+            } else {
+                pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
             }
+            // --- end of RT-21454
         });
 
         return textField;
@@ -546,6 +538,14 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     private ListView<T> createListView() {
         final ListView<T> _listView = new ListView<T>() {
+
+            {
+                // disable selecting the first item on focus gain - this is
+                // not what is expected in the ComboBox control (unlike the
+                // ListView control, which does this).
+                getProperties().put("selectOnFocusGain", false);
+            }
+
             @Override protected double computeMinHeight(double width) {
                 return 30;
             }
@@ -581,57 +581,58 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             @Override protected double computePrefHeight(double width) {
                 return getListViewPrefHeight();
             }
+
+            @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                switch (attribute) {
+                    case PARENT: return comboBox;
+                    default: return super.accGetAttribute(attribute, parameters);
+                }
+            }
         };
 
         _listView.setId("list-view");
         _listView.placeholderProperty().bind(comboBox.placeholderProperty());
         _listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        _listView.setFocusTraversable(false);
 
-        _listView.getSelectionModel().selectedIndexProperty().addListener(new InvalidationListener() {
-             @Override public void invalidated(Observable o) {
-                 if (listSelectionLock) return;
-                 int index = listView.getSelectionModel().getSelectedIndex();
-                 comboBox.getSelectionModel().select(index);
-                 updateDisplayNode();
-             }
-         });
+        _listView.getSelectionModel().selectedIndexProperty().addListener(o -> {
+            if (listSelectionLock) return;
+            int index = listView.getSelectionModel().getSelectedIndex();
+            comboBox.getSelectionModel().select(index);
+            updateDisplayNode();
+            comboBox.accSendNotification(Attribute.TITLE);
+        });
          
-        comboBox.getSelectionModel().selectedItemProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                listViewSelectionDirty = true;
-            }
+        comboBox.getSelectionModel().selectedItemProperty().addListener(o -> {
+            listViewSelectionDirty = true;
         });
         
-        _listView.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {
-                // RT-18672: Without checking if the user is clicking in the 
-                // scrollbar area of the ListView, the comboBox will hide. Therefore,
-                // we add the check below to prevent this from happening.
-                EventTarget target = t.getTarget();
-                if (target instanceof Parent) {
-                    List<String> s = ((Parent) target).getStyleClass();
-                    if (s.contains("thumb") 
-                            || s.contains("track") 
-                            || s.contains("decrement-arrow") 
-                            || s.contains("increment-arrow")) {
-                        return;
-                    }
+        _listView.addEventFilter(MouseEvent.MOUSE_RELEASED, t -> {
+            // RT-18672: Without checking if the user is clicking in the
+            // scrollbar area of the ListView, the comboBox will hide. Therefore,
+            // we add the check below to prevent this from happening.
+            EventTarget target = t.getTarget();
+            if (target instanceof Parent) {
+                List<String> s = ((Parent) target).getStyleClass();
+                if (s.contains("thumb")
+                        || s.contains("track")
+                        || s.contains("decrement-arrow")
+                        || s.contains("increment-arrow")) {
+                    return;
                 }
-                
-                if (isHideOnClickEnabled()) {
-                    comboBox.hide();
-                }
+            }
+
+            if (isHideOnClickEnabled()) {
+                comboBox.hide();
             }
         });
 
-        _listView.setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent t) {
-                // TODO move to behavior, when (or if) this class becomes a SkinBase
-                if (t.getCode() == KeyCode.ENTER || 
-                        t.getCode() == KeyCode.SPACE || 
-                        t.getCode() == KeyCode.ESCAPE) {
-                    comboBox.hide();
-                }
+        _listView.setOnKeyPressed(t -> {
+            // TODO move to behavior, when (or if) this class becomes a SkinBase
+            if (t.getCode() == KeyCode.ENTER ||
+                    t.getCode() == KeyCode.SPACE ||
+                    t.getCode() == KeyCode.ESCAPE) {
+                comboBox.hide();
             }
         });
         
@@ -697,4 +698,37 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             setFocused(b);
         }
     }
+
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case CHILDREN: {
+                ObservableList<Node> children = comboBox.getChildrenUnmodifiable();
+                ObservableList<Node> list =  FXCollections.observableArrayList();
+                list.addAll(children);
+                if (!list.contains(listView)) list.add(listView);
+                return list;
+            }
+            case TITLE: {
+                String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();
+                if (title == null || title.isEmpty()) {
+                    title = comboBox.getPromptText();
+                }
+                return title;
+            }
+            case FOCUS_ITEM: if (!comboBox.isShowing()) return super.accGetAttribute(attribute, parameters);
+            //fall through
+            case ROW_COUNT:
+            case MULTIPLE_SELECTION:
+            case ROW_AT_INDEX:
+            case LEAF:
+            case SELECTED_ROWS: {
+                Object o = listView.accGetAttribute(attribute, parameters);
+                //if (o != null) return o;
+                return o;
+            }
+            //fall through
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }
+

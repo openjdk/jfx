@@ -26,6 +26,7 @@
 package javafx.scene.canvas;
 
 import com.sun.javafx.geom.Arc2D;
+import com.sun.javafx.geom.IllegalPathStateException;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.transform.Affine2D;
@@ -332,6 +333,7 @@ public final class GraphicsContext {
     private void writePoly(double xPoints[], double yPoints[], int nPoints,
                            boolean close, byte command)
     {
+        if (xPoints == null || yPoints == null) return;
         GrowableDataBuffer buf = getBuffer();
         buf.putByte(NGCanvas.PATHSTART);
         int pos = 0;
@@ -358,7 +360,7 @@ public final class GraphicsContext {
     private void writeImage(Image img,
                             double dx, double dy, double dw, double dh)
     {
-        if (img.getProgress() < 1.0) return;
+        if (img == null || img.getProgress() < 1.0) return;
         Object platformImg = img.impl_getPlatformImage();
         if (platformImg == null) return;
         updateTransform();
@@ -371,7 +373,7 @@ public final class GraphicsContext {
                             double dx, double dy, double dw, double dh,
                             double sx, double sy, double sw, double sh)
     {
-        if (img.getProgress() < 1.0) return;
+        if (img == null || img.getProgress() < 1.0) return;
         Object platformImg = img.impl_getPlatformImage();
         if (platformImg == null) return;
         updateTransform();
@@ -387,6 +389,7 @@ public final class GraphicsContext {
     private void writeText(String text, double x, double y, double maxWidth,
                            byte command)
     {
+        if (text == null) return;
         updateTransform();
         GrowableDataBuffer buf = getBuffer();
         buf.putByte(command);
@@ -607,11 +610,12 @@ public final class GraphicsContext {
     /**
      * Concatenates the input with the current transform. Only 2D transforms are
      * supported. The only values used are the X and Y scaling, translation, and
-     * shearing components of a transform.
+     * shearing components of a transform. A {@code null} value is treated as identity.
      * 
-     * @param xform The affine to be concatenated with the current transform.
+     * @param xform The affine to be concatenated with the current transform or null.
      */
     public void transform(Affine xform) {
+        if (xform == null) return;
         scratchTX.setTransform(xform.getMxx(), xform.getMyx(),
                                xform.getMxy(), xform.getMyy(),
                                xform.getTx(), xform.getTy());
@@ -719,8 +723,9 @@ public final class GraphicsContext {
     private static Blend TMP_BLEND = new Blend(BlendMode.SRC_OVER); 
     /**
      * Sets the global blend mode.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
-     * @param op the {@code BlendMode} that will be set.
+     * @param op the {@code BlendMode} that will be set or null.
      */
     public void setGlobalBlendMode(BlendMode op) {
         if (op != null && op != curState.blendop) {
@@ -745,11 +750,12 @@ public final class GraphicsContext {
     /**
      * Sets the current fill attribute. This method affects the paint used for any
      * method with "fill" in it. For Example, fillRect(...), fillOval(...).
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
-     * @param p The {@code Paint} to be used as the fill {@code Paint}.
+     * @param p The {@code Paint} to be used as the fill {@code Paint} or null.
      */
     public void setFill(Paint p) {
-        if (curState.fill != p) {
+        if (p != null && curState.fill != p) {
             curState.fill = p;
             writePaint(p, NGCanvas.FILL_PAINT);
         }
@@ -767,11 +773,12 @@ public final class GraphicsContext {
 
     /**
      * Sets the current stroke.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
-     * @param p The Paint to be used as the stroke Paint.
+     * @param p The Paint to be used as the stroke Paint or null.
      */
     public void setStroke(Paint p) {
-        if (curState.stroke != p) {
+        if (p != null && curState.stroke != p) {
             curState.stroke = p;
             writePaint(p, NGCanvas.STROKE_PAINT);
         }
@@ -813,15 +820,13 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current stroke line cap. A {@code null} value will be ignored and the 
-     * current value will remain unchanged.
+     * Sets the current stroke line cap.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
-     * @param cap {@code StrokeLineCap} with a value of Butt, Round, or Square.
-     * 
+     * @param cap {@code StrokeLineCap} with a value of Butt, Round, or Square or null.
      */
     public void setLineCap(StrokeLineCap cap) {
-        if (cap == null) return;
-        if (curState.linecap != cap) {
+        if (cap != null && curState.linecap != cap) {
             byte v;
             switch (cap) {
                 case BUTT: v = NGCanvas.CAP_BUTT; break;
@@ -844,14 +849,13 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current stroke line join. A {@code null} value will be ignored and 
-     * the current value will remain unchanged.
+     * Sets the current stroke line join.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
-     * @param join {@code StrokeLineJoin} with a value of Miter, Bevel, or Round.
+     * @param join {@code StrokeLineJoin} with a value of Miter, Bevel, or Round or null.
      */
     public void setLineJoin(StrokeLineJoin join) {
-        if (join == null) return;
-        if (curState.linejoin != join) {
+        if (join != null && curState.linejoin != join) {
             byte v;
             switch (join) {
                 case MITER: v = NGCanvas.JOIN_MITER; break;
@@ -901,11 +905,12 @@ public final class GraphicsContext {
 
     /**
      * Sets the current Font.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
-     * @param f the Font 
+     * @param f the Font or null.
      */
     public void setFont(Font f) {
-        if (curState.font != f) {
+        if (f != null && curState.font != f) {
             curState.font = f;
             GrowableDataBuffer buf = getBuffer();
             buf.putByte(NGCanvas.FONT);
@@ -924,7 +929,6 @@ public final class GraphicsContext {
 
     /**
      * Defines horizontal text alignment, relative to the text {@code x} origin.
-     * A {@code null} value will be ignored and the current value will remain unchanged.
      * <p>
      * Let horizontal bounds represent the logical width of a single line of
      * text. Where each line of text has a separate horizontal bounds.
@@ -941,12 +945,12 @@ public final class GraphicsContext {
      * Note: Canvas does not support line wrapping, therefore the text
      * alignment Justify is identical to left aligned text.
      * <p>
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
-     * @param align {@code TextAlignment} with values of Left, Center, Right.
+     * @param align {@code TextAlignment} with values of Left, Center, Right or null.
      */
     public void setTextAlign(TextAlignment align) {
-        if (align == null) return;
-        if (curState.textalign != align) {
+        if (align != null && curState.textalign != align) {
             byte a;
             switch (align) {
                 case LEFT: a = NGCanvas.ALIGN_LEFT; break;
@@ -971,14 +975,13 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current Text Baseline. A null value will be ignored and the 
-     * current value will remain unchanged.
+     * Sets the current Text Baseline.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
-     * @param baseline {@code VPos} with values of Top, Center, Baseline, or Bottom
+     * @param baseline {@code VPos} with values of Top, Center, Baseline, or Bottom or null.
      */
     public void setTextBaseline(VPos baseline) {
-        if (baseline == null) return;
-        if (curState.textbaseline != baseline) {
+        if (baseline != null && curState.textbaseline != baseline) {
             byte b;
             switch (baseline) {
                 case TOP: b = NGCanvas.BASE_TOP; break;
@@ -1004,8 +1007,9 @@ public final class GraphicsContext {
     /**
      * Fills the given string of text at position x, y (0,0 at top left)
      * with the current fill paint attribute.
+     * A {@code null} text value will be ignored.
      * 
-     * @param text the string of text.
+     * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
      */
@@ -1016,8 +1020,9 @@ public final class GraphicsContext {
     /**
      * draws the given string of text at position x, y (0,0 at top left)
      * with the current stroke paint attribute.
+     * A {@code null} text value will be ignored.
      * 
-     * @param text the string of text.
+     * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
      */
@@ -1030,8 +1035,9 @@ public final class GraphicsContext {
      * 
      * If the width of the text extends past max width, then it will be sized
      * to fit.
+     * A {@code null} text value will be ignored.
      * 
-     * @param text the string of text.
+     * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
      * @param maxWidth  maximum width the text string can have.
@@ -1046,8 +1052,9 @@ public final class GraphicsContext {
      * 
      * If the width of the text extends past max width, then it will be sized
      * to fit.
+     * A {@code null} text value will be ignored.
      * 
-     * @param text the string of text.
+     * @param text the string of text or null.
      * @param x position on the x axis.
      * @param y position on the y axis.
      * @param maxWidth  maximum width the text string can have.
@@ -1060,14 +1067,12 @@ public final class GraphicsContext {
 
     /**
      * Set the filling rule constant for determining the interior of the path.
-     * The value must be one of the following constants:
-     * {@code FillRile.EVEN_ODD} or {@code FillRule.NON_ZERO}.
-     * The default value is {@code FillRule.NON_ZERO}.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
      *
-     * @defaultValue FillRule.NON_ZERO
+     * @param fillRule {@code FillRule} with a value of  Even_odd or Non_zero or null.
      */
      public void setFillRule(FillRule fillRule) {
-         if (curState.fillRule != fillRule) {
+         if (fillRule != null && curState.fillRule != fillRule) {
             byte b;
             if (fillRule == FillRule.EVEN_ODD) {
                 b = NGCanvas.FILL_RULE_EVEN_ODD;
@@ -1122,6 +1127,9 @@ public final class GraphicsContext {
         coords[0] = (float) x1;
         coords[1] = (float) y1;
         curState.transform.transform(coords, 0, coords, 0, 1);
+        if (path.getNumCommands() == 0) {
+            path.moveTo(coords[0], coords[1]);
+        }
         path.lineTo(coords[0], coords[1]);
         markPathDirty();
     }
@@ -1140,6 +1148,9 @@ public final class GraphicsContext {
         coords[2] = (float) x1;
         coords[3] = (float) y1;
         curState.transform.transform(coords, 0, coords, 0, 2);
+        if (path.getNumCommands() == 0) {
+            path.moveTo(coords[0], coords[1]);
+        }
         path.quadTo(coords[0], coords[1], coords[2], coords[3]);
         markPathDirty();
     }
@@ -1162,6 +1173,9 @@ public final class GraphicsContext {
         coords[4] = (float) x1;
         coords[5] = (float) y1;
         curState.transform.transform(coords, 0, coords, 0, 3);
+        if (path.getNumCommands() == 0) {
+            path.moveTo(coords[0], coords[1]);
+        }
         path.curveTo(coords[0], coords[1], coords[2], coords[3], coords[4], coords[5]);
         markPathDirty();
     }
@@ -1389,10 +1403,12 @@ public final class GraphicsContext {
     /**
      * Appends an SVG Path string to the current path. If there is no current 
      * path the string must then start with either type of move command.
-     * 
+     * A {@code null} value or incorrect SVG path will be ignored.
      * @param svgpath the SVG Path string.
+     *
      */
     public void appendSVGPath(String svgpath) {
+        if (svgpath == null) return;
         boolean prependMoveto = true;
         boolean skipMoveto = true;
         for (int i = 0; i < svgpath.length(); i++) {
@@ -1439,22 +1455,28 @@ public final class GraphicsContext {
         } else {
             skipMoveto = false;
         }
-        p2d.appendSVGPath(svgpath);
-        PathIterator pi = p2d.getPathIterator(curState.transform);
-        if (skipMoveto) {
-            // We need to delete the initial moveto and let the path
-            // extend from the actual existing geometry.
-            pi.next();
+        try {
+            p2d.appendSVGPath(svgpath);
+            PathIterator pi = p2d.getPathIterator(curState.transform);
+            if (skipMoveto) {
+                // We need to delete the initial moveto and let the path
+                // extend from the actual existing geometry.
+                pi.next();
+            }
+            path.append(pi, false);
+        } catch (IllegalArgumentException | IllegalPathStateException ex) {
+            //Ignore incorrect path
         }
-        path.append(pi, false);
     }
 
     /**
      * Closes the path.
      */
     public void closePath() {
-        path.closePath();
-        markPathDirty();
+        if (path.getNumCommands() > 0) {
+            path.closePath();
+            markPathDirty();
+        }
     }
 
     /**
@@ -1579,7 +1601,7 @@ public final class GraphicsContext {
      * @param h the height of the arc.
      * @param startAngle the starting angle of the arc in degrees.
      * @param arcExtent the angular extent of the arc in degrees.
-     * @param closure closure type (Round, Chord, Open).
+     * @param closure closure type (Round, Chord, Open) or null.
      */
     public void fillArc(double x, double y, double w, double h,
                         double startAngle, double arcExtent, ArcType closure)
@@ -1593,14 +1615,14 @@ public final class GraphicsContext {
     /**
      * Strokes an Arc using the current stroke paint. A {@code null} ArcType or 
      * non positive width or height will cause the render command to be ignored.
-     * 
+     *
      * @param x the X coordinate of the arc.
      * @param y the Y coordinate of the arc.
      * @param w the width of the arc.
      * @param h the height of the arc.
      * @param startAngle the starting angle of the arc in degrees.
      * @param arcExtent arcExtent the angular extent of the arc in degrees.
-     * @param closure closure type (Round, Chord, Open).
+     * @param closure closure type (Round, Chord, Open) or null
      */
     public void strokeArc(double x, double y, double w, double h,
                         double startAngle, double arcExtent, ArcType closure)
@@ -1661,9 +1683,10 @@ public final class GraphicsContext {
 
     /**
      * Fills a polygon with the given points using the currently set fill paint.
+     * A {@code null} value for one of the arrays will be ignored and nothing will be drawn.
      * 
-     * @param xPoints array containing the x coordinates of the polygon's points.
-     * @param yPoints array containing the y coordinates of the polygon's points.
+     * @param xPoints array containing the x coordinates of the polygon's points or null.
+     * @param yPoints array containing the y coordinates of the polygon's points or null.
      * @param nPoints the number of points that make the polygon.
      */
     public void fillPolygon(double xPoints[], double yPoints[], int nPoints) {
@@ -1674,9 +1697,10 @@ public final class GraphicsContext {
 
     /**
      * Strokes a polygon with the given points using the currently set stroke paint.
+     * A {@code null} value for one of the arrays will be ignored and nothing will be drawn.
      * 
-     * @param xPoints array containing the x coordinates of the polygon's points.
-     * @param yPoints array containing the y coordinates of the polygon's points.
+     * @param xPoints array containing the x coordinates of the polygon's points or null.
+     * @param yPoints array containing the y coordinates of the polygon's points or null.
      * @param nPoints the number of points that make the polygon.
      */
     public void strokePolygon(double xPoints[], double yPoints[], int nPoints) {
@@ -1688,9 +1712,10 @@ public final class GraphicsContext {
     /**
      * Draws a polyline with the given points using the currently set stroke 
      * paint attribute.
+     * A {@code null} value for one of the arrays will be ignored and nothing will be drawn.
      * 
-     * @param xPoints array containing the x coordinates of the polyline's points.
-     * @param yPoints array containing the y coordinates of the polyline's points.
+     * @param xPoints array containing the x coordinates of the polyline's points or null.
+     * @param yPoints array containing the y coordinates of the polyline's points or null.
      * @param nPoints the number of points that make the polyline.
      */
     public void strokePolyline(double xPoints[], double yPoints[], int nPoints) {
@@ -1702,12 +1727,14 @@ public final class GraphicsContext {
     /**
      * Draws an image at the given x, y position using the width
      * and height of the given image.
+     * A {@code null} image value or an image still in progress will be ignored.
      * 
-     * @param img the image to be drawn.
+     * @param img the image to be drawn or null.
      * @param x the X coordinate on the destination for the upper left of the image.
      * @param y the Y coordinate on the destination for the upper left of the image.
      */
     public void drawImage(Image img, double x, double y) {
+        if (img == null) return;
         double sw = img.getWidth();
         double sh = img.getHeight();
         writeImage(img, x, y, sw, sh);
@@ -1716,8 +1743,9 @@ public final class GraphicsContext {
     /**
      * Draws an image into the given destination rectangle of the canvas. The
      * Image is scaled to fit into the destination rectagnle.
+     * A {@code null} image value or an image still in progress will be ignored.
      * 
-     * @param img the image to be drawn.
+     * @param img the image to be drawn or null.
      * @param x the X coordinate on the destination for the upper left of the image.
      * @param y the Y coordinate on the destination for the upper left of the image.
      * @param w the width of the destination rectangle. 
@@ -1730,8 +1758,9 @@ public final class GraphicsContext {
     /**
      * Draws the current source rectangle of the given image to the given 
      * destination rectangle of the Canvas.
+     * A {@code null} image value or an image still in progress will be ignored.
      * 
-     * @param img the image to be drawn.
+     * @param img the image to be drawn or null.
      * @param sx the source rectangle's X coordinate position.
      * @param sy the source rectangle's Y coordinate position.
      * @param sw the source rectangle's width.
@@ -1782,6 +1811,7 @@ public final class GraphicsContext {
 
                 @Override
                 public void setColor(int x, int y, Color c) {
+                    if (c == null) throw new NullPointerException("Color cannot be null");
                     int a = (int) Math.round(c.getOpacity() * 255.0);
                     int r = (int) Math.round(c.getRed() * 255.0);
                     int g = (int) Math.round(c.getGreen() * 255.0);
@@ -1859,6 +1889,8 @@ public final class GraphicsContext {
                               PixelFormat<T> pixelformat,
                               T buffer, int scan)
                 {
+                    if (pixelformat == null) throw new NullPointerException("PixelFormat cannot be null");
+                    if (buffer == null) throw new NullPointerException("Buffer cannot be null");
                     if (w <= 0 || h <= 0) return;
                     int offset = buffer.position();
                     int adjustments[] = checkBounds(x, y, w, h,
@@ -1888,6 +1920,8 @@ public final class GraphicsContext {
                                       PixelFormat<ByteBuffer> pixelformat,
                                       byte[] buffer, int offset, int scanlineStride)
                 {
+                    if (pixelformat == null) throw new NullPointerException("PixelFormat cannot be null");
+                    if (buffer == null) throw new NullPointerException("Buffer cannot be null");
                     if (w <= 0 || h <= 0) return;
                     int adjustments[] = checkBounds(x, y, w, h,
                                                     pixelformat, scanlineStride);
@@ -1915,6 +1949,8 @@ public final class GraphicsContext {
                                       PixelFormat<IntBuffer> pixelformat,
                                       int[] buffer, int offset, int scanlineStride)
                 {
+                    if (pixelformat == null) throw new NullPointerException("PixelFormat cannot be null");
+                    if (buffer == null) throw new NullPointerException("Buffer cannot be null");
                     if (w <= 0 || h <= 0) return;
                     int adjustments[] = checkBounds(x, y, w, h,
                                                     pixelformat, scanlineStride);
@@ -1941,6 +1977,7 @@ public final class GraphicsContext {
                 public void setPixels(int dstx, int dsty, int w, int h,
                                       PixelReader reader, int srcx, int srcy)
                 {
+                    if (reader == null) throw new NullPointerException("Reader cannot be null");
                     if (w <= 0 || h <= 0) return;
                     int adjustments[] = checkBounds(dstx, dsty, w, h, null, 0);
                     if (adjustments != null) {
@@ -1998,9 +2035,11 @@ public final class GraphicsContext {
 
     /**
      * Applies the given effect to the entire canvas.
-     * @param e the effect to apply onto the entire destination.
+     * A {@code null} value will be ignored.
+     * @param e the effect to apply onto the entire destination or null.
      */
     public void applyEffect(Effect e) {
+        if (e == null) return;
         GrowableDataBuffer buf = getBuffer();
         buf.putByte(NGCanvas.FX_APPLY_EFFECT);
         Effect effect = e.impl_copy();

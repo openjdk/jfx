@@ -4,9 +4,14 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/3DViewer.iml" filepath="$PROJECT_DIR$/.idea/3DViewer.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Ensemble8.iml" filepath="$PROJECT_DIR$/.idea/Ensemble8.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/FX8-3DFeatures.iml" filepath="$PROJECT_DIR$/.idea/FX8-3DFeatures.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/FXSlideShow.iml" filepath="$PROJECT_DIR$/.idea/FXSlideShow.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/GraphicsPerformance.iml" filepath="$PROJECT_DIR$/.idea/GraphicsPerformance.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Hello.iml" filepath="$PROJECT_DIR$/.idea/Hello.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/MandelbrotSet.iml" filepath="$PROJECT_DIR$/.idea/MandelbrotSet.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Modena.iml" filepath="$PROJECT_DIR$/.idea/Modena.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/SceneBuilderApp.iml" filepath="$PROJECT_DIR$/.idea/SceneBuilderApp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/SceneBuilderKit.iml" filepath="$PROJECT_DIR$/.idea/SceneBuilderKit.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/Shape3DToy.iml" filepath="$PROJECT_DIR$/.idea/Shape3DToy.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/StretchyGrid.iml" filepath="$PROJECT_DIR$/.idea/StretchyGrid.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/SystemTests.iml" filepath="$PROJECT_DIR$/.idea/SystemTests.iml" />
@@ -14,7 +19,6 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/buildSrc.iml" filepath="$PROJECT_DIR$/.idea/buildSrc.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/builders.iml" filepath="$PROJECT_DIR$/.idea/builders.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/controls.iml" filepath="$PROJECT_DIR$/.idea/controls.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/deploy.iml" filepath="$PROJECT_DIR$/.idea/deploy.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/designTime.iml" filepath="$PROJECT_DIR$/.idea/designTime.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/fxml.iml" filepath="$PROJECT_DIR$/.idea/fxml.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/fxpackager.iml" filepath="$PROJECT_DIR$/.idea/fxpackager.iml" />

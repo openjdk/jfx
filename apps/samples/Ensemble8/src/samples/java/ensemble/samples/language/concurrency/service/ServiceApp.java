@@ -70,12 +70,9 @@ public class ServiceApp extends Application {
         vbox.setPadding(new Insets(12));
         TableView tableView = new TableView();
         Button button = new Button("Refresh");
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                service.restart();
-            }
-        });
+        button.setOnAction((ActionEvent t) -> {
+            service.restart();
+       });
         vbox.setPrefHeight(160);
         vbox.getChildren().addAll(tableView, button);
 

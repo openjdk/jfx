@@ -41,12 +41,8 @@ public abstract class TrackableObservableList<T> extends ObservableListWrapper<T
 
     public TrackableObservableList() {
         super(new ArrayList<T>());
-        addListener(new ListChangeListener<T>() {
-
-            @Override
-            public void onChanged(Change<? extends T> c) {
-                TrackableObservableList.this.onChanged((Change<T>)c);
-            }
+        addListener((Change<? extends T> c) -> {
+            TrackableObservableList.this.onChanged((Change<T>)c);
         });
     }
 

@@ -35,14 +35,11 @@ final class WatchdogTimer {
         executor = new ScheduledThreadPoolExecutor(1, threadFactory);
         executor.setRemoveOnCancelPolicy(true);
 
-        runnable = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    twkFire(nativePointer);
-                } catch (Throwable th) {
-                    logger.log(WARNING, "Error firing watchdog timer", th);
-                }
+        runnable = () -> {
+            try {
+                twkFire(nativePointer);
+            } catch (Throwable th) {
+                logger.log(WARNING, "Error firing watchdog timer", th);
             }
         };
     }

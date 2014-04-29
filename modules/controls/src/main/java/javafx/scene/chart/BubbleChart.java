@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -143,9 +143,9 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     @Override protected void dataItemAdded(Series<X,Y> series, int itemIndex, Data<X,Y> item) {
         Node bubble = createBubble(series, getData().indexOf(series), item, itemIndex);
         if (shouldAnimate()) {
+            // fade in new bubble
             bubble.setOpacity(0);
             getPlotChildren().add(bubble);
-            // fade in new bubble
             FadeTransition ft = new FadeTransition(Duration.millis(500),bubble);
             ft.setToValue(1);
             ft.play();
@@ -160,11 +160,10 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
             // fade out old bubble
             FadeTransition ft = new FadeTransition(Duration.millis(500),bubble);
             ft.setToValue(0);
-            ft.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent actionEvent) {
-                    getPlotChildren().remove(bubble);
-                    removeDataItemFromDisplay(series, item);
-                }
+            ft.setOnFinished(actionEvent -> {
+                getPlotChildren().remove(bubble);
+                removeDataItemFromDisplay(series, item);
+                bubble.setOpacity(1.0);
             });
             ft.play();
         } else {
@@ -199,20 +198,17 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
         // remove all bubble nodes
         if (shouldAnimate()) {
             ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(new EventHandler<ActionEvent>() {
-                public void handle(ActionEvent event) {
-                    removeSeriesFromDisplay(series);
-                }
+            pt.setOnFinished(event -> {
+                removeSeriesFromDisplay(series);
             });
             for (XYChart.Data<X,Y> d : series.getData()) {
                 final Node bubble = d.getNode();
                 // fade out old bubble
                 FadeTransition ft = new FadeTransition(Duration.millis(500),bubble);
                 ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(bubble);
-                    }
+                ft.setOnFinished(actionEvent -> {
+                    getPlotChildren().remove(bubble);
+                    bubble.setOpacity(1.0);
                 });
                 pt.getChildren().add(ft);
             }

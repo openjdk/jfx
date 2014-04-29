@@ -185,6 +185,9 @@ public final class SortedList<E> extends TransformationList<E, E>{
         } else {
             int[] perm = new int[size];
             int[] rperm = new int[size];
+            for (int i = 0; i < size; ++i) {
+                perm[i] = rperm[i] = i;
+            }
             boolean changed = false;
             int idx = 0;
             while (idx < size) {
@@ -237,9 +240,11 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 final int removedTo = c.getFrom() + c.getRemovedSize();
                 System.arraycopy(sorted, removedTo, sorted, c.getFrom(), size - removedTo);
                 size -= c.getRemovedSize();
+                updateIndices(removedTo, -c.getRemovedSize());
             }
             if (c.wasAdded()) {
                 ensureSize(size + c.getAddedSize());
+                updateIndices(c.getFrom(), c.getAddedSize());
                 System.arraycopy(sorted, c.getFrom(), sorted, c.getTo(), size - c.getFrom());
                 size += c.getAddedSize();
                 for (int i = c.getFrom(); i < c.getTo(); ++i) {

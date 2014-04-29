@@ -385,11 +385,7 @@ public class TreeTableColumnTest {
     }
 
     @Test public void cellValueFactoryCanBeSpecified() {
-        CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().firstNameProperty();
-            }
-        };
+        CellValueFactory<Person,String> factory = param -> param.getValue().getValue().firstNameProperty();
 
         column.setCellValueFactory(factory);
         assertSame(factory, column.getCellValueFactory());
@@ -397,11 +393,7 @@ public class TreeTableColumnTest {
     }
 
     @Test public void cellValueFactoryCanBeResetToNull() {
-        CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().firstNameProperty();
-            }
-        };
+        CellValueFactory<Person,String> factory = param -> param.getValue().getValue().firstNameProperty();
 
         column.setCellValueFactory(factory);
         column.setCellValueFactory(null);
@@ -418,11 +410,7 @@ public class TreeTableColumnTest {
     }
 
     @Test public void cellValueFactoryCanBeBound() {
-        CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().firstNameProperty();
-            }
-        };
+        CellValueFactory<Person,String> factory = param -> param.getValue().getValue().firstNameProperty();
         ObjectProperty<CellValueFactory<Person,String>> other =
                 new SimpleObjectProperty<CellValueFactory<Person, String>>(factory);
         column.cellValueFactoryProperty().bind(other);
@@ -438,22 +426,14 @@ public class TreeTableColumnTest {
      ********************************************************************/
 
     @Test public void cellFactoryCanBeSpecified() {
-        CellFactory<Person,String> factory = new CellFactory<Person, String>() {
-            @Override public TreeTableCell call(TreeTableColumn<Person, String> param) {
-                return null;
-            }
-        };
+        CellFactory<Person,String> factory = param -> null;
         column.setCellFactory(factory);
         assertSame(factory, column.getCellFactory());
         assertSame(factory, column.cellFactoryProperty().get());
     }
 
     @Test public void cellFactoryCanBeResetToNull() {
-        CellFactory<Person,String> factory = new CellFactory<Person, String>() {
-            @Override public TreeTableCell call(TreeTableColumn<Person,String> param) {
-                return null;
-            }
-        };
+        CellFactory<Person,String> factory = param -> null;
         column.setCellFactory(factory);
         column.setCellFactory(null);
         assertNull(column.getCellFactory());
@@ -469,11 +449,7 @@ public class TreeTableColumnTest {
     }
 
     @Test public void cellFactoryCanBeBound() {
-        CellFactory<Person,String> factory = new CellFactory<Person, String>() {
-            @Override public TreeTableCell call(TreeTableColumn<Person,String> param) {
-                return null;
-            }
-        };
+        CellFactory<Person,String> factory = param -> null;
         ObjectProperty<CellFactory<Person,String>> other =
                 new SimpleObjectProperty<CellFactory<Person, String>>(factory);
         column.cellFactoryProperty().bind(other);
@@ -757,22 +733,14 @@ public class TreeTableColumnTest {
      ********************************************************************/
 
     @Test public void comparatorCanBeSpecified() {
-        Comparator<String> comparator = new Comparator<String>() {
-            @Override public int compare(String o1, String o2) {
-                return o1.compareTo(o2);
-            }
-        };
+        Comparator<String> comparator = (o1, o2) -> o1.compareTo(o2);
         column.setComparator(comparator);
         assertSame(comparator, column.getComparator());
         assertSame(comparator, column.comparatorProperty().get());
     }
 
     @Test public void comparatorCanBeResetToNull() {
-        Comparator<String> comparator = new Comparator<String>() {
-            @Override public int compare(String o1, String o2) {
-                return o1.compareTo(o2);
-            }
-        };
+        Comparator<String> comparator = (o1, o2) -> o1.compareTo(o2);
         column.setComparator(comparator);
         column.setComparator(null);
         assertNull(column.getComparator());
@@ -788,11 +756,7 @@ public class TreeTableColumnTest {
     }
 
     @Test public void comparatorCanBeBound() {
-        Comparator<String> comparator = new Comparator<String>() {
-            @Override public int compare(String o1, String o2) {
-                return o1.compareTo(o2);
-            }
-        };
+        Comparator<String> comparator = (o1, o2) -> o1.compareTo(o2);
         ObjectProperty<Comparator<String>> other =
                 new SimpleObjectProperty<Comparator<String>>(comparator);
         column.comparatorProperty().bind(other);
@@ -814,10 +778,8 @@ public class TreeTableColumnTest {
 
     @Test public void onEditStartCanBeSpecified() {
         EventHandler<TreeTableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditStart(handler);
         assertSame(handler, column.getOnEditStart());
         assertSame(handler, column.onEditStartProperty().get());
@@ -825,10 +787,8 @@ public class TreeTableColumnTest {
 
     @Test public void onEditStartCanBeResetToNull() {
         EventHandler<TreeTableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditStart(handler);
         column.setOnEditStart(null);
         assertNull(column.getOnEditStart());
@@ -845,10 +805,8 @@ public class TreeTableColumnTest {
 
     @Test public void onEditStartCanBeBound() {
         EventHandler<TreeTableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person,String>>> other =
                 new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person, String>>>(handler);
         column.onEditStartProperty().bind(other);
@@ -870,10 +828,8 @@ public class TreeTableColumnTest {
 
     @Test public void onEditCancelCanBeSpecified() {
         EventHandler<TreeTableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditCancel(handler);
         assertSame(handler, column.getOnEditCancel());
         assertSame(handler, column.onEditCancelProperty().get());
@@ -881,10 +837,8 @@ public class TreeTableColumnTest {
 
     @Test public void onEditCancelCanBeResetToNull() {
         EventHandler<TreeTableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditCancel(handler);
         column.setOnEditCancel(null);
         assertNull(column.getOnEditCancel());
@@ -901,10 +855,8 @@ public class TreeTableColumnTest {
 
     @Test public void onEditCancelCanBeBound() {
         EventHandler<TreeTableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person,String>>> other =
                 new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person, String>>>(handler);
         column.onEditCancelProperty().bind(other);
@@ -926,10 +878,8 @@ public class TreeTableColumnTest {
 
     @Test public void onEditCommitCanBeSpecified() {
         EventHandler<TreeTableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditCommit(handler);
         assertSame(handler, column.getOnEditCommit());
         assertSame(handler, column.onEditCommitProperty().get());
@@ -937,10 +887,8 @@ public class TreeTableColumnTest {
 
     @Test public void onEditCommitCanBeResetToNull() {
         EventHandler<TreeTableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditCommit(handler);
         column.setOnEditCommit(null);
         assertNull(column.getOnEditCommit());
@@ -957,10 +905,8 @@ public class TreeTableColumnTest {
 
     @Test public void onEditCommitCanBeBound() {
         EventHandler<TreeTableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TreeTableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TreeTableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         ObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person,String>>> other =
                 new SimpleObjectProperty<EventHandler<TreeTableColumn.CellEditEvent<Person, String>>>(handler);
         column.onEditCommitProperty().bind(other);
@@ -1029,11 +975,7 @@ public class TreeTableColumnTest {
 
     @Test public void getCellDataReturnsValue() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().getValue().firstNameProperty());
         assertEquals("Humphrey McPhee", column.getCellData(1));
     }
 
@@ -1129,11 +1071,7 @@ public class TreeTableColumnTest {
     @Test(expected=NullPointerException.class)
     public void defaultOnEditCommitHandlerDealsWithNullTableView() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().getValue().firstNameProperty());
         TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, 0, column);
         EventType<TreeTableColumn.CellEditEvent<Person,String>> eventType = TreeTableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<Person, String>(
@@ -1143,11 +1081,7 @@ public class TreeTableColumnTest {
     @Test(expected=NullPointerException.class)
     public void defaultOnEditCommitHandlerDealsWithNullTablePosition() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().getValue().firstNameProperty());
         TreeTablePosition<Person,String> pos = new TreeTablePosition<Person, String>(table, 0, column);
         EventType<TreeTableColumn.CellEditEvent<Person,String>> eventType = TreeTableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TreeTableColumn.CellEditEvent<Person, String>(

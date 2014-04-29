@@ -59,6 +59,7 @@ public class Application extends DataType implements Cloneable {
     String id = null;
     boolean embeddedIntoSwing = false;
     String version = null;
+    Boolean daemon = null;
 
     public void setVersion(String v) {
         version = v;
@@ -170,6 +171,15 @@ public class Application extends DataType implements Cloneable {
         preloaderClass = v;
     }
 
+    /**
+     * Is this class a daemon/service?
+     *
+     * @ant.not-required Default is false, i.e. an interactive app
+     */
+    public void setDaemon(boolean b) {
+        daemon = b;
+    }
+    
     //return instance that actually has data. Could be referenced object ...
     public Application get() {
         return isReference() ?

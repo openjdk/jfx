@@ -61,14 +61,12 @@ public class  SystemProperties {
     private static boolean isDebug;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
-                addProperties (sysprop_table, false);
-                addProperties (jfxprop_table, true);
-                setVersions();
-                isDebug = "true".equalsIgnoreCase(getProperty("javafx.debug"));
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction) () -> {
+            addProperties (sysprop_table, false);
+            addProperties (jfxprop_table, true);
+            setVersions();
+            isDebug = "true".equalsIgnoreCase(getProperty("javafx.debug"));
+            return null;
         });
     }
 

@@ -105,7 +105,7 @@ public final class Node_hasMirroring_Test extends NodeOrientationTestBase {
                         },
 
                         /* effective: LRRRLL, automatic: LRLLLL */
-                        { lrIiliScene(), "......", ".MM..." },
+                        { lrIiliScene(), "......", ".MMMM." },
                         /* effective: LRLRLR, automatic: LRLLLR */
                         { lrLRlrScene(), "......", ".MM..M" },
 

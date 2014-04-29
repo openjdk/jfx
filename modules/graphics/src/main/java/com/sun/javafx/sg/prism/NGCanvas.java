@@ -297,7 +297,6 @@ public class NGCanvas extends NGNode {
         }
     }
 
-    private static Image TMP_IMAGE = Image.fromIntArgbPreData(new int[1], 1, 1);
     private static Blend BLENDER = new MyBlend(Mode.SRC_OVER, null, null);
 
     private GrowableDataBuffer thebuf;
@@ -554,11 +553,9 @@ public class NGCanvas extends NGNode {
         texg.setCompositeMode(CompositeMode.SRC);
         if (cv.savedPixelData == null) {
             final PixelData pd = new PixelData(cw, ch);
-            runOnRenderThread(new Runnable() {
-                public void run() {
-                  pd.save(localTex);
-                  pd.restore(texg, tw, th);
-                }
+            runOnRenderThread(() -> {
+              pd.save(localTex);
+              pd.restore(texg, tw, th);
             });
         } else {
             cv.savedPixelData.restore(texg, tw, th);
@@ -803,21 +800,22 @@ public class NGCanvas extends NGNode {
                     float dx1 = buf.getInt();
                     float dy1 = buf.getInt();
                     int argb = buf.getInt();
-                    TMP_IMAGE.setArgb(0, 0, argb);
                     Graphics gr = cv.g;
                     gr.setExtraAlpha(1.0f);
                     gr.setCompositeMode(CompositeMode.SRC);
                     gr.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-                    ResourceFactory factory = gr.getResourceFactory();
-                    Texture tex =
-                        factory.getCachedTexture(TMP_IMAGE, Texture.WrapMode.CLAMP_TO_EDGE);
                     dx1 *= highestPixelScale;
                     dy1 *= highestPixelScale;
-                    gr.drawTexture(tex,
-                                   dx1, dy1, dx1 + highestPixelScale, dy1 + highestPixelScale,
-                                   0, 0, 1, 1);
-                    tex.contentsNotUseful();
-                    tex.unlock();
+                    float a = ((argb) >>> 24) / 255.0f;
+                    float r = (((argb) >> 16) & 0xff) / 255.0f;
+                    float g = (((argb) >>  8) & 0xff) / 255.0f;
+                    float b = (((argb)      ) & 0xff) / 255.0f;
+                    gr.setPaint(new Color(r, g, b, a));
+                    // Note that we cannot use fillRect here because SRC
+                    // mode does not interact well with antialiasing.
+                    // fillQuad does hard edges which matches the concept
+                    // of setting adjacent abutting, non-overlapping "pixels"
+                    gr.fillQuad(dx1, dy1, dx1+highestPixelScale, dy1+highestPixelScale);
                     break;
                 }
                 case PUT_ARGBPRE_BUF:

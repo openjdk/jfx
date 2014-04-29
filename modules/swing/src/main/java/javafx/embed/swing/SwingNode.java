@@ -142,11 +142,8 @@ public class SwingNode extends Node {
         setEventHandler(KeyEvent.ANY, new SwingKeyEventHandler());
         setEventHandler(ScrollEvent.SCROLL, new SwingScrollEventHandler());
 
-        focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, final Boolean newValue) {
-                 activateLwFrame(newValue);
-            }
+        focusedProperty().addListener((observable, oldValue, newValue) -> {
+             activateLwFrame(newValue);
         });
 
         //Workaround for RT-34170
@@ -168,11 +165,8 @@ public class SwingNode extends Node {
     public void setContent(final JComponent content) {
         this.content = content;
 
-        SwingFXUtils.runOnEDT(new Runnable() {
-            @Override
-            public void run() {
-                setContentImpl(content);
-            }
+        SwingFXUtils.runOnEDT(() -> {
+            setContentImpl(content);
         });
     }
 
@@ -206,20 +200,14 @@ public class SwingNode extends Node {
             lwFrame.addWindowFocusListener(new WindowFocusListener() {
                 @Override
                 public void windowGainedFocus(WindowEvent e) {
-                    SwingFXUtils.runOnFxThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            SwingNode.this.requestFocus();
-                        }
+                    SwingFXUtils.runOnFxThread(() -> {
+                        SwingNode.this.requestFocus();
                     });
                 }
                 @Override
                 public void windowLostFocus(WindowEvent e) {
-                    SwingFXUtils.runOnFxThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            ungrabFocus(true);
-                        }
+                    SwingFXUtils.runOnFxThread(() -> {
+                        ungrabFocus(true);
                     });
                 }
             });
@@ -228,14 +216,11 @@ public class SwingNode extends Node {
             lwFrame.setSize((int)width, (int)height);
             lwFrame.setVisible(true);
 
-            SwingFXUtils.runOnFxThread(new Runnable() {
-                @Override
-                public void run() {
-                    locateLwFrame(); // initialize location
+            SwingFXUtils.runOnFxThread(() -> {
+                locateLwFrame(); // initialize location
 
-                    if (focusedProperty().get()) {
-                        activateLwFrame(true);
-                    }
+                if (focusedProperty().get()) {
+                    activateLwFrame(true);
                 }
             });
         }
@@ -251,11 +236,8 @@ public class SwingNode extends Node {
                         final int w, final int h,
                         final int linestride)
     {
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h, linestride);
-            }
+        Runnable r = () -> {
+            peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h, linestride);
         };
         if (peer != null) {
             SwingFXUtils.runOnFxThread(r);
@@ -269,11 +251,8 @@ public class SwingNode extends Node {
      * Called on EDT
      */
     void setImageBounds(final int x, final int y, final int w, final int h) {
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                peer.setImageBounds(x, y, w, h);
-            }
+        Runnable r = () -> {
+            peer.setImageBounds(x, y, w, h);
         };
         if (peer != null) {
             SwingFXUtils.runOnFxThread(r);
@@ -286,12 +265,9 @@ public class SwingNode extends Node {
      * Called on EDT
      */
     void repaintDirtyRegion(final int dirtyX, final int dirtyY, final int dirtyWidth, final int dirtyHeight) {
-        Runnable r = new Runnable() {
-            @Override
-            public void run() {
-                peer.repaintDirtyRegion(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
-                impl_markDirty(DirtyBits.NODE_CONTENTS);
-            }
+        Runnable r = () -> {
+            peer.repaintDirtyRegion(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+            impl_markDirty(DirtyBits.NODE_CONTENTS);
         };
         if (peer != null) {
             SwingFXUtils.runOnFxThread(r);
@@ -322,12 +298,9 @@ public class SwingNode extends Node {
             this.height = height;
             impl_geomChanged();
             impl_markDirty(DirtyBits.NODE_GEOMETRY);
-            SwingFXUtils.runOnEDT(new Runnable() {
-                @Override
-                public void run() {
-                    if (lwFrame != null) {
-                        lwFrame.setSize((int) width, (int) height);
-                    }
+            SwingFXUtils.runOnEDT(() -> {
+                if (lwFrame != null) {
+                    lwFrame.setSize((int) width, (int) height);
                 }
             });
         }
@@ -400,42 +373,30 @@ public class SwingNode extends Node {
         return true;
     }
 
-    private final InvalidationListener locationListener = new InvalidationListener() {
-        @Override
-        public void invalidated(Observable observable) {
-            locateLwFrame();
+    private final InvalidationListener locationListener = observable -> {
+        locateLwFrame();
+    };
+
+    private final EventHandler<FocusUngrabEvent> ungrabHandler = event -> {
+        if (!skipBackwardUnrgabNotification) {
+            AccessController.doPrivileged(new PostEventAction(new UngrabEvent(lwFrame)));
         }
     };
 
-    private final EventHandler<FocusUngrabEvent> ungrabHandler = new EventHandler<FocusUngrabEvent>() {
-        @Override
-        public void handle(FocusUngrabEvent event) {
-            if (!skipBackwardUnrgabNotification) {
-                AccessController.doPrivileged(new PostEventAction(new UngrabEvent(lwFrame)));
-            }
+    private final ChangeListener<Boolean> windowVisibleListener = (observable, oldValue, newValue) -> {
+        if (!newValue) {
+            disposeLwFrame();
+        } else {
+            setContent(content);
         }
     };
 
-    private final ChangeListener<Boolean> windowVisibleListener = new ChangeListener<Boolean>() {
-        @Override
-        public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-            if (!newValue) {
-                disposeLwFrame();
-            } else {
-                setContent(content);
-            }
+    private final ChangeListener<Window> sceneWindowListener = (observable, oldValue, newValue) -> {
+        if (oldValue != null) {
+            removeWindowListeners(oldValue);
         }
-    };
-
-    private final ChangeListener<Window> sceneWindowListener = new ChangeListener<Window>() {
-        @Override
-        public void changed(ObservableValue<? extends Window> observable, Window oldValue, Window newValue) {
-            if (oldValue != null) {
-                removeWindowListeners(oldValue);
-            }
-            if (newValue != null) {
-                addWindowListeners(newValue);
-            }
+        if (newValue != null) {
+            addWindowListeners(newValue);
         }
     };
 
@@ -482,29 +443,23 @@ public class SwingNode extends Node {
             addSceneListeners(getScene());
         }
 
-        sceneProperty().addListener(new ChangeListener<Scene>() {
-            @Override
-            public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
-                if (oldValue != null) {
-                    // Removed from scene
-                    removeSceneListeners(oldValue);
-                    disposeLwFrame();
+        sceneProperty().addListener((observable, oldValue, newValue) -> {
+            if (oldValue != null) {
+                // Removed from scene
+                removeSceneListeners(oldValue);
+                disposeLwFrame();
+            }
+            if (newValue != null) {
+                // Added to another scene
+                if (content != null && lwFrame == null) {
+                    setContent(content);
                 }
-                if (newValue != null) {
-                    // Added to another scene
-                    if (content != null && lwFrame == null) {
-                        setContent(content);
-                    }
-                    addSceneListeners(newValue);
-                }
+                addSceneListeners(newValue);
             }
         });
 
-        impl_treeVisibleProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                setLwFrameVisible(newValue);
-            }
+        impl_treeVisibleProperty().addListener((observable, oldValue, newValue) -> {
+            setLwFrameVisible(newValue);
         });
 
         return peer;
@@ -537,13 +492,10 @@ public class SwingNode extends Node {
         final int sceneX = (int)getScene().getX();
         final int sceneY = (int)getScene().getY();
 
-        SwingFXUtils.runOnEDT(new Runnable() {
-            @Override
-            public void run() {
-                if (lwFrame != null) {
-                    lwFrame.setLocation(windowX + sceneX + (int) loc.getX(),
-                            windowY + sceneY + (int) loc.getY());
-                }
+        SwingFXUtils.runOnEDT(() -> {
+            if (lwFrame != null) {
+                lwFrame.setLocation(windowX + sceneX + (int) loc.getX(),
+                        windowY + sceneY + (int) loc.getY());
             }
         });
     }
@@ -552,12 +504,9 @@ public class SwingNode extends Node {
         if (lwFrame == null) {
             return;
         }
-        SwingFXUtils.runOnEDT(new Runnable() {
-            @Override
-            public void run() {
-                if (lwFrame != null) {
-                    lwFrame.emulateActivation(activate);
-                }
+        SwingFXUtils.runOnEDT(() -> {
+            if (lwFrame != null) {
+                lwFrame.emulateActivation(activate);
             }
         });
     }
@@ -566,13 +515,10 @@ public class SwingNode extends Node {
         if (lwFrame == null) {
             return;
         }
-        SwingFXUtils.runOnEDT(new Runnable() {
-            @Override
-            public void run() {
-                if (lwFrame != null) {
-                    lwFrame.dispose();
-                    lwFrame = null;
-                }
+        SwingFXUtils.runOnEDT(() -> {
+            if (lwFrame != null) {
+                lwFrame.dispose();
+                lwFrame = null;
             }
         });
     }
@@ -581,12 +527,9 @@ public class SwingNode extends Node {
         if (lwFrame == null) {
             return;
         }
-        SwingFXUtils.runOnEDT(new Runnable() {
-            @Override
-            public void run() {
-                if (lwFrame != null) {
-                    lwFrame.setVisible(visible);
-                }
+        SwingFXUtils.runOnEDT(() -> {
+            if (lwFrame != null) {
+                lwFrame.setVisible(visible);
             }
         });
     }
@@ -634,67 +577,49 @@ public class SwingNode extends Node {
         }
         @Override
         public void focusGrabbed() {
-            SwingFXUtils.runOnFxThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (getScene() != null &&
-                            getScene().getWindow() != null &&
-                            getScene().getWindow().impl_getPeer() != null) {
-                        getScene().getWindow().impl_getPeer().grabFocus();
-                        grabbed = true;
-                    }
+            SwingFXUtils.runOnFxThread(() -> {
+                if (getScene() != null &&
+                        getScene().getWindow() != null &&
+                        getScene().getWindow().impl_getPeer() != null) {
+                    getScene().getWindow().impl_getPeer().grabFocus();
+                    grabbed = true;
                 }
             });
         }
         @Override
         public void focusUngrabbed() {
-            SwingFXUtils.runOnFxThread(new Runnable() {
-                @Override
-                public void run() {
-                    ungrabFocus(false);
-                }
+            SwingFXUtils.runOnFxThread(() -> {
+                ungrabFocus(false);
             });
         }
         @Override
         public void preferredSizeChanged(final int width, final int height) {
-            SwingFXUtils.runOnFxThread(new Runnable() {
-                @Override
-                public void run() {
-                    SwingNode.this.prefWidth = width;
-                    SwingNode.this.prefHeight = height;
-                    SwingNode.this.impl_notifyLayoutBoundsChanged();
-                }
-            });            
+            SwingFXUtils.runOnFxThread(() -> {
+                SwingNode.this.prefWidth = width;
+                SwingNode.this.prefHeight = height;
+                SwingNode.this.impl_notifyLayoutBoundsChanged();
+            });
         }
         @Override
         public void maximumSizeChanged(final int width, final int height) {
-            SwingFXUtils.runOnFxThread(new Runnable() {
-                @Override
-                public void run() {
-                    SwingNode.this.maxWidth = width;
-                    SwingNode.this.maxHeight = height;
-                    SwingNode.this.impl_notifyLayoutBoundsChanged();
-                }
-            });            
+            SwingFXUtils.runOnFxThread(() -> {
+                SwingNode.this.maxWidth = width;
+                SwingNode.this.maxHeight = height;
+                SwingNode.this.impl_notifyLayoutBoundsChanged();
+            });
         }
         @Override
         public void minimumSizeChanged(final int width, final int height) {
-            SwingFXUtils.runOnFxThread(new Runnable() {
-                @Override
-                public void run() {
-                    SwingNode.this.minWidth = width;
-                    SwingNode.this.minHeight = height;
-                    SwingNode.this.impl_notifyLayoutBoundsChanged();
-                }
-            });            
+            SwingFXUtils.runOnFxThread(() -> {
+                SwingNode.this.minWidth = width;
+                SwingNode.this.minHeight = height;
+                SwingNode.this.impl_notifyLayoutBoundsChanged();
+            });
         }
 
         public void setCursor(Cursor cursor) {
-            SwingFXUtils.runOnFxThread(new Runnable() {
-                @Override
-                public void run() {
-                    SwingNode.this.setCursor(SwingCursors.embedCursorToCursor(cursor));
-                }
+            SwingFXUtils.runOnFxThread(() -> {
+                SwingNode.this.setCursor(SwingCursors.embedCursorToCursor(cursor));
             });
         }
     }

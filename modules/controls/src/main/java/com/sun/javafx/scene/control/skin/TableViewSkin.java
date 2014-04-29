@@ -25,13 +25,18 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -40,6 +45,7 @@ import javafx.scene.control.TableRow;
 import javafx.scene.control.TableSelectionModel;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewFocusModel;
+import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
@@ -58,60 +64,39 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         
         super.init(tableView);
 
-        EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) { 
-                // RT-15127: cancel editing on scroll. This is a bit extreme
-                // (we are cancelling editing on touching the scrollbars).
-                // This can be improved at a later date.
-                if (tableView.getEditingCell() != null) {
-                    tableView.edit(-1, null);
-                }
-                
-                // This ensures that the table maintains the focus, even when the vbar
-                // and hbar controls inside the flow are clicked. Without this, the
-                // focus border will not be shown when the user interacts with the
-                // scrollbars, and more importantly, keyboard navigation won't be
-                // available to the user.
-                tableView.requestFocus(); 
+        EventHandler<MouseEvent> ml = event -> {
+            // RT-15127: cancel editing on scroll. This is a bit extreme
+            // (we are cancelling editing on touching the scrollbars).
+            // This can be improved at a later date.
+            if (tableView.getEditingCell() != null) {
+                tableView.edit(-1, null);
             }
+
+            // This ensures that the table maintains the focus, even when the vbar
+            // and hbar controls inside the flow are clicked. Without this, the
+            // focus border will not be shown when the user interacts with the
+            // scrollbars, and more importantly, keyboard navigation won't be
+            // available to the user.
+            tableView.requestFocus();
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 
         // init the behavior 'closures'
         TableViewBehavior<T> behavior = getBehavior();
-        behavior.setOnFocusPreviousRow(new Runnable() {
-            @Override public void run() { onFocusPreviousCell(); }
-        });
-        behavior.setOnFocusNextRow(new Runnable() {
-            @Override public void run() { onFocusNextCell(); }
-        });
-        behavior.setOnMoveToFirstCell(new Runnable() {
-            @Override public void run() { onMoveToFirstCell(); }
-        });
-        behavior.setOnMoveToLastCell(new Runnable() {
-            @Override public void run() { onMoveToLastCell(); }
-        });
-        behavior.setOnScrollPageDown(new Callback<Boolean, Integer>() {
-            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageDown(isFocusDriven); }
-        });
-        behavior.setOnScrollPageUp(new Callback<Boolean, Integer>() {
-            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageUp(isFocusDriven); }
-        });
-        behavior.setOnSelectPreviousRow(new Runnable() {
-            @Override public void run() { onSelectPreviousCell(); }
-        });
-        behavior.setOnSelectNextRow(new Runnable() {
-            @Override public void run() { onSelectNextCell(); }
-        });
-        behavior.setOnSelectLeftCell(new Runnable() {
-            @Override public void run() { onSelectLeftCell(); }
-        });
-        behavior.setOnSelectRightCell(new Runnable() {
-            @Override public void run() { onSelectRightCell(); }
-        });
+        behavior.setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
+        behavior.setOnFocusNextRow(() -> { onFocusNextCell(); });
+        behavior.setOnMoveToFirstCell(() -> { onMoveToFirstCell(); });
+        behavior.setOnMoveToLastCell(() -> { onMoveToLastCell(); });
+        behavior.setOnScrollPageDown(isFocusDriven -> onScrollPageDown(isFocusDriven));
+        behavior.setOnScrollPageUp(isFocusDriven -> onScrollPageUp(isFocusDriven));
+        behavior.setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
+        behavior.setOnSelectNextRow(() -> { onSelectNextCell(); });
+        behavior.setOnSelectLeftCell(() -> { onSelectLeftCell(); });
+        behavior.setOnSelectRightCell(() -> { onSelectRightCell(); });
 
         registerChangeListener(tableView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
+
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
@@ -250,7 +235,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
             
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
                 getChildren().add(cell);
-                cell.impl_processCSS(false);
+                cell.applyCss();
                 maxWidth = Math.max(maxWidth, cell.prefWidth(-1));
                 getChildren().remove(cell);
             }
@@ -294,7 +279,26 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         }
     }
     
-    
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case SELECTED_CELLS: {
+                List<Node> selection = new ArrayList<>();
+                TableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                for (TablePosition pos : sm.getSelectedCells()) {
+                    TableRow<T> row = flow.getPrivateCell(pos.getRow());
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            case FOCUS_ITEM: // TableViewSkinBase
+            case CELL_AT_ROW_COLUMN: // TableViewSkinBase
+            case COLUMN_AT_INDEX: // TableViewSkinBase
+            case HEADER: // TableViewSkinBase
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
     /***************************************************************************
      *                                                                         *
      * Layout                                                                  *

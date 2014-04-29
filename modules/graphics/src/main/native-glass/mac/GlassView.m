@@ -173,6 +173,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1initIDs
     {
         jViewNotifyDragEnd = (*env)->GetMethodID(env, jViewClass, "notifyDragEnd", "(I)V");
     }
+
+    if (jViewGetAccessible == NULL)
+    {
+        jViewGetAccessible = (*env)->GetMethodID(env, jViewClass, "getAccessible", "()J");
+    }
     
     if (jMapGetMethod == NULL)
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.SubSceneTraversalEngine;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
@@ -50,7 +53,6 @@ import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.SubSceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
@@ -241,12 +243,8 @@ public class SubScene extends Node {
 
                     if (oldRoot != null) {
                         oldRoot.setScenes(null, null);
-                        oldRoot.setImpl_traversalEngine(null);
                     }
                     oldRoot = _value;
-                    if (_value.getImpl_traversalEngine() == null) {
-                        _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
-                    }
                     _value.getStyleClass().add(0, "root");
                     _value.setScenes(getScene(), SubScene.this);
                     markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
@@ -559,25 +557,25 @@ public class SubScene extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override
-    protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
+    protected void impl_processCSS(WritableValue<Boolean> unused) {
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) { return; }
 
         if (getRoot().cssFlag == CssFlags.CLEAN) {
             getRoot().cssFlag = cssFlag;
         }
-        super.impl_processCSS(cacheHint);
-        getRoot().processCSS(cacheHint);
+        super.impl_processCSS(unused);
+        getRoot().processCSS();
     }
 
     @Override
-    void processCSS(WritableValue<Boolean> cacheHint) {
+    void processCSS() {
         Parent root = getRoot();
         if (root.impl_isDirty(DirtyBits.NODE_CSS)) {
             root.impl_clearDirty(DirtyBits.NODE_CSS);
             if (cssFlag == CssFlags.CLEAN) { cssFlag = CssFlags.UPDATE; }
         }
-        super.processCSS(cacheHint);
+        super.processCSS();
     }
 
     @Override void updateBounds() {
@@ -642,6 +640,12 @@ public class SubScene extends Node {
             }
             dirtyLayout = false;
         }
+    }
+
+    private TopMostTraversalEngine traversalEngine = new SubSceneTraversalEngine(this);
+
+    boolean traverse(Node node, Direction dir) {
+        return traversalEngine.trav(node, dir) != null;
     }
 
     private enum SubSceneDirtyBits {

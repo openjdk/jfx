@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -300,7 +300,7 @@ public class StylesheetTest {
             root.getChildren().add(rect);
             Scene scene = new Scene(root, 500, 500);
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows inline style works.
             assertEquals(Color.RED, rect.getFill());
@@ -310,7 +310,7 @@ public class StylesheetTest {
 
             // loop in style!
             rect.setStyle("-fx-base: -fx-fill; -fx-fill: -fx-base;");
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows value was left alone
             assertNull(rect.getFill());
@@ -335,7 +335,7 @@ public class StylesheetTest {
             root.getChildren().add(rect);
             Scene scene = new Scene(root, 500, 500);
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows inline style works.
             assertTrue(rect.getFill() instanceof RadialGradient);
@@ -346,7 +346,7 @@ public class StylesheetTest {
             // loop in style!
             rect.setStyle("-fx-base: -fx-color; -fx-color: -fx-base; -fx-fill: radial-gradient(radius 100%, red, -fx-color);");
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows value was left alone
             assertNull(rect.getFill());
@@ -376,7 +376,7 @@ public class StylesheetTest {
             root.getChildren().add(pane);
             Scene scene = new Scene(root, 500, 500);
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows inline style works.
             assertTrue(rect.getFill() instanceof RadialGradient);
@@ -387,7 +387,7 @@ public class StylesheetTest {
             // loop in style
             root.setStyle("-fx-base: -fx-color;");
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows value was left alone
             assertNull(rect.getFill());
@@ -411,7 +411,7 @@ public class StylesheetTest {
             root.getChildren().add(rect);
             Scene scene = new Scene(root, 500, 500);
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows inline style works.
             assertTrue(rect.getFill() instanceof RadialGradient);
@@ -424,7 +424,7 @@ public class StylesheetTest {
             rect.setStyle("-fx-fill: radial-gradient(radius 100%, derive(-fx-base, -25%), derive(-fx-base, 25%));");
 
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows value was left alone
             assertNull(rect.getFill());

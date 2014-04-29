@@ -220,10 +220,8 @@ public class CheckBoxTreeItemTest {
     
     private int selectedEventCount = 0;
     @Test public void testSelectedPropertyEvent() {
-        treeItem.selectedProperty().addListener(new ChangeListener<Object>() {
-            public void changed(javafx.beans.value.ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
-                selectedEventCount++;
-            }
+        treeItem.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            selectedEventCount++;
         });
         
         // no event when the value is unchanged
@@ -259,10 +257,8 @@ public class CheckBoxTreeItemTest {
     
     private int indeterminateEventCount = 0;
     @Test public void testIndeterminatePropertyEvent() {
-        treeItem.indeterminateProperty().addListener(new ChangeListener<Object>() {
-            public void changed(javafx.beans.value.ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
-                indeterminateEventCount++;
-            }
+        treeItem.indeterminateProperty().addListener((observable, oldValue, newValue) -> {
+            indeterminateEventCount++;
         });
         
         // no event when the value is unchanged
@@ -298,10 +294,8 @@ public class CheckBoxTreeItemTest {
     
     private int independentEventCount = 0;
     @Test public void testIndependentPropertyEvent() {
-        treeItem.independentProperty().addListener(new ChangeListener<Object>() {
-            public void changed(javafx.beans.value.ObservableValue<? extends Object> observable, Object oldValue, Object newValue) {
-                independentEventCount++;
-            }
+        treeItem.independentProperty().addListener((observable, oldValue, newValue) -> {
+            independentEventCount++;
         });
         
         // no event when the value is unchanged
@@ -468,14 +462,12 @@ public class CheckBoxTreeItemTest {
     private int eventCount = 0;
     @Test public void testTreeModificationEvent_child1_onSelectionChanged() {
         assertEquals(0, eventCount);
-        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), new EventHandler<TreeModificationEvent<String>>() {
-            public void handle(TreeModificationEvent<String> event) {
-                eventCount++;
-                
-                assertTrue(event.wasSelectionChanged());
-                assertFalse(event.wasIndeterminateChanged());
-                assertEquals(child1, event.getTreeItem());
-            }
+        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), event -> {
+            eventCount++;
+
+            assertTrue(event.wasSelectionChanged());
+            assertFalse(event.wasIndeterminateChanged());
+            assertEquals(child1, event.getTreeItem());
         });
         
         child1.setSelected(true);
@@ -484,14 +476,12 @@ public class CheckBoxTreeItemTest {
     
     @Test public void testTreeModificationEvent_child1_onSelectionChangedAgain() {
         assertEquals(0, eventCount);
-        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), new EventHandler<TreeModificationEvent<String>>() {
-            public void handle(TreeModificationEvent<String> event) {
-                eventCount++;
-                
-                assertTrue(event.wasSelectionChanged());
-                assertFalse(event.wasIndeterminateChanged());
-                assertEquals(child1, event.getTreeItem());
-            }
+        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), event -> {
+            eventCount++;
+
+            assertTrue(event.wasSelectionChanged());
+            assertFalse(event.wasIndeterminateChanged());
+            assertEquals(child1, event.getTreeItem());
         });
         
         child1.setSelected(true);
@@ -508,14 +498,12 @@ public class CheckBoxTreeItemTest {
     
     @Test public void testTreeModificationEvent_child1_onSelectionChangedOnRootWhenChild1IsSelected() {
         assertEquals(0, eventCount);
-        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), new EventHandler<TreeModificationEvent<String>>() {
-            public void handle(TreeModificationEvent<String> event) {
-                eventCount++;
-                
-                assertTrue(event.wasSelectionChanged());
-                assertFalse(event.wasIndeterminateChanged());
-                assertEquals(child1, event.getTreeItem());
-            }
+        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), event -> {
+            eventCount++;
+
+            assertTrue(event.wasSelectionChanged());
+            assertFalse(event.wasIndeterminateChanged());
+            assertEquals(child1, event.getTreeItem());
         });
         
         child1.setSelected(true);
@@ -528,14 +516,12 @@ public class CheckBoxTreeItemTest {
     
     @Test public void testTreeModificationEvent_child1_onSelectionChangedOnRootWhenChild1IsNotSelected() {
         assertEquals(0, eventCount);
-        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), new EventHandler<TreeModificationEvent<String>>() {
-            public void handle(TreeModificationEvent<String> event) {
-                eventCount++;
-                
-                assertTrue(event.wasSelectionChanged());
-                assertFalse(event.wasIndeterminateChanged());
-                assertEquals(child1, event.getTreeItem());
-            }
+        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), event -> {
+            eventCount++;
+
+            assertTrue(event.wasSelectionChanged());
+            assertFalse(event.wasIndeterminateChanged());
+            assertEquals(child1, event.getTreeItem());
         });
         
         // should increment when the root is changed and the child1 is unselected
@@ -551,14 +537,12 @@ public class CheckBoxTreeItemTest {
     
     @Test public void testTreeModificationEvent_child1_onIndeterminateChanged() {
         assertEquals(0, eventCount);
-        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), new EventHandler<TreeModificationEvent<String>>() {
-            public void handle(TreeModificationEvent<String> event) {
-                eventCount++;
-                
-                assertFalse(event.wasSelectionChanged());
-                assertTrue(event.wasIndeterminateChanged());
-                assertEquals(child1, event.getTreeItem());
-            }
+        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), event -> {
+            eventCount++;
+
+            assertFalse(event.wasSelectionChanged());
+            assertTrue(event.wasIndeterminateChanged());
+            assertEquals(child1, event.getTreeItem());
         });
         
         child1.setIndeterminate(true);
@@ -567,14 +551,12 @@ public class CheckBoxTreeItemTest {
     
     @Test public void testTreeModificationEvent_child1_onIndeterminateChangedAgain() {
         assertEquals(0, eventCount);
-        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), new EventHandler<TreeModificationEvent<String>>() {
-            public void handle(TreeModificationEvent<String> event) {
-                eventCount++;
-                
-                assertFalse(event.wasSelectionChanged());
-                assertTrue(event.wasIndeterminateChanged());
-                assertEquals(child1, event.getTreeItem());
-            }
+        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), event -> {
+            eventCount++;
+
+            assertFalse(event.wasSelectionChanged());
+            assertTrue(event.wasIndeterminateChanged());
+            assertEquals(child1, event.getTreeItem());
         });
         
         child1.setIndeterminate(true);
@@ -591,14 +573,12 @@ public class CheckBoxTreeItemTest {
     
     @Test public void testTreeModificationEvent_child1_onIndeterminateChangedOnRootWhenChild1IsIndeterminate() {
         assertEquals(0, eventCount);
-        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), new EventHandler<TreeModificationEvent<String>>() {
-            public void handle(TreeModificationEvent<String> event) {
-                eventCount++;
-                
-                assertFalse(event.wasSelectionChanged());
-                assertTrue(event.wasIndeterminateChanged());
-                assertEquals(child1, event.getTreeItem());
-            }
+        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), event -> {
+            eventCount++;
+
+            assertFalse(event.wasSelectionChanged());
+            assertTrue(event.wasIndeterminateChanged());
+            assertEquals(child1, event.getTreeItem());
         });
         
         child1.setIndeterminate(true);
@@ -611,14 +591,12 @@ public class CheckBoxTreeItemTest {
     
     @Test public void testTreeModificationEvent_child1_onIndeterminateChangedOnRootWhenChild1IsNotIndeterminate() {
         assertEquals(0, eventCount);
-        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), new EventHandler<TreeModificationEvent<String>>() {
-            public void handle(TreeModificationEvent<String> event) {
-                eventCount++;
-                
-                assertFalse(event.wasSelectionChanged());
-                assertTrue(event.wasIndeterminateChanged());
-                assertEquals(child1, event.getTreeItem());
-            }
+        child1.addEventHandler(CheckBoxTreeItem.<String>checkBoxSelectionChangedEvent(), event -> {
+            eventCount++;
+
+            assertFalse(event.wasSelectionChanged());
+            assertTrue(event.wasIndeterminateChanged());
+            assertEquals(child1, event.getTreeItem());
         });
         
         root.setIndeterminate(true);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,8 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -115,32 +117,28 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     public DatePicker() {
         this(null);
 
-        valueProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                LocalDate date = getValue();
-                Chronology chrono = getChronology();
+        valueProperty().addListener(observable -> {
+            LocalDate date = getValue();
+            Chronology chrono = getChronology();
 
-                if (validateDate(chrono, date)) {
-                    lastValidDate = date;
-                } else {
-                    System.err.println("Restoring value to " +
-                                ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
-                    setValue(lastValidDate);
-                }
+            if (validateDate(chrono, date)) {
+                lastValidDate = date;
+            } else {
+                System.err.println("Restoring value to " +
+                            ((lastValidDate == null) ? "null" : getConverter().toString(lastValidDate)));
+                setValue(lastValidDate);
             }
         });
 
-        chronologyProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                LocalDate date = getValue();
-                Chronology chrono = getChronology();
+        chronologyProperty().addListener(observable -> {
+            LocalDate date = getValue();
+            Chronology chrono = getChronology();
 
-                if (validateDate(chrono, date)) {
-                    lastValidChronology = chrono;
-                } else {
-                    System.err.println("Restoring value to " + lastValidChronology);
-                    setChronology(lastValidChronology);
-                }
+            if (validateDate(chrono, date)) {
+                lastValidChronology = chrono;
+            } else {
+                System.err.println("Restoring value to " + lastValidChronology);
+                setChronology(lastValidChronology);
             }
         });
     }
@@ -359,6 +357,35 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      *   });
      * </code></pre>
      *
+     * <p>The default base year for parsing input containing only two digits for
+     * the year is 2000 (see {@link java.time.format.DateTimeFormatter}).  This
+     * default is not useful for allowing a person's date of birth to be typed.
+     * The following example modifies the converter's fromString() method to
+     * allow a two digit year for birth dates up to 99 years in the past.
+     * <pre><code>
+     *   &#064;Override public LocalDate fromString(String text) {
+     *       if (text != null && !text.isEmpty()) {
+     *           Locale locale = Locale.getDefault(Locale.Category.FORMAT);
+     *           Chronology chrono = datePicker.getChronology();
+     *           String pattern =
+     *               DateTimeFormatterBuilder.getLocalizedDateTimePattern(FormatStyle.SHORT,
+     *                                                                    null, chrono, locale);
+     *           String prePattern = pattern.substring(0, pattern.indexOf("y"));
+     *           String postPattern = pattern.substring(pattern.lastIndexOf("y")+1);
+     *           int baseYear = LocalDate.now().getYear() - 99;
+     *           DateTimeFormatter df = new DateTimeFormatterBuilder()
+     *                       .parseLenient()
+     *                       .appendPattern(prePattern)
+     *                       .appendValueReduced(ChronoField.YEAR, 2, 2, baseYear)
+     *                       .appendPattern(postPattern)
+     *                       .toFormatter();
+     *           return LocalDate.from(chrono.date(df.parse(text)));
+     *       } else {
+     *           return null;
+     *       }
+     *   }
+     * </code></pre>
+     *
      * @see javafx.scene.control.ComboBox#converterProperty
      */
     public final ObjectProperty<StringConverter<LocalDate>> converterProperty() { return converter; }
@@ -513,4 +540,28 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.DATE_PICKER;
+            case DATE: return getValue();
+            case TITLE: {
+                LocalDate date = getValue();
+                StringConverter<LocalDate> c = getConverter();
+                if (date != null && c != null) {
+                    return c.toString(date);
+                }
+                return "";
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
 }

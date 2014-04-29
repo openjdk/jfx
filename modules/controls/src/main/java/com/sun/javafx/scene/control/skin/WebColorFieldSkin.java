@@ -48,10 +48,8 @@ class WebColorFieldSkin extends InputFieldSkin {
         // Whenever the value changes on the control, we need to update the text
         // in the TextField. The only time this is not the case is when the update
         // to the control happened as a result of an update in the text textField.
-        control.valueProperty().addListener(integerFieldValueListener = new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                updateText();
-            }
+        control.valueProperty().addListener(integerFieldValueListener = observable -> {
+            updateText();
         });
     }
 

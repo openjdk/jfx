@@ -181,11 +181,7 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<T> converter) {
-        return new Callback<TableColumn<S,T>, TableCell<S,T>>() {
-            @Override public TableCell<S,T> call(TableColumn<S,T> list) {
-                return new CheckBoxTableCell<S,T>(getSelectedProperty, converter);
-            }
-        };
+        return list -> new CheckBoxTableCell<S,T>(getSelectedProperty, converter);
     }
     
     

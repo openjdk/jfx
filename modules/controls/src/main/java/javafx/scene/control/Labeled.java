@@ -53,6 +53,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Region;
@@ -130,7 +131,7 @@ public abstract class Labeled extends Control {
      */
     public Labeled(String text, Node graphic) {
         setText(text);
-        setGraphic(graphic);
+        ((StyleableProperty<Node>)graphicProperty()).applyStyle(null, graphic);
     }
 
     /***************************************************************************
@@ -471,11 +472,22 @@ public abstract class Labeled extends Control {
                 protected void invalidated() {
 
                     // need to call super.get() here since get() is overridden to return the graphicProperty's value
-                    String url = super.get();
+                    final String url = super.get();
 
                     if (url == null) {
                         ((StyleableProperty)graphicProperty()).applyStyle(origin, null);
                     } else {
+                        // RT-34466 - if graphic's url is the same as this property's value, then don't overwrite.
+                        final Node graphicNode = Labeled.this.getGraphic();
+                        if (graphicNode instanceof ImageView) {
+                            final ImageView imageView = (ImageView)graphicNode;
+                            final Image image = imageView.getImage();
+                            if (image != null) {
+                                final String imageViewUrl = image.impl_getUrl();
+                                if (url.equals(imageViewUrl)) return;
+                            }
+
+                        }
 
                         final Image img = StyleManager.getInstance().getCachedImage(url);
 
@@ -1053,4 +1065,18 @@ public abstract class Labeled extends Control {
         return getClassCssMetaData();
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TITLE: //fall through so that mnemonic can be properly handled
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
  }

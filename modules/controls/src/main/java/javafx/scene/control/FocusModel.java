@@ -48,12 +48,10 @@ public abstract class FocusModel<T> {
      * Creates a default FocusModel instance.
      */
     public FocusModel() {
-        focusedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                // we used to lazily retrieve the focused item, but now we just
-                // do it when the focused index changes.
-                setFocusedItem(getModelItem(getFocusedIndex()));
-            }
+        focusedIndexProperty().addListener(valueModel -> {
+            // we used to lazily retrieve the focused item, but now we just
+            // do it when the focused index changes.
+            setFocusedItem(getModelItem(getFocusedIndex()));
         });
     }
 

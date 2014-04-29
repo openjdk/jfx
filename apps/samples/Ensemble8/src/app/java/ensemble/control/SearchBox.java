@@ -57,10 +57,8 @@ public class SearchBox extends TextField implements ChangeListener<String>{
         setPrefHeight(30);
         clearButton.getStyleClass().setAll("search-clear-button");
         clearButton.setCursor(Cursor.DEFAULT);
-        clearButton.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {
-                setText("");
-            }
+        clearButton.setOnMouseClicked((MouseEvent t) -> {
+            setText("");
         });
         clearButton.setVisible(false);
         clearButton.setManaged(false);

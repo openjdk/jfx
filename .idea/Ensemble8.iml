@@ -24,8 +24,19 @@
       <sourceFolder url="file://$MODULE_DIR$/apps/samples/Ensemble8/src/generated/java" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/apps/samples/Ensemble8/src/generated/resources" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/apps/samples/Ensemble8/build" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/samples/Ensemble8/nbproject" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="rt" />
+    <orderEntry type="module-library">
+      <library name="lucene-grouping-3.2.0.jar">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/apps/samples/Ensemble8/lib/lucene-grouping-3.2.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
     <orderEntry type="module-library">
       <library name="lucene-core-3.2.0.jar">
         <CLASSES>
@@ -36,18 +47,6 @@
       </library>
     </orderEntry>
     <orderEntry type="module-library">
-      <library name="lucene-grouping-3.2.0.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/apps/samples/Ensemble8/lib/lucene-grouping-3.2.0.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module" module-name="rt" />
-    <orderEntry type="inheritedJdk" />
-    <orderEntry type="module" module-name="builders" />
-    <orderEntry type="module-library">
       <library>
         <CLASSES>
           <root url="jar://$MODULE_DIR$/../caches/sdk/rt/lib/ext/jfxrt.jar!/" />
@@ -56,6 +55,7 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="inheritedJdk" />
   </component>
 </module>
 

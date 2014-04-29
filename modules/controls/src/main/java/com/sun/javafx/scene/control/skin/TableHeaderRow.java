@@ -25,10 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -193,10 +190,8 @@ public class TableHeaderRow extends StackPane {
 
         // Give focus to the table when an empty area of the header row is clicked.
         // This ensures the user knows that the table has focus.
-        setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {
-                skin.getSkinnable().requestFocus();
-            }
+        setOnMousePressed(e -> {
+            skin.getSkinnable().requestFocus();
         });
 
         // build the corner region button for showing the popup menu
@@ -216,18 +211,14 @@ public class TableHeaderRow extends StackPane {
         cornerRegion.getStyleClass().setAll("show-hide-columns-button");
         cornerRegion.getChildren().addAll(image);
         cornerRegion.setVisible(tableSkin.tableMenuButtonVisibleProperty().get());
-        tableSkin.tableMenuButtonVisibleProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                cornerRegion.setVisible(tableSkin.tableMenuButtonVisibleProperty().get());
-                requestLayout();
-            }
+        tableSkin.tableMenuButtonVisibleProperty().addListener(valueModel -> {
+            cornerRegion.setVisible(tableSkin.tableMenuButtonVisibleProperty().get());
+            requestLayout();
         });
-        cornerRegion.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                // show a popupMenu which lists all columns
-                columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
-                me.consume();
-            }
+        cornerRegion.setOnMousePressed(me -> {
+            // show a popupMenu which lists all columns
+            columnPopupMenu.show(cornerRegion, Side.BOTTOM, 0, 0);
+            me.consume();
         });
 
         // the actual header
@@ -245,16 +236,12 @@ public class TableHeaderRow extends StackPane {
      *                                                                         *
      **************************************************************************/    
     
-    private InvalidationListener tableWidthListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateTableWidth();
-        }
+    private InvalidationListener tableWidthListener = valueModel -> {
+        updateTableWidth();
     };
 
-    private InvalidationListener tablePaddingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateTableWidth();
-        }
+    private InvalidationListener tablePaddingListener = valueModel -> {
+        updateTableWidth();
     };
     
     private ListChangeListener visibleLeafColumnsListener = new ListChangeListener<TableColumn<?,?>>() {
@@ -264,21 +251,17 @@ public class TableHeaderRow extends StackPane {
         }
     };
     
-    private final ListChangeListener tableColumnsListener = new ListChangeListener<TableColumn<?,?>>() {
-        @Override public void onChanged(Change<? extends TableColumn<?,?>> c) {
-            while (c.next()) {
-                updateTableColumnListeners(c.getAddedSubList(), c.getRemoved());
-            }
+    private final ListChangeListener tableColumnsListener = c -> {
+        while (c.next()) {
+            updateTableColumnListeners(c.getAddedSubList(), c.getRemoved());
         }
     };
     
-    private final InvalidationListener columnTextListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            TableColumn<?,?> column = (TableColumn<?,?>) ((StringProperty)observable).getBean();
-            CheckMenuItem menuItem = columnMenuItems.get(column);
-            if (menuItem != null) {
-                menuItem.setText(getText(column.getText(), column));
-            }
+    private final InvalidationListener columnTextListener = observable -> {
+        TableColumn<?,?> column = (TableColumn<?,?>) ((StringProperty)observable).getBean();
+        CheckMenuItem menuItem = columnMenuItems.get(column);
+        if (menuItem != null) {
+            menuItem.setText(getText(column.getText(), column));
         }
     };
     
@@ -317,6 +300,10 @@ public class TableHeaderRow extends StackPane {
         
         // position the filler region
         final Control control = tableSkin.getSkinnable();
+        if (control == null) {
+            return;
+        }
+
         final double controlInsets = control.snappedLeftInset() + control.snappedRightInset();
         double fillerWidth = tableWidth - headerWidth + filler.getInsets().getLeft() - controlInsets;
         fillerWidth -= tableSkin.tableMenuButtonVisibleProperty().get() ? cornerWidth : 0;
@@ -412,6 +399,45 @@ public class TableHeaderRow extends StackPane {
         clip.setWidth(tableWidth);
     }
 
+    public TableColumnHeader getColumnHeaderFor(final TableColumnBase<?,?> col) {
+        if (col == null) return null;
+        List<TableColumnBase<?,?>> columnChain = new ArrayList<>();
+        columnChain.add(col);
+
+        TableColumnBase<?,?> parent = col.getParentColumn();
+        while (parent != null) {
+            columnChain.add(0, parent);
+            parent = parent.getParentColumn();
+        }
+
+        // we now have a list from top to bottom of a nested column hierarchy,
+        // and we can now navigate down to retrieve the header with ease
+        TableColumnHeader currentHeader = getRootHeader();
+        for (int depth = 0; depth < columnChain.size(); depth++) {
+            // this is the column we are looking for at this depth
+            TableColumnBase<?,?> column = columnChain.get(depth);
+
+            // and now we iterate through the nested table column header at this
+            // level to get the header
+            currentHeader = getColumnHeaderFor(column, currentHeader);
+        }
+        return currentHeader;
+    }
+
+    public TableColumnHeader getColumnHeaderFor(final TableColumnBase<?,?> col, TableColumnHeader currentHeader) {
+        if (currentHeader instanceof NestedTableColumnHeader) {
+            List<TableColumnHeader> headers = ((NestedTableColumnHeader)currentHeader).getColumnHeaders();
+
+            for (int i = 0; i < headers.size(); i++) {
+                TableColumnHeader header = headers.get(i);
+                if (header.getTableColumn() == col) {
+                    return header;
+                }
+            }
+        }
+
+        return null;
+    }
 
 
     /***************************************************************************

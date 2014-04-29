@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,9 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.ListCellSkin;
+import java.lang.ref.WeakReference;
+import java.util.List;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -36,15 +38,12 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-
 import javafx.collections.WeakListChangeListener;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
-import java.lang.ref.WeakReference;
-import java.util.List;
-
+import com.sun.javafx.scene.control.skin.ListCellSkin;
 
 /**
  * <p>The {@link Cell} type used within {@link ListView} instances. In addition 
@@ -105,10 +104,8 @@ public class ListCell<T> extends IndexedCell<T> {
      * editing. In such a case, we need to be notified so we can call startEdit
      * on our side.
      */
-    private final InvalidationListener editingListener = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            updateEditing();
-        }
+    private final InvalidationListener editingListener = value -> {
+        updateEditing();
     };
     private boolean updateEditingIndex = true;
 
@@ -116,10 +113,8 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the selection model on the ListView. Whenever the selection model
      * is changed (updated), the selected property on the ListCell is updated accordingly.
      */
-    private final ListChangeListener<Integer> selectedListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
-            updateSelection();
-        }
+    private final ListChangeListener<Integer> selectedListener = c -> {
+        updateSelection();
     };
 
     /**
@@ -150,10 +145,8 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the items on the ListView. Whenever the items are changed in such a way that
      * it impacts the index of this ListCell, then we must update the item.
      */
-    private final ListChangeListener<T> itemsListener = new ListChangeListener<T>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends T> c) {
-            updateItem();
-        }
+    private final ListChangeListener<T> itemsListener = c -> {
+        updateItem(-1);
     };
 
     /**
@@ -170,7 +163,7 @@ public class ListCell<T> extends IndexedCell<T> {
             if (newValue != null) {
                 newValue.addListener(weakItemsListener);
             }
-            updateItem();
+            updateItem(-1);
         }
     };
 
@@ -178,10 +171,8 @@ public class ListCell<T> extends IndexedCell<T> {
      * Listens to the focus model on the ListView. Whenever the focus model changes,
      * the focused property on the ListCell is updated
      */
-    private final InvalidationListener focusedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable value) {
-            updateFocus();
-        }
+    private final InvalidationListener focusedListener = value -> {
+        updateFocus();
     };
 
     /**
@@ -286,7 +277,7 @@ public class ListCell<T> extends IndexedCell<T> {
                 weakListViewRef = new WeakReference<ListView<T>>(currentListView);
             }
 
-            updateItem();
+            updateItem(-1);
             updateSelection();
             updateFocus();
             requestLayout();
@@ -304,15 +295,11 @@ public class ListCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    private int index = -1;
-
     /** {@inheritDoc} */
-    @Override void indexChanged() {
-        final int oldIndex = index;
-        super.indexChanged();
-        index = getIndex();
+    @Override void indexChanged(int oldIndex, int newIndex) {
+        super.indexChanged(oldIndex, newIndex);
 
-        if (isEditing() && index == oldIndex) {
+        if (isEditing() && newIndex == oldIndex) {
             // no-op
             // Fix for RT-31165 - if we (needlessly) update the index whilst the
             // cell is being edited it will no longer be in an editing state.
@@ -321,7 +308,7 @@ public class ListCell<T> extends IndexedCell<T> {
             // will not change to the editing state as a layout of VirtualFlow
             // is immediately invoked, which forces all cells to be updated.
         } else {
-            updateItem();
+            updateItem(oldIndex);
             updateSelection();
             updateFocus();
         }
@@ -436,7 +423,7 @@ public class ListCell<T> extends IndexedCell<T> {
      **************************************************************************/
 
     private boolean firstRun = true;
-    private void updateItem() {
+    private void updateItem(int oldIndex) {
         final ListView<T> lv = getListView();
         final List<T> items = lv == null ? null : lv.getItems();
         final int index = getIndex();
@@ -452,11 +439,13 @@ public class ListCell<T> extends IndexedCell<T> {
         if (valid) {
             final T newValue = items.get(index);
 
-            // There used to be conditional code here to prevent updateItem from
-            // being called when the value didn't change, but that led us to
-            // issues such as RT-33108, where the value didn't change but the item
-            // we needed to be listening to did. Without calling updateItem we
-            // were breaking things, so once again the conditionals are gone.
+            // RT-34566 - if the index didn't change, then avoid calling updateItem
+            // unless the item has changed.
+            if (oldIndex == index) {
+                if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
+                    return;
+                }
+            }
             updateItem(newValue, false);
         } else {
             // RT-30484 We need to allow a first run to be special-cased to allow
@@ -544,5 +533,58 @@ public class ListCell<T> extends IndexedCell<T> {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "list-cell";
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.LIST_ITEM;
+            case TITLE: {
+                String text = getText();
+                /* If the data bounded to cell is a Node
+                 * the default behavior is to hide the text
+                 * and use data as the graphics. (see ListViewSkin#createDefaultCellImpl).
+                 * If the text is empty try to get graphics. 
+                 */
+                if (text == null || text.isEmpty()) {
+                    if (getGraphic() != null) {
+                        text = (String)getGraphic().accGetAttribute(Attribute.TITLE);
+                    }
+                }
+                return text;
+            }
+            case INDEX: return getIndex();
+            case SELECTED: return isSelected();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        final ListView<T> listView = getListView();
+        final MultipleSelectionModel<T> sm = listView == null ? null : listView.getSelectionModel();
+        switch (action) {
+            case SELECT: {
+                if (sm != null) sm.clearAndSelect(getIndex());
+                break;
+            }
+            case ADD_TO_SELECTION: {
+                if (sm != null) sm.select(getIndex());
+                break;
+            }
+            case REMOVE_FROM_SELECTION: {
+                if (sm != null) sm.clearSelection(getIndex());
+                break;
+            }
+            default: super.accExecuteAction(action);
+        }
+    }
 }
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+    <!--
+    <classpathentry kind="src" path="Chess/ChessLibrary/src/main/java"/>
+    -->
+    <classpathentry combineaccessrules="false" kind="src" path="/rt">
+      <attributes>
+        <attribute name="optional" value="true"/>
+      </attributes>
+    </classpathentry>
+    <classpathentry kind="output" path="bin"/>
+</classpath>

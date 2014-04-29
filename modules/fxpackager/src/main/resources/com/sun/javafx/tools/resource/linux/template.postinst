@@ -17,11 +17,28 @@ set -e
 # for details, see http://www.debian.org/doc/debian-policy/ or
 # the debian-policy package
 
-
 case "$1" in
     configure)
         echo Adding shortcut to the menu
         cp /opt/APPLICATION_NAME/APPLICATION_NAME.desktop /usr/share/applications/
+
+        if [ "SERVICE_HINT" = "true" ]; then
+            echo Installing daemon
+            cp /opt/APPLICATION_NAME/APPLICATION_PACKAGE.init /etc/init.d/APPLICATION_PACKAGE
+
+            if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
+                update-rc.d APPLICATION_PACKAGE defaults
+
+                if [ "START_ON_INSTALL" = "true" ]; then
+                    if which invoke-rc.d >/dev/null 2>&1; then
+                        invoke-rc.d APPLICATION_PACKAGE start
+                    else
+                        /etc/init.d/APPLICATION_PACKAGE start
+                    fi
+                fi
+	        fi
+
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

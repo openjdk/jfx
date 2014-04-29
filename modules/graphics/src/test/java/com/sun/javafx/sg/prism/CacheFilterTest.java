@@ -25,11 +25,14 @@
 
 package com.sun.javafx.sg.prism;
 
+import com.sun.javafx.geom.RectBounds;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.geom.transform.GeneralTransform3D;
+import com.sun.javafx.geom.transform.Translate2D;
 import javafx.scene.CacheHint;
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  */
@@ -130,5 +133,25 @@ public class CacheFilterTest {
         cf.setHint(CacheHint.SCALE_AND_ROTATE);
         assertTrue(cf.isRotateHint());
         assertTrue(cf.isScaleHint());
+    }
+    
+    @Test public void cacheFilterReturnsCorrectDirtyBounds() {
+        
+        NGRectangle r = new NGRectangle();
+        r.updateRectangle(0.3f, 0.9f, 100.3f, 119.9f, 0, 0);
+        r.setTransformMatrix(BaseTransform.IDENTITY_TRANSFORM);
+        r.setTransformedBounds(new RectBounds(0.3f, 0.9f, 100.6f, 120.8f), false);
+        CacheFilter cf = new CacheFilter(r, CacheHint.DEFAULT);
+        RectBounds result = new RectBounds();
+        cf.computeDirtyBounds(result, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
+        assertEquals(new RectBounds(0, 0, 101, 121), result);
+        
+        r.clearDirty();
+        
+        final Translate2D translation = new Translate2D(10, 10);
+        r.setTransformMatrix(translation);
+        r.setTransformedBounds(new RectBounds(10.3f, 10, 110.6f, 130.8f), false);
+        cf.computeDirtyBounds(result, BaseTransform.IDENTITY_TRANSFORM, new GeneralTransform3D());
+        assertEquals(new RectBounds(0, 0, 111, 131), result);
     }
 }

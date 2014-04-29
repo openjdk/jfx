@@ -29,6 +29,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.javafx.scene.traversal.Algorithm;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -37,14 +40,16 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
-import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
-import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.CustomMenuItem;
@@ -68,11 +73,9 @@ import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.scene.traversal.TraverseListener;
 import javafx.css.Styleable;
 
-public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> implements TraverseListener {
+public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
 
     private Pane box;
     private ToolBarOverflowMenu overflowMenu;
@@ -83,8 +86,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
     private double savedPrefHeight = 0;
     private ObservableList<MenuItem> overflowMenuItems;
     private boolean needsUpdate = false;
-    private TraversalEngine engine;
-    private Direction direction;
+    private final ParentTraversalEngine engine;
 
     public ToolBarSkin(ToolBar toolbar) {
         super(toolbar, new ToolBarBehavior(toolbar));
@@ -92,52 +94,123 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         initialize();
         registerChangeListener(toolbar.orientationProperty(), "ORIENTATION");
 
-        engine = new TraversalEngine(getSkinnable(), false) {
-            @Override public void trav(Node owner, Direction dir) {
-                // This allows the right arrow to select the overflow menu
-                // without it only the tab key can select the overflow menu.
-                if (overflow) {
-                    engine.reg(overflowMenu);
+        engine = new ParentTraversalEngine(getSkinnable(), new Algorithm() {
+
+            private Node selectPrev(int from, TraversalContext context) {
+                for (int i = from; i >= 0; --i) {
+                    Node n = box.getChildren().get(i);
+                    if (n.isDisabled() || !n.impl_isTreeVisible()) continue;
+                    if (n instanceof Parent) {
+                        Node selected = context.selectLastInParent((Parent)n);
+                        if (selected != null) return selected;
+                    }
+                    if (n.isFocusTraversable() ) {
+                        return n;
+                    }
                 }
-                direction = dir;
-                super.trav(owner, dir);
-                if (overflow) {
-                    engine.unreg(overflowMenu);
-                }
+                return null;
             }
-        };
-        engine.addTraverseListener(this);
+
+            private Node selectNext(int from, TraversalContext context) {
+                for (int i = from, max = box.getChildren().size(); i < max; ++i) {
+                    Node n = box.getChildren().get(i);
+                    if (n.isDisabled() || !n.impl_isTreeVisible()) continue;
+                    if (n.isFocusTraversable()) {
+                        return n;
+                    }
+                    if (n instanceof Parent) {
+                        Node selected = context.selectFirstInParent((Parent)n);
+                        if (selected != null) return selected;
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public Node select(Node owner, Direction dir, TraversalContext context) {
+                final ObservableList<Node> boxChildren = box.getChildren();
+                if (owner == overflowMenu) {
+                    if (dir.isForward()) {
+                        return null;
+                    } else {
+                        Node selected = selectPrev(boxChildren.size() - 1, context);
+                        if (selected != null) return selected;
+                    }
+                }
+
+                int idx = boxChildren.indexOf(owner);
+
+                if (idx < 0) {
+                    // The current focus owner is a child of some Toolbar's item
+                    Parent item = owner.getParent();
+                    while (!boxChildren.contains(item)) {
+                        item = item.getParent();
+                    }
+                    Node selected = context.selectInSubtree(item, owner, dir);
+                    if (selected != null) return selected;
+                    idx = boxChildren.indexOf(owner);
+                    if (dir == Direction.NEXT) dir = Direction.NEXT_IN_LINE;
+                }
+
+                if (idx >= 0) {
+                    if (dir.isForward()) {
+                        Node selected = selectNext(idx + 1, context);
+                        if (selected != null) return selected;
+                        if (overflow) {
+                            overflowMenu.requestFocus();
+                            return overflowMenu;
+                        }
+                    } else {
+                        Node selected = selectPrev(idx - 1, context);
+                        if (selected != null) return selected;
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public Node selectFirst(TraversalContext context) {
+                Node selected = selectNext(0, context);
+                if (selected != null) return selected;
+                if (overflow) {
+                    return overflowMenu;
+                }
+                return null;
+            }
+
+            @Override
+            public Node selectLast(TraversalContext context) {
+                if (overflow) {
+                    return overflowMenu;
+                }
+                return selectPrev(box.getChildren().size() - 1, context);
+            }
+        });
         getSkinnable().setImpl_traversalEngine(engine);
 
-        toolbar.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                if (newValue) {
-                    // TODO need to detect the focus direction
-                    // to selected the first control in the toolbar when TAB is pressed
-                    // or select the last control in the toolbar when SHIFT TAB is pressed.
-                    if (!box.getChildren().isEmpty()) {
-                        box.getChildren().get(0).requestFocus();
-                    } else {
-                        overflowMenu.requestFocus();
-                    }
+        toolbar.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                // TODO need to detect the focus direction
+                // to selected the first control in the toolbar when TAB is pressed
+                // or select the last control in the toolbar when SHIFT TAB is pressed.
+                if (!box.getChildren().isEmpty()) {
+                    box.getChildren().get(0).requestFocus();
+                } else {
+                    overflowMenu.requestFocus();
                 }
             }
         });
 
-        toolbar.getItems().addListener(new ListChangeListener<Node>() {
-            @Override
-            public void onChanged(Change<? extends Node> c) {
-                while (c.next()) {
-                    for (Node n: c.getRemoved()) {
-                        box.getChildren().remove(n);
-                    }
-                    box.getChildren().addAll(c.getAddedSubList());
+        toolbar.getItems().addListener((ListChangeListener<Node>) c -> {
+            while (c.next()) {
+                for (Node n: c.getRemoved()) {
+                    box.getChildren().remove(n);
                 }
-                needsUpdate = true;
-                getSkinnable().requestLayout();
+                box.getChildren().addAll(c.getAddedSubList());
             }
-        });        
+            needsUpdate = true;
+            getSkinnable().requestLayout();
+        });
     }
 
     private DoubleProperty spacing;
@@ -456,7 +529,10 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
             } else {
                 if (node.isFocused()) {
                     if (!box.getChildren().isEmpty()) {
-                        engine.registeredNodes.get(engine.registeredNodes.size() - 1).requestFocus();
+                        Node last = engine.selectLast();
+                        if (last != null) {
+                            last.requestFocus();
+                        }
                     } else {
                         overflowMenu.requestFocus();                        
                     }
@@ -464,7 +540,46 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
                 if (node instanceof Separator) {
                     overflowMenuItems.add(new SeparatorMenuItem());
                 } else {
-                    overflowMenuItems.add(new CustomMenuItem(node));
+                    CustomMenuItem customMenuItem = new CustomMenuItem(node);
+
+                    // RT-36455:
+                    // We can't be totally certain of all nodes, but for the
+                    // most common nodes we can check to see whether we should
+                    // hide the menu when the node is clicked on. The common
+                    // case is for TextField or Slider.
+                    // This list won't be exhaustive (there is no point really
+                    // considering the ListView case), but it should try to
+                    // include most common control types that find themselves
+                    // placed in menus.
+                    final String nodeType = node.getTypeSelector();
+                    switch (nodeType) {
+                        case "Button":
+                        case "Hyperlink":
+                        case "Label":
+                            customMenuItem.setHideOnClick(true);
+                            break;
+                        case "CheckBox":
+                        case "ChoiceBox":
+                        case "ColorPicker":
+                        case "ComboBox":
+                        case "DatePicker":
+                        case "MenuButton":
+                        case "PasswordField":
+                        case "RadioButton":
+                        case "ScrollBar":
+                        case "ScrollPane":
+                        case "Slider":
+                        case "SplitMenuButton":
+                        case "SplitPane":
+                        case "TextArea":
+                        case "TextField":
+                        case "ToggleButton":
+                        case "ToolBar":
+                            customMenuItem.setHideOnClick(false);
+                            break;
+                    }
+
+                    overflowMenuItems.add(customMenuItem);
                 }
             }
         }
@@ -472,20 +587,13 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         // Check if we overflowed.
         overflow = overflowMenuItems.size() > 0;
         if (!overflow && overflowMenu.isFocused()) {
-            engine.registeredNodes.get(engine.registeredNodes.size() - 1).requestFocus();
+            Node last = engine.selectLast();
+            if (last != null) {
+                last.requestFocus();
+            }
         }
         overflowMenu.setVisible(overflow);
         overflowMenu.setManaged(overflow);
-    }
-
-    @Override
-    public void onTraverse(Node node, Bounds bounds) {
-        int index = engine.registeredNodes.indexOf(node);
-        if (index == -1 && direction.equals(Direction.NEXT)) {
-            if (overflow) {
-                overflowMenu.requestFocus();
-            }
-        }
     }
 
     class ToolBarOverflowMenu extends StackPane {
@@ -495,108 +603,68 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
 
         public ToolBarOverflowMenu(ObservableList<MenuItem> items) {
             getStyleClass().setAll("tool-bar-overflow-button");
+            setFocusTraversable(true);
             this.menuItems = items;
             downArrow = new StackPane();
             downArrow.getStyleClass().setAll("arrow");
-            downArrow.setOnMousePressed(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent me) {                    
-                    if (popup.isShowing()) {
-                        popup.hide();
-                    } else {
+            downArrow.setOnMousePressed(me -> {
+                fire();
+            });
+
+            setOnKeyPressed(ke -> {
+                if (KeyCode.SPACE.equals(ke.getCode())) {
+                    if (!popup.isShowing()) {
                         popup.getItems().clear();
                         popup.getItems().addAll(menuItems);
                         popup.show(downArrow, Side.BOTTOM, 0, 0);
                     }
-                }
-            });
-
-            setOnKeyPressed(new EventHandler<KeyEvent>() {
-                @Override public void handle(KeyEvent ke) {                    
-                    if (KeyCode.SPACE.equals(ke.getCode())) {
-                        if (!popup.isShowing()) {
-                            popup.getItems().clear();
-                            popup.getItems().addAll(menuItems);
-                            popup.show(downArrow, Side.BOTTOM, 0, 0);
-                        }
-                    } else if (KeyCode.ESCAPE.equals(ke.getCode())) {
-                        if (popup.isShowing()) {
-                            popup.hide();
-                        }
-                    } else if (KeyCode.ENTER.equals(ke.getCode())) {
-                        if (popup.isShowing()) {
-                            popup.hide();
-                        } else {
-                            popup.getItems().clear();
-                            popup.getItems().addAll(menuItems);
-                            popup.show(downArrow, Side.BOTTOM, 0, 0);
-                        }
-                    } else {
-                        boolean isRTL = getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
-                        boolean leftAction = KeyCode.LEFT.equals(ke.getCode());
-                        boolean rightAction = KeyCode.RIGHT.equals(ke.getCode()) || KeyCode.TAB.equals(ke.getCode());
-                        if (isRTL) {
-                            boolean swap = leftAction;
-                            leftAction = rightAction;
-                            rightAction = swap;
-                        }
-                        if (KeyCode.UP.equals(ke.getCode()) || leftAction ||
-                            (KeyCode.TAB.equals(ke.getCode()) && ke.isShiftDown())) {
-                            if (engine.registeredNodes.isEmpty()) {
-                                return;
-                            }
-                            int index = box.getChildren().indexOf(engine.registeredNodes.get(engine.registeredNodes.size() - 1));
-                            if (index != -1) {
-                                box.getChildren().get(index).requestFocus();                            
-                            } else {
-                                if (!box.getChildren().isEmpty()) {
-                                    box.getChildren().get(0).requestFocus();
-                                } else {
-                                    new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.PREVIOUS);
-                                }
-                            }
-                        } else if (KeyCode.DOWN.equals(ke.getCode()) || rightAction) {                        
-                            new TraversalEngine(getSkinnable(), false).trav(getSkinnable(), Direction.NEXT);
-                        }
+                    ke.consume();
+                } else if (KeyCode.ESCAPE.equals(ke.getCode())) {
+                    if (popup.isShowing()) {
+                        popup.hide();
                     }
+                    ke.consume();
+                } else if (KeyCode.ENTER.equals(ke.getCode())) {
+                    fire();
                     ke.consume();
                 }
             });
 
-            focusedProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(
-                        ObservableValue<? extends Boolean> observable,
-                        Boolean oldValue, Boolean newValue) {                    
-                    if (newValue) {
-                        if (!popup.isShowing()) {
-                            popup.getItems().clear();
-                            popup.getItems().addAll(menuItems);
-                            popup.show(downArrow, Side.BOTTOM, 0, 0);
-                        }
-                    } else {
-                        if (popup.isShowing()) {
-                            popup.hide();
-                        } 
+            focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    if (!popup.isShowing()) {
+                        popup.getItems().clear();
+                        popup.getItems().addAll(menuItems);
+                        popup.show(downArrow, Side.BOTTOM, 0, 0);
+                    }
+                } else {
+                    if (popup.isShowing()) {
+                        popup.hide();
                     }
                 }
             });
 
-            visibleProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(
-                        ObservableValue<? extends Boolean> observable,
-                        Boolean oldValue, Boolean newValue) {
-                        if (newValue) {
-                            if (box.getChildren().isEmpty()) {
-                                setFocusTraversable(true);
-                            }
+            visibleProperty().addListener((observable, oldValue, newValue) -> {
+                    if (newValue) {
+                        if (box.getChildren().isEmpty()) {
+                            setFocusTraversable(true);
                         }
-                }
+                    }
             });
             popup = new ContextMenu();
             setVisible(false);
             setManaged(false);            
             getChildren().add(downArrow);            
+        }
+
+        private void fire() {
+            if (popup.isShowing()) {
+                popup.hide();
+            } else {
+                popup.getItems().clear();
+                popup.getItems().addAll(menuItems);
+                popup.show(downArrow, Side.BOTTOM, 0, 0);
+            }
         }
 
         @Override protected double computePrefWidth(double height) {
@@ -622,6 +690,21 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
             downArrow.resize(w, h);
             positionInArea(downArrow, x, y, w, h,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
+        }
+
+        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            switch (attribute) {
+                case ROLE: return Role.BUTTON;
+                case TITLE: return "Overflow button";
+                default: return super.accGetAttribute(attribute, parameters);
+            }
+        }
+
+        @Override public void accExecuteAction(Action action, Object... parameters) {
+            switch (action) {
+                case FIRE: fire(); break;
+                default: super.accExecuteAction(action); break;
+            }
         }
     }
 
@@ -709,4 +792,19 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> impl
         return getClassCssMetaData();
     }
 
+    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case OVERFLOW_BUTTON: return overflowMenu;
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    @Override protected void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SHOW_MENU: 
+                overflowMenu.fire();
+                break;
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
 }

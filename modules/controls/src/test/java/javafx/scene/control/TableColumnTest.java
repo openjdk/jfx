@@ -381,11 +381,7 @@ public class TableColumnTest {
     }
 
     @Test public void cellValueFactoryCanBeSpecified() {
-        CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        };
+        CellValueFactory<Person,String> factory = param -> param.getValue().firstNameProperty();
 
         column.setCellValueFactory(factory);
         assertSame(factory, column.getCellValueFactory());
@@ -393,11 +389,7 @@ public class TableColumnTest {
     }
 
     @Test public void cellValueFactoryCanBeResetToNull() {
-        CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        };
+        CellValueFactory<Person,String> factory = param -> param.getValue().firstNameProperty();
 
         column.setCellValueFactory(factory);
         column.setCellValueFactory(null);
@@ -414,11 +406,7 @@ public class TableColumnTest {
     }
 
     @Test public void cellValueFactoryCanBeBound() {
-        CellValueFactory<Person,String> factory = new CellValueFactory<Person,String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        };
+        CellValueFactory<Person,String> factory = param -> param.getValue().firstNameProperty();
         ObjectProperty<CellValueFactory<Person,String>> other =
                 new SimpleObjectProperty<CellValueFactory<Person, String>>(factory);
         column.cellValueFactoryProperty().bind(other);
@@ -434,22 +422,14 @@ public class TableColumnTest {
      ********************************************************************/
 
     @Test public void cellFactoryCanBeSpecified() {
-        CellFactory<Person,String> factory = new CellFactory<Person, String>() {
-            @Override public TableCell call(TableColumn<Person, String> param) {
-                return null;
-            }
-        };
+        CellFactory<Person,String> factory = param -> null;
         column.setCellFactory(factory);
         assertSame(factory, column.getCellFactory());
         assertSame(factory, column.cellFactoryProperty().get());
     }
 
     @Test public void cellFactoryCanBeResetToNull() {
-        CellFactory<Person,String> factory = new CellFactory<Person, String>() {
-            @Override public TableCell call(TableColumn<Person,String> param) {
-                return null;
-            }
-        };
+        CellFactory<Person,String> factory = param -> null;
         column.setCellFactory(factory);
         column.setCellFactory(null);
         assertNull(column.getCellFactory());
@@ -465,11 +445,7 @@ public class TableColumnTest {
     }
 
     @Test public void cellFactoryCanBeBound() {
-        CellFactory<Person,String> factory = new CellFactory<Person, String>() {
-            @Override public TableCell call(TableColumn<Person,String> param) {
-                return null;
-            }
-        };
+        CellFactory<Person,String> factory = param -> null;
         ObjectProperty<CellFactory<Person,String>> other =
                 new SimpleObjectProperty<CellFactory<Person, String>>(factory);
         column.cellFactoryProperty().bind(other);
@@ -753,22 +729,14 @@ public class TableColumnTest {
      ********************************************************************/
 
     @Test public void comparatorCanBeSpecified() {
-        Comparator<String> comparator = new Comparator<String>() {
-            @Override public int compare(String o1, String o2) {
-                return o1.compareTo(o2);
-            }
-        };
+        Comparator<String> comparator = (o1, o2) -> o1.compareTo(o2);
         column.setComparator(comparator);
         assertSame(comparator, column.getComparator());
         assertSame(comparator, column.comparatorProperty().get());
     }
 
     @Test public void comparatorCanBeResetToNull() {
-        Comparator<String> comparator = new Comparator<String>() {
-            @Override public int compare(String o1, String o2) {
-                return o1.compareTo(o2);
-            }
-        };
+        Comparator<String> comparator = (o1, o2) -> o1.compareTo(o2);
         column.setComparator(comparator);
         column.setComparator(null);
         assertNull(column.getComparator());
@@ -784,11 +752,7 @@ public class TableColumnTest {
     }
 
     @Test public void comparatorCanBeBound() {
-        Comparator<String> comparator = new Comparator<String>() {
-            @Override public int compare(String o1, String o2) {
-                return o1.compareTo(o2);
-            }
-        };
+        Comparator<String> comparator = (o1, o2) -> o1.compareTo(o2);
         ObjectProperty<Comparator<String>> other =
                 new SimpleObjectProperty<Comparator<String>>(comparator);
         column.comparatorProperty().bind(other);
@@ -810,10 +774,8 @@ public class TableColumnTest {
 
     @Test public void onEditStartCanBeSpecified() {
         EventHandler<TableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditStart(handler);
         assertSame(handler, column.getOnEditStart());
         assertSame(handler, column.onEditStartProperty().get());
@@ -821,10 +783,8 @@ public class TableColumnTest {
 
     @Test public void onEditStartCanBeResetToNull() {
         EventHandler<TableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditStart(handler);
         column.setOnEditStart(null);
         assertNull(column.getOnEditStart());
@@ -841,10 +801,8 @@ public class TableColumnTest {
 
     @Test public void onEditStartCanBeBound() {
         EventHandler<TableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         ObjectProperty<EventHandler<TableColumn.CellEditEvent<Person,String>>> other =
                 new SimpleObjectProperty<EventHandler<TableColumn.CellEditEvent<Person, String>>>(handler);
         column.onEditStartProperty().bind(other);
@@ -866,10 +824,8 @@ public class TableColumnTest {
 
     @Test public void onEditCancelCanBeSpecified() {
         EventHandler<TableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditCancel(handler);
         assertSame(handler, column.getOnEditCancel());
         assertSame(handler, column.onEditCancelProperty().get());
@@ -877,10 +833,8 @@ public class TableColumnTest {
 
     @Test public void onEditCancelCanBeResetToNull() {
         EventHandler<TableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditCancel(handler);
         column.setOnEditCancel(null);
         assertNull(column.getOnEditCancel());
@@ -897,10 +851,8 @@ public class TableColumnTest {
 
     @Test public void onEditCancelCanBeBound() {
         EventHandler<TableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         ObjectProperty<EventHandler<TableColumn.CellEditEvent<Person,String>>> other =
                 new SimpleObjectProperty<EventHandler<TableColumn.CellEditEvent<Person, String>>>(handler);
         column.onEditCancelProperty().bind(other);
@@ -922,10 +874,8 @@ public class TableColumnTest {
 
     @Test public void onEditCommitCanBeSpecified() {
         EventHandler<TableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditCommit(handler);
         assertSame(handler, column.getOnEditCommit());
         assertSame(handler, column.onEditCommitProperty().get());
@@ -933,10 +883,8 @@ public class TableColumnTest {
 
     @Test public void onEditCommitCanBeResetToNull() {
         EventHandler<TableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         column.setOnEditCommit(handler);
         column.setOnEditCommit(null);
         assertNull(column.getOnEditCommit());
@@ -953,10 +901,8 @@ public class TableColumnTest {
 
     @Test public void onEditCommitCanBeBound() {
         EventHandler<TableColumn.CellEditEvent<Person,String>> handler =
-                new EventHandler<TableColumn.CellEditEvent<Person, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<Person, String> event) {
-            }
-        };
+                event -> {
+                };
         ObjectProperty<EventHandler<TableColumn.CellEditEvent<Person,String>>> other =
                 new SimpleObjectProperty<EventHandler<TableColumn.CellEditEvent<Person, String>>>(handler);
         column.onEditCommitProperty().bind(other);
@@ -1025,32 +971,22 @@ public class TableColumnTest {
 
     @Test public void getCellDataReturnsValue() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         assertEquals("Humphrey McPhee", column.getCellData(0));
     }
 
     @Test public void getCellDataReturnsValue2() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         assertEquals("Humphrey McPhee", column.getCellData(table.getItems().get(0)));
     }
 
     @Test public void cellDataFeaturesHasTableViewSpecified() {
         final boolean[] passed = new boolean[] { false };
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                passed[0] = param.getTableView() == table;
-                return param.getValue().firstNameProperty();
-            }
+        column.setCellValueFactory(param -> {
+            passed[0] = param.getTableView() == table;
+            return param.getValue().firstNameProperty();
         });
         column.getCellData(table.getItems().get(0));
         assertTrue(passed[0]);
@@ -1059,11 +995,9 @@ public class TableColumnTest {
     @Test public void cellDataFeaturesHasTableColumnSpecified() {
         final boolean[] passed = new boolean[] { false };
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                passed[0] = param.getTableColumn() == column;
-                return param.getValue().firstNameProperty();
-            }
+        column.setCellValueFactory(param -> {
+            passed[0] = param.getTableColumn() == column;
+            return param.getValue().firstNameProperty();
         });
         column.getCellData(table.getItems().get(0));
         assertTrue(passed[0]);
@@ -1072,11 +1006,9 @@ public class TableColumnTest {
     @Test public void cellDataFeaturesHasRowItemSpecified() {
         final boolean[] passed = new boolean[] { false };
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person,String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                passed[0] = param.getValue() == table.getItems().get(0);
-                return param.getValue().firstNameProperty();
-            }
+        column.setCellValueFactory(param -> {
+            passed[0] = param.getValue() == table.getItems().get(0);
+            return param.getValue().firstNameProperty();
         });
         column.getCellData(table.getItems().get(0));
         assertTrue(passed[0]);
@@ -1095,11 +1027,7 @@ public class TableColumnTest {
 
     @Test public void defaultOnEditCommitHandlerWillSaveToWritableValue() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,String>(
@@ -1110,11 +1038,7 @@ public class TableColumnTest {
     @Test public void defaultOnEditCommitHandlerWillIgnoreReadOnlyValue() {
         TableColumn<Person,Number> ageColumn = new TableColumn<Person,Number>();
         table.getColumns().add(ageColumn);
-        ageColumn.setCellValueFactory(new CellValueFactory<Person, Number>() {
-            @Override public ObservableValue<Number> call(TableColumn.CellDataFeatures<Person, Number> param) {
-                return param.getValue().ageProperty();
-            }
-        });
+        ageColumn.setCellValueFactory(param -> param.getValue().ageProperty());
         TablePosition<Person,Number> pos = new TablePosition<Person, Number>(table, 0, ageColumn);
         EventType<TableColumn.CellEditEvent<Person,Number>> eventType = TableColumn.editCommitEvent();
         ageColumn.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,Number>(
@@ -1125,11 +1049,7 @@ public class TableColumnTest {
     @Test(expected=NullPointerException.class)
     public void defaultOnEditCommitHandlerDealsWithNullTableView() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
@@ -1139,11 +1059,7 @@ public class TableColumnTest {
     @Test(expected=NullPointerException.class)
     public void defaultOnEditCommitHandlerDealsWithNullTablePosition() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 0, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(
@@ -1152,11 +1068,7 @@ public class TableColumnTest {
 
     @Test public void defaultOnEditCommitHandlerDealsWithInvalidTablePosition_indexIsNegative() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, -1, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person,String>(
@@ -1166,11 +1078,7 @@ public class TableColumnTest {
 
     @Test public void defaultOnEditCommitHandlerDealsWithInvalidTablePosition_indexIsTooLarge() {
         table.getColumns().add(column);
-        column.setCellValueFactory(new CellValueFactory<Person, String>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<Person, String> param) {
-                return param.getValue().firstNameProperty();
-            }
-        });
+        column.setCellValueFactory(param -> param.getValue().firstNameProperty());
         TablePosition<Person,String> pos = new TablePosition<Person, String>(table, 100, column);
         EventType<TableColumn.CellEditEvent<Person,String>> eventType = TableColumn.editCommitEvent();
         column.getOnEditCommit().handle(new TableColumn.CellEditEvent<Person, String>(

@@ -25,8 +25,10 @@
 
 package com.sun.javafx.image;
 
+import com.sun.javafx.image.impl.ByteBgr;
 import com.sun.javafx.image.impl.ByteBgra;
 import com.sun.javafx.image.impl.ByteBgraPre;
+import com.sun.javafx.image.impl.ByteGray;
 import com.sun.javafx.image.impl.ByteIndexed;
 import com.sun.javafx.image.impl.ByteRgb;
 import com.sun.javafx.image.impl.General;
@@ -100,7 +102,7 @@ public class PixelUtils {
                 return ByteIndexed.createGetter(pf);
             case INT_ARGB:
             case INT_ARGB_PRE:
-                // Impossible
+                // Impossible - not byte format
         }
         return null;
     }
@@ -114,7 +116,8 @@ public class PixelUtils {
             case BYTE_BGRA:
             case BYTE_BGRA_PRE:
             case BYTE_RGB:
-                // Impossible
+            case BYTE_INDEXED:
+                // Impossible - not int format
         }
         return null;
     }
@@ -122,15 +125,13 @@ public class PixelUtils {
     public static <T extends Buffer> PixelGetter<T> getGetter(PixelFormat<T> pf) {
         switch (pf.getType()) {
             case BYTE_BGRA:
-                return (PixelGetter<T>) ByteBgra.getter;
             case BYTE_BGRA_PRE:
-                return (PixelGetter<T>) ByteBgraPre.getter;
-            case INT_ARGB:
-                return (PixelGetter<T>) IntArgb.getter;
-            case INT_ARGB_PRE:
-                return (PixelGetter<T>) IntArgbPre.getter;
             case BYTE_RGB:
-                return (PixelGetter<T>) ByteRgb.getter;
+            case BYTE_INDEXED:
+                return (PixelGetter<T>) getByteGetter((PixelFormat<ByteBuffer>) pf);
+            case INT_ARGB:
+            case INT_ARGB_PRE:
+                return (PixelGetter<T>) getIntGetter((PixelFormat<IntBuffer>) pf);
         }
         return null;
     }
@@ -141,10 +142,12 @@ public class PixelUtils {
                 return ByteBgra.setter;
             case BYTE_BGRA_PRE:
                 return ByteBgraPre.setter;
+            case BYTE_RGB:
+            case BYTE_INDEXED:
+                // Impossible - not writable
             case INT_ARGB:
             case INT_ARGB_PRE:
-            case BYTE_RGB:
-                // Impossible
+                // Impossible - not byte format
         }
         return null;
     }
@@ -158,7 +161,8 @@ public class PixelUtils {
             case BYTE_BGRA:
             case BYTE_BGRA_PRE:
             case BYTE_RGB:
-                // Impossible
+            case BYTE_INDEXED:
+                // Impossible - not int format
         }
         return null;
     }
@@ -166,15 +170,14 @@ public class PixelUtils {
     public static <T extends Buffer> PixelSetter<T> getSetter(WritablePixelFormat<T> pf) {
         switch (pf.getType()) {
             case BYTE_BGRA:
-                return (PixelSetter<T>) ByteBgra.setter;
             case BYTE_BGRA_PRE:
-                return (PixelSetter<T>) ByteBgraPre.setter;
+                return (PixelSetter<T>) getByteSetter((WritablePixelFormat<ByteBuffer>) pf);
             case INT_ARGB:
-                return (PixelSetter<T>) IntArgb.setter;
             case INT_ARGB_PRE:
-                return (PixelSetter<T>) IntArgbPre.setter;
+                return (PixelSetter<T>) getIntSetter((WritablePixelFormat<IntBuffer>) pf);
             case BYTE_RGB:
-                // Impossible
+            case BYTE_INDEXED:
+                // Impossible - not writable
         }
         return null;
     }
@@ -221,12 +224,40 @@ public class PixelUtils {
                 return    ByteRgb.ToByteBgraConverter;
             } else if (dst ==       ByteBgraPre.setter) {
                 return    ByteRgb.ToByteBgraPreConverter;
+            } else if (dst ==       ByteBgr.setter) {
+                return    ByteRgb.ToByteBgrConverter;
+            }
+        } else if (src == ByteBgr.getter) {
+            if (dst ==              ByteBgr.setter) {
+                return    ByteBgr.ToByteBgrConverter;
+            } else if (dst ==       ByteBgra.setter) {
+                return    ByteBgr.ToByteBgraConverter;
+            } else if (dst ==       ByteBgraPre.setter) {
+                return    ByteBgr.ToByteBgraPreConverter;
+            }
+        } else if (src == ByteGray.getter) {
+            if (dst ==               ByteGray.setter) {
+                return    ByteGray.ToByteGrayConverter;
+            } else if (dst ==        ByteBgr.setter) {
+                return    ByteGray.ToByteBgrConverter;
+            } else if (dst ==        ByteBgra.setter) {
+                return    ByteGray.ToByteBgraConverter;
+            } else if (dst ==        ByteBgraPre.setter) {
+                return    ByteGray.ToByteBgraPreConverter;
             }
         } else if (src instanceof ByteIndexed.Getter) {
             if (dst == ByteBgra.setter || dst == ByteBgraPre.setter) {
                 return ByteIndexed.createToByteBgraAny((BytePixelGetter) src,
                                                        (BytePixelSetter) dst);
             }
+        }
+        if (dst == ByteGray.setter) {
+            return null;
+        }
+        if (src.getAlphaType() != AlphaType.OPAQUE &&
+            dst.getAlphaType() == AlphaType.OPAQUE)
+        {
+            return null;
         }
         return General.create((BytePixelGetter) src, (BytePixelSetter) dst);
     }
@@ -252,11 +283,28 @@ public class PixelUtils {
             } else if (dst ==       IntArgbPre.setter) {
                 return    ByteRgb.ToIntArgbPreConverter;
             }
+        } else if (src == ByteBgr.getter) {
+            if (dst ==              IntArgb.setter) {
+                return    ByteBgr.ToIntArgbConverter;
+            } else if (dst ==       IntArgbPre.setter) {
+                return    ByteBgr.ToIntArgbPreConverter;
+            }
+        } else if (src == ByteGray.getter) {
+            if (dst ==              IntArgbPre.setter) {
+                return    ByteGray.ToIntArgbPreConverter;
+            } else if (dst ==       IntArgb.setter) {
+                return    ByteGray.ToIntArgbConverter;
+            }
         } else if (src instanceof ByteIndexed.Getter) {
             if (dst == IntArgb.setter || dst == IntArgbPre.setter) {
                 return ByteIndexed.createToIntArgbAny((BytePixelGetter) src,
                                                       (IntPixelSetter)  dst);
             }
+        }
+        if (src.getAlphaType() != AlphaType.OPAQUE &&
+            dst.getAlphaType() == AlphaType.OPAQUE)
+        {
+            return null;
         }
         return General.create((BytePixelGetter) src, (IntPixelSetter) dst);
     }
@@ -277,6 +325,14 @@ public class PixelUtils {
                 return    IntArgbPre.ToByteBgraPreConverter;
             }
         }
+        if (dst == ByteGray.setter) {
+            return null;
+        }
+        if (src.getAlphaType() != AlphaType.OPAQUE &&
+            dst.getAlphaType() == AlphaType.OPAQUE)
+        {
+            return null;
+        }
         return General.create((IntPixelGetter) src, (BytePixelSetter) dst);
     }
 
@@ -295,6 +351,11 @@ public class PixelUtils {
             } else if (dst ==          IntArgbPre.setter) {
                 return    IntArgbPre.ToIntArgbPreConverter;
             }
+        }
+        if (src.getAlphaType() != AlphaType.OPAQUE &&
+            dst.getAlphaType() == AlphaType.OPAQUE)
+        {
+            return null;
         }
         return General.create((IntPixelGetter) src, (IntPixelSetter) dst);
     }

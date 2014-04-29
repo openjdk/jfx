@@ -215,11 +215,9 @@ public class TreeViewMouseInputTest {
         final FocusModel fm = treeView.getFocusModel();
         fm.focus(-1);
 
-        fm.focusedIndexProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                rt30394_count++;
-                assertEquals(0, fm.getFocusedIndex());
-            }
+        fm.focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt30394_count++;
+            assertEquals(0, fm.getFocusedIndex());
         });
 
         // test pre-conditions
@@ -372,11 +370,9 @@ public class TreeViewMouseInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
 
-        treeView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    rt_30626_count++;
-                }
+        treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                rt_30626_count++;
             }
         });
 
@@ -386,5 +382,52 @@ public class TreeViewMouseInputTest {
 
         VirtualFlowTestUtils.clickOnRow(treeView, 1);
         assertEquals(1, rt_30626_count);
+    }
+
+    @Test public void test_rt_34649() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        treeView.setRoot(root);
+
+        final MultipleSelectionModel sm = treeView.getSelectionModel();
+        final FocusModel fm = treeView.getFocusModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        assertFalse(sm.isSelected(4));
+        assertFalse(fm.isFocused(4));
+        VirtualFlowTestUtils.clickOnRow(treeView, 4, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+
+        VirtualFlowTestUtils.clickOnRow(treeView, 4, KeyModifier.getShortcutKey());
+        assertFalse(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+    }
+
+    @Test public void test_rt_36509() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        treeView.setRoot(root);
+
+        // expand
+        assertFalse(root.isExpanded());
+        VirtualFlowTestUtils.clickOnRow(treeView, 0, 2);
+        assertTrue(root.isExpanded());
+
+        // collapse
+        VirtualFlowTestUtils.clickOnRow(treeView, 0, 2);
+        assertFalse(root.isExpanded());
+
+        // expand again
+        VirtualFlowTestUtils.clickOnRow(treeView, 0, 2);
+        assertTrue(root.isExpanded());
     }
 }

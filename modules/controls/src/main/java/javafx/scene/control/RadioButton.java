@@ -26,10 +26,10 @@
 package javafx.scene.control;
 
 import javafx.geometry.Pos;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.scene.control.accessible.AccessibleRadioButton;
 import com.sun.javafx.scene.control.skin.RadioButtonSkin;
 import javafx.css.StyleableProperty;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 /**
  * <p>RadioButtons create a series of items where only one item can be
@@ -123,17 +123,6 @@ import javafx.css.StyleableProperty;
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "radio-button";
-    
-    private AccessibleRadioButton accRadioButton ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
-        if( accRadioButton == null)
-            accRadioButton = new AccessibleRadioButton(this);
-        return (AccessibleProvider)accRadioButton ;
-    }
 
     /**
       * Labeled return CENTER_LEFT for alignment, but ToggleButton returns
@@ -146,4 +135,19 @@ import javafx.css.StyleableProperty;
         return Pos.CENTER_LEFT;
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.RADIO_BUTTON;
+            case SELECTED: return isSelected();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

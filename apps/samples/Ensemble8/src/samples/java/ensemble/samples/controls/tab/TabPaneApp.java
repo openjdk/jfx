@@ -113,10 +113,8 @@ public class TabPaneApp extends Application {
             final RadioButton radioButton = new RadioButton(policy.name());
             radioButton.setMnemonicParsing(false);
             radioButton.setToggleGroup(closingPolicy);
-            radioButton.setOnAction(new EventHandler<ActionEvent>() {                
-                @Override public void handle(ActionEvent event) {
-                    tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.valueOf(radioButton.getText()));
-                }
+            radioButton.setOnAction((ActionEvent event) -> {
+                tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.valueOf(radioButton.getText()));
             });
             if (policy.name().equals(TabPane.TabClosingPolicy.SELECTED_TAB.name())) {
                 radioButton.setSelected(true);
@@ -134,20 +132,18 @@ public class TabPaneApp extends Application {
 
         final CheckBox cb = new CheckBox("Show labels on original tabs");
         cb.setSelected(true);
-        cb.setOnAction(new EventHandler<ActionEvent>() {           
-            @Override public void handle(ActionEvent event) {
-                if (cb.isSelected()) {
-                    tab1.setText("Tab 1");
-                    tab2.setText("Longer Tab");
-                    tab3.setText("Tab 3");
-                    internalTab.setText("Internal Tabs");
-
-                } else {
-                    tab1.setText("");
-                    tab2.setText("");
-                    tab3.setText("");
-                    internalTab.setText("");
-                }
+        cb.setOnAction((ActionEvent event) -> {
+            if (cb.isSelected()) {
+                tab1.setText("Tab 1");
+                tab2.setText("Longer Tab");
+                tab3.setText("Tab 3");
+                internalTab.setText("Internal Tabs");
+                
+            } else {
+                tab1.setText("");
+                tab2.setText("");
+                tab3.setText("");
+                internalTab.setText("");
             }
         });
         vboxTab3.getChildren().add(cb);
@@ -195,18 +191,14 @@ public class TabPaneApp extends Application {
         innerVbox.setTranslateX(10);
         innerVbox.setTranslateY(10);
         Button innerTabPosButton = new Button("Toggle Tab Position");
-        innerTabPosButton.setOnAction(new EventHandler<ActionEvent>() {           
-            @Override public void handle(ActionEvent e) {
-                toggleTabPosition(internalTabPane);
-            }
+        innerTabPosButton.setOnAction((ActionEvent e) -> {
+            toggleTabPosition(internalTabPane);
         });
         innerVbox.getChildren().add(innerTabPosButton);
         {
             Button innerTabModeButton = new Button("Toggle Tab Mode");
-            innerTabModeButton.setOnAction(new EventHandler<ActionEvent>() {               
-                @Override public void handle(ActionEvent e) {
-                    toggleTabMode(internalTabPane);
-                }
+            innerTabModeButton.setOnAction((ActionEvent e) -> {
+                toggleTabMode(internalTabPane);
             });
             innerVbox.getChildren().add(innerTabModeButton);
         }
@@ -226,38 +218,30 @@ public class TabPaneApp extends Application {
     private void setUpControlButtons(VBox vbox) {
         // Toggle style class floating
         final Button tabModeButton = new Button("Toggle Tab Mode");
-        tabModeButton.setOnAction(new EventHandler<ActionEvent>() {            
-            @Override public void handle(ActionEvent e) {
-                toggleTabMode(tabPane);
-            }
+        tabModeButton.setOnAction((ActionEvent e) -> {
+            toggleTabMode(tabPane);
         });
         vbox.getChildren().add(tabModeButton);
         // Tab position
         final Button tabPositionButton = new Button("Toggle Tab Position");
-        tabPositionButton.setOnAction(new EventHandler<ActionEvent>() {           
-            @Override public void handle(ActionEvent e) {
-                toggleTabPosition(tabPane);
-            }
+        tabPositionButton.setOnAction((ActionEvent e) -> {
+            toggleTabPosition(tabPane);
         });
         // Add tab and switch to it
         final Button newTabButton = new Button("Switch to New Tab");
-        newTabButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                Tab t = new Tab("Testing");
-                t.setContent(new Button("Howdy"));
-                tabPane.getTabs().add(t);
-                tabPane.getSelectionModel().select(t);
-            }
+        newTabButton.setOnAction((ActionEvent e) -> {
+            Tab t = new Tab("Testing");
+            t.setContent(new Button("Howdy"));
+            tabPane.getTabs().add(t);
+            tabPane.getSelectionModel().select(t);
         });
         vbox.getChildren().add(newTabButton);
         // Add tab
         final Button addTabButton = new Button("Add Tab");
-        addTabButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                Tab t = new Tab("New Tab");
-                t.setContent(new Region());
-                tabPane.getTabs().add(t);
-            }
+        addTabButton.setOnAction((ActionEvent e) -> {
+            Tab t = new Tab("New Tab");
+            t.setContent(new Region());
+            tabPane.getTabs().add(t);
         });
         vbox.getChildren().add(addTabButton);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import java.lang.reflect.Field;
 import com.sun.javafx.geom.BaseBounds;
+import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
@@ -54,7 +55,7 @@ public class NGTestBase {
     /** Transforms the given node by the specified transform. */
     protected static <N extends NGNode> void transform(N node, BaseTransform tx) {
         // Concatenate this transform with the one already on the node
-        tx = node.getTransform().deriveWithConcatenation(tx);
+        tx = node.getTransform().copy().deriveWithConcatenation(tx);
         // Compute & set the new transformed bounds for the node
         node.setTransformedBounds(node.getEffectBounds(new RectBounds(), tx), false);
         // Set the transform matrix
@@ -69,7 +70,8 @@ public class NGTestBase {
     /** Set the given effect on the node. effect must not be null. */
     protected static <N extends NGNode> void setEffect(N node, Effect effect) {
         node.setEffect(null); // so that when we ask for the getEffectBounds, it won't include an old effect
-        BaseBounds effectBounds = effect.getBounds();
+        BaseBounds effectBounds = new RectBounds();
+        effectBounds = effectBounds.deriveWithNewBounds(effect.getBounds(BaseTransform.IDENTITY_TRANSFORM, new NodeEffectInput(node)));
         BaseBounds clippedBounds = node.getEffectBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM);
         node.setEffect(effect);
         // The new transformed bounds should be the union of the old effect bounds, new effect bounds, and

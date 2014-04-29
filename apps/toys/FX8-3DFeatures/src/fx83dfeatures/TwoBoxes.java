@@ -25,12 +25,10 @@
 package fx83dfeatures;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.PointLight;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.Box;
@@ -86,21 +84,13 @@ public class TwoBoxes extends Application {
 
         final Scene scene = new Scene(root, 500, 500, true);
 
-        scene.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                anchorX = event.getSceneX();
-                anchorY = event.getSceneY();
-                anchorAngle = parent.getRotate();
-            }
+        scene.setOnMousePressed(event -> {
+            anchorX = event.getSceneX();
+            anchorY = event.getSceneY();
+            anchorAngle = parent.getRotate();
         });
 
-        scene.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                parent.setRotate(anchorAngle + anchorX - event.getSceneX());
-            }
-        });
+        scene.setOnMouseDragged(event -> parent.setRotate(anchorAngle + anchorX - event.getSceneX()));
 
         PointLight pointLight = new PointLight(Color.ANTIQUEWHITE);
         pointLight.setTranslateX(15);

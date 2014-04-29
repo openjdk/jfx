@@ -206,8 +206,11 @@ static void process_dnd_target_drop_start(WindowContext *ctx, GdkEventDND *event
 static gboolean check_state_in_drag(JNIEnv *env)
 {
     if (!enter_ctx.ctx) {
-        env->ThrowNew(env->FindClass("java/lang/IllegalStateException"),
-                "Cannot get supported actions. Drag pointer haven't entered the application window");
+        jclass jc = env->FindClass("java/lang/IllegalStateException");
+        if (!env->ExceptionCheck()) {
+            env->ThrowNew(jc,
+                    "Cannot get supported actions. Drag pointer haven't entered the application window");
+        }
         return TRUE;
     }
     return FALSE;
@@ -242,17 +245,24 @@ jobjectArray dnd_target_get_mimes(JNIEnv *env)
     if (!enter_ctx.mimes) {
         GList* targets = GLASS_GDK_DRAG_CONTEXT_LIST_TARGETS(enter_ctx.ctx);
         jobject set = env->NewObject(jHashSetCls, jHashSetInit, NULL);
+        EXCEPTION_OCCURED(env);
 
         while (targets) {
             GdkAtom target = GDK_POINTER_TO_ATOM(targets->data);
             gchar *name = gdk_atom_name(target);
 
             if (target_is_text(target)) {
-                env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF("text/plain"), NULL);
+                jstring jStr = env->NewStringUTF("text/plain");                
+                EXCEPTION_OCCURED(env);
+                env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
+                EXCEPTION_OCCURED(env);
             }
 
             if (target_is_image(target)) {
-                env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF("application/x-java-rawimage"), NULL);
+                jstring jStr = env->NewStringUTF("application/x-java-rawimage");
+                EXCEPTION_OCCURED(env);
+                env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
+                EXCEPTION_OCCURED(env);
             }
 
             if (target_is_uri(target)) {
@@ -262,16 +272,25 @@ jobjectArray dnd_target_get_mimes(JNIEnv *env)
                     guint size = g_strv_length(uris);
                     guint files_cnt = get_files_count(uris);
                     if (files_cnt) {
-                        env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF("application/x-java-file-list"), NULL);
+                        jstring jStr = env->NewStringUTF("application/x-java-file-list");
+                        EXCEPTION_OCCURED(env);
+                        env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
+                        EXCEPTION_OCCURED(env);
                     }
                     if (size - files_cnt) {
-                        env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF("text/uri-list"), NULL);
+                        jstring jStr = env->NewStringUTF("text/uri-list");
+                        EXCEPTION_OCCURED(env);
+                        env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
+                        EXCEPTION_OCCURED(env);
                     }
                     g_strfreev(uris);
                 }
                 g_free(ctx.data);
             } else {
-                env->CallBooleanMethod(set, jSetAdd, env->NewStringUTF(name), NULL);
+                jstring jStr = env->NewStringUTF(name);
+                EXCEPTION_OCCURED(env);
+                env->CallBooleanMethod(set, jSetAdd, jStr, NULL);
+                EXCEPTION_OCCURED(env);
             }
 
             g_free(name);
@@ -279,6 +298,7 @@ jobjectArray dnd_target_get_mimes(JNIEnv *env)
         }
         enter_ctx.mimes = env->NewObjectArray(env->CallIntMethod(set, jSetSize, NULL),
                 jStringCls, NULL);
+        EXCEPTION_OCCURED(env);
         enter_ctx.mimes = (jobjectArray)env->CallObjectMethod(set, jSetToArray, enter_ctx.mimes, NULL);
         enter_ctx.mimes = (jobjectArray)env->NewGlobalRef(enter_ctx.mimes);
     }
@@ -340,10 +360,12 @@ static jobject dnd_target_get_string(JNIEnv *env)
     
     if (dnd_target_receive_data(env, TARGET_UTF8_STRING_ATOM, &ctx)) {
         result = env->NewStringUTF((char *)ctx.data);
+        EXCEPTION_OCCURED(env);
         g_free(ctx.data);
     }
     if (!result && dnd_target_receive_data(env, TARGET_MIME_TEXT_PLAIN_ATOM, &ctx)) {
         result = env->NewStringUTF((char *)ctx.data);
+        EXCEPTION_OCCURED(env);
         g_free(ctx.data);
     }
     // TODO find out how to convert from compound text
@@ -354,6 +376,7 @@ static jobject dnd_target_get_string(JNIEnv *env)
         str = g_convert( (gchar *)ctx.data, -1, "UTF-8", "ISO-8859-1", NULL, NULL, NULL);
         if (str != NULL) {
             result = env->NewStringUTF(str);
+            EXCEPTION_OCCURED(env);
             g_free(str);
         }
         g_free(ctx.data);
@@ -415,10 +438,13 @@ static jobject dnd_target_get_image(JNIEnv *env)
                 //Actually, we are converting RGBA to BGRA, but that's the same operation
                 data = (guchar*) convert_BGRA_to_RGBA((int*) data, stride, h);
                 data_array = env->NewByteArray(stride * h);
+                EXCEPTION_OCCURED(env);
                 env->SetByteArrayRegion(data_array, 0, stride*h, (jbyte*) data);
+                EXCEPTION_OCCURED(env);
 
                 buffer = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, data_array);
                 result = env->NewObject(jGtkPixelsCls, jGtkPixelsInit, w, h, buffer);
+                EXCEPTION_OCCURED(env);
 
                 g_object_unref(buf);
                 g_free(data); // data from convert_BGRA_to_RGBA
@@ -437,10 +463,13 @@ static jobject dnd_target_get_raw(JNIEnv *env, GdkAtom target, gboolean string_d
     if (dnd_target_receive_data(env, target, &ctx)) {
         if (string_data) {
              result = env->NewStringUTF((char *)ctx.data);
+             EXCEPTION_OCCURED(env);
         } else {
             jsize length = ctx.length * (ctx.format / 8);
             jbyteArray array = env->NewByteArray(length);
+            EXCEPTION_OCCURED(env);
             env->SetByteArrayRegion(array, 0, length, (const jbyte*)ctx.data);
+            EXCEPTION_OCCURED(env);
             result = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, array);
         }
     }
@@ -578,6 +607,7 @@ static jobject dnd_source_get_data(const char *key)
 {
     jobject data = (jobject)g_object_get_data(G_OBJECT(dnd_window), SOURCE_DND_DATA);
     jstring string = mainEnv->NewStringUTF(key);
+    EXCEPTION_OCCURED(mainEnv);
     jobject result = mainEnv->CallObjectMethod(data, jMapGet, string, NULL);
 
     return (EXCEPTION_OCCURED(mainEnv)) ? NULL : result;
@@ -591,6 +621,9 @@ static gboolean dnd_source_set_utf8_string(GdkWindow *requestor, GdkAtom propert
     }
 
     const char *cstring = mainEnv->GetStringUTFChars(string, NULL);
+    if (!cstring) {
+        return FALSE;
+    }
     gint size = strlen(cstring);
     
     gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
@@ -609,16 +642,18 @@ static gboolean dnd_source_set_string(GdkWindow *requestor, GdkAtom property)
     
     gboolean is_data_set = FALSE;
     const char *cstring = mainEnv->GetStringUTFChars(string, NULL);
-    gchar *res_str = g_convert((gchar *)cstring, -1, "ISO-8859-1", "UTF-8", NULL, NULL, NULL);
-    
-    if (res_str) {
-        gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
-                8, GDK_PROP_MODE_REPLACE, (guchar *)res_str, strlen(res_str));
-        g_free(res_str);
-        is_data_set = TRUE;
+    if (cstring) {
+        gchar *res_str = g_convert((gchar *)cstring, -1, "ISO-8859-1", "UTF-8", NULL, NULL, NULL);
+
+        if (res_str) {
+            gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
+                    8, GDK_PROP_MODE_REPLACE, (guchar *)res_str, strlen(res_str));
+            g_free(res_str);
+            is_data_set = TRUE;
+        }
+
+        mainEnv->ReleaseStringUTFChars(string, cstring);
     }
-    
-    mainEnv->ReleaseStringUTFChars(string, cstring);
     return is_data_set;
 }
 
@@ -683,6 +718,7 @@ static gboolean dnd_source_set_uri_list(GdkWindow *requestor, GdkAtom property)
     if (files_cnt > 0) {
         for (gsize i = 0; i < files_cnt; ++i) {
             jstring string = (jstring) mainEnv->GetObjectArrayElement(files_array, i);
+            EXCEPTION_OCCURED(mainEnv);
             const gchar* file = mainEnv->GetStringUTFChars(string, NULL);
             gchar* uri = g_filename_to_uri(file, NULL, NULL);
 
@@ -714,23 +750,26 @@ static gboolean dnd_source_set_raw(GdkWindow *requestor, GdkAtom property, GdkAt
     if (data) {
         if (mainEnv->IsInstanceOf(data, jStringCls)) {
             const char *cstring = mainEnv->GetStringUTFChars((jstring)data, NULL);
+            if (cstring) {
+                gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
+                        8, GDK_PROP_MODE_REPLACE, (guchar *) cstring, strlen(cstring));
 
-            gdk_property_change(requestor, property, GDK_SELECTION_TYPE_STRING,
-                    8, GDK_PROP_MODE_REPLACE, (guchar *) cstring, strlen(cstring));
-        
-            mainEnv->ReleaseStringUTFChars((jstring)data, cstring);
-            is_data_set = TRUE;
+                mainEnv->ReleaseStringUTFChars((jstring)data, cstring);
+                is_data_set = TRUE;
+            }
         } else if (mainEnv->IsInstanceOf(data, jByteBufferCls)) {
             jbyteArray byteArray = (jbyteArray)mainEnv->CallObjectMethod(data, jByteBufferArray);
             if (!EXCEPTION_OCCURED(mainEnv)) {
                 jbyte* raw = mainEnv->GetByteArrayElements(byteArray, NULL);
-                jsize nraw = mainEnv->GetArrayLength(byteArray);
+                if (raw) {
+                    jsize nraw = mainEnv->GetArrayLength(byteArray);
 
-                gdk_property_change(requestor, property, target,
-                        8, GDK_PROP_MODE_REPLACE, (guchar *) raw, nraw);
+                    gdk_property_change(requestor, property, target,
+                            8, GDK_PROP_MODE_REPLACE, (guchar *) raw, nraw);
 
-                mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
-                is_data_set = TRUE;
+                    mainEnv->ReleaseByteArrayElements(byteArray, raw, JNI_ABORT);
+                    is_data_set = TRUE;
+                }
             }
         }
     }

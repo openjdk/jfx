@@ -94,12 +94,8 @@ public class HTMLEditorApp extends Application {
         scrollPane.setFitToWidth(true);
 
         Button showHTMLButton = new Button("Show the HTML below");
-        showHTMLButton.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent arg0) {
-                htmlLabel.setText(htmlEditor.getHtmlText());
-            }
+        showHTMLButton.setOnAction((ActionEvent arg0) -> {
+            htmlLabel.setText(htmlEditor.getHtmlText());
         });
 
         VBox vRoot = new VBox();

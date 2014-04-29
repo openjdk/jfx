@@ -128,18 +128,22 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinCursor__1initIDs
 (JNIEnv *env, jclass cls)
 {
     cls = env->FindClass("com/sun/glass/ui/Size");
-    
+    if (env->ExceptionCheck()) return;
+
     javaIDs.Size.init = env->GetMethodID(cls, "<init>", "(II)V");
     ASSERT(javaIDs.Size.init);
-
+    if (env->ExceptionCheck()) return;
 
     cls = env->FindClass("com/sun/glass/ui/Cursor");
+    if (env->ExceptionCheck()) return;
     
     javaIDs.Cursor.getType = env->GetMethodID(cls, "getType", "()I");
     ASSERT(javaIDs.Cursor.getType);
-    
+    if (env->ExceptionCheck()) return;
+
     javaIDs.Cursor.getNativeCursor = env->GetMethodID(cls, "getNativeCursor", "()J");
     ASSERT(javaIDs.Cursor.getNativeCursor);
+    if (env->ExceptionCheck()) return;
 }
         
 /*

@@ -623,4 +623,96 @@ public class AnchorPaneTest {
         assertEquals(30, internalAnchorpane.prefWidth(-1), 1e-100);
         assertEquals(256, internalAnchorpane.prefHeight(-1), 1e-100);
     }
+    
+    @Test
+    public void testTopAnchoredMinSizeOverridden() {
+        AnchorPane anchorpane = new AnchorPane();
+        MockResizable child = new MockResizable(300, 400, 100, 100, 500, 600);
+        anchorpane.setTopAnchor(child, 10.0);
+        anchorpane.getChildren().add(child);
+
+        assertEquals(300, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(410, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
+        assertEquals(300, anchorpane.prefWidth(-1), 1e-100);
+        assertEquals(410, anchorpane.prefHeight(-1), 1e-100);
+
+        anchorpane.autosize();
+        anchorpane.layout();
+        assertEquals(0, child.getLayoutX(), 1e-100);
+        assertEquals(10, child.getLayoutY(), 1e-100);
+        assertEquals(300, child.getWidth(), 1e-100);
+        assertEquals(400, child.getHeight(), 1e-100);
+    }
+    
+    @Test
+    public void testBottomAnchoredMinSizeOverridden() {
+        AnchorPane anchorpane = new AnchorPane();
+        MockResizable child = new MockResizable(300,400, 100,100, 500,600);
+        anchorpane.setBottomAnchor(child, 10.0);
+        anchorpane.getChildren().add(child);
+
+        assertEquals(300, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(410, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
+        assertEquals(300, anchorpane.prefWidth(-1), 1e-100);
+        assertEquals(410, anchorpane.prefHeight(-1), 1e-100);
+
+        anchorpane.autosize();
+        anchorpane.layout();
+        assertEquals(0, child.getLayoutX(), 1e-100);
+        assertEquals(0, child.getLayoutY(), 1e-100);
+        assertEquals(300, child.getWidth(), 1e-100);
+        assertEquals(400, child.getHeight(), 1e-100);
+    }
+    
+    @Test public void testLeftAnchoredMinSizeOverridden() {
+        AnchorPane anchorpane = new AnchorPane();
+        MockResizable child = new MockResizable(300,400, 100,100, 500,600);
+        anchorpane.setLeftAnchor(child, 10.0);
+        anchorpane.getChildren().add(child);
+
+        assertEquals(310, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(400, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
+        assertEquals(310, anchorpane.prefWidth(-1), 1e-100);
+        assertEquals(400, anchorpane.prefHeight(-1), 1e-100);
+
+        anchorpane.autosize();
+        anchorpane.layout();
+        assertEquals(10, child.getLayoutX(), 1e-100);
+        assertEquals(0, child.getLayoutY(), 1e-100);
+        assertEquals(300, child.getWidth(), 1e-100);
+        assertEquals(400, child.getHeight(), 1e-100);
+
+        anchorpane.resize(500,500);
+        anchorpane.layout();
+        assertEquals(10, child.getLayoutX(), 1e-100);
+        assertEquals(0, child.getLayoutY(), 1e-100);
+        assertEquals(300, child.getWidth(), 1e-100);
+        assertEquals(400, child.getHeight(), 1e-100);
+    }
+    
+    @Test public void testRightAnchoredMinSizeOverridden() {
+        AnchorPane anchorpane = new AnchorPane();
+        MockResizable child = new MockResizable(300,400, 100,100, 500,600);
+        anchorpane.setRightAnchor(child, 10.0);
+        anchorpane.getChildren().add(child);
+
+        assertEquals(310, anchorpane.minWidth(-1), 1e-100); // Not restricted, at pref. width
+        assertEquals(400, anchorpane.minHeight(-1), 1e-100); // Not restricted, at pref. height
+        assertEquals(310, anchorpane.prefWidth(-1), 1e-100);
+        assertEquals(400, anchorpane.prefHeight(-1), 1e-100);
+
+        anchorpane.autosize();
+        anchorpane.layout();
+        assertEquals(0, child.getLayoutX(), 1e-100);
+        assertEquals(0, child.getLayoutY(), 1e-100);
+        assertEquals(300, child.getWidth(), 1e-100);
+        assertEquals(400, child.getHeight(), 1e-100);
+
+        anchorpane.resize(500,500);
+        anchorpane.layout();
+        assertEquals(190, child.getLayoutX(), 1e-100);
+        assertEquals(0, child.getLayoutY(), 1e-100);
+        assertEquals(300, child.getWidth(), 1e-100);
+        assertEquals(400, child.getHeight(), 1e-100);
+    }
 }

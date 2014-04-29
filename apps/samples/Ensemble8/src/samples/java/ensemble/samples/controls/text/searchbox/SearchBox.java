@@ -56,18 +56,12 @@ public class SearchBox extends Region {
         clearButton = new Button();
         clearButton.setVisible(false);
         getChildren().addAll(textBox, clearButton);
-        clearButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                textBox.setText("");
-                textBox.requestFocus();
-            }
+        clearButton.setOnAction((ActionEvent actionEvent) -> {
+            textBox.setText("");
+            textBox.requestFocus();
         });
-        textBox.textProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                clearButton.setVisible(textBox.getText().length() != 0);
-            }
+        textBox.textProperty().addListener((ObservableValue<? extends String> observable, String oldValue, String newValue) -> {
+            clearButton.setVisible(textBox.getText().length() != 0);
         });
     }
 

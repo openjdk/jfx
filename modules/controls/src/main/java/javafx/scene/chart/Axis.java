@@ -37,6 +37,7 @@ import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import javafx.animation.FadeTransition;
@@ -48,10 +49,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.FontCssMetaData;
 import javafx.css.StyleableProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Dimension2D;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.control.Label;
@@ -82,17 +82,16 @@ public abstract class Axis<T> extends Region {
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
 
     Text measure = new Text();
+    private Orientation effectiveOrientation;
     private Label axisLabel = new Label();
     private final Path tickMarkPath = new Path();
     private double oldLength = 0;
     /** True when the current range invalid and all dependent calculations need to be updated */
     boolean rangeValid = false;
-    private boolean tickPropertyChanged = false;
-    /** True when labelFormatter changes programmatically - only tick marks text needs to updated */
-    boolean formatterValid = false;
-    
-    double maxWidth = 0;
-    double maxHeight = 0;
+    private boolean measureInvalid = false;
+
+    private int numLabelsToSkip = 1;
+
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     private final ObservableList<TickMark<T>> tickMarks = FXCollections.observableArrayList();
@@ -135,6 +134,20 @@ public abstract class Axis<T> extends Region {
     public final Side getSide() { return side.get(); }
     public final void setSide(Side value) { side.set(value); }
     public final ObjectProperty<Side> sideProperty() { return side; }
+
+    final void setEffectiveOrientation(Orientation orientation) {
+        effectiveOrientation = orientation;
+    }
+
+    final Side getEffectiveSide() {
+        final Side side = getSide();
+        if (side == null || (side.isVertical() && effectiveOrientation == Orientation.HORIZONTAL)
+                || side.isHorizontal() && effectiveOrientation == Orientation.VERTICAL) {
+            // Means side == null && effectiveOrientation == null produces Side.BOTTOM
+            return effectiveOrientation == Orientation.VERTICAL ? Side.LEFT : Side.BOTTOM;
+        }
+        return side;
+    }
 
     /** The axis label */
     private ObjectProperty<String> label = new ObjectPropertyBase<String>() {
@@ -272,6 +285,7 @@ public abstract class Axis<T> extends Region {
             for(TickMark<T> tm : getTickMarks()) {
                 tm.textNode.setFont(f);
             }
+            measureInvalid = true;
             requestAxisLayout();
         }
 
@@ -297,8 +311,9 @@ public abstract class Axis<T> extends Region {
     /** The fill for all tick labels */
     private ObjectProperty<Paint> tickLabelFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
         @Override protected void invalidated() {
-            tickPropertyChanged = true;
-            requestAxisLayout();
+            for (TickMark<T> tick : tickMarks) {
+                tick.textNode.setFill(getTickLabelFill());
+            }
         }
 
         @Override
@@ -540,8 +555,8 @@ public abstract class Axis<T> extends Region {
      * @return the computed preferred width for this axis
      */
     @Override protected double computePrefHeight(double width) {
-        final Side side = getSide();
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL
+        final Side side = getEffectiveSide();
+        if (side.isVertical()) {
             // TODO for now we have no hard and fast answer here, I guess it should work
             // TODO out the minimum size needed to display min, max and zero tick mark labels.
             return 100;
@@ -575,8 +590,8 @@ public abstract class Axis<T> extends Region {
      * @return the computed preferred width for this axis
      */
     @Override protected double computePrefWidth(double height) {
-        final Side side = getSide();
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL
+        final Side side = getEffectiveSide();
+        if (side.isVertical()) {
             // we need to first auto range as this may/will effect tick marks
             Object range = autoRange(height);
             // calculate max tick label width
@@ -614,82 +629,48 @@ public abstract class Axis<T> extends Region {
     @Override protected void layoutChildren() {
         final double width = getWidth();
         final double height = getHeight();
-        final double tickMarkLength = (getTickLength() > 0) ? getTickLength() : 0;
+        final double tickMarkLength = (isTickMarkVisible() && getTickLength() > 0) ? getTickLength() : 0;
         final boolean isFirstPass = oldLength == 0;
         // auto range if it is not valid
-        final Side side = getSide();
-        final double length = (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) ? height : width;
-        int numLabelsToSkip = 1;
+        final Side side = getEffectiveSide();
+        final double length = (side.isVertical()) ? height : width;
         int tickIndex = 0;
-        if (oldLength != length || !isRangeValid() || tickPropertyChanged || formatterValid) {
+        boolean rangeInvalid = !isRangeValid();
+        if (oldLength != length || rangeInvalid) {
             // get range
             Object range;
             if(isAutoRanging()) {
                 // auto range
                 range = autoRange(length);
                 // set current range to new range
-                setRange(range, getAnimated() && !isFirstPass && impl_isTreeVisible() && !isRangeValid());
+                setRange(range, getAnimated() && !isFirstPass && impl_isTreeVisible() && rangeInvalid);
             } else {
                 range = getRange();
             }
             // calculate new tick marks
             List<T> newTickValues = calculateTickValues(length, range);
 
-             // calculate maxLabelWidth / maxLabelHeight for respective orientations
-            maxWidth = 0; maxHeight = 0;
-            if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
-                for (T value: newTickValues) {
-                    maxHeight = Math.round(Math.max(maxHeight, measureTickMarkSize(value, range).getHeight()));
-                }
-            } else {
-                for (T value: newTickValues) {
-                    maxWidth = Math.round(Math.max(maxWidth, measureTickMarkSize(value, range).getWidth()));
-                }
-            }
-            // we have to work out what new or removed tick marks there are, then create new tick marks and their
-            // text nodes where needed
-            // find everything added or removed
-            List<T> added = new ArrayList<T>();
-            List<TickMark<T>> removed = new ArrayList<TickMark<T>>();
-            if(tickMarks.isEmpty()) {
-                added.addAll(newTickValues);
-            } else {
-                // find removed
-                for (TickMark<T> tick: tickMarks) {
-                    if(!newTickValues.contains(tick.getValue())) removed.add(tick);
-                }
-                // find added
-                for(T newValue: newTickValues) {
-                    boolean found = false;
-                    for (TickMark<T> tick: tickMarks) {
-                        if(tick.getValue().equals(newValue)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if(!found) added.add(newValue);
-                }
-            }
-            // remove everything that needs to go
-            for(TickMark<T> tick: removed) {
+            // remove everything
+            Iterator<TickMark<T>> tickMarkIterator = tickMarks.iterator();
+            while (tickMarkIterator.hasNext()) {
+                TickMark<T> tick = tickMarkIterator.next();
                 final TickMark<T> tm = tick;
                 if (shouldAnimate()) {
                     FadeTransition ft = new FadeTransition(Duration.millis(250),tick.textNode);
                     ft.setToValue(0);
-                    ft.setOnFinished(new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getChildren().remove(tm.textNode);
-                        }
+                    ft.setOnFinished(actionEvent -> {
+                        getChildren().remove(tm.textNode);
                     });
                     ft.play();
                 } else {
                     getChildren().remove(tm.textNode);
                 }
                 // we have to remove the tick mark immediately so we don't draw tick line for it or grid lines and fills
-                tickMarks.remove(tm);
+                tickMarkIterator.remove();
             }
+
             // add new tick marks for new values
-            for(T newValue: added) {
+            for(T newValue: newTickValues) {
                 final TickMark<T> tick = new TickMark<T>();
                 tick.setValue(newValue);
                 tick.textNode.setText(getTickMarkLabel(newValue));
@@ -706,20 +687,7 @@ public abstract class Axis<T> extends Region {
                     ft.play();
                 }
             }
-            if (tickPropertyChanged) {
-                tickPropertyChanged = false;
-                for (TickMark<T> tick : tickMarks) {
-                    tick.textNode.setFill(getTickLabelFill());
-                }
-            }
-            if (formatterValid) {
-                // update tick's textNode text for all ticks as formatter has changed.
-                formatterValid = false;
-                for (TickMark<T> tick : tickMarks) {
-                    tick.textNode.setText(getTickMarkLabel(tick.getValue()));
-                }
-            }
-           
+
             // call tick marks updated to inform subclasses that we have updated tick marks
             tickMarksUpdated();
             // mark all done
@@ -727,16 +695,39 @@ public abstract class Axis<T> extends Region {
             rangeValid = true;
         }
 
-        // RT-12272 : tick labels overlapping
-        int numLabels = 0;
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
-            numLabels = (maxHeight > 0) ? (int) (length/maxHeight) : 0;
-        } else {
-            numLabels = (maxWidth > 0) ? (int)(length/maxWidth) : 0;
+        if (oldLength != length || rangeInvalid || measureInvalid) {
+            measureInvalid = false;
+            // RT-12272 : tick labels overlapping
+            switch (side) {
+                case LEFT:
+                case RIGHT:
+                    double totalLabelHeight = 0;
+                    double maxLabelHeight = 0;
+                    for (TickMark<T> m : tickMarks) {
+                        double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
+                        totalLabelHeight += tickHeight;
+                        maxLabelHeight = Math.round(Math.max(maxLabelHeight, tickHeight));
+                    }
+                    if (maxLabelHeight > 0 && length < totalLabelHeight) {
+                        numLabelsToSkip = ((int)(tickMarks.size() * maxLabelHeight / length)) + 1;
+                    }
+                    break;
+                case BOTTOM:
+                case TOP:
+                    double totalLabelWidth = 0;
+                    double maxLabelWidth = 0;
+                    for (TickMark<T> m : tickMarks) {
+                        double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
+                        totalLabelWidth += tickWidth;
+                        maxLabelWidth = Math.round(Math.max(maxLabelWidth, tickWidth));
+                    }
+                    if (maxLabelWidth > 0 && length < totalLabelWidth) {
+                        numLabelsToSkip = ((int)(tickMarks.size() * maxLabelWidth / length)) + 1;
+                    }
+                    break;
+            }
         }
-        if (numLabels > 0) {
-            numLabelsToSkip = ((int)(tickMarks.size()/numLabels)) + 1;
-        }
+
         // clear tick mark path elements as we will recreate
         tickMarkPath.getElements().clear();
         // do layout of axis label, tick mark lines and text
@@ -1018,6 +1009,11 @@ public abstract class Axis<T> extends Region {
          * @return true if tick mark label text is visible and false otherwise
          */
         public final boolean isTextVisible() { return textVisible.get(); }
+
+        /**
+         * Specifies whether this tick mark label text is displayed or not.
+         * @param value true if tick mark label text is visible and false otherwise
+         */
         public final void setTextVisible(boolean value) { textVisible.set(value); }
 
         /**

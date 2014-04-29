@@ -31,13 +31,14 @@ import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * An effect that returns a mask that is the inverse of the input (i.e.,
  * opaque areas of the input become transparent and vice versa) with a
  * given offset and padding.
  */
-public class InvertMask extends CoreEffect {
+public class InvertMask extends CoreEffect<RenderState> {
 
     private int pad;
     private int xoff;
@@ -219,26 +220,48 @@ public class InvertMask extends CoreEffect {
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
-        // Typically the mask gets padded by synthetic opaque mask data
-        // that is computed from the lack of input pixels in the padded
-        // area.  But in the case where a clip has cut down on the
-        // amount of data we are generating then the padding for this
-        // particular (clipped) operation may not be synthetic, rather it
-        // may actually represent inversions of real input pixels.  Thus,
-        // the clip for the input needs to make sure it includes any
-        // valid input pixels that may appear not just in the output
-        // clip, but also in its padded fringe.
-        if (outputClip != null) {
-            if (pad != 0) {
-                outputClip = new Rectangle(outputClip);
-                outputClip.grow(pad, pad);
+        return new RenderState() {
+            @Override
+            public EffectCoordinateSpace getEffectTransformSpace() {
+                return EffectCoordinateSpace.UserSpace;
             }
-        }
-        return outputClip;
+
+            @Override
+            public BaseTransform getInputTransform(BaseTransform filterTransform) {
+                return BaseTransform.IDENTITY_TRANSFORM;
+            }
+
+            @Override
+            public BaseTransform getResultTransform(BaseTransform filterTransform) {
+                return filterTransform;
+            }
+
+            @Override
+            public Rectangle getInputClip(int i, Rectangle filterClip) {
+                // Typically the mask gets padded by synthetic opaque mask data
+                // that is computed from the lack of input pixels in the padded
+                // area.  But in the case where a clip has cut down on the
+                // amount of data we are generating then the padding for this
+                // particular (clipped) operation may not be synthetic, rather it
+                // may actually represent inversions of real input pixels.  Thus,
+                // the clip for the input needs to make sure it includes any
+                // valid input pixels that may appear not just in the output
+                // clip, but also in its padded fringe.
+                if (filterClip != null) {
+                    if (pad != 0) {
+                        filterClip = new Rectangle(filterClip);
+                        filterClip.grow(pad, pad);
+                    }
+                }
+                return filterClip;
+            }
+        };
     }
 
     @Override

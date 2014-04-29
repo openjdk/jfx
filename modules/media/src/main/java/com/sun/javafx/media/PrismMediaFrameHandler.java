@@ -157,11 +157,9 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         textures.clear();
     }
     
-    private RenderJob releaseRenderJob = new RenderJob(new Runnable() {
-            public void run() {
-                releaseData();
-            }
-        });
+    private RenderJob releaseRenderJob = new RenderJob(() -> {
+        releaseData();
+    });
 
     /**
      * Call this when you no longer need to render movie frames, for example

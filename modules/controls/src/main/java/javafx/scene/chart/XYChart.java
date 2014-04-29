@@ -42,12 +42,11 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.geometry.Orientation;
 import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -88,9 +87,9 @@ public abstract class XYChart<X,Y> extends Chart {
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
 
     // to indicate which colors are being used for the series
-    BitSet colorBits = new BitSet(8);
+    private final BitSet colorBits = new BitSet(8);
     static String DEFAULT_COLOR = "default-color";
-    Map<Series, Integer> seriesColorMap = new HashMap<Series, Integer>();
+    final Map<Series, Integer> seriesColorMap = new HashMap<Series, Integer>();
     private boolean rangeValid = false;
     private final Line verticalZeroLine = new Line();
     private final Line horizontalZeroLine = new Line();
@@ -107,70 +106,70 @@ public abstract class XYChart<X,Y> extends Chart {
     /* start pointer of a series linked list. */
     Series<X,Y> begin = null;
     /** This is called when a series is added or removed from the chart */
-    private final ListChangeListener<Series<X,Y>> seriesChanged = new ListChangeListener<Series<X,Y>>() {
-        @Override public void onChanged(Change<? extends Series<X,Y>> c) {
-            while (c.next()) {
-                if (c.getRemoved().size() > 0) updateLegend();
-                for (Series<X,Y> series : c.getRemoved()) {
-                    series.setToRemove = true;
-                    series.setChart(null);
-                    seriesRemoved(series);
+    private final ListChangeListener<Series<X,Y>> seriesChanged = c -> {
+        while (c.next()) {
+            if (c.getRemoved().size() > 0) updateLegend();
+            for (Series<X,Y> series : c.getRemoved()) {
+                series.setToRemove = true;
+                series.setChart(null);
+                seriesRemoved(series);
+                int idx = seriesColorMap.remove(series);
+                colorBits.clear(idx);
 //                    seriesDefaultColorIndex --;
-                }
-                for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
-                    final Series<X,Y> series = c.getList().get(i);
-                    // add new listener to data
-                    series.setChart(XYChart.this);
-                    if (series.setToRemove) {
-                        series.setToRemove = false;
-                        series.getChart().seriesBeingRemovedIsAdded(series);
-                    }
-                    // update linkedList Pointers for series
-                    if (XYChart.this.begin == null) {
-                        XYChart.this.begin = getData().get(i);
-                        XYChart.this.begin.next = null;
-                    } else {
-                        if (i == 0) {
-                            getData().get(0).next = XYChart.this.begin;
-                            begin = getData().get(0);
-                        } else {
-                            Series ptr = begin;
-                            for (int j = 0; j < i -1 && ptr!=null ; j++) {
-                                ptr = ptr.next;
-                            }
-                            if (ptr != null) {
-                                getData().get(i).next = ptr.next;
-                                ptr.next = getData().get(i);
-                            }
-
-                        }
-                    }
-                    // update default color style class
-                    int nextClearBit = colorBits.nextClearBit(0);
-                    colorBits.set(nextClearBit, true);
-                    series.defaultColorStyleClass = DEFAULT_COLOR+(nextClearBit%8);
-                    seriesColorMap.put(series, nextClearBit%8);
-                    // inform sub-classes of series added
-                    seriesAdded(series, i);
-                }
-                if (c.getFrom() < c.getTo()) updateLegend();
-                seriesChanged(c);
-                // RT-12069, linked list pointers should update when list is permutated.
-                if (c.wasPermutated() && getData().size() > 0) {
-                    XYChart.this.begin = getData().get(0);
-                    Series<X,Y> ptr = begin;
-                    for(int k = 1; k < getData().size() && ptr != null; k++) {
-                        ptr.next = getData().get(k);
-                        ptr = ptr.next;
-                    }
-                    ptr.next = null;
-                }
             }
-            // update axis ranges
-            invalidateRange();
-            // lay everything out
-            requestChartLayout();
+            for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
+                final Series<X,Y> series = c.getList().get(i);
+                // add new listener to data
+                series.setChart(XYChart.this);
+                if (series.setToRemove) {
+                    series.setToRemove = false;
+                    series.getChart().seriesBeingRemovedIsAdded(series);
+                }
+                // update linkedList Pointers for series
+                if (XYChart.this.begin == null) {
+                    XYChart.this.begin = getData().get(i);
+                    XYChart.this.begin.next = null;
+                } else {
+                    if (i == 0) {
+                        getData().get(0).next = XYChart.this.begin;
+                        begin = getData().get(0);
+                    } else {
+                        Series ptr = begin;
+                        for (int j = 0; j < i -1 && ptr!=null ; j++) {
+                            ptr = ptr.next;
+                        }
+                        if (ptr != null) {
+                            getData().get(i).next = ptr.next;
+                            ptr.next = getData().get(i);
+                        }
+
+                    }
+                }
+                // update default color style class
+                int nextClearBit = colorBits.nextClearBit(0);
+                colorBits.set(nextClearBit, true);
+                series.defaultColorStyleClass = DEFAULT_COLOR+(nextClearBit%8);
+                seriesColorMap.put(series, nextClearBit%8);
+                // inform sub-classes of series added
+                seriesAdded(series, i);
+            }
+            if (c.getFrom() < c.getTo()) updateLegend();
+            seriesChanged(c);
+            // RT-12069, linked list pointers should update when list is permutated.
+            if (c.wasPermutated() && getData().size() > 0) {
+                XYChart.this.begin = getData().get(0);
+                Series<X,Y> ptr = begin;
+                for(int k = 1; k < getData().size() && ptr != null; k++) {
+                    ptr.next = getData().get(k);
+                    ptr = ptr.next;
+                }
+                ptr.next = null;
+            }
         }
+        // update axis ranges
+        invalidateRange();
+        // lay everything out
+        requestChartLayout();
     };
 
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
@@ -432,19 +431,17 @@ public abstract class XYChart<X,Y> extends Chart {
      */
     public XYChart(Axis<X> xAxis, Axis<Y> yAxis) {
         this.xAxis = xAxis;
-        if(xAxis.getSide() == null) xAxis.setSide(Side.BOTTOM);
+        if (xAxis.getSide() == null) xAxis.setSide(Side.BOTTOM);
+        xAxis.setEffectiveOrientation(Orientation.HORIZONTAL);
         this.yAxis = yAxis;
-        if(yAxis.getSide() == null) yAxis.setSide(Side.LEFT);
+        if (yAxis.getSide() == null) yAxis.setSide(Side.LEFT);
+        yAxis.setEffectiveOrientation(Orientation.VERTICAL);
         // RT-23123 autoranging leads to charts incorrect appearance.
-        xAxis.autoRangingProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                updateAxisRange();
-            }
+        xAxis.autoRangingProperty().addListener((ov, t, t1) -> {
+            updateAxisRange();
         });
-        yAxis.autoRangingProperty().addListener(new ChangeListener<Boolean>() {
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                updateAxisRange();
-            }
+        yAxis.autoRangingProperty().addListener((ov, t, t1) -> {
+            updateAxisRange();
         });
         // add initial content to chart content
         getChartChildren().addAll(plotBackground,plotArea,xAxis,yAxis);
@@ -473,11 +470,9 @@ public abstract class XYChart<X,Y> extends Chart {
         plotContent.setManaged(false);
         plotArea.setManaged(false);
         // listen to animation on/off and sync to axis
-        animatedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> valueModel, Boolean oldValue, Boolean newValue) {
-                if(getXAxis() != null) getXAxis().setAnimated(newValue);
-                if(getYAxis() != null) getYAxis().setAnimated(newValue);
-            }
+        animatedProperty().addListener((valueModel, oldValue, newValue) -> {
+            if(getXAxis() != null) getXAxis().setAnimated(newValue);
+            if(getYAxis() != null) getYAxis().setAnimated(newValue);
         });
     }
 
@@ -676,7 +671,7 @@ public abstract class XYChart<X,Y> extends Chart {
         final Axis<Y> ya = getYAxis();
         final ObservableList<Axis.TickMark<Y>> yaTickMarks = ya.getTickMarks();
         // check we have 2 axises and know their sides
-        if (xa == null || ya == null || xa.getSide() == null || ya.getSide() == null) return;
+        if (xa == null || ya == null) return;
         // try and work out width and height of axises
         double xAxisWidth = 0;
         double xAxisHeight = 30; // guess x axis height to start with
@@ -697,31 +692,28 @@ public abstract class XYChart<X,Y> extends Chart {
         yAxisHeight = Math.ceil(yAxisHeight);
         // calc xAxis height
         double xAxisY = 0;
-        if (xa.getSide().equals(Side.TOP)) {
-            xa.setVisible(true);
-            xAxisY = top+1;
-            top += xAxisHeight;
-        } else if (xa.getSide().equals(Side.BOTTOM)) {
-            xa.setVisible(true);
-            xAxisY = top + yAxisHeight;
-        } else {
-            // X axis should never be left or right so hide
-            xa.setVisible(false);
-            xAxisHeight = 0;
+        switch(xa.getEffectiveSide()) {
+            case TOP:
+                xa.setVisible(true);
+                xAxisY = top+1;
+                top += xAxisHeight;
+                break;
+            case BOTTOM:
+                xa.setVisible(true);
+                xAxisY = top + yAxisHeight;
         }
+
         // calc yAxis width
         double yAxisX = 0;
-        if (ya.getSide().equals(Side.LEFT)) {
-            ya.setVisible(true);
-            yAxisX = left +1;
-            left += yAxisWidth;
-        } else if (ya.getSide().equals(Side.RIGHT)) {
-            ya.setVisible(true);
-            yAxisX = left + xAxisWidth;
-        } else {
-            // Y axis should never be top or bottom so hide
-            ya.setVisible(false);
-            yAxisWidth = 0;
+        switch(ya.getEffectiveSide()) {
+            case LEFT:
+                ya.setVisible(true);
+                yAxisX = left +1;
+                left += yAxisWidth;
+                break;
+            case RIGHT:
+                ya.setVisible(true);
+                yAxisX = left + xAxisWidth;
         }
         // resize axises
         xa.resizeRelocate(left, xAxisY, xAxisWidth, xAxisHeight);
@@ -1477,6 +1469,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
         private final ListChangeListener<Data<X,Y>> dataChangeListener = new ListChangeListener<Data<X, Y>>() {
             @Override public void onChanged(Change<? extends Data<X, Y>> c) {
+                final XYChart<X, Y> chart = getChart();
                 while (c.next()) {
                     // RT-25187 Probably a sort happened, just reorder the pointers and return.
                     if (c.wasPermutated()) {
@@ -1504,7 +1497,7 @@ public abstract class XYChart<X,Y> extends Chart {
                     if (c.getAddedSize() > 0) {
                         for (Data<X,Y> itemPtr = begin; itemPtr != null; itemPtr = itemPtr.next) {
                             if (itemPtr.setToRemove) {
-                                getChart().dataBeingRemovedIsAdded(itemPtr, Series.this);
+                                if (chart != null) chart.dataBeingRemovedIsAdded(itemPtr, Series.this);
                                 itemPtr.setToRemove = false;
                             }
                         }
@@ -1542,7 +1535,6 @@ public abstract class XYChart<X,Y> extends Chart {
                         }
                     }
                     // inform chart
-                    XYChart<X,Y> chart = getChart();
                     if(chart!=null) chart.dataItemsChanged(Series.this,
                             (List<Data<X,Y>>)c.getRemoved(), c.getFrom(), c.getTo(), c.wasPermutated());
                 }

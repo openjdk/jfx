@@ -182,11 +182,7 @@ public class StackPane extends Pane {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
 
-    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
-        public Insets call(Node n) {
-            return getMargin(n);
-        }
-    };
+    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
 
     /**
      * Removes all stackpane constraints from the child node.
@@ -338,12 +334,7 @@ public class StackPane extends Pane {
         double contentWidth = width - left - right;
         double contentHeight = height - top - bottom;
         double baselineOffset = alignVpos == VPos.BASELINE ?
-                getAreaBaselineOffset(managed, marginAccessor, new Function<Integer, Double>() {
-
-            public Double apply(Integer i) {
-                return width;
-            }
-        }, contentHeight, true)
+                getAreaBaselineOffset(managed, marginAccessor, i -> width, contentHeight, true)
                                     : 0;
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);

@@ -58,11 +58,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
      *      from 0.0 to 1.0.
      */
     public static <S> Callback<TreeTableColumn<S,Double>, TreeTableCell<S,Double>> forTreeTableColumn() {
-        return new Callback<TreeTableColumn<S, Double>, TreeTableCell<S, Double>>() {
-            @Override public TreeTableCell<S, Double> call(TreeTableColumn<S, Double> param) {
-                return new ProgressBarTreeTableCell<S>();
-            }
-        };
+        return param -> new ProgressBarTreeTableCell<S>();
     }
     
     

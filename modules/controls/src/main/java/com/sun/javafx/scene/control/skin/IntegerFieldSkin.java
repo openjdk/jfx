@@ -45,10 +45,8 @@ public class IntegerFieldSkin extends InputFieldSkin {
         // Whenever the value changes on the control, we need to update the text
         // in the TextField. The only time this is not the case is when the update
         // to the control happened as a result of an update in the text textField.
-        control.valueProperty().addListener(integerFieldValueListener = new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                updateText();
-            }
+        control.valueProperty().addListener(integerFieldValueListener = observable -> {
+            updateText();
         });
     }
 
@@ -103,10 +101,8 @@ public class IntegerFieldSkin extends InputFieldSkin {
         } catch (NumberFormatException ex) {
             // Empty string most likely
             ((IntegerField) control).setValue(0);
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    getTextField().positionCaret(1);
-                }
+            Platform.runLater(() -> {
+                getTextField().positionCaret(1);
             });
         }
     }

@@ -33,8 +33,9 @@ import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
-public class PerspectiveTransform extends CoreEffect {
+public class PerspectiveTransform extends CoreEffect<RenderState> {
     private float tx[][] = new float[3][3];
     private float ulx, uly, urx, ury, lrx, lry, llx, lly;
     private float devcoords[] = new float[8];
@@ -183,11 +184,6 @@ public class PerspectiveTransform extends CoreEffect {
     }
 
     @Override
-    public boolean operatesInUserSpace() {
-        return true;
-    }
-
-    @Override
     public ImageData filter(FilterContext fctx,
                             BaseTransform transform,
                             Rectangle outputClip,
@@ -195,8 +191,10 @@ public class PerspectiveTransform extends CoreEffect {
                             Effect defaultInput)
     {
         setupTransforms(transform);
+        RenderState rstate = getRenderState(fctx, transform, outputClip,
+                                            renderHelper, defaultInput);
         Effect input = getDefaultedInput(0, defaultInput);
-        Rectangle inputClip = getInputClip(0, transform, outputClip);
+        Rectangle inputClip = rstate.getInputClip(0, outputClip);
         ImageData inputData =
             input.filter(fctx, BaseTransform.IDENTITY_TRANSFORM,
                          inputClip, null, defaultInput);
@@ -204,7 +202,7 @@ public class PerspectiveTransform extends CoreEffect {
             inputData.unref();
             return new ImageData(fctx, null, inputData.getUntransformedBounds());
         }
-        ImageData ret = filterImageDatas(fctx, transform, outputClip, inputData);
+        ImageData ret = filterImageDatas(fctx, transform, outputClip, rstate, inputData);
         inputData.unref();
         return ret;
     }
@@ -260,15 +258,18 @@ public class PerspectiveTransform extends CoreEffect {
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
         // RT-27402
-        // TODO: Inverse map the bounds through the perspective
-        // transform to see what portions of the source contribute
-        // to it.
-        return null;
+        // TODO: We could inverse map the output bounds through the perspective
+        // transform to see what portions of the input contribute to the result,
+        // but until we implement such a process we will just use the stock
+        // object that specifies no clipping of the inputs.
+        return RenderState.UnclippedUserSpaceRenderState;
     }
 
     @Override

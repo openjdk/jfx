@@ -34,7 +34,9 @@ package ensemble.samples.controls.togglebutton;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.HPos;
 import javafx.geometry.Pos;
+import javafx.geometry.VPos;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -74,14 +76,11 @@ public class ToggleButtonApp extends Application {
         tb1.setToggleGroup(group);
         tb2.setToggleGroup(group);
         tb3.setToggleGroup(group);
-        group.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-            @Override
-            public void changed(ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) {
-                if (selectedToggle != null) {
-                    label.setText(((ToggleButton) selectedToggle).getText());
-                } else {
-                    label.setText("...");
-                }
+        group.selectedToggleProperty().addListener((ObservableValue<? extends Toggle> observable, Toggle oldValue, Toggle selectedToggle) -> {
+            if (selectedToggle != null) {
+                label.setText(((ToggleButton) selectedToggle).getText());
+            } else {
+                label.setText("...");
             }
         });
         // select the first button to start with
@@ -90,7 +89,7 @@ public class ToggleButtonApp extends Application {
         GridPane.setConstraints(tb1, 0, 0);
         GridPane.setConstraints(tb2, 1, 0);
         GridPane.setConstraints(tb3, 2, 0);
-        GridPane.setConstraints(label, 1, 1, 1, 1);
+        GridPane.setConstraints(label, 0, 1, 3, 1, HPos.CENTER, VPos.BASELINE);
         GridPane grid = new GridPane();
         grid.setVgap(20);
         grid.setHgap(12);

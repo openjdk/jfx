@@ -32,6 +32,7 @@ UninstallDisplayIcon={app}\APPLICATION_NAME.ico
 UninstallDisplayName=APPLICATION_NAME
 WizardImageStretch=No
 WizardSmallImageFile=APPLICATION_NAME-setup-icon.bmp   
+ArchitecturesInstallIn64BitMode=ARCHITECTURE_BIT_MODE
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -45,7 +46,11 @@ Name: "{group}\APPLICATION_NAME"; Filename: "{app}\APPLICATION_NAME.exe"; IconFi
 Name: "{commondesktop}\APPLICATION_NAME"; Filename: "{app}\APPLICATION_NAME.exe";  IconFilename: "{app}\APPLICATION_NAME.ico"; Check: APPLICATION_DESKTOP_SHORTCUT()
 
 [Run]
-Filename: "{app}\APPLICATION_NAME.exe"; Description: "{cm:LaunchProgram,APPLICATION_NAME}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\RUN_FILENAME.exe"; Description: "{cm:LaunchProgram,APPLICATION_NAME}"; Flags: nowait postinstall skipifsilent; Check: APPLICATION_NOT_SERVICE()
+Filename: "{app}\RUN_FILENAME.exe"; Parameters: "-install -svcName ""APPLICATION_NAME"" -svcDesc ""APPLICATION_DESCRIPTION"" -mainExe ""APPLICATION_LAUNCHER_FILENAME"" START_ON_INSTALL RUN_AT_STARTUP"; Check: APPLICATION_SERVICE()
+
+[UninstallRun]
+Filename: "{app}\RUN_FILENAME.exe "; Parameters: "-uninstall -svcName APPLICATION_NAME STOP_ON_UNINSTALL"; Check: APPLICATION_SERVICE()
 
 [Code]
 function returnTrue(): Boolean;
