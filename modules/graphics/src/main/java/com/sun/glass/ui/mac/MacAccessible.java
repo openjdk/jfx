@@ -1288,9 +1288,10 @@ final class MacAccessible extends PlatformAccessible {
                  * the value again in AXTitle will cause voice over to read the text twice. 
                  */
                 switch (role) {
+                    case COMBOBOX:
                     case TEXT:
                     case TEXT_FIELD:
-                    case TEXT_AREA: return null;
+                    case TEXT_AREA:
                     case TREE_TABLE_ITEM: return null;
                     case TREE_TABLE_CELL: {
                         /*
