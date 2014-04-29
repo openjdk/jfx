@@ -40,7 +40,6 @@ import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
-import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import com.sun.javafx.binding.ExpressionHelper;
