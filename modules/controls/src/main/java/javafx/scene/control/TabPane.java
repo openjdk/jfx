@@ -653,7 +653,6 @@ public class TabPane extends Control {
                                     int downPos = tabIndex - i;
                                     if (downPos >= 0) {
                                         Tab _tab = getModelItem(downPos);
-                                        System.out.println(_tab.getText() + " disabled: " + _tab.isDisabled() + ", disable: " + _tab.isDisable());
                                         if (_tab != null && ! _tab.isDisable()) {
                                             select(_tab);
                                             break;
