@@ -2,7 +2,7 @@
 <assembly xmlns='urn:schemas-microsoft-com:asm.v1' manifestVersion='1.0'>
  <assemblyIdentity version="FXVERSION"
          processorArchitecture="X86"
-         name="javafxpackager.exe"
+         name="javapackager.exe"
          type="win32"/>
   <description>JavaFX application packager</description>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">

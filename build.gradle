@@ -1813,23 +1813,23 @@ project(":fxpackager") {
         }
     }
 
-    // Builds the javafxpackager executable. For everything other than windows,
+    // Builds the javapackager executable. For everything other than windows,
     // this is simply moving the existing shell script and ensuring it has proper
     // permissions. For Windows, this includes compiling the native executable
     if (IS_WINDOWS && COMPILE_FXPACKAGER){
-        task buildJavaFXPackager(type: CCTask, group: "Build") {
-            description = "Compiles native sources for javafxpackager.exe"
-            matches = "javafxpackager\\.cpp"
+        task buildJavaPackager(type: CCTask, group: "Build") {
+            description = "Compiles native sources for javapackager.exe"
+            matches = "javapackager\\.cpp"
             params.addAll(WIN.fxpackager.ccFlags)
             compiler = WIN.fxpackager.compiler
-            output(file("$buildDir/native/javafxpackager"))
+            output(file("$buildDir/native/javapackager"))
             source WIN.fxpackager.nativeSource
             doFirst {
                 copy {
                     mkdir "$buildDir/native"
-                    mkdir "$buildDir/native/javafxpackager"
-                    from file("src/main/native/javafxpackager/win/javafxpackager.manifest")
-                    into file("$buildDir/native/javafxpackager")
+                    mkdir "$buildDir/native/javapackager"
+                    from file("src/main/native/javapackager/win/javapackager.manifest")
+                    into file("$buildDir/native/javapackager")
                     filter { line->
                         line = line.replace("FXVERSION", "${RAW_VERSION}.${HUDSON_BUILD_NUMBER}");
                     }
@@ -1839,48 +1839,59 @@ project(":fxpackager") {
                 mkdir "$buildDir/native"
                 exec({
                     commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8",
-                            "/fo$buildDir/native/javafxpackager/javafxpackager.res",
-                            "src/main/native/javafxpackager/win/javafxpackager.rc");
+                            "/fo$buildDir/native/javapackager/javapackager.res",
+                            "src/main/native/javapackager/win/javapackager.rc");
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
                 });
             }
             doLast {
-                mkdir "$buildDir/javafxpackager"
+                mkdir "$buildDir/javapackager"
                 exec({
                     commandLine("$WIN.fxpackager.linker", "/nologo", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib",
-                            "/out:$buildDir/native/javafxpackager/javafxpackager.exe",
-                            "$buildDir/native/javafxpackager/javafxpackager.obj",
-                            "$buildDir/native/javafxpackager/javafxpackager.res")
+                            "/out:$buildDir/native/javapackager/javapackager.exe",
+                            "$buildDir/native/javapackager/javapackager.obj",
+                            "$buildDir/native/javapackager/javapackager.res")
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                 })
             }
             doLast {
                 exec({
                     commandLine("$MC", "-manifest",
-                                       "$buildDir/native/javafxpackager/javafxpackager.manifest",
-                                       "-outputresource:$buildDir/native/javafxpackager/javafxpackager.exe")
+                                       "$buildDir/native/javapackager/javapackager.manifest",
+                                       "-outputresource:$buildDir/native/javapackager/javapackager.exe")
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                 })
                 copy {
-                    from file("$buildDir/native/javafxpackager/javafxpackager.exe")
-                    into file("$buildDir/javafxpackager")
+                    from file("$buildDir/native/javapackager/javapackager.exe")
+                    into file("$buildDir/javapackager")
+                }
+                copy {
+                    from file("$buildDir/native/javapackager/javapackager.exe")
+                    into file("$buildDir/javapackager")
+                    rename ('javapackager', 'javafxpackager')
                 }
             }
         }
     } else {
-        task buildJavaFXPackager(group: "Build") {
+        task buildJavaPackager(group: "Build") {
             enabled = COMPILE_FXPACKAGER
             doLast {
 	            copy {
-    	            from "src/main/native/javafxpackager/shell"
-        		    into "$buildDir/javafxpackager"
+    	            from "src/main/native/javapackager/shell"
+        		    into "$buildDir/javapackager"
+                	fileMode = 0755
+                }
+	            copy {
+    	            from "src/main/native/javapackager/shell"
+        		    into "$buildDir/javapackager"
+                    rename ('javapackager', 'javafxpackager')
                 	fileMode = 0755
                 }
             }
         }
     }
 
-    jar.dependsOn buildJavaFXPackager
+    jar.dependsOn buildJavaPackager
 
     classes << {
         // Copy all of the download libraries to libs directory for the sake of the IDEs
@@ -2825,10 +2836,10 @@ compileTargets { t ->
                 into "build/${sdkDirName}/man"
             }
 
-            // Copy over the javafxpackager executable
+            // Copy over the javapackager executable
             if (t.name == "win" || t.name == "linux" || t.name == "mac") {
                 copy {
-                    from "modules/fxpackager/build/javafxpackager"
+                    from "modules/fxpackager/build/javapackager"
                     into "build/${sdkDirName}/bin"
                 }
             }

@@ -44,7 +44,7 @@ public class RelativeFileSet {
                 throw new RuntimeException("File " + f.getAbsolutePath() +
                         " does not belong to "+baseAbsolute);
             }
-            if (!absolute.equals(baseAbsolute)) { //possible in javafxpackager case
+            if (!absolute.equals(baseAbsolute)) { //possible in javapackager case
                this.files.add(absolute.substring(baseAbsolute.length()+1));
             }
         }

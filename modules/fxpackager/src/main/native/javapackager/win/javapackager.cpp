@@ -415,10 +415,23 @@ int fileExists (const std::string& path) {
     return (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
+bool hasEnding (std::string const &fullString, std::string const &ending) {
+    if (fullString.length() >= ending.length())
+        return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+    else
+        return false;
+}
+
 int main(int argc, char** argv) {
     char buf[MAX_PATH];
     GetModuleFileName (NULL, buf, MAX_PATH);
     std::string javafxhome = buf;
+    std::string ending = "javafxpackager.exe";
+
+    if (hasEnding (javafxhome, ending)) {
+        fprintf(stderr, "javafxpackager.exe has been renamed javapackager.exe.\nThe original file may be removed in a future release in lieu of javapackager.\nPlease update your scripts.\n\n");
+    }
+
     javafxhome.erase (javafxhome.rfind ("\\"));
 
     std::string fxlib = javafxhome + "\\..\\lib\\";
@@ -472,7 +485,7 @@ int main(int argc, char** argv) {
     if (! CreateProcess (NULL, (char *) cmd.c_str (),
             NULL, NULL, TRUE, NORMAL_PRIORITY_CLASS, NULL, NULL, &start, &pi)) {
 #ifdef _DEBUG
-        fprintf (stderr, "CAnnot start java.exe");
+        fprintf (stderr, "Cannot start java.exe");
 #endif
         return EXIT_FAILURE;
     }

@@ -238,7 +238,7 @@ WIN.iconLauncher.linkFlags = ["/link", "/nologo", "/SUBSYSTEM:CONSOLE"];
 
 WIN.fxpackager = [:]
 WIN.fxpackager.nativeSource = [
-    file("modules/fxpackager/src/main/native/javafxpackager/win")]
+    file("modules/fxpackager/src/main/native/javapackager/win")]
 WIN.fxpackager.compiler = compiler
 WIN.fxpackager.ccFlags = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",
                     "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",

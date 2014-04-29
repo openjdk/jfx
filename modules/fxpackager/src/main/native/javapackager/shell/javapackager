@@ -62,6 +62,14 @@ if [ ! -x "$JAVA_CMD" ] ; then
   exit 1
 fi
 
+case "$PRG" in
+  *javafxpackager)
+  echo 'javafxpackager has been renamed javapackager';
+  echo 'The original file may be removed in a future release in lieu of javapackager.';
+  echo 'Please update your scripts.';
+  echo ;;
+esac
+
 javafx_home=`dirname "$PRG"`/..
 
 classpath=".:$javafx_home/lib/ant-javafx.jar"

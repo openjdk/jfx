@@ -324,7 +324,7 @@ public class DeployParams extends CommonParams {
     }
 
     //we need to expand as in some cases
-    // (most notably javafxpackager)
+    // (most notably javapackager)
     //we may get "." as filename and assumption is we include
     // everything in the given folder
     // (IOUtils.copyfiles() have recursive behavior)

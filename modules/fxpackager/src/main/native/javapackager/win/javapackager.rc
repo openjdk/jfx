@@ -57,9 +57,9 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "Oracle Corporation\0"       "\0"
             VALUE "FileDescription",  "JavaFX(TM) Packager\0"
-            VALUE "InternalName",     "javafxpackager\0"
-            VALUE "LegalCopyright",   "Copyright 2013\0"     "\0"
-            VALUE "OriginalFilename", "javafxpackager.exe\0"
+            VALUE "InternalName",     "javapackager\0"
+            VALUE "LegalCopyright",   "Copyright 2014\0"     "\0"
+            VALUE "OriginalFilename", "javapackager.exe\0"
             VALUE "ProductName",      "JavaFX(TM) Runtime\0"          "\0"
             VALUE "ProductVersion",   XSTR(JFX_DVERSION)           "\0"
         END
@@ -76,5 +76,5 @@ END
 // Manifest
 //
 
-MANIFEST_RESOURCE_ID RT_MANIFEST "javafxpackager.manifest"
+MANIFEST_RESOURCE_ID RT_MANIFEST "javapackager.manifest"
 
