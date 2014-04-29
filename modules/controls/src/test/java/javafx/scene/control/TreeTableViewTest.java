@@ -3346,4 +3346,56 @@ public class TreeTableViewTest {
 
         sl.dispose();
     }
+
+    @Test public void test_rt36885() {
+        test_rt36885(false);
+    }
+
+    @Test public void test_rt36885_addChildAfterSelection() {
+        test_rt36885(true);
+    }
+
+    private void test_rt36885(boolean addChildToAAfterSelection) {
+        TreeItem<String> root = new TreeItem<>("Root");         // 0
+                TreeItem<String> a = new TreeItem<>("a");       // 1
+                    TreeItem<String> a1 = new TreeItem<>("a1"); // a expanded = 2, a collapsed = -1
+            TreeItem<String> b = new TreeItem<>("b");           // a expanded = 3, a collapsed = 2
+                TreeItem<String> b1 = new TreeItem<>("b1");     // a expanded = 4, a collapsed = 3
+                TreeItem<String> b2 = new TreeItem<>("b2");     // a expanded = 5, a collapsed = 4
+
+        root.setExpanded(true);
+        root.getChildren().setAll(a, b);
+
+        a.setExpanded(false);
+        if (!addChildToAAfterSelection) {
+            a.getChildren().add(a1);
+        }
+
+        b.setExpanded(true);
+        b.getChildren().addAll(b1, b2);
+
+        final TreeTableView<String> treeView = new TreeTableView<>(root);
+        TreeTableColumn<String, String> tableColumn = new TreeTableColumn<>();
+        tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue().getValue()));
+        treeView.getColumns().add(tableColumn);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = treeView.getSelectionModel();
+        FocusModel<TreeItem<String>> fm = treeView.getFocusModel();
+
+        sm.select(b1);
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals(b1, sm.getSelectedItem());
+        assertEquals(3, fm.getFocusedIndex());
+        assertEquals(b1, fm.getFocusedItem());
+
+        if (addChildToAAfterSelection) {
+            a.getChildren().add(a1);
+        }
+
+        a.setExpanded(true);
+        assertEquals(4, sm.getSelectedIndex());
+        assertEquals(b1, sm.getSelectedItem());
+        assertEquals(4, fm.getFocusedIndex());
+        assertEquals(b1, fm.getFocusedItem());
+    }
 }
