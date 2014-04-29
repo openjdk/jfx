@@ -1596,15 +1596,18 @@ public class ComboBoxTest {
 
         StageLoader sl = new StageLoader(vbox);
         sl.getStage().requestFocus();
+        btn.requestFocus();
         Toolkit.getToolkit().firePulse();
         Scene scene = sl.getStage().getScene();
 
+        assertTrue(btn.isFocused());
         assertEquals(btn, scene.getFocusOwner());
 
         MouseEventFirer mouse = new MouseEventFirer(cb);
         mouse.fireMousePressAndRelease();
 
         assertTrue(cb.isShowing());
+        assertTrue(cb.isFocused());
         assertEquals(cb, scene.getFocusOwner());
 
         sl.dispose();
