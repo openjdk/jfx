@@ -41,6 +41,9 @@ public class UInput {
             System.setProperty("glass.platform", "Monocle");
             System.setProperty("monocle.platform", "Headless");
             System.setProperty("prism.order", "sw");
+            System.setProperty("com.sun.javafx.gestures.zoom", "true");
+            System.setProperty("com.sun.javafx.gestures.rotate", "true");
+            System.setProperty("com.sun.javafx.gestures.scroll", "true");
         }
         isMonocle = "Monocle".equals(System.getProperty("glass.platform"));
         setup();

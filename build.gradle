@@ -1136,6 +1136,9 @@ allprojects {
             systemProperty 'glass.platform', 'Monocle'
             systemProperty 'monocle.platform', 'Headless'
             systemProperty 'prism.order', 'sw'
+            systemProperty 'com.sun.javafx.gestures.zoom', 'true'
+            systemProperty 'com.sun.javafx.gestures.rotate', 'true'
+            systemProperty 'com.sun.javafx.gestures.scroll', 'true'
         }
     }
 
