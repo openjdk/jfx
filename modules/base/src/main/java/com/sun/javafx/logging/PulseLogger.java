@@ -25,6 +25,8 @@
 
 package com.sun.javafx.logging;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,10 +42,20 @@ public class PulseLogger {
         if (logger != null) {
             list.add(logger);
         }
-        logger = JFRLogger.getInstance();
-        if (logger != null) {
-            list.add(logger);
+        try {
+            Class klass = Class.forName("com.sun.javafx.logging.JFRLogger");
+            if (klass != null) {
+                Method method = klass.getDeclaredMethod("getInstance");
+                logger = (Logger) method.invoke(null);
+                if (logger != null) {
+                    list.add(logger);
+                }
+            }
         }
+        catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            // Ignore
+        }
+
         loggers = list.toArray(new Logger[list.size()]);
         PULSE_LOGGING_ENABLED = loggers.length > 0;
     }

@@ -4,6 +4,7 @@
   <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
   <classpathentry kind="src" exported="true" path="src/main/java"/>
   <classpathentry kind="src" exported="true" path="src/main/java8"/>
+  <classpathentry kind="src" exported="true" path="src/main/java-jfr"/>
   <classpathentry kind="src" exported="true" path="src/test/java">
   <attributes>
       <attribute name="optional" value="true"/>
