@@ -210,6 +210,20 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     return ignored;
 }
 
+- (id)accessibilityAttributeValue:(NSString *)attribute
+{
+    /* 
+    * The default value of AXRoleDescription for a NSPanel is 'system dialog'.
+    * While this is correct for an average cocoa application it is not appropriate
+    * for JFX, where all NSPanels are decoration-less windows used to implement 
+    * tooltip, context menus, combo boxes, etc.
+    */
+    if ([NSAccessibilityRoleDescriptionAttribute isEqualToString: attribute]) {
+        return @"";
+    }
+    return [super accessibilityAttributeValue: attribute];
+}
+
 @end
 // --------------------------------------------------------------------------------------
 
