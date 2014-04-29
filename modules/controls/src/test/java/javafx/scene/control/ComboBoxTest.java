@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.PseudoClass;
 
@@ -1584,6 +1585,27 @@ public class ComboBoxTest {
         assertNotNull(cb.getEditor());
         KeyEventFirer tfKeyboard = new KeyEventFirer(cb.getEditor());
         tfKeyboard.doKeyPress(KeyCode.ENTER);   // Stack overflow here
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt36827() {
+        final Button btn = new Button("focus owner");
+        final ComboBox<String> cb = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        VBox vbox = new VBox(btn, cb);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        Toolkit.getToolkit().firePulse();
+        Scene scene = sl.getStage().getScene();
+
+        assertEquals(btn, scene.getFocusOwner());
+
+        MouseEventFirer mouse = new MouseEventFirer(cb);
+        mouse.fireMousePressAndRelease();
+
+        assertTrue(cb.isShowing());
+        assertEquals(cb, scene.getFocusOwner());
 
         sl.dispose();
     }
