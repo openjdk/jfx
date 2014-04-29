@@ -25,12 +25,10 @@
 
 package com.sun.javafx.tools.packager;
 
-import com.oracle.bundlers.Bundler;
-import com.oracle.bundlers.BundlerParamInfo;
-import com.oracle.bundlers.Bundlers;
+import com.oracle.tools.packager.*;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
-import com.sun.javafx.tools.packager.bundlers.ConfigException;
-import com.sun.javafx.tools.packager.bundlers.UnsupportedPlatformException;
+import com.oracle.tools.packager.ConfigException;
+import com.oracle.tools.packager.UnsupportedPlatformException;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -441,9 +439,9 @@ public class Main {
 
                 //set default logger
                 if (verbose) {
-                    Log.setLogger(new Log.Logger(true));
+                    com.oracle.tools.packager.Log.setLogger(new com.oracle.tools.packager.Log.Logger(true));
                 } else {
-                    Log.setLogger(new Log.Logger(false));
+                    com.oracle.tools.packager.Log.setLogger(new com.oracle.tools.packager.Log.Logger(false));
                 }
 
                 if (css2Bin) {

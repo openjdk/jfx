@@ -25,10 +25,8 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
+import com.oracle.tools.packager.*;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
-import com.oracle.bundlers.BundlerParamInfo;
-import com.sun.javafx.tools.packager.Log;
-import com.sun.javafx.tools.packager.PackagerLib;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +35,7 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
-import static com.oracle.bundlers.StandardBundlerParam.*;
+import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 public class BundleParams {
       
@@ -254,7 +252,7 @@ public class BundleParams {
         putUnlessNull(PARAM_SERVICE_HINT, b);
     }
     
-    public RelativeFileSet getRuntime() {
+    public com.oracle.tools.packager.RelativeFileSet getRuntime() {
         return fetchParam(RUNTIME);
     }
 
@@ -353,7 +351,7 @@ public class BundleParams {
     //Note: input could be null (then we asked to use system JRE)
     //       or it must be valid directory
     //Returns null on validation failure. Returns jre root if ok.
-    static File validateRuntimeLocation(File javaHome) {
+    public static File validateRuntimeLocation(File javaHome) {
         if (javaHome == null) {
             return null;
         }
@@ -410,11 +408,11 @@ public class BundleParams {
     //       runtime = fs;
     //}
 
-    public RelativeFileSet getAppResource() {
+    public com.oracle.tools.packager.RelativeFileSet getAppResource() {
         return fetchParam(APP_RESOURCES);
     }
 
-    public void setAppResource(RelativeFileSet fs) {
+    public void setAppResource(com.oracle.tools.packager.RelativeFileSet fs) {
         putUnlessNull(PARAM_APP_RESOURCES, fs);
     }
 
@@ -503,7 +501,7 @@ public class BundleParams {
             return mainJar;
         }
         
-        RelativeFileSet appResources = getAppResource();
+        com.oracle.tools.packager.RelativeFileSet appResources = getAppResource();
         String applicationClass = getApplicationClass();
 
         if (appResources == null || applicationClass == null) {
@@ -520,7 +518,7 @@ public class BundleParams {
                     boolean javaMain = applicationClass.equals(
                                attrs.getValue(Attributes.Name.MAIN_CLASS));
                     boolean fxMain = applicationClass.equals(
-                               attrs.getValue(PackagerLib.MANIFEST_JAVAFX_MAIN));
+                               attrs.getValue(MANIFEST_JAVAFX_MAIN));
                     if (javaMain || fxMain) {
                         useFXPackaging = fxMain;
                         mainJar = fname;

@@ -1741,7 +1741,7 @@ project(":fxpackager") {
             doLast {
                 copy {
                     from "$buildDir/native/WinLauncher/WinLauncher.exe"
-                    into "$buildDir/classes/main/com/sun/javafx/tools/resource/windows"
+                    into "$buildDir/classes/main/com/oracle/tools/packager/windows"
                 }
             }
         }
@@ -1757,7 +1757,7 @@ project(":fxpackager") {
             doLast {
                 copy {
                     from "$buildDir/native/WinLauncherSvc/WinLauncherSvc.exe"
-                    into "$buildDir/classes/main/com/sun/javafx/tools/resource/windows"
+                    into "$buildDir/classes/main/com/oracle/tools/packager/windows"
                 }
             }
         }
@@ -1773,7 +1773,7 @@ project(":fxpackager") {
             doLast {
                 copy {
                     from "$buildDir/native/IconSwap/IconSwap.exe"
-                    into "$buildDir/classes/main/com/sun/javafx/tools/resource/windows"
+                    into "$buildDir/classes/main/com/oracle/tools/packager/windows"
                 }
             }
         }
@@ -1784,7 +1784,7 @@ project(":fxpackager") {
             task compileLauncher(type: CCTask, group: "Build") {
                 description = "Compiles native sources for the application co-bundle launcher"
                 matches = ".*\\.m"
-                output(file("$buildDir/classes/main/com/sun/javafx/tools/resource/mac"))
+                output(file("$buildDir/classes/main/com/oracle/tools/packager/mac"))
                 params.addAll(MAC.launcher.ccFlags)
                 source file("src/main/native/launcher/mac")
                 compiler = MAC.launcher.compiler
@@ -1807,7 +1807,7 @@ project(":fxpackager") {
                 linker = LINUX.launcher.linker
                 linkParams.addAll(LINUX.launcher.linkFlags)
                 objectDir = file("$buildDir/native/launcher")
-                lib = file("$buildDir/classes/main/com/sun/javafx/tools/resource/linux/JavaAppLauncher")
+                lib = file("$buildDir/classes/main/com/oracle/tools/packager/linux/JavaAppLauncher")
             }
             jar.dependsOn linkTask;
         }

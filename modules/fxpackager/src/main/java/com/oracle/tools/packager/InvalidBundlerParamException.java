@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,36 +23,10 @@
  * questions.
  */
 
-package com.sun.javafx.tools.ant;
+package com.oracle.tools.packager;
 
-import com.oracle.tools.packager.Log;
-import org.apache.tools.ant.Project;
-
-public class AntLog extends Log.Logger {
-    private Project prj = null;
-
-    AntLog(Project p) {
-        super(false);
-        prj = p;
-    }
-
-    @Override
-    public void info(String msg) {
-        prj.log(msg);
-    }
-
-    @Override
-    public void verbose(String msg) {
-        prj.log(msg, Project.MSG_VERBOSE);
-    }
-
-    @Override
-    public void verbose(Throwable t) {
-        prj.log(t.getMessage(), t, Project.MSG_VERBOSE);
-    }
-
-    @Override
-    public void debug(String msg) {
-        prj.log(msg, Project.MSG_DEBUG);
+public class InvalidBundlerParamException extends RuntimeException {
+    public InvalidBundlerParamException(String message) {
+        super(message);
     }
 }

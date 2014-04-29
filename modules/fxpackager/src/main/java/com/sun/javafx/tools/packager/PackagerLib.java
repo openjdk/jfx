@@ -25,7 +25,11 @@
 
 package com.sun.javafx.tools.packager;
 
-import com.oracle.bundlers.Bundlers;
+import com.oracle.tools.packager.*;
+import com.oracle.tools.packager.ConfigException;
+import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.RelativeFileSet;
+import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.ant.Utils;
 import com.sun.javafx.tools.packager.DeployParams.Icon;
 import com.sun.javafx.tools.packager.JarSignature.InputStreamSource;
@@ -88,7 +92,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import sun.misc.BASE64Encoder;
 
-import static com.oracle.bundlers.StandardBundlerParam.*;
+import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 public class PackagerLib {
     public static final String JAVAFX_VERSION = "8.0";
@@ -127,8 +131,6 @@ public class PackagerLib {
         return classLoader;
     }
 
-    public static final String MANIFEST_JAVAFX_MAIN ="JavaFX-Application-Class";
-
     //  if set of input resources consist of SINGLE element and
     //   this element is jar file then we expect this to be request to
     //   "update" jar file
@@ -147,7 +149,7 @@ public class PackagerLib {
                 return f;
             } catch (Exception e) {
                 //treat any exception as "not a special case" scenario
-                Log.verbose(e);
+                com.oracle.tools.packager.Log.verbose(e);
             }
         }
         return null;
@@ -169,7 +171,7 @@ public class PackagerLib {
         Manifest m = null;
 
         if (jarToUpdate != null) {
-            Log.info(MessageFormat.format(bundle.getString("MSG_UpdatingJar"), jarToUpdate.getAbsolutePath()));
+            com.oracle.tools.packager.Log.info(MessageFormat.format(bundle.getString("MSG_UpdatingJar"), jarToUpdate.getAbsolutePath()));
             try (JarFile jf = new JarFile(jarToUpdate)) {
                 //extract data we want to preserve
                 m = jf.getManifest();
@@ -490,18 +492,18 @@ public class PackagerLib {
         if (params.containsKey(RUNTIME.getID())) {
             RelativeFileSet runtime = RUNTIME.fetchFrom(params);
             if (runtime == null) {
-                Log.info(bundle.getString("MSG_NoJREPackaged"));
+                com.oracle.tools.packager.Log.info(bundle.getString("MSG_NoJREPackaged"));
             } else {
-                Log.info(MessageFormat.format(bundle.getString("MSG_UserProvidedJRE"), runtime.getBaseDirectory().getAbsolutePath()));
-                if (Log.isDebug()) {
+                com.oracle.tools.packager.Log.info(MessageFormat.format(bundle.getString("MSG_UserProvidedJRE"), runtime.getBaseDirectory().getAbsolutePath()));
+                if (com.oracle.tools.packager.Log.isDebug()) {
                     runtime.dump();
                 }
             }
         } else {
-            Log.info(bundle.getString("MSG_UseSystemJRE"));
+            com.oracle.tools.packager.Log.info(bundle.getString("MSG_UseSystemJRE"));
         }
 
-        for (com.oracle.bundlers.Bundler bundler : Bundlers.createBundlersInstance().getBundlers(bundleType)) {
+        for (com.oracle.tools.packager.Bundler bundler : Bundlers.createBundlersInstance().getBundlers(bundleType)) {
             // if they specify the bundle format, require we match the ID
             if (bundleFormat != null && !bundleFormat.equals(bundler.getID())) continue;
 
@@ -515,17 +517,17 @@ public class PackagerLib {
                 }
                 
             } catch (UnsupportedPlatformException e) {
-                Log.debug(MessageFormat.format(bundle.getString("MSG_BundlerPlatformException"), bundler.getName()));
+                com.oracle.tools.packager.Log.debug(MessageFormat.format(bundle.getString("MSG_BundlerPlatformException"), bundler.getName()));
             } catch (ConfigException e) {
-                Log.debug(e);
+                com.oracle.tools.packager.Log.debug(e);
                 if (e.getAdvice() != null) {
-                    Log.info(MessageFormat.format(bundle.getString("MSG_BundlerConfigException"), bundler.getName(), e.getMessage(), e.getAdvice()));
+                    com.oracle.tools.packager.Log.info(MessageFormat.format(bundle.getString("MSG_BundlerConfigException"), bundler.getName(), e.getMessage(), e.getAdvice()));
                 } else {
-                    Log.info(MessageFormat.format(bundle.getString("MSG_BundlerConfigExceptionNoAdvice"), bundler.getName(), e.getMessage()));
+                    com.oracle.tools.packager.Log.info(MessageFormat.format(bundle.getString("MSG_BundlerConfigExceptionNoAdvice"), bundler.getName(), e.getMessage()));
                 }
             } catch (RuntimeException re) {
-                Log.info(MessageFormat.format(bundle.getString("MSG_BundlerRuntimeException"), bundler.getName(), re.toString()));
-                Log.debug(re);
+                com.oracle.tools.packager.Log.info(MessageFormat.format(bundle.getString("MSG_BundlerRuntimeException"), bundler.getName(), re.toString()));
+                com.oracle.tools.packager.Log.debug(re);
             }
         }
     }
@@ -552,7 +554,7 @@ public class PackagerLib {
                     copyFileToOutDir(new FileInputStream(srcFile),
                                      destFile);
                 } else {
-                    Log.verbose(MessageFormat.format(bundle.getString("MSG_JarNoSelfCopy"), resource.getRelativePath()));
+                    com.oracle.tools.packager.Log.verbose(MessageFormat.format(bundle.getString("MSG_JarNoSelfCopy"), resource.getRelativePath()));
                 }
             }
         }
@@ -576,7 +578,7 @@ public class PackagerLib {
             }
 
         } catch (Exception ex) {
-            Log.verbose(ex);
+            com.oracle.tools.packager.Log.verbose(ex);
             throw new PackagerException("ERR_SignFailed", ex);
         }
 
@@ -757,6 +759,7 @@ public class PackagerLib {
         dp.outdir = distDir;
         dp.outfile = outfileName;
         dp.addResource(distDir, jarName);
+        //noinspection deprecation
         dp.setBundleType(BundleType.ALL);
 
         generateDeploymentPackages(dp);
@@ -783,7 +786,7 @@ public class PackagerLib {
                     System.out.println(line);
                 }
             } catch (IOException ioe) {
-                Log.verbose(ioe);
+                com.oracle.tools.packager.Log.verbose(ioe);
             }
         });
         t.setDaemon(true);

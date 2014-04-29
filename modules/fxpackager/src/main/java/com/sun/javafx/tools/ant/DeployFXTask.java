@@ -31,7 +31,7 @@ import java.util.List;
 import com.sun.javafx.tools.ant.Platform.Jvmarg;
 import com.sun.javafx.tools.ant.Platform.Property;
 import com.sun.javafx.tools.packager.DeployParams;
-import com.sun.javafx.tools.packager.Log;
+import com.oracle.tools.packager.Log;
 import com.sun.javafx.tools.packager.PackagerException;
 import com.sun.javafx.tools.packager.PackagerLib;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;

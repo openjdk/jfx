@@ -23,36 +23,8 @@
  * questions.
  */
 
-package com.sun.javafx.tools.ant;
+package com.oracle.tools.packager.windows;
 
-import com.oracle.tools.packager.Log;
-import org.apache.tools.ant.Project;
+public class WinResources {
 
-public class AntLog extends Log.Logger {
-    private Project prj = null;
-
-    AntLog(Project p) {
-        super(false);
-        prj = p;
-    }
-
-    @Override
-    public void info(String msg) {
-        prj.log(msg);
-    }
-
-    @Override
-    public void verbose(String msg) {
-        prj.log(msg, Project.MSG_VERBOSE);
-    }
-
-    @Override
-    public void verbose(Throwable t) {
-        prj.log(t.getMessage(), t, Project.MSG_VERBOSE);
-    }
-
-    @Override
-    public void debug(String msg) {
-        prj.log(msg, Project.MSG_DEBUG);
-    }
 }

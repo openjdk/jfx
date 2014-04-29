@@ -330,7 +330,7 @@ public class DeployParams extends CommonParams {
     // (IOUtils.copyfiles() have recursive behavior)
     List<File> expandFileset(File root) {
         List<File> files = new LinkedList<>();
-        if (IOUtils.isNotSymbolicLink(root)) {
+        if (com.oracle.tools.packager.IOUtils.isNotSymbolicLink(root)) {
            if (root.isDirectory()) {
                File[] children = root.listFiles();
                if (children != null) {
@@ -493,7 +493,7 @@ public class DeployParams extends CommonParams {
                     }
                 }
             }
-            RelativeFileSet appResources = new RelativeFileSet(outdir, files);
+            com.oracle.tools.packager.RelativeFileSet appResources = new com.oracle.tools.packager.RelativeFileSet(outdir, files);
 
             bundleParams.setIdentifier(id);
             bundleParams.setAppResource(appResources);
@@ -533,7 +533,7 @@ public class DeployParams extends CommonParams {
                     //could be full path or something relative to the output folder
                     appIcon = new File(ic.href);
                     if (!appIcon.exists()) {
-                        Log.debug("Icon ["+ic.href+"] is not valid absolute path. "+
+                        com.oracle.tools.packager.Log.debug("Icon [" + ic.href + "] is not valid absolute path. " +
                                 "Assume it is relative to the output dir.");
                         appIcon = new File(outdir, ic.href);
                     }
