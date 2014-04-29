@@ -374,6 +374,12 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nBlit
         return;
     }
 
+    // Temporarily disable scissor to avoid a problem with some GL drivers
+    // that honor the scissor test if enabled
+    if (ctxInfo->state.scissorEnabled) {
+        glDisable(GL_SCISSOR_TEST);
+    }
+
     if (dstFBO == 0) {
         dstFBO = ctxInfo->state.fbo;
     }
@@ -393,6 +399,11 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nBlit
 
     // Restore previous FBO
     ctxInfo->glBindFramebuffer(GL_FRAMEBUFFER, ctxInfo->state.fbo);
+
+    // Restore previous scissor
+    if (ctxInfo->state.scissorEnabled) {
+        glEnable(GL_SCISSOR_TEST);
+    }
 }
 
 GLuint attachRenderbuffer(ContextInfo *ctxInfo, GLuint rbID, GLenum attachment) {

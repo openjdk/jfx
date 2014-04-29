@@ -145,7 +145,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 if (isAntiAliasing()) {
                     context.flushVertexBuffer();
                     // Note must flip the z axis during blit
-                    context.blit(stableBackbuffer, null, x0, y0, x1, y1,
+                    g.blit(stableBackbuffer, null, x0, y0, x1, y1,
                             x0, y1, x1, y0);
                 } else {
                     drawTexture(g, stableBackbuffer, x0, y0, x1, y1,
