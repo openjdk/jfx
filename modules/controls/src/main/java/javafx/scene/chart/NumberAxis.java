@@ -218,16 +218,14 @@ public final class NumberAxis extends ValueAxis<Number> {
             animator.stop(currentAnimationID);
             currentAnimationID = animator.animate(
                 new KeyFrame(Duration.ZERO,
-                        new KeyValue(currentLowerBound, oldLowerBound)
-//                        new KeyValue(scalePropertyImpl(), getScale())
+                        new KeyValue(currentLowerBound, oldLowerBound),
+                        new KeyValue(scalePropertyImpl(), getScale())
                 ),
                 new KeyFrame(Duration.millis(700),
-                        new KeyValue(currentLowerBound, lowerBound)
-//                        new KeyValue(scalePropertyImpl(), scale)
+                        new KeyValue(currentLowerBound, lowerBound),
+                        new KeyValue(scalePropertyImpl(), scale)
                 )
             );
-            setScale(scale);
-//            currentLowerBound.set(lowerBound);
         } else {
             currentLowerBound.set(lowerBound);
             setScale(scale);
