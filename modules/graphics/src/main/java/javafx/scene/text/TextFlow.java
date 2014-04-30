@@ -344,6 +344,9 @@ public class TextFlow extends Pane {
                      * to run a full text analysis in the new content.
                      */
                     double baseline = node.getBaselineOffset();
+                    if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                        baseline = node.getLayoutBounds().getHeight();
+                    }
                     double width = computeChildPrefAreaWidth(node, null);
                     double height = computeChildPrefAreaHeight(node, null);
                     spans[i] = new EmbeddedSpan(node, baseline, width, height);
