@@ -1,5 +1,5 @@
-package com.sun.glass.ui.monocle.omapx11;/*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+package com.sun.glass.ui.monocle.x11;/*
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,25 +24,18 @@ package com.sun.glass.ui.monocle.omapx11;/*
  */
 
 import com.sun.glass.ui.monocle.AcceleratedScreen;
-import com.sun.glass.ui.monocle.NativeScreen;
-import com.sun.glass.ui.monocle.omap.OMAPPlatform;
-import com.sun.glass.ui.monocle.x11.X11AcceleratedScreen;
-import com.sun.glass.ui.monocle.x11.X11Screen;
+import com.sun.glass.ui.monocle.NativePlatformFactory;
 
-public class OMAPX11Platform extends OMAPPlatform {
+public class X11AcceleratedScreen extends AcceleratedScreen {
 
-    @Override
-    protected NativeScreen createScreen() {
-        return new X11Screen(false);
+    public X11AcceleratedScreen(int[] attributes) {
+        super(attributes);
     }
 
     @Override
-    public synchronized AcceleratedScreen getAcceleratedScreen(
-            int[] attributes) {
-        if (accScreen == null) {
-            accScreen = new X11AcceleratedScreen(attributes);
-        }
-        return accScreen;
+    protected long platformGetNativeWindow() {
+        return NativePlatformFactory.getNativePlatform()
+                .getScreen().getNativeHandle();
     }
 
 }

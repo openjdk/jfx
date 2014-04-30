@@ -298,6 +298,7 @@ X86EGL.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/lens/*",
+    "com/sun/glass/ui/monocle/*",
     "com/sun/glass/ui/monocle/linux/*",
     "com/sun/glass/ui/monocle/util/*",
     "com/sun/glass/ui/monocle/x11/*",
@@ -306,6 +307,7 @@ X86EGL.glass.lib = "glass"
 
 X86EGL.glass.monocle = [:]
 X86EGL.glass.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle"),
         file("modules/graphics/src/main/native-glass/monocle/linux"),
         file("modules/graphics/src/main/native-glass/monocle/util") ]
 X86EGL.glass.monocle.compiler = compiler
@@ -444,7 +446,7 @@ X86EGL.iio.linkFlags = iioLFlags
 X86EGL.iio.lib = "javafx_iio"
 
 X86EGL.prismES2 = [:]
-X86EGL.prismES2.variants = ["eglfb"]
+X86EGL.prismES2.variants = ["eglfb", "monocle"]
 X86EGL.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 X86EGL.prismES2.eglfb = [:]
@@ -470,6 +472,18 @@ X86EGL.prismES2.eglx11.ccFlags = es2X11CFlags
 X86EGL.prismES2.eglx11.linker = linker
 X86EGL.prismES2.eglx11.linkFlags = es2X11LFlags
 X86EGL.prismES2.eglx11.lib = "prism_es2_eglx11"
+
+X86EGL.prismES2.monocle= [:]
+X86EGL.prismES2.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-prism-es2"),
+        file("modules/graphics/src/main/native-prism-es2/GL"),
+        file("modules/graphics/src/main/native-prism-es2/monocle")
+]
+X86EGL.prismES2.monocle.compiler = compiler
+X86EGL.prismES2.monocle.ccFlags = [ es2EglfbCFlags, "-I", X86EGL.glass.lensport.nativeSource ].flatten()
+X86EGL.prismES2.monocle.linker = linker
+X86EGL.prismES2.monocle.linkFlags = es2EglfbLFlags
+X86EGL.prismES2.monocle.lib = "prism_es2_monocle"
 
 def closedDir = file("$projectDir/../rt-closed")
 X86EGL.font = [:]
