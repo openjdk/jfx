@@ -107,6 +107,9 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                 Data<X,Y> item = iter.next();
                 double x = getXAxis().getDisplayPosition(item.getCurrentX());
                 double y = getYAxis().getDisplayPosition(item.getCurrentY());
+                if (Double.isNaN(x) || Double.isNaN(y)) {
+                    continue;
+                }
                 Node bubble = item.getNode();
                 Ellipse ellipse;
                 if (bubble != null) {

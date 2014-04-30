@@ -48,6 +48,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.util.Duration;
 
@@ -439,29 +440,36 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
 
     /** @inheritDoc */
     @Override protected void layoutPlotChildren() {
+        List<LineTo> constructedPath = new ArrayList<>(getDataSize());
         for (int seriesIndex=0; seriesIndex < getDataSize(); seriesIndex++) {
             Series<X,Y> series = getData().get(seriesIndex);
             final DoubleProperty seriesYAnimMultiplier = seriesYMultiplierMap.get(series);
-            boolean isFirst = true;
             if(series.getNode() instanceof  Path) {
-                Path seriesLine = (Path)series.getNode();
-                seriesLine.getElements().clear();
+                final ObservableList<PathElement> seriesLine = ((Path)series.getNode()).getElements();
+                seriesLine.clear();
+                constructedPath.clear();
                 for (Data<X,Y> item = series.begin; item != null; item = item.next) {
                     double x = getXAxis().getDisplayPosition(item.getCurrentX());
                     double y = getYAxis().getDisplayPosition(
                             getYAxis().toRealValue(getYAxis().toNumericValue(item.getCurrentY()) * seriesYAnimMultiplier.getValue()));
-                    if (isFirst) {
-                        isFirst = false;
-                        seriesLine.getElements().add(new MoveTo(x, y));
-                    } else {
-                        seriesLine.getElements().add(new LineTo(x, y));
+                    if (Double.isNaN(x) || Double.isNaN(y)) {
+                        continue;
                     }
+                    constructedPath.add(new LineTo(x, y));
+
                     Node symbol = item.getNode();
                     if (symbol != null) {
                         final double w = symbol.prefWidth(-1);
                         final double h = symbol.prefHeight(-1);
                         symbol.resizeRelocate(x-(w/2), y-(h/2),w,h);
                     }
+                }
+                Collections.sort(constructedPath, (e1, e2) -> Double.compare(e1.getX(), e2.getX()));
+
+                if (!constructedPath.isEmpty()) {
+                    LineTo first = constructedPath.get(0);
+                    seriesLine.add(new MoveTo(first.getX(), first.getY()));
+                    seriesLine.addAll(constructedPath);
                 }
             }
         }
