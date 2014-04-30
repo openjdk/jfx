@@ -68,6 +68,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -294,6 +295,7 @@ public class HelloTableView extends Application {
         invitedCol.setMaxWidth(50);
         invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
         invitedCol.setCellFactory(p -> new CheckBoxTableCell<Person, Boolean>());
+        invitedCol.setEditable(true);
         /*
         ContextMenu ctx = new ContextMenu();
         final MenuItem cutMI    = new MenuItem("Cut");
@@ -389,6 +391,7 @@ public class HelloTableView extends Application {
 //        tableView.getColumns().addAll(nameCol, emailCol);
         tableView.getColumns().addAll(invitedCol, nameCol, emailCol, countryCol);
         tableView.setPrefSize(485, 300);
+        tableView.setEditable(true);
 
 
         ContextMenu ctx = new ContextMenu();
@@ -903,43 +906,5 @@ public class HelloTableView extends Application {
     private Node createLabel(String text) {
         Label label = new Label(text);
         return label;
-    }
-
-
-
-    public static class CheckBoxTableCell<S,T> extends TableCell<S,T> {
-        private final CheckBox checkBox;
-
-        private ObservableValue<T> ov;
-
-        public CheckBoxTableCell() {
-            this.checkBox = new CheckBox();
-            this.checkBox.setAlignment(Pos.CENTER);
-
-            setAlignment(Pos.CENTER);
-            setGraphic(checkBox);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void updateItem(T item, boolean empty) {
-            super.updateItem(item, empty);
-
-            if (empty) {
-                setText(null);
-                setGraphic(null);
-            } else {
-                setGraphic(checkBox);
-
-                if (ov instanceof BooleanProperty) {
-                    checkBox.selectedProperty().unbindBidirectional((BooleanProperty)ov);
-                }
-
-                ov = getTableColumn().getCellObservableValue(getIndex());
-
-                if (ov instanceof BooleanProperty) {
-                    checkBox.selectedProperty().bindBidirectional((BooleanProperty)ov);
-                }
-            }
-        }
     }
 }
