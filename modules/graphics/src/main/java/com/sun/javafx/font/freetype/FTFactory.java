@@ -80,7 +80,11 @@ public class FTFactory extends PrismFontFactory {
             OSFreetype.FT_Done_Face(face);
         }
         OSFreetype.FT_Done_FreeType(library);
-        return error == 0;
+        if (error != 0) return false;
+        if (OSFreetype.isPangoEnabled()) {
+            return OSPango.FcConfigAppFontAddFile(0, path);
+        }
+        return true;
     }
 
     private static class StubGlyphLayout extends GlyphLayout {
