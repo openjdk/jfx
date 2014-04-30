@@ -70,6 +70,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.SwipeEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
@@ -660,13 +661,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         private boolean measureClosingTabs = false;
 
         private double scrollOffset;
-        public double getScrollOffset() {
-            return scrollOffset;
-        }
-        public void setScrollOffset(double value) {
-            scrollOffset = value;
-            headersRegion.requestLayout();
-        }
 
         public TabHeaderArea() {
             getStyleClass().setAll("tab-header-area");
@@ -719,14 +713,16 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                                 }
                                 offset += tabHeaderPrefWidth;                                
                             }
-                        } else {
-                            isSelectingTab = true;
+//                        } else {
+//                            isSelectingTab = true;
                         }
                     }
 
                     if (isSelectingTab) {
                         ensureSelectedTabIsVisible();
                         isSelectingTab = false;
+                    } else {
+                        validateScrollOffset();
                     }
 
                     Side tabPosition = getSkinnable().getSide();
@@ -778,6 +774,24 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             }
             getChildren().addAll(headerBackground, headersRegion, controlButtons);
 
+            // support for mouse scroll of header area (for when the tabs exceed
+            // the available space)
+            addEventHandler(ScrollEvent.SCROLL, (ScrollEvent e) -> {
+                Side side = getSkinnable().getSide();
+                side = side == null ? Side.TOP : side;
+                switch (side) {
+                    default:
+                    case TOP:
+                    case BOTTOM:
+                        setScrollOffset(scrollOffset - e.getDeltaY());
+                        break;
+                    case LEFT:
+                    case RIGHT:
+                        setScrollOffset(scrollOffset + e.getDeltaY());
+                        break;
+                }
+
+            });
         }
 
         private void updateHeaderClip() {
@@ -901,13 +915,49 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             } else if (selectedTabEndX > (visibleAreaEndX - scrollOffset)) {
                 setScrollOffset(visibleAreaEndX - selectedTabEndX);
             }
+        }
 
-            // need to make sure the right-most tab is attached to the
-            // right-hand side of the tab header (e.g. if the tab header area width
-            // is expanded), and if it isn't modify the scroll offset to bring
-            // it into line. See RT-35194 for a test case.
-            if ((visibleWidth - scrollOffset) > offset && scrollOffset < 0) {
-                setScrollOffset(visibleWidth - offset);
+        public double getScrollOffset() {
+            return scrollOffset;
+        }
+
+        private void validateScrollOffset() {
+            setScrollOffset(getScrollOffset());
+        }
+
+        private void setScrollOffset(double newScrollOffset) {
+            // work out the visible width of the tab header
+            double tabPaneWidth = snapSize(getSkinnable().getWidth());
+            double controlTabWidth = snapSize(controlButtons.getWidth());
+            double visibleWidth = tabPaneWidth - controlTabWidth - firstTabIndent() - SPACER;
+
+            // measure the width of all tabs
+            double offset = 0.0;
+            for (Node node : headersRegion.getChildren()) {
+                TabHeaderSkin tabHeader = (TabHeaderSkin)node;
+                double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1));
+                offset += tabHeaderPrefWidth;
+            }
+
+            double actualNewScrollOffset;
+
+            if ((visibleWidth - newScrollOffset) > offset && newScrollOffset < 0) {
+                // need to make sure the right-most tab is attached to the
+                // right-hand side of the tab header (e.g. if the tab header area width
+                // is expanded), and if it isn't modify the scroll offset to bring
+                // it into line. See RT-35194 for a test case.
+                actualNewScrollOffset = visibleWidth - offset;
+            } else if (newScrollOffset > 0) {
+                // need to prevent the left-most tab from becoming detached
+                // from the left-hand side of the tab header.
+                actualNewScrollOffset = 0;
+            } else {
+                actualNewScrollOffset = newScrollOffset;
+            }
+
+            if (actualNewScrollOffset != scrollOffset) {
+                scrollOffset = actualNewScrollOffset;
+                headersRegion.requestLayout();
             }
         }
 
@@ -1219,7 +1269,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             getProperties().put(Tab.class, tab);
             getProperties().put(ContextMenu.class, tab.getContextMenu());
 
-            setOnContextMenuRequested(me -> {
+            setOnContextMenuRequested((ContextMenuEvent me) -> {
                if (getTab().getContextMenu() != null) {
                     getTab().getContextMenu().show(inner, me.getScreenX(), me.getScreenY());
                     me.consume();
