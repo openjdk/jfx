@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.tk.Toolkit;
 import javafx.css.PseudoClass;
 
@@ -38,6 +39,7 @@ import com.sun.javafx.scene.control.skin.VirtualFlow;
 
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.util.*;
 
@@ -1609,6 +1611,57 @@ public class ComboBoxTest {
         assertTrue(cb.isShowing());
         assertTrue(cb.isFocused());
         assertEquals(cb, scene.getFocusOwner());
+
+        sl.dispose();
+    }
+
+    @Ignore("fix not yet developed")
+    @Test public void test_rt36902() {
+        final ComboBox<String> cb1 = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        final ComboBox<String> cb2 = new ComboBox<>(FXCollections.observableArrayList("a", "b", "c"));
+        cb2.setEditable(true);
+        VBox vbox = new VBox(cb1, cb2);
+
+        // lame - I would rather have one keyboard here but I couldn't get it to
+        // work, so watch out for which keyboard is used below
+        KeyEventFirer cb1Keyboard = new KeyEventFirer(cb1);
+        KeyEventFirer cb2Keyboard = new KeyEventFirer(cb2);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        cb1.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        Scene scene = sl.getStage().getScene();
+
+        assertTrue(cb1.isFocused());
+        assertEquals(cb1, scene.getFocusOwner());
+
+        // move focus forward to cb2
+        cb1Keyboard.doKeyPress(KeyCode.TAB);
+        assertTrue(cb2.isFocused());
+        assertEquals(cb2, scene.getFocusOwner());
+
+        // move focus forward again to cb1
+        cb2Keyboard.doKeyPress(KeyCode.TAB);
+        assertTrue(cb1.isFocused());
+        assertEquals(cb1, scene.getFocusOwner());
+
+        // now start going backwards with shift-tab.
+        // The first half of the bug is here - when we shift-tab into cb2, we
+        // actually go into the FakeFocusTextField subcomponent, so whilst the
+        // cb2.isFocused() returns true as expected, the scene focus owner is
+        // not the ComboBox, but the FakeFocusTextField inside it
+        cb1Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
+        assertTrue("Expect cb2 to be focused, but actual focus owner is: " + scene.getFocusOwner(),
+                cb2.isFocused());
+        assertEquals("Expect cb2 TextField to be focused, but actual focus owner is: " + scene.getFocusOwner(),
+                cb2.getEditor(), scene.getFocusOwner());
+
+        // This is where the second half of the bug appears, as we are stuck in
+        // the FakeFocusTextField of cb2, we never make it to cb1
+        cb2Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
+        assertTrue(cb1.isFocused());
+        assertEquals(cb1, scene.getFocusOwner());
 
         sl.dispose();
     }

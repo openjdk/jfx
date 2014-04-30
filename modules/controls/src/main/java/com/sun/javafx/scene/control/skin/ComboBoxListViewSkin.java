@@ -28,10 +28,10 @@ package com.sun.javafx.scene.control.skin;
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import java.util.List;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import com.sun.javafx.scene.traversal.Algorithm;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -182,6 +182,21 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
         updateValue();
+
+        // Fix for RT-36902, where focus traversal was getting stuck inside the ComboBox
+        comboBox.setImpl_traversalEngine(new ParentTraversalEngine(comboBox, new Algorithm() {
+            @Override public Node select(Node owner, Direction dir, TraversalContext context) {
+                return null;
+            }
+
+            @Override public Node selectFirst(TraversalContext context) {
+                return null;
+            }
+
+            @Override public Node selectLast(TraversalContext context) {
+                return null;
+            }
+        }));
         
         registerChangeListener(comboBox.itemsProperty(), "ITEMS");
         registerChangeListener(comboBox.promptTextProperty(), "PROMPT_TEXT");

@@ -32,20 +32,18 @@ import java.time.YearMonth;
 import java.time.chrono.HijrahChronology;
 import java.time.format.DateTimeParseException;
 
-import javafx.application.Platform;
+import com.sun.javafx.scene.traversal.Algorithm;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.css.PseudoClass;
-// import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 import javafx.scene.input.*;
-import javafx.scene.layout.Region;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.scene.control.behavior.DatePickerBehavior;
@@ -155,6 +153,21 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                 event.consume();
             });
         }
+
+        // Fix for RT-36902, where focus traversal was getting stuck inside the DatePicker
+        datePicker.setImpl_traversalEngine(new ParentTraversalEngine(datePicker, new Algorithm() {
+            @Override public Node select(Node owner, Direction dir, TraversalContext context) {
+                return null;
+            }
+
+            @Override public Node selectFirst(TraversalContext context) {
+                return null;
+            }
+
+            @Override public Node selectLast(TraversalContext context) {
+                return null;
+            }
+        }));
 
         registerChangeListener(datePicker.chronologyProperty(), "CHRONOLOGY");
         registerChangeListener(datePicker.converterProperty(), "CONVERTER");
