@@ -950,7 +950,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // updateIndex(-1) works for TableView, but breaks ListView.
                 // For now, the TableView just does not use the dirtyCells API
 //                cell.updateIndex(-1);
-                cell.requestLayout();
+                if (cell != null) {
+                    cell.requestLayout();
+                }
                 dirtyCells.clear(index);
             }
 
