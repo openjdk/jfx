@@ -26,6 +26,7 @@
 package com.sun.javafx.font.freetype;
 
 import com.sun.javafx.font.CompositeFontResource;
+import com.sun.javafx.font.CompositeGlyphMapper;
 import com.sun.javafx.font.FontResource;
 import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
@@ -138,7 +139,15 @@ class PangoGlyphLayout extends GlyphLayout {
                     for (int i = 0; i < g.num_glyphs; i++) {
                         int gii = gi + i;
                         if (slot != -1) {
-                            glyphs[gii] = (slot << 24) | g.glyphs[i];
+                            int gg = g.glyphs[i];
+
+                            /* Ignoring any glyphs outside the GLYPHMASK range.
+                             * Note that Pango uses PANGO_GLYPH_EMPTY (0x0FFFFFFF), PANGO_GLYPH_INVALID_INPUT (0xFFFFFFFF), 
+                             * and other values with special meaning.
+                             */
+                            if (0 <= gg && gg <= CompositeGlyphMapper.GLYPHMASK) {
+                                glyphs[gii] = (slot << 24) | gg;
+                            }
                         }
                         if (size != 0) {
                             width += g.widths[i];
