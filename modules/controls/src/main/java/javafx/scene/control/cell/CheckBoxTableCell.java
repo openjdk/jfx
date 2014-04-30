@@ -55,6 +55,16 @@ import javafx.util.StringConverter;
  * that the CheckBox in the cell will set/unset this property based on user 
  * interactions, and the CheckBox will reflect the state of the ObservableValue, 
  * if it changes externally).
+ *
+ * <p>Note that the CheckBoxTableCell renders the CheckBox 'live', meaning that
+ * the CheckBox is always interactive and can be directly toggled by the user.
+ * This means that it is not necessary that the cell enter its
+ * {@link #editingProperty() editing state} (usually by the user double-clicking
+ * on the cell). A side-effect of this is that the usual editing callbacks
+ * (such as {@link javafx.scene.control.TableColumn#onEditCommitProperty() on edit commit})
+ * will <strong>not</strong> be called. If you want to be notified of changes,
+ * it is recommended to directly observe the boolean properties that are
+ * manipulated by the CheckBox.</p>
  * 
  * @param <T> The type of the elements contained within the TableColumn.
  * @since JavaFX 2.2

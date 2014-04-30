@@ -72,6 +72,16 @@ import javafx.util.StringConverter;
  * is provided that can return an {@code ObservableValue<Boolean>}
  * given a {@link TreeItem} instance. This {@code ObservableValue<Boolean>} 
  * should represent the boolean state of the given {@link TreeItem}.
+ *
+ * <p>Note that the CheckBoxTreeCell renders the CheckBox 'live', meaning that
+ * the CheckBox is always interactive and can be directly toggled by the user.
+ * This means that it is not necessary that the cell enter its
+ * {@link #editingProperty() editing state} (usually by the user double-clicking
+ * on the cell). A side-effect of this is that the usual editing callbacks
+ * (such as {@link javafx.scene.control.TreeView#onEditCommitProperty() on edit commit})
+ * will <strong>not</strong> be called. If you want to be notified of changes,
+ * it is recommended to directly observe the boolean properties that are
+ * manipulated by the CheckBox.</p>
  * 
  * @param <T> The type of the elements contained within the TreeView TreeItem 
  *      instances.
