@@ -129,13 +129,16 @@ void cachePangoGlyphStringFields(JNIEnv *env)
 JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
     (JNIEnv *env, jclass that, jlong str, jlong pangoItem)
 {
+    if (!str) return NULL;
     if (!pangoItem) return NULL;
     PangoItem *item = (PangoItem *)pangoItem;
     PangoAnalysis analysis = item->analysis;
+    if (!pangoItem) return NULL;
     const gchar *text= (const gchar *)(str + item->offset);
     PangoGlyphString *glyphString = pango_glyph_string_new();
     if (!glyphString) return NULL;
 
+    jobject result = NULL;
     pango_shape(text, item->length, &analysis, glyphString);
     int count = glyphString->num_glyphs;
     if(count == 0) goto fail;
@@ -143,30 +146,29 @@ JNIEXPORT jobject JNICALL OS_NATIVE(pango_1shape)
     jintArray glyphsArray = (*env)->NewIntArray(env, count);
     jintArray widthsArray = (*env)->NewIntArray(env, count);
     jintArray clusterArray = (*env)->NewIntArray(env, count);
-    jobject result = NULL;
     if (glyphsArray && widthsArray && clusterArray) {
-    	jint glyphs[count];
-    	jint widths[count];
+        jint glyphs[count];
+        jint widths[count];
         jint cluster[count];
         int i;
         for (i = 0; i < count; i++) {
-        	glyphs[i] = glyphString->glyphs[i].glyph;
-        	widths[i] = glyphString->glyphs[i].geometry.width;
+            glyphs[i] = glyphString->glyphs[i].glyph;
+            widths[i] = glyphString->glyphs[i].geometry.width;
             /* translate byte index to char index */
             cluster[i] = (jint)g_utf8_pointer_to_offset(text, text + glyphString->log_clusters[i]);
         }
         (*env)->SetIntArrayRegion(env, glyphsArray, 0, count, glyphs); 
-        if ((*env)->ExceptionOccurred(env)) {   
+        if ((*env)->ExceptionOccurred(env)) {
             fprintf(stderr, "OS_NATIVE error: JNI exception");
             goto fail;
         }
         (*env)->SetIntArrayRegion(env, widthsArray, 0, count, widths);
-        if ((*env)->ExceptionOccurred(env)) {   
+        if ((*env)->ExceptionOccurred(env)) {
             fprintf(stderr, "OS_NATIVE error: JNI exception");
             goto fail;
         }
         (*env)->SetIntArrayRegion(env, clusterArray, 0, count, cluster);
-        if ((*env)->ExceptionOccurred(env)) {   
+        if ((*env)->ExceptionOccurred(env)) {
             fprintf(stderr, "OS_NATIVE error: JNI exception");
             goto fail;
         }
@@ -359,25 +361,28 @@ JNIEXPORT void JNICALL OS_NATIVE(g_1list_1free)
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf8_1offset_1to_1pointer)
-    (JNIEnv *env, jclass that, jlong arg0, jlong arg1)
+    (JNIEnv *env, jclass that, jlong str, jlong offset)
 {
-    return (jlong)g_utf8_offset_to_pointer((const gchar *)arg0, (glong)arg1);
+    if (!str) return 0;
+    return (jlong)g_utf8_offset_to_pointer((const gchar *)str, (glong)offset);
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf8_1pointer_1to_1offset)
-    (JNIEnv *env, jclass that, jlong arg0, jlong arg1)
+    (JNIEnv *env, jclass that, jlong str, jlong pos)
 {
-    return (jlong)g_utf8_pointer_to_offset((const gchar *)arg0, (const gchar *)arg1);
+    if (!str) return 0;
+    return (jlong)g_utf8_pointer_to_offset((const gchar *)str, (const gchar *)pos);
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf16_1to_1utf8)
-    (JNIEnv *env, jclass that, jcharArray arg0)
+    (JNIEnv *env, jclass that, jcharArray str)
 {
-    jsize length = (*env)->GetArrayLength(env, arg0);
-    void *ch = (*env)->GetPrimitiveArrayCritical(env, arg0, 0);
-    jlong str = (jlong)g_utf16_to_utf8((const gunichar2 *)ch, length, NULL, NULL, NULL);
-    (*env)->ReleasePrimitiveArrayCritical(env, arg0, ch, 0);
-    return str;
+    if (!str) return 0;
+    jsize length = (*env)->GetArrayLength(env, str);
+    void *ch = (*env)->GetPrimitiveArrayCritical(env, str, 0);
+    jlong result = (jlong)g_utf16_to_utf8((const gunichar2 *)ch, length, NULL, NULL, NULL);
+    (*env)->ReleasePrimitiveArrayCritical(env, str, ch, 0);
+    return result;
 }
 
 JNIEXPORT void JNICALL OS_NATIVE(g_1free)

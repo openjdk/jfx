@@ -63,6 +63,19 @@ class PangoGlyphLayout extends GlyphLayout {
         return slot;
     }
 
+    private boolean check(long checkValue, String message, long fontmap, long context, long desc, long attrList) {
+        if (checkValue != 0) return false;
+        if (message != null && PrismFontFactory.debugFonts) {
+            System.err.println(message);
+        }
+        /* pango_attr_list_unref() also frees the attributes it contains */
+        if (attrList != 0) OSPango.pango_attr_list_unref(attrList);
+        if (desc != 0) OSPango.pango_font_description_free(desc);
+        if (context != 0) OSPango.g_object_unref(context);
+        if (fontmap != 0) OSPango.g_object_unref(fontmap);
+        return true;
+    }
+
     private long str = 0L;
     public void layout(TextRun run, PGFont font, FontStrike strike, char[] text) {
 
@@ -73,18 +86,33 @@ class PangoGlyphLayout extends GlyphLayout {
             fr = ((CompositeFontResource)fr).getSlotResource(0);
         }
         long fontmap = OSPango.pango_ft2_font_map_new();
+        if (check(fontmap, "Failed allocating PangoFontMap.", 0, 0, 0, 0)) {
+            return;
+        }
         long context = OSPango.pango_font_map_create_context(fontmap);
+        if (check(context, "Failed allocating PangoContext.", fontmap, 0, 0, 0)) {
+            return;
+        }
         float size = font.getSize();
         int style = fr.isItalic() ? OSPango.PANGO_STYLE_ITALIC : OSPango.PANGO_STYLE_NORMAL;
         int weight = fr.isBold() ? OSPango.PANGO_WEIGHT_BOLD : OSPango.PANGO_WEIGHT_NORMAL;
         long desc = OSPango.pango_font_description_new();
+        if (check(desc, "Failed allocating FontDescription.", fontmap, context, 0, 0)) {
+            return;
+        }
         OSPango.pango_font_description_set_family(desc, fr.getFamilyName());
         OSPango.pango_font_description_set_absolute_size(desc, size * OSPango.PANGO_SCALE);
         OSPango.pango_font_description_set_stretch(desc, OSPango.PANGO_STRETCH_NORMAL);
         OSPango.pango_font_description_set_style(desc, style);
         OSPango.pango_font_description_set_weight(desc, weight);
         long attrList = OSPango.pango_attr_list_new();
+        if (check(attrList, "Failed allocating PangoAttributeList.", fontmap, context, desc, 0)) {
+            return;
+        }
         long attr = OSPango.pango_attr_font_desc_new(desc);
+        if (check(attr, "Failed allocating PangoAttribute.", fontmap, context, desc, attrList)) {
+            return;
+        }
         OSPango.pango_attr_list_insert(attrList, attr);
         if (!composite) {
             attr = OSPango.pango_attr_fallback_new(false);
@@ -93,10 +121,7 @@ class PangoGlyphLayout extends GlyphLayout {
 
         if (str == 0L) {
             str = OSPango.g_utf16_to_utf8(text);
-            if (str == 0L) {
-                if (PrismFontFactory.debugFonts) {
-                    System.err.println("Failed allocating UTF-8 buffer.");
-                }
+            if (check(str, "Failed allocating UTF-8 buffer.", fontmap, context, desc, attrList)) {
                 return;
             }
         }
@@ -162,11 +187,7 @@ class PangoGlyphLayout extends GlyphLayout {
             run.shape(glyphCount, glyphs, pos, indices);
         }
 
-        /* pango_attr_list_unref() also frees the attributes it contains */
-        OSPango.pango_attr_list_unref(attrList);
-        OSPango.pango_font_description_free(desc);
-        OSPango.g_object_unref(context);
-        OSPango.g_object_unref(fontmap);
+        check(0, null, fontmap, context, desc, attrList);
     }
 
     @Override
