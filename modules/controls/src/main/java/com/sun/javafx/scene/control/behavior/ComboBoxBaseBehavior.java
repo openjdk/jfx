@@ -238,6 +238,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     
     public void show() {
         if (! getControl().isShowing()) {
+            getControl().requestFocus();
             getControl().show();
         }
     }

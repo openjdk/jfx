@@ -123,6 +123,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 penHeight   = viewHeight;
                 textureBits = null;
                 pixBits = null;
+                freshBackBuffer = true;
             }
             Graphics g = rttexture.createGraphics();
             if (g == null) {
@@ -132,6 +133,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             }
             g.scale(scale, scale);
             paintImpl(g);
+            freshBackBuffer = false;
 
             int rawbits[] = rttexture.getPixels();
             

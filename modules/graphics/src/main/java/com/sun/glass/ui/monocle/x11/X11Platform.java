@@ -23,17 +23,36 @@ package com.sun.glass.ui.monocle.x11;/*
  * questions.
  */
 
+import com.sun.glass.ui.monocle.AcceleratedScreen;
 import com.sun.glass.ui.monocle.NativeCursor;
 import com.sun.glass.ui.monocle.NativePlatform;
 import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.NullCursor;
 import com.sun.glass.ui.monocle.input.InputDeviceRegistry;
+import com.sun.glass.ui.monocle.linux.LinuxInputDeviceRegistry;
+import com.sun.glass.ui.monocle.linux.LinuxSystem;
+import com.sun.glass.ui.monocle.mx6.MX6AcceleratedScreen;
+
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 public class X11Platform extends NativePlatform {
 
+    private final boolean x11InputAndCursor;
+
+    public X11Platform() {
+        LinuxSystem.getLinuxSystem().loadLibrary();
+        x11InputAndCursor = AccessController.doPrivileged((PrivilegedAction<Boolean>)
+                () -> Boolean.getBoolean("x11.input"));
+    }
+
     @Override
     protected InputDeviceRegistry createInputDeviceRegistry() {
-        return new X11InputDeviceRegistry();
+        if (x11InputAndCursor) {
+            return new X11InputDeviceRegistry();
+        } else {
+            return new LinuxInputDeviceRegistry(false);
+        }
     }
 
     @Override
@@ -43,7 +62,15 @@ public class X11Platform extends NativePlatform {
 
     @Override
     protected NativeScreen createScreen() {
-        return new X11Screen(true);
+        return new X11Screen(x11InputAndCursor);
     }
 
+    @Override
+    public synchronized AcceleratedScreen getAcceleratedScreen(
+            int[] attributes) {
+        if (accScreen == null) {
+            accScreen = new X11AcceleratedScreen(attributes);
+        }
+        return accScreen;
+    }
 }

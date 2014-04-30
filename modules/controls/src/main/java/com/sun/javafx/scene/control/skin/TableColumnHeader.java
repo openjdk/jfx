@@ -99,7 +99,7 @@ public class TableColumnHeader extends Region {
     private NestedTableColumnHeader parentHeader;
 
     // work out where this column currently is within its parent
-    private Label label;
+    Label label;
 
     // sort order
     int sortPos = -1;
@@ -508,6 +508,13 @@ public class TableColumnHeader extends Region {
         label.setText(column.getText());
         label.setGraphic(column.getGraphic());
         label.setVisible(column.isVisible());
+
+        label.fontProperty().addListener((o, old, newValue) -> {
+            // The font has changed (probably due to CSS being applied), so we
+            // need to re-run the column resizing algorithm to ensure columns
+            // fit nicely based on their content and their header
+            getTableViewSkin().resizeColumnToFitContent(column, 30);
+        });
 
         // ---- container for the sort arrow (which is not supported on embedded
         // platforms)

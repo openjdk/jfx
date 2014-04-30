@@ -59,8 +59,15 @@ jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
                                                    "(JIIIIIIIIIIIF)V");
         GLASS_CHECK_EXCEPTION(env);
 
-        NSValue *resolutionValue = [[screen deviceDescription] valueForKey:NSDeviceResolution];
-        NSSize resolution = [resolutionValue sizeValue];
+        // Note that NSDeviceResolution always reports 72 DPI, so we use Core Graphics API instead
+        const CGDirectDisplayID displayID = [[[screen deviceDescription] objectForKey:@"NSScreenNumber"] intValue];
+        CGSize size = CGDisplayScreenSize(displayID);
+        CGRect rect = CGDisplayBounds(displayID);
+        const CGFloat MM_PER_INCH = 25.4f; // 1 inch == 25.4 mm
+        // Avoid division by zero, default to 72 DPI
+        if (size.width == 0) size.width = rect.size.width * MM_PER_INCH / 72.f;
+        if (size.height == 0) size.height = rect.size.height * MM_PER_INCH / 72.f;
+        NSSize resolution = {rect.size.width / (size.width / MM_PER_INCH), rect.size.height / (size.height / MM_PER_INCH)};
 
         jscreen = (jobject)(*env)->NewObject(env, jScreenClass, screenInit,
                                              ptr_to_jlong(screen),

@@ -810,7 +810,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
             double _prefWidth = 0.0f;
             double _maxWidth = 0.0f;
 
-            for (TableColumnBase col : getColumns()) {
+            for (TableColumnBase<S, ?> col : getColumns()) {
                 col.setParentColumn(this);
 
                 _minWidth += col.getMinWidth();

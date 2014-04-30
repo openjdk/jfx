@@ -458,10 +458,14 @@ public final class CategoryAxis extends Axis<String> {
      */
     @Override public double getDisplayPosition(String value) {
         // find index of value
+        final ObservableList<String> cat = getCategories();
+        if (!cat.contains(value)) {
+            return Double.NaN;
+        }
         if (getEffectiveSide().isHorizontal()) {
-            return firstCategoryPos.get() + getCategories().indexOf("" + value) * categorySpacing.get();
+            return firstCategoryPos.get() + cat.indexOf(value) * categorySpacing.get();
         } else {
-            return firstCategoryPos.get() + getCategories().indexOf("" + value) * categorySpacing.get() * -1;
+            return firstCategoryPos.get() + cat.indexOf(value) * categorySpacing.get() * -1;
         }
     }
 

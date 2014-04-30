@@ -512,10 +512,8 @@ public class PieChart extends Chart {
         boolean shouldShowLabels = getLabelsVisible();
         if(getLabelsVisible()) {
 
-            double minX = begin != null ? Double.MAX_VALUE : 0d;
-            double minY = begin != null ? Double.MAX_VALUE : 0d;
-            double maxX = begin != null ? Double.MIN_VALUE : 0d;
-            double maxY = begin != null ? Double.MIN_VALUE : 0d;
+            double xPad = 0d;
+            double yPad = 0d;
 
             labelsX = new double[getDataSize()];
             labelsY = new double[getDataSize()];
@@ -533,22 +531,15 @@ public class PieChart extends Chart {
                 final double sproutY = calcY(labelAngles[index], getLabelLineLength(), 0);
                 labelsX[index] = sproutX;
                 labelsY[index] = sproutY;
-                if (sproutX < 0) { // on left
-                    minX = Math.min(minX, sproutX-item.textNode.getLayoutBounds().getWidth()-LABEL_TICK_GAP);
-                } else { // on right
-                    maxX = Math.max(maxX, sproutX+item.textNode.getLayoutBounds().getWidth()+LABEL_TICK_GAP);
-
-                }
+                xPad = Math.max(xPad, 2 * (item.textNode.getLayoutBounds().getWidth() + LABEL_TICK_GAP + Math.abs(sproutX)));
                 if (sproutY > 0) { // on bottom
-                    maxY = Math.max(maxY, sproutY+item.textNode.getLayoutBounds().getMaxY());
+                    yPad = Math.max(yPad, 2 * Math.abs(sproutY+item.textNode.getLayoutBounds().getMaxY()));
                 } else { // on top
-                    minY = Math.min(minY, sproutY + item.textNode.getLayoutBounds().getMinY());
+                    yPad = Math.max(yPad, 2 * Math.abs(sproutY + item.textNode.getLayoutBounds().getMinY()));
                 }
                 start+= size;
                 index++;
             }
-            double xPad = (Math.max(Math.abs(minX), Math.abs(maxX))) * 2;
-            double yPad = (Math.max(Math.abs(minY), Math.abs(maxY))) * 2;
             pieRadius = Math.min(contentWidth - xPad, contentHeight - yPad) / 2;
             // check if this makes the pie too small
             if (pieRadius < MIN_PIE_RADIUS ) {

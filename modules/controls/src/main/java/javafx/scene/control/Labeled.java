@@ -587,7 +587,7 @@ public abstract class Labeled extends Control {
             lineSpacing = new StyleableDoubleProperty(0) {
 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,Number> getCssMetaData() {
                     return StyleableProperties.LINE_SPACING;
                 }
 
@@ -693,7 +693,7 @@ public abstract class Labeled extends Control {
             graphicTextGap = new StyleableDoubleProperty(4) {
                 
                 @Override
-                public CssMetaData getCssMetaData() {
+                public CssMetaData<Labeled,Number> getCssMetaData() {
                     return StyleableProperties.GRAPHIC_TEXT_GAP;
                 }
 

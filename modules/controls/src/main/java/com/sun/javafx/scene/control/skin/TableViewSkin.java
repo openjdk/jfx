@@ -48,6 +48,7 @@ import javafx.scene.control.TableView.TableViewFocusModel;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
+import javafx.scene.text.Font;
 import javafx.util.Callback;
 
 import com.sun.javafx.scene.control.behavior.TableViewBehavior;
@@ -204,14 +205,16 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
      * rows is large.
      */
     @Override protected void resizeColumnToFitContent(TableColumn<T, ?> tc, int maxRows) {
-        final TableColumn<T, ?> col = tc;
+        if (!tc.isResizable()) return;
+
+//        final TableColumn<T, ?> col = tc;
         List<?> items = itemsProperty().get();
         if (items == null || items.isEmpty()) return;
     
-        Callback/*<TableColumn<T, ?>, TableCell<T,?>>*/ cellFactory = col.getCellFactory();
+        Callback/*<TableColumn<T, ?>, TableCell<T,?>>*/ cellFactory = tc.getCellFactory();
         if (cellFactory == null) return;
     
-        TableCell<T,?> cell = (TableCell<T, ?>) cellFactory.call(col);
+        TableCell<T,?> cell = (TableCell<T, ?>) cellFactory.call(tc);
         if (cell == null) return;
         
         // set this property to tell the TableCell we want to know its actual
@@ -229,7 +232,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         int rows = maxRows == -1 ? items.size() : Math.min(items.size(), maxRows);
         double maxWidth = 0;
         for (int row = 0; row < rows; row++) {
-            cell.updateTableColumn(col);
+            cell.updateTableColumn(tc);
             cell.updateTableView(tableView);
             cell.updateIndex(row);
             
@@ -243,14 +246,23 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
 
         // dispose of the cell to prevent it retaining listeners (see RT-31015)
         cell.updateIndex(-1);
+
+        // RT-36855 - take into account the column header text / graphic widths.
+        // Magic 10 is to allow for sort arrow to appear without text truncation.
+        TableColumnHeader header = getTableHeaderRow().getColumnHeaderFor(tc);
+        double headerTextWidth = Utils.computeTextWidth(header.label.getFont(), tc.getText(), -1);
+        Node graphic = header.label.getGraphic();
+        double headerGraphicWidth = graphic == null ? 0 : graphic.prefWidth(-1) + header.label.getGraphicTextGap();
+        double headerWidth = headerTextWidth + headerGraphicWidth + 10 + header.snappedLeftInset() + header.snappedRightInset();
+        maxWidth = Math.max(maxWidth, headerWidth);
         
         // RT-23486
-        double widthMax = maxWidth + padding;
+        maxWidth += padding;
         if(tableView.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY) {
-             widthMax = Math.max(widthMax, col.getWidth());
+            maxWidth = Math.max(maxWidth, tc.getWidth());
         }
 
-        col.impl_setWidth(widthMax); 
+        tc.impl_setWidth(maxWidth);
     }
     
     /** {@inheritDoc} */

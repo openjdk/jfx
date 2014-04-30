@@ -678,9 +678,9 @@ public abstract class XYChart<X,Y> extends Chart {
         double yAxisWidth = 0;
         double yAxisHeight = 0;
         for (int count=0; count<5; count ++) {
-            yAxisHeight = height-xAxisHeight;
+            yAxisHeight = snapSize(height-xAxisHeight);
             yAxisWidth = ya.prefWidth(yAxisHeight);
-            xAxisWidth = width - yAxisWidth;
+            xAxisWidth = snapSize(width - yAxisWidth);
             double newXAxisHeight = xa.prefHeight(xAxisWidth);
             if (newXAxisHeight == xAxisHeight) break;
             xAxisHeight = newXAxisHeight;
@@ -765,11 +765,10 @@ public abstract class XYChart<X,Y> extends Chart {
         if(getVerticalGridLinesVisible()) {
             for(int i=0; i < xaTickMarks.size(); i++) {
                 Axis.TickMark<X> tick = xaTickMarks.get(i);
-                double pixelOffset = (i==(xaTickMarks.size()-1)) ? -0.5 : 0.5;
                 final double x = xa.getDisplayPosition(tick.getValue());
                 if ((x!=xAxisZero || !isVerticalZeroLineVisible()) && x > 0 && x <= xAxisWidth) {
-                    verticalGridLines.getElements().add(new MoveTo(left+x+pixelOffset,top));
-                    verticalGridLines.getElements().add(new LineTo(left+x+pixelOffset,top+yAxisHeight));
+                    verticalGridLines.getElements().add(new MoveTo(left+x+0.5,top));
+                    verticalGridLines.getElements().add(new LineTo(left+x+0.5,top+yAxisHeight));
                 }
             }
         }
@@ -778,11 +777,10 @@ public abstract class XYChart<X,Y> extends Chart {
         if(isHorizontalGridLinesVisible()) {
             for(int i=0; i < yaTickMarks.size(); i++) {
                 Axis.TickMark<Y> tick = yaTickMarks.get(i);
-                double pixelOffset = (i==(yaTickMarks.size()-1)) ? -0.5 : 0.5;
                 final double y = ya.getDisplayPosition(tick.getValue());
                 if ((y!=yAxisZero || !isHorizontalZeroLineVisible()) && y >= 0 && y < yAxisHeight) {
-                    horizontalGridLines.getElements().add(new MoveTo(left,top+y+pixelOffset));
-                    horizontalGridLines.getElements().add(new LineTo(left+xAxisWidth,top+y+pixelOffset));
+                    horizontalGridLines.getElements().add(new MoveTo(left,top+y+0.5));
+                    horizontalGridLines.getElements().add(new LineTo(left+xAxisWidth,top+y+0.5));
                 }
             }
         }

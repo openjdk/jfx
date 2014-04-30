@@ -71,14 +71,14 @@ void setEGLAttrs(jint *attrs, int *eglAttrs) {
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGL_eglGetDisplay
-    (JNIEnv *env, jclass clazz, jlong display) {
+    (JNIEnv *UNUSED(env), jclass UNUSED(clazz), jlong display) {
     // EGLNativeDisplayType is defined differently on different systems; can be an int or a ptr so cast with care
     EGLDisplay dpy = eglGetDisplay(((EGLNativeDisplayType) (unsigned long)(display)));
     return asJLong(dpy);
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglInitialize
-    (JNIEnv *env, jclass clazz, jlong eglDisplay, jintArray majorArray,
+    (JNIEnv *env, jclass UNUSED(clazz), jlong eglDisplay, jintArray majorArray,
      jintArray minorArray){
 
     EGLint major, minor;
@@ -92,7 +92,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglInitialize
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglBindAPI
-    (JNIEnv *env, jclass clazz, jint api) {
+    (JNIEnv *UNUSED(env), jclass UNUSED(clazz), jint api) {
 
     if (eglBindAPI(api)) {
         return JNI_TRUE;
@@ -102,7 +102,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglBindAPI
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglChooseConfig
-    (JNIEnv *env, jclass clazz, jlong eglDisplay, jintArray attribs,
+    (JNIEnv *env, jclass UNUSED(clazz), jlong eglDisplay, jintArray attribs,
      jlongArray configs, jint configSize, jintArray numConfigs) {
 
     int i=0;
@@ -139,7 +139,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglChooseConfig
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGL__1eglCreateWindowSurface
-    (JNIEnv *env, jclass clazz, jlong eglDisplay, jlong config,
+    (JNIEnv *UNUSED(env), jclass UNUSED(clazz), jlong eglDisplay, jlong config,
      jlong nativeWindow, jintArray attribs) {
 
     EGLSurface eglSurface;
@@ -149,8 +149,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGL__1eglCreateWindowSurfa
         attrArray = (*env)->GetIntArrayElements(env, attribs, JNI_FALSE);
 
     eglSurface =  eglCreateWindowSurface(asPtr(eglDisplay), asPtr(config),
-                                               asPtr(nativeWindow),
-                                               NULL);
+                                         (EGLNativeWindowType) asPtr(nativeWindow),
+                                         (EGLint *) NULL);
     if (attrArray != NULL) {
         (*env)->ReleaseIntArrayElements(env, attribs, attrArray, JNI_ABORT);
     }
@@ -158,8 +158,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGL__1eglCreateWindowSurfa
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGL_eglCreateContext
-    (JNIEnv *env, jclass clazz, jlong eglDisplay, jlong config,
-      jlong shareContext, jintArray attribs){
+    (JNIEnv *UNUSED(env), jclass UNUSED(clazz), jlong eglDisplay, jlong config,
+      jlong UNUSED(shareContext), jintArray UNUSED(attribs)){
 
     // we don't support any passed-in context attributes presently
     // we don't support any share context presently
@@ -176,7 +176,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGL_eglCreateContext
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglMakeCurrent
-   (JNIEnv *env, jclass clazz, jlong eglDisplay, jlong drawSurface,
+   (JNIEnv *UNUSED(env), jclass UNUSED(clazz), jlong eglDisplay, jlong drawSurface,
     jlong readSurface, jlong eglContext) {
 
     if (eglMakeCurrent(asPtr(eglDisplay), asPtr(drawSurface), asPtr(readSurface),
@@ -188,7 +188,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglMakeCurrent
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglSwapBuffers
-    (JNIEnv *env, jclass clazz, jlong eglDisplay, jlong eglSurface) {
+    (JNIEnv *UNUSED(env), jclass UNUSED(clazz), jlong eglDisplay, jlong eglSurface) {
     if (eglSwapBuffers(asPtr(eglDisplay), asPtr(eglSurface))) {
         return JNI_TRUE;
     } else {

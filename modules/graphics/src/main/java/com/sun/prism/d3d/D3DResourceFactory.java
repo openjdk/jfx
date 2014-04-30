@@ -320,6 +320,9 @@ class D3DResourceFactory extends BaseShaderFactory {
             int width = D3DResourceFactory.nGetTextureWidth(pResource);
             int height = D3DResourceFactory.nGetTextureHeight(pResource);
             D3DRTTexture rtt = createRTTexture(width, height, WrapMode.CLAMP_NOT_NEEDED, pState.isAntiAliasing());
+            if (PrismSettings.dirtyOptsEnabled) {
+                rtt.contentsUseful();
+            }
 
             if (rtt != null) {
                 return new D3DSwapChain(context, pResource, rtt);

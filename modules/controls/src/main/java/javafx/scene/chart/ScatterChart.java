@@ -165,6 +165,9 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
             for (Data<X,Y> item = series.begin; item != null; item = item.next) {
                 double x = getXAxis().getDisplayPosition(item.getCurrentX());
                 double y = getYAxis().getDisplayPosition(item.getCurrentY());
+                if (Double.isNaN(x) || Double.isNaN(y)) {
+                    continue;
+                }
                 Node symbol = item.getNode();
                 if (symbol != null) {
                     final double w = symbol.prefWidth(-1);

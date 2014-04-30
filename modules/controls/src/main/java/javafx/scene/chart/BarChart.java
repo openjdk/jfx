@@ -356,6 +356,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                         categoryPos = getYAxis().getDisplayPosition(item.getCurrentY());
                         valPos = getXAxis().getDisplayPosition(item.getCurrentX());
                     }
+                    if (Double.isNaN(categoryPos) || Double.isNaN(valPos)) {
+                        continue;
+                    }
                     final double bottom = Math.min(valPos,zeroPos);
                     final double top = Math.max(valPos,zeroPos);
                     bottomPos = bottom;

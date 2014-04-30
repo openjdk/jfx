@@ -621,7 +621,6 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             case COMBOBOX:
                 impl = patternId == UIA_ExpandCollapsePatternId ||
-                       patternId == UIA_SelectionPatternId ||
                        patternId == UIA_ValuePatternId;
                 break;
             case SCROLL_BAR:
@@ -1012,7 +1011,6 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             }
             case TREE_VIEW:
-            case COMBOBOX:
             case LIST_VIEW: {
                 ObservableList<Node> selection = (ObservableList<Node>)getAttribute(SELECTED_ROWS);
                 if (selection != null) {
@@ -1121,6 +1119,7 @@ final class WinAccessible extends PlatformAccessible {
                 case SCROLL_BAR:
                 case TEXT_FIELD:
                 case TEXT_AREA: return false;
+                case COMBOBOX: return Boolean.FALSE.equals(getAttribute(EDITABLE));
                 default:
             }
         }

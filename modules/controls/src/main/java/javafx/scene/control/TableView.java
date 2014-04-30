@@ -1631,7 +1631,7 @@ public class TableView<S> extends Control {
                 return row != null ? row.accGetAttribute(attribute, parameters) : null;
             }
             case MULTIPLE_SELECTION: {
-                MultipleSelectionModel sm = getSelectionModel();
+                MultipleSelectionModel<S> sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
             }
             case COLUMN_AT_INDEX: //Skin

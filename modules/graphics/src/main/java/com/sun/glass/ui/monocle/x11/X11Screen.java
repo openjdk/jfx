@@ -104,7 +104,7 @@ public class X11Screen implements NativeScreen {
                 cwMask,
                 attrs.p);
         X.XMapWindow(display, window);
-        X.XStoreName(display, window, "JavaFX EGL/framebuffer container");
+        X.XStoreName(display, window, "JavaFX framebuffer container");
         X.XSync(display, false);
         int[] widthA = new int[1];
         int[] heightA = new int[1];
