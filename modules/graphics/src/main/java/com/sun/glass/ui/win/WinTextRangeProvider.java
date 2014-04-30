@@ -458,7 +458,7 @@ class WinTextRangeProvider {
                     while (next != BreakIterator.DONE && requestedCount != actualCount) {
                         /* Always keep start offset at a word start, and end offset at a word end */
                         if (endpoint == TextPatternRangeEndpoint_Start) {
-                            while (isWordStart(bi, text, next)) next = bi.next();
+                            while (next == BreakIterator.DONE && isWordStart(bi, text, next)) next = bi.next();
                         } else {
                             while (!isWordStart(bi, text, next)) next = bi.next();
                         }
@@ -471,7 +471,7 @@ class WinTextRangeProvider {
                     while (prev != BreakIterator.DONE && requestedCount != actualCount) {
                         /* Always keep start offset at a word start, and end offset at a word end */
                         if (endpoint == TextPatternRangeEndpoint_Start) {
-                            while (isWordStart(bi, text, prev)) prev = bi.previous();
+                            while (prev == BreakIterator.DONE && isWordStart(bi, text, prev)) prev = bi.previous();
                         } else {
                             while (!isWordStart(bi, text, prev)) prev = bi.previous();
                         }
