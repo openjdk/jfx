@@ -52,6 +52,29 @@ import javafx.util.StringConverter;
  * much the same way as the ListView {@link ListView#itemsProperty() items}
  * property. In other words, it is the content of the items list that is displayed
  * to users when they click on the ComboBox button.
+ *
+ * <p>The ComboBox exposes the {@link #valueProperty()} from
+ * {@link javafx.scene.control.ComboBoxBase}, but there are some important points
+ * of the value property that need to be understood in relation to ComboBox.
+ * These include:
+ *
+ * <ol>
+ *     <li>The value property <strong>is not</strong> constrained to items contained
+ *     within the items list - it can be anything as long as it is a valid value
+ *     of type T.</li>
+ *     <li>If the value property is set to a non-null object, and subsequently the
+ *     items list is cleared, the value property <strong>is not</strong> nulled out.</li>
+ *     <li>Clearing the {@link javafx.scene.control.SelectionModel#clearSelection()
+ *     selection} in the selection model <strong>does not</strong> null the value
+ *     property - it remains the same as before.</li>
+ *     <li>It is valid for the selection model to have a selection set to a given
+ *     index even if there is no items in the list (or less items in the list than
+ *     the given index). Once the items list is further populated, such that the
+ *     list contains enough items to have an item in the given index, both the
+ *     selection model {@link SelectionModel#selectedItemProperty()} and
+ *     value property will be updated to have this value. This is inconsistent with
+ *     other controls that use a selection model, but done intentionally for ComboBox.</li>
+ * </ol>
  * 
  * <p>By default, when the popup list is showing, the maximum number of rows
  * visible is 10, but this can be changed by modifying the 
