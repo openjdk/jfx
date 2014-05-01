@@ -58,8 +58,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_font_DFontDecoder_createCTFont
     CFArrayRef fonts = CTFontCollectionCreateMatchingFontDescriptors(collection);
     CFRelease(collection);
     CFIndex count = CFArrayGetCount(fonts);
-    for (CFIndex i = 0; i < count && descriptor == NULL; i++) {
-        CTFontDescriptorRef fd = (CTFontDescriptorRef)CFArrayGetValueAtIndex(fonts, i);
+    CFIndex i = 0;
+    while (i < count && descriptor == NULL) {
+        CTFontDescriptorRef fd = (CTFontDescriptorRef)CFArrayGetValueAtIndex(fonts, i++);
         if (fd) {
             CFStringRef fdNameRef = CTFontDescriptorCopyAttribute(fd, kCTFontDisplayNameAttribute);
             if (fdNameRef) {
