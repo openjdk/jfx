@@ -237,7 +237,10 @@ NSArray* jArrayToNSArray(JNIEnv *env, jarray srcArray, jMapper mapper) {
         for (CFIndex index = 0; index < size; index++) {
             jobject element = (*env)->GetObjectArrayElement(env, srcArray, index);
             if ((*env)->ExceptionCheck(env)) return NULL;
-            [array addObject: variantToID(env, element)];
+            id variant = variantToID(env, element);
+            if (variant) {
+                [array addObject: variant];
+            }
         }
         return array;
     }
