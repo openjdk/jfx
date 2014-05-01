@@ -69,7 +69,8 @@ X86EGL.compileSWT = false;
 X86EGL.compileFXPackager = false;
 X86EGL.compileDesignTime = false;
 
-// Libraries end up in the sdk/rt/lib/arm directory for arm builds
+// Libraries end up in the sdk/rt/lib/i386 directory for i386 builds
+X86EGL.arch = "i386"
 X86EGL.libDest = "lib/i386"
 
 // TODO this is garbage. Each target file should define what it includes,
@@ -523,3 +524,16 @@ X86EGL.media =[:]
 X86EGL.media.compiler = compiler
 X86EGL.media.linker = linker
 X86EGL.media.lib = "ar"
+
+X86EG.deploy = [:]
+X86EG.deploy.publicLibraryFilter = [
+  "fxavcodecplugin-52.so",
+  "fxavcodecplugin-53.so",
+  "fxplugins.so",
+  "libjfxwebkit.so",
+  "libgstplugins-lite.so",
+  "libgstreamer-lite.so",
+  "libprism_es2_eglx11.so",
+  "libglass_lens_fb.so"
+]
+X86EG.deploy.compressBigJar=true

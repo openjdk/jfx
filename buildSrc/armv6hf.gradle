@@ -78,6 +78,7 @@ ARMV6HF.compileFXPackager = false;
 ARMV6HF.compileDesignTime = false;
 
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
+ARMV6HF.arch = "arm"
 ARMV6HF.libDest = "lib/arm"
 
 // TODO this is garbage. Each target file should define what it includes,
@@ -601,3 +602,16 @@ ARMV6HF.media.compiler = compiler
 ARMV6HF.media.linker = linker
 ARMV6HF.media.extra_cflags = mediaCFlags.join(' ')
 ARMV6HF.media.extra_ldflags = mediaLFlags.join(' ')
+
+ARMV6HF.deploy = [:]
+ARMV6HF.deploy.publicLibraryFilter = [
+  "fxavcodecplugin-52.so",
+  "fxavcodecplugin-53.so",
+  "fxplugins.so",
+  "libjfxwebkit.so",
+  "libgstplugins-lite.so",
+  "libgstreamer-lite.so",
+  "libprism_es2_eglx11.so",
+  "libglass_lens_fb.so"
+]
+ARMV6HF.deploy.compressBigJar=true
