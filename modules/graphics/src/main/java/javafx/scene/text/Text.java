@@ -249,15 +249,13 @@ public class Text extends Shape {
          * extra work is necessary. Other times the layout is caused by changes
          * in the text flow object (wrapping width and text alignment for example).
          * In the second case the dirty bits must be set here using
-         * needsTextLayout(). Note that needsTextLayout() uses impl_geomChanged()
-         * which causes another (undesired) layout request in the parent.
-         * In general this is not a problem because shapes are not resizable and
-         * region do not propagate layout changes to the parent.
+         * geomChanged() and impl_markDirty().
          * This is a special case where a shape is resized by the parent during
-         * layoutChildren().  See TextFlow#requestLayout() for information how
+         * layoutChildren(). See TextFlow#requestLayout() for information how
          * text flow deals with this situation.
          */
-        needsTextLayout();
+        geomChanged();
+        impl_markDirty(DirtyBits.NODE_CONTENTS);
 
         spanBoundsInvalid = true;
         int count = 0;
@@ -763,6 +761,10 @@ public class Text extends Shape {
     @Override
     protected final void impl_geomChanged() {
         super.impl_geomChanged();
+        geomChanged();
+    }
+
+    private void geomChanged() {
         if (attributes != null) {
             if (attributes.impl_caretBinding != null) {
                 attributes.impl_caretBinding.invalidate();
