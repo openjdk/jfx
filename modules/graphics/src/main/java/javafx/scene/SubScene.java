@@ -240,7 +240,7 @@ public class SubScene extends Node {
                     _value.setDisabled(isDisabled());
 
                     if (oldRoot != null) {
-                        cssForget(StyleManager.getInstance(),oldRoot);
+                        StyleManager.getInstance().forget(SubScene.this);
                         oldRoot.setScenes(null, null);
                     }
                     oldRoot = _value;
@@ -583,30 +583,17 @@ public class SubScene extends Node {
      * @see #getUserAgentStylesheet()
      * @see #setUserAgentStylesheet(String)
      */
-    public ObjectProperty<String> userAgentStylesheetProperty() {
+    public final ObjectProperty<String> userAgentStylesheetProperty() {
         if (userAgentStylesheet == null) {
             userAgentStylesheet = new SimpleObjectProperty<String>(SubScene.this, "userAgentStylesheet", null) {
                 @Override protected void invalidated() {
-                    cssForget(StyleManager.getInstance(), getRoot());
+                    StyleManager.getInstance().forget(SubScene.this);
                     impl_reapplyCSS();
                 }
             };
         }
         return userAgentStylesheet;
     }
-
-    private void cssForget(final StyleManager styleManager, final Parent parent) {
-
-        if (parent == null) return;
-        styleManager.forget(parent);
-
-        for(Node child : parent.getChildren()) {
-            if (child instanceof Parent) {
-                cssForget(styleManager, (Parent)child);
-            }
-        }
-
-     }
 
     /**
      * Get the URL of the user-agent stylesheet that will be used by this SubScene. If the URL has not been set,
@@ -618,7 +605,7 @@ public class SubScene extends Node {
      * @return The URL of the user-agent stylesheet that will be used by this SubScene,
      * or null if has not been set.
      */
-    public String getUserAgentStylesheet() {
+    public final String getUserAgentStylesheet() {
         return userAgentStylesheet == null ? null : userAgentStylesheet.get();
     }
 
@@ -635,7 +622,7 @@ public class SubScene extends Node {
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
      */
-    public void setUserAgentStylesheet(String url) {
+    public final void setUserAgentStylesheet(String url) {
         userAgentStylesheetProperty().set(url);
     }
 

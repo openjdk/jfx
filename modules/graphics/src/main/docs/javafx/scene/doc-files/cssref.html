@@ -187,11 +187,13 @@
       <li><a href="#intro">Introduction</a>
         <ul>
           <li><a href="#introscenegraph">CSS and the JavaFX Scene Graph</a></li>
+          <li><a href="#introstylesheets">Scene, Parent and SubScene Stylesheets</a></li>
+          <li><a href="#intronaming">Naming Conventions</a></li>
           <li><a href="#intropublicapi">CSS Public API</a></li>
-          <li><a href="#introlimitations">Limitations</a></li>
           <li><a href="#introinheritance">Inheritance</a></li>
           <li><a href="#introexamples">Examples</a></li>
           <li><a href="#introparserwarnings">Understanding Parser Warnings</a></li>
+          <li><a href="#introlimitations">Limitations</a></li>
         </ul>
       </li>
       <li><a href="#types">Types</a>
@@ -435,7 +437,6 @@
         such as MouseEvent.MOUSE_ENTERED which triggers the &quot;hover&quot; state, are
         applied on then next pulse following the event.
     </p>
-
     <p>
         <a href="http://www.w3.org/TR/css3-selectors/">CSS selectors</a> are used to match styles to scene&#8209;graph
         nodes.
@@ -480,6 +481,7 @@
         the appropriate type and is then assigned to an instance variable of the
         JavaFX object.
     </p>
+    <h3><a name="introstylesheets" id="introstylesheets">Scene, Parent and SubScene Stylesheets</a></h3>
     <p>
         CSS styles can come from style sheets or inline styles. Style sheets are
         loaded from the URLs specified in the
@@ -502,6 +504,27 @@
         inline styles, the style sheets of all its ancestors, and any style sheets
         from the Scene.
     </p>
+    <p>
+        Beginning with JavaFX 8u20, the Scene class has a
+        <a href="../../../javafx/scene/Scene.html#getUserAgentStylesheet--">getUserAgentStylesheet</a> property,
+        allowing a user&#8209;style sheet to be set on a Scene. This allows a Scene
+        to have a set of user&#8209;agent styles distinct from the platform default. When a user&#8209;agent
+        stylesheet is set on a Scene, the user&#8209;agent styles are used instead of the styles from the
+        platform default user&#8209;agent stylesheet.
+    </p>
+    <p>
+        Beginning with JavaFX 8u20, the SubScene class has a
+        <a href="../../../javafx/scene/SubScene.html#getUserAgentStylesheet--">getUserAgentStylesheet</a> property,
+        allowing a user&#8209;style sheet to be set on a SubScene. This allows a SubScene
+        of the scene&#8209;graph to have set of user&#8209;agent styles distinct from the platform default
+        or from the Scene in which the SubScene is contained. When a user&#8209;agent
+        stylesheet is set on a SubScene, the user&#8209;agent styles are used instead of the styles from the
+        platform default user&#8209;agent stylesheet or any user&#8209;agent stylesheet set on the Scene.
+    </p>
+    <p>It is important to note that styles from a stylesheet added to a Scene or Parent, do not affect
+        a SubScene which is a child or descendent of the Scene or Parent. Unless a user&#8209;agent has
+        been set on the SubScene, the SubScene will get styles
+        from the a Scene's user&#8209;agent stylesheet or the platform user&#8209;agent stylesheet.</p>
     The implementation allows designers to style an application by using style
     sheets to override property values set from code. For example, a call to <code>rectangle.setFill(Color.YELLOW)</code>
     can be overridden by an inline&#8209;style or a style from an author stylesheet. This has implications for
@@ -512,6 +535,7 @@
     or Parent style sheet. Inline styles have highest precedence. Style sheets
     from a Parent instance are considered to be more specific than those styles
     from Scene style sheets.</cite>
+    <h3><a name="intronaming" id="introsnaming">Naming Conventions</a></h3>
     <p>Naming conventions have been established for deriving CSS style&#8209;class
         names from JavaFX class names, and for deriving CSS property names from
         JavaFX variable names. Note that this is only a naming convention; there
@@ -530,30 +554,6 @@
     <h3><a name="intropublicapi" id="intropublicapi">CSS Public API</a></h3>
     Beginning with JavaFX 8.0, public API is available for developers to create styleable properties and manage
     pseudo-class state. Refer to <a href="../../../javafx/css/package-summary.html">javafx.css</a> for details.
-    <h3><a name="introlimitations" id="introlimitations">Limitations</a></h3>
-    <p> While the JavaFX CSS parser will parse valid CSS syntax, it is not a
-        fully compliant CSS parser. One should not expect the parser to handle
-        syntax not specified in this document.</p>
-    <p>With the exception of @font&#8209;face, @-keyword statements are ignored.</p>
-    <p>The structural pseudo&#8209;classes are not supported. </p>
-    <p>The ":active" and ":focus" dynamic pseudo&#8209;classes are not supported.
-        However, <a href="#node">Nodes</a> do support the ":pressed" and
-        ":focused" pseudo&#8209;classes, which are similar. </p>
-    <p>The ":link" and ":visited" pseudo&#8209;classes are not supported in general.
-        However, <a href="#hyperlink">Hyperlink</a> objects can be styled, and
-        they support the ":visited" pseudo&#8209;class. </p>
-    <p>JavaFX CSS does not support comma-separated series of font family names
-        in the -fx-font-family property. The optional line height parameter when
-        specifying fonts is not supported. There is no equivalent for the
-        font-variant property.</p>
-    <p>JavaFX CSS uses the HSB color model instead of the HSL color model. </p>
-    <p>If a property of a node is initialized by calling the set method of the
-    property, the CSS implementation will see this as a user set value and the
-    value will not be overwritten by a style from a user agent style
-    sheet.</p>
-    <p>When parsing a <a href="http://www.w3.org/TR/CSS2/syndata.html#uri">URI</a>,
-    the parser doesn't handle URI escapes nor \&lt;hex-digit&gt;[1,6] code points.</p>
-
     <h3><a name="introinheritance" id="introinheritance">Inheritance</a></h3>
     <p>CSS also provides for certain properties to be inherited by default, or
         to be inherited if the property value is 'inherit'. If a value is
@@ -657,6 +657,30 @@
         to the errors property of com.sun.javafx.css.StyleManager. This is not
         public API and is subject to change. <br>
     </p>
+    <h3><a name="introlimitations" id="introlimitations">Limitations</a></h3>
+    <p> While the JavaFX CSS parser will parse valid CSS syntax, it is not a
+        fully compliant CSS parser. One should not expect the parser to handle
+        syntax not specified in this document.</p>
+    <p>With the exception of @font&#8209;face and @import, @-keyword statements are ignored.</p>
+    <p>The structural pseudo&#8209;classes are not supported. </p>
+    <p>The ":active" and ":focus" dynamic pseudo&#8209;classes are not supported.
+        However, <a href="#node">Nodes</a> do support the ":pressed" and
+        ":focused" pseudo&#8209;classes, which are similar. </p>
+    <p>The ":link" and ":visited" pseudo&#8209;classes are not supported in general.
+        However, <a href="#hyperlink">Hyperlink</a> objects can be styled, and
+        they support the ":visited" pseudo&#8209;class. </p>
+    <p>JavaFX CSS does not support comma-separated series of font family names
+        in the -fx-font-family property. The optional line height parameter when
+        specifying fonts is not supported. There is no equivalent for the
+        font-variant property.</p>
+    <p>JavaFX CSS uses the HSB color model instead of the HSL color model. </p>
+    <p>If a property of a node is initialized by calling the set method of the
+        property, the CSS implementation will see this as a user set value and the
+        value will not be overwritten by a style from a user agent style
+        sheet.</p>
+    <p>When parsing a <a href="http://www.w3.org/TR/CSS2/syndata.html#uri">URI</a>,
+        the parser doesn't handle URI escapes nor \&lt;hex-digit&gt;[1,6] code points.</p>
+
     <h2><a name="types" id="types">Types</a></h2>
     <h3><a name="typeinherit" id="typeinherit">inherit</a></h3>
     <p>Each property has a type, which determines what kind of value and the

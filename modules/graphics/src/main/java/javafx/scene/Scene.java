@@ -1513,7 +1513,7 @@ public class Scene implements EventTarget {
      * @see #getUserAgentStylesheet()
      * @see #setUserAgentStylesheet(String)
      */
-    public ObjectProperty<String> userAgentStylesheetProperty() {
+    public final ObjectProperty<String> userAgentStylesheetProperty() {
         if (userAgentStylesheet == null) {
             userAgentStylesheet = new SimpleObjectProperty<String>(Scene.this, "userAgentStylesheet", null) {
                 @Override protected void invalidated() {
@@ -1535,7 +1535,7 @@ public class Scene implements EventTarget {
      * @return The URL of the user-agent stylesheet that will be used by this Scene,
      * or null if has not been set.
      */
-    public String getUserAgentStylesheet() {
+    public final String getUserAgentStylesheet() {
         return userAgentStylesheet == null ? null : userAgentStylesheet.get();
     }
 
@@ -1552,7 +1552,7 @@ public class Scene implements EventTarget {
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
      */
-    public void setUserAgentStylesheet(String url) {
+    public final void setUserAgentStylesheet(String url) {
         userAgentStylesheetProperty().set(url);
     }
 
