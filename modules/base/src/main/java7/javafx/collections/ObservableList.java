@@ -28,7 +28,7 @@ package javafx.collections;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Predicate;
+//import java.util.function.Predicate;
 
 import javafx.beans.Observable;
 import javafx.collections.transformation.FilteredList;
