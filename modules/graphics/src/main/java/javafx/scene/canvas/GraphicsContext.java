@@ -237,7 +237,7 @@ public final class GraphicsContext {
         return theCanvas.getBuffer();
     }
 
-    private static float coords[] = new float[6];
+    private float coords[] = new float[6];
     private static final byte pgtype[] = {
         NGCanvas.MOVETO,
         NGCanvas.LINETO,
@@ -585,7 +585,6 @@ public final class GraphicsContext {
         txdirty = true;
     }
 
-    private static Affine2D scratchTX = new Affine2D();
     /**
      * Concatenates the input with the current transform.
      * 
@@ -600,10 +599,8 @@ public final class GraphicsContext {
                           double mxy, double myy,
                           double mxt, double myt)
     {
-        scratchTX.setTransform(mxx, myx,
-                               mxy, myy,
-                               mxt, myt);
-        curState.transform.concatenate(scratchTX);
+        curState.transform.concatenate(mxx, mxy, mxt,
+                                       myx, myy, myt);
         txdirty = true;
     }
     
@@ -616,10 +613,8 @@ public final class GraphicsContext {
      */
     public void transform(Affine xform) {
         if (xform == null) return;
-        scratchTX.setTransform(xform.getMxx(), xform.getMyx(),
-                               xform.getMxy(), xform.getMyy(),
-                               xform.getTx(), xform.getTy());
-        curState.transform.concatenate(scratchTX);
+        curState.transform.concatenate(xform.getMxx(), xform.getMxy(), xform.getTx(),
+                                       xform.getMyx(), xform.getMyy(), xform.getTy());
         txdirty = true;
     }
 
@@ -719,8 +714,7 @@ public final class GraphicsContext {
     public double getGlobalAlpha() {
         return curState.globalAlpha;
     }
-    
-    private static Blend TMP_BLEND = new Blend(BlendMode.SRC_OVER); 
+
     /**
      * Sets the global blend mode.
      * A {@code null} value will be ignored and the current value will remain unchanged.
@@ -731,10 +725,8 @@ public final class GraphicsContext {
         if (op != null && op != curState.blendop) {
             GrowableDataBuffer buf = getBuffer();           
             curState.blendop = op; 
-            TMP_BLEND.setMode(op);
-            TMP_BLEND.impl_sync();
             buf.putByte(NGCanvas.COMP_MODE);
-            buf.putObject(((com.sun.scenario.effect.Blend)TMP_BLEND.impl_getImpl()).getMode());
+            buf.putObject(Blend.impl_getToolkitMode(op));
         }
     }
     
@@ -1341,7 +1333,6 @@ public final class GraphicsContext {
         return true;
     }
 
-    private static final Arc2D TEMP_ARC = new Arc2D();
     /**
      * Adds path elements to the current path to make an arc that uses Euclidean
      * degrees. This Euclidean orientation sweeps from East to North, then West,
@@ -1358,14 +1349,14 @@ public final class GraphicsContext {
                     double radiusX, double radiusY,
                     double startAngle, double length)
     {
-        TEMP_ARC.setArc((float)(centerX - radiusX), // x
-                        (float)(centerY - radiusY), // y
-                        (float)(radiusX * 2.0), // w
-                        (float)(radiusY * 2.0), // h
-                        (float)startAngle,
-                        (float)length,
-                        Arc2D.OPEN);
-        path.append(TEMP_ARC.getPathIterator(curState.transform), true);
+        Arc2D arc = new Arc2D((float) (centerX - radiusX), // x
+                              (float) (centerY - radiusY), // y
+                              (float) (radiusX * 2.0), // w
+                              (float) (radiusY * 2.0), // h
+                              (float) startAngle,
+                              (float) length,
+                              Arc2D.OPEN);
+        path.append(arc.getPathIterator(curState.transform), true);
         markPathDirty();
     }
 
