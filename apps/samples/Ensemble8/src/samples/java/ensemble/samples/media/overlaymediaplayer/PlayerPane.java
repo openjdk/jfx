@@ -115,6 +115,7 @@ public class PlayerPane extends Region {
             mediaTopBar.setAlignment(Pos.CENTER);
             mediaTopBar.setOpacity(1.0);
 
+            topBar.setId("top-bar");
             topBar.setStyle("-fx-background-color: rgb(0,0,0.0,0.0);");
             bottomBar.setStyle("-fx-background-color: rgb(0,0,0.0,0.0);");
 
