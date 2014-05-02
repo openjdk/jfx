@@ -55,7 +55,9 @@ public final class ParentTraversalEngine extends TraversalEngine{
     }
 
     public boolean isParentTraversable() {
-        return overridenTraversability != null ? overridenTraversability : root.isFocusTraversable();
+        // This means the traversability can be overriden only for traversable root.
+        // If user explicitly disabled traversability, we don't set it back to true
+        return overridenTraversability != null ? root.isFocusTraversable() && overridenTraversability : root.isFocusTraversable();
     }
 
 }
