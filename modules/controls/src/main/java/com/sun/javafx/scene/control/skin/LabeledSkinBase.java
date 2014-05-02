@@ -261,7 +261,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     protected void mnemonicTargetChanged() {
         if (containsMnemonic == true) {
             /*
-            ** was there previously a labelFor
+            ** was there previously a labelFor  
             */
             removeMnemonic();
 
@@ -283,7 +283,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         final Labeled labeled = getSkinnable();
         Scene scene = labeled.getScene();
 
-        if (scene != null) {
+        if (scene != null && containsMnemonic) {
             addMnemonic();
         }
 
