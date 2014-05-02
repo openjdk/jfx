@@ -36,6 +36,7 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
@@ -48,9 +49,7 @@ public class HelloTitledPane extends Application {
 
     @Override public void start(Stage stage) {
         stage.setTitle("TitledPane");
-        Scene scene = new Scene(new Group(), 1000, 250);
-        scene.setFill(Color.GHOSTWHITE);
-        
+
         // --- Simple grid test
         TitledPane gridTitlePane = new TitledPane();
         GridPane grid = new GridPane();
@@ -64,14 +63,14 @@ public class HelloTitledPane extends Application {
         grid.add(new TextField(), 1, 2);
         gridTitlePane.setText("Hello World!");
         gridTitlePane.setContent(grid);
-        
+
         // --- Label test
         TitledPane normalText = new TitledPane();
         Label lbl = new Label("This is a collapsible TitledPane\nthat allows for text to be wrapped.\n\nIt should be the perfect height to fit all text provided.\n\nIs it?");
         normalText.setText("Hello World!");
         normalText.setFont(Font.font(20));
         normalText.setContent(lbl);
-        
+
         // --- Big button test
         TitledPane normal = new TitledPane();
         Button bn = new Button("Button");
@@ -95,13 +94,13 @@ public class HelloTitledPane extends Application {
         Button bf = new Button("Button");
         bf.setPrefSize(75, 50);
         uncollapsible.setContent(bf);
-        
-        HBox hbox = new HBox(10);
+
+        VBox hbox = new VBox(10);
         hbox.setPadding(new Insets(20, 0, 0, 20));
         hbox.getChildren().setAll(normal, gridTitlePane, normalText, unanimated, uncollapsible);
 
-        Group root = (Group)scene.getRoot();
-        root.getChildren().add(hbox);
+        Scene scene = new Scene(hbox);
+        scene.setFill(Color.GHOSTWHITE);
         stage.setScene(scene);
         stage.show();
     }

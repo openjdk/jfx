@@ -32,15 +32,13 @@ import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
 public class HelloAccordion extends Application {
 
     @Override public void start(Stage stage) {
-        stage.setTitle("Accordion Sample");
-        Scene scene = new Scene(new Group(), 500, 500);
-        scene.setFill(Color.GHOSTWHITE);
 
         TitledPane t1 = new TitledPane();
         t1.setId("Label 1");
@@ -63,11 +61,15 @@ public class HelloAccordion extends Application {
         accordion.getPanes().add(t2);
         accordion.getPanes().add(t3);
 
-        Group root = (Group)scene.getRoot();
-        root.setTranslateX(50);
-        root.setTranslateY(50);
-        root.getChildren().clear();
+        stage.setTitle("Accordion Sample");
+
+        final VBox root = new VBox(20);
+        root.setFillWidth(false);
+        Scene scene = new Scene(root, 500, 500);
         root.getChildren().add(accordion);
+
+        root.getChildren().add(new Button("This button doesn't change it's layout when Accordion is used"));
+
         stage.setScene(scene);
         stage.show();
     }
