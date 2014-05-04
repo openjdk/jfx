@@ -28,8 +28,8 @@ package javafx.scene.control;
 import com.sun.javafx.collections.MappingChange;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
-
 import com.sun.javafx.scene.control.SelectedCellsMap;
+
 import javafx.beans.property.DoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -65,6 +65,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
@@ -1827,7 +1828,7 @@ public class TreeTableView<S> extends Control {
                     }
 
                     @Override public StyleableProperty<Number> getStyleableProperty(TreeTableView<?> n) {
-                        return (StyleableProperty<Number>) n.fixedCellSizeProperty();
+                        return (StyleableProperty<Number>)(WritableValue<Number>) n.fixedCellSizeProperty();
                     }
                 };
 
@@ -1897,7 +1898,7 @@ public class TreeTableView<S> extends Control {
                 return row != null ? row.accGetAttribute(attribute, parameters) : null;
             }
             case MULTIPLE_SELECTION: {
-                MultipleSelectionModel sm = getSelectionModel();
+                TreeTableViewSelectionModel<S> sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
             }
 

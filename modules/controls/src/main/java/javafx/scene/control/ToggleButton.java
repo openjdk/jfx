@@ -26,18 +26,22 @@
 package javafx.scene.control;
 
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
+
 import javafx.css.StyleableProperty;
 
 /**
@@ -127,7 +131,7 @@ import javafx.css.StyleableProperty;
         // makes it look to css like the user set the value and css will not 
         // override. Initializing alignment by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty)alignmentProperty()).applyStyle(null, Pos.CENTER);
+        ((StyleableProperty<Pos>)(WritableValue<Pos>)alignmentProperty()).applyStyle(null, Pos.CENTER);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
     /***************************************************************************

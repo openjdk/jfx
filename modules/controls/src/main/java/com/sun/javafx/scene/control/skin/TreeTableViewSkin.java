@@ -402,7 +402,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
             case SELECTED_CELLS: {
                 List<Node> selection = new ArrayList<>();
                 TreeTableView.TreeTableViewSelectionModel<S> sm = getSkinnable().getSelectionModel();
-                for (TreeTablePosition pos : sm.getSelectedCells()) {
+                for (TreeTablePosition<S,?> pos : sm.getSelectedCells()) {
                     TreeTableRow<S> row = flow.getPrivateCell(pos.getRow());
                     if (row != null) selection.add(row);
                 }

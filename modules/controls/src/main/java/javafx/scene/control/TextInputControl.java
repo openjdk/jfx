@@ -44,6 +44,7 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableStringValue;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
 import javafx.css.PseudoClass;
@@ -53,14 +54,15 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
+
 import java.text.BreakIterator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import com.sun.javafx.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
 
@@ -1176,7 +1178,7 @@ public abstract class TextInputControl extends Control {
 
             @Override
             public StyleableProperty<Font> getStyleableProperty(TextInputControl n) {
-                return (StyleableProperty<Font>)n.fontProperty();
+                return (StyleableProperty<Font>)(WritableValue<Font>)n.fontProperty();
             }
         };
 

@@ -40,7 +40,6 @@ import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import javafx.util.Callback;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -131,7 +130,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     private boolean needCellsRebuilt = true;
     private boolean needCellsReconfigured = false;
     
-    private EventHandler<TreeModificationEvent> rootListener = e -> {
+    private EventHandler<TreeModificationEvent<T>> rootListener = e -> {
         if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
             // Fix for RT-14842, where the children of a TreeItem were changing,
             // but because the overall item count was staying the same, there was
@@ -147,7 +146,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         } else {
             // Fix for RT-20090. We are checking to see if the event coming
             // from the TreeItem root is an event where the count has changed.
-            EventType eventType = e.getEventType();
+            EventType<?> eventType = e.getEventType();
             while (eventType != null) {
                 if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
                     rowCountDirty = true;
@@ -159,20 +158,20 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         }
     };
     
-    private WeakEventHandler weakRootListener;
+    private WeakEventHandler<TreeModificationEvent<T>> weakRootListener;
             
     
-    private WeakReference<TreeItem> weakRoot;
-    private TreeItem getRoot() {
+    private WeakReference<TreeItem<T>> weakRoot;
+    private TreeItem<T> getRoot() {
         return weakRoot == null ? null : weakRoot.get();
     }
-    private void setRoot(TreeItem newRoot) {
+    private void setRoot(TreeItem<T> newRoot) {
         if (getRoot() != null && weakRootListener != null) {
             getRoot().removeEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
-        weakRoot = new WeakReference<TreeItem>(newRoot);
+        weakRoot = new WeakReference<>(newRoot);
         if (getRoot() != null) {
-            weakRootListener = new WeakEventHandler(rootListener);
+            weakRootListener = new WeakEventHandler<>(rootListener);
             getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
         
@@ -353,13 +352,13 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
     
     private void onFocusPreviousCell() {
-        FocusModel fm = getSkinnable().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getSkinnable().getFocusModel();
         if (fm == null) return;
         flow.show(fm.getFocusedIndex());
     }
 
     private void onFocusNextCell() {
-        FocusModel fm = getSkinnable().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getSkinnable().getFocusModel();
         if (fm == null) return;
         flow.show(fm.getFocusedIndex());
     }
@@ -391,8 +390,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         TreeCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
 
-        final SelectionModel sm = getSkinnable().getSelectionModel();
-        final FocusModel fm = getSkinnable().getFocusModel();
+        final SelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
+        final FocusModel<TreeItem<T>> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
 
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
@@ -435,8 +434,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         TreeCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
 
-        final SelectionModel sm = getSkinnable().getSelectionModel();
-        final FocusModel fm = getSkinnable().getFocusModel();
+        final SelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
+        final FocusModel<TreeItem<T>> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
 
         int firstVisibleCellIndex = firstVisibleCell.getIndex();

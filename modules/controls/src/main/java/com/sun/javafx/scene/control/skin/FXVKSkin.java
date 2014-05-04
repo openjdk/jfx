@@ -35,7 +35,6 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.geometry.Bounds;
@@ -68,7 +67,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.HashMap;
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import static javafx.scene.input.MouseEvent.MOUSE_PRESSED;
 import static javafx.scene.input.TouchEvent.TOUCH_PRESSED;
@@ -475,7 +473,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
     }
 
     public FXVKSkin(final FXVK fxvk) {
-        super(fxvk, new BehaviorBase<>(fxvk, Collections.EMPTY_LIST));
+        super(fxvk, new BehaviorBase<>(fxvk, Collections.emptyList()));
         this.fxvk = fxvk;
         if (fxvk == FXVK.vk) {
             primaryVK = fxvk;

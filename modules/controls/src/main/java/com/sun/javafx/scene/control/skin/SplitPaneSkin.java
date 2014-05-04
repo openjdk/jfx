@@ -30,7 +30,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
@@ -55,7 +54,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
     private boolean horizontal;
     
     public SplitPaneSkin(final SplitPane splitPane) {
-        super(splitPane, new BehaviorBase<>(splitPane, Collections.EMPTY_LIST));
+        super(splitPane, new BehaviorBase<>(splitPane, Collections.emptyList()));
 //        splitPane.setManaged(false);
         horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
         

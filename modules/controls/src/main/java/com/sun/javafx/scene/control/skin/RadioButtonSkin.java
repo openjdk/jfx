@@ -29,8 +29,6 @@ import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 import javafx.scene.control.RadioButton;
 import javafx.scene.layout.StackPane;
 
-import com.sun.javafx.scene.control.behavior.ButtonBehavior;
-
 public class RadioButtonSkin extends LabeledSkinBase<RadioButton, ToggleButtonBehavior<RadioButton>> {
 
     /** The radio contains the "dot", which is usually a circle */

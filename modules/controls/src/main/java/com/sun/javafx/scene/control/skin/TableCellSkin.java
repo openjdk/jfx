@@ -36,13 +36,11 @@ import javafx.scene.control.TableColumn;
  */
 public class TableCellSkin<S,T> extends TableCellSkinBase<TableCell<S,T>, TableCellBehavior<S,T>> {
     
-    private final TableCell<S,T> tableCell;
     private final TableColumn<S,T> tableColumn;
     
     public TableCellSkin(TableCell<S,T> tableCell) {
         super(tableCell, new TableCellBehavior<S,T>(tableCell));
         
-        this.tableCell = tableCell;
         this.tableColumn = tableCell.getTableColumn();
         
         super.init(tableCell);

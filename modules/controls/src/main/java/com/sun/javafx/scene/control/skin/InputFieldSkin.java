@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.event.EventDispatchChainImpl;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.event.EventDispatchChain;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;

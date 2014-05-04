@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
@@ -52,13 +53,15 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.util.Callback;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
+
 import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeName;
 import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.getSortTypeProperty;
 import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.isAscending;
@@ -968,7 +971,7 @@ public class TableColumnHeader extends Region {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TableColumnHeader n) {
-                return (StyleableProperty<Number>)n.sizeProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.sizeProperty();
             }
         };
 

@@ -30,21 +30,21 @@ import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.PaginationBehavior;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.animation.*;
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -65,7 +65,6 @@ import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Font;
 import javafx.util.Duration;
 
 public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehavior>  {
@@ -1286,7 +1285,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)skin.arrowsVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.arrowsVisibleProperty();
             }
         };
 
@@ -1303,7 +1302,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)skin.pageInformationVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.pageInformationVisibleProperty();
             }
         };
 
@@ -1320,7 +1319,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             @Override
             public StyleableProperty<Side> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Side>)skin.pageInformationAlignmentProperty();
+                return (StyleableProperty<Side>)(WritableValue<Side>)skin.pageInformationAlignmentProperty();
             }
         };
 
@@ -1337,7 +1336,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Pagination n) {
                 final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)skin.tooltipVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.tooltipVisibleProperty();
             }
         };
         private static final CssMetaData<Pagination,Number> ARROW_BUTTON_GAP =
@@ -1349,7 +1348,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
                 @Override public StyleableProperty<Number> getStyleableProperty(Pagination n) {
                     final PaginationSkin skin = (PaginationSkin) n.getSkin();
-                    return (StyleableProperty<Number>)skin.arrowButtonGapProperty();
+                    return (StyleableProperty<Number>)(WritableValue<Number>)skin.arrowButtonGapProperty();
                 }
             };
 

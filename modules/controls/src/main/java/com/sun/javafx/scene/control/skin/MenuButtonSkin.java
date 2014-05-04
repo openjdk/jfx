@@ -25,11 +25,9 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.control.MenuButton;
-import javafx.stage.WindowEvent;
 
 import com.sun.javafx.scene.control.behavior.MenuButtonBehavior;
 

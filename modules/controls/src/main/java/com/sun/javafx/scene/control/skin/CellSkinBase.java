@@ -30,18 +30,19 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
-import javafx.scene.control.Cell;
 
+import javafx.scene.control.Cell;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.StyleOrigin;
+
 import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
+
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.control.IndexedCell;
 import javafx.scene.control.SkinBase;
 
 
@@ -145,7 +146,7 @@ public class CellSkinBase<C extends Cell, B extends BehaviorBase<C>> extends Lab
             @Override
             public StyleableProperty<Number> getStyleableProperty(Cell<?> n) {
                 final CellSkinBase<?,?> skin = (CellSkinBase<?,?>) n.getSkin();
-                return (StyleableProperty<Number>)skin.cellSizePropertyImpl();
+                return (StyleableProperty<Number>)(WritableValue<Number>)skin.cellSizePropertyImpl();
             }
         };
 

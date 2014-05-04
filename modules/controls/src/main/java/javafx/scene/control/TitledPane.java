@@ -33,14 +33,16 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
-
 import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.scene.control.skin.TitledPaneSkin;
+
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -300,7 +302,7 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty<Boolean>)n.collapsibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.collapsibleProperty();
             }
         };
                
@@ -315,7 +317,7 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty<Boolean>)n.animatedProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.animatedProperty();
             }
         };
 

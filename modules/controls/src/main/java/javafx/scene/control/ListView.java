@@ -41,6 +41,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -56,14 +57,18 @@ import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.EnumConverter;
+
 import javafx.collections.WeakListChangeListener;
+
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
+
 import java.lang.ref.WeakReference;
+
 import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
@@ -1032,7 +1037,7 @@ public class ListView<T> extends Control {
                 }
 
                 @Override public StyleableProperty<Number> getStyleableProperty(ListView<?> n) {
-                    return (StyleableProperty<Number>) n.fixedCellSizeProperty();
+                    return (StyleableProperty<Number>)(WritableValue<Number>)n.fixedCellSizeProperty();
                 }
             };
             

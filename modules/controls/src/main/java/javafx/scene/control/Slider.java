@@ -36,6 +36,7 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.Orientation;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
@@ -43,17 +44,19 @@ import javafx.scene.accessibility.Role;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.Utils;
+
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
-
 import com.sun.javafx.scene.control.skin.SliderSkin;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -661,7 +664,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Number>)n.blockIncrementProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.blockIncrementProperty();
             }
         };
         
@@ -676,7 +679,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Boolean>)n.showTickLabelsProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showTickLabelsProperty();
             }
         };
                     
@@ -691,7 +694,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Boolean>)n.showTickMarksProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showTickMarksProperty();
             }
         };
             
@@ -706,7 +709,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Boolean>)n.snapToTicksProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.snapToTicksProperty();
             }
         };
         
@@ -721,7 +724,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Number>)n.majorTickUnitProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.majorTickUnitProperty();
             }
         };
         
@@ -736,7 +739,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Number>)n.minorTickCountProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.minorTickCountProperty();
             }
         };
         
@@ -758,7 +761,7 @@ public class Slider extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(Slider n) {
-                return (StyleableProperty<Orientation>)n.orientationProperty();
+                return (StyleableProperty<Orientation>)(WritableValue<Orientation>)n.orientationProperty();
             }
         };
 

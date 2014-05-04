@@ -25,7 +25,6 @@
 
 package javafx.scene.control.cell;
 
-import javafx.css.CssMetaData;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -342,6 +341,7 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
      **************************************************************************/
     
     /** {@inheritDoc} */
+    @SuppressWarnings("unchecked")
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
         
@@ -349,7 +349,7 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
             setText(null);
             setGraphic(null);
         } else {
-            StringConverter c = getConverter();
+            StringConverter<T> c = getConverter();
             
             if (showLabel) {
                 setText(c.toString(item));
@@ -359,9 +359,9 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
             if (booleanProperty instanceof BooleanProperty) {
                 checkBox.selectedProperty().unbindBidirectional((BooleanProperty)booleanProperty);
             }
-            ObservableValue obsValue = getSelectedProperty();
+            ObservableValue<?> obsValue = getSelectedProperty();
             if (obsValue instanceof BooleanProperty) {
-                booleanProperty = obsValue;
+                booleanProperty = (ObservableValue<Boolean>) obsValue;
                 checkBox.selectedProperty().bindBidirectional((BooleanProperty)booleanProperty);
             }
             
@@ -386,7 +386,7 @@ public class CheckBoxTableCell<S,T> extends TableCell<S,T> {
         this.checkBox.setAlignment(showLabel ? Pos.CENTER_LEFT : Pos.CENTER);
     }
     
-    private ObservableValue getSelectedProperty() {
+    private ObservableValue<?> getSelectedProperty() {
         return getSelectedStateCallback() != null ?
                 getSelectedStateCallback().call(getIndex()) :
                 getTableColumn().getCellObservableValue(getIndex());

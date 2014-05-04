@@ -424,7 +424,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
             setText(null);
             setGraphic(null);
         } else {
-            StringConverter c = getConverter();
+            StringConverter<TreeItem<T>> c = getConverter();
             
             TreeItem<T> treeItem = getTreeItem();
             

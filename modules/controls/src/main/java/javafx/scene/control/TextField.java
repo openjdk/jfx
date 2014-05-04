@@ -28,11 +28,13 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
@@ -42,10 +44,12 @@ import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
+
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
+
 import javafx.css.Styleable;
 
 
@@ -285,7 +289,7 @@ public class TextField extends TextInputControl {
             }
 
             @Override public StyleableProperty<Pos> getStyleableProperty(TextField n) {
-                return (StyleableProperty<Pos>)n.alignmentProperty();
+                return (StyleableProperty<Pos>)(WritableValue<Pos>)n.alignmentProperty();
             }
         };
 
@@ -300,7 +304,7 @@ public class TextField extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextField n) {
-                return (StyleableProperty<Number>)n.prefColumnCountProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefColumnCountProperty();
             }
         };
 

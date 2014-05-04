@@ -32,21 +32,22 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+
 import javafx.css.Styleable;
-import javafx.util.Callback;
 
 public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<T>> {
 
@@ -203,7 +204,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         // being cleaned out.
         // if (treeItem == null) return;
         
-        TreeView tree = getSkinnable().getTreeView();
+        TreeView<T> tree = getSkinnable().getTreeView();
         if (tree == null) return;
         
         if (disclosureNodeDirty) {
@@ -270,7 +271,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
             return fixedCellSize;
         }
 
-        final TreeCell cell = getSkinnable();
+        final TreeCell<T> cell = getSkinnable();
         
         final double pref = super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
         final Node d = cell.getDisclosureNode();
@@ -294,7 +295,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
 
         double pw = snappedLeftInset() + snappedRightInset();
 
-        TreeView tree = getSkinnable().getTreeView();
+        TreeView<T> tree = getSkinnable().getTreeView();
         if (tree == null) return pw;
         
         if (treeItem == null) return pw;
@@ -329,14 +330,14 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
             new CssMetaData<TreeCell<?>,Number>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
                     
-            @Override public boolean isSettable(TreeCell n) {
-                DoubleProperty p = ((TreeCellSkin) n.getSkin()).indentProperty();
+            @Override public boolean isSettable(TreeCell<?> n) {
+                DoubleProperty p = ((TreeCellSkin<?>) n.getSkin()).indentProperty();
                 return p == null || !p.isBound();
             }
 
-            @Override public StyleableProperty<Number> getStyleableProperty(TreeCell n) {
-                final TreeCellSkin skin = (TreeCellSkin) n.getSkin();
-                return (StyleableProperty<Number>)skin.indentProperty();
+            @Override public StyleableProperty<Number> getStyleableProperty(TreeCell<?> n) {
+                final TreeCellSkin<?> skin = (TreeCellSkin<?>) n.getSkin();
+                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indentProperty();
             }
         };
         

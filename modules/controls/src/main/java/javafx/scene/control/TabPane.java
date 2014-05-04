@@ -35,6 +35,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -516,7 +517,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty<Number>)n.tabMinWidthProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tabMinWidthProperty();
             }
         };
 
@@ -531,7 +532,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty<Number>)n.tabMaxWidthProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tabMaxWidthProperty();
             }
         };
 
@@ -546,7 +547,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty<Number>)n.tabMinHeightProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tabMinHeightProperty();
             }
         };
 
@@ -561,7 +562,7 @@ public class TabPane extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TabPane n) {
-                return (StyleableProperty<Number>)n.tabMaxHeightProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tabMaxHeightProperty();
             }
         };
 

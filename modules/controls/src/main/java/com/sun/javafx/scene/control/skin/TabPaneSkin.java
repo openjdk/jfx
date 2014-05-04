@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.Utils;
+
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -36,6 +37,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -47,7 +49,6 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -77,18 +78,18 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
-import javafx.util.Callback;
 import javafx.util.Duration;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.scene.traversal.TraverseListener;
 
 public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private static enum TabAnimation {
@@ -603,7 +604,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
             @Override public StyleableProperty<TabAnimation> getStyleableProperty(TabPane node) {
                 TabPaneSkin skin = (TabPaneSkin) node.getSkin();
-                return (StyleableProperty<TabAnimation>)skin.openTabAnimation;
+                return (StyleableProperty<TabAnimation>)(WritableValue<TabAnimation>)skin.openTabAnimation;
             }
         };
         
@@ -617,7 +618,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
             @Override public StyleableProperty<TabAnimation> getStyleableProperty(TabPane node) {
                 TabPaneSkin skin = (TabPaneSkin) node.getSkin();
-                return (StyleableProperty<TabAnimation>)skin.closeTabAnimation;
+                return (StyleableProperty<TabAnimation>)(WritableValue<TabAnimation>)skin.closeTabAnimation;
             }
         };
         
@@ -697,7 +698,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         if (!removeTab.isEmpty()) {                            
                             double offset = 0;
                             double w = tabHeaderArea.getWidth() - snapSize(controlButtons.prefWidth(-1)) - firstTabIndent() - SPACER;
-                            Iterator i = getChildren().iterator();
+                            Iterator<Node> i = getChildren().iterator();
                             while (i.hasNext()) {
                                 TabHeaderSkin tabHeader = (TabHeaderSkin)i.next();
                                 double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1));

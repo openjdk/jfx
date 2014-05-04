@@ -34,6 +34,7 @@ import javafx.beans.DefaultProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -41,11 +42,14 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
+
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.SplitPaneSkin;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -175,7 +179,7 @@ public class SplitPane extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with a
         // null StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
 
         items.addListener(new ListChangeListener<Node>() {
             @Override public void onChanged(Change<? extends Node> c) {
@@ -398,7 +402,7 @@ public class SplitPane extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(SplitPane n) {
-                return (StyleableProperty<Orientation>)n.orientationProperty();
+                return (StyleableProperty<Orientation>)(WritableValue<Orientation>)n.orientationProperty();
             }
         };
 

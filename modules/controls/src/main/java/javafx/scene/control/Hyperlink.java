@@ -27,11 +27,14 @@ package javafx.scene.control;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
+import javafx.beans.value.WritableValue;
 import javafx.event.ActionEvent;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.scene.control.skin.HyperlinkSkin;
+
 import javafx.css.StyleableProperty;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
@@ -91,7 +94,7 @@ public class Hyperlink extends ButtonBase {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing cursor by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty)cursorProperty()).applyStyle(null, Cursor.HAND);
+        ((StyleableProperty<Cursor>)(WritableValue<Cursor>)cursorProperty()).applyStyle(null, Cursor.HAND);
     }
     
     /***************************************************************************

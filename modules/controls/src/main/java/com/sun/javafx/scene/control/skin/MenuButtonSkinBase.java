@@ -26,26 +26,15 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.ControlAcceleratorSupport;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.scene.Scene;
-import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.RadioMenuItem;
-import javafx.scene.input.KeyCombination;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import com.sun.javafx.scene.control.behavior.MenuButtonBehaviorBase;
-
-import java.util.Map;
 
 /**
  * Base class for MenuButtonSkin and SplitMenuButtonSkin. It consists of the

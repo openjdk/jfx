@@ -76,6 +76,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @return A {@link Callback} that will return a TreeCell that is able to 
      *      work on the type of element contained within the TreeView.
      */    
+    @SafeVarargs
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(T... items) {
         return forTreeView(FXCollections.observableArrayList(items));
     }
@@ -121,6 +122,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @return A {@link Callback} that will return a TreeCell that is able to 
      *      work on the type of element contained within the TreeView.
      */  
+    @SafeVarargs
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final StringConverter<T> converter, 
             final T... items) {
@@ -187,6 +189,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @param items The items to show in the ChoiceBox popup menu when selected 
      * by the user.
      */
+    @SafeVarargs
     public ChoiceBoxTreeCell(T... items) {
         this(FXCollections.observableArrayList(items));
     }
@@ -203,6 +206,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @param items The items to show in the ChoiceBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ChoiceBoxTreeCell(StringConverter<T> converter, T... items) {
         this(converter, FXCollections.observableArrayList(items));
     }

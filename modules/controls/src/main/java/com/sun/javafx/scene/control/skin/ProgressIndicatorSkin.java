@@ -34,16 +34,14 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.BooleanExpression;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
@@ -743,7 +741,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
                     @Override
                     public StyleableProperty<Paint> getStyleableProperty(ProgressIndicator n) {
                         final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                        return (StyleableProperty<Paint>)skin.progressColor;
+                        return (StyleableProperty<Paint>)(WritableValue<Paint>)skin.progressColor;
                     }
                 };
         private static final CssMetaData<ProgressIndicator,Number> INDETERMINATE_SEGMENT_COUNT =
@@ -758,7 +756,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
                     @Override public StyleableProperty<Number> getStyleableProperty(ProgressIndicator n) {
                         final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) n.getSkin();
-                        return (StyleableProperty<Number>)skin.indeterminateSegmentCount;
+                        return (StyleableProperty<Number>)(WritableValue<Number>)skin.indeterminateSegmentCount;
                     }
                 };
         private static final CssMetaData<ProgressIndicator,Boolean> SPIN_ENABLED =
@@ -771,7 +769,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, P
 
                     @Override public StyleableProperty<Boolean> getStyleableProperty(ProgressIndicator node) {
                         final ProgressIndicatorSkin skin = (ProgressIndicatorSkin) node.getSkin();
-                        return (StyleableProperty<Boolean>)skin.spinEnabled;
+                        return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.spinEnabled;
                     }
                 };
 

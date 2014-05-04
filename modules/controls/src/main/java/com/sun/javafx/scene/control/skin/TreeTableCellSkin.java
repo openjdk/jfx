@@ -96,7 +96,7 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
 
         double indentPerLevel = 10;
         if (treeTableRow.getSkin() instanceof TreeTableRowSkin) {
-            indentPerLevel = ((TreeTableRowSkin)treeTableRow.getSkin()).getIndentationPerLevel();
+            indentPerLevel = ((TreeTableRowSkin<?>)treeTableRow.getSkin()).getIndentationPerLevel();
         }
         leftPadding += nodeLevel * indentPerLevel;
 

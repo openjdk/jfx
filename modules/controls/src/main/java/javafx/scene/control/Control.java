@@ -427,7 +427,7 @@ public abstract class Control extends Region implements Skinnable {
         // override. Initializing focusTraversable by calling applyStyle
         // with null for StyleOrigin ensures that css will be able to override
         // the value.
-        final StyleableProperty<Boolean> prop = (StyleableProperty<Boolean>)focusTraversableProperty();
+        final StyleableProperty<Boolean> prop = (StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty();
         prop.applyStyle(null, Boolean.TRUE);
 
         // we add a listener for menu request events to show the context menu
@@ -786,7 +786,7 @@ public abstract class Control extends Region implements Skinnable {
 
             @Override
             public StyleableProperty<String> getStyleableProperty(Control n) {
-                return (StyleableProperty<String>)n.skinClassNameProperty();
+                return (StyleableProperty<String>)(WritableValue<String>)n.skinClassNameProperty();
             }
         };
 

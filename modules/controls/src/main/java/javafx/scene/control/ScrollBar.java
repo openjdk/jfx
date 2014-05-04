@@ -29,9 +29,11 @@ import com.sun.javafx.Utils;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.ScrollBarSkin;
+
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.Styleable;
@@ -91,7 +93,7 @@ public class ScrollBar extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null
         // for StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null,Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null,Boolean.FALSE);
 
         // set pseudo-class state to horizontal
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
@@ -393,7 +395,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Orientation>)n.orientationProperty();
+                return (StyleableProperty<Orientation>)(WritableValue<Orientation>)n.orientationProperty();
             }
         };
         
@@ -408,7 +410,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Number>)n.unitIncrementProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.unitIncrementProperty();
             }
                     
         };
@@ -424,7 +426,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Number>)n.blockIncrementProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.blockIncrementProperty();
             }
                     
         };

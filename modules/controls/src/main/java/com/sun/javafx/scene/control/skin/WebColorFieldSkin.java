@@ -28,7 +28,6 @@ package com.sun.javafx.scene.control.skin;
 import java.util.Locale;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 

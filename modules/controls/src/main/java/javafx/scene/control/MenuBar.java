@@ -26,21 +26,23 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.converters.BooleanConverter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-
 import javafx.css.CssMetaData;
 import javafx.css.StyleableBooleanProperty;
+
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 
@@ -86,7 +88,7 @@ public class MenuBar extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
 
 
@@ -183,7 +185,7 @@ public class MenuBar extends Control {
             }
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(MenuBar n) {
-                return (StyleableProperty<Boolean>)n.useSystemMenuBarProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.useSystemMenuBarProperty();
             }
         };
 

@@ -26,11 +26,7 @@
 package javafx.scene.control.cell;
 
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Cell;
 import javafx.scene.control.ChoiceBox;
@@ -38,7 +34,6 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 
@@ -53,7 +48,7 @@ class CellUtils {
      *                                                                         *
      **************************************************************************/    
     
-    private final static StringConverter defaultStringConverter = new StringConverter<Object>() {
+    private final static StringConverter<?> defaultStringConverter = new StringConverter<Object>() {
         @Override public String toString(Object t) {
             return t == null ? null : t.toString();
         }
@@ -63,15 +58,15 @@ class CellUtils {
         }
     };
     
-    private final static StringConverter defaultTreeItemStringConverter =
-        new StringConverter<TreeItem>() {
-            @Override public String toString(TreeItem treeItem) {
+    private final static StringConverter<?> defaultTreeItemStringConverter =
+        new StringConverter<TreeItem<?>>() {
+            @Override public String toString(TreeItem<?> treeItem) {
                 return (treeItem == null || treeItem.getValue() == null) ? 
                         "" : treeItem.getValue().toString();
             }
 
-            @Override public TreeItem fromString(String string) {
-                return new TreeItem(string);
+            @Override public TreeItem<?> fromString(String string) {
+                return new TreeItem<>(string);
             }
         };
     
@@ -85,6 +80,7 @@ class CellUtils {
      * Simple method to provide a StringConverter implementation in various cell
      * implementations.
      */
+    @SuppressWarnings("unchecked")
     static <T> StringConverter<T> defaultStringConverter() {
         return (StringConverter<T>) defaultStringConverter;
     }
@@ -93,6 +89,7 @@ class CellUtils {
      * Simple method to provide a TreeItem-specific StringConverter 
      * implementation in various cell implementations.
      */
+    @SuppressWarnings("unchecked")
     static <T> StringConverter<TreeItem<T>> defaultTreeItemStringConverter() {
         return (StringConverter<TreeItem<T>>) defaultTreeItemStringConverter;
     }

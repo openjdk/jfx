@@ -96,7 +96,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
 
     private final String property;
 
-    private Class columnClass;
+    private Class<?> columnClass;
     private String previousProperty;
     private PropertyReference<T> propertyRef;
 
@@ -114,7 +114,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
     /** {@inheritDoc} */
     @Override public ObservableValue<T> call(CellDataFeatures<S, T> param) {
         TreeItem<S> treeItem = param.getValue();
-        return getCellDataReflectively((T)treeItem.getValue());
+        return getCellDataReflectively(treeItem.getValue());
     }
 
     /**
@@ -122,7 +122,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
      */
     public final String getProperty() { return property; }
 
-    private ObservableValue<T> getCellDataReflectively(T rowData) {
+    private ObservableValue<T> getCellDataReflectively(S rowData) {
         if (getProperty() == null || getProperty().isEmpty() || rowData == null) return null;
 
         try {

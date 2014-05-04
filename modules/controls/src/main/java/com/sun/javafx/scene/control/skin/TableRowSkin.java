@@ -28,7 +28,6 @@ package com.sun.javafx.scene.control.skin;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.scene.accessibility.Attribute;

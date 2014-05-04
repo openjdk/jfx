@@ -81,6 +81,7 @@ public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
      * @return A {@link Callback} that will return a TableCell that is able to 
      *      work on the type of element contained within the TableColumn.
      */
+    @SafeVarargs
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final T... items) {
         return forTableColumn(null, items);
@@ -106,6 +107,7 @@ public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
      * @return A {@link Callback} that will return a TableCell that is able to 
      *      work on the type of element contained within the TableColumn.
      */
+    @SafeVarargs
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final StringConverter<T> converter, 
             final T... items) {
@@ -195,6 +197,7 @@ public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ComboBoxTableCell(T... items) {
         this(FXCollections.observableArrayList(items));
     }
@@ -211,6 +214,7 @@ public class ComboBoxTableCell<S,T> extends TableCell<S,T> {
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ComboBoxTableCell(StringConverter<T> converter, T... items) {
         this(converter, FXCollections.observableArrayList(items));
     }

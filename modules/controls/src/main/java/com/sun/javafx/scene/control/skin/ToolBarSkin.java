@@ -32,14 +32,13 @@ import java.util.List;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -58,21 +57,20 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SkinBase;
 import javafx.scene.control.ToolBar;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 import com.sun.javafx.scene.traversal.Direction;
+
 import javafx.css.Styleable;
 
 public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
@@ -732,7 +730,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
             @Override
             public StyleableProperty<Number> getStyleableProperty(ToolBar n) {
                 final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
-                return (StyleableProperty<Number>)skin.spacingProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)skin.spacingProperty();
             }
         };
          
@@ -749,7 +747,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
             @Override
             public StyleableProperty<Pos> getStyleableProperty(ToolBar n) {
                 final ToolBarSkin skin = (ToolBarSkin) n.getSkin();
-                return (StyleableProperty<Pos>)skin.boxAlignmentProperty();
+                return (StyleableProperty<Pos>)(WritableValue<Pos>)skin.boxAlignmentProperty();
             }
         };
 

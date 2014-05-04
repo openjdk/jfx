@@ -27,7 +27,6 @@ package javafx.scene.control.cell;
 
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.util.Callback;
@@ -71,7 +70,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
     
     private final ProgressBar progressBar;
     
-    private ObservableValue observable;
+    private ObservableValue<Double> observable;
     
     
     

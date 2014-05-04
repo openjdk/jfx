@@ -70,7 +70,7 @@ public class ProgressBarTableCell<S> extends TableCell<S, Double> {
     
     private final ProgressBar progressBar;
     
-    private ObservableValue observable;
+    private ObservableValue<Double> observable;
     
     
     

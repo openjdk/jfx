@@ -30,8 +30,6 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
@@ -45,8 +43,6 @@ import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
@@ -62,7 +58,6 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
-import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.InputMethodTextRun;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -738,13 +733,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
             @Override
             public boolean isSettable(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();
                 return skin.textFill == null || !skin.textFill.isBound();
             }
 
             @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();                
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();                
                 return (StyleableProperty<Paint>)skin.textFill;
             }
         };
@@ -755,13 +750,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
             @Override
             public boolean isSettable(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();
                 return skin.promptTextFill == null || !skin.promptTextFill.isBound();
             }
 
             @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();
                 return (StyleableProperty<Paint>)skin.promptTextFill;
             }
         };
@@ -772,13 +767,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
             @Override
             public boolean isSettable(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();
                 return skin.highlightFill == null || !skin.highlightFill.isBound();
             }
 
             @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();
                 return (StyleableProperty<Paint>)skin.highlightFill;
             }
         };
@@ -789,13 +784,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
             @Override
             public boolean isSettable(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();
                 return skin.highlightTextFill == null || !skin.highlightTextFill.isBound();
             }
 
             @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Paint> getStyleableProperty(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();
                 return (StyleableProperty<Paint>)skin.highlightTextFill;
             }
         };
@@ -806,13 +801,13 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
             @Override
             public boolean isSettable(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();
                 return skin.displayCaret == null || !skin.displayCaret.isBound();
             }
 
             @Override @SuppressWarnings("unchecked") 
             public StyleableProperty<Boolean> getStyleableProperty(TextInputControl n) {
-                final TextInputControlSkin skin = (TextInputControlSkin) n.getSkin();
+                final TextInputControlSkin<?,?> skin = (TextInputControlSkin<?,?>) n.getSkin();
                 return (StyleableProperty<Boolean>)skin.displayCaret;
             }
         };

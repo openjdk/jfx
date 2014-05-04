@@ -34,18 +34,14 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.binding.When;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -59,9 +55,11 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
 import javafx.util.Duration;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.ProgressBarBehavior;
+
 import javafx.css.Styleable;
 
 
@@ -611,7 +609,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             @Override
             public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
                 final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty<Number>)skin.indeterminateBarLengthProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indeterminateBarLengthProperty();
             }
         };
 
@@ -629,7 +627,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
                 final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)skin.indeterminateBarEscapeProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.indeterminateBarEscapeProperty();
             }
         };
 
@@ -647,7 +645,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
                 final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)skin.indeterminateBarFlipProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.indeterminateBarFlipProperty();
             }
         };
 
@@ -665,7 +663,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             @Override
             public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
                 final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty<Number>)skin.indeterminateBarAnimationTimeProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indeterminateBarAnimationTimeProperty();
             }
         };
 

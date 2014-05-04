@@ -27,9 +27,11 @@ package javafx.scene.control;
 
 import com.sun.javafx.scene.control.skin.LabelSkin;
 import com.sun.javafx.scene.NodeHelper;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 import javafx.scene.accessibility.Attribute;
@@ -90,7 +92,7 @@ public class Label extends Labeled {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.        
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
     
     /***************************************************************************

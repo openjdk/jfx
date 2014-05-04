@@ -26,31 +26,37 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.css.StyleManager;
+
 import javafx.beans.property.StringProperty;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableStringProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.event.EventHandler;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
+
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.css.converters.StringConverter;
 import com.sun.javafx.scene.control.behavior.ColorPickerBehavior;
+
 import java.util.HashMap;
 import java.util.Map;
+
 import javafx.scene.control.ColorPicker;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.value.WritableValue;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
@@ -552,7 +558,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
             
             @Override public StyleableProperty<Boolean> getStyleableProperty(ColorPicker n) {
                 final ColorPickerSkin skin = (ColorPickerSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)skin.colorLabelVisible;
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.colorLabelVisible;
             }
         };
         private static final CssMetaData<ColorPicker,Number> COLOR_RECT_WIDTH =

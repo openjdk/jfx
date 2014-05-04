@@ -27,14 +27,8 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.util.StringConverter;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
@@ -57,7 +51,7 @@ import javafx.collections.WeakListChangeListener;
 /**
  * ChoiceBoxSkin - default implementation
  */
-    public class ChoiceBoxSkin<T> extends BehaviorSkinBase<ChoiceBox<T>, ChoiceBoxBehavior<T>> {
+public class ChoiceBoxSkin<T> extends BehaviorSkinBase<ChoiceBox<T>, ChoiceBoxBehavior<T>> {
 
     public ChoiceBoxSkin(ChoiceBox<T> control) {
         super(control, new ChoiceBoxBehavior<T>(control));

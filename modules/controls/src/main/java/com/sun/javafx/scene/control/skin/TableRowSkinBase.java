@@ -37,9 +37,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableObjectProperty;
-import javafx.geometry.HPos;
 import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Control;
@@ -370,7 +368,7 @@ public abstract class TableRowSkinBase<T,
                 // if the style origin is null then the property has not been
                 // set (or it has been reset to its default), which means that
                 // we can set it without overwriting someone elses settings.
-                final StyleOrigin origin = ((StyleableObjectProperty) tableCell.alignmentProperty()).getStyleOrigin();
+                final StyleOrigin origin = ((StyleableObjectProperty<?>) tableCell.alignmentProperty()).getStyleOrigin();
                 if (! centreContent && origin == null) {
                     tableCell.setAlignment(Pos.TOP_LEFT);
                 }

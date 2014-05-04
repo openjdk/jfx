@@ -43,11 +43,13 @@ import java.util.List;
 import java.util.Locale;
 
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -507,7 +509,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
             }
 
             @Override public StyleableProperty<Boolean> getStyleableProperty(DatePicker n) {
-                return (StyleableProperty)n.showWeekNumbersProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.showWeekNumbersProperty();
             }
         };
 

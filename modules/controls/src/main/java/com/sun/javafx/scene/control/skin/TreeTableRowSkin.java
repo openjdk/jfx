@@ -42,18 +42,19 @@ import java.util.List;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.scene.Node;
-
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.behavior.TreeTableRowBehavior;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.util.Callback;
 
 public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTableRow<T>, TreeTableRowBehavior<T>, TreeTableCell<T,?>> {
 
@@ -345,7 +346,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     private void updateTableViewSkin() {
-        TreeTableView tableView = getSkinnable().getTreeTableView();
+        TreeTableView<T> tableView = getSkinnable().getTreeTableView();
         if (tableView.getSkin() instanceof TreeTableViewSkin) {
             treeTableViewSkin = (TreeTableViewSkin)tableView.getSkin();
         }
@@ -365,14 +366,14 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             new CssMetaData<TreeTableRow<?>,Number>("-fx-indent",
                 SizeConverter.getInstance(), 10.0) {
                     
-            @Override public boolean isSettable(TreeTableRow n) {
-                DoubleProperty p = ((TreeTableRowSkin) n.getSkin()).indentProperty();
+            @Override public boolean isSettable(TreeTableRow<?> n) {
+                DoubleProperty p = ((TreeTableRowSkin<?>) n.getSkin()).indentProperty();
                 return p == null || !p.isBound();
             }
 
-            @Override public StyleableProperty<Number> getStyleableProperty(TreeTableRow n) {
-                final TreeTableRowSkin skin = (TreeTableRowSkin) n.getSkin();
-                return (StyleableProperty<Number>)skin.indentProperty();
+            @Override public StyleableProperty<Number> getStyleableProperty(TreeTableRow<?> n) {
+                final TreeTableRowSkin<?> skin = (TreeTableRowSkin<?>) n.getSkin();
+                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indentProperty();
             }
         };
         
@@ -412,14 +413,14 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 // (selectedCells could be big, cellsMap is much smaller)
                 List<Node> selection = new ArrayList<>();
                 int index = getSkinnable().getIndex();
-                for (TreeTablePosition pos : treeTableView.getSelectionModel().getSelectedCells()) {
+                for (TreeTablePosition<T,?> pos : treeTableView.getSelectionModel().getSelectedCells()) {
                     if (pos.getRow() == index) {
-                        TreeTableColumn column = pos.getTableColumn();
+                        TreeTableColumn<T,?> column = pos.getTableColumn();
                         if (column == null) {
                             /* This is the row-based case */
                             column = treeTableView.getVisibleLeafColumn(0);
                         }
-                        TreeTableCell cell = cellsMap.get(column);
+                        TreeTableCell<T,?> cell = cellsMap.get(column);
                         if (cell != null) selection.add(cell);
                     }
                     return FXCollections.observableArrayList(selection);
@@ -427,13 +428,13 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             }
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
-                TreeTableColumn column = treeTableView.getVisibleLeafColumn(colIndex);
+                TreeTableColumn<T,?> column = treeTableView.getVisibleLeafColumn(colIndex);
                 return cellsMap.get(column);
             }
             case FOCUS_ITEM: {
                 TreeTableView.TreeTableViewFocusModel<T> fm = treeTableView.getFocusModel();
-                TreeTablePosition focusedCell = fm.getFocusedCell();
-                TreeTableColumn column = focusedCell.getTableColumn();
+                TreeTablePosition<T,?> focusedCell = fm.getFocusedCell();
+                TreeTableColumn<T,?> column = focusedCell.getTableColumn();
                 if (column == null) {
                     /* This is the row-based case */
                     column = treeTableView.getVisibleLeafColumn(0);

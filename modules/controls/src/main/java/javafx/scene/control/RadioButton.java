@@ -26,7 +26,10 @@
 package javafx.scene.control;
 
 import javafx.geometry.Pos;
+
 import com.sun.javafx.scene.control.skin.RadioButtonSkin;
+
+import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
@@ -90,7 +93,7 @@ import javafx.scene.accessibility.Role;
         // makes it look to css like the user set the value and css will not 
         // override. Initializing alignment by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty)alignmentProperty()).applyStyle(null, Pos.CENTER_LEFT);
+        ((StyleableProperty<Pos>)(WritableValue<Pos>)alignmentProperty()).applyStyle(null, Pos.CENTER_LEFT);
     }
 
     /***************************************************************************

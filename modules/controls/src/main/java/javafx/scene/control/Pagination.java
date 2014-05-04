@@ -34,6 +34,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.Styleable;
@@ -347,7 +348,7 @@ public class Pagination extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Pagination n) {
-                return (StyleableProperty<Number>)n.maxPageIndicatorCountProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.maxPageIndicatorCountProperty();
             }
         };
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;

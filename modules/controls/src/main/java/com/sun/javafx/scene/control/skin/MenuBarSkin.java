@@ -186,7 +186,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
      **************************************************************************/
 
     public MenuBarSkin(final MenuBar control) {
-        super(control, new BehaviorBase<>(control, Collections.EMPTY_LIST));
+        super(control, new BehaviorBase<>(control, Collections.emptyList()));
         
         container = new HBox();
         container.getStyleClass().add("container");

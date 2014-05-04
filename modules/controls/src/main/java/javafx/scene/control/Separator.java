@@ -30,15 +30,17 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
-
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.SeparatorSkin;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -83,7 +85,7 @@ public class Separator extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         
         // initialize pseudo-class state
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
@@ -248,7 +250,7 @@ public class Separator extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(Separator n) {
-                return (StyleableProperty<Orientation>)n.orientationProperty();
+                return (StyleableProperty<Orientation>)(WritableValue<Orientation>)n.orientationProperty();
             }
         };
         
@@ -264,7 +266,7 @@ public class Separator extends Control {
 
             @Override
             public StyleableProperty<HPos> getStyleableProperty(Separator n) {
-                return (StyleableProperty<HPos>)n.halignmentProperty();
+                return (StyleableProperty<HPos>)(WritableValue<HPos>)n.halignmentProperty();
             }
         };
         
@@ -280,7 +282,7 @@ public class Separator extends Control {
 
             @Override
             public StyleableProperty<VPos> getStyleableProperty(Separator n) {
-                return (StyleableProperty<VPos>)n.valignmentProperty();
+                return (StyleableProperty<VPos>)(WritableValue<VPos>)n.valignmentProperty();
             }
         };
 

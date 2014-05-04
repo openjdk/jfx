@@ -28,12 +28,14 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
@@ -44,9 +46,11 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.ScrollPaneSkin;
+
 import javafx.css.Styleable;
 
 /**
@@ -104,7 +108,7 @@ public class ScrollPane extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with
         // null StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
     }
 
     /**
@@ -611,7 +615,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<ScrollBarPolicy> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty<ScrollBarPolicy>)n.hbarPolicyProperty();
+                return (StyleableProperty<ScrollBarPolicy>)(WritableValue<ScrollBarPolicy>)n.hbarPolicyProperty();
             }
         };
                 
@@ -627,7 +631,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<ScrollBarPolicy> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty<ScrollBarPolicy>)n.vbarPolicyProperty();
+                return (StyleableProperty<ScrollBarPolicy>)(WritableValue<ScrollBarPolicy>)n.vbarPolicyProperty();
             }
         };
                 
@@ -642,7 +646,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty<Boolean>)n.fitToWidthProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.fitToWidthProperty();
             }
         };
                 
@@ -657,7 +661,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty<Boolean>)n.fitToHeightProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.fitToHeightProperty();
             }
         };
                 
@@ -672,7 +676,7 @@ public class ScrollPane extends Control {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(ScrollPane n) {
-                return (StyleableProperty<Boolean>)n.pannableProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.pannableProperty();
             }
         };
 

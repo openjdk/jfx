@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
+
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -42,6 +43,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
@@ -1069,7 +1071,7 @@ public class TreeView<T> extends Control {
                     }
 
                     @Override public StyleableProperty<Number> getStyleableProperty(TreeView<?> n) {
-                        return (StyleableProperty<Number>) n.fixedCellSizeProperty();
+                        return (StyleableProperty<Number>)(WritableValue<Number>) n.fixedCellSizeProperty();
                     }
                 };
 

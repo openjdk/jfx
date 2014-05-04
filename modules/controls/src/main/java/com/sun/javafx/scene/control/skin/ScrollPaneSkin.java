@@ -25,9 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -38,11 +36,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
-import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
@@ -61,7 +55,6 @@ import javafx.util.Duration;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
 import com.sun.javafx.scene.traversal.TraverseListener;
-import static com.sun.javafx.Utils.*;
 import static com.sun.javafx.scene.control.skin.Utils.*;
 import javafx.geometry.Insets;
 

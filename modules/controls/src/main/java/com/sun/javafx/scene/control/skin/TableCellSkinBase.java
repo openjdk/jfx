@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
