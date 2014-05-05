@@ -25,16 +25,34 @@
 
 package com.sun.glass.ui.monocle.input.filters;
 
-import com.sun.glass.ui.monocle.input.TouchInput;
 import com.sun.glass.ui.monocle.input.TouchState;
 
 public class LookaheadTouchFilter implements TouchFilter {
 
-    private TouchInput touch = TouchInput.getInstance();
     private TouchState previousState = new TouchState();
     private TouchState tmpState = new TouchState();
     private boolean assignIDs;
-    private boolean processedFirstEvent;
+
+    private enum FilterState {
+        /** No events processed yet */
+        CLEAN,
+        /**
+         * previousState contains an event that must be sent as is. This will
+         * happen when an event is the first to be processed on this pulse, or
+         * "Substantially different" means that two events differ in the number
+         * of touch points or in the IDs assigned to those points.
+         */
+        PENDING_UNMODIFIABLE,
+        /**
+         * previousState contains an event that we are allowed to change before
+         * sending. An event can be modified if it is substantially different
+         * neither from the event that preceded it nor from the event that
+         * follows it.
+         */
+        PENDING_MODIFIABLE
+    }
+
+    private FilterState filterState = FilterState.CLEAN;
 
     /**
      * Creates a new LookaheadTouchFilter
@@ -48,41 +66,48 @@ public class LookaheadTouchFilter implements TouchFilter {
 
     @Override
     public boolean filter(TouchState state) {
-        if (!processedFirstEvent) {
-            touch.getState(previousState);
-            if (state.canBeFoldedWith(previousState, assignIDs)) {
-                processedFirstEvent = true;
-            } else {
+        state.sortPointsByID();
+        switch (filterState) {
+            case CLEAN:
                 state.copyTo(previousState);
-                return false; // send state
-            }
-        }
-        if (processedFirstEvent) {
-            // fold together TouchStates that have the same touch point count
-            // and IDs. For Protocol A devices the touch IDs are not initialized
-            // yet, which means the only differentiator will be the number of
-            // points.
-            state.sortPointsByID();
-            if (!state.canBeFoldedWith(previousState, assignIDs)) {
-                // the events are different. Send "previousState".
+                filterState = FilterState.PENDING_UNMODIFIABLE;
+                return true;
+            case PENDING_UNMODIFIABLE:
+                // send the previous state and hold the new state as pending
                 state.copyTo(tmpState);
                 previousState.copyTo(state);
                 tmpState.copyTo(previousState);
+                if (state.canBeFoldedWith(previousState, assignIDs)) {
+                    filterState = FilterState.PENDING_MODIFIABLE;
+                }
                 return false;
-            }
+            case PENDING_MODIFIABLE:
+                if (state.canBeFoldedWith(previousState, assignIDs)) {
+                    state.copyTo(previousState);
+                    return true;
+                } else {
+                    // send the previous state and hold the new state as pending
+                    state.copyTo(tmpState);
+                    previousState.copyTo(state);
+                    tmpState.copyTo(previousState);
+                    filterState = FilterState.PENDING_UNMODIFIABLE;
+                    return false;
+                }
+            default:
+                return false;
         }
-        state.copyTo(previousState);
-        return true;
     }
 
     @Override
     public boolean flush(TouchState state) {
-        if (processedFirstEvent) {
-            previousState.copyTo(state);
-            processedFirstEvent = false;
-            return true;
-        } else {
-            return false;
+        switch (filterState) {
+            case PENDING_MODIFIABLE:
+            case PENDING_UNMODIFIABLE:
+                previousState.copyTo(state);
+                filterState = FilterState.CLEAN;
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -93,7 +118,10 @@ public class LookaheadTouchFilter implements TouchFilter {
 
     @Override
     public String toString() {
-        return "Lookahead";
+        return "Lookahead[previousState="
+                + previousState
+                + ",filterState=" + filterState
+                + "]";
     }
 
 }

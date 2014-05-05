@@ -25,21 +25,13 @@
 
 package com.sun.glass.ui.monocle.input.devices;
 
-import javafx.application.Platform;
-import javafx.geometry.Rectangle2D;
-import javafx.stage.Screen;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class TestTouchDevices {
-
-    protected static AtomicReference<Rectangle2D> screen = new AtomicReference<>();
 
     public static List<TestTouchDevice> getTouchDevices() {
         List<TestTouchDevice> devices = new ArrayList<>();
@@ -84,32 +76,6 @@ public class TestTouchDevices {
                 .map(d -> new Object[] { d })
                 .collect(Collectors.toList());
         return c;
-    }
-
-    private static void fetchScreenBounds() {
-        if (Platform.isFxApplicationThread()) {
-            screen.set(Screen.getPrimary().getBounds());
-        } else {
-            CountDownLatch latch = new CountDownLatch(1);
-            Platform.runLater(() -> {
-                screen.set(Screen.getPrimary().getBounds());
-                latch.countDown();
-            });
-            try {
-                latch.await();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public static Rectangle2D getScreenBounds() {
-        Rectangle2D r = screen.get();
-        if (r == null) {
-            fetchScreenBounds();
-            r = screen.get();
-        }
-        return r;
     }
 
 }

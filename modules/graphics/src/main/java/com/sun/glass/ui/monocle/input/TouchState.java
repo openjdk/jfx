@@ -62,7 +62,10 @@ public class TouchState {
      * @param fallback the window to use if no primary ID is available
      */
     MonocleWindow getWindow(boolean recalculateCache, MonocleWindow fallback) {
-        if (window == null || recalculateCache) {
+        if (window == null) {
+            window = fallback;
+        }
+        if (recalculateCache) {
             window = fallback;
             if (primaryID >= 0) {
                 Point p = getPointForID(primaryID);

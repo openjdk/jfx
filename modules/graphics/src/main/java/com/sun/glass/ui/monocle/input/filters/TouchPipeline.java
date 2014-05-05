@@ -103,7 +103,11 @@ public class TouchPipeline {
 
     public boolean filter(TouchState state) {
         for (int i = 0; i < filters.size(); i++) {
-            if (filters.get(i).filter(state)) {
+            TouchFilter filter = filters.get(i);
+            if (MonocleSettings.settings.traceEventsVerbose) {
+                MonocleTrace.traceEvent("Applying %s to %s", filter, state);
+            }
+            if (filter.filter(state)) {
                 return true;
             }
         }

@@ -237,4 +237,43 @@ public class SimpleMouseTest {
         Assert.assertEquals(0, TestLog.countLogContaining("Mouse clicked"));
     }
 
+
+    @Test
+    public void testGrab1() throws Exception {
+        TestApplication.showInMiddleOfScreen();
+        TestApplication.addMouseListeners();
+        Rectangle2D r = TestApplication.getScreenBounds();
+        final int width = (int) r.getWidth();
+        final int height = (int) r.getHeight();
+        final int x1 = (int) Math.round(width * 0.5);
+        final int y1 = (int) Math.round(height * 0.5);
+        final int x2 = (int) Math.round(width * 0.7);
+        final int y2 = (int) Math.round(height * 0.7);
+        final int x3 = (int) Math.round(width * 0.9);
+        final int y3 = (int) Math.round(height * 0.9);
+        TestApplication.movePointerTo(x1, y1);
+        // press
+        ui.processLine("EV_KEY BTN_LEFT 1");
+        ui.processLine("EV_SYN");
+        // drag to x2, y2
+        ui.processLine("EV_REL REL_X " + (x2 - x1));
+        ui.processLine("EV_REL REL_Y " + (y2 - y1));
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Mouse dragged: %d, %d", x2, y2);
+        // drag to x3, y3
+        ui.processLine("EV_REL REL_X " + (x3 - x2));
+        ui.processLine("EV_REL REL_Y " + (y3 - y2));
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Mouse dragged: %d, %d", x3, y3);
+        // drag to x2, y2
+        ui.processLine("EV_REL REL_X " + (x2 - x3));
+        ui.processLine("EV_REL REL_Y " + (y2 - y3));
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Mouse dragged: %d, %d", x2, y2);
+        // release
+        ui.processLine("EV_KEY BTN_LEFT 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Mouse released: %d, %d", x2, y2);
+    }
+
 }

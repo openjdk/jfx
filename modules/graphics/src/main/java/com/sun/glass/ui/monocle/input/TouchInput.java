@@ -111,7 +111,8 @@ public class TouchInput {
         // Get the cached window for the old state and compute the window for
         // the new state
         MonocleWindow oldWindow = state.getWindow(false, null);
-        MonocleWindow window = newState.getWindow(true, oldWindow);
+        boolean recalculateWindow = state.getPointCount() == 0;
+        MonocleWindow window = newState.getWindow(recalculateWindow, oldWindow);
         View oldView = oldWindow == null ? null : oldWindow.getView();
         View view = window == null ? null : window.getView();
         if (!newState.equalsSorted(state)) {

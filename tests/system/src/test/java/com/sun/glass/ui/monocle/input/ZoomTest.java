@@ -59,10 +59,6 @@ public class ZoomTest extends ParameterizedTestBase {
      */
     @Test
     public void testZoomInSmallStepBigStep() throws Exception {
-
-        Rectangle2D r = TestTouchDevices.getScreenBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
         int x1 = (int) Math.round(width / 2);
         int y1 = (int) Math.round(height * 0.3);
         int x2 = (int) Math.round(width / 2);
@@ -159,10 +155,6 @@ public class ZoomTest extends ParameterizedTestBase {
      */
     @Test
     public void testZoomIn() throws Exception {
-
-        Rectangle2D r = TestTouchDevices.getScreenBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
         int x1 = (int) Math.round(width / 2);
         int y1 = (int) Math.round(height * 0.3);
         int x2 = (int) Math.round(width / 2);
@@ -239,10 +231,6 @@ public class ZoomTest extends ParameterizedTestBase {
      */
     @Test
     public void testZoomOut() throws Exception {
-
-        Rectangle2D r = TestTouchDevices.getScreenBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
         int x1 = (int) Math.round(width / 2);
         int y1 = (int) Math.round(height * 0.1);
         int x2 = (int) Math.round(width / 2);
@@ -339,10 +327,6 @@ public class ZoomTest extends ParameterizedTestBase {
      */
     @Test
     public void testZoomOutSmallStepBigStep() throws Exception {
-
-        Rectangle2D r = TestTouchDevices.getScreenBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
         int x1 = (int) Math.round(width / 2);
         int y1 = (int) Math.round(height * 0.1);
         int x2 = (int) Math.round(width / 2);

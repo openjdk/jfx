@@ -77,7 +77,6 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
      */
     @Test
     public void singleTouch_dragPointIntoTheWindow() throws Exception {
-        Assume.assumeTrue(!TestApplication.isMonocle()); // RT-35406
         Stage stage = TestApplication.getStage();
         int windowRightEnd = (int)(stage.getX() + stage.getWidth());
         int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
@@ -145,7 +144,6 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
      * 
      */
     public void singleTouch_dragPointInandOutAwindow() throws Exception {
-        Assume.assumeTrue(!TestApplication.isMonocle()); // RT-35406
         Stage stage = TestApplication.getStage();
         int windowMiddleWidth = (int)(stage.getX() + stage.getWidth() / 2);
         int windowMiddleHeight = (int)(stage.getY() + (stage.getHeight() / 2));
@@ -185,7 +183,6 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
      * 
      */
     public void multiTouch_dragPointInandOutAwindow() throws Exception {
-        Assume.assumeTrue(!TestApplication.isMonocle()); // RT-35406
         Assume.assumeTrue(device.getPointCount() >= 2);
         Stage stage = TestApplication.getStage();
         int windowMiddleWidth = (int)(stage.getX() + stage.getWidth() / 2);

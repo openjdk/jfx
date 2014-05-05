@@ -74,7 +74,7 @@ public abstract class ParameterizedTestBase {
     public void createDevice() throws Exception {
         TestApplication.showFullScreenScene();
         TestLog.log("Starting " + name.getMethodName() + "[" + device + "]");
-        Rectangle2D r = TestTouchDevices.getScreenBounds();
+        Rectangle2D r = TestApplication.getScreenBounds();
         width = r.getWidth();
         height = r.getHeight();
         TestLog.reset();
