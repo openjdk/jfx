@@ -696,6 +696,13 @@ final class LensApplication extends Application {
         }
     }
 
+    private class LensScreenEvent extends Event {
+         @Override
+         void dispatch() {
+             Screen.notifySettingsChanged();
+         }
+     }
+
     private final LinkedList<Event> eventList = new LinkedList<Event>();
 
     private void postEvent(Event e) {
@@ -1596,6 +1603,17 @@ final class LensApplication extends Application {
 
         postEvent(new LensDeviceEvent(flags, attach));
     }
+    
+    /**
+     * Notify changes in screen settings from native layer
+     * This method is triggered when native code detects a change in e.g. screen orientation
+     */
+    private void notifyScreenSettingsChanged() {
+        if (LensLogger.getLogger().isLoggable(Level.FINE)) {
+            LensLogger.getLogger().fine("Notify screen settings changed");
+        }    
+        postEvent(new LensScreenEvent());
+    }   
 
     //*******************************************************************
 

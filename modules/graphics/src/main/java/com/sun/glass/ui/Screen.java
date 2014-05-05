@@ -240,7 +240,7 @@ public final class Screen {
     /**
      * Called from native when the Screen definitions change.
      */
-    private static void notifySettingsChanged() {
+    public static void notifySettingsChanged() {
         // Save the old screens in order to dispose them later
         List<Screen> oldScreens = screens;
 
