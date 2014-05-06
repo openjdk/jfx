@@ -256,6 +256,7 @@ public class TreeTableViewMouseInputTest {
         // select the first row with the shift key held down. The focus event
         // should only fire once - for focus on 0 (never -1 as this bug shows).
         VirtualFlowTestUtils.clickOnRow(tableView, 0, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
         assertEquals(1, rt30394_count);
         assertTrue(fm.isFocused(0));
     }
