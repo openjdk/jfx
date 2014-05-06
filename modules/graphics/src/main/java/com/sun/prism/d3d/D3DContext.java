@@ -171,7 +171,7 @@ class D3DContext extends BaseShaderContext {
             }
         }
 
-        return hr == D3D_OK;
+        return !FAILED(hr);
     }
 
     /**
@@ -185,7 +185,7 @@ class D3DContext extends BaseShaderContext {
             validate(res);
         }
 
-        return res == D3D_OK;
+        return !FAILED(res);
     }
 
     /**

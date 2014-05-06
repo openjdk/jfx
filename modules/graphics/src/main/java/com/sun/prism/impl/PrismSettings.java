@@ -320,7 +320,7 @@ public final class PrismSettings {
                                           "prism.disableRegionCaching",
                                           false);
 
-        disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", true);
+        disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", false);
 
         disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
 
