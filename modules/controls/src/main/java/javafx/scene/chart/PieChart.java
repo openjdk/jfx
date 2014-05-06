@@ -86,7 +86,6 @@ public class PieChart extends Chart {
 
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
     private static final int MIN_PIE_RADIUS = 25;
-    private int defaultColorIndex = 0;
     private static final double LABEL_TICK_GAP = 6;
     private static final double LABEL_BALL_RADIUS = 2;
     private static int uniqueId = 0;
@@ -144,7 +143,7 @@ public class PieChart extends Chart {
         }
         for(int i=c.getFrom(); i<c.getTo(); i++) {
             Data item = getData().get(i);
-            dataItemAdded(item);
+            dataItemAdded(item, i);
         }
         // update legend if any data has changed
         if (isLegendVisible() && (c.getRemoved().size() > 0 || c.getFrom() < c.getTo())) updateLegend();
@@ -358,7 +357,7 @@ public class PieChart extends Chart {
         }
     }
 
-    private Node createArcRegion(Data item) {
+    private Node createArcRegion(Data item, int index) {
         Node arcRegion = item.getNode();
         // check if symbol has already been created
         if (arcRegion == null) {
@@ -367,7 +366,7 @@ public class PieChart extends Chart {
             item.setNode(arcRegion);
         }
         // Note: not sure if we want to add or check, ie be more careful and efficient here
-        arcRegion.getStyleClass().setAll("chart-pie", "data" + getUniqueId(), item.defaultColorStyleString);
+        arcRegion.getStyleClass().setAll("chart-pie", "data" + getUniqueId(), "default-color"+(index % 8));
         if (item.getPieValue() < 0) {
             arcRegion.getStyleClass().add("negative");
         }
@@ -380,12 +379,10 @@ public class PieChart extends Chart {
         return text;
     }
 
-    private void dataItemAdded(final Data item) {
+    private void dataItemAdded(final Data item, int index) {
         // set default color styleClass
-        item.defaultColorStyleString = "default-color"+(defaultColorIndex % 8);
-        defaultColorIndex ++;
         // create shape
-        Node shape = createArcRegion(item);
+        Node shape = createArcRegion(item, index);
         final Text text = createPieLabel(item);
         item.getChart().getChartChildren().add(shape);
         if (shouldAnimate()) {
@@ -794,7 +791,6 @@ public class PieChart extends Chart {
          * Next pointer for the next data item : so we can do animation on data delete.
          */
         private Data next = null;
-        private String defaultColorStyleString;
 
         // -------------- PUBLIC PROPERTIES ------------------------------------
 
