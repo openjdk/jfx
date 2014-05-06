@@ -85,7 +85,6 @@ public class ColorPalette extends Region {
     
     public ColorPalette(final ColorPicker colorPicker) {
         getStyleClass().add("color-palette-region");
-        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         this.colorPicker = colorPicker;
         colorPickerGrid = new ColorPickerGrid();
         colorPickerGrid.requestFocus();
@@ -170,18 +169,24 @@ public class ColorPalette extends Region {
         double x = b.getMinX();
         double y = b.getMinY();
 
+        double xAdjust;
+        double scaleAdjust = hoverSquare.getScaleX() == 1.0 ? 0 : hoverSquare.getWidth() / 4.0;
+
         if (colorPicker.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-            x -= hoverSquare.getWidth() * hoverSquare.getScaleX() / 2.0;
+            x = focusedSquare.getLayoutX();
+            xAdjust = -focusedSquare.getWidth() + scaleAdjust;
+        } else {
+            xAdjust = focusedSquare.getWidth() / 2.0 + scaleAdjust;
         }
 
-        hoverSquare.setLayoutX(snapPosition(x) - focusedSquare.getWidth() / 2.0 - (hoverSquare.getScaleX() == 1.0 ? 0 : hoverSquare.getWidth() / 4.0));
+        hoverSquare.setLayoutX(snapPosition(x) - xAdjust);
         hoverSquare.setLayoutY(snapPosition(y) - focusedSquare.getHeight() / 2.0 + (hoverSquare.getScaleY() == 1.0 ? 0 : focusedSquare.getHeight() / 4.0));
     }
     
     private void buildCustomColors() {
         int customColumnIndex = 0; 
         int customRowIndex = 0;
-        int remainingSquares = customSquares.size()%NUM_OF_COLUMNS;
+        int remainingSquares = customSquares.size() % NUM_OF_COLUMNS;
         int numEmpty = (remainingSquares == 0) ? 0 : NUM_OF_COLUMNS - remainingSquares;
 
         customColorGrid.getChildren().clear();
@@ -224,14 +229,16 @@ public class ColorPalette extends Region {
     }
     
     private void initNavigation() {
+        final boolean isRTL = colorPicker.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+
         setOnKeyPressed(ke -> {
             switch (ke.getCode()) {
                 case LEFT:
-                    processLeftKey(ke);
+                    if (isRTL) processRightKey(ke); else processLeftKey(ke);
                     ke.consume();
                     break;
                 case RIGHT:
-                    processRightKey(ke);
+                    if (isRTL) processLeftKey(ke); else processRightKey(ke);
                     ke.consume();
                     break;
                 case UP:
