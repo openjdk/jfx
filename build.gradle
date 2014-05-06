@@ -322,6 +322,10 @@ ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
 
+// COMPILE_JFR specifies whether to build code that logs to JRockit Flight Recorder
+defineProperty("COMPILE_JFR", Boolean.toString(file("$JDK_HOME/jre/lib/jfr.jar").exists()))
+ext.IS_COMPILE_JFR = Boolean.parseBoolean(COMPILE_JFR)
+
 // RETAIN_PACKAGER_TESTS specifies whether the tests in fxpackager should
 // keep generated files instead of attempting to automatically delete them
 defineProperty("RETAIN_PACKAGER_TESTS", "false")
@@ -1215,7 +1219,7 @@ project(":base") {
         sourceSets.main.java.srcDirs += "src/main/java7"
     }
 
-    if (file("$JDK_HOME/jre/lib/jfr.jar").exists()) {
+    if (IS_COMPILE_JFR) {
         sourceSets.main.java.srcDirs += "src/main/java-jfr"
     }
 
