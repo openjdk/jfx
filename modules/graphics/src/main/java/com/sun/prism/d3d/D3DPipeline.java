@@ -193,11 +193,16 @@ public final class D3DPipeline extends GraphicsPipeline {
      */
     private static Screen getScreenForAdapter(List<Screen> screens, int adapterOrdinal) {
         for (Screen screen : screens) {
-            if (nGetAdapterOrdinal(screen.getNativeScreen()) == adapterOrdinal) {
+            if (screen.getAdapterOrdinal() == adapterOrdinal) {
                 return screen;
             }
         }
         return Screen.getMainScreen();
+    }
+
+    @Override
+    public int getAdapterOrdinal(Screen screen) {
+        return nGetAdapterOrdinal(screen.getNativeScreen());
     }
 
     private static D3DResourceFactory findDefaultResourceFactory(List<Screen> screens) {
@@ -230,7 +235,7 @@ public final class D3DPipeline extends GraphicsPipeline {
     }
 
     public ResourceFactory getResourceFactory(Screen screen) {
-        return getD3DResourceFactory(nGetAdapterOrdinal(screen.getNativeScreen()), screen);
+        return getD3DResourceFactory(screen.getAdapterOrdinal(), screen);
     }
 
     @Override

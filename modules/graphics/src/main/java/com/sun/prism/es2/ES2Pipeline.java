@@ -136,11 +136,16 @@ public class ES2Pipeline extends GraphicsPipeline {
      */
     private static Screen getScreenForAdapter(List<Screen> screens, int adapterOrdinal) {
         for (Screen screen : screens) {
-            if (glFactory.getAdapterOrdinal(screen.getNativeScreen()) == adapterOrdinal) {
+            if (screen.getAdapterOrdinal() == adapterOrdinal) {
                 return screen;
             }
         }
         return Screen.getMainScreen();
+    }
+
+    @Override
+    public int getAdapterOrdinal(Screen screen) {
+        return glFactory.getAdapterOrdinal(screen.getNativeScreen());
     }
 
     private static ES2ResourceFactory findDefaultResourceFactory(List<Screen> screens) {
@@ -174,8 +179,7 @@ public class ES2Pipeline extends GraphicsPipeline {
 
     @Override
     public ResourceFactory getResourceFactory(Screen screen) {
-        return getES2ResourceFactory(
-                glFactory.getAdapterOrdinal(screen.getNativeScreen()), screen);
+        return getES2ResourceFactory(screen.getAdapterOrdinal(), screen);
     }
 
     @Override

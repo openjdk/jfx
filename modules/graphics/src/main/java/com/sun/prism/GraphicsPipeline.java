@@ -62,6 +62,8 @@ public abstract class GraphicsPipeline {
         installedPipeline = null;
     }
 
+    public abstract int getAdapterOrdinal(Screen screen);
+
     /*
      * The following method allows to access several graphics adapters individually.
      * Graphics resources are not sharable between different adapters
