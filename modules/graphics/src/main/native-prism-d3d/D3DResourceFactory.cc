@@ -537,7 +537,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DResourceFactory_nIsDefaultP
 
     RETURN_STATUS_IF_NULL(pResource, FALSE);
 
-    return pResource->IsDefaultPool();
+    return pResource->IsDefaultPool() ? JNI_TRUE : JNI_FALSE;
 }
 
 /*
