@@ -61,6 +61,7 @@ import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_BIDI;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_COMPLEX;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_EMBEDDED;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_TABS;
+import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_CJK;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_RTL_BASE;
 
 import java.text.Bidi;
@@ -202,6 +203,11 @@ public abstract class GlyphLayout {
                             codePoint = Character.toCodePoint(ch, chars[++i]);
                         }
                     }
+
+                    if (Character.isIdeographic(codePoint)) {
+                        flags |= FLAGS_HAS_CJK;
+                    }
+
                     /* Check for script changes */
                     script = ScriptMapper.getScript(codePoint);
                     if (scriptRun > ScriptMapper.INHERITED  &&

@@ -38,11 +38,12 @@ public interface TextLayout {
     static final int FLAGS_HAS_BIDI         = 1 << 3;
     static final int FLAGS_HAS_COMPLEX      = 1 << 4;
     static final int FLAGS_HAS_EMBEDDED     = 1 << 5;
-    static final int FLAGS_WRAPPED          = 1 << 6;
-    static final int FLAGS_RTL_BASE         = 1 << 7;
-    static final int FLAGS_CACHED_UNDERLINE      = 1 << 8;
-    static final int FLAGS_CACHED_STRIKETHROUGH  = 1 << 9;
-    static final int FLAGS_LAST             = 1 << 10;
+    static final int FLAGS_HAS_CJK          = 1 << 6;
+    static final int FLAGS_WRAPPED          = 1 << 7;
+    static final int FLAGS_RTL_BASE         = 1 << 8;
+    static final int FLAGS_CACHED_UNDERLINE      = 1 << 9;
+    static final int FLAGS_CACHED_STRIKETHROUGH  = 1 << 10;
+    static final int FLAGS_LAST             = 1 << 11;
 
     static final int ANALYSIS_MASK = FLAGS_LAST - 1;
 
@@ -69,7 +70,7 @@ public interface TextLayout {
 
     public static final int TYPE_TEXT           = 1 << 0;
     public static final int TYPE_UNDERLINE      = 1 << 1;
-    public static final int TYPE_STRIKETHROUGH = 1 << 2;
+    public static final int TYPE_STRIKETHROUGH  = 1 << 2;
     public static final int TYPE_BASELINE       = 1 << 3;
     public static final int TYPE_TOP            = 1 << 4;
     public static final int TYPE_BEARINGS       = 1 << 5;
@@ -145,7 +146,7 @@ public interface TextLayout {
      * @return the visual bounds
      */
     public BaseBounds getVisualBounds(int type);
-    
+
     /**
      * Returns the lines of text layout.
      * 
@@ -161,7 +162,7 @@ public interface TextLayout {
      * @return the runs
      */
     public GlyphList[] getRuns();
-    
+
     /**
      * Returns the shape of the entire text layout relative to the baseline
      * of the first line.

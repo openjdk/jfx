@@ -1033,7 +1033,7 @@ public class PrismTextLayout implements TextLayout {
 
         BreakIterator boundary = null;
         if (wrapWidth > 0) {
-            if ((flags & (FLAGS_HAS_COMPLEX)) != 0) {
+            if ((flags & (FLAGS_HAS_COMPLEX | FLAGS_HAS_CJK)) != 0) {
                 boundary = BreakIterator.getLineInstance();
                 boundary.setText(new CharArrayIterator(chars));
             }
