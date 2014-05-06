@@ -90,118 +90,145 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1initIDs
     
     if (jIntegerClass == NULL)
     {
-        jIntegerClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/Integer"));
+        jclass jcls = (*env)->FindClass(env, "java/lang/Integer");
+        if ((*env)->ExceptionCheck(env)) return;
+        jIntegerClass = (*env)->NewGlobalRef(env, jcls);
     }
     
     if (jMapClass == NULL)
     {
-        jMapClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/util/Map"));
+        jclass jcls = (*env)->FindClass(env, "java/util/Map");
+        if ((*env)->ExceptionCheck(env)) return;
+        jMapClass = (*env)->NewGlobalRef(env, jcls);
     }
     
     if (jBooleanClass == NULL)
     {
-        jBooleanClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/Boolean"));
+        jclass jcls = (*env)->FindClass(env, "java/lang/Boolean");
+        if ((*env)->ExceptionCheck(env)) return;
+        jBooleanClass = (*env)->NewGlobalRef(env, jcls);
     }
     
     if (jViewNotifyEvent == NULL)
     {
         jViewNotifyEvent = (*env)->GetMethodID(env, jViewClass, "notifyView", "(I)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyRepaint == NULL)
     {
         jViewNotifyRepaint = (*env)->GetMethodID(env, jViewClass, "notifyRepaint", "(IIII)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyResize == NULL)
     {
         jViewNotifyResize = (*env)->GetMethodID(env, jViewClass, "notifyResize", "(II)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyKey == NULL)
     {
         jViewNotifyKey = (*env)->GetMethodID(env, jViewClass, "notifyKey", "(II[CI)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyMenu == NULL)
     {
         jViewNotifyMenu = (*env)->GetMethodID(env, jViewClass, "notifyMenu", "(IIIIZ)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyMouse == NULL)
     {
         jViewNotifyMouse = (*env)->GetMethodID(env, jViewClass, "notifyMouse", "(IIIIIIIZZ)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyInputMethod == NULL)
     {
         jViewNotifyInputMethod = (*env)->GetMethodID(env, jViewClass, "notifyInputMethod", "(Ljava/lang/String;[I[I[BIII)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyInputMethodMac == NULL)
     {
         jclass jMacViewClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacView" withEnv:env];
         jViewNotifyInputMethodMac = (*env)->GetMethodID(env, jMacViewClass, "notifyInputMethodMac", "(Ljava/lang/String;III)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if(jViewNotifyInputMethodCandidatePosRequest == NULL)
     {
         jViewNotifyInputMethodCandidatePosRequest = (*env)->GetMethodID(env, jViewClass, "notifyInputMethodCandidatePosRequest", "(I)[D");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyDragEnter == NULL)
     {
         jViewNotifyDragEnter = (*env)->GetMethodID(env, jViewClass, "notifyDragEnter", "(IIIII)I");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyDragOver == NULL)
     {
         jViewNotifyDragOver = (*env)->GetMethodID(env, jViewClass, "notifyDragOver", "(IIIII)I");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyDragLeave == NULL)
     {
         jViewNotifyDragLeave = (*env)->GetMethodID(env, jViewClass, "notifyDragLeave", "()V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyDragDrop == NULL)
     {
         jViewNotifyDragDrop = (*env)->GetMethodID(env, jViewClass, "notifyDragDrop", "(IIIII)I");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jViewNotifyDragEnd == NULL)
     {
         jViewNotifyDragEnd = (*env)->GetMethodID(env, jViewClass, "notifyDragEnd", "(I)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
 
     if (jViewGetAccessible == NULL)
     {
         jViewGetAccessible = (*env)->GetMethodID(env, jViewClass, "getAccessible", "()J");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jMapGetMethod == NULL)
     {
         jMapGetMethod = (*env)->GetMethodID(env, jMapClass, "get", "(Ljava/lang/Object;)Ljava/lang/Object;");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jBooleanValueMethod == NULL)
     {
         jBooleanValueMethod = (*env)->GetMethodID(env, jBooleanClass, "booleanValue", "()Z");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jIntegerInitMethod == NULL)
     {
         jIntegerInitMethod = (*env)->GetMethodID(env, jIntegerClass, "<init>", "(I)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jIntegerValueMethod == NULL)
     {
         jIntegerValueMethod = (*env)->GetMethodID(env, jIntegerClass, "intValue", "()I");
+        if ((*env)->ExceptionCheck(env)) return;
     }
         
     if (jLongClass == NULL)
     {
-        jLongClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/Long"));
+        jclass jcls = (*env)->FindClass(env, "java/lang/Long");
+        if ((*env)->ExceptionCheck(env)) return;
+        jLongClass = (*env)->NewGlobalRef(env, jcls);
     }
     
     if (jLongValueMethod == NULL)
@@ -291,7 +318,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1create
         [view setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
         
         [hostView addSubview:view];
-        (*env)->SetLongField(env, jView, (*env)->GetFieldID(env, jViewClass, "ptr", "J"), ptr_to_jlong(view));
+        jfieldID jfID = (*env)->GetFieldID(env, jViewClass, "ptr", "J");
+        GLASS_CHECK_EXCEPTION(env);
+        (*env)->SetLongField(env, jView, jfID, ptr_to_jlong(view));
         
         value = ptr_to_jlong(view);
 

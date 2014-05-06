@@ -70,7 +70,9 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
 {
     if (jview != NULL)
     {
-        return (NSView<GlassView>*)jlong_to_ptr((*env)->GetLongField(env, jview, (*env)->GetFieldID(env, jViewClass, "ptr", "J")));
+        jfieldID jfID = (*env)->GetFieldID(env, jViewClass, "ptr", "J");
+        GLASS_CHECK_EXCEPTION(env);
+        return (NSView<GlassView>*)jlong_to_ptr((*env)->GetLongField(env, jview, jfID));
     }
     else
     {
@@ -604,41 +606,49 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1initIDs
     if (jWindowNotifyMove == NULL)
     {
         jWindowNotifyMove = (*env)->GetMethodID(env, jWindowClass, "notifyMove", "(II)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jWindowNotifyResize == NULL)
     {
         jWindowNotifyResize = (*env)->GetMethodID(env, jWindowClass, "notifyResize", "(III)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jWindowNotifyMoveToAnotherScreen == NULL)
     {
         jWindowNotifyMoveToAnotherScreen = (*env)->GetMethodID(env, jWindowClass, "notifyMoveToAnotherScreen", "(Lcom/sun/glass/ui/Screen;)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jWindowNotifyClose == NULL)
     {
         jWindowNotifyClose = (*env)->GetMethodID(env, jWindowClass, "notifyClose", "()V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jWindowNotifyFocus == NULL)
     {
         jWindowNotifyFocus = (*env)->GetMethodID(env, jWindowClass, "notifyFocus", "(I)V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jWindowNotifyFocusUngrab == NULL)
     {
         jWindowNotifyFocusUngrab = (*env)->GetMethodID(env, jWindowClass, "notifyFocusUngrab", "()V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jWindowNotifyFocusDisabled == NULL)
     {
         jWindowNotifyFocusDisabled = (*env)->GetMethodID(env, jWindowClass, "notifyFocusDisabled", "()V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jWindowNotifyDestroy == NULL)
     {
         jWindowNotifyDestroy = (*env)->GetMethodID(env, jWindowClass, "notifyDestroy", "()V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
     
     if (jWindowNotifyDelegatePtr == NULL)

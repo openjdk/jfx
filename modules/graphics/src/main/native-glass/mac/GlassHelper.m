@@ -49,7 +49,14 @@ static volatile jobject glassClassLoader = NULL;
     static jclass classCls = NULL;
     if (classCls == NULL)
     {
-        classCls = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "java/lang/Class"));
+        jclass jcls = (*env)->FindClass(env, "java/lang/Class");
+        GLASS_CHECK_EXCEPTION(env);
+        if (jcls == NULL)
+        {
+            NSLog(@"GlassHelper error: jcls == NULL");
+            return NULL;            
+        }
+        classCls = (*env)->NewGlobalRef(env, jcls);
     }
     if (classCls == NULL)
     {
@@ -61,6 +68,7 @@ static volatile jobject glassClassLoader = NULL;
     if (forNameMID == NULL)
     {
         forNameMID = (*env)->GetStaticMethodID(env, classCls, "forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;");
+        GLASS_CHECK_EXCEPTION(env);
     }
     if (forNameMID == NULL)
     {
@@ -77,6 +85,7 @@ static volatile jobject glassClassLoader = NULL;
 
     jclass foundClass = (*env)->CallStaticObjectMethod(env, classCls,
         forNameMID,classNameStr, JNI_TRUE, glassClassLoader);
+    GLASS_CHECK_EXCEPTION(env);
     (*env)->DeleteLocalRef(env, classNameStr);
 
     return foundClass;

@@ -120,10 +120,13 @@
     if (jproperties != NULL)
     {
         jobject k3dDepthKey = (*env)->NewObject(env, jIntegerClass, jIntegerInitMethod, com_sun_glass_ui_View_Capability_k3dDepthKeyValue);
+        GLASS_CHECK_EXCEPTION(env);
         jobject k3dDepthKeyValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, k3dDepthKey);
+        GLASS_CHECK_EXCEPTION(env);
         if (k3dDepthKeyValue != NULL)
         {
             depthBits = (*env)->CallIntMethod(env, k3dDepthKeyValue, jIntegerValueMethod);
+            GLASS_CHECK_EXCEPTION(env);
         }
     }
     
@@ -132,9 +135,11 @@
     {
         jobject sharedContextPtrKey = (*env)->NewStringUTF(env, "shareContextPtr");
         jobject sharedContextPtrValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, sharedContextPtrKey);
+        GLASS_CHECK_EXCEPTION(env);
         if (sharedContextPtrValue != NULL)
         {
             jlong jsharedContextPtr = (*env)->CallLongMethod(env, sharedContextPtrValue, jLongValueMethod);
+            GLASS_CHECK_EXCEPTION(env);
             if (jsharedContextPtr != 0)
             {
                 NSOpenGLContext *sharedContextNS = (NSOpenGLContext*)jlong_to_ptr(jsharedContextPtr);
@@ -148,9 +153,11 @@
     {
         jobject contextPtrKey = (*env)->NewStringUTF(env, "contextPtr");
         jobject contextPtrValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, contextPtrKey);
+        GLASS_CHECK_EXCEPTION(env);
         if (contextPtrValue != NULL)
         {
             jlong jcontextPtr = (*env)->CallLongMethod(env, contextPtrValue, jLongValueMethod);
+            GLASS_CHECK_EXCEPTION(env);
             if (jcontextPtr != 0)
             {
                 NSOpenGLContext *clientContextNS = (NSOpenGLContext*)jlong_to_ptr(jcontextPtr);
@@ -173,10 +180,13 @@
     if (jproperties != NULL)
     {
         jobject kHiDPIAwareKey = (*env)->NewObject(env, jIntegerClass, jIntegerInitMethod, com_sun_glass_ui_View_Capability_kHiDPIAwareKeyValue);
+        GLASS_CHECK_EXCEPTION(env);
         jobject kHiDPIAwareValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, kHiDPIAwareKey);
+        GLASS_CHECK_EXCEPTION(env);
         if (kHiDPIAwareValue != NULL)
         {
             self->isHiDPIAware = (*env)->CallBooleanMethod(env, kHiDPIAwareValue, jBooleanValueMethod) ? YES : NO;
+            GLASS_CHECK_EXCEPTION(env);
         }
     }
 
