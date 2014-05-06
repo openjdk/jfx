@@ -170,10 +170,11 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
 }                                                                                       \
 - (void)sendEvent:(NSEvent *)event                                                      \
 {                                                                                       \
-    [self->gWindow->view retain];                                                       \
+    /* Local copy of the id keeps the retain/release calls balanced. */                 \
+    id view = [self->gWindow->view retain];                                             \
     [self->gWindow sendEvent:event];                                                    \
     [super sendEvent:event];                                                            \
-    [self->gWindow->view release];                                                      \
+    [view release];                                                                     \
 }
 
 @implementation GlassWindow_Normal

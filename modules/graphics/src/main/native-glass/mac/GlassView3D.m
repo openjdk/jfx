@@ -454,9 +454,10 @@
 {
     KEYLOG("performKeyEquivalent");
     // Crash if the FS window is released while performing a key equivalent
-    [self->_delegate->fullscreenWindow retain];
+    // Local copy of the id keeps the retain/release calls balanced.
+    id fsWindow = [self->_delegate->fullscreenWindow retain];
     [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
-    [self->_delegate->fullscreenWindow release];
+    [fsWindow release];
     return NO; // return NO to allow system-default processing of Cmd+Q, etc.
 }
 
