@@ -108,7 +108,7 @@ class WinTextRangeProvider {
         if (offset == 0) return true;
         if (offset == text.length()) return true;
         if (offset == BreakIterator.DONE) return true;
-        return bi.isBoundary(offset) && Character.isLetterOrDigit(text.charAt(offset)); 
+        return bi.isBoundary(offset) && Character.isLetterOrDigit(text.charAt(offset));
     }
 
     /***********************************************/
@@ -160,8 +160,13 @@ class WinTextRangeProvider {
                     }
                     start = offset != BreakIterator.DONE ? offset : 0;
                 }
-                int offset = bi.following(start); /* Assumes a word end always follows a word start */
-                end = offset != BreakIterator.DONE ? offset : length;
+                if (!isWordStart(bi, text, end)) {
+                    int offset = bi.following(end);
+                    while (!isWordStart(bi, text, offset)) {
+                        offset = bi.next();
+                    }
+                    end = offset != BreakIterator.DONE ? offset : length;
+                }
                 break;
             }
             case TextUnit_Line: {
@@ -330,7 +335,7 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TITLE);
         if (text == null) return null;
         int endOffset = maxLength != -1 ? Math.min(end, start + maxLength) : end;
-        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
+//        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
         return text.substring(start, endOffset);
     }
 
@@ -379,9 +384,12 @@ class WinTextRangeProvider {
                     } else {
                         start = requestedCount > 0 ? length : 0;
                     }
+                    offset = bi.following(start);
+                    while (!isWordStart(bi, text, offset)) {
+                        offset = bi.next();
+                    }
+                    end = offset != BreakIterator.DONE ? offset : length;
                 }
-                offset = bi.following(start); /* Assumes a word end always follows a word start */
-                end = offset != BreakIterator.DONE ? offset : length;
                 break;
             }
             case TextUnit_Line: {
@@ -436,6 +444,7 @@ class WinTextRangeProvider {
     }
 
     int MoveEndpointByUnit(int endpoint, int unit, final int requestedCount) {
+        if (requestedCount == 0) return 0;
         String text = (String)getAttribute(TITLE);
         if (text == null) return 0;
         int length = text.length();
@@ -453,32 +462,23 @@ class WinTextRangeProvider {
             case TextUnit_Word: {
                 BreakIterator bi = BreakIterator.getWordInstance();
                 bi.setText(text);
-                if (requestedCount > 0) {
-                    int next = bi.following(offset);
-                    while (next != BreakIterator.DONE && requestedCount != actualCount) {
-                        /* Always keep start offset at a word start, and end offset at a word end */
-                        if (endpoint == TextPatternRangeEndpoint_Start) {
-                            while (next == BreakIterator.DONE && isWordStart(bi, text, next)) next = bi.next();
-                        } else {
-                            while (!isWordStart(bi, text, next)) next = bi.next();
+                while (offset != BreakIterator.DONE && actualCount != requestedCount) {
+                    if (requestedCount > 0) {
+                        offset = bi.following(offset);
+                        while (!isWordStart(bi, text, offset)) {
+                            offset = bi.next();
                         }
                         actualCount++;
-                        next = bi.next();
-                    }
-                    offset = next != BreakIterator.DONE ? next : length;
-                } else {
-                    int prev = bi.preceding(offset);
-                    while (prev != BreakIterator.DONE && requestedCount != actualCount) {
-                        /* Always keep start offset at a word start, and end offset at a word end */
-                        if (endpoint == TextPatternRangeEndpoint_Start) {
-                            while (prev == BreakIterator.DONE && isWordStart(bi, text, prev)) prev = bi.previous();
-                        } else {
-                            while (!isWordStart(bi, text, prev)) prev = bi.previous();
+                    } else {
+                        offset = bi.preceding(offset);
+                        while (!isWordStart(bi, text, offset)) {
+                            offset = bi.previous();
                         }
                         actualCount--;
-                        prev = bi.previous();
                     }
-                    offset = prev != BreakIterator.DONE ? prev : 0;
+                }
+                if (offset == BreakIterator.DONE) {
+                    offset = requestedCount > 0 ? length : 0;
                 }
                 break;
             }
@@ -513,20 +513,17 @@ class WinTextRangeProvider {
             case TextUnit_Paragraph: {
                 BreakIterator bi = BreakIterator.getSentenceInstance();
                 bi.setText(text);
-                if (requestedCount > 0) {
-                    int next = bi.following(offset);
-                    while (next != BreakIterator.DONE && requestedCount != actualCount) {
+                while (offset != BreakIterator.DONE && actualCount != requestedCount) {
+                    if (requestedCount > 0) {
+                        offset = bi.following(offset);
                         actualCount++;
-                        next = bi.next();
-                    }
-                    offset = next != BreakIterator.DONE ? next : length;
-                } else {
-                    int prev = bi.preceding(offset);
-                    while (prev != BreakIterator.DONE && requestedCount != actualCount) {
+                    } else {
+                        offset = bi.preceding(offset);
                         actualCount--;
-                        prev = bi.previous();
                     }
-                    offset = prev != BreakIterator.DONE ? prev : 0;
+                }
+                if (offset == BreakIterator.DONE) {
+                    offset = requestedCount > 0 ? length : 0;
                 }
                 break;
             }
