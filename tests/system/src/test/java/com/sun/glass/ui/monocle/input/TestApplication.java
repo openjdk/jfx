@@ -161,7 +161,6 @@ public class TestApplication extends Application {
                 Scene scene = new Scene(root, bounds.getWidth() / 2,
                                         bounds.getHeight() / 2);
                 stage.setScene(scene);
-                stage.centerOnScreen();
 
                 stage.show();
                 stage.requestFocus();
@@ -228,6 +227,14 @@ public class TestApplication extends Application {
         getStage().getScene().setOnMouseClicked((e) -> {
             TestLog.log("Mouse clicked: "
                     + (int) e.getScreenX() + ", " + (int) e.getScreenY());
+        });
+        getStage().getScene().setOnMouseEntered((e) -> {
+            TestLog.log("Mouse entered: "
+                                + (int) e.getScreenX() + ", " + (int) e.getScreenY());
+        });
+        getStage().getScene().setOnMouseExited((e) -> {
+            TestLog.log("Mouse exited: "
+                                + (int) e.getScreenX() + ", " + (int) e.getScreenY());
         });
     }
 
