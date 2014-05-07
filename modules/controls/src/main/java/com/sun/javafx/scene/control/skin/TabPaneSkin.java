@@ -1695,6 +1695,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         private void showControlButtons() {
             setVisible(true);
+            if (popup == null) {
+                setupPopupMenu();
+            }
         }
 
         private void hideControlButtons() {
