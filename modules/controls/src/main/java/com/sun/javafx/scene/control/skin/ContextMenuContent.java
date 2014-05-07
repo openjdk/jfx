@@ -1035,6 +1035,8 @@ public class ContextMenuContent extends Region {
         private EventHandler<MouseEvent> mouseEnteredEventHandler;
         private EventHandler<MouseEvent> mouseReleasedEventHandler;
 
+        private EventHandler<ActionEvent> actionEventHandler;
+
         protected Label getLabel(){
             return (Label) label;
         }
@@ -1080,7 +1082,7 @@ public class ContextMenuContent extends Region {
             
             listener.registerChangeListener(item.graphicProperty(), "GRAPHIC");
 
-            addEventHandler(ActionEvent.ACTION, e -> {
+            actionEventHandler = e -> {
                 if (item instanceof Menu) {
                     final Menu menu = (Menu) item;
                     if (openSubmenu == menu && submenu.isShowing()) return;
@@ -1093,12 +1095,20 @@ public class ContextMenuContent extends Region {
                 } else {
                     doSelect();
                 }
-            });
-
+            };
+            addEventHandler(ActionEvent.ACTION, actionEventHandler);
         }
         
         public void dispose() {
+            if (item instanceof CustomMenuItem) {
+                Node node = ((CustomMenuItem)item).getContent();
+                if (node != null) {
+                    node.removeEventHandler(MouseEvent.MOUSE_CLICKED, customMenuItemMouseClickedHandler);
+                }
+            }
+
             listener.dispose();
+            removeEventHandler(ActionEvent.ACTION, actionEventHandler);
             
             if (label != null) {
                 ((Label)label).textProperty().unbind();
@@ -1304,19 +1314,23 @@ public class ContextMenuContent extends Region {
             item.fire();
             hideAllMenus(item);
         }
+
+        private EventHandler<MouseEvent> customMenuItemMouseClickedHandler;
         
         private void createNodeMenuItemChildren(final CustomMenuItem item) {
             Node node = item.getContent();
             getChildren().add(node);
+
             // handle hideOnClick
-            node.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
+            customMenuItemMouseClickedHandler = event -> {
                 if (item == null || item.isDisable()) return;
 
                 item.fire();
                 if (item.isHideOnClick()) {
                     hideAllMenus(item);
                 }
-            });
+            };
+            node.addEventHandler(MouseEvent.MOUSE_CLICKED, customMenuItemMouseClickedHandler);
         }
         
         @Override protected void layoutChildren() {
