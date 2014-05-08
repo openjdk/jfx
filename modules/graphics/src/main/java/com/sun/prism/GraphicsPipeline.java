@@ -230,6 +230,6 @@ public abstract class GraphicsPipeline {
      * @return true if the pipeline uses an uploading painter
      */
     public boolean isUploading() {
-        return false;
+        return PrismSettings.forceUploadingPainter;
     }
 }

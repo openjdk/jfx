@@ -88,6 +88,7 @@ public final class PrismSettings {
     public static final boolean perfLogFirstPaintExit;
     public static final boolean superShader;
     public static final boolean skipMeshNormalComputation;
+    public static final boolean forceUploadingPainter;
 
     private PrismSettings() {
     }
@@ -339,6 +340,9 @@ public final class PrismSettings {
         perfLogFirstPaintExit = getBoolean(systemProperties, "sun.perflog.fx.firstpaintexit", false, true);
 
         superShader = getBoolean(systemProperties, "prism.supershader", true);
+
+        // Force uploading painter (e.g., to avoid Linux live-resize jittering)
+        forceUploadingPainter = getBoolean(systemProperties, "prism.forceUploadingPainter", false);
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,
