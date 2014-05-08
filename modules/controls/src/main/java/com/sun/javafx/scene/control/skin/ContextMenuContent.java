@@ -271,10 +271,9 @@ public class ContextMenuContent extends Region {
      * of submenus if any, also get cleaned up.
      */
     public void dispose() {
-        if (submenu != null) {
-            ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
-            cmContent.dispose(); // recursive call to dispose submenus.
-        }
+        disposeBinds();
+
+        disposeContextMenu(submenu);
         submenu = null;
         openSubmenu = null;
         selectedBackground = null;
@@ -282,7 +281,13 @@ public class ContextMenuContent extends Region {
             contextMenu.getItems().clear();
             contextMenu = null;
         }
-        
+    }
+
+    public void disposeContextMenu(ContextMenu menu) {
+        if (menu != null) {
+            ContextMenuContent cmContent = (ContextMenuContent)menu.getSkin().getNode();
+            cmContent.dispose(); // recursive call to dispose submenus.
+        }
     }
 
     @Override protected void layoutChildren() {
@@ -727,43 +732,82 @@ public class ContextMenuContent extends Region {
     }
 
     private void setUpBinds() {
-        updateMenuShowingListeners(contextMenu.getItems());
-        contextMenu.getItems().addListener((ListChangeListener<MenuItem>) c -> {
-            // Add listeners to the showing property of all menus that have
-            // been added, and remove listeners from menus that have been removed
-            // FIXME this is temporary - we should be adding and removing
-            // listeners such that they use the one listener defined above
-            // - but that can't be done until we have the bean in the
-            // ObservableValue
-            while (c.next()) {
-                updateMenuShowingListeners(c.getAddedSubList());
-            }
-
-            // Listener to items in PopupMenu to update items in PopupMenuContent
-            itemsDirty = true;
-            updateItems(); // RT-29761
-        });
+        updateMenuShowingListeners(contextMenu.getItems(), true);
+        contextMenu.getItems().addListener(contextMenuItemsListener);
     }
 
-    private void updateMenuShowingListeners(List<? extends MenuItem> added) {
-        for (MenuItem item : added) {
-            if (item instanceof Menu) {
-                final Menu menuItem = (Menu) item;
-                menuItem.showingProperty().addListener((observable, wasShowing, isShowing) -> {
-                    if (wasShowing && ! isShowing) {
-                        // hide the submenu popup
-                        hideSubmenu();
-                    } else if (! wasShowing && isShowing) {
-                        // show the submenu popup
-                        showSubmenu(menuItem);
-                    }
-                });
+    private void disposeBinds() {
+        updateMenuShowingListeners(contextMenu.getItems(), false);
+        contextMenu.getItems().removeListener(contextMenuItemsListener);
+    }
+
+    private ChangeListener<Boolean> menuShowingListener = (observable, wasShowing, isShowing) -> {
+        ReadOnlyBooleanProperty isShowingProperty = (ReadOnlyBooleanProperty) observable;
+        Menu menu = (Menu) isShowingProperty.getBean();
+
+        if (wasShowing && ! isShowing) {
+            // hide the submenu popup
+            hideSubmenu();
+        } else if (! wasShowing && isShowing) {
+            // show the submenu popup
+            showSubmenu(menu);
+        }
+    };
+
+    private ListChangeListener<MenuItem> contextMenuItemsListener = (ListChangeListener<MenuItem>) c -> {
+        // Add listeners to the showing property of all menus that have
+        // been added, and remove listeners from menus that have been removed
+        // FIXME this is temporary - we should be adding and removing
+        // listeners such that they use the one listener defined above
+        // - but that can't be done until we have the bean in the
+        // ObservableValue
+        while (c.next()) {
+            List<MenuItem> toRemove = new ArrayList<>();
+            List<MenuItem> toAdd = new ArrayList<>();
+
+            if (c.wasRemoved()) {
+                toRemove.addAll(c.getRemoved());
             }
+
+            if (c.wasAdded()) {
+                toAdd.addAll(c.getAddedSubList());
+            }
+
+            toRemove.removeAll(toAdd);
+            toAdd.removeAll(c.getList());
+
+            updateMenuShowingListeners(toRemove, false);
+            updateMenuShowingListeners(toAdd, true);
+        }
+
+        // Listener to items in PopupMenu to update items in PopupMenuContent
+        itemsDirty = true;
+        updateItems(); // RT-29761
+    };
+
+    private ChangeListener<Boolean> menuItemVisibleListener = (observable, oldValue, newValue) -> {
+        // re layout as item's visibility changed
+        requestLayout();
+    };
+
+    private void updateMenuShowingListeners(List<? extends MenuItem> items, boolean addListeners) {
+        for (MenuItem item : items) {
+            if (item instanceof Menu) {
+                final Menu menu = (Menu) item;
+
+                if (addListeners) {
+                    menu.showingProperty().addListener(menuShowingListener);
+                } else {
+                    menu.showingProperty().removeListener(menuShowingListener);
+                }
+            }
+
              // listen to menu items's visible property.
-            item.visibleProperty().addListener((observable, oldValue, newValue) -> {
-                // re layout as item's visibility changed
-                requestLayout();
-            });
+            if (addListeners) {
+                item.visibleProperty().addListener(menuItemVisibleListener);
+            } else {
+                item.visibleProperty().removeListener(menuItemVisibleListener);
+            }
         }
     }
 
@@ -807,6 +851,11 @@ public class ContextMenuContent extends Region {
         if (submenu == null) return;
 
         submenu.hide();
+
+        // Fix for RT-37022 - we dispose content so that we do not process CSS
+        // on hidden submenus
+        disposeContextMenu(submenu);
+        submenu = null;
     }
     
     private void hideAllMenus(MenuItem item) {
