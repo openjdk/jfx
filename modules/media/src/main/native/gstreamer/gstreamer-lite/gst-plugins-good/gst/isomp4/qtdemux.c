@@ -77,7 +77,12 @@
 #define QTDEMUX_MAX_ATOM_SIZE (25*1024*1024)
 
 /* if the sample index is larger than this, something is likely wrong */
+#ifdef GSTREAMER_LITE
+// relaxing the limitation since some long files has more than 50Mb sample index
+#define QTDEMUX_MAX_SAMPLE_INDEX_SIZE (500*1024*1024)
+#else
 #define QTDEMUX_MAX_SAMPLE_INDEX_SIZE (50*1024*1024)
+#endif // GSTREAMER_LITE 
 
 /* For converting qt creation times to unix epoch times */
 #define QTDEMUX_SECONDS_PER_DAY (60 * 60 * 24)
