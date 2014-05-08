@@ -255,9 +255,7 @@ public class DatePickerTest {
     }
 
     @Test public void ensureCanSetNonNullDayCellFactory() {
-        Callback<DatePicker, DateCell> cf = new Callback<DatePicker, DateCell>() {
-            @Override public DateCell call(DatePicker p) { return null; }
-        };
+        Callback<DatePicker, DateCell> cf = p -> null;
         datePicker.setDayCellFactory(cf);
         assertSame(cf, datePicker.getDayCellFactory());
     }
@@ -335,9 +333,7 @@ public class DatePickerTest {
     }
 
     @Test public void ensureCanSetOnAction() {
-        EventHandler<ActionEvent> onAction = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) { }
-        };
+        EventHandler<ActionEvent> onAction = t -> { };
         datePicker.setOnAction(onAction);
         assertEquals(onAction, datePicker.getOnAction());
     }

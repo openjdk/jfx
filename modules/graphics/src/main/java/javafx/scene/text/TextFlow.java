@@ -159,11 +159,7 @@ public class TextFlow extends Pane {
      */
     public TextFlow() {
         super();
-        effectiveNodeOrientationProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                checkOrientation();
-            }
-        });
+        effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
     }
 
     /**

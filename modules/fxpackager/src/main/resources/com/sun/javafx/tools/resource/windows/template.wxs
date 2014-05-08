@@ -7,7 +7,7 @@
              UpgradeCode="PRODUCT_UPGRADE_GUID">
         <Package Description="APPLICATION_DESCRIPTION" Comments="None"
                  InstallerVersion="200" Compressed="yes"
-                 InstallScope="INSTALL_SCOPE"/>
+                 InstallScope="INSTALL_SCOPE" Platform="PLATFORM"/>
         <Media Id="1" Cabinet="simple.cab" EmbedCab="yes" />
 
         <!-- We use RemoveFolderEx to ensure application folder is fully 
@@ -26,7 +26,7 @@
                             Id="APPLICATIONFOLDER_REGSEARCH" Name="Path" />
         </Property>
         <DirectoryRef Id="APPLICATIONFOLDER">
-            <Component Id="CleanupMainApplicationFolder" Guid="*">
+            <Component Id="CleanupMainApplicationFolder" Guid="*" Win64="WIN64">
                 <RegistryValue Root="REGISTRY_ROOT"
                                    Key="SOFTWARE\APPLICATION_VENDOR\APPLICATION_NAME"
                                    Name="Path" Type="string" Value="[APPLICATIONFOLDER]"

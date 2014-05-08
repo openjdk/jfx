@@ -29,12 +29,14 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 
 import javafx.event.WeakEventHandler;
-import javafx.scene.control.TreeTableRow;
-import javafx.scene.control.TreeTableView;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
+import javafx.scene.control.*;
 
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.property.BooleanProperty;
@@ -45,13 +47,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.control.ResizeFeaturesBase;
-import javafx.scene.control.TableSelectionModel;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
-import javafx.scene.control.TreeTableCell;
-import javafx.scene.control.TreeTableColumn;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -72,58 +68,36 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
         
         setRoot(getSkinnable().getRoot());
 
-        EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) { 
-                // RT-15127: cancel editing on scroll. This is a bit extreme
-                // (we are cancelling editing on touching the scrollbars).
-                // This can be improved at a later date.
-                if (treeTableView.getEditingCell() != null) {
-                    treeTableView.edit(-1, null);
-                }
-                
-                // This ensures that the table maintains the focus, even when the vbar
-                // and hbar controls inside the flow are clicked. Without this, the
-                // focus border will not be shown when the user interacts with the
-                // scrollbars, and more importantly, keyboard navigation won't be
-                // available to the user.
-                treeTableView.requestFocus(); 
+        EventHandler<MouseEvent> ml = event -> {
+            // RT-15127: cancel editing on scroll. This is a bit extreme
+            // (we are cancelling editing on touching the scrollbars).
+            // This can be improved at a later date.
+            if (treeTableView.getEditingCell() != null) {
+                treeTableView.edit(-1, null);
             }
+
+            // This ensures that the table maintains the focus, even when the vbar
+            // and hbar controls inside the flow are clicked. Without this, the
+            // focus border will not be shown when the user interacts with the
+            // scrollbars, and more importantly, keyboard navigation won't be
+            // available to the user.
+            treeTableView.requestFocus();
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 
         // init the behavior 'closures'
         TreeTableViewBehavior<S> behavior = getBehavior();
-        behavior.setOnFocusPreviousRow(new Runnable() {
-            @Override public void run() { onFocusPreviousCell(); }
-        });
-        behavior.setOnFocusNextRow(new Runnable() {
-            @Override public void run() { onFocusNextCell(); }
-        });
-        behavior.setOnMoveToFirstCell(new Runnable() {
-            @Override public void run() { onMoveToFirstCell(); }
-        });
-        behavior.setOnMoveToLastCell(new Runnable() {
-            @Override public void run() { onMoveToLastCell(); }
-        });
-        behavior.setOnScrollPageDown(new Callback<Boolean, Integer>() {
-            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageDown(isFocusDriven); }
-        });
-        behavior.setOnScrollPageUp(new Callback<Boolean, Integer>() {
-            @Override public Integer call(Boolean isFocusDriven) { return onScrollPageUp(isFocusDriven); }
-        });
-        behavior.setOnSelectPreviousRow(new Runnable() {
-            @Override public void run() { onSelectPreviousCell(); }
-        });
-        behavior.setOnSelectNextRow(new Runnable() {
-            @Override public void run() { onSelectNextCell(); }
-        });
-        behavior.setOnSelectLeftCell(new Runnable() {
-            @Override public void run() { onSelectLeftCell(); }
-        });
-        behavior.setOnSelectRightCell(new Runnable() {
-            @Override public void run() { onSelectRightCell(); }
-        });
+        behavior.setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
+        behavior.setOnFocusNextRow(() -> { onFocusNextCell(); });
+        behavior.setOnMoveToFirstCell(() -> { onMoveToFirstCell(); });
+        behavior.setOnMoveToLastCell(() -> { onMoveToLastCell(); });
+        behavior.setOnScrollPageDown(isFocusDriven -> onScrollPageDown(isFocusDriven));
+        behavior.setOnScrollPageUp(isFocusDriven -> onScrollPageUp(isFocusDriven));
+        behavior.setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
+        behavior.setOnSelectNextRow(() -> { onSelectNextCell(); });
+        behavior.setOnSelectLeftCell(() -> { onSelectLeftCell(); });
+        behavior.setOnSelectRightCell(() -> { onSelectRightCell(); });
         
         registerChangeListener(treeTableView.rootProperty(), "ROOT");
         registerChangeListener(treeTableView.showRootProperty(), "SHOW_ROOT");
@@ -174,32 +148,30 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
     private TreeTableView<S> treeTableView;
     private WeakReference<TreeItem<S>> weakRootRef;
     
-    private EventHandler<TreeItem.TreeModificationEvent<S>> rootListener = new EventHandler<TreeItem.TreeModificationEvent<S>>() {
-        @Override public void handle(TreeItem.TreeModificationEvent<S> e) {
-            if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
-                // Fix for RT-14842, where the children of a TreeItem were changing,
-                // but because the overall item count was staying the same, there was 
-                // no event being fired to the skin to be informed that the items
-                // had changed. So, here we just watch for the case where the number
-                // of items being added is equal to the number of items being removed.
-                rowCountDirty = true;
-                getSkinnable().requestLayout();
-            } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
-                // Fix for RT-14971 and RT-15338. 
-                needCellsRebuilt = true;
-                getSkinnable().requestLayout();
-            } else {
-                // Fix for RT-20090. We are checking to see if the event coming
-                // from the TreeItem root is an event where the count has changed.
-                EventType<?> eventType = e.getEventType();
-                while (eventType != null) {
-                    if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
-                        rowCountDirty = true;
-                        getSkinnable().requestLayout();
-                        break;
-                    }
-                    eventType = eventType.getSuperType();
+    private EventHandler<TreeItem.TreeModificationEvent<S>> rootListener = e -> {
+        if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
+            // Fix for RT-14842, where the children of a TreeItem were changing,
+            // but because the overall item count was staying the same, there was
+            // no event being fired to the skin to be informed that the items
+            // had changed. So, here we just watch for the case where the number
+            // of items being added is equal to the number of items being removed.
+            rowCountDirty = true;
+            getSkinnable().requestLayout();
+        } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
+            // Fix for RT-14971 and RT-15338.
+            needCellsRebuilt = true;
+            getSkinnable().requestLayout();
+        } else {
+            // Fix for RT-20090. We are checking to see if the event coming
+            // from the TreeItem root is an event where the count has changed.
+            EventType<?> eventType = e.getEventType();
+            while (eventType != null) {
+                if (eventType.equals(TreeItem.<S>expandedItemCountChangeEvent())) {
+                    rowCountDirty = true;
+                    getSkinnable().requestLayout();
+                    break;
                 }
+                eventType = eventType.getSuperType();
             }
         }
     };
@@ -344,7 +316,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
             
             if ((cell.getText() != null && !cell.getText().isEmpty()) || cell.getGraphic() != null) {
                 getChildren().add(cell);
-                cell.impl_processCSS(false);
+                cell.applyCss();
                 
                 double w = cell.prefWidth(-1);
                 
@@ -382,7 +354,14 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
 
         // If there is no disclosure node, then add one of my own
         if (cell.getDisclosureNode() == null) {
-            final StackPane disclosureNode = new StackPane();
+            final StackPane disclosureNode = new StackPane() {
+                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                    switch (attribute) {
+                        case ROLE: return Role.DISCLOSURE_NODE;
+                        default: return super.accGetAttribute(attribute, parameters);
+                    }
+                }
+            };
             disclosureNode.getStyleClass().setAll("tree-disclosure-node");
             disclosureNode.setMouseTransparent(true);
 
@@ -401,6 +380,33 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
         super.horizontalScroll();
         if (getSkinnable().getFixedCellSize() > 0) {
             flow.requestCellLayout();
+        }
+    }
+
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROW_AT_INDEX: {
+                final int rowIndex = (Integer)parameters[0];
+                return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
+            }
+            case SELECTED_CELLS: {
+                List<Node> selection = new ArrayList<>();
+                TreeTableView.TreeTableViewSelectionModel<S> sm = getSkinnable().getSelectionModel();
+                for (TreeTablePosition pos : sm.getSelectedCells()) {
+                    TreeTableRow<S> row = flow.getPrivateCell(pos.getRow());
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+
+            case FOCUS_ITEM: // TableViewSkinBase
+            case CELL_AT_ROW_COLUMN: // TableViewSkinBase
+            case COLUMN_AT_INDEX: // TableViewSkinBase
+            case HEADER: // TableViewSkinBase
+            case VERTICAL_SCROLLBAR: // TableViewSkinBase
+            case HORIZONTAL_SCROLLBAR: // TableViewSkinBase
+            default: return super.accGetAttribute(attribute, parameters);
         }
     }
     

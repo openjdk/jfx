@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,13 +114,10 @@ public final class ParallelTransition extends Transition {
     private boolean childrenChanged = true;
     private boolean toggledRate;
 
-    private final InvalidationListener childrenListener = new InvalidationListener() {
-        @Override
-        public void invalidated(Observable observable) {
-            childrenChanged = true;
-            if (getStatus() == Status.STOPPED) {
-                setCycleDuration(computeCycleDuration());
-            }
+    private final InvalidationListener childrenListener = observable -> {
+        childrenChanged = true;
+        if (getStatus() == Status.STOPPED) {
+            setCycleDuration(computeCycleDuration());
         }
     };
 
@@ -580,12 +577,19 @@ public final class ParallelTransition extends Transition {
 
     private void jumpToEnd() {
         for (int i = 0 ; i < cachedChildren.length; ++i) {
+            if (forceChildSync[i]) {
+                // See explanation in SequentialTransition#jumpToEnd
+                cachedChildren[i].impl_sync(true);
+            }
             cachedChildren[i].impl_jumpTo(durations[i], durations[i], true);
         }
     }
 
     private void jumpToStart() {
         for (int i = cachedChildren.length - 1 ; i >= 0; --i) {
+            if (forceChildSync[i]) {
+                cachedChildren[i].impl_sync(true);
+            }
             cachedChildren[i].impl_jumpTo(0, durations[i], true);
         }
     }

@@ -94,13 +94,10 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
         return property instanceof ReadOnlyDoubleProperty ? (ReadOnlyDoubleProperty) property:
            new ReadOnlyDoublePropertyBase() {
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 
@@ -141,13 +138,10 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
         return new ReadOnlyObjectPropertyBase<Double>() {
 
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 

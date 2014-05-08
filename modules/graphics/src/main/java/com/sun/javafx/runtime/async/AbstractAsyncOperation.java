@@ -54,11 +54,7 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
     protected AbstractAsyncOperation(final AsyncOperationListener<V> listener) {
         this.listener = listener;
 
-        Callable<V> callable = new Callable<V>() {
-            public V call() throws Exception {
-                return AbstractAsyncOperation.this.call();
-            }
-        };
+        Callable<V> callable = () -> AbstractAsyncOperation.this.call();
 
         final Runnable completionRunnable = new Runnable() {
             public void run() {
@@ -110,11 +106,7 @@ public abstract class AbstractAsyncOperation<V> implements AsyncOperation,
     protected void notifyProgress() {
         final int last = lastProgress;
         final int max = progressMax;
-        Platform.runLater(new Runnable() {
-            public void run() {
-                listener.onProgress(last, max);
-            }
-        });
+        Platform.runLater(() -> listener.onProgress(last, max));
     }
 
     protected void addProgress(int amount) {

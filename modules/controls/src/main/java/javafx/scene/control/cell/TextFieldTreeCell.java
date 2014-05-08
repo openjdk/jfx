@@ -91,11 +91,7 @@ public class TextFieldTreeCell<T> extends DefaultTreeCell<T> {
      */
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final StringConverter<T> converter) {
-        return new Callback<TreeView<T>, TreeCell<T>>() {
-            @Override public TreeCell<T> call(TreeView<T> list) {
-                return new TextFieldTreeCell<T>(converter);
-            }
-        };
+        return list -> new TextFieldTreeCell<T>(converter);
     }
     
     

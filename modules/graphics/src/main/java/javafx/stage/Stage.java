@@ -207,6 +207,11 @@ public class Stage extends Window {
         public void setFullScreen(Stage stage, boolean fs) {
             stage.fullScreenPropertyImpl().set(fs);
         }
+
+        @Override
+        public void setAlwaysOnTop(Stage stage, boolean aot) {
+            stage.alwaysOnTopPropertyImpl().set(aot);
+        }
     };
 
     /**
@@ -428,6 +433,8 @@ public class Stage extends Window {
      *
      * @throws IllegalStateException if this method is called on a thread
      *     other than the JavaFX Application Thread.
+     * @throws java.lang.IllegalStateException if this method is called outside of
+     *     event handler. This includes animation callbacks, properties handlers and layout processing.
      * @throws IllegalStateException if this method is called on the
      *     primary stage.
      * @throws IllegalStateException if this stage is already showing.
@@ -818,6 +825,52 @@ public class Stage extends Window {
         }
         return maximized;
     }
+    
+    /**
+     * Defines whether this {@code Stage} is kept on top of other windows.
+     * <p>
+     * If some other window is already always-on-top then the
+     * relative order between these windows is unspecified (depends on
+     * platform).
+     * </p>
+     * <p>
+     * There are differences in behavior between applications if a security 
+     * manager is present. Applications with permissions are allowed to set
+     * "always on top" flag on a Stage. In applications without the proper 
+     * permissions, an attempt to set the flag will be ignored and the property
+     * value will be restored to "false".
+     * </p>
+     * <p>
+     * The property is read only because it can be changed externally
+     * by the underlying platform and therefore must not be bindable.
+     * </p>
+     * 
+     * @defaultValue false
+     * @since JavaFX 8u20
+     */
+    private ReadOnlyBooleanWrapper alwaysOnTop;
+    
+    public final void setAlwaysOnTop(boolean value) {
+        alwaysOnTopPropertyImpl().set(value);
+        if (impl_peer != null) {
+            impl_peer.setAlwaysOnTop(value);
+        }
+    }
+
+    public final boolean isAlwaysOnTop() {
+        return alwaysOnTop == null ? false : alwaysOnTop.get();
+    }
+
+    public final ReadOnlyBooleanProperty alwaysOnTopProperty() {
+        return alwaysOnTopPropertyImpl().getReadOnlyProperty();
+    }
+
+    private ReadOnlyBooleanWrapper alwaysOnTopPropertyImpl() {
+        if (alwaysOnTop == null) {
+            alwaysOnTop = new ReadOnlyBooleanWrapper(Stage.this, "alwaysOnTop");
+        }
+        return alwaysOnTop;
+    }
 
     /**
      * Defines whether the {@code Stage} is resizable or not by the user.
@@ -1122,6 +1175,7 @@ public class Stage extends Window {
             impl_peer.setImportant(isImportant());
             impl_peer.setResizable(isResizable());
             impl_peer.setFullScreen(isFullScreen());
+            impl_peer.setAlwaysOnTop(isAlwaysOnTop());
             impl_peer.setIconified(isIconified());
             impl_peer.setMaximized(isMaximized());
             impl_peer.setTitle(getTitle());

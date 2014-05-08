@@ -52,6 +52,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.accessibility.Action;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.MenuItem;
@@ -99,16 +100,14 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
     static boolean preload = false;
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override public Void run() {
-                String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
-                if (s != null) {
-                    if (s.equalsIgnoreCase("PRERENDER")) {
-                        preload = true;
-                    }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            String s = System.getProperty("com.sun.javafx.virtualKeyboard.preload");
+            if (s != null) {
+                if (s.equalsIgnoreCase("PRERENDER")) {
+                    preload = true;
                 }
-                return null;
             }
+            return null;
         });
     }    
 
@@ -361,29 +360,25 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                     }
                 }
             }
-            textInput.focusedProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    if (USE_FXVK) {
-                        Scene scene = getSkinnable().getScene();
-                        if (textInput.isEditable() && textInput.isFocused()) {
-                            FXVK.attach(textInput);
-                        } else if (scene == null ||
-                                   scene.getWindow() == null ||
-                                   !scene.getWindow().isFocused() ||
-                                   !(scene.getFocusOwner() instanceof TextInputControl &&
-                                     ((TextInputControl)scene.getFocusOwner()).isEditable())) {
-                            FXVK.detach();
-                        }
+            textInput.focusedProperty().addListener(observable -> {
+                if (USE_FXVK) {
+                    Scene scene = getSkinnable().getScene();
+                    if (textInput.isEditable() && textInput.isFocused()) {
+                        FXVK.attach(textInput);
+                    } else if (scene == null ||
+                               scene.getWindow() == null ||
+                               !scene.getWindow().isFocused() ||
+                               !(scene.getFocusOwner() instanceof TextInputControl &&
+                                 ((TextInputControl)scene.getFocusOwner()).isEditable())) {
+                        FXVK.detach();
                     }
                 }
             });
         }
 
         if (textInput.getOnInputMethodTextChanged() == null) {
-            textInput.setOnInputMethodTextChanged(new EventHandler<InputMethodEvent>() {
-                @Override public void handle(InputMethodEvent event) {
-                    handleInputMethodEvent(event);
-                }
+            textInput.setOnInputMethodTextChanged(event -> {
+                handleInputMethodEvent(event);
             });
         }
 
@@ -643,19 +638,15 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             caretTimeline.setCycleCount(Timeline.INDEFINITE);
             caretTimeline.getKeyFrames().addAll(
                 new KeyFrame(Duration.ZERO,
-                             new EventHandler<ActionEvent>() {
-                                 @Override
-                                 public void handle(final ActionEvent event) {
-                                     setBlink(false);
-                                 }
-                             }),
+                        event -> {
+                            setBlink(false);
+                        }
+                ),
                 new KeyFrame(Duration.seconds(.5),
-                             new EventHandler<ActionEvent>() {
-                                 @Override
-                                 public void handle(final ActionEvent event) {
-                                     setBlink(true);
-                                 }
-                             }),
+                        event -> {
+                            setBlink(true);
+                        }
+                ),
                 new KeyFrame(Duration.seconds(1)));
         }
 
@@ -681,10 +672,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
     class ContextMenuItem extends MenuItem {
         ContextMenuItem(final String action) {
             super(getString("TextInputControl.menu." + action));
-            setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent e) {
-                    getBehavior().callAction(action);
-                }
+            setOnAction(e -> {
+                getBehavior().callAction(action);
             });
         }
     }
@@ -858,4 +847,20 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         return getClassCssMetaData();
     }
 
+    /** @treatAsPrivate */
+    protected void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                Integer start = (Integer)parameters[0];
+                Integer end = (Integer)parameters[1];
+                if (start != null && end != null) {
+                    scrollCharacterToVisible(end);
+                    scrollCharacterToVisible(start);
+                    scrollCharacterToVisible(end);
+                }
+                break;
+            } 
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
 }

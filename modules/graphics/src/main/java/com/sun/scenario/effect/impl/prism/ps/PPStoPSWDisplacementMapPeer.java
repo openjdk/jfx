@@ -36,6 +36,7 @@ import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrRenderer;
 import com.sun.scenario.effect.impl.prism.PrTexture;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 public class PPStoPSWDisplacementMapPeer extends EffectPeer  {
     PrRenderer softwareRenderer;
@@ -43,26 +44,29 @@ public class PPStoPSWDisplacementMapPeer extends EffectPeer  {
 
     public PPStoPSWDisplacementMapPeer(FilterContext fctx, Renderer r, String shaderName) {
         super(fctx, r, shaderName);
-        softwareRenderer = PrRenderer.createSoftwareRenderer(fctx);
+        softwareRenderer = (PrRenderer) Renderer.getRenderer(fctx);
         softwarePeer = softwareRenderer.getPeerInstance(fctx, "DisplacementMap", 0);
     }
 
     @Override
-    public ImageData filter(Effect effect, BaseTransform transform,
-                            Rectangle outputClip, ImageData... inputs)
+    public ImageData filter(Effect effect,
+                            RenderState rstate,
+                            BaseTransform transform,
+                            Rectangle outputClip,
+                            ImageData... inputs)
     {
         ImageData input = inputs[0];
         PrTexture srcTex = (PrTexture) input.getUntransformedImage();
         RTTexture srcRT = (RTTexture) srcTex.getTextureObject();
         // The software renderer produces drawables that also implement HeapImage
         PrDrawable srcDrawable = softwareRenderer.createDrawable(srcRT);
-        ImageData heapinput = new ImageData(input.getFilterContext(), srcDrawable,
+        ImageData heapinput = new ImageData(getFilterContext(), srcDrawable,
                                             input.getUntransformedBounds());
         heapinput = heapinput.transform(input.getTransform());
 
         // The software peer will return a PrDrawable that can produce a
         // prism Texture on demand as needed.
-        ImageData ret = softwarePeer.filter(effect, transform, outputClip, heapinput);
+        ImageData ret = softwarePeer.filter(effect, rstate, transform, outputClip, heapinput);
         // Note that heapinput should not be unref()ed since it shares the
         // rtt with input/srcTex and we do not want it to dispose the rtt.
         return ret;

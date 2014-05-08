@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalEngine;
 import javafx.animation.Animation.Status;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -45,6 +48,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
@@ -55,9 +59,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import com.sun.javafx.Utils;
-import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import static com.sun.javafx.Utils.*;
 import static com.sun.javafx.scene.control.skin.Utils.*;
@@ -146,13 +148,17 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private final InvalidationListener nodeListener = new InvalidationListener() {
         @Override public void invalidated(Observable valueModel) {
             if (!nodeSizeInvalid) {
+                final Bounds scrollNodeBounds = scrollNode.getLayoutBounds();
+                final double scrollNodeWidth = scrollNodeBounds.getWidth();
+                final double scrollNodeHeight = scrollNodeBounds.getHeight();
+
                 /*
                 ** if the new size causes scrollbar visibility to change, then need to relayout
                 ** we also need to correct the thumb size when the scrollnode's size changes 
                 */
                 if (vsbvis != determineVerticalSBVisible() || hsbvis != determineHorizontalSBVisible() ||
-                    (scrollNode.getLayoutBounds().getWidth() != 0.0  && nodeWidth != scrollNode.getLayoutBounds().getWidth()) ||
-                    (scrollNode.getLayoutBounds().getHeight() != 0.0 && nodeHeight != scrollNode.getLayoutBounds().getHeight())) {
+                    (scrollNodeWidth != 0.0  && nodeWidth != scrollNodeWidth) ||
+                    (scrollNodeHeight != 0.0 && nodeHeight != scrollNodeHeight)) {
                     getSkinnable().requestLayout();
                 } else {
                     /**
@@ -226,7 +232,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         }
    };
 
-
     private void initialize() {
         // requestLayout calls below should not trigger requestLayout above ScrollPane
 //        setManaged(false);
@@ -234,7 +239,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         ScrollPane control = getSkinnable();
         scrollNode = control.getContent();
 
-        TraversalEngine traversalEngine = new TraversalEngine(getSkinnable(), false);
+        ParentTraversalEngine traversalEngine = new ParentTraversalEngine(getSkinnable());
         traversalEngine.addTraverseListener(this);
         getSkinnable().setImpl_traversalEngine(traversalEngine);
 
@@ -294,7 +299,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             }
         };
         viewRect.getChildren().add(viewContent);
-        
+
         if (scrollNode != null) {
             viewContent.getChildren().add(scrollNode);
             viewRect.nodeOrientationProperty().bind(scrollNode.nodeOrientationProperty());
@@ -306,148 +311,136 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         /*
         ** listeners, and assorted housekeeping
         */
-        InvalidationListener vsbListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                if (!IS_TOUCH_SUPPORTED) {
-                    posY = Utils.clamp(getSkinnable().getVmin(), vsb.getValue(), getSkinnable().getVmax());
-                }
-                else {
-                    posY = vsb.getValue();
-                }
-                updatePosY();
+        InvalidationListener vsbListener = valueModel -> {
+            if (!IS_TOUCH_SUPPORTED) {
+                posY = Utils.clamp(getSkinnable().getVmin(), vsb.getValue(), getSkinnable().getVmax());
             }
+            else {
+                posY = vsb.getValue();
+            }
+            updatePosY();
         };
         vsb.valueProperty().addListener(vsbListener);
 
-        InvalidationListener hsbListener = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                if (!IS_TOUCH_SUPPORTED) {
-                    posX = Utils.clamp(getSkinnable().getHmin(), hsb.getValue(), getSkinnable().getHmax());
-                }
-                else {
-                    posX = hsb.getValue();
-                }
-                updatePosX();
+        InvalidationListener hsbListener = valueModel -> {
+            if (!IS_TOUCH_SUPPORTED) {
+                posX = Utils.clamp(getSkinnable().getHmin(), hsb.getValue(), getSkinnable().getHmax());
             }
+            else {
+                posX = hsb.getValue();
+            }
+            updatePosX();
         };
         hsb.valueProperty().addListener(hsbListener);
 
-        viewRect.setOnMousePressed(new EventHandler<javafx.scene.input.MouseEvent>() {
-           @Override public void handle(javafx.scene.input.MouseEvent e) {
-               mouseDown = true;
-               if (IS_TOUCH_SUPPORTED) {
-                   startSBReleasedAnimation();
-               }
-               pressX = e.getX();
-               pressY = e.getY();
-               ohvalue = hsb.getValue();
-               ovvalue = vsb.getValue();
-           }
+        viewRect.setOnMousePressed(e -> {
+            mouseDown = true;
+            if (IS_TOUCH_SUPPORTED) {
+                startSBReleasedAnimation();
+            }
+            pressX = e.getX();
+            pressY = e.getY();
+            ohvalue = hsb.getValue();
+            ovvalue = vsb.getValue();
         });
 
 
-        viewRect.setOnDragDetected(new EventHandler<javafx.scene.input.MouseEvent>() {
-           @Override public void handle(javafx.scene.input.MouseEvent e) {
-                if (IS_TOUCH_SUPPORTED) {
-                    startSBReleasedAnimation();
-                }
-               if (getSkinnable().isPannable()) {
-                 dragDetected = true;
-                 if (saveCursor == null) {
-                     saveCursor = getSkinnable().getCursor();
-                     if (saveCursor == null) {
-                         saveCursor = Cursor.DEFAULT;
-                     }
-                     getSkinnable().setCursor(Cursor.MOVE);
-                     getSkinnable().requestLayout();
-                 }
-               }
-           }
-        });
-
-        viewRect.addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {
-                 mouseDown = false;
-                 if (dragDetected == true) {
-                     if (saveCursor != null) {
-                         getSkinnable().setCursor(saveCursor);
-                         saveCursor = null;
-                         getSkinnable().requestLayout();
-                     }
-                     dragDetected = false;
-                 }
-
-                 /*
-                 ** if the contents need repositioning, and there's is no
-                 ** touch event in progress, then start the repositioning.
-                 */
-                 if ((posY > getSkinnable().getVmax() || posY < getSkinnable().getVmin() ||
-                     posX > getSkinnable().getHmax() || posX < getSkinnable().getHmin()) && !touchDetected) {
-                     startContentsToViewport();
-                 }
+        viewRect.setOnDragDetected(e -> {
+             if (IS_TOUCH_SUPPORTED) {
+                 startSBReleasedAnimation();
+             }
+            if (getSkinnable().isPannable()) {
+              dragDetected = true;
+              if (saveCursor == null) {
+                  saveCursor = getSkinnable().getCursor();
+                  if (saveCursor == null) {
+                      saveCursor = Cursor.DEFAULT;
+                  }
+                  getSkinnable().setCursor(Cursor.MOVE);
+                  getSkinnable().requestLayout();
+              }
             }
         });
-        viewRect.setOnMouseDragged(new EventHandler<javafx.scene.input.MouseEvent>() {
-           @Override public void handle(javafx.scene.input.MouseEvent e) {
-                if (IS_TOUCH_SUPPORTED) {
-                    startSBReleasedAnimation();
+
+        viewRect.addEventFilter(MouseEvent.MOUSE_RELEASED, e -> {
+             mouseDown = false;
+             if (dragDetected == true) {
+                 if (saveCursor != null) {
+                     getSkinnable().setCursor(saveCursor);
+                     saveCursor = null;
+                     getSkinnable().requestLayout();
+                 }
+                 dragDetected = false;
+             }
+
+             /*
+             ** if the contents need repositioning, and there's is no
+             ** touch event in progress, then start the repositioning.
+             */
+             if ((posY > getSkinnable().getVmax() || posY < getSkinnable().getVmin() ||
+                 posX > getSkinnable().getHmax() || posX < getSkinnable().getHmin()) && !touchDetected) {
+                 startContentsToViewport();
+             }
+        });
+        viewRect.setOnMouseDragged(e -> {
+             if (IS_TOUCH_SUPPORTED) {
+                 startSBReleasedAnimation();
+             }
+            /*
+            ** for mobile-touch we allow drag, even if not pannagle
+            */
+            if (getSkinnable().isPannable() || IS_TOUCH_SUPPORTED) {
+                double deltaX = pressX - e.getX();
+                double deltaY = pressY - e.getY();
+                /*
+                ** we only drag if not all of the content is visible.
+                */
+                if (hsb.getVisibleAmount() > 0.0 && hsb.getVisibleAmount() < hsb.getMax()) {
+                    if (Math.abs(deltaX) > PAN_THRESHOLD) {
+                        if (isReverseNodeOrientation()) {
+                            deltaX = -deltaX;
+                        }
+                        double newHVal = (ohvalue + deltaX / (nodeWidth - viewRect.getWidth()) * (hsb.getMax() - hsb.getMin()));
+                        if (!IS_TOUCH_SUPPORTED) {
+                            if (newHVal > hsb.getMax()) {
+                                newHVal = hsb.getMax();
+                            }
+                            else if (newHVal < hsb.getMin()) {
+                                newHVal = hsb.getMin();
+                            }
+                            hsb.setValue(newHVal);
+                        }
+                        else {
+                            hsb.setValue(newHVal);
+                        }
+                    }
                 }
-               /*
-               ** for mobile-touch we allow drag, even if not pannagle
-               */
-               if (getSkinnable().isPannable() || IS_TOUCH_SUPPORTED) {
-                   double deltaX = pressX - e.getX();
-                   double deltaY = pressY - e.getY();
-                   /*
-                   ** we only drag if not all of the content is visible.
-                   */
-                   if (hsb.getVisibleAmount() > 0.0 && hsb.getVisibleAmount() < hsb.getMax()) {
-                       if (Math.abs(deltaX) > PAN_THRESHOLD) {
-                           if (isReverseNodeOrientation()) {
-                               deltaX = -deltaX;
-                           }
-                           double newHVal = (ohvalue + deltaX / (nodeWidth - viewRect.getWidth()) * (hsb.getMax() - hsb.getMin()));
-                           if (!IS_TOUCH_SUPPORTED) {
-                               if (newHVal > hsb.getMax()) {
-                                   newHVal = hsb.getMax();
-                               }
-                               else if (newHVal < hsb.getMin()) {
-                                   newHVal = hsb.getMin();
-                               }
-                               hsb.setValue(newHVal);
-                           }
-                           else {
-                               hsb.setValue(newHVal);
-                           }
-                       }
-                   }
-                   /*
-                   ** we only drag if not all of the content is visible.
-                   */
-                   if (vsb.getVisibleAmount() > 0.0 && vsb.getVisibleAmount() < vsb.getMax()) {
-                       if (Math.abs(deltaY) > PAN_THRESHOLD) {
-                           double newVVal = (ovvalue + deltaY / (nodeHeight - viewRect.getHeight()) * (vsb.getMax() - vsb.getMin()));
-                           if (!IS_TOUCH_SUPPORTED) {
-                               if (newVVal > vsb.getMax()) {
-                                   newVVal = vsb.getMax();
-                               }
-                               else if (newVVal < vsb.getMin()) {
-                                   newVVal = vsb.getMin();
-                               }
-                               vsb.setValue(newVVal);
-                           }
-                           else {
-                               vsb.setValue(newVVal);
-                           }
-                       }
-                   }
-               }
-               /*
-               ** we need to consume drag events, as we don't want
-               ** the scrollpane itself to be dragged on every mouse click
-               */
-               e.consume();
-           }
+                /*
+                ** we only drag if not all of the content is visible.
+                */
+                if (vsb.getVisibleAmount() > 0.0 && vsb.getVisibleAmount() < vsb.getMax()) {
+                    if (Math.abs(deltaY) > PAN_THRESHOLD) {
+                        double newVVal = (ovvalue + deltaY / (nodeHeight - viewRect.getHeight()) * (vsb.getMax() - vsb.getMin()));
+                        if (!IS_TOUCH_SUPPORTED) {
+                            if (newVVal > vsb.getMax()) {
+                                newVVal = vsb.getMax();
+                            }
+                            else if (newVVal < vsb.getMin()) {
+                                newVVal = vsb.getMin();
+                            }
+                            vsb.setValue(newVVal);
+                        }
+                        else {
+                            vsb.setValue(newVVal);
+                        }
+                    }
+                }
+            }
+            /*
+            ** we need to consume drag events, as we don't want
+            ** the scrollpane itself to be dragged on every mouse click
+            */
+            e.consume();
         });
 
 
@@ -456,116 +449,111 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         ** In a ScrollPane a vertical scroll should scroll on the vertical only,
         ** whereas in a horizontal ScrollBar it can scroll horizontally.
         */ 
-        final EventDispatcher blockEventDispatcher = new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               // block the event from being passed down to children
-               return event;
-           }
-        };
+        final EventDispatcher blockEventDispatcher = (event, tail) -> event;
         // block ScrollEvent from being passed down to scrollbar's skin
         final EventDispatcher oldHsbEventDispatcher = hsb.getEventDispatcher();
-        hsb.setEventDispatcher(new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL &&
-                       !((ScrollEvent)event).isDirect()) {
-                   tail = tail.prepend(blockEventDispatcher);
-                   tail = tail.prepend(oldHsbEventDispatcher);
-                   return tail.dispatchEvent(event);
-               }
-               return oldHsbEventDispatcher.dispatchEvent(event, tail);
-           }
+        hsb.setEventDispatcher((event, tail) -> {
+            if (event.getEventType() == ScrollEvent.SCROLL &&
+                    !((ScrollEvent)event).isDirect()) {
+                tail = tail.prepend(blockEventDispatcher);
+                tail = tail.prepend(oldHsbEventDispatcher);
+                return tail.dispatchEvent(event);
+            }
+            return oldHsbEventDispatcher.dispatchEvent(event, tail);
         });
         // block ScrollEvent from being passed down to scrollbar's skin
         final EventDispatcher oldVsbEventDispatcher = vsb.getEventDispatcher();
-        vsb.setEventDispatcher(new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL &&
-                       !((ScrollEvent)event).isDirect()) {
-                   tail = tail.prepend(blockEventDispatcher);
-                   tail = tail.prepend(oldVsbEventDispatcher);
-                   return tail.dispatchEvent(event);
-               }
-               return oldVsbEventDispatcher.dispatchEvent(event, tail);
-           }
+        vsb.setEventDispatcher((event, tail) -> {
+            if (event.getEventType() == ScrollEvent.SCROLL &&
+                    !((ScrollEvent)event).isDirect()) {
+                tail = tail.prepend(blockEventDispatcher);
+                tail = tail.prepend(oldVsbEventDispatcher);
+                return tail.dispatchEvent(event);
+            }
+            return oldVsbEventDispatcher.dispatchEvent(event, tail);
         });
 
         /*
-        ** listen for ScrollEvents over the whole of the ScrollPane
-        ** area, the above dispatcher having removed the ScrollBars
-        ** scroll event handling.
-        */
-        getSkinnable().addEventHandler(ScrollEvent.SCROLL, new EventHandler<javafx.scene.input.ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                if (IS_TOUCH_SUPPORTED) {
-                    startSBReleasedAnimation();
+         * listen for ScrollEvents over the whole of the ScrollPane
+         * area, the above dispatcher having removed the ScrollBars
+         * scroll event handling.
+         *
+         * Note that we use viewRect here, rather than setting the eventHandler
+         * on the ScrollPane itself. This is for RT-31582, and effectively
+         * allows for us to prioritise handling (and consuming) the event
+         * internally, before it is made available to users listening to events
+         * on the control. This is consistent with the VirtualFlow-based controls.
+         */
+        viewRect.addEventHandler(ScrollEvent.SCROLL, event -> {
+            if (IS_TOUCH_SUPPORTED) {
+                startSBReleasedAnimation();
+            }
+            /*
+            ** if we're completely visible then do nothing....
+            ** we only consume an event that we've used.
+            */
+            if (vsb.getVisibleAmount() < vsb.getMax()) {
+                double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
+                double vPixelValue;
+                if (nodeHeight > 0.0) {
+                    vPixelValue = vRange / nodeHeight;
                 }
-                /*
-                ** if we're completely visible then do nothing....
-                ** we only consume an event that we've used.
-                */
-                if (vsb.getVisibleAmount() < vsb.getMax()) {
-                    double vRange = getSkinnable().getVmax()-getSkinnable().getVmin();
-                    double vPixelValue;
-                    if (nodeHeight > 0.0) {
-                        vPixelValue = vRange / nodeHeight;
-                    }
-                    else {
-                        vPixelValue = 0.0;
-                    }
-                    double newValue = vsb.getValue()+(-event.getDeltaY())*vPixelValue;
-                    if (!IS_TOUCH_SUPPORTED) {
-                        if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
-                            (event.getDeltaY() < 0.0 && vsb.getValue() < vsb.getMax())) {
-                            vsb.setValue(newValue);
-                            event.consume();
-                        }
-                    }
-                    else {
-                        /*
-                        ** if there is a repositioning in progress then we only
-                        ** set the value for 'real' events
-                        */
-                        if (!(((ScrollEvent)event).isInertia()) || (((ScrollEvent)event).isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
-                            vsb.setValue(newValue);
-                            if ((newValue > vsb.getMax() || newValue < vsb.getMin()) && (!mouseDown && !touchDetected)) {
-                                startContentsToViewport();
-                            }
-                            event.consume();
-                        }
+                else {
+                    vPixelValue = 0.0;
+                }
+                double newValue = vsb.getValue()+(-event.getDeltaY())*vPixelValue;
+                if (!IS_TOUCH_SUPPORTED) {
+                    if ((event.getDeltaY() > 0.0 && vsb.getValue() > vsb.getMin()) ||
+                        (event.getDeltaY() < 0.0 && vsb.getValue() < vsb.getMax())) {
+                        vsb.setValue(newValue);
+                        event.consume();
                     }
                 }
-
-                if (hsb.getVisibleAmount() < hsb.getMax()) {
-                    double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
-                    double hPixelValue;
-                    if (nodeWidth > 0.0) {
-                        hPixelValue = hRange / nodeWidth;
-                    }
-                    else {
-                        hPixelValue = 0.0;
-                    }
-
-                    double newValue = hsb.getValue()+(-event.getDeltaX())*hPixelValue;
-                    if (!IS_TOUCH_SUPPORTED) {
-                        if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
-                            (event.getDeltaX() < 0.0 && hsb.getValue() < hsb.getMax())) {
-                            hsb.setValue(newValue);
-                            event.consume();
+                else {
+                    /*
+                    ** if there is a repositioning in progress then we only
+                    ** set the value for 'real' events
+                    */
+                    if (!(((ScrollEvent)event).isInertia()) || (((ScrollEvent)event).isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
+                        vsb.setValue(newValue);
+                        if ((newValue > vsb.getMax() || newValue < vsb.getMin()) && (!mouseDown && !touchDetected)) {
+                            startContentsToViewport();
                         }
+                        event.consume();
                     }
-                    else {
-                        /*
-                        ** if there is a repositioning in progress then we only
-                        ** set the value for 'real' events
-                        */
-                        if (!(((ScrollEvent)event).isInertia()) || (((ScrollEvent)event).isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
-                            hsb.setValue(newValue);
+                }
+            }
 
-                            if ((newValue > hsb.getMax() || newValue < hsb.getMin()) && (!mouseDown && !touchDetected)) {
-                                startContentsToViewport();
-                            }
-                            event.consume();
+            if (hsb.getVisibleAmount() < hsb.getMax()) {
+                double hRange = getSkinnable().getHmax()-getSkinnable().getHmin();
+                double hPixelValue;
+                if (nodeWidth > 0.0) {
+                    hPixelValue = hRange / nodeWidth;
+                }
+                else {
+                    hPixelValue = 0.0;
+                }
+
+                double newValue = hsb.getValue()+(-event.getDeltaX())*hPixelValue;
+                if (!IS_TOUCH_SUPPORTED) {
+                    if ((event.getDeltaX() > 0.0 && hsb.getValue() > hsb.getMin()) ||
+                        (event.getDeltaX() < 0.0 && hsb.getValue() < hsb.getMax())) {
+                        hsb.setValue(newValue);
+                        event.consume();
+                    }
+                }
+                else {
+                    /*
+                    ** if there is a repositioning in progress then we only
+                    ** set the value for 'real' events
+                    */
+                    if (!(((ScrollEvent)event).isInertia()) || (((ScrollEvent)event).isInertia()) && (contentsToViewTimeline == null || contentsToViewTimeline.getStatus() == Status.STOPPED)) {
+                        hsb.setValue(newValue);
+
+                        if ((newValue > hsb.getMax() || newValue < hsb.getMin()) && (!mouseDown && !touchDetected)) {
+                            startContentsToViewport();
                         }
+                        event.consume();
                     }
                 }
             }
@@ -575,23 +563,23 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         ** there are certain animations that need to know if the touch is
         ** happening.....
         */
-        getSkinnable().addEventHandler(TouchEvent.TOUCH_PRESSED, new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                touchDetected = true;
-                startSBReleasedAnimation();
-                e.consume();
-            }
+        getSkinnable().addEventHandler(TouchEvent.TOUCH_PRESSED, e -> {
+            touchDetected = true;
+            startSBReleasedAnimation();
+            e.consume();
         });
 
-        getSkinnable().addEventHandler(TouchEvent.TOUCH_RELEASED,new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                touchDetected = false;
-                e.consume();
-            }
+        getSkinnable().addEventHandler(TouchEvent.TOUCH_RELEASED, e -> {
+            touchDetected = false;
+            e.consume();
         });
 
         // ScrollPanes do not block all MouseEvents by default, unlike most other UI Controls.
         consumeMouseEvents(false);
+
+        // update skin initial state to match control (see RT-35554)
+        hsb.setValue(control.getHvalue());
+        vsb.setValue(control.getVvalue());
     }
 
 
@@ -641,50 +629,36 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     void scrollBoundsIntoView(Bounds b) {
         double dx = 0.0;
         double dy = 0.0;
-        boolean needsLayout = false;
         if (b.getMaxX() > contentWidth) {
-            dx = contentWidth - b.getMaxX();
+            dx = b.getMinX() - snappedLeftInset();
         }
-        if (b.getMinX() < 0) {
-            dx = -b.getMinX();
+        if (b.getMinX() < snappedLeftInset()) {
+            dx = b.getMaxX() - contentWidth - snappedLeftInset();
         }
-        if (b.getMaxY() > contentHeight) {
-            dy = contentHeight - b.getMaxY();
+        if (b.getMaxY() > snappedTopInset() + contentHeight) {
+            dy = b.getMinY() - snappedTopInset();
         }
-        if (b.getMinY() < 0) {
-            dy = -b.getMinY();
+        if (b.getMinY() < snappedTopInset()) {
+            dy = b.getMaxY() - contentHeight - snappedTopInset();
         }
         // We want to move contentPanel's layoutX,Y by (dx,dy).
         // But to do this we have to set the scrollbars' values appropriately.
 
-        double newHvalue = hsb.getValue();
-        double newVvalue = vsb.getValue();
         if (dx != 0) {
-            double sdx = -dx * (hsb.getMax() - hsb.getMin()) / (nodeWidth - viewRect.getWidth());
-            if (sdx < 0) {
-                sdx -= hsb.getUnitIncrement();
-            } else {
-                sdx += hsb.getUnitIncrement();
-            }
-            newHvalue = clamp(hsb.getMin(), hsb.getValue() + sdx, hsb.getMax());
-            hsb.setValue(newHvalue);
-            needsLayout = true;
-        }
-        if (dy != 0) {
-            double sdy = -dy * (vsb.getMax() - vsb.getMin()) / (nodeHeight - viewRect.getHeight());
-            if (sdy < 0) {
-                sdy -= vsb.getUnitIncrement();
-            } else {
-                sdy += vsb.getUnitIncrement();
-            }
-            newVvalue = clamp(vsb.getMin(), vsb.getValue() + sdy, vsb.getMax());
-            vsb.setValue(newVvalue);
-            needsLayout = true;
-        }
-
-        if (needsLayout == true) {
+            double sdx = dx * (hsb.getMax() - hsb.getMin()) / (nodeWidth - contentWidth);
+            // Adjust back for some amount so that the Node border is not too close to view border
+            sdx += -1 * Math.signum(sdx) * hsb.getUnitIncrement() / 5; // This accounts to 2% of view width
+            hsb.setValue(hsb.getValue() + sdx);
             getSkinnable().requestLayout();
         }
+        if (dy != 0) {
+            double sdy = dy * (vsb.getMax() - vsb.getMin()) / (nodeHeight - contentHeight);
+            // Adjust back for some amount so that the Node border is not too close to view border
+            sdy += -1 * Math.signum(sdy) * vsb.getUnitIncrement() / 5; // This accounts to 2% of view height
+            vsb.setValue(vsb.getValue() + sdy);
+            getSkinnable().requestLayout();
+        }
+
     }
 
     /*
@@ -734,25 +708,35 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ScrollPane sp = getSkinnable();
-        
+
+        double vsbWidth = sp.getVbarPolicy() == ScrollBarPolicy.ALWAYS ? vsb.prefWidth(ScrollBar.USE_COMPUTED_SIZE) : 0;
+        double minWidth = vsbWidth + snappedLeftInset() + snappedRightInset();
+
         if (sp.getPrefViewportWidth() > 0) {
-            double vsbWidth = sp.getVbarPolicy() == ScrollBarPolicy.ALWAYS? vsb.prefWidth(-1) : 0;
-            return (sp.getPrefViewportWidth() + vsbWidth + snappedLeftInset() + snappedRightInset());
+            return (sp.getPrefViewportWidth() + minWidth);
+        }
+        else if (sp.getContent() != null) {
+            return (sp.getContent().prefWidth(height) + minWidth);
         }
         else {
-            return DEFAULT_PREF_SIZE;
+            return Math.max(minWidth, DEFAULT_PREF_SIZE);
         }
     }
 
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ScrollPane sp = getSkinnable();
-        
+
+        double hsbHeight = sp.getHbarPolicy() == ScrollBarPolicy.ALWAYS ? hsb.prefHeight(ScrollBar.USE_COMPUTED_SIZE) : 0;
+        double minHeight = hsbHeight + snappedTopInset() + snappedBottomInset();
+
         if (sp.getPrefViewportHeight() > 0) {
-            double hsbHeight = sp.getHbarPolicy() == ScrollBarPolicy.ALWAYS? hsb.prefHeight(-1) : 0;
-            return (sp.getPrefViewportHeight() + hsbHeight + snappedTopInset() + snappedBottomInset());
+            return (sp.getPrefViewportHeight() + minHeight);
+        }
+        else if (sp.getContent() != null) {
+            return (sp.getContent().prefHeight(width) + minHeight);
         }
         else {
-            return DEFAULT_PREF_SIZE;
+            return Math.max(minHeight, DEFAULT_PREF_SIZE);
         }
     }
 
@@ -817,6 +801,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 if (vsbvis) {
                     // now both are visible
                     contentWidth -= vsbWidth;
+                    hsbWidth -= vsbWidth;
                     computeScrollNodeSize(contentWidth, contentHeight);
                 }
             } else if (vsbvis && !hsbvis) {
@@ -825,6 +810,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
                 if (hsbvis) {
                     // now both are visible
                     contentHeight -= hsbHeight;
+                    vsbHeight -= hsbHeight;
                     computeScrollNodeSize(contentWidth, contentHeight);
                 }
             }
@@ -884,7 +870,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         }
         updateHorizontalSB();
 
-        viewRect.resize(snapSize(contentWidth), snapSize(contentHeight));
+        viewRect.resizeRelocate(snappedLeftInset(), snappedTopInset(), snapSize(contentWidth), snapSize(contentHeight));
         resetClip();
 
         if (vsbvis && hsbvis) {
@@ -945,29 +931,33 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
     private boolean determineHorizontalSBVisible() {
         final ScrollPane sp = getSkinnable();
-        final double contentw = sp.getWidth() - snappedLeftInset() - snappedRightInset();
+
         if (IS_TOUCH_SUPPORTED) {
-            return (tempVisibility && (nodeWidth > contentw));
+            return (tempVisibility && (nodeWidth > contentWidth));
         }
         else {
-            return (getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
-                ((getSkinnable().getHbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
-                 ((getSkinnable().isFitToWidth() && scrollNode != null ? scrollNode.isResizable() : false) ?
-                  (nodeWidth > contentw && scrollNode.minWidth(-1) > contentw) : (nodeWidth > contentw)));
+            // RT-17395: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
+            ScrollBarPolicy hbarPolicy = sp.getHbarPolicy();
+            return (ScrollBarPolicy.NEVER == hbarPolicy) ? false :
+                   ((ScrollBarPolicy.ALWAYS == hbarPolicy) ? true :
+                   ((sp.isFitToWidth() && scrollNode != null ? scrollNode.isResizable() : false) ?
+                   (nodeWidth > contentWidth && scrollNode.minWidth(-1) > contentWidth) : (nodeWidth > contentWidth)));
         }
     }
 
     private boolean determineVerticalSBVisible() {
         final ScrollPane sp = getSkinnable();
-        final double contenth = sp.getHeight() - snappedTopInset() - snappedBottomInset();
+
         if (IS_TOUCH_SUPPORTED) {
-            return (tempVisibility && (nodeHeight > contenth));
+            return (tempVisibility && (nodeHeight > contentHeight));
         }
         else {
-            return (getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.NEVER)) ? false :
-                ((getSkinnable().getVbarPolicy().equals(ScrollBarPolicy.ALWAYS)) ? true :
-                 ((getSkinnable().isFitToHeight() && scrollNode != null ? scrollNode.isResizable() : false) ?
-                  (nodeHeight > contenth && scrollNode.minHeight(-1) > contenth) : (nodeHeight > contenth)));
+            // RT-17395: ScrollBarPolicy might be null. If so, treat it as "AS_NEEDED", which is the default
+            ScrollBarPolicy vbarPolicy = sp.getVbarPolicy();
+            return (ScrollBarPolicy.NEVER == vbarPolicy) ? false :
+                   ((ScrollBarPolicy.ALWAYS == vbarPolicy) ? true :
+                   ((sp.isFitToHeight() && scrollNode != null ? scrollNode.isResizable() : false) ?
+                   (nodeHeight > contentHeight && scrollNode.minHeight(-1) > contentHeight) : (nodeHeight > contentHeight)));
         }
     }
 
@@ -1013,7 +1003,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             if (nodeWidth > contentWidth) {
                 updatePosX();
             } else {
-                viewContent.setLayoutX(snappedLeftInset());
+                viewContent.setLayoutX(0);
             }
         }
     }
@@ -1037,7 +1027,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             if (nodeHeight > contentHeight) {
                 updatePosY();
             } else {
-                viewContent.setLayoutY(snappedTopInset());
+                viewContent.setLayoutY(0);
             }
         }
     }
@@ -1045,22 +1035,23 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     private double updatePosX() {
         final ScrollPane sp = getSkinnable();
         double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
-        viewContent.setLayoutX(snapPosition(snappedLeftInset() - x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)));
-        sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
+        double minX = Math.min((- x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)), 0);
+        viewContent.setLayoutX(snapPosition(minX));
+        if (!sp.hvalueProperty().isBound()) sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
         return posX;
     }
 
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
-        viewContent.setLayoutY(snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)));
-        sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
+        double minY = Math.min((- posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)), 0);
+        viewContent.setLayoutY(snapPosition(minY));
+        if (!sp.vvalueProperty().isBound()) sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;
     }
 
     private void resetClip() {
         clipRect.setWidth(snapSize(contentWidth));
         clipRect.setHeight(snapSize(contentHeight));
-        clipRect.relocate(snappedLeftInset(), snappedTopInset());
     }
 
     Timeline sbTouchTimeline;
@@ -1081,20 +1072,16 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             ** while after a scroll/drag
             */
             sbTouchTimeline = new Timeline();
-            sbTouchKF1 = new KeyFrame(Duration.millis(0), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    tempVisibility = true;
-                    if (touchDetected == true || mouseDown == true) {
-                        sbTouchTimeline.playFromStart();
-                    }
+            sbTouchKF1 = new KeyFrame(Duration.millis(0), event -> {
+                tempVisibility = true;
+                if (touchDetected == true || mouseDown == true) {
+                    sbTouchTimeline.playFromStart();
                 }
             });
 
-            sbTouchKF2 = new KeyFrame(Duration.millis(1000), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    tempVisibility = false;
-                    getSkinnable().requestLayout();
-                }
+            sbTouchKF2 = new KeyFrame(Duration.millis(1000), event -> {
+                tempVisibility = false;
+                getSkinnable().requestLayout();
             });
             sbTouchTimeline.getKeyFrames().addAll(sbTouchKF1, sbTouchKF2);
         }
@@ -1143,11 +1130,9 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         /*
         ** reposition
         */
-        contentsToViewKF2 = new KeyFrame(Duration.millis(150), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    getSkinnable().requestLayout();
-                }
-            },
+        contentsToViewKF2 = new KeyFrame(Duration.millis(150), event -> {
+            getSkinnable().requestLayout();
+        },
             new KeyValue(contentPosX, newPosX),
             new KeyValue(contentPosY, newPosY)
             );
@@ -1209,5 +1194,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             };
         }
         return contentPosY;
+    }
+
+    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case VERTICAL_SCROLLBAR: return vsb;
+            case HORIZONTAL_SCROLLBAR: return hsb;
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

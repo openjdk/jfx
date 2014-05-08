@@ -28,12 +28,13 @@ package com.sun.scenario.effect;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * An effect that blends the two inputs together using one of the
  * pre-defined {@code Mode}s.
  */
-public class Blend extends CoreEffect {
+public class Blend extends CoreEffect<RenderState> {
 
     /**
      * A blending mode that defines the manner in which the inputs
@@ -574,18 +575,20 @@ public class Blend extends CoreEffect {
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
         // A blend operation operates on its inputs pixel-by-pixel
         // with no expansion or contraction.
         // RT-27563
-        // TODO: For blend modes which "intersect" their inputs, we
-        // could further restrict the amount we ask for each input to the
-        // intersection of the two input bounds, but for now we will
-        // simply pass along the output clip as the input clip.
-        return outputClip;
+        // TODO: The RenderSpaceRenderState object uses the output clip unchanged
+        // for its inputs, but we could further restrict the amount we ask for
+        // each input to the intersection of the two input bounds, but for now we
+        // will simply let it pass along the output clip as the input clip.
+        return RenderState.RenderSpaceRenderState;
     }
 
     @Override

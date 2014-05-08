@@ -78,7 +78,7 @@ sourceSets {
 
 // Workaround for lack of Antlr 3 support in Gradle. By defining a configuration,
 // we can then give it a class path and use that classpath to execute a java command
-getConfigurations().add("antlr3");
+getConfigurations().create("antlr3");
 
 dependencies {
     compile     group: "org.antlr", name: "antlr",          version: "3.1.3"

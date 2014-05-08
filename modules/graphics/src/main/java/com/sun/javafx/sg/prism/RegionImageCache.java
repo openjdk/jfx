@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import java.util.HashMap;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.logging.PulseLogger;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.prism.Graphics;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
@@ -126,8 +127,8 @@ class RegionImageCache {
             imageMap.clear();
             packer.add(rect);
             backingStore.createGraphics().clear();
-            if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                PulseLogger.PULSE_LOGGER.renderIncrementCounter("Region image cache flushed");
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.incrementCounter("Region image cache flushed");
             }
         }
         imageMap.put(key, new CachedImage(rect, background, shape));

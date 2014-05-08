@@ -33,9 +33,7 @@ public class WebPageTest extends TestBase {
     }
     
     private String getHtml(final WebPage page) throws Exception {
-        return submit(new Callable<String>() { public String call() {
-            return page.getHtml(page.getMainFrame());
-        }});
+        return submit(() -> page.getHtml(page.getMainFrame()));
     }
 
     @Test public void testGetHtmlIllegalFrameId() {

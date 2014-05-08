@@ -50,7 +50,7 @@ final class LensTouchInputSupport {
      * Property is used by Lens native input driver 
      * 
      */
-    private static final int touchTapRadius;
+    static final int touchTapRadius;
     /**
      * This property determine the sensitivity of move events from touch. The 
      * bigger the value the less sensitive is the touch screen. In practice move
@@ -89,44 +89,19 @@ final class LensTouchInputSupport {
 
     static {
         touchTapRadius = AccessController.doPrivileged(
-        new PrivilegedAction<Integer>() {
-            @Override
-            public Integer run() {
-                return Integer.getInteger("lens.input.touch.TapRadius", 20);
-            }
-        });
+                (PrivilegedAction<Integer>) () -> Integer.getInteger("lens.input.touch.TapRadius", 20));
 
         touchMoveSensitivity = AccessController.doPrivileged(
-        new PrivilegedAction<Integer>() {
-            @Override
-            public Integer run() {
-                return Integer.getInteger("lens.input.touch.MoveSensitivity", 20);
-            }
-        });
+                (PrivilegedAction<Integer>) () -> Integer.getInteger("lens.input.touch.MoveSensitivity", 20));
 
         pruneInputDevices = AccessController.doPrivileged(
-        new PrivilegedAction<Boolean>() {
-            @Override
-            public Boolean run() {
-                return Boolean.getBoolean("lens.input.pruneDevices");
-            }
-        });
+                (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("lens.input.pruneDevices"));
 
         useMultiTouch = AccessController.doPrivileged(
-        new PrivilegedAction<Boolean>() {
-            @Override
-            public Boolean run() {
-                return Boolean.getBoolean("com.sun.javafx.experimental.embedded.multiTouch");
-            }
-        });
+                (PrivilegedAction<Boolean>) () -> !(Boolean.getBoolean("lens.input.forceSingleTouch")));
 
         enableDeviceTrace = AccessController.doPrivileged(
-        new PrivilegedAction<Boolean>() {
-            @Override
-            public Boolean run() {
-                return Boolean.getBoolean("lens.input.trace");
-            }
-        });
+                (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("lens.input.trace"));
 
     }
 

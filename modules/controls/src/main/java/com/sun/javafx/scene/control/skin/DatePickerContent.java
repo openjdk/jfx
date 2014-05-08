@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.DateCell;
 import javafx.scene.control.Label;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -128,11 +129,8 @@ public class DatePickerContent extends VBox {
             displayedYearMonth.set((date != null) ? YearMonth.from(date) : YearMonth.now());
         }
 
-        displayedYearMonth.addListener(new ChangeListener<YearMonth>() {
-            @Override public void changed(ObservableValue<? extends YearMonth> observable,
-                                          YearMonth oldValue, YearMonth newValue) {
-                updateValues();
-            }
+        displayedYearMonth.addListener((observable, oldValue, newValue) -> {
+            updateValues();
         });
 
 
@@ -166,18 +164,16 @@ public class DatePickerContent extends VBox {
         gridPane.setVgap(-1);
         gridPane.setHgap(-1);
 
-        gridPane.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (hasFocus) {
-                    if (lastFocusedDayCell != null) {
-                        Platform.runLater(new Runnable() {
-                            @Override public void run() {
-                                lastFocusedDayCell.requestFocus();
-                            }
-                        });
-                    } else {
-                        clearFocus();
-                    }
+        gridPane.focusedProperty().addListener((ov, t, hasFocus) -> {
+            if (hasFocus) {
+                if (lastFocusedDayCell != null) {
+                    Platform.runLater(new Runnable() {
+                        @Override public void run() {
+                            lastFocusedDayCell.requestFocus();
+                        }
+                    });
+                } else {
+                    clearFocus();
                 }
             }
         });
@@ -204,98 +200,69 @@ public class DatePickerContent extends VBox {
 
         refresh();
 
-        // RT-30511: This enables traversal (not sure why Scene doesn't handle this),
-        // plus it prevents key events from reaching the popup's owner.
-        addEventHandler(KeyEvent.ANY, new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent e) {
-                Node node = getScene().getFocusOwner();
+        // RT-30511: This prevents key events from reaching the popup's owner.
+        addEventHandler(KeyEvent.ANY, e -> {
+            Node node = getScene().getFocusOwner();
+            if (node instanceof DateCell) {
+                lastFocusedDayCell = (DateCell)node;
+            }
+
+            if (e.getEventType() == KeyEvent.KEY_PRESSED) {
+                switch (e.getCode()) {
+                  case HOME:
+                      goToDate(LocalDate.now(), true);
+                      e.consume();
+                      break;
+
+
+                  case PAGE_UP:
+                      if ((isMac() && e.isMetaDown()) || (!isMac() && e.isControlDown())) {
+                          if (!backYearButton.isDisabled()) {
+                              forward(-1, YEARS, true);
+                          }
+                      } else {
+                          if (!backMonthButton.isDisabled()) {
+                              forward(-1, MONTHS, true);
+                          }
+                      }
+                      e.consume();
+                      break;
+
+                  case PAGE_DOWN:
+                      if ((isMac() && e.isMetaDown()) || (!isMac() && e.isControlDown())) {
+                          if (!forwardYearButton.isDisabled()) {
+                              forward(1, YEARS, true);
+                          }
+                      } else {
+                          if (!forwardMonthButton.isDisabled()) {
+                              forward(1, MONTHS, true);
+                          }
+                      }
+                      e.consume();
+                      break;
+                }
+
+                node = getScene().getFocusOwner();
                 if (node instanceof DateCell) {
                     lastFocusedDayCell = (DateCell)node;
                 }
+            }
 
-                if (e.getEventType() == KeyEvent.KEY_PRESSED) {
-                    switch (e.getCode()) {
-                      case TAB:
-                          node.impl_traverse(e.isShiftDown() ? Direction.PREVIOUS : Direction.NEXT);
-                          e.consume();
-                          break;
+            // Consume all key events except those that control
+            // showing the popup and traversal.
+            switch (e.getCode()) {
+              case ESCAPE:
+              case F4:
+              case F10:
+              case UP:
+              case DOWN:
+              case LEFT:
+              case RIGHT:
+              case TAB:
+                    break;
 
-                      case UP:
-                          if (!e.isAltDown()) {
-                              node.impl_traverse(Direction.UP);
-                              e.consume();
-                          }
-                          break;
-
-                      case DOWN:
-                          if (!e.isAltDown()) {
-                              node.impl_traverse(Direction.DOWN);
-                              e.consume();
-                          }
-                          break;
-
-                      case LEFT:
-                          node.impl_traverse(Direction.LEFT);
-                          e.consume();
-                          break;
-
-                      case RIGHT:
-                          node.impl_traverse(Direction.RIGHT);
-                          e.consume();
-                          break;
-
-                      case HOME:
-                          goToDate(LocalDate.now());
-                          e.consume();
-                          break;
-
-
-                      case PAGE_UP:
-                          if ((isMac() && e.isMetaDown()) || (!isMac() && e.isControlDown())) {
-                              if (!backYearButton.isDisabled()) {
-                                  forward(-1, YEARS);
-                              }
-                          } else {
-                              if (!backMonthButton.isDisabled()) {
-                                  forward(-1, MONTHS);
-                              }
-                          }
-                          e.consume();
-                          break;
-
-                      case PAGE_DOWN:
-                          if ((isMac() && e.isMetaDown()) || (!isMac() && e.isControlDown())) {
-                              if (!forwardYearButton.isDisabled()) {
-                                  forward(1, YEARS);
-                              }
-                          } else {
-                              if (!forwardMonthButton.isDisabled()) {
-                                  forward(1, MONTHS);
-                              }
-                          }
-                          e.consume();
-                          break;
-                    }
-
-                    node = getScene().getFocusOwner();
-                    if (node instanceof DateCell) {
-                        lastFocusedDayCell = (DateCell)node;
-                    }
-                }
-
-                // Consume all key events except those that control
-                // showing the popup.
-                switch (e.getCode()) {
-                  case ESCAPE:
-                  case F4:
-                  case F10:
-                  case UP:
-                  case DOWN:
-                      break;
-
-                  default:
-                    e.consume();
-                }
+              default:
+                e.consume();
             }
         });
     }
@@ -334,19 +301,15 @@ public class DatePickerContent extends VBox {
         forwardMonthButton.setGraphic(rightMonthArrow);
 
 
-        backMonthButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                forward(-1, MONTHS);
-            }
+        backMonthButton.setOnAction(t -> {
+            forward(-1, MONTHS, false);
         });
 
         monthLabel = new Label();
         monthLabel.getStyleClass().add("spinner-label");
 
-        forwardMonthButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                forward(1, MONTHS);
-            }
+        forwardMonthButton.setOnAction(t -> {
+            forward(1, MONTHS, false);
         });
 
         monthSpinner.getChildren().addAll(backMonthButton, monthLabel, forwardMonthButton);
@@ -374,19 +337,15 @@ public class DatePickerContent extends VBox {
         forwardYearButton.setGraphic(rightYearArrow);
 
 
-        backYearButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                forward(-1, YEARS);
-            }
+        backYearButton.setOnAction(t -> {
+            forward(-1, YEARS, false);
         });
 
         yearLabel = new Label();
         yearLabel.getStyleClass().add("spinner-label");
 
-        forwardYearButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                forward(1, YEARS);
-            }
+        forwardYearButton.setOnAction(t -> {
+            forward(1, YEARS, false);
         });
 
         yearSpinner.getChildren().addAll(backYearButton, yearLabel, forwardYearButton);
@@ -477,11 +436,13 @@ yearSpinner.setFillHeight(false);
         Chronology chrono = getPrimaryChronology();
         int firstOfMonthIdx = determineFirstOfMonthDayOfWeek();
         YearMonth curMonth = displayedYearMonth.get();
-        YearMonth prevMonth = curMonth.minusMonths(1);
-        YearMonth nextMonth = curMonth.plusMonths(1);
-        int daysInCurMonth = determineDaysInMonth(curMonth);
-        int daysInPrevMonth = determineDaysInMonth(prevMonth);
-        int daysInNextMonth = determineDaysInMonth(nextMonth);
+
+        // RT-31075: The following are now set in the try-catch block.
+        YearMonth prevMonth = null;
+        YearMonth nextMonth = null;
+        int daysInCurMonth = -1;
+        int daysInPrevMonth = -1;
+        int daysInNextMonth = -1;
 
         for (int i = 0; i < 6 * daysPerWeek; i++) {
             DateCell dayCell = dayCells.get(i);
@@ -492,14 +453,25 @@ yearSpinner.setFillHeight(false);
             dayCell.setTooltip(null);
 
             try {
+                if (daysInCurMonth == -1) {
+                    daysInCurMonth = curMonth.lengthOfMonth();
+                }
                 YearMonth month = curMonth;
                 int day = i - firstOfMonthIdx + 1;
                 //int index = firstOfMonthIdx + i - 1;
                 if (i < firstOfMonthIdx) {
+                    if (prevMonth == null) {
+                        prevMonth = curMonth.minusMonths(1);
+                        daysInPrevMonth = prevMonth.lengthOfMonth();
+                    }
                     month = prevMonth;
                     day = i + daysInPrevMonth - firstOfMonthIdx + 1;
                     dayCell.getStyleClass().add("previous-month");
                 } else if (i >= firstOfMonthIdx + daysInCurMonth) {
+                    if (nextMonth == null) {
+                        nextMonth = curMonth.plusMonths(1);
+                        daysInNextMonth = nextMonth.lengthOfMonth();
+                    }
                     month = nextMonth;
                     day = i - daysInCurMonth - firstOfMonthIdx + 1;
                     dayCell.getStyleClass().add("next-month");
@@ -576,10 +548,10 @@ yearSpinner.setFillHeight(false);
 
         Chronology chrono = datePicker.getChronology();
         LocalDate firstDayOfMonth = yearMonth.atDay(1);
-        backMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth.minusDays(1)));
-        forwardMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth.plusMonths(1)));
-        backYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth.minusYears(1)));
-        forwardYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth.plusYears(1)));
+        backMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth, -1, DAYS));
+        forwardMonthButton.setDisable(!isValidDate(chrono, firstDayOfMonth, +1, MONTHS));
+        backYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth, -1, YEARS));
+        forwardYearButton.setDisable(!isValidDate(chrono, firstDayOfMonth, +1, YEARS));
     }
 
     private String formatMonth(YearMonth yearMonth) {
@@ -660,10 +632,6 @@ yearSpinner.setFillHeight(false);
         return firstOfMonthIdx;
     }
 
-    private int determineDaysInMonth(YearMonth month) {
-        return month.atDay(1).plusMonths(1).minusDays(1).getDayOfMonth();
-    }
-
     private boolean isToday(LocalDate localDate) {
         return (localDate.equals(LocalDate.now()));
     }
@@ -674,24 +642,26 @@ yearSpinner.setFillHeight(false);
     }
 
     // public for behavior class
-    public void goToDayCell(DateCell dateCell, int offset, ChronoUnit unit) {
-        goToDate(dayCellDate(dateCell).plus(offset, unit));
+    public void goToDayCell(DateCell dateCell, int offset, ChronoUnit unit, boolean focusDayCell) {
+        goToDate(dayCellDate(dateCell).plus(offset, unit), focusDayCell);
     }
 
-    protected void forward(int offset, ChronoUnit unit) {
+    protected void forward(int offset, ChronoUnit unit, boolean focusDayCell) {
         YearMonth yearMonth = displayedYearMonth.get();
         DateCell dateCell = lastFocusedDayCell;
         if (dateCell == null || !dayCellDate(dateCell).getMonth().equals(yearMonth.getMonth())) {
             dateCell = findDayCellForDate(yearMonth.atDay(1));
         }
-        goToDayCell(dateCell, offset, unit);
+        goToDayCell(dateCell, offset, unit, focusDayCell);
     }
 
     // public for behavior class
-    public void goToDate(LocalDate date) {
+    public void goToDate(LocalDate date, boolean focusDayCell) {
         if (isValidDate(datePicker.getChronology(), date)) {
             displayedYearMonth.set(YearMonth.from(date));
-            findDayCellForDate(date).requestFocus();
+            if (focusDayCell) {
+                findDayCellForDate(date).requestFocus();
+            }
         }
     }
 
@@ -717,7 +687,7 @@ yearSpinner.setFillHeight(false);
         }
         if (YearMonth.from(focusDate).equals(displayedYearMonth.get())) {
             // focus date
-            goToDate(focusDate);
+            goToDate(focusDate, true);
         } else {
             // focus month spinner (should not happen)
             backMonthButton.requestFocus();
@@ -733,22 +703,20 @@ yearSpinner.setFillHeight(false);
     }
 
     protected void createDayCells() {
-        final EventHandler<MouseEvent> dayCellActionHandler = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent ev) {
-                if (ev.getButton() != MouseButton.PRIMARY) {
-                    return;
-                }
-
-                DateCell dayCell = (DateCell)ev.getSource();
-                selectDayCell(dayCell);
-                lastFocusedDayCell = dayCell;
+        final EventHandler<MouseEvent> dayCellActionHandler = ev -> {
+            if (ev.getButton() != MouseButton.PRIMARY) {
+                return;
             }
+
+            DateCell dayCell = (DateCell)ev.getSource();
+            selectDayCell(dayCell);
+            lastFocusedDayCell = dayCell;
         };
 
         for (int row = 0; row < 6; row++) {
             for (int col = 0; col < daysPerWeek; col++) {
                 DateCell dayCell = createDayCell();
-                dayCell.setOnMouseClicked(dayCellActionHandler);
+                dayCell.addEventHandler(MouseEvent.MOUSE_CLICKED, dayCellActionHandler);
                 dayCells.add(dayCell);
             }
         }
@@ -780,6 +748,16 @@ yearSpinner.setFillHeight(false);
      */
     protected Chronology getPrimaryChronology() {
         return datePicker.getChronology();
+    }
+
+    protected boolean isValidDate(Chronology chrono, LocalDate date, int offset, ChronoUnit unit) {
+        if (date != null) {
+            try {
+                return isValidDate(chrono, date.plus(offset, unit));
+            } catch (DateTimeException ex) {
+            }
+        }
+        return false;
     }
 
     protected boolean isValidDate(Chronology chrono, LocalDate date) {

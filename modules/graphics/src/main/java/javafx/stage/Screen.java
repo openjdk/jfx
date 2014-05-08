@@ -72,11 +72,7 @@ public final class Screen {
             FXCollections.unmodifiableObservableList(screens);
 
     static {
-        accessor = Toolkit.getToolkit().setScreenConfigurationListener(new TKScreenConfigurationListener() {
-            @Override public void screenConfigurationChanged() {
-                updateConfiguration();
-            }
-        });
+        accessor = Toolkit.getToolkit().setScreenConfigurationListener(() -> updateConfiguration());
     }
 
     private Screen() {

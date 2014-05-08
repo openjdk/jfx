@@ -82,11 +82,7 @@ public class SSEBackend extends TreeScanner {
     }
 
     private static SortedSet<Variable> getSortedVars(Collection<Variable> unsortedVars) {
-        Comparator<Variable> c = new Comparator<Variable>() {
-            public int compare(Variable v0, Variable v1) {
-                return v0.getName().compareTo(v1.getName());
-            }
-        };
+        Comparator<Variable> c = (v0, v1) -> v0.getName().compareTo(v1.getName());
         SortedSet<Variable> sortedVars = new TreeSet<Variable>(c);
         sortedVars.addAll(unsortedVars);
         return sortedVars;
@@ -94,9 +90,11 @@ public class SSEBackend extends TreeScanner {
 
     public final GenCode getGenCode(String effectName,
                                     String peerName,
+                                    String genericsName,
                                     String interfaceName)
     {
         Map<String, Variable> vars = parser.getSymbolTable().getGlobalVariables();
+        StringBuilder genericsDecl = new StringBuilder();
         StringBuilder interfaceDecl = new StringBuilder();
         StringBuilder constants = new StringBuilder();
         StringBuilder samplers = new StringBuilder();
@@ -309,6 +307,10 @@ public class SSEBackend extends TreeScanner {
             }
         }
 
+        if (genericsName != null) {
+            genericsDecl.append("<"+genericsName+">");
+        }
+
         if (interfaceName != null) {
             interfaceDecl.append("implements "+interfaceName);
         }
@@ -318,6 +320,7 @@ public class SSEBackend extends TreeScanner {
         StringTemplate jglue = group.getInstanceOf("glue");
         jglue.setAttribute("effectName", effectName);
         jglue.setAttribute("peerName", peerName);
+        jglue.setAttribute("genericsDecl", genericsDecl.toString());
         jglue.setAttribute("interfaceDecl", interfaceDecl.toString());
         jglue.setAttribute("usercode", usercode.toString());
         jglue.setAttribute("samplers", samplers.toString());

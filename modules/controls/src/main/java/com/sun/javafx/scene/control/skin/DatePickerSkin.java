@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,7 @@ import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 import javafx.scene.input.*;
+import javafx.scene.layout.Region;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.scene.control.behavior.DatePickerBehavior;
@@ -69,14 +70,6 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             getChildren().add(textField);
         }
 
-        if (arrowButton.getOnMouseReleased() == null) {
-            arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    ((DatePickerBehavior)getBehavior()).mouseReleased(e, true);
-                    e.consume();
-                }
-            });
-        }
 
         // The "arrow" is actually a rectangular svg icon resembling a calendar.
         // Round the size of the icon to whole integers to get sharp edges.
@@ -99,75 +92,67 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 
         // Move fake focus in to the textfield.
         // Note: DatePicker uses TextField for both editable and non-editable modes
-        datePicker.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                //if (datePicker.isEditable()) {
-                    // Fix for the regression noted in a comment in RT-29885.
-                    ((ComboBoxListViewSkin.FakeFocusTextField)textField).setFakeFocus(hasFocus);
-                //}
-            }
+        datePicker.focusedProperty().addListener((ov, t, hasFocus) -> {
+            //if (datePicker.isEditable()) {
+                // Fix for the regression noted in a comment in RT-29885.
+                ((ComboBoxListViewSkin.FakeFocusTextField)textField).setFakeFocus(hasFocus);
+            //}
         });
 
-        datePicker.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent ke) {
-                if (textField == null) return;
+        datePicker.addEventFilter(KeyEvent.ANY, ke -> {
+            if (textField == null) return;
 
-                // This prevents a stack overflow from our rebroadcasting of the
-                // event to the textfield that occurs in the final else statement
-                // of the conditions below.
-                if (ke.getTarget().equals(textField)) return;
+            // This prevents a stack overflow from our rebroadcasting of the
+            // event to the textfield that occurs in the final else statement
+            // of the conditions below.
+            if (ke.getTarget().equals(textField)) return;
 
-                // When the user hits the enter or F4 keys, we respond before
-                // ever giving the event to the TextField.
-                if (ke.getCode() == KeyCode.ENTER) {
-                    setTextFromTextFieldIntoComboBoxValue();
-                    /*
-                    ** don't consume this if we're on an embedded
-                    ** platform that supports 5-button navigation
-                    */
-                    if (!Utils.isTwoLevelFocus()) {
-                        ke.consume();
-                    }
-                    return;
-                } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
-                    if (datePicker.isShowing()) datePicker.hide();
-                    else datePicker.show();
-                    ke.consume();
-                    return;
-                } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
-                    // RT-23275: The TextField fires F10 and ESCAPE key events
-                    // up to the parent, which are then fired back at the
-                    // TextField, and this ends up in an infinite loop until
-                    // the stack overflows. So, here we consume these two
-                    // events and stop them from going any further.
-                    ke.consume();
-                    return;
-                } else {
-                    // Fix for the regression noted in a comment in RT-29885.
-                    // This forwards the event down into the TextField when
-                    // the key event is actually received by the ComboBox.
-                    textField.fireEvent(ke.copyFor(textField, textField));
+            // When the user hits the enter or F4 keys, we respond before
+            // ever giving the event to the TextField.
+            if (ke.getCode() == KeyCode.ENTER) {
+                setTextFromTextFieldIntoComboBoxValue();
+                /*
+                ** don't consume this if we're on an embedded
+                ** platform that supports 5-button navigation
+                */
+                if (!Utils.isTwoLevelFocus()) {
                     ke.consume();
                 }
+                return;
+            } else if (ke.getCode() == KeyCode.F4 && ke.getEventType() == KeyEvent.KEY_RELEASED) {
+                if (datePicker.isShowing()) datePicker.hide();
+                else datePicker.show();
+                ke.consume();
+                return;
+            } else if (ke.getCode() == KeyCode.F10 || ke.getCode() == KeyCode.ESCAPE) {
+                // RT-23275: The TextField fires F10 and ESCAPE key events
+                // up to the parent, which are then fired back at the
+                // TextField, and this ends up in an infinite loop until
+                // the stack overflows. So, here we consume these two
+                // events and stop them from going any further.
+                ke.consume();
+                return;
+            } else {
+                // Fix for the regression noted in a comment in RT-29885.
+                // This forwards the event down into the TextField when
+                // the key event is actually received by the ComboBox.
+                textField.fireEvent(ke.copyFor(textField, textField));
+                ke.consume();
             }
         });
 
         // Fix for RT-31093 - drag events from the textfield were not surfacing
         // properly for the DatePicker.
         if (textField != null) {
-            textField.addEventFilter(MouseEvent.DRAG_DETECTED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    if (event.getTarget().equals(datePicker)) return;
-                    datePicker.fireEvent(event.copyFor(datePicker, datePicker));
-                    event.consume();
-                }
+            textField.addEventFilter(MouseEvent.DRAG_DETECTED, event -> {
+                if (event.getTarget().equals(datePicker)) return;
+                datePicker.fireEvent(event.copyFor(datePicker, datePicker));
+                event.consume();
             });
-            textField.addEventFilter(DragEvent.ANY, new EventHandler<DragEvent>() {
-                @Override public void handle(DragEvent event) {
-                    if (event.getTarget().equals(datePicker)) return;
-                    datePicker.fireEvent(event.copyFor(datePicker, datePicker));
-                    event.consume();
-                }
+            textField.addEventFilter(DragEvent.ANY, event -> {
+                if (event.getTarget().equals(datePicker)) return;
+                datePicker.fireEvent(event.copyFor(datePicker, datePicker));
+                event.consume();
             });
         }
 
@@ -218,6 +203,8 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
 //             }
             datePickerContent = null;
             popup = null;
+        } else if ("CONVERTER".equals(p)) {
+            updateDisplayNode();
         } else if ("EDITOR".equals(p)) {
             getEditableInputNode();
         } else if ("SHOWING".equals(p)) {
@@ -284,28 +271,26 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
         if (textField != null) return textField;
 
         textField = datePicker.getEditor();
-        textField.setFocusTraversable(true);
+        textField.focusTraversableProperty().bindBidirectional(datePicker.focusTraversableProperty());
         textField.promptTextProperty().bind(datePicker.promptTextProperty());
 
-        textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                // Note: DatePicker uses TextField for both editable and non-editable
-                // modes, so don't perform this test here.
-                // if (!datePicker.isEditable()) return;
+        textField.focusedProperty().addListener((ov, t, hasFocus) -> {
+            // Note: DatePicker uses TextField for both editable and non-editable
+            // modes, so don't perform this test here.
+            // if (!datePicker.isEditable()) return;
 
-                // Fix for RT-29885
-                datePicker.getProperties().put("FOCUSED", hasFocus);
-                // --- end of RT-29885
+            // Fix for RT-29885
+            datePicker.getProperties().put("FOCUSED", hasFocus);
+            // --- end of RT-29885
 
-                // RT-21454 starts here
-                if (! hasFocus) {
-                    setTextFromTextFieldIntoComboBoxValue();
-                    pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, false);
-                } else {
-                    pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
-                }
-                // --- end of RT-21454
+            // RT-21454 starts here
+            if (! hasFocus) {
+                setTextFromTextFieldIntoComboBoxValue();
+                pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, false);
+            } else {
+                pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, true);
             }
+            // --- end of RT-21454
         });
 
         return textField;

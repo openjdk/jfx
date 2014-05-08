@@ -69,7 +69,7 @@ jclass GlassApplication::ClassForName(JNIEnv *env, char *className)
 {
     // TODO: cache classCls as JNI global ref
     jclass classCls = env->FindClass("java/lang/Class");
-    if (!classCls) {
+    if (CheckAndClearException(env) || !classCls) {
         fprintf(stderr, "ClassForName error: classCls == NULL");
         return NULL;
     }
@@ -77,19 +77,20 @@ jclass GlassApplication::ClassForName(JNIEnv *env, char *className)
     // TODO: cache forNameMID as static
     jmethodID forNameMID =
         env->GetStaticMethodID(classCls, "forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;");
-    if (!forNameMID) {
+    if (CheckAndClearException(env) || !forNameMID) {
         fprintf(stderr, "ClassForName error: forNameMID == NULL");
         return NULL;
     }
 
     jstring classNameStr = env->NewStringUTF(className);
-    if (classNameStr == NULL) {
+    if (CheckAndClearException(env) || classNameStr == NULL) {
         fprintf(stderr, "ClassForName error: classNameStrs == NULL");
         return NULL;
     }
 
     jclass foundClass = (jclass)env->CallStaticObjectMethod(classCls,
         forNameMID, classNameStr, JNI_TRUE, sm_glassClassLoader);
+    if (CheckAndClearException(env)) return NULL;
 
     env->DeleteLocalRef(classNameStr);
     env->DeleteLocalRef(classCls);
@@ -330,12 +331,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
     javaIDs.Application.reportExceptionMID =
         env->GetStaticMethodID(cls, "reportException", "(Ljava/lang/Throwable;)V");
     ASSERT(javaIDs.Application.reportExceptionMID);
+    if (CheckAndClearException(env)) return;
 
     //NOTE: substitute the cls
     cls = (jclass)env->FindClass("java/lang/Runnable");
+    if (CheckAndClearException(env)) return;
 
     javaIDs.Runnable.run = env->GetMethodID(cls, "run", "()V");
     ASSERT(javaIDs.Runnable.run);
+    if (CheckAndClearException(env)) return;
 }
 
 /*

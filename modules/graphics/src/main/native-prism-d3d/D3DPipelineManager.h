@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -141,18 +141,31 @@ private:
     D3DDEVTYPE devType;
 
     D3DAdapter *pAdapters;
+
+    bool isVsyncEnabled;
+
     // instance of this object
     static D3DPipelineManager* pMgr;
 
 };
 
-#define OS_UNDEFINED    (0 << 0)
-#define OS_VISTA        (1 << 0)
-#define OS_WINSERV_2008 (1 << 1)
-#define OS_WINXP        (1 << 2)
-#define OS_WINXP_64     (1 << 3)
-#define OS_WINSERV_2003 (1 << 4)
-#define OS_ALL (OS_VISTA|OS_WINSERV_2008|OS_WINXP|OS_WINXP_64|OS_WINSERV_2003)
+#define OS_UNDEFINED       (0 << 0)
+#define OS_WIN81           (1 << 0)
+#define OS_WINSERV_2012_R2 (1 << 1)
+#define OS_WIN8            (1 << 2)
+#define OS_WINSERV_2012    (1 << 3)
+#define OS_WIN7            (1 << 4)
+#define OS_WINSERV_2008_R2 (1 << 5)
+#define OS_VISTA           (1 << 6)
+#define OS_WINSERV_2008    (1 << 7)
+#define OS_WINXP           (1 << 8)
+#define OS_WINXP_64        (1 << 9)
+#define OS_WINSERV_2003    (1 << 10)
+#define OS_WIN7_OR_NEWER (OS_WIN81 | OS_WINSERV_2012_R2 | \
+                          OS_WIN8 | OS_WINSERV_2012 | \
+                          OS_WIN7 | OS_WINSERV_2008_R2)
+#define OS_VISTA_OR_NEWER (OS_WIN7_OR_NEWER | OS_VISTA | OS_WINSERV_2008)
+#define OS_ALL (OS_VISTA_OR_NEWER | OS_WINXP | OS_WINXP_64 | OS_WINSERV_2003)
 #define OS_UNKNOWN      (~OS_ALL)
 BOOL D3DPPLM_OsVersionMatches(USHORT osInfo);
 

@@ -44,10 +44,8 @@ class DefaultTreeCell<T> extends TreeCell<T> {
 
     private WeakReference<TreeItem<T>> treeItemRef;
 
-    private InvalidationListener treeItemGraphicListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            updateDisplay(getItem(), isEmpty());
-        }
+    private InvalidationListener treeItemGraphicListener = observable -> {
+        updateDisplay(getItem(), isEmpty());
     };
 
     private InvalidationListener treeItemListener = new InvalidationListener() {

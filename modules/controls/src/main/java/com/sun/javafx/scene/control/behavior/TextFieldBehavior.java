@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -37,8 +36,8 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.TextField;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import javafx.stage.Window;
@@ -70,38 +69,31 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         handleFocusChange();
 
         // Register for change events
-        textField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                handleFocusChange();
-            }
+        textField.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            handleFocusChange();
         });
 
-        focusOwnerListener = new ChangeListener<Node>() {
-            @Override public void changed(ObservableValue<? extends Node> observable, Node oldValue, Node newValue) {
-                // RT-23699: The selection is now only affected when the TextField
-                // gains or loses focus within the Scene, and not when the whole
-                // stage becomes active or inactive.
-                if (newValue == textField) {
-                    if (!focusGainedByMouseClick) {
-                        textField.selectRange(textField.getLength(), 0);
-                    }
-                } else {
-                    textField.selectRange(0, 0);
+        focusOwnerListener = (observable, oldValue, newValue) -> {
+            // RT-23699: The selection is now only affected when the TextField
+            // gains or loses focus within the Scene, and not when the whole
+            // stage becomes active or inactive.
+            if (newValue == textField) {
+                if (!focusGainedByMouseClick) {
+                    textField.selectRange(textField.getLength(), 0);
                 }
+            } else {
+                textField.selectRange(0, 0);
             }
         };
 
         final WeakChangeListener<Node> weakFocusOwnerListener =
                                 new WeakChangeListener<Node>(focusOwnerListener);
-        sceneListener = new ChangeListener<Scene>() {
-            @Override public void changed(ObservableValue<? extends Scene> observable, Scene oldValue, Scene newValue) {
-                if (oldValue != null) {
-                    oldValue.focusOwnerProperty().removeListener(weakFocusOwnerListener);
-                }
-                if (newValue != null) {
-                    newValue.focusOwnerProperty().addListener(weakFocusOwnerListener);
-                }
+        sceneListener = (observable, oldValue, newValue) -> {
+            if (oldValue != null) {
+                oldValue.focusOwnerProperty().removeListener(weakFocusOwnerListener);
+            }
+            if (newValue != null) {
+                newValue.focusOwnerProperty().addListener(weakFocusOwnerListener);
             }
         };
         textField.sceneProperty().addListener(new WeakChangeListener<Scene>(sceneListener));
@@ -199,6 +191,16 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         skin.replaceText(start, end, txt);
     }
 
+    @Override protected void deleteFromLineStart() {
+        TextField textField = getControl();
+        int end = textField.getCaretPosition();
+
+        if (end > 0) {
+            getUndoManager().addChange(0, textField.textProperty().getValueSafe().substring(0, end), null);
+            replaceText(0, end, "");
+        }
+    }
+
     @Override protected void setCaretAnimating(boolean play) {
         if (skin != null) {
             skin.setCaretAnimating(play);
@@ -243,7 +245,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
 
             // if the primary button was pressed
             if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
-                HitInfo hit = skin.getIndex(e);
+                HitInfo hit = skin.getIndex(e.getX(), e.getY());
                 String text = textField.textProperty().getValueSafe();
                 int i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, text);
                 final int anchor = textField.getAnchor();
@@ -301,7 +303,7 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         if (!textField.isDisabled() && !deferClick) {
             if (e.isPrimaryButtonDown() && !(e.isMiddleButtonDown() || e.isSecondaryButtonDown())) {
                 if (!(e.isControlDown() || e.isAltDown() || e.isShiftDown() || e.isMetaDown())) {
-                    skin.positionCaret(skin.getIndex(e), true);
+                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), true);
                 }
             }
         }
@@ -316,66 +318,71 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
             setCaretAnimating(false);
             if (deferClick) {
                 deferClick = false;
-                skin.positionCaret(skin.getIndex(e), shiftDown);
+                skin.positionCaret(skin.getIndex(e.getX(), e.getY()), shiftDown);
                 shiftDown = false;
             }
             setCaretAnimating(true);
         }
-        if (e.getButton() == MouseButton.SECONDARY) {
-            if (contextMenu.isShowing()) {
-                contextMenu.hide();
-            } else if (textField.getContextMenu() == null) {
-                double screenX = e.getScreenX();
-                double screenY = e.getScreenY();
-                double sceneX = e.getSceneX();
+    }
 
-                if (IS_TOUCH_SUPPORTED) {
-                    Point2D menuPos;
-                    if (textField.getSelection().getLength() == 0) {
-                        skin.positionCaret(skin.getIndex(e), false);
-                        menuPos = skin.getMenuPosition();
-                    } else {
-                        menuPos = skin.getMenuPosition();
-                        if (menuPos != null && (menuPos.getX() <= 0 || menuPos.getY() <= 0)) {
-                            skin.positionCaret(skin.getIndex(e), false);
-                            menuPos = skin.getMenuPosition();
-                        }
-                    }
+    @Override public void contextMenuRequested(ContextMenuEvent e) {
+        final TextField textField = getControl();
 
-                    if (menuPos != null) {
-                        Point2D p = getControl().localToScene(menuPos);
-                        Scene scene = getControl().getScene();
-                        Window window = scene.getWindow();
-                        Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
-                                                       window.getY() + scene.getY() + p.getY());
-                        screenX = location.getX();
-                        sceneX = p.getX();
-                        screenY = location.getY();
+        if (contextMenu.isShowing()) {
+            contextMenu.hide();
+        } else if (textField.getContextMenu() == null) {
+            double screenX = e.getScreenX();
+            double screenY = e.getScreenY();
+            double sceneX = e.getSceneX();
+
+            if (IS_TOUCH_SUPPORTED) {
+                Point2D menuPos;
+                if (textField.getSelection().getLength() == 0) {
+                    skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false);
+                    menuPos = skin.getMenuPosition();
+                } else {
+                    menuPos = skin.getMenuPosition();
+                    if (menuPos != null && (menuPos.getX() <= 0 || menuPos.getY() <= 0)) {
+                        skin.positionCaret(skin.getIndex(e.getX(), e.getY()), false);
+                        menuPos = skin.getMenuPosition();
                     }
                 }
 
-                skin.populateContextMenu(contextMenu);
-                double menuWidth = contextMenu.prefWidth(-1);
-                double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
-                Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(screenX, 0);
-                Rectangle2D bounds = currentScreen.getBounds();
-
-                if (menuX < bounds.getMinX()) {
-                    getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                    getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                    contextMenu.show(getControl(), bounds.getMinX(), screenY);
-                } else if (screenX + menuWidth > bounds.getMaxX()) {
-                    double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
-                    getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
-                    getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
-                    contextMenu.show(getControl(), screenX - leftOver, screenY);
-                } else {
-                    getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
-                    getControl().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
-                    contextMenu.show(getControl(), menuX, screenY);
+                if (menuPos != null) {
+                    Point2D p = getControl().localToScene(menuPos);
+                    Scene scene = getControl().getScene();
+                    Window window = scene.getWindow();
+                    Point2D location = new Point2D(window.getX() + scene.getX() + p.getX(),
+                                                   window.getY() + scene.getY() + p.getY());
+                    screenX = location.getX();
+                    sceneX = p.getX();
+                    screenY = location.getY();
                 }
             }
+
+            skin.populateContextMenu(contextMenu);
+            double menuWidth = contextMenu.prefWidth(-1);
+            double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
+            Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(screenX, 0);
+            Rectangle2D bounds = currentScreen.getBounds();
+
+            if (menuX < bounds.getMinX()) {
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getControl(), bounds.getMinX(), screenY);
+            } else if (screenX + menuWidth > bounds.getMaxX()) {
+                double leftOver = menuWidth - ( bounds.getMaxX() - screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", screenX);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", sceneX);
+                contextMenu.show(getControl(), screenX - leftOver, screenY);
+            } else {
+                getControl().getProperties().put("CONTEXT_MENU_SCREEN_X", 0);
+                getControl().getProperties().put("CONTEXT_MENU_SCENE_X", 0);
+                contextMenu.show(getControl(), menuX, screenY);
+            }
         }
+
+        e.consume();
     }
 
 //    var hadFocus = false;

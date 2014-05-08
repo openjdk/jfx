@@ -199,22 +199,14 @@ public class EffectInputTest {
         ((ObjectProperty)m.invoke(effect1)).bind(v);
 
         // try setting first input as input for itself
-        try {
-            v.set(effect1);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, getInput1.invoke(effect1));
-            v.set(null);
-            ((ObjectProperty)m.invoke(effect1)).bind(v);
-        }
+        v.set(effect1);
+        assertEquals(null, getInput1.invoke(effect1));
+        v.set(null);
+        ((ObjectProperty)m.invoke(effect1)).bind(v);
 
         // try setting up cycle from 1. and 2. effect
-        try {
-            setInput2.invoke(effect2, effect1);
-            v.set(effect2);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, getInput1.invoke(effect1));
-        }
+        setInput2.invoke(effect2, effect1);
+        v.set(effect2);
+        assertEquals(null, getInput1.invoke(effect1));
     }
 }

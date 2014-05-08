@@ -93,8 +93,7 @@ public abstract class PrismFontFactory implements FontFactory {
         isEmbedded = PlatformUtil.isEmbedded();
 
         debugFonts = AccessController.doPrivileged(
-            new PrivilegedAction<Boolean>() {
-                public Boolean run() {
+                (PrivilegedAction<Boolean>) () -> {
                     NativeLibLoader.loadLibrary("javafx_font");
                     String dbg = System.getProperty("prism.debugfonts", "");
                     boolean debug = "true".equals(dbg);
@@ -122,7 +121,7 @@ public abstract class PrismFontFactory implements FontFactory {
                         subPixelMode |= SUB_PIXEL_Y | SUB_PIXEL_NATIVE | SUB_PIXEL_ON;
                     }
 
-                    useNativeRasterizer = isMacOSX || isWindows;
+                    useNativeRasterizer = isMacOSX || isWindows || (isLinux && !isEmbedded);
                     String defPrismText = useNativeRasterizer ? "native" : "t2k";
                     String prismText = System.getProperty("prism.text", defPrismText);
                     if (useNativeRasterizer) {
@@ -150,7 +149,7 @@ public abstract class PrismFontFactory implements FontFactory {
 
                     return debug;
                 }
-            });
+        );
     }
 
     private static String getNativeFactoryName() {
@@ -1378,26 +1377,23 @@ public abstract class PrismFontFactory implements FontFactory {
 
     private synchronized void addFileCloserHook() {
         if (fileCloser == null) {
-            final Runnable fileCloserRunnable = new Runnable() {
-                    public void run() {
-                        if (embeddedFonts != null) {
-                            for (PrismFontFile font : embeddedFonts.values()) {
-                                font.disposeOnShutdown();
-                            }
-                        }
-                        if (tmpFonts != null) {
-                            for (WeakReference<PrismFontFile> ref : tmpFonts) {
-                                PrismFontFile font = ref.get();
-                                if (font != null) {
-                                    font.disposeOnShutdown();
-                                }
-                            }
+            final Runnable fileCloserRunnable = () -> {
+                if (embeddedFonts != null) {
+                    for (PrismFontFile font : embeddedFonts.values()) {
+                        font.disposeOnShutdown();
+                    }
+                }
+                if (tmpFonts != null) {
+                    for (WeakReference<PrismFontFile> ref : tmpFonts) {
+                        PrismFontFile font = ref.get();
+                        if (font != null) {
+                            font.disposeOnShutdown();
                         }
                     }
+                }
             };
             java.security.AccessController.doPrivileged(
-                new java.security.PrivilegedAction<Object>() {
-                    public Object run() {
+                    (PrivilegedAction<Object>) () -> {
                         /* The thread must be a member of a thread group
                          * which will not get GCed before VM exit.
                          * Make its parent the top-level thread group.
@@ -1410,7 +1406,7 @@ public abstract class PrismFontFactory implements FontFactory {
                         Runtime.getRuntime().addShutdownHook(fileCloser);
                         return null;
                     }
-            });
+            );
         }
     }
 
@@ -1831,11 +1827,7 @@ public abstract class PrismFontFactory implements FontFactory {
         String[] files = null;
         try {
             files = AccessController.doPrivileged(
-                new PrivilegedExceptionAction<String[]>() {
-                     public String[] run() {
-                         return dir.list(TTFilter.getInstance());
-                     }
-                }
+                    (PrivilegedExceptionAction<String[]>) () -> dir.list(TTFilter.getInstance())
             );
         } catch (Exception e) {
         }

@@ -41,17 +41,15 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     static {
 
-        d3dEnabled = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                if (PrismSettings.verbose) {
-                    System.out.println("Loading D3D native library ...");
-                }
-                NativeLibLoader.loadLibrary("prism_d3d");
-                if (PrismSettings.verbose) {
-                    System.out.println("\tsucceeded.");
-                }
-                return Boolean.valueOf(nInit(PrismSettings.class));
+        d3dEnabled = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            if (PrismSettings.verbose) {
+                System.out.println("Loading D3D native library ...");
             }
+            NativeLibLoader.loadLibrary("prism_d3d");
+            if (PrismSettings.verbose) {
+                System.out.println("\tsucceeded.");
+            }
+            return Boolean.valueOf(nInit(PrismSettings.class));
         });
 
         if (PrismSettings.verbose) {

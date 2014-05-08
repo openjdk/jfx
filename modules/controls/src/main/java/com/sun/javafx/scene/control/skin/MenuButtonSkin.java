@@ -66,18 +66,14 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton, MenuButtonBeh
                 }
         });
         // request focus on content when the popup is shown
-        popup.setOnShown(new EventHandler<WindowEvent>() {
-            @Override public void handle(WindowEvent event) {
-                ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
-                if (cmContent != null) cmContent.requestFocus();
-            }
+        popup.setOnShown(event -> {
+            ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
+            if (cmContent != null) cmContent.requestFocus();
         });
 
         if (menuButton.getOnAction() == null) {
-            menuButton.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent e) {
-                    menuButton.show();
-                }
+            menuButton.setOnAction(e -> {
+                menuButton.show();
             });
         }
 

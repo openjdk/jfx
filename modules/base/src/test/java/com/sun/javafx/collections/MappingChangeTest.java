@@ -49,12 +49,7 @@ public class MappingChangeTest {
     public void testAddRemove() {
         Change<Integer> change = new NonIterableChange.SimpleRemovedChange<Integer>(0, 1, new Integer(5), originalList);
         MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
-                new MappingChange.Map<Integer, String>() {
-            @Override
-            public String map(Integer e) {
-                return e.toString();
-            }
-        }, list);
+                e -> e.toString(), list);
         
         assertTrue(mapChange.next());
         assertEquals(0, mapChange.getFrom());
@@ -69,12 +64,7 @@ public class MappingChangeTest {
     public void testUpdate() {
         Change<Integer> change = new NonIterableChange.SimpleUpdateChange<Integer>(0, 1, originalList);
         MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
-                new MappingChange.Map<Integer, String>() {
-            @Override
-            public String map(Integer e) {
-                return e.toString();
-            }
-        }, list);
+                e -> e.toString(), list);
         
         assertTrue(mapChange.next());
         assertEquals(0, mapChange.getFrom());
@@ -89,12 +79,7 @@ public class MappingChangeTest {
     public void testPermutation() {
         Change<Integer> change = new NonIterableChange.SimplePermutationChange<Integer>(0, 2, new int[] {1, 0}, originalList);
         MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
-                new MappingChange.Map<Integer, String>() {
-            @Override
-            public String map(Integer e) {
-                return e.toString();
-            }
-        }, list);
+                e -> e.toString(), list);
         
         assertTrue(mapChange.next());
         assertEquals(0, mapChange.getFrom());
@@ -147,12 +132,7 @@ public class MappingChangeTest {
             }
         };
         MappingChange<Integer, String> mapChange = new MappingChange<Integer, String>(change,
-                new MappingChange.Map<Integer, String>() {
-            @Override
-            public String map(Integer e) {
-                return e.toString();
-            }
-        }, list);
+                e -> e.toString(), list);
         
         assertTrue(mapChange.next());
         assertEquals(0, mapChange.getFrom());

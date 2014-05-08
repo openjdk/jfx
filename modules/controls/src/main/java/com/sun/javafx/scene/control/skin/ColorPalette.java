@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,48 +25,53 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.css.PseudoClass;
-import javafx.scene.control.ColorPicker;
-import java.util.List;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
-import javafx.scene.control.*;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Hyperlink;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.PopupControl;
+import javafx.scene.control.Separator;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.StrokeType;
-import javafx.stage.WindowEvent;
 
-public class ColorPalette extends VBox {
+import java.util.List;
+
+import static com.sun.javafx.scene.control.skin.ColorPickerSkin.getString;
+
+public class ColorPalette extends Region {
 
     private static final int SQUARE_SIZE = 15;
     private static final int NUM_OF_COLUMNS = 12;
     private static final int NUM_OF_ROWS = 10;
-    private static final int LABEL_GAP = 2;
-    
-    private boolean customColorAdded = false;
+
+    // package protected for testing purposes
     ColorPickerGrid colorPickerGrid;
-    ColorPicker colorPicker;
-    GridPane customColorGrid = new GridPane();
-    Hyperlink customColorLink = new Hyperlink("Custom Color..");
-    Separator separator = new Separator();
-    Label customColorLabel = new Label("Custom Colors");
+    final Hyperlink customColorLink = new Hyperlink(getString("customColorLink"));
     CustomColorDialog customColorDialog = null;
+
+    private ColorPicker colorPicker;
+    private final GridPane customColorGrid = new GridPane();
+    private final Separator separator = new Separator();
+    private final Label customColorLabel = new Label(getString("customColorLabel"));
     private final List<ColorSquare> customSquares = FXCollections.observableArrayList();
  
     private PopupControl popupControl;
@@ -75,11 +80,14 @@ public class ColorPalette extends VBox {
     
     private Color mouseDragColor = null;
     private boolean dragDetected = false;
+
+    private final ColorSquare hoverSquare = new ColorSquare(null);
     
-    public ColorPalette(Color initPaint, final ColorPicker colorPicker) {
-        getStyleClass().add("color-palette");
+    public ColorPalette(final ColorPicker colorPicker) {
+        getStyleClass().add("color-palette-region");
+        setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         this.colorPicker = colorPicker;
-        colorPickerGrid = new ColorPickerGrid(initPaint);
+        colorPickerGrid = new ColorPickerGrid();
         colorPickerGrid.requestFocus();
         colorPickerGrid.setFocusTraversable(true);
         customColorLabel.setAlignment(Pos.CENTER_LEFT);
@@ -91,43 +99,29 @@ public class ColorPalette extends VBox {
             @Override public void handle(ActionEvent t) {
                 if (customColorDialog == null) {
                     customColorDialog = new CustomColorDialog(popupControl);
-                    customColorDialog.customColorProperty().addListener(new ChangeListener<Color>() {
-                        @Override public void changed(ObservableValue<? extends Color> ov, 
-                                                                Color t, Color t1) {
-                            colorPicker.setValue(customColorDialog.customColorProperty().get());
-                        }
+                    customColorDialog.customColorProperty().addListener((ov, t1, t2) -> {
+                        colorPicker.setValue(customColorDialog.customColorProperty().get());
                     });
-                    customColorDialog.setOnSave(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            Color customColor = customColorDialog.customColorProperty().get();
-                            ColorSquare cs = new ColorSquare(customColor, true);
-                            customSquares.add(cs);
-                            buildCustomColors();
-                            colorPicker.getCustomColors().add(customColor);
-                            updateSelection(customColor);
-                            Event.fireEvent(colorPicker, new ActionEvent());
-                            colorPicker.hide();
-                        }
+                    customColorDialog.setOnSave(() -> {
+                        Color customColor = customColorDialog.customColorProperty().get();
+                        ColorSquare cs = new ColorSquare(customColor, true);
+                        customSquares.add(cs);
+                        buildCustomColors();
+                        colorPicker.getCustomColors().add(customColor);
+                        updateSelection(customColor);
+                        Event.fireEvent(colorPicker, new ActionEvent());
+                        colorPicker.hide();
                     });
-                    customColorDialog.setOnUse(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            Event.fireEvent(colorPicker, new ActionEvent());
-                            colorPicker.hide();
-                        }
+                    customColorDialog.setOnUse(() -> {
+                        Event.fireEvent(colorPicker, new ActionEvent());
+                        colorPicker.hide();
                     });
                 }
                 customColorDialog.setCurrentColor(colorPicker.valueProperty().get());
                 if (popupControl != null) popupControl.setAutoHide(false);
                 customColorDialog.show();
-                 customColorDialog.setOnHidden(new EventHandler<WindowEvent>() {
- 
-                     @Override public void handle(WindowEvent event) {
-                        if (popupControl != null) popupControl.setAutoHide(true);
-                     }
+                 customColorDialog.setOnHidden(event -> {
+                    if (popupControl != null) popupControl.setAutoHide(true);
                  });
             }
         });
@@ -149,7 +143,39 @@ public class ColorPalette extends VBox {
                 buildCustomColors();
             }
         });
-        getChildren().addAll(colorPickerGrid, customColorLabel, customColorGrid, separator, customColorLink);
+
+        VBox paletteBox = new VBox();
+        paletteBox.getStyleClass().add("color-palette");
+        paletteBox.getChildren().addAll(colorPickerGrid, customColorLabel, customColorGrid, separator, customColorLink);
+
+        hoverSquare.setMouseTransparent(true);
+        hoverSquare.getStyleClass().addAll("hover-square");
+        setFocusedSquare(null);
+
+        getChildren().addAll(paletteBox, hoverSquare);
+    }
+
+    private void setFocusedSquare(ColorSquare square) {
+        focusedSquare = square;
+
+        hoverSquare.setVisible(focusedSquare != null);
+        if (focusedSquare == null) {
+            return;
+        }
+
+        hoverSquare.rectangle.setFill(focusedSquare.rectangle.getFill());
+
+        Bounds b = square.localToScene(square.getLayoutBounds());
+
+        double x = b.getMinX();
+        double y = b.getMinY();
+
+        if (colorPicker.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            x -= hoverSquare.getWidth() * hoverSquare.getScaleX() / 2.0;
+        }
+
+        hoverSquare.setLayoutX(snapPosition(x) - focusedSquare.getWidth() / 2.0 - (hoverSquare.getScaleX() == 1.0 ? 0 : hoverSquare.getWidth() / 4.0));
+        hoverSquare.setLayoutY(snapPosition(y) - focusedSquare.getHeight() / 2.0 + (hoverSquare.getScaleY() == 1.0 ? 0 : focusedSquare.getHeight() / 4.0));
     }
     
     private void buildCustomColors() {
@@ -171,14 +197,12 @@ public class ColorPalette extends VBox {
             customColorGrid.setVisible(true);
             customColorGrid.setManaged(true);
             if (contextMenu == null) {
-                MenuItem item = new MenuItem("Remove Color");
-                item.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent e) {
-                        ColorSquare square = (ColorSquare)contextMenu.getOwnerNode();
-                        colorPicker.getCustomColors().remove(square.rectangle.getFill());
-                        customSquares.remove(square);
-                        buildCustomColors();
-                    }
+                MenuItem item = new MenuItem(getString("removeColor"));
+                item.setOnAction(e -> {
+                    ColorSquare square = (ColorSquare)contextMenu.getOwnerNode();
+                    colorPicker.getCustomColors().remove(square.rectangle.getFill());
+                    customSquares.remove(square);
+                    buildCustomColors();
                 });
                 contextMenu = new ContextMenu(item);
             }
@@ -200,34 +224,30 @@ public class ColorPalette extends VBox {
     }
     
     private void initNavigation() {
-        setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent ke) {
-                switch (ke.getCode()) {
-                    case LEFT:
-                        if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                            processRightKey(ke);
-                        } else {
-                            processLeftKey(ke);
-                        }
-                        break;
-                    case RIGHT:
-                        if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                            processLeftKey(ke);
-                        } else {
-                            processRightKey(ke);
-                        }
-                        break;
-                    case UP:
-                        processUpKey(ke);
-                        break;
-                    case DOWN:
-                        processDownKey(ke);
-                        break;
-                    case ENTER:
-                        processSelectKey(ke);
-                        break;
-                    default: // no-op
-                }
+        setOnKeyPressed(ke -> {
+            switch (ke.getCode()) {
+                case LEFT:
+                    processLeftKey(ke);
+                    ke.consume();
+                    break;
+                case RIGHT:
+                    processRightKey(ke);
+                    ke.consume();
+                    break;
+                case UP:
+                    processUpKey(ke);
+                    ke.consume();
+                    break;
+                case DOWN:
+                    processDownKey(ke);
+                    ke.consume();
+                    break;
+                case SPACE:
+                case ENTER:
+                    processSelectKey(ke);
+                    ke.consume();
+                    break;
+                default: // no-op
             }
         });
     }
@@ -244,7 +264,7 @@ public class ColorPalette extends VBox {
                 ColorSquare prevSquare = colorPickerGrid.getSquares().get((index != 0) ? 
                                     (index-1) : (NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
                 prevSquare.requestFocus();
-                focusedSquare = prevSquare;
+                setFocusedSquare(prevSquare);
                 return;
             } 
         }
@@ -256,14 +276,13 @@ public class ColorPalette extends VBox {
                 ColorSquare prevSquare = (ColorSquare)customColorGrid.getChildren().get((index != 0) ? 
                                     (index-1) : len-1);
                 prevSquare.requestFocus();
-                focusedSquare = prevSquare;
+                setFocusedSquare(prevSquare);
                 return;
             } 
         }
         if (index == -1) {
             ColorSquare cs = colorPickerGrid.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
-            focusedSquare = cs;
-            cs.requestFocus();;
+            setFocusedSquare(cs);
         }
     }
     
@@ -275,7 +294,7 @@ public class ColorPalette extends VBox {
                 ColorSquare prevSquare = colorPickerGrid.getSquares().get((index-12 >= 0)? 
                         (index-12) : ((NUM_OF_ROWS-1)*NUM_OF_COLUMNS)+index);
                 prevSquare.requestFocus();
-                focusedSquare = prevSquare;
+                setFocusedSquare(prevSquare);
                 return;
             } 
         }
@@ -292,14 +311,13 @@ public class ColorPalette extends VBox {
                     prevSquare = (ColorSquare)customColorGrid.getChildren().get((rowIndex*NUM_OF_COLUMNS)+index);
                 }
                 prevSquare.requestFocus();
-                focusedSquare = prevSquare;
+                setFocusedSquare(prevSquare);
                 return;
             }
         }
         if (index == -1) {
             ColorSquare cs = colorPickerGrid.getSquares().get((NUM_OF_ROWS*NUM_OF_COLUMNS)-1);
-            focusedSquare = cs;
-            focusedSquare.requestFocus();
+            setFocusedSquare(cs);
         }
     }
      
@@ -311,7 +329,7 @@ public class ColorPalette extends VBox {
                 ColorSquare prevSquare = colorPickerGrid.getSquares().get(
                         (index != (NUM_OF_ROWS*NUM_OF_COLUMNS)-1) ? (index+1) : 0);
                 prevSquare.requestFocus();
-                focusedSquare = prevSquare;
+                setFocusedSquare(prevSquare);
                 return;
             } 
         }
@@ -323,14 +341,13 @@ public class ColorPalette extends VBox {
                 ColorSquare prevSquare = (ColorSquare)customColorGrid.getChildren().get(
                         (index != len-1) ? (index+1) : 0);
                 prevSquare.requestFocus();
-                focusedSquare = prevSquare;
+                setFocusedSquare(prevSquare);
                 return;
             } 
         }
         if (index == len) {
             ColorSquare cs = colorPickerGrid.getSquares().get(0);
-            focusedSquare = cs;
-            focusedSquare.requestFocus();
+            setFocusedSquare(cs);
         }
     }
     
@@ -342,7 +359,7 @@ public class ColorPalette extends VBox {
                 ColorSquare prevSquare = colorPickerGrid.getSquares().get((index+12 < NUM_OF_ROWS*NUM_OF_COLUMNS)? 
                         (index+12) : index-((NUM_OF_ROWS-1)*NUM_OF_COLUMNS));
                 prevSquare.requestFocus();
-                focusedSquare = prevSquare;
+                setFocusedSquare(prevSquare);
                 return;
             } 
         }
@@ -359,14 +376,13 @@ public class ColorPalette extends VBox {
                     prevSquare = (ColorSquare)customColorGrid.getChildren().get(index-(rowIndex)*NUM_OF_COLUMNS);
                 }
                 prevSquare.requestFocus();
-                focusedSquare = prevSquare;
+                setFocusedSquare(prevSquare);
                 return;
             } 
         }
         if (index == len) {
             ColorSquare cs = colorPickerGrid.getSquares().get(0);
-            focusedSquare.requestFocus();
-            focusedSquare = cs;
+            setFocusedSquare(cs);
         }
     }
     
@@ -377,39 +393,7 @@ public class ColorPalette extends VBox {
     public ColorPickerGrid getColorGrid() {
         return colorPickerGrid;
     }
-//
-//    @Override protected void layoutChildren() {
-//        double x = getInsets().getLeft();
-//        double y = getInsets().getTop();
-////        double popupWidth = cpg.prefWidth(-1) + paddingX+getInsets().getRight();
-////        double popupHeight = cpg.prefHeight(-1) + getInsets().getTop() + getInsets().getBottom();
-//        colorPickerGrid.relocate(x, y);
-//        y = y+colorPickerGrid.prefHeight(-1)+GAP;
-//        if (customColorAdded) {
-//            if (customColorLabel.isVisible()) {
-//                customColorLabel.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), customColorLabel.prefHeight(y));
-//                y = y+customColorLabel.prefHeight(-1)+LABEL_GAP;
-//            }
-//            customColorGrid.relocate(x, y);
-//            y = y+customColorGrid.prefHeight(-1)+GAP;
-//        }
-//        separator.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), separator.prefHeight(-1));
-//        y = y+separator.prefHeight(-1)+GAP;
-//        customColorLink.resizeRelocate(x, y, colorPickerGrid.prefWidth(-1), customColorLink.prefHeight(-1));
-//    }
-//
-//    @Override protected double computePrefWidth(double height) {
-//        return getInsets().getLeft() + colorPickerGrid.prefWidth(-1) + getInsets().getRight();
-//    }
-//
-//    @Override protected double computePrefHeight(double width) {
-//        double totalHeight = colorPickerGrid.prefHeight(-1) + GAP +
-//                ((customColorAdded) ?
-//                (customColorGrid.prefHeight(-1)+customColorLabel.prefHeight(-1))+LABEL_GAP+GAP : 0) +
-//                separator.prefHeight(-1) + GAP + customColorLink.prefHeight(-1);
-//        return getInsets().getTop() + totalHeight + getInsets().getBottom();
-//    }
-//
+
     public boolean isCustomColorDialogShowing() {
         if (customColorDialog != null) return customColorDialog.isVisible();
         return false;
@@ -417,76 +401,61 @@ public class ColorPalette extends VBox {
 
     class ColorSquare extends StackPane {
         Rectangle rectangle;
-        boolean isCustom = false;
         boolean isEmpty = false;
+
         public ColorSquare(Color color) {
             this(color, false);
         }
-        public ColorSquare(Color color, boolean value) {
+
+        public ColorSquare(Color color, boolean isCustom) {
             // Add style class to handle selected color square
             getStyleClass().add("color-square");
             setFocusTraversable(true);
-            this.isCustom = value;
+
             rectangle = new Rectangle(SQUARE_SIZE, SQUARE_SIZE);
-            setFocusTraversable(true);
             if (color == null) {
-                rectangle.setFill(Color.WHITE );
+                rectangle.setFill(Color.WHITE);
                 isEmpty = true;
-            }
-            else {
+            } else {
                 rectangle.setFill(color);
             }
-//            setFill(color);
+
             rectangle.setSmooth(false);
-//            Utils.setBlocksMouse(this, true);
-            
             rectangle.setStrokeType(StrokeType.INSIDE);
-            String tooltipStr = ColorPickerSkin.colorValueToWeb(color);
+
+            String tooltipStr = ColorPickerSkin.tooltipString(color);
             Tooltip.install(this, new Tooltip((tooltipStr == null) ? "" : tooltipStr));
           
             rectangle.getStyleClass().add("color-rect");
 
-            addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    toFront();
-                }
-            });
-            addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    if (!dragDetected && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
-                        if (!isEmpty) {
-                            Color fill = (Color)rectangle.getFill();
-                            colorPicker.setValue(fill);
-                            colorPicker.fireEvent(new ActionEvent());
-                            updateSelection(fill);
-                            event.consume();
-                        }
-                        colorPicker.hide();
-                    } else if (event.getButton() == MouseButton.SECONDARY ||
-                            event.getButton() == MouseButton.MIDDLE) {
-                        if (isCustom && contextMenu != null) {
-                            if (!contextMenu.isShowing()) {
-                                contextMenu.show(ColorSquare.this, Side.RIGHT, 0, 0);
-                                Utils.addMnemonics(contextMenu, ColorSquare.this.getScene(), colorPicker.impl_isShowMnemonics());
-                            }
-                            else {
-                                contextMenu.hide();
-                                Utils.removeMnemonics(contextMenu, ColorSquare.this.getScene());
-                            }
+            addEventHandler(MouseEvent.MOUSE_RELEASED, event -> {
+                if (!dragDetected && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 1) {
+                    if (!isEmpty) {
+                        Color fill = (Color) rectangle.getFill();
+                        colorPicker.setValue(fill);
+                        colorPicker.fireEvent(new ActionEvent());
+                        updateSelection(fill);
+                        event.consume();
+                    }
+                    colorPicker.hide();
+                } else if (event.getButton() == MouseButton.SECONDARY ||
+                        event.getButton() == MouseButton.MIDDLE) {
+                    if (isCustom && contextMenu != null) {
+                        if (!contextMenu.isShowing()) {
+                            contextMenu.show(ColorSquare.this, Side.RIGHT, 0, 0);
+                            Utils.addMnemonics(contextMenu, ColorSquare.this.getScene(), colorPicker.impl_isShowMnemonics());
+                        } else {
+                            contextMenu.hide();
+                            Utils.removeMnemonics(contextMenu, ColorSquare.this.getScene());
                         }
                     }
                 }
             });
-            focusedProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                }
+            addEventHandler(MouseEvent.MOUSE_ENTERED, event -> {
+                setFocusedSquare(ColorSquare.this);
             });
-            addEventHandler(MouseEvent.MOUSE_ENTERED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    focusedSquare = ColorSquare.this;
-                    focusedSquare.requestFocus();
-                }
+            addEventHandler(MouseEvent.MOUSE_EXITED, event -> {
+                setFocusedSquare(null);
             });
             getChildren().add(rectangle);
         }
@@ -501,39 +470,6 @@ public class ColorPalette extends VBox {
             }
             colorPicker.hide();
         }
-        
-        private ReadOnlyBooleanWrapper selected;
-        protected final void setSelected(boolean value) {
-            selectedPropertyImpl().set(value);
-        }
-        public final boolean isSelected() { return selected == null ? false : selected.get(); }
-
-        public ReadOnlyBooleanProperty selectedProperty() {
-            return selectedPropertyImpl().getReadOnlyProperty();
-        }
-        private ReadOnlyBooleanWrapper selectedPropertyImpl() {
-            if (selected == null) {
-                selected = new ReadOnlyBooleanWrapper() {
-                    @Override protected void invalidated() {
-                        pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, get());
-                    }
-
-                    @Override
-                    public Object getBean() {
-                        return ColorSquare.this;
-                    }
-
-                    @Override
-                    public String getName() {
-                        return "selected";
-                    }
-                };
-            }
-            return selected;
-        }
-        private final PseudoClass SELECTED_PSEUDOCLASS_STATE =
-            PseudoClass.getPseudoClass("selected");
-        
     }
     
     public void clearFocus() {
@@ -542,12 +478,20 @@ public class ColorPalette extends VBox {
 
     // The skin can update selection if colorpicker value changes..
     public void updateSelection(Color color) {
+        setFocusedSquare(null);
+
         for (ColorSquare c : colorPickerGrid.getSquares()) {
-             c.setSelected(c.rectangle.getFill().equals(color));
+            if (c.rectangle.getFill().equals(color)) {
+                setFocusedSquare(c);
+                return;
+            }
         }
         // check custom colors
-        for (ColorSquare cs : customSquares) {
-            cs.setSelected(cs.rectangle.getFill().equals(color));
+        for (ColorSquare c : customSquares) {
+            if (c.rectangle.getFill().equals(color)) {
+                setFocusedSquare(c);
+                return;
+            }
         }
     }
     
@@ -555,7 +499,7 @@ public class ColorPalette extends VBox {
 
         private final List<ColorSquare> squares;
 
-        public ColorPickerGrid(Color initPaint) {
+        public ColorPickerGrid() {
             getStyleClass().add("color-picker-grid");
             setId("ColorCustomizerColorGrid");
             int columnIndex = 0, rowIndex = 0;
@@ -579,38 +523,32 @@ public class ColorPalette extends VBox {
                     rowIndex++;
                 }
             }
-            setOnMouseDragged(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent t) {
-                    if (!dragDetected) {
-                        dragDetected = true;
-                        mouseDragColor = colorPicker.getValue();
-                    }
-                    int xIndex = (int)(t.getX()/16.0);
-                    int yIndex = (int)(t.getY()/16.0);
-                        int index = xIndex + yIndex*12;
-                    if (index < NUM_OF_COLUMNS*NUM_OF_ROWS) {
-                        colorPicker.setValue((Color) squares.get(index).rectangle.getFill());
-                        updateSelection(colorPicker.getValue());
-                    }
+            setOnMouseDragged(t -> {
+                if (!dragDetected) {
+                    dragDetected = true;
+                    mouseDragColor = colorPicker.getValue();
+                }
+                int xIndex = (int)(t.getX()/16.0);
+                int yIndex = (int)(t.getY()/16.0);
+                    int index = xIndex + yIndex*12;
+                if (index < NUM_OF_COLUMNS*NUM_OF_ROWS) {
+                    colorPicker.setValue((Color) squares.get(index).rectangle.getFill());
+                    updateSelection(colorPicker.getValue());
                 }
             });
-            addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent t) {
-                    if(colorPickerGrid.getBoundsInLocal().contains(t.getX(), t.getY())) {
-                        updateSelection(colorPicker.getValue());
-                        colorPicker.fireEvent(new ActionEvent());
-                        colorPicker.hide();
-                    } else {
-                        // restore color as mouse release happened outside the grid.
-                        if (mouseDragColor != null) {
-                            colorPicker.setValue(mouseDragColor);
-                            updateSelection(mouseDragColor);
-                        }
+            addEventHandler(MouseEvent.MOUSE_RELEASED, t -> {
+                if(colorPickerGrid.getBoundsInLocal().contains(t.getX(), t.getY())) {
+                    updateSelection(colorPicker.getValue());
+                    colorPicker.fireEvent(new ActionEvent());
+                    colorPicker.hide();
+                } else {
+                    // restore color as mouse release happened outside the grid.
+                    if (mouseDragColor != null) {
+                        colorPicker.setValue(mouseDragColor);
+                        updateSelection(mouseDragColor);
                     }
-                    dragDetected = false;
                 }
+                dragDetected = false;
             });
         }
         
@@ -748,7 +686,5 @@ public class ColorPalette extends VBox {
         @Override protected double computePrefHeight(double width) {
             return (SQUARE_SIZE + 1)*10;
         }
-        
     }
-    
 }

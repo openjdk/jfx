@@ -28,9 +28,7 @@ package fx83dfeatures;
 import javafx.animation.Timeline;
 import javafx.animation.TranslateTransition;
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.*;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.*;
@@ -81,39 +79,36 @@ public class SimpleMovingCamera extends Application {
         transTrans.setCycleCount(Timeline.INDEFINITE);
         transTrans.setByZ(-400);
 
-        scene.setOnKeyTyped(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent e) {
-                switch (e.getCharacter()) {
-                    case "[":
-                        fovValue -= 2.0;
-                        if (fovValue < 10.0) {
-                            fovValue = 10.0;
-                        }
-                        camera.setFieldOfView(fovValue);
-                        break;
-                    case "]":
-                        fovValue += 2.0;
-                        if (fovValue > 60.0) {
-                            fovValue = 60.0;
-                        }
-                        camera.setFieldOfView(fovValue);
-                        break;
-                    case "r":
-                        rotateCamera += 5.0;
-                        if (rotateCamera > 360.0) {
-                            rotateCamera = 0.0;
-                        }
-                        camera.setRotate(rotateCamera);
-                        break;
-                    case "t":
-                        if (transTrans.getStatus() == Timeline.Status.RUNNING) {
-                            transTrans.pause();
-                        } else {
-                            transTrans.play();
-                        }
-                        break;
-                }
+        scene.setOnKeyTyped(e -> {
+            switch (e.getCharacter()) {
+                case "[":
+                    fovValue -= 2.0;
+                    if (fovValue < 10.0) {
+                        fovValue = 10.0;
+                    }
+                    camera.setFieldOfView(fovValue);
+                    break;
+                case "]":
+                    fovValue += 2.0;
+                    if (fovValue > 60.0) {
+                        fovValue = 60.0;
+                    }
+                    camera.setFieldOfView(fovValue);
+                    break;
+                case "r":
+                    rotateCamera += 5.0;
+                    if (rotateCamera > 360.0) {
+                        rotateCamera = 0.0;
+                    }
+                    camera.setRotate(rotateCamera);
+                    break;
+                case "t":
+                    if (transTrans.getStatus() == Timeline.Status.RUNNING) {
+                        transTrans.pause();
+                    } else {
+                        transTrans.play();
+                    }
+                    break;
             }
         });
         return scene;

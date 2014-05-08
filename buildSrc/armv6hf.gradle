@@ -25,17 +25,44 @@
 
 ext.ARMV6HF = [:]
 
-fetchExternalTools('ARMV6HF', 
-  ["armhf-raspberry-pi-10.tgz",
-   "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ], 
-  rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
-
 // Define the location of the sdk and toolchain
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-10")
 def compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
+def compilerPrefix
+def jniPlatform
+if (IS_LINUX) {
+    fetchExternalTools('ARMV6HF',
+            ["armhf-raspberry-pi-10.tgz",
+             "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ],
+            rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
+
+    compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
+    compilerPrefix="arm-linux-gnueabihf-"
+    jniPlatform="linux"
+} else if (IS_MAC) {
+    fetchExternalTools('ARMV6HF',
+            ["armhf-raspberry-pi-10.tgz"],
+            rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
+
+    compilerHome=file("/usr/local/arm-linux")
+    compilerPrefix="arm-linux-"
+    jniPlatform="darwin"
+} else {
+    println "ERROR: Cannot build on this platform"
+    return;
+}
+
+if (rootProject.hasProperty("ARMV6HF_COMPILER")) {
+    logger.quiet "Using alternate ARMV6HF_COMPILER $rootProject.ARMV6HF_COMPILER"
+    compilerHome=file(rootProject.ARMV6HF_COMPILER);
+}
+if (rootProject.hasProperty("ARMV6HF_COMPILER_PREFIX")) {
+    logger.quiet "Using alternate ARMV6HF_COMPILER_PREFIX $rootProject.ARMV6HF_COMPILER_PREFIX"
+    compilerPrefix="${rootProject.ARMV6HF_COMPILER_PREFIX}"
+}
 
 // Declare whether this particular target file applies to the current system
-ARMV6HF.canBuild = IS_LINUX && compilerHome.exists() && sdk.exists()
+ARMV6HF.canBuild = (IS_LINUX || IS_MAC) && compilerHome.exists() && sdk.exists()
 if (!ARMV6HF.canBuild) {
     if (!compilerHome.exists()) println "ERROR: Mising compiler $compilerHome"
     if (!sdk.exists()) println "ERROR: Mising sdk $sdk"
@@ -44,9 +71,6 @@ if (!ARMV6HF.canBuild) {
 
 // Lambda for naming the generated libs
 ARMV6HF.library = { name -> return "lib${name}.so" as String }
-
-// alias for this platform in legacy artifacts
-ARMV6HF.artifactsName = "armv6hf-vfp"
 
 ARMV6HF.compileSwing = false;
 ARMV6HF.compileSWT = false;
@@ -61,7 +85,6 @@ ARMV6HF.libDest = "lib/arm"
 ARMV6HF.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
-    "com/sun/glass/ui/accessible/win",
     "com/sun/prism/d3d",
     "com/sun/prism/es2/gl/win",
     //"com/sun/prism/null3d",
@@ -69,7 +92,6 @@ ARMV6HF.jfxrtJarExcludes = [
     
     "com/sun/glass/events/mac",
     "com/sun/glass/ui/mac",
-    "com/sun/glass/ui/accessible/mac",
     "com/sun/prism/es2/gl/mac",
     
     "com/sun/glass/ui/android",
@@ -92,7 +114,7 @@ def commonFlags = [
         "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
 // Specify the compilation parameters and link parameters
 def ccFlags = [
-        commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
+        commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/$jniPlatform", "-c",
         IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : "-O2"].flatten()
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def linkFlags = ["-shared", commonFlags].flatten()
@@ -123,6 +145,11 @@ def extraLFlags = [
         "-L$sdk/opt/vc/lib"].flatten()
 
 def lensLFlags = [extraLFlags, "-lpthread", "-ludev", "-ldl", "-lm"].flatten()
+def monocleCFlags = [
+        extraCFlags,
+        "-Werror",
+        "-I", file("modules/graphics/src/main/native-glass/monocle/")].flatten();
+def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 
 def fontCFlags = [extraCFlags].flatten()
 def fontLFlags = [extraLFlags].flatten()
@@ -132,6 +159,8 @@ def iioLFlags = [extraLFlags].flatten()
 
 def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
 def es2EglfbLFlags = [extraLFlags].flatten()
+def es2MonocleCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
+def es2MonocleLFlags = [extraLFlags].flatten()
 
 def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX"].flatten()
 def es2X11LFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
@@ -191,6 +220,9 @@ directfb.glass.lens=dfb
 directfb.prism.order=sw
 directfb.com.sun.javafx.isEmbedded=true
 directfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+directfb.com.sun.javafx.gestures.zoom=true
+directfb.com.sun.javafx.gestures.rotate=true
+directfb.com.sun.javafx.gestures.scroll=true
 eglfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 eglfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 eglfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -208,6 +240,9 @@ eglfb.com.sun.javafx.isEmbedded=true
 eglfb.doNativeComposite=true
 eglfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
 eglfb.prism.glDepthSize=0
+eglfb.com.sun.javafx.gestures.zoom=true
+eglfb.com.sun.javafx.gestures.rotate=true
+eglfb.com.sun.javafx.gestures.scroll=true
 fb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 fb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 fb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -217,6 +252,25 @@ fb.prism.order=sw
 fb.com.sun.javafx.isEmbedded=true
 fb.glass.restrictWindowToScreen=true
 fb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+fb.com.sun.javafx.gestures.zoom=true
+fb.com.sun.javafx.gestures.rotate=true
+fb.com.sun.javafx.gestures.scroll=true
+monocle.glass.platform=Monocle
+monocle.prism.order=es2,sw
+monocle.prism.eglfb=true
+monocle.prism.lcdtext=false
+monocle.prism.maxvram=128m
+monocle.prism.targetvram=112m
+monocle.use.egl=true
+monocle.use.gles2=true
+monocle.embedded=monocle
+monocle.com.sun.javafx.isEmbedded=true
+monocle.doNativeComposite=true
+monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
+monocle.prism.glDepthSize=0
+monocle.com.sun.javafx.gestures.zoom=true
+monocle.com.sun.javafx.gestures.rotate=true
+monocle.com.sun.javafx.gestures.scroll=true
 eglx11.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 eglx11.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 eglx11.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -233,13 +287,19 @@ eglx11.embedded=eglx11
 eglx11.com.sun.javafx.isEmbedded=true
 eglx11.com.sun.javafx.scene.control.skin.FXVK.cache=true
 eglx11.prism.glDepthSize=0
+eglx11.com.sun.javafx.gestures.zoom=true
+eglx11.com.sun.javafx.gestures.rotate=true
+eglx11.com.sun.javafx.gestures.scroll=true
 gtk.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 gtk.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 gtk.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
 gtk.glass.platform=gtk
 gtk.prism.order=sw
 gtk.com.sun.javafx.isEmbedded=true
-gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
+gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true
+gtk.com.sun.javafx.gestures.zoom=true
+gtk.com.sun.javafx.gestures.rotate=true
+gtk.com.sun.javafx.gestures.scroll=true"""
 
 def pangoCCFlags = [extraCFlags, "-D_ENABLE_PANGO"];
 def pangoLinkFlags = [extraLFlags];
@@ -265,8 +325,8 @@ setupTools("armv6hf_pango_tools",
     }
 )
 
-def freetypeCCFlags = [ext.COMPILE_PANGO ? "-D_ENABLE_PANGO" : 
-                       ext.COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
+def freetypeCCFlags = [ext.IS_COMPILE_PANGO ? "-D_ENABLE_PANGO" :
+                       ext.IS_COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
 def freetypeLinkFlags = []
 setupTools("armv6hf_freetype_tools",
     { propFile ->
@@ -290,17 +350,22 @@ setupTools("armv6hf_freetype_tools",
     }
 )
 
-def compiler = file("$compilerHome/bin/arm-linux-gnueabihf-gcc").getAbsolutePath()
-def linker = file("$compilerHome/bin/arm-linux-gnueabihf-g++").getAbsolutePath()
+def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/${compilerPrefix}g++").getAbsolutePath()
 
 ARMV6HF.glass = [:]
-ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport" ]
+ARMV6HF.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport", "monocle", "monocle_x11" ]
 ARMV6HF.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/lens/*",
-    "com/sun/glass/ui/gtk/*",
-    "com/sun/glass/ui/accessible/gtk/*"]
+    "com/sun/glass/ui/monocle/*",
+    "com/sun/glass/ui/monocle/dispman/*",
+    "com/sun/glass/ui/monocle/mx6/*",
+    "com/sun/glass/ui/monocle/linux/*",
+    "com/sun/glass/ui/monocle/util/*",
+    "com/sun/glass/ui/monocle/x11/*",
+    "com/sun/glass/ui/gtk/*"]
 ARMV6HF.glass.lib = "glass"
 
 ARMV6HF.glass.lensport = [:]
@@ -312,6 +377,29 @@ ARMV6HF.glass.lensport.ccFlags = ["-ffast-math", extraCFlags, "-DLINUX", "-DISEG
 ARMV6HF.glass.lensport.linker = linker
 ARMV6HF.glass.lensport.linkFlags = [lensLFlags].flatten()
 ARMV6HF.glass.lensport.lib = "lens_porting"
+
+ARMV6HF.glass.monocle = [:]
+ARMV6HF.glass.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle"),
+        file("modules/graphics/src/main/native-glass/monocle/dispman"),
+        file("modules/graphics/src/main/native-glass/monocle/mx6"),
+        file("modules/graphics/src/main/native-glass/monocle/linux"),
+        file("modules/graphics/src/main/native-glass/monocle/util") ]
+ARMV6HF.glass.monocle.compiler = compiler
+ARMV6HF.glass.monocle.ccFlags = monocleCFlags
+ARMV6HF.glass.monocle.linker = linker
+ARMV6HF.glass.monocle.linkFlags = monocleLFlags
+ARMV6HF.glass.monocle.lib = "glass_monocle"
+
+ARMV6HF.glass.monocle_x11 = [:]
+ARMV6HF.glass.monocle_x11.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle/util"),
+        file("modules/graphics/src/main/native-glass/monocle/x11") ]
+ARMV6HF.glass.monocle_x11.compiler = compiler
+ARMV6HF.glass.monocle_x11.ccFlags = monocleCFlags
+ARMV6HF.glass.monocle_x11.linker = linker
+ARMV6HF.glass.monocle_x11.linkFlags = [ monocleLFlags, "-lX11" ].flatten()
+ARMV6HF.glass.monocle_x11.lib = "glass_monocle_x11"
 
 ARMV6HF.glass.eglfb = [:]
 // TODO when building headless, use lens/cursor/nullcursor/
@@ -394,7 +482,7 @@ ARMV6HF.prism.nativeSource = file("modules/graphics/src/main/native-prism")
 ARMV6HF.prism.compiler = compiler
 ARMV6HF.prism.ccFlags = [extraCFlags].flatten()
 ARMV6HF.prism.linker = linker
-ARMV6HF.prism.linkFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
+ARMV6HF.prism.linkFlags = [extraLFlags].flatten()
 ARMV6HF.prism.lib = "prism_common"
 
 ARMV6HF.prismSW = [:]
@@ -418,7 +506,7 @@ ARMV6HF.iio.linkFlags = iioLFlags
 ARMV6HF.iio.lib = "javafx_iio"
 
 ARMV6HF.prismES2 = [:]
-ARMV6HF.prismES2.variants = ["eglfb"]
+ARMV6HF.prismES2.variants = ["eglfb", "monocle"]
 ARMV6HF.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 ARMV6HF.prismES2.eglfb = [:]
@@ -432,6 +520,18 @@ ARMV6HF.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", ARMV6HF.glass.lensport.
 ARMV6HF.prismES2.eglfb.linker = linker
 ARMV6HF.prismES2.eglfb.linkFlags = es2EglfbLFlags
 ARMV6HF.prismES2.eglfb.lib = "prism_es2_eglfb"
+
+ARMV6HF.prismES2.monocle= [:]
+ARMV6HF.prismES2.monocle.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/monocle")
+]
+ARMV6HF.prismES2.monocle.compiler = compiler
+ARMV6HF.prismES2.monocle.ccFlags = [ es2EglfbCFlags, "-I", ARMV6HF.glass.lensport.nativeSource ].flatten()
+ARMV6HF.prismES2.monocle.linker = linker
+ARMV6HF.prismES2.monocle.linkFlags = es2EglfbLFlags
+ARMV6HF.prismES2.monocle.lib = "prism_es2_monocle"
 
 ARMV6HF.prismES2.eglx11 = [:]
 ARMV6HF.prismES2.eglx11.nativeSource = [
@@ -490,9 +590,9 @@ ARMV6HF.webkit = [:]
 ARMV6HF.webkit.binDir   = "$compilerHome/bin"
 ARMV6HF.webkit.compiler = compiler
 ARMV6HF.webkit.linker   = linker
-ARMV6HF.webkit.ar       = file("$compilerHome/bin/arm-linux-gnueabihf-ar").getAbsolutePath()
-ARMV6HF.webkit.objcopy  = file("$compilerHome/bin/arm-linux-gnueabihf-objcopy").getAbsolutePath()
-ARMV6HF.webkit.strip    = file("$compilerHome/bin/arm-linux-gnueabihf-strip").getAbsolutePath()
+ARMV6HF.webkit.ar       = file("$compilerHome/bin/${compilerPrefix}ar").getAbsolutePath()
+ARMV6HF.webkit.objcopy  = file("$compilerHome/bin/${compilerPrefix}objcopy").getAbsolutePath()
+ARMV6HF.webkit.strip    = file("$compilerHome/bin/${compilerPrefix}strip").getAbsolutePath()
 ARMV6HF.webkit.ccFlags  = extraCFlags.join(' ')
 ARMV6HF.webkit.linkFlags = extraLFlags.join(' ')
 

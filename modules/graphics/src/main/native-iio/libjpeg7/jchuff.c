@@ -179,6 +179,9 @@ jpeg_make_c_derived_tbl (j_compress_ptr cinfo, boolean isDC, int tblno,
   unsigned int huffcode[257];
   unsigned int code;
 
+  MEMZERO(huffsize, SIZEOF(huffsize));
+  MEMZERO(huffcode, SIZEOF(huffcode));
+
   /* Note that huffsize[] and huffcode[] are filled in code-length order,
    * paralleling the order of the symbols themselves in htbl->huffval[].
    */
@@ -789,6 +792,8 @@ encode_mcu_AC_refine (j_compress_ptr cinfo, JBLOCKROW *MCU_data)
   int Al = cinfo->Al;
   JBLOCKROW block;
   int absvalues[DCTSIZE2];
+
+  MEMZERO(absvalues, SIZEOF(absvalues));
 
   entropy->next_output_byte = cinfo->dest->next_output_byte;
   entropy->free_in_buffer = cinfo->dest->free_in_buffer;

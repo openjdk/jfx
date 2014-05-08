@@ -125,15 +125,13 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
      *      all of its children (recursively).
      */
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView() {
-        Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty = 
-                new Callback<TreeItem<T>, ObservableValue<Boolean>>() {
-            @Override public ObservableValue<Boolean> call(TreeItem<T> item) {
-                if (item instanceof CheckBoxTreeItem<?>) {
-                    return ((CheckBoxTreeItem<?>)item).selectedProperty();
-                }
-                return null;
-            }
-        };
+        Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty =
+                item -> {
+                    if (item instanceof CheckBoxTreeItem<?>) {
+                        return ((CheckBoxTreeItem<?>)item).selectedProperty();
+                    }
+                    return null;
+                };
         return forTreeView(getSelectedProperty, 
                            CellUtils.<T>defaultTreeItemStringConverter());
     }
@@ -212,11 +210,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<TreeItem<T>> converter) {
-        return new Callback<TreeView<T>, TreeCell<T>>() {
-            @Override public TreeCell<T> call(TreeView<T> tree) {
-                return new CheckBoxTreeCell<T>(getSelectedProperty, converter);
-            }
-        };
+        return tree -> new CheckBoxTreeCell<T>(getSelectedProperty, converter);
     }
     
     
@@ -251,13 +245,11 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     public CheckBoxTreeCell() {
         // getSelectedProperty as anonymous inner class to deal with situation
         // where the user is using CheckBoxTreeItem instances in their tree
-        this(new Callback<TreeItem<T>, ObservableValue<Boolean>>() {
-            @Override public ObservableValue<Boolean> call(TreeItem<T> item) {
-                if (item instanceof CheckBoxTreeItem<?>) {
-                    return ((CheckBoxTreeItem<?>)item).selectedProperty();
-                }
-                return null;
+        this(item -> {
+            if (item instanceof CheckBoxTreeItem<?>) {
+                return ((CheckBoxTreeItem<?>)item).selectedProperty();
             }
+            return null;
         });
     }
     

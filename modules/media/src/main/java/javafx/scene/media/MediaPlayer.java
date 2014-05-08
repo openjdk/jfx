@@ -512,11 +512,8 @@ public final class MediaPlayer {
         }
 
         // Register for the Player's event
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                registerListeners();
-            }
+        Platform.runLater(() -> {
+            registerListeners();
         });
     }
 
@@ -1039,12 +1036,8 @@ public final class MediaPlayer {
         if (isStartValueSet) {
             jfxPlayer.setStartTime(startStop[0]);
             if (getStatus() == Status.READY || getStatus() == Status.PAUSED) {
-                Platform.runLater(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        setCurrentTime(getStartTime());
-                    }
+                Platform.runLater(() -> {
+                    setCurrentTime(getStartTime());
                 });
             }
         }
@@ -1727,17 +1720,15 @@ public final class MediaPlayer {
 
     // This function sets the player's error property on the UI thread.
     void handleError(final MediaException error) {
-        Platform.runLater(new Runnable() {
-            @Override public void run () {
-                setError(error);
+        Platform.runLater(() -> {
+            setError(error);
 
-                // Propogate errors that related to media to media object
-                if (error.getType() == MediaException.Type.MEDIA_CORRUPTED
-                        || error.getType() == MediaException.Type.MEDIA_UNSUPPORTED
-                        || error.getType() == MediaException.Type.MEDIA_INACCESSIBLE
-                        || error.getType() == MediaException.Type.MEDIA_UNAVAILABLE) {
-                    media._setError(error.getType(), error.getMessage());
-                }
+            // Propogate errors that related to media to media object
+            if (error.getType() == MediaException.Type.MEDIA_CORRUPTED
+                    || error.getType() == MediaException.Type.MEDIA_UNSUPPORTED
+                    || error.getType() == MediaException.Type.MEDIA_INACCESSIBLE
+                    || error.getType() == MediaException.Type.MEDIA_UNAVAILABLE) {
+                media._setError(error.getType(), error.getMessage());
             }
         });
     }
@@ -2431,14 +2422,10 @@ public final class MediaPlayer {
 
         @Override
         public void onMarker(final MarkerEvent evt) {
-            Platform.runLater(new Runnable() {
-
-                @Override
-                public void run() {
-                    Duration markerTime = Duration.millis(evt.getPresentationTime() * 1000.0);
-                    if (getOnMarker() != null) {
-                        getOnMarker().handle(new MediaMarkerEvent(new Pair<String, Duration>(evt.getMarkerName(), markerTime)));
-                    }
+            Platform.runLater(() -> {
+                Duration markerTime = Duration.millis(evt.getPresentationTime() * 1000.0);
+                if (getOnMarker() != null) {
+                    getOnMarker().handle(new MediaMarkerEvent(new Pair<String, Duration>(evt.getMarkerName(), markerTime)));
                 }
             });
         }
@@ -2448,16 +2435,13 @@ public final class MediaPlayer {
         @Override
         public void onReady(PlayerStateEvent evt) {
             //System.out.println("** MediaPlayerFX received onReady!");
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (disposeLock) {
-                        if (getStatus() == Status.DISPOSED) {
-                            return;
-                        }
-                        
-                        preReady();
+            Platform.runLater(() -> {
+                synchronized (disposeLock) {
+                    if (getStatus() == Status.DISPOSED) {
+                        return;
                     }
+
+                    preReady();
                 }
             });
         }
@@ -2467,11 +2451,9 @@ public final class MediaPlayer {
             //System.err.println("** MediaPlayerFX received onPlaying!");
             startTimeAtStop = null;
             
-            Platform.runLater(new Runnable() {
-                @Override public void run() {                    
-                    createMediaTimer();
-                    setStatus(Status.PLAYING);
-                }
+            Platform.runLater(() -> {
+                createMediaTimer();
+                setStatus(Status.PLAYING);
             });
         }
 
@@ -2479,25 +2461,17 @@ public final class MediaPlayer {
         public void onPause(PlayerStateEvent evt) {
             //System.err.println("** MediaPlayerFX received onPause!");
             
-            Platform.runLater(new Runnable() {
+            Platform.runLater(() -> {
+                // Disable updating currentTime.
+                isUpdateTimeEnabled = false;
 
-                @Override
-                public void run() {
-                    // Disable updating currentTime.
-                    isUpdateTimeEnabled = false;
-
-                    setStatus(Status.PAUSED);
-                }
+                setStatus(Status.PAUSED);
             });
             
             if (startTimeAtStop != null && startTimeAtStop != getStartTime()) {
                 startTimeAtStop = null;
-                Platform.runLater(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        setCurrentTime(getStartTime());
-                    }
+                Platform.runLater(() -> {
+                    setCurrentTime(getStartTime());
                 });
             }
         }
@@ -2505,31 +2479,23 @@ public final class MediaPlayer {
         @Override
         public void onStop(PlayerStateEvent evt) {
             //System.err.println("** MediaPlayerFX received onStop!");
-            Platform.runLater(new Runnable() {
-
-                @Override
-                public void run() {
-                    // Destroy media time and update current time
-                    destroyMediaTimer();
-                    startTimeAtStop = getStartTime();
-                    setCurrentTime(getStartTime());
-                    setStatus(Status.STOPPED);
-                }
+            Platform.runLater(() -> {
+                // Destroy media time and update current time
+                destroyMediaTimer();
+                startTimeAtStop = getStartTime();
+                setCurrentTime(getStartTime());
+                setStatus(Status.STOPPED);
             });
         }
 
         @Override
         public void onStall(PlayerStateEvent evt) {
             //System.err.println("** MediaPlayerFX received onStall!");
-            Platform.runLater(new Runnable() {
+            Platform.runLater(() -> {
+                // Disable updating currentTime.
+                isUpdateTimeEnabled = false;
 
-                @Override
-                public void run() {
-                    // Disable updating currentTime.
-                    isUpdateTimeEnabled = false;
-
-                    setStatus(Status.STALLED);
-                }
+                setStatus(Status.STALLED);
             });
         }
 
@@ -2574,27 +2540,19 @@ public final class MediaPlayer {
             //System.err.println("** MediaPlayerFX received onFinish!");
             startTimeAtStop = null;
             
-            Platform.runLater(new Runnable() {
-
-                @Override
-                public void run() {
-                    handleFinish();
-                }
+            Platform.runLater(() -> {
+                handleFinish();
             });
         }
 
         @Override
         public void onHalt(final PlayerStateEvent evt) {
-            Platform.runLater(new Runnable() {
+            Platform.runLater(() -> {
+                setStatus(Status.HALTED);
+                handleError(MediaException.haltException(evt.getMessage()));
 
-                @Override
-                public void run() {
-                    setStatus(Status.HALTED);
-                    handleError(MediaException.haltException(evt.getMessage()));
-
-                    // Disable updating currentTime.
-                    isUpdateTimeEnabled = false;
-                }
+                // Disable updating currentTime.
+                isUpdateTimeEnabled = false;
             });
         }
     }
@@ -2609,13 +2567,9 @@ public final class MediaPlayer {
         @Override
         public void onDurationChanged(final double duration) {
             //System.err.println("** MediaPlayerFX received onDurationChanged!");
-            Platform.runLater(new Runnable() {
-
-                @Override
-                public void run() {
-                    theDuration = duration;
-                    handleDurationChanged();
-                }
+            Platform.runLater(() -> {
+                theDuration = duration;
+                handleDurationChanged();
             });
         }
     }
@@ -2626,15 +2580,11 @@ public final class MediaPlayer {
 
         @Override
         public void onSizeChanged(final int width, final int height) {
-            Platform.runLater(new Runnable() {
-
-                @Override
-                public void run() {
-                    if (media != null) {
-                        trackWidth = width;
-                        trackHeight = height;
-                        setSize();
-                    }
+            Platform.runLater(() -> {
+                if (media != null) {
+                    trackWidth = width;
+                    trackHeight = height;
+                    setSize();
                 }
             });
         }
@@ -2675,10 +2625,8 @@ public final class MediaPlayer {
                     bufferedTime = position/stop * evt.getDuration()*1000.0;
                     lastBufferEvent = null;
 
-                    Platform.runLater(new Runnable() {
-                       @Override public void run() {
-                            setBufferProgressTime(Duration.millis(bufferedTime));
-                       }
+                    Platform.runLater(() -> {
+                         setBufferProgressTime(Duration.millis(bufferedTime));
                     });
                 } else {
                     lastBufferEvent = evt;
@@ -2692,15 +2640,13 @@ public final class MediaPlayer {
         private float[] phases;
 
         @Override public void onAudioSpectrumEvent(final AudioSpectrumEvent evt) {
-            Platform.runLater(new Runnable() {
-                @Override public void run () {
-                    AudioSpectrumListener listener = getAudioSpectrumListener();
-                    if (listener != null) {
-                        listener.spectrumDataUpdate(evt.getTimestamp(),
-                                evt.getDuration(),
-                                magnitudes = evt.getSource().getMagnitudes(magnitudes),
-                                phases = evt.getSource().getPhases(phases));
-                    }
+            Platform.runLater(() -> {
+                AudioSpectrumListener listener = getAudioSpectrumListener();
+                if (listener != null) {
+                    listener.spectrumDataUpdate(evt.getTimestamp(),
+                            evt.getDuration(),
+                            magnitudes = evt.getSource().getMagnitudes(magnitudes),
+                            phases = evt.getSource().getPhases(phases));
                 }
             });
         }
@@ -2893,12 +2839,9 @@ class MediaTimerTask extends TimerTask {
             final MediaPlayer player = playerRef.get();
             if (player != null) {
 
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        synchronized (timerLock) {
-                            player.updateTime();
-                        }
+                Platform.runLater(() -> {
+                    synchronized (timerLock) {
+                        player.updateTime();
                     }
                 });
             } else {

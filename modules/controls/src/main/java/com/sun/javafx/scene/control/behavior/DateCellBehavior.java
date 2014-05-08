@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,18 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.DateCell;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.scene.control.skin.DatePickerContent;
 import com.sun.javafx.scene.traversal.Direction;
 import static java.time.temporal.ChronoUnit.DAYS;
-import static java.time.temporal.ChronoUnit.MONTHS;
 import static java.time.temporal.ChronoUnit.WEEKS;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.PAGE_DOWN;
-import static javafx.scene.input.KeyCode.PAGE_UP;
 import static javafx.scene.input.KeyCode.RIGHT;
 import static javafx.scene.input.KeyCode.SPACE;
 import static javafx.scene.input.KeyCode.UP;
@@ -50,7 +47,8 @@ import static javafx.scene.input.KeyEvent.*;
  * that subclasses implement so that CellSkinBase has API to call.
  *
  */
-public class DateCellBehavior extends CellBehaviorBase<DateCell> {
+public class DateCellBehavior extends BehaviorBase<DateCell> {
+
     /**************************************************************************
      *                          Setup KeyBindings                             *
      *************************************************************************/
@@ -84,6 +82,8 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
     }
 
     @Override public void traverse(final Node node, final Direction dir) {
+        boolean rtl = (node.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT);
+
         switch (dir) {
           case UP:
           case DOWN:
@@ -94,10 +94,10 @@ public class DateCellBehavior extends CellBehaviorBase<DateCell> {
                   if (dpc != null) {
                       DateCell cell = (DateCell)node;
                       switch (dir) {
-                        case UP:    dpc.goToDayCell(cell, -1, WEEKS); break;
-                        case DOWN:  dpc.goToDayCell(cell, +1, WEEKS); break;
-                        case LEFT:  dpc.goToDayCell(cell, -1, DAYS); break;
-                        case RIGHT: dpc.goToDayCell(cell, +1, DAYS); break;
+                        case UP:    dpc.goToDayCell(cell, -1, WEEKS, true); break;
+                        case DOWN:  dpc.goToDayCell(cell, +1, WEEKS, true); break;
+                        case LEFT:  dpc.goToDayCell(cell, rtl ? +1 : -1, DAYS,  true); break;
+                        case RIGHT: dpc.goToDayCell(cell, rtl ? -1 : +1, DAYS,  true); break;
                       }
                       return;
                   }

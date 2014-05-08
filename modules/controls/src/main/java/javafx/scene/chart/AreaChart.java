@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,8 +41,6 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
@@ -73,7 +71,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     // -------------- PRIVATE FIELDS ------------------------------------------
 
     /** A multiplier for teh Y values that we store for each series, it is used to animate in a new series */
-    private Map<Series, DoubleProperty> seriesYMultiplierMap = new HashMap<Series, DoubleProperty>();
+    private Map<Series<X,Y>, DoubleProperty> seriesYMultiplierMap = new HashMap<>();
     private Legend legend = new Legend();
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
@@ -229,10 +227,13 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             }
             if (animate) {
                 animate(
-                    new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
-                                        item.getCurrentY()),
-                                        new KeyValue(item.currentXProperty(),
-                                        item.getCurrentX())),
+                    new KeyFrame(Duration.ZERO,
+                            (e) -> { if (!getPlotChildren().contains(symbol)) getPlotChildren().add(symbol); },
+                            new KeyValue(item.currentYProperty(),
+                                    item.getCurrentY()),
+                            new KeyValue(item.currentXProperty(),
+                                    item.getCurrentX())
+                    ),
                     new KeyFrame(Duration.millis(800), new KeyValue(item.currentYProperty(),
                                         item.getYValue(), Interpolator.EASE_BOTH),
                                         new KeyValue(item.currentXProperty(),
@@ -251,7 +252,12 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         int itemIndex = series.getItemIndex(item);
         if (shouldAnimate()) {
             boolean animate = false;
-            if (itemIndex > 0 && itemIndex < series.getDataSize()-1) {
+            // dataSize represents size of currently visible data. After this operation, the number will decrement by 1
+            final int dataSize = series.getDataSize();
+            // This is the size of current data list in Series. Note that it might be totaly different from dataSize as
+            // some big operation might have happened on the list.
+            final int dataListSize = series.getData().size();
+            if (itemIndex > 0 && itemIndex < dataSize -1) {
                 animate = true;
                 int index=0; Data<X,Y> d;
                 for (d = series.begin; d != null && index != itemIndex - 1; d=d.next) index++;
@@ -276,38 +282,36 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 //                double y = (y3 + y1)/2;
 //                item.setCurrentX(x);
 //                item.setCurrentY(y);
-            } else if (itemIndex == 0 && series.getDataSize() > 1) {
-                animate = true;
-                item.setXValue(series.getData().get(0).getXValue());
-                item.setYValue(series.getData().get(0).getYValue());
-            } else if (itemIndex == (series.getDataSize() - 1) && series.getDataSize() > 1) {
-                animate = true;
-                int last = series.getData().size() - 1;
-                item.setXValue(series.getData().get(last).getXValue());
-                item.setYValue(series.getData().get(last).getYValue());
             } else {
-                // fade out symbol
-                symbol.setOpacity(0);
-                FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
-                ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
+                if (itemIndex == 0 && dataListSize > 1) {
+                    animate = true;
+                    item.setXValue(series.getData().get(0).getXValue());
+                    item.setYValue(series.getData().get(0).getYValue());
+                } else if (itemIndex == (dataSize - 1) && dataListSize > 1) {
+                    animate = true;
+                    int last = dataListSize - 1;
+                    item.setXValue(series.getData().get(last).getXValue());
+                    item.setYValue(series.getData().get(last).getYValue());
+                } else {
+                    // fade out symbol
+                    symbol.setOpacity(0);
+                    FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
+                    ft.setToValue(0);
+                    ft.setOnFinished(actionEvent -> {
                         getPlotChildren().remove(symbol);
                         removeDataItemFromDisplay(series, item);
-                    }
-                });
-                ft.play();
+                    });
+                    ft.play();
+                }
             }
             if (animate) {
                 animate( new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
                             item.getCurrentY()), new KeyValue(item.currentXProperty(),
                             item.getCurrentX())),
-                            new KeyFrame(Duration.millis(800), new EventHandler<ActionEvent>() {
-                                @Override public void handle(ActionEvent actionEvent) {
-                                    item.setSeries(null);
-                                    getPlotChildren().remove(symbol);
-                                    removeDataItemFromDisplay(series, item);
-                                }
+                            new KeyFrame(Duration.millis(800), actionEvent -> {
+                                item.setSeries(null);
+                                getPlotChildren().remove(symbol);
+                                removeDataItemFromDisplay(series, item);
                             },
                             new KeyValue(item.currentYProperty(),
                             item.getYValue(), Interpolator.EASE_BOTH),
@@ -337,7 +341,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             seriesLine.getStyleClass().setAll("chart-series-area-line", "series" + i, s.defaultColorStyleClass);
             fillPath.getStyleClass().setAll("chart-series-area-fill", "series" + i, s.defaultColorStyleClass);
             for (int j=0; j < s.getData().size(); j++) {
-                final Data item = s.getData().get(j);
+                final Data<X,Y> item = s.getData().get(j);
                 final Node node = item.getNode();
                 if(node!=null) node.getStyleClass().setAll("chart-area-symbol", "series" + i, "data" + j, s.defaultColorStyleClass);
             }
@@ -376,7 +380,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             ));
         }
         for (int j=0; j<series.getData().size(); j++) {
-            Data item = series.getData().get(j);
+            Data<X,Y> item = series.getData().get(j);
             final Node symbol = createSymbol(series, seriesIndex, item, j);
             if (symbol != null) {
                 if (shouldAnimate()) {
@@ -395,7 +399,6 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
     }
     private void updateDefaultColorIndex(final Series<X,Y> series) {
         int clearIndex = seriesColorMap.get(series);
-        colorBits.clear(clearIndex);
         Path seriesLine = (Path)((Group)series.getNode()).getChildren().get(1);
         Path fillPath = (Path)((Group)series.getNode()).getChildren().get(0);
         if (seriesLine != null) {
@@ -404,14 +407,12 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         if (fillPath != null) {
             fillPath.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
         }
-        colorBits.clear(clearIndex);
         for (int j=0; j < series.getData().size(); j++) {
             final Node node = series.getData().get(j).getNode();
             if(node!=null) {
                 node.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
             }
         }
-        seriesColorMap.remove(series);
     }
     @Override protected  void seriesRemoved(final Series<X,Y> series) {
         updateDefaultColorIndex(series);
@@ -424,7 +425,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             nodes.add(series.getNode());
             if (getCreateSymbols()) { // RT-22124
                 // done need to fade the symbols if createSymbols is false
-                for (Data d: series.getData()) nodes.add(d.getNode());
+                for (Data<X,Y> d: series.getData()) nodes.add(d.getNode());
             }
             // fade out old and symbols
             KeyValue[] startValues = new KeyValue[nodes.size()];
@@ -436,17 +437,15 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             Timeline tl = new Timeline();
             tl.getKeyFrames().addAll(
                 new KeyFrame(Duration.ZERO,startValues),
-                new KeyFrame(Duration.millis(400), new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().removeAll(nodes);
-                        removeSeriesFromDisplay(series);
-                    }
+                new KeyFrame(Duration.millis(400), actionEvent -> {
+                    getPlotChildren().removeAll(nodes);
+                    removeSeriesFromDisplay(series);
                 },endValues)
             );
             tl.play();
         } else {
             getPlotChildren().remove(series.getNode());
-            for (Data d:series.getData()) getPlotChildren().remove(d.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
             removeSeriesFromDisplay(series);
         }
     }
@@ -468,7 +467,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                         getYAxis().toRealValue(getYAxis().toNumericValue(item.getCurrentY()) * seriesYAnimMultiplier.getValue()));
                 if (isFirst) {
                     isFirst = false;
-                    fillPath.getElements().add(new MoveTo(x, getYAxis().getZeroPosition()));
+                    fillPath.getElements().add(new MoveTo(x, getYAxis().getHeight()));
                     seriesLine.getElements().add(new MoveTo(x, y));
                 } else {
                     seriesLine.getElements().add(new LineTo(x, y));
@@ -482,15 +481,15 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 }
             }
             if (fillPath.getElements().size() >= 1) {
-                fillPath.getElements().add(new LineTo(lastX, getYAxis().getZeroPosition()));
+                fillPath.getElements().add(new LineTo(lastX, getYAxis().getHeight()));
             } else {
-                fillPath.getElements().add(new MoveTo(lastX, getYAxis().getZeroPosition()));
+                fillPath.getElements().add(new MoveTo(lastX, getYAxis().getHeight()));
             }
             fillPath.getElements().add(new ClosePath());
         }
     }
 
-    private Node createSymbol(Series series, int seriesIndex, final Data item, int itemIndex) {
+    private Node createSymbol(Series<X,Y> series, int seriesIndex, final Data<X,Y> item, int itemIndex) {
         Node symbol = item.getNode();
         // check if symbol has already been created
         if (symbol == null && getCreateSymbols()) {
@@ -535,12 +534,12 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(AreaChart node) {
+            public boolean isSettable(AreaChart<?,?> node) {
                 return node.createSymbols == null || !node.createSymbols.isBound();
 }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(AreaChart node) {
+            public StyleableProperty<Boolean> getStyleableProperty(AreaChart<?,?> node) {
                 return (StyleableProperty<Boolean>)node.createSymbolsProperty();
             }
         };

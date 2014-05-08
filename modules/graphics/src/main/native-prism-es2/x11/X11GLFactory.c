@@ -259,12 +259,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
 */
 
     /*
-     * Supported Cards: Intel HD Graphics, Intel HD Graphics 2000/3000,
-     * Radeon HD 2350, GeForce FX (with newer drivers), GeForce 6 series or higher
+     * Targeted Cards: Intel HD Graphics, Intel HD Graphics 2000/3000,
+     * Radeon HD 2350, GeForce FX (with newer drivers), GeForce 7 series or higher
      *
-     * Check for OpenGL 2.0 or later.
+     * Check for OpenGL 2.1 or later. 
      */
-    if (versionNumbers[0] < 2) {
+    if ((versionNumbers[0] < 2) || ((versionNumbers[0] == 2) && (versionNumbers[1] < 1))) {
         fprintf(stderr, "Prism-ES2 Error : GL_VERSION (major.minor) = %d.%d\n",
                 versionNumbers[0], versionNumbers[1]);
         printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap, NULL);
@@ -288,7 +288,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
         return 0;
     }
 
-    // We use GL 2.0 and GL_ARB_pixel_buffer_object as an guide to
+    // We use GL_ARB_pixel_buffer_object as an guide to
     // determine PS 3.0 capable.
     if (!isExtensionSupported(glExtensions, "GL_ARB_pixel_buffer_object")) {
         printAndReleaseResources(display, fbConfigList, visualInfo,

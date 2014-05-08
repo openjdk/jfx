@@ -28,6 +28,7 @@ package com.sun.javafx.binding;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import sun.util.logging.PlatformLogger;
 
 import java.util.Arrays;
 
@@ -132,7 +133,11 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent() {
-            listener.invalidated(observable);
+            try {
+                listener.invalidated(observable);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
         }
     }
     
@@ -173,7 +178,11 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             currentValue = observable.getValue();
             final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
             if (changed) {
-                listener.changed(observable, oldValue, currentValue);
+                try {
+                    listener.changed(observable, oldValue, currentValue);
+                } catch (Exception e) {
+                    Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                }
             }
         }
     }
@@ -336,7 +345,11 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             try {
                 locked = true;
                 for (int i = 0; i < curInvalidationSize; i++) {
-                    curInvalidationList[i].invalidated(observable);
+                    try {
+                        curInvalidationList[i].invalidated(observable);
+                    } catch (Exception e) {
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                    }
                 }
                 if (curChangeSize > 0) {
                     final T oldValue = currentValue;
@@ -344,7 +357,11 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
                     final boolean changed = (currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue);
                     if (changed) {
                         for (int i = 0; i < curChangeSize; i++) {
-                            curChangeList[i].changed(observable, oldValue, currentValue);
+                            try {
+                                curChangeList[i].changed(observable, oldValue, currentValue);
+                            } catch (Exception e) {
+                                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                            }
                         }
                     }
                 }

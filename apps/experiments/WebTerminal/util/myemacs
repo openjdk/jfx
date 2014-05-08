@@ -1,0 +1,7 @@
+# Convenience command to run emacs with working TERM and TERMINFO
+case "$0" in 
+  /* ) cmd="$0";;
+  *)   cmd=`pwd`/"$0";;
+esac
+dir=`dirname $cmd`
+TERMINFO=$dir/../terminfo TERM=jfxterm /usr/bin/emacs -nw "$@"

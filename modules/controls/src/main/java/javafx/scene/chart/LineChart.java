@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,8 +43,6 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.LineTo;
@@ -72,8 +70,8 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PRIVATE FIELDS ------------------------------------------
 
-    /** A multiplier for teh Y values that we store for each series, it is used to animate in a new series */
-    private Map<Series, DoubleProperty> seriesYMultiplierMap = new HashMap<Series, DoubleProperty>();
+    /** A multiplier for the Y values that we store for each series, it is used to animate in a new series */
+    private Map<Series<X,Y>, DoubleProperty> seriesYMultiplierMap = new HashMap<>();
     private Legend legend = new Legend();
     private Timeline dataRemoveTimeline;
     private Series<X,Y> seriesOfDataRemoved = null;
@@ -230,16 +228,17 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 item.setCurrentY(series.getData().get(last).getYValue());
             } else if(symbol != null) {
                 // fade in new symbol
+                symbol.setOpacity(0);
+                getPlotChildren().add(symbol);
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
                 ft.setToValue(1);
                 ft.play();
             }
-            if(symbol != null) {
-                    getPlotChildren().add(symbol);
-            }
             if (animate) {
                 animate(
-                    new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
+                    new KeyFrame(Duration.ZERO,
+                            (e) -> { if (symbol != null && !getPlotChildren().contains(symbol)) getPlotChildren().add(symbol); },
+                                   new KeyValue(item.currentYProperty(),
                                         item.getCurrentY()),
                                         new KeyValue(item.currentXProperty(),
                                         item.getCurrentX())),
@@ -307,15 +306,13 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             } else {
                 // fade out symbol
                 if (symbol != null) {
-                    symbol.setOpacity(0);
                     fadeSymbolTransition = new FadeTransition(Duration.millis(500),symbol);
                     fadeSymbolTransition.setToValue(0);
-                    fadeSymbolTransition.setOnFinished(new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            item.setSeries(null);
-                            getPlotChildren().remove(symbol);
-                            removeDataItemFromDisplay(series, item);
-                        }
+                    fadeSymbolTransition.setOnFinished(actionEvent -> {
+                        item.setSeries(null);
+                        getPlotChildren().remove(symbol);
+                        removeDataItemFromDisplay(series, item);
+                        symbol.setOpacity(1.0);
                     });
                     fadeSymbolTransition.play();
                 }
@@ -380,7 +377,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             ));
         }
         for (int j=0; j<series.getData().size(); j++) {
-            Data item = series.getData().get(j);
+            Data<X,Y> item = series.getData().get(j);
             final Node symbol = createSymbol(series, seriesIndex, item, j);
             if(symbol != null) {
                 if (shouldAnimate()) symbol.setOpacity(0);
@@ -396,7 +393,6 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     }
     private void updateDefaultColorIndex(final Series<X,Y> series) {
         int clearIndex = seriesColorMap.get(series);
-        colorBits.clear(clearIndex);
         series.getNode().getStyleClass().remove(DEFAULT_COLOR+clearIndex);
         for (int j=0; j < series.getData().size(); j++) {
             final Node node = series.getData().get(j).getNode();
@@ -404,7 +400,6 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 node.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
             }
         }
-        seriesColorMap.remove(series);
     }
 
     @Override protected  void seriesRemoved(final Series<X,Y> series) {
@@ -417,7 +412,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             nodes.add(series.getNode());
             if (getCreateSymbols()) { // RT-22124 
                 // done need to fade the symbols if createSymbols is false
-                for (Data d: series.getData()) nodes.add(d.getNode());
+                for (Data<X,Y> d: series.getData()) nodes.add(d.getNode());
             }
             // fade out old and symbols
             KeyValue[] startValues = new KeyValue[nodes.size()];
@@ -429,17 +424,15 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             seriesRemoveTimeline = new Timeline();
             seriesRemoveTimeline.getKeyFrames().addAll(
                 new KeyFrame(Duration.ZERO,startValues),
-                new KeyFrame(Duration.millis(900), new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().removeAll(nodes);
-                        removeSeriesFromDisplay(series);
-                    }
+                new KeyFrame(Duration.millis(900), actionEvent -> {
+                    getPlotChildren().removeAll(nodes);
+                    removeSeriesFromDisplay(series);
                 },endValues)
             );
             seriesRemoveTimeline.play();
         } else {
             getPlotChildren().remove(series.getNode());
-            for (Data d:series.getData()) getPlotChildren().remove(d.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
             removeSeriesFromDisplay(series);
         }
     }
@@ -503,7 +496,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             seriesRemoveTimeline.setOnFinished(null);
             seriesRemoveTimeline.stop();
             getPlotChildren().remove(series.getNode());
-            for (Data d:series.getData()) getPlotChildren().remove(d.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
             removeSeriesFromDisplay(series);
         }
     }
@@ -516,12 +509,10 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
                 item.getCurrentY()), new KeyValue(item.currentXProperty(),
                 item.getCurrentX())),
-                new KeyFrame(Duration.millis(500), new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        if (symbol != null) getPlotChildren().remove(symbol);
-                        removeDataItemFromDisplay(series, item);
-                        XYValueMap.clear();
-                    }
+                new KeyFrame(Duration.millis(500), actionEvent -> {
+                    if (symbol != null) getPlotChildren().remove(symbol);
+                    removeDataItemFromDisplay(series, item);
+                    XYValueMap.clear();
                 },
                 new KeyValue(item.currentYProperty(),
                 item.getYValue(), Interpolator.EASE_BOTH),
@@ -531,7 +522,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         return t;
     }
 
-    private Node createSymbol(Series<X, Y> series, int seriesIndex, final Data item, int itemIndex) {
+    private Node createSymbol(Series<X, Y> series, int seriesIndex, final Data<X,Y> item, int itemIndex) {
         Node symbol = item.getNode();
         // check if symbol has already been created
         if (symbol == null && getCreateSymbols()) {
@@ -574,12 +565,12 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(LineChart node) {
+            public boolean isSettable(LineChart<?,?> node) {
                 return node.createSymbols == null || !node.createSymbols.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(LineChart node) {
+            public StyleableProperty<Boolean> getStyleableProperty(LineChart<?,?> node) {
                 return (StyleableProperty<Boolean>)node.createSymbolsProperty();
             }
         };

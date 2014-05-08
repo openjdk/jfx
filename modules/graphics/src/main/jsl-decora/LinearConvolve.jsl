@@ -24,39 +24,29 @@
  */
 
 <<
-private LinearConvolveKernel getKernel() {
-    return (LinearConvolveKernel) AccessHelper.getState(getEffect());
-}
-
-public int getPow2ScaleX(LinearConvolveKernel kernel) {
-    return kernel.getPow2ScaleX();
-}
-
-public int getPow2ScaleY(LinearConvolveKernel kernel) {
-    return kernel.getPow2ScaleY();
-}
-
 public Rectangle getResultBounds(com.sun.javafx.geom.transform.BaseTransform transform,
                                  com.sun.javafx.geom.Rectangle outputClip,
                                  com.sun.scenario.effect.ImageData... inputDatas)
 {
-    return getKernel().getScaledResultBounds(inputDatas[0].getTransformedBounds(outputClip), getPass());
+    return getRenderState().getPassResultBounds(inputDatas[0].getTransformedBounds(outputClip));
 }
 
 private int getCount() {
-    return (getKernel().getScaledKernelSize(getPass()) + 3) / 4;
+    // The shader consumes weights 4 at a time so we need to round the
+    // kernel size to the next multiple of 4.
+    return (getRenderState().getPassKernelSize() + 3) / 4;
 }
 
 private float[] getOffset() {
-    return getKernel().getVector(getInputNativeBounds(0), getInputTransform(0), getPass());
+    return getRenderState().getPassVector();
 }
 
 private FloatBuffer getWeights() {
-    return getKernel().getWeights(getPass());
+    return getRenderState().getPassWeights();
 }
 
 private int getWeightsArrayLength() {
-    return getKernel().getWeightsArrayLength(getPass());
+    return getRenderState().getPassWeightsArrayLength();
 }
 >>
 
@@ -68,10 +58,10 @@ param int count;
 // offset.w = dy offset to first weighted convolution sample
 param float4 offset;
 // value for each location in the offsets array:
-//   weights[i].x = weight for pos0 + offset + i*direction*4+0
-//   weights[i].y = weight for pos0 + offset + i*direction*4+1
-//   weights[i].z = weight for pos0 + offset + i*direction*4+2
-//   weights[i].w = weight for pos0 + offset + i*direction*4+3
+//   weights[i].x = weight for pos0 + offset.zw + (i*4+0)*offset.xy
+//   weights[i].y = weight for pos0 + offset.zw + (i*4+1)*offset.xy
+//   weights[i].z = weight for pos0 + offset.zw + (i*4+2)*offset.xy
+//   weights[i].w = weight for pos0 + offset.zw + (i*4+3)*offset.xy
 param float4 weights[%d];
 
 void main()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css.parser;
 
+import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
 import javafx.scene.effect.BlurType;
@@ -100,12 +101,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 final public class CSSParser {
 
@@ -196,8 +192,11 @@ final public class CSSParser {
         final Stylesheet stylesheet = new Stylesheet();
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
             setInputSource(stylesheetText);
-            Reader reader = new CharArrayReader(stylesheetText.toCharArray());
-            parse(stylesheet, reader);
+            try (Reader reader = new CharArrayReader(stylesheetText.toCharArray())) {
+                parse(stylesheet, reader);
+            } catch (IOException ioe) {
+                // this method doesn't explicitly throw IOException
+            }
         }
         return stylesheet;
     }
@@ -213,8 +212,9 @@ final public class CSSParser {
         final Stylesheet stylesheet = new Stylesheet(docbase);
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
             setInputSource(docbase, stylesheetText);
-            Reader reader = new CharArrayReader(stylesheetText.toCharArray());
-            parse(stylesheet, reader);
+            try (Reader reader = new CharArrayReader(stylesheetText.toCharArray())) {
+                parse(stylesheet, reader);
+            }
         }
         return stylesheet;
     }
@@ -233,8 +233,9 @@ final public class CSSParser {
         final Stylesheet stylesheet = new Stylesheet(path);
         if (url != null) {
             setInputSource(path, null);
-            Reader reader = new BufferedReader(new InputStreamReader(url.openStream()));
-            parse(stylesheet, reader);
+            try (Reader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
+                parse(stylesheet, reader);
+            }
         }
         return stylesheet;
     }
@@ -242,13 +243,12 @@ final public class CSSParser {
     /* All of the other function calls should wind up here */
     private void parse(final Stylesheet stylesheet, final Reader reader) {
 
-        CSSLexer lex = CSSLexer.getInstance();
+//        CSSLexer lex = CSSLexer.getInstance();
+        CSSLexer lex = new CSSLexer();
         lex.setReader(reader);
 
         try {
             this.parse(stylesheet, lex);
-            reader.close();
-        } catch (IOException ioe) {
         } catch (Exception ex) {
             // Sometimes bad syntax causes an exception. The code should be
             // fixed to handle the bad syntax, but the fallback is
@@ -268,10 +268,9 @@ final public class CSSParser {
         if (stylesheetText != null && !stylesheetText.trim().isEmpty()) {
             setInputSource(node);
             final List<Rule> rules = new ArrayList<Rule>();
-            final Reader reader = new CharArrayReader(stylesheetText.toCharArray());
-            final CSSLexer lexer = CSSLexer.getInstance();
-            lexer.setReader(reader);
-            try {
+            try (Reader reader = new CharArrayReader(stylesheetText.toCharArray())) {
+                final CSSLexer lexer = CSSLexer.getInstance();
+                lexer.setReader(reader);
                 currentToken = nextToken(lexer);
                 final List<Declaration> declarations = declarations(lexer);
                 if (declarations != null && !declarations.isEmpty()) {
@@ -282,7 +281,6 @@ final public class CSSParser {
                     );
                     rules.add(rule);
                 }
-                reader.close();
             } catch (IOException ioe) {
             } catch (Exception ex) {
                 // Sometimes bad syntax causes an exception. The code should be
@@ -302,22 +300,21 @@ final public class CSSParser {
 
     /** convenience method for unit tests */
     public ParsedValueImpl parseExpr(String property, String expr) {
-        ParsedValueImpl value = null;
-        try {
-            setInputSource(null, property + ": " + expr);
-            char buf[] = new char[expr.length() + 1];
-            System.arraycopy(expr.toCharArray(), 0, buf, 0, expr.length());
-            buf[buf.length-1] = ';';
+        if (property == null || expr == null) return null;
 
-            Reader reader = new CharArrayReader(buf);
+        ParsedValueImpl value = null;
+        setInputSource(null, property + ": " + expr);
+        char buf[] = new char[expr.length() + 1];
+        System.arraycopy(expr.toCharArray(), 0, buf, 0, expr.length());
+        buf[buf.length-1] = ';';
+
+        try (Reader reader = new CharArrayReader(buf)) {
             CSSLexer lex = CSSLexer.getInstance();
             lex.setReader(reader);
 
             currentToken = nextToken(lex);
             CSSParser.Term term = this.expr(lex);
             value = valueFor(property, term);
-
-            reader.close();
         } catch (IOException ioe) {
         } catch (ParseException e) {
             if (LOGGER.isLoggable(Level.WARNING)) {
@@ -693,14 +690,24 @@ final public class CSSParser {
         }
 
         if (root.token.getType() == CSSLexer.IDENT) {
-            if ("inherit".equalsIgnoreCase(root.token.getText())) {
+            final String txt = root.token.getText();
+            if ("inherit".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("inherit", null);
-            } else if ("null".equalsIgnoreCase(root.token.getText())) {
+            } else if ("null".equalsIgnoreCase(txt)
+                    || "none".equalsIgnoreCase(txt)) {
                 return new ParsedValueImpl<String,String>("null", null);
             }
         }
-
-        if ("-fx-background-color".equals(property)) {
+        if ("-fx-fill".equals(property)) {
+             ParsedValueImpl pv = parse(root);
+            if (pv.getConverter() == StyleConverter.getUrlConverter()) {
+                // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
+                // Pending RT-33574
+                pv = new ParsedValueImpl(new ParsedValue[] {pv},PaintConverter.ImagePatternConverter.getInstance());
+            }
+            return pv;
+        }
+        else if ("-fx-background-color".equals(property)) {
             return parsePaintLayers(root);
         } else if ("-fx-background-image".equals(prop)) {
             return parseURILayers(root);
@@ -841,9 +848,11 @@ final public class CSSParser {
             final String text = str.toLowerCase(Locale.ROOT);
             if ("ladder".equals(text)) {
                 value = ladder(root);
-            } else if ("linear".equals(text)) {
+            } else if ("linear".equals(text) && (root.nextInSeries) != null) {
+                // if nextInSeries is null, then assume this is _not_ an old-style linear gradient
                 value = linearGradient(root);
-            } else if ("radial".equals(text)) {
+            } else if ("radial".equals(text) && (root.nextInSeries) != null) {
+                // if nextInSeries is null, then assume this is _not_ an old-style radial gradient
                 value = radialGradient(root);
             } else if ("true".equals(text)) {
                 // TODO: handling of boolean is really bogus
@@ -3776,6 +3785,9 @@ final public class CSSParser {
 
     }
 
+    // keep track of what is in process of being parsed to avoid import loops
+    private static Stack<String> imports;
+
     private void parse(Stylesheet stylesheet, CSSLexer lexer) {
 
         // need to read the first token
@@ -3788,6 +3800,55 @@ final public class CSSParser {
                 FontFace fontFace = fontFace(lexer);
                 if (fontFace != null) stylesheet.getFontFaces().add(fontFace);
                 currentToken = nextToken(lexer);
+                continue;
+
+            } else if (currentToken.getType() == CSSLexer.IMPORT) {
+
+                if (CSSParser.imports == null) {
+                    CSSParser.imports = new Stack<>();
+                }
+
+                if (!imports.contains(sourceOfStylesheet)) {
+
+                    imports.push(sourceOfStylesheet);
+
+                    Stylesheet importedStylesheet = handleImport(lexer);
+
+                    if (importedStylesheet != null) {
+                        List<Rule> importedRules = importedStylesheet.getRules();
+                        if (importedRules != null && !importedRules.isEmpty()) {
+                            stylesheet.getRules().addAll(importedRules);
+                        }
+                    }
+
+                    imports.pop();
+
+                    if (CSSParser.imports.isEmpty()) {
+                        CSSParser.imports = null;
+                    }
+
+                } else {
+                    // Import imports import!
+                    final int line = currentToken.getLine();
+                    final int pos = currentToken.getOffset();
+                    final String msg =
+                            MessageFormat.format("Recursive @import at {2} [{0,number,#},{1,number,#}]",
+                                    line,pos,imports.peek());
+                    CssError error = createError(msg);
+                    if (LOGGER.isLoggable(Level.WARNING)) {
+                        LOGGER.warning(error.toString());
+                    }
+                    reportError(error);
+                }
+
+                // get past EOL or SEMI
+                do {
+                    currentToken = lexer.nextToken();
+                } while ((currentToken != null) &&
+                        (currentToken.getType() == CSSLexer.SEMI) ||
+                        (currentToken.getType() == CSSLexer.WS) ||
+                        (currentToken.getType() == CSSLexer.NL));
+
                 continue;
             }
 
@@ -3998,6 +4059,45 @@ final public class CSSParser {
         return new FontFace(descriptors, sources);
     }
 
+    private Stylesheet handleImport(CSSLexer lexer) {
+        currentToken = nextToken(lexer);
+
+        if (currentToken == null || currentToken.getType() == Token.EOF) {
+            return null;
+        }
+
+        int ttype = currentToken.getType();
+
+        String fname = null;
+        if (ttype == CSSLexer.STRING || ttype == CSSLexer.URL) {
+            fname = currentToken.getText();
+        }
+
+        Stylesheet importedStylesheet = null;
+
+        if (fname != null) {
+            // let URLConverter do the conversion
+            ParsedValueImpl[] uriValues = new ParsedValueImpl[] {
+                    new ParsedValueImpl<String,String>(fname, StringConverter.getInstance()),
+                    new ParsedValueImpl<String,String>(sourceOfStylesheet, null)
+            };
+            ParsedValue<ParsedValue[], String> parsedValue =
+                    new ParsedValueImpl<ParsedValue[], String>(uriValues, URLConverter.getInstance());
+
+            String urlString = parsedValue.convert(null);
+
+            try {
+                URL url = new URL(urlString);
+                return new CSSParser().parse(url);
+            } catch (MalformedURLException malf) {
+
+            } catch (IOException ioe) {
+
+            }
+        }
+
+        return null;
+    }
 
     private List<Selector> selectors(CSSLexer lexer) {
 

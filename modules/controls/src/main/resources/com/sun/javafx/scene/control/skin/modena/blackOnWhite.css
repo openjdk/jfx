@@ -153,19 +153,37 @@
 .html-editor-outdent:hover:armed {
     -fx-graphic: url("HTMLEditor-Outdent-Black.png");
 }
+.html-editor-outdent:dir(rtl),
+.html-editor-outdent:hover:armed:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Outdent-Black-rtl.png");
+}
 .html-editor-indent,
 .html-editor-indent:hover:armed {
     -fx-graphic: url("HTMLEditor-Indent-Black.png");
+}
+.html-editor-indent:dir(rtl),
+.html-editor-indent:hover:armed:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Indent-Black-rtl.png");
 }
 .html-editor-bullets,
 .html-editor-bullets:hover:armed,
 .html-editor-bullets:selected:armed {
     -fx-graphic: url("HTMLEditor-Bullets-Black.png");
 }
+.html-editor-bullets:dir(rtl),
+.html-editor-bullets:hover:armed:dir(rtl),
+.html-editor-bullets:selected:armed:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Bullets-Black-rtl.png");
+}
 .html-editor-numbers,
 .html-editor-numbers:hover:armed,
 .html-editor-numbers:selected:armed {
     -fx-graphic: url("HTMLEditor-Numbered-Black.png");
+}
+.html-editor-numbers:dir(rtl),
+.html-editor-numbers:hover:armed:dir(rtl),
+.html-editor-numbers:selected:armed:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Numbered-Black-rtl.png");
 }
 .html-editor-bold,
 .html-editor-bold:hover:armed,

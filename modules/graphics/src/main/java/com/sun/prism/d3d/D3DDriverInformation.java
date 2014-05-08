@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,8 @@ class D3DDriverInformation {
                 switch (osMinorVersion) {
                     case 0: return "Windows Vista";
                     case 1: return "Windows 7";
+                    case 2: return "Windows 8.0";
+                    case 3: return "Windows 8.1";
                 } break;
             case 5:
                 switch (osMinorVersion) {

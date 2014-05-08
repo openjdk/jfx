@@ -50,16 +50,14 @@ public class IrresponsiveScriptTest extends TestBase {
         // amount of CPU time to run, and checks that the handler is not
         // interrupted.
         final long CPU_TIME_TO_RUN = 24L * 1000 * 1000 * 1000;
-        getEngine().setOnAlert(new EventHandler<WebEvent<String>>() {
-            public void handle(WebEvent<String> ev) {
-                ThreadMXBean bean = ManagementFactory.getThreadMXBean();
-                long startCpuTime = bean.getCurrentThreadCpuTime();
-                while (bean.getCurrentThreadCpuTime() - startCpuTime
-                        < CPU_TIME_TO_RUN)
-                {
-                    // Do something that consumes CPU time
-                    Math.sqrt(Math.random() * 21082013);
-                }
+        getEngine().setOnAlert(ev -> {
+            ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+            long startCpuTime = bean.getCurrentThreadCpuTime();
+            while (bean.getCurrentThreadCpuTime() - startCpuTime
+                    < CPU_TIME_TO_RUN)
+            {
+                // Do something that consumes CPU time
+                Math.sqrt(Math.random() * 21082013);
             }
         });
         executeScript("alert('Jumbo!');");

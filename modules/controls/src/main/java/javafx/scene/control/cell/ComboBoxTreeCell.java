@@ -150,11 +150,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<TreeView<T>, TreeCell<T>>() {
-          @Override public TreeCell<T> call(TreeView<T> list) {
-              return new ComboBoxTreeCell<T>(converter, items);
-          }
-      };
+        return list -> new ComboBoxTreeCell<T>(converter, items);
     }
     
     

@@ -27,6 +27,7 @@ package com.sun.javafx.scene;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -98,8 +99,10 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         return accelerators;
     }
 
-    public void traverse(Node node, Direction dir) {
-        node.impl_traverse(dir);
+    private void traverse(Event event, Node node, Direction dir) {
+        if (node.impl_traverse(dir)) {
+            event.consume();
+        }
     }
 
     public void processTraversal(Event event) {
@@ -111,28 +114,23 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                     switch (((KeyEvent)event).getCode()) {
                       case TAB :
                           if (((KeyEvent)event).isShiftDown()) {
-                              traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.PREVIOUS);
+                              traverse(event, ((Node)obj), com.sun.javafx.scene.traversal.Direction.PREVIOUS);
                           }
                           else {
-                              traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.NEXT);
+                              traverse(event, ((Node)obj), com.sun.javafx.scene.traversal.Direction.NEXT);
                           }
-                          event.consume();
                           break;
                       case UP :
-                          traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.UP);
-                          event.consume();
+                          traverse(event, ((Node) obj), com.sun.javafx.scene.traversal.Direction.UP);
                           break;
                       case DOWN :
-                          traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.DOWN);
-                          event.consume();
+                          traverse(event, ((Node) obj), com.sun.javafx.scene.traversal.Direction.DOWN);
                           break;
                       case LEFT :
-                          traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.LEFT);
-                          event.consume();
+                          traverse(event, ((Node) obj), com.sun.javafx.scene.traversal.Direction.LEFT);
                           break;
                       case RIGHT :
-                          traverse(((Node)obj), com.sun.javafx.scene.traversal.Direction.RIGHT);
-                          event.consume();
+                          traverse(event, ((Node) obj), com.sun.javafx.scene.traversal.Direction.RIGHT);
                           break;
                       default :
                           break;
@@ -383,6 +381,19 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         if (b != mnemonicsDisplayEnabled) {
             mnemonicsDisplayEnabled = b;
             processMnemonicsKeyDisplay();
+        }
+    }
+
+    public void clearNodeMnemonics(Node node) {
+        if (mnemonics != null) {
+            for (ObservableList<Mnemonic> list : mnemonics.values()) {
+                for (Iterator<Mnemonic> it = list.iterator(); it.hasNext(); ) {
+                    Mnemonic m = it.next();
+                    if (m.getNode() == node) {
+                        it.remove();
+                    }
+                }
+            }
         }
     }
 }

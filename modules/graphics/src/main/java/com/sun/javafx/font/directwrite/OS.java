@@ -33,11 +33,9 @@ import com.sun.javafx.geom.Path2D;
 
 class OS {
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-           public Void run() {
-               NativeLibLoader.loadLibrary("javafx_font");
-               return null;
-           }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            NativeLibLoader.loadLibrary("javafx_font");
+            return null;
         });
     }
 

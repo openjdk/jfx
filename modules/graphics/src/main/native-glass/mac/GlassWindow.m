@@ -40,7 +40,6 @@
 #import "GlassTouches.h"
 #import "GlassApplication.h"
 #import "GlassLayer3D.h"
-#import "GlassAccessibleRoot.h"
 #import "GlassHelper.h"
 
 //#define VERBOSE
@@ -173,47 +172,7 @@ static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
     [self->gWindow sendEvent:event];                                                    \
     [super sendEvent:event];                                                            \
     [self->gWindow->view release];                                                      \
-}                                                                                       \
-- (NSArray *)accessibilityAttributeNames                                                \
-{                                                                                       \
-    if( !self->gWindow->isAccessibleInitComplete )                                      \
-    {                                                                                   \
-        [self->gWindow _initAccessibility];                                             \
-    }                                                                                   \
-    return [[ [super accessibilityAttributeNames]                                       \
-              arrayByAddingObject:NSAccessibilityFocusedUIElementAttribute ] retain];   \
-}                                                                                       \
-- (id)accessibilityAttributeValue:(NSString *)attribute                                 \
-{                                                                                       \
-    if ([attribute isEqualToString:NSAccessibilityChildrenAttribute]) {                 \
-        return self->gWindow->accChildren; /* return array with one child, the root */  \
-    } else if([attribute isEqualToString:NSAccessibilityFocusedUIElementAttribute]) {   \
-        LOG( "GlassWindow:accessibilityAttributeValue %p",                              \
-             self->gWindow->accFocusElement );                                          \
-        return self->gWindow->accFocusElement;                                          \
-    } else {                                                                            \
-        id idFromSuper = [super accessibilityAttributeValue:attribute];                 \
-        return idFromSuper;                                                             \
-    }                                                                                   \
-}                                                                                       \
-- (BOOL)accessibilityIsIgnored                                                          \
-{                                                                                       \
-    return NO;                                                                          \
-}                                                                                       \
-- (id)accessibilityHitTest:(NSPoint)point                                               \
-{                                                                                       \
-    LOG("GlassWindow:accessibilityHitTest:point");                                      \
-    return [[self->gWindow->accChildren objectAtIndex:0] accessibilityHitTest:point];   \
-}                                                                                       \
--(void)accessibilityPostEvent:(NSString*)event                                          \
-                              focusElement:(GlassAccessibleBaseProvider*)focusElement   \
-{                                                                                       \
-    LOG("GlassWindow:accessibilityPostEvent %s", [event UTF8String]);                   \
-    self->gWindow->accFocusElement = focusElement;                                      \
-    NSAccessibilityPostNotification(self, event);                                       \
 }
-//return self->gWindow->accChildren self ;   return NSAccessibilityUnignoredAncestor(self);
-
 
 @implementation GlassWindow_Normal
 GLASS_NS_WINDOW_IMPLEMENTATION
@@ -227,20 +186,35 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     [super setWorksWhenModal:NO];
 }
 
+- (BOOL)accessibilityIsIgnored
+{
+    /* In JavaFX NSPanels are used to implement PopupWindows,
+     * which are used by ContextMenu.  In Accessibility, for a
+     * menu to work as expected, the window has to be ignored.
+     * Note that asking the children of the window is
+     * very important in this context. It ensures that all
+     * descendants created.  Without it, the menu  will
+     * not be seen by the assistive technology.
+     */
+    __block BOOL ignored = [super accessibilityIsIgnored];
+    NSArray* children = [self accessibilityAttributeValue: NSAccessibilityChildrenAttribute];
+    if (children) {
+        [children enumerateObjectsUsingBlock: ^(id child, NSUInteger index, BOOL *stop) {
+            NSString* role = [child accessibilityAttributeValue: NSAccessibilityRoleAttribute];
+            if ([NSAccessibilityMenuRole isEqualToString: role]) {
+                ignored = YES;
+                *stop = YES;
+            }
+        }];
+    }
+    return ignored;
+}
+
 @end
 // --------------------------------------------------------------------------------------
 
 
 @implementation GlassWindow
-
--(void) accessibilityPostEvent:(NSString*)event
-                               focusElement:(GlassAccessibleBaseProvider*)focusElement
-{
-    LOG("GlassWindow:Base:accessibilityPostEvent NSAccessibilityFocusedUIElementAttribute");
-    // [self->nsWindow accessibilityPostEvent];
-    // NSAccessibilityPostNotification(self->nsWindow, NSAccessibilityFocusedUIElementAttribute);
-}
-
 
 - (void)setFullscreenWindow:(NSWindow*)fsWindow
 {
@@ -342,13 +316,6 @@ GLASS_NS_WINDOW_IMPLEMENTATION
     }
 }
 
-- (void)setAccessibilityInitIsComplete:(GlassAccessibleRoot *)acc
-{
-    // TODO: When should the retained reference be released?
-    accChildren = [[NSArray arrayWithObject:acc] retain];
-    isAccessibleInitComplete = YES;  // set the flag so init isn't called again
-    acc->parent = nsWindow;  // this is the parent of the root
-}
 
 @end
 
@@ -544,7 +511,6 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         }
         
         window->fullscreenWindow = nil;
-        window->isAccessibleInitComplete = NO;
 
         window->isSizeAssigned = NO;
         window->isLocationAssigned = NO;
@@ -664,11 +630,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1initIDs
     if (jWindowNotifyDelegatePtr == NULL)
     {
         jWindowNotifyDelegatePtr = (*env)->GetMethodID(env, jWindowClass, "notifyDelegatePtr", "(J)V");
-    }
-
-    if (jWindowNotifyInitAccessibilityPtr == NULL)
-    {
-        jWindowNotifyInitAccessibilityPtr = (*env)->GetMethodID(env, jWindowClass, "notifyInitAccessibility", "()V");
     }
 }
 
@@ -884,6 +845,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
 
         if (window->view != nil)
         {
+            CALayer *layer = [window->view layer];
+            if ([layer isKindOfClass:[CAOpenGLLayer class]] == YES)
+            {
+                [((CAOpenGLLayer*)layer) setOpaque:[window->nsWindow isOpaque]];
+            }
+            
             window->suppressWindowMoveEvent = YES; // RT-11215
             {
                 NSRect viewFrame = [window->view frame];
@@ -1322,14 +1289,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
+        GlassWindow *window = getGlassWindow(env, jPtr);
         if (jPixels != NULL)
         {
             NSImage *image = nil;
             (*env)->CallVoidMethod(env, jPixels, jPixelsAttachData, ptr_to_jlong(&image));
-            if (image != nil)
-            {
-                GlassWindow *window = getGlassWindow(env, jPtr);
-                
+            if (image != nil) {
                 // need an explicit window title for the rest of the code to work
                 if ([window->nsWindow title] == nil)
                 {
@@ -1340,7 +1305,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
                 [window->nsWindow setRepresentedURL:[NSURL fileURLWithPath:[window->nsWindow title]]];
                 [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:image];
                 [image release];
+            } else {
+                [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:nil];
             }
+        } else {
+            [[window->nsWindow standardWindowButton:NSWindowDocumentIconButton] setImage:nil];
         }
     }
     GLASS_POOL_EXIT;

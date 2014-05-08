@@ -47,18 +47,8 @@ public class TransformChangedEventTest {
 
     @Test
     public void testConstructor() {
-        final EventTarget src = new EventTarget() {
-            @Override
-            public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
-                return null;
-            }
-        };
-        final EventTarget trg = new EventTarget() {
-            @Override
-            public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
-                return null;
-            }
-        };
+        final EventTarget src = tail -> null;
+        final EventTarget trg = tail -> null;
         TransformChangedEvent e = new TransformChangedEvent(src, trg);
         assertSame(TransformChangedEvent.TRANSFORM_CHANGED, e.getEventType());
         assertSame(src, e.getSource());

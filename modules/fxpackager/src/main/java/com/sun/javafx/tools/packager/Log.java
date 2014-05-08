@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,10 @@
  */
 
 package com.sun.javafx.tools.packager;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 
 public class Log {
     public static class Logger {
@@ -92,7 +96,26 @@ public class Log {
         }
     }
 
+    public static void debug(RuntimeException re) {
+        debug((Throwable) re);
+    }
+
+    public static void debug(Throwable t) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            try (PrintStream ps = new PrintStream(baos)) {
+                t.printStackTrace(ps);
+            }
+            debug(baos.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static boolean isDebug() {
         return debug;
+    }
+
+    public static void setDebug(boolean debug) {
+        Log.debug = debug;
     }
 }

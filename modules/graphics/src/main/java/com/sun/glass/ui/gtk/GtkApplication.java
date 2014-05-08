@@ -48,11 +48,9 @@ import java.util.concurrent.CountDownLatch;
 final class GtkApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                Application.loadNativeLibrary();
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            Application.loadNativeLibrary();
+            return null;
         });
     }
 
@@ -64,12 +62,7 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
 
     GtkApplication() {
         boolean isEventThread = AccessController
-                .doPrivileged(new PrivilegedAction<Boolean>() {
-                    public Boolean run() {
-                        // Embedded in SWT, with shared event thread
-                        return Boolean.getBoolean("javafx.embed.isEventThread");
-                    }
-                });
+                .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
             invokeLaterDispatcher = new InvokeLaterDispatcher(this);
             invokeLaterDispatcher.start();
@@ -106,12 +99,8 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
             eventProc = result == null ? 0 : result;
         }
 
-        final boolean disableGrab = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                return Boolean.getBoolean("sun.awt.disablegrab") ||
-                       Boolean.getBoolean("glass.disableGrab");
-            }
-        });
+        final boolean disableGrab = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("sun.awt.disablegrab") ||
+               Boolean.getBoolean("glass.disableGrab"));
 
         _init(eventProc, disableGrab);
     }
@@ -119,12 +108,7 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected void runLoop(final Runnable launchable) {
         final boolean isEventThread = AccessController
-            .doPrivileged(new PrivilegedAction<Boolean>() {
-                public Boolean run() {
-                    // Embedded in SWT, with shared event thread
-                    return Boolean.getBoolean("javafx.embed.isEventThread");
-                }
-            });
+            .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         
         if (isEventThread) {
             init();
@@ -134,23 +118,13 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
         }
         
         final boolean noErrorTrap = AccessController
-            .doPrivileged(new PrivilegedAction<Boolean>() {
-                public Boolean run() {
-                    return Boolean.getBoolean("glass.noErrorTrap");
-                }
-            });
+            .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("glass.noErrorTrap"));
         
         final Thread toolkitThread =
-            AccessController.doPrivileged(new PrivilegedAction<Thread>() {
-                public Thread run() {
-                    return new Thread(new Runnable() {
-                        public void run() {
-                            init();
-                            _runLoop(launchable, noErrorTrap);
-                        }
-                    }, "GtkNativeMainLoopThread");
-                }
-        });
+            AccessController.doPrivileged((PrivilegedAction<Thread>) () -> new Thread(() -> {
+                init();
+                _runLoop(launchable, noErrorTrap);
+            }, "GtkNativeMainLoopThread"));
         setEventThread(toolkitThread);
         toolkitThread.start();
     }
@@ -181,11 +155,9 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
             invokeLaterDispatcher.invokeAndWait(runnable);
         } else {
             final CountDownLatch latch = new CountDownLatch(1);
-            submitForLaterInvocation(new Runnable() {
-                public void run() {
-                    if (runnable != null) runnable.run();
-                    latch.countDown();
-                }
+            submitForLaterInvocation(() -> {
+                if (runnable != null) runnable.run();
+                latch.countDown();
             });
             try {
                 latch.await();

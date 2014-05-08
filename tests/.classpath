@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+    <classpathentry kind="src" path="app-lifecycle/ClassLoaderApp/src"/>
+    <classpathentry kind="src" path="app-lifecycle/ClassLoaderTest/test"/>
+    <!--
+    <classpathentry kind="src" path="functional/animation"/>
+    -->
+    <classpathentry kind="src" path="golden-image-suite/src"/>
+    <!--
+    <classpathentry kind="src" path="golden-image-suite/test"/>
+    -->
+    <classpathentry kind="src" path="manual/printing"/>
+    <classpathentry kind="src" path="performance/VMPerformance/src"/>
+    <classpathentry kind="src" path="system/src/test/java"/>
+    <classpathentry kind="src" path="system/src/test/resources"/>
+    <classpathentry combineaccessrules="false" kind="src" path="/rt"/>
+    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+    <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
+    <classpathentry kind="output" path="bin"/>
+</classpath>

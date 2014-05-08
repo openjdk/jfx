@@ -42,21 +42,7 @@ public abstract class ParentBuilder<B extends javafx.scene.ParentBuilder<B>> ext
     public void applyTo(javafx.scene.Parent x) {
         super.applyTo(x);
         int set = __set;
-        if ((set & (1 << 0)) != 0) x.setImpl_traversalEngine(this.impl_traversalEngine);
         if ((set & (1 << 1)) != 0) x.getStylesheets().addAll(this.stylesheets);
-    }
-    
-    private com.sun.javafx.scene.traversal.TraversalEngine impl_traversalEngine;
-    /**
-    Set the value of the {@link javafx.scene.Parent#getImpl_traversalEngine() impl_traversalEngine} property for the instance constructed by this builder.
-    @treatAsPrivate
-    @deprecated This is an internal API that is not intended for use and will be removed in the next version
-    */
-    @SuppressWarnings("unchecked") @Deprecated
-    public B impl_traversalEngine(com.sun.javafx.scene.traversal.TraversalEngine x) {
-        this.impl_traversalEngine = x;
-        __set |= 1 << 0;
-        return (B) this;
     }
     
     private java.util.Collection<? extends java.lang.String> stylesheets;

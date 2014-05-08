@@ -51,10 +51,8 @@ public class ControlChildrenTest {
         t = new Tooltip();
 //        t.setSkin(new SkinStub<Tooltip>(t));
         changeNotificationCount = 0;
-        changeNotifier = new ListChangeListener<Node>() {
-            @Override public void onChanged(Change<? extends Node> c) {
-                changeNotificationCount++;
-            }
+        changeNotifier = c1 -> {
+            changeNotificationCount++;
         };
     }
 

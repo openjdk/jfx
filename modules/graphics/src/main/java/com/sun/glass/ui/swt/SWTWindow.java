@@ -82,11 +82,7 @@ final class SWTWindow extends Window {
             SWT.Resize,
             SWT.Dispose,
         };
-        Listener shellListener = new Listener () {
-            public void handleEvent(Event event) {
-                handleShellEvent (event);
-            }
-        };
+        Listener shellListener = event -> handleShellEvent (event);
         for (int i=0; i<shellEvents.length; i++) {
             shell.addListener(shellEvents[i], shellListener);
         }
@@ -189,37 +185,35 @@ final class SWTWindow extends Window {
             final int cw, final int ch, float xGravity, float yGravity) {
         
         //TODO - using syncExec because of applet
-        shell.getDisplay().syncExec(new Runnable() {
-            @Override public void run() {
-                Rectangle rect = shell.getBounds();
-                if (xSet) rect.x = x;
-                if (ySet) rect.y = y;
-                boolean hSet = false, wSet = false;
-                //TODO - check that this is the right way to process w, h, cw, ch
-                if (w != -1) {
+        shell.getDisplay().syncExec(() -> {
+            Rectangle rect = shell.getBounds();
+            if (xSet) rect.x = x;
+            if (ySet) rect.y = y;
+            boolean hSet = false, wSet = false;
+            //TODO - check that this is the right way to process w, h, cw, ch
+            if (w != -1) {
+                wSet = true;
+                rect.width = w;
+            } else {
+                if (cw != -1) {
                     wSet = true;
-                    rect.width = w;
-                } else {
-                    if (cw != -1) {
-                        wSet = true;
-                        rect.width = cw;
-                    }
+                    rect.width = cw;
                 }
-                if (h != -1) {
+            }
+            if (h != -1) {
+                hSet = true;
+                rect.height = h;
+            } else {
+                if (ch != -1) {
                     hSet = true;
-                    rect.height = h;
-                } else {
-                    if (ch != -1) {
-                        hSet = true;
-                        rect.height = ch;
-                    }
+                    rect.height = ch;
                 }
-                if (wSet || hSet) {
-                    Rectangle bounds= shell.computeTrim(rect.x, rect.y, rect.width, rect.height);
-                    shell.setBounds(rect.x, rect.y, bounds.width, bounds.height);
-                } else {
-                    shell.setLocation(rect.x, rect.y);
-                }
+            }
+            if (wSet || hSet) {
+                Rectangle bounds= shell.computeTrim(rect.x, rect.y, rect.width, rect.height);
+                shell.setBounds(rect.x, rect.y, bounds.width, bounds.height);
+            } else {
+                shell.setLocation(rect.x, rect.y);
             }
         });
     }
@@ -241,15 +235,13 @@ final class SWTWindow extends Window {
 
     @Override protected boolean _setVisible(long ptr, final boolean visible) {
         //TODO - using syncExec because of applet
-        shell.getDisplay().syncExec(new Runnable() {
-            @Override public void run() {
-                if ((shell.getStyle() & SWT.NO_FOCUS) != 0) {
-                    shell.setVisible(visible);
-                } else {
-                    shell.open();
-                    //TODO - explicitly setting focus should not be necessary
-                    shell.setFocus();
-                }
+        shell.getDisplay().syncExec(() -> {
+            if ((shell.getStyle() & SWT.NO_FOCUS) != 0) {
+                shell.setVisible(visible);
+            } else {
+                shell.open();
+                //TODO - explicitly setting focus should not be necessary
+                shell.setFocus();
             }
         });
         return true;

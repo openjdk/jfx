@@ -107,12 +107,9 @@ public class JPEGImageLoader extends ImageLoaderImpl {
     //private native ByteBuffer decompressDirect(long structPointer, boolean reportProgress) throws IOException;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-
-            public Object run() {
-                NativeLibLoader.loadLibrary("javafx_iio");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            NativeLibLoader.loadLibrary("javafx_iio");
+            return null;
         });
         initJPEGMethodIDs(InputStream.class);
     }

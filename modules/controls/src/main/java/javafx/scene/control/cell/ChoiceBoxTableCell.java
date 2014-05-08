@@ -155,11 +155,7 @@ public class ChoiceBoxTableCell<S,T> extends TableCell<S,T> {
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<TableColumn<S,T>, TableCell<S,T>>() {
-            @Override public TableCell<S,T> call(TableColumn<S,T> list) {
-                return new ChoiceBoxTableCell<S,T>(converter, items);
-            }
-        };
+        return list -> new ChoiceBoxTableCell<S,T>(converter, items);
     }
     
     

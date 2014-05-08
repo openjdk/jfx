@@ -50,11 +50,7 @@ public class ProgressBarTableCellTest {
         tableView = new TableView<>();
         tableColumn = new TableColumn<>();
         booleanProperty = new SimpleBooleanProperty(false);
-        callback = new Callback<Integer, ObservableValue<Boolean>>() {
-            public ObservableValue<Boolean> call(Integer param) {
-                return booleanProperty;
-            }
-        };
+        callback = param -> booleanProperty;
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
                 return null;

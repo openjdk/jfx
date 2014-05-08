@@ -109,10 +109,8 @@ public abstract class WCRenderQueue extends Ref {
                 arr[i++] = bdata.getBuffer();
             }
             buffers.clear();
-            Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-                @Override public void run() {
-                    twkRelease(arr);
-                }
+            Invoker.getInvoker().invokeOnEventThread(() -> {
+                twkRelease(arr);
             });
             size = 0;
             if (log.isLoggable(Level.FINE)) {

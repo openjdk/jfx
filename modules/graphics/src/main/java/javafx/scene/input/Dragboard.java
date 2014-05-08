@@ -178,11 +178,8 @@ public final class Dragboard extends Clipboard {
     static {
         // This is used by classes in different packages to get access to
         // private and package private methods.
-        DragboardHelper.setDragboardAccessor(new DragboardHelper.DragboardAccessor() {
-            @Override
-            public void setDataAccessRestriction(Dragboard dragboard, boolean restricted) {
-                dragboard.dataAccessRestricted = restricted;
-            }
+        DragboardHelper.setDragboardAccessor((dragboard, restricted) -> {
+            dragboard.dataAccessRestricted = restricted;
         });
     }
 }

@@ -66,12 +66,9 @@ public class OverlayWarning extends Group {
         overlayTransition = new SequentialTransition();
         overlayTransition.getChildren().add(pause);
         overlayTransition.getChildren().add(fade);
-        overlayTransition.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                warningTransition = false;
-                view.getWindowStage().setWarning(null);
-            }
+        overlayTransition.setOnFinished(event -> {
+            warningTransition = false;
+            view.getWindowStage().setWarning(null);
         });
     }
 

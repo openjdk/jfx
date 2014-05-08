@@ -1,6 +1,6 @@
 group MEJavaGlue;
 
-glue(effectName,peerName,interfaceDecl,
+glue(effectName,peerName,genericsDecl,interfaceDecl,
      usercode,samplers,srcRects,constants,params,paramDecls) ::= <<
 /*
  * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
@@ -49,7 +49,7 @@ import com.sun.scenario.effect.impl.state.*;
 import com.sun.javafx.geom.AffineTransform;
 import com.sun.javafx.geom.Rectangle;
 
-public class ME$peerName$Peer extends MEEffectPeer $interfaceName$ {
+public class ME$peerName$Peer extends MEEffectPeer$genericsDecl$ $interfaceDecl$ {
 
     public ME$peerName$Peer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);

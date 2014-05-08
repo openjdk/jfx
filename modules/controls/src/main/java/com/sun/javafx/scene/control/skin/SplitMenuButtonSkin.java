@@ -57,24 +57,16 @@ public class SplitMenuButtonSkin extends MenuButtonSkinBase<SplitMenuButton, Spl
         behaveLikeButton = true;
         // TODO: do we need to consume all mouse events?
         // they only bubble to the skin which consumes them by default
-        arrowButton.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    event.consume();
-                }
-            });
-        arrowButton.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent e) {
-                getBehavior().mousePressed(e, false);
-                e.consume();
-            }
+        arrowButton.addEventHandler(MouseEvent.ANY, event -> {
+            event.consume();
         });
-        arrowButton.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                getBehavior().mouseReleased(e, false);
-                e.consume();
-            }
+        arrowButton.setOnMousePressed(e -> {
+            getBehavior().mousePressed(e, false);
+            e.consume();
+        });
+        arrowButton.setOnMouseReleased(e -> {
+            getBehavior().mouseReleased(e, false);
+            e.consume();
         });
 
         label.setLabelFor(splitMenuButton);

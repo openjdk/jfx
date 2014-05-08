@@ -48,6 +48,7 @@ import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.tk.Toolkit;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
@@ -82,6 +83,11 @@ public class ButtonTest {
         stage = new Stage();
         stage.setScene(scene);
         mouse = new MouseEventFirer(btn);
+    }
+
+    @After public void after() {
+        stage.hide();
+        mouse.dispose();
     }
     
     /*********************************************************************
@@ -211,11 +217,8 @@ public class ButtonTest {
     @Test public void disabledDefaultButtonCannotGetInvoked_RT20929() {
         root.getChildren().add(btn);        
         
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                fail();
-            }
+        btn.setOnAction(actionEvent -> {
+            fail();
         });
         
         btn.setDefaultButton(true);
@@ -230,11 +233,8 @@ public class ButtonTest {
 
     @Test public void defaultButtonCanBeInvokeAfterRemovingFromTheScene_RT22106() {
         btn.setDefaultButton(true);        
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                fail();
-            }
+        btn.setOnAction(actionEvent -> {
+            fail();
         });
         root.getChildren().add(btn);
         show();
@@ -318,11 +318,8 @@ public class ButtonTest {
 
     @Test public void cancelButtonCanBeInvokeAfterRemovingFromTheScene_RT22106() {
         btn.setCancelButton(true);        
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                fail();
-            }
+        btn.setOnAction(actionEvent -> {
+            fail();
         });
         root.getChildren().add(btn);
         show();
@@ -340,10 +337,8 @@ public class ButtonTest {
         ContextMenu popupMenu = new ContextMenu();
         MenuItem item1 = new MenuItem("_About");
         popupMenu.getItems().add(item1);
-        popupMenu.setOnShown(new EventHandler<WindowEvent>() {
-            @Override public void handle(WindowEvent w) {
-                fail();
-            }
+        popupMenu.setOnShown(w -> {
+            fail();
         });
 
         btn.setContextMenu(popupMenu);
@@ -370,11 +365,9 @@ public class ButtonTest {
         ContextMenu popupMenu = new ContextMenu();
         MenuItem item1 = new MenuItem("_About");
         popupMenu.getItems().add(item1);
-        popupMenu.setOnShown(new EventHandler<WindowEvent>() {
-            @Override public void handle(WindowEvent w) {
-                System.out.println("popup shown");
-                count++;
-            }
+        popupMenu.setOnShown(w -> {
+            System.out.println("popup shown");
+            count++;
         });
 
         btn.setContextMenu(popupMenu);
@@ -383,10 +376,8 @@ public class ButtonTest {
         root.getChildren().add(btn);
         show();
         
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent event) {
-                fail();
-            }
+        btn.setOnAction(event -> {
+            fail();
         });
 
         assertEquals(0, count);

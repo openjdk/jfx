@@ -178,16 +178,12 @@ class CachingShapeRepState {
     private static class MaskCache {
         private static final int MAX_MASK_DIM = 512;
         private static final int MAX_SIZE_IN_PIXELS = 4194304; // 4 MB
-        private static Comparator<CacheEntry> comparator = new Comparator<CacheEntry>() {
-
-            public int compare(CacheEntry o1, CacheEntry o2) {
-                int widthCompare = Float.compare(o1.xformBounds.getWidth(), o2.xformBounds.getWidth());
-                if (widthCompare != 0) {
-                    return widthCompare;
-                }
-                return Float.compare(o1.xformBounds.getHeight(), o2.xformBounds.getHeight());
+        private static Comparator<CacheEntry> comparator = (o1, o2) -> {
+            int widthCompare = Float.compare(o1.xformBounds.getWidth(), o2.xformBounds.getWidth());
+            if (widthCompare != 0) {
+                return widthCompare;
             }
-
+            return Float.compare(o1.xformBounds.getHeight(), o2.xformBounds.getHeight());
         };
 
         private CacheEntry[] entries = new CacheEntry[8];

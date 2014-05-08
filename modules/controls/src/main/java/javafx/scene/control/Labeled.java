@@ -26,8 +26,6 @@
 package javafx.scene.control;
 
 
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -35,9 +33,6 @@ import com.sun.javafx.css.converters.InsetsConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.css.converters.StringConverter;
-import com.sun.javafx.css.parser.CSSParser;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -53,9 +48,9 @@ import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
@@ -130,7 +125,7 @@ public abstract class Labeled extends Control {
      */
     public Labeled(String text, Node graphic) {
         setText(text);
-        setGraphic(graphic);
+        ((StyleableProperty<Node>)graphicProperty()).applyStyle(null, graphic);
     }
 
     /***************************************************************************
@@ -471,11 +466,22 @@ public abstract class Labeled extends Control {
                 protected void invalidated() {
 
                     // need to call super.get() here since get() is overridden to return the graphicProperty's value
-                    String url = super.get();
+                    final String url = super.get();
 
                     if (url == null) {
                         ((StyleableProperty)graphicProperty()).applyStyle(origin, null);
                     } else {
+                        // RT-34466 - if graphic's url is the same as this property's value, then don't overwrite.
+                        final Node graphicNode = Labeled.this.getGraphic();
+                        if (graphicNode instanceof ImageView) {
+                            final ImageView imageView = (ImageView)graphicNode;
+                            final Image image = imageView.getImage();
+                            if (image != null) {
+                                final String imageViewUrl = image.impl_getUrl();
+                                if (url.equals(imageViewUrl)) return;
+                            }
+
+                        }
 
                         final Image img = StyleManager.getInstance().getCachedImage(url);
 
@@ -1053,4 +1059,18 @@ public abstract class Labeled extends Control {
         return getClassCssMetaData();
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TITLE: //fall through so that mnemonic can be properly handled
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
  }

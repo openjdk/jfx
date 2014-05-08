@@ -116,11 +116,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final Callback<T, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<T> converter) {
-        return new Callback<ListView<T>, ListCell<T>>() {
-            @Override public ListCell<T> call(ListView<T> list) {
-                return new CheckBoxListCell<T>(getSelectedProperty, converter);
-            }
-        };
+        return list -> new CheckBoxListCell<T>(getSelectedProperty, converter);
     }
     
     /***************************************************************************

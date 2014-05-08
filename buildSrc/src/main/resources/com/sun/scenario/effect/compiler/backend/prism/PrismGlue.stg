@@ -1,6 +1,6 @@
 group PrismGlue;
 
-glue(effectName,peerName,superClass,interfaceDecl,
+glue(effectName,peerName,superClass,genericsDecl,interfaceDecl,
      usercode,samplerLinear,samplerInit,
      paramInit,paramUpdate,isPixcoordUsed) ::= <<
 /*
@@ -46,7 +46,7 @@ import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.state.*;
 import com.sun.javafx.geom.Rectangle;
 
-public class PPS$peerName$Peer extends $superClass$ $interfaceDecl$ {
+public class PPS$peerName$Peer extends $superClass$$genericsDecl$ $interfaceDecl$ {
 
     public PPS$peerName$Peer(FilterContext fctx, Renderer r, String shaderName) {
         super(fctx, r, shaderName);

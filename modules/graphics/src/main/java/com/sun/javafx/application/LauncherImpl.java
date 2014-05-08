@@ -152,21 +152,19 @@ public class LauncherImpl {
 
         // Create a new Launcher thread and then wait for that thread to finish
         final CountDownLatch launchLatch = new CountDownLatch(1);
-        Thread launcherThread = new Thread(new Runnable() {
-            @Override public void run() {
-                try {
-                    launchApplication1(appClass, preloaderClass, args);
-                } catch (RuntimeException rte) {
-                    launchException = rte;
-                } catch (Exception ex) {
-                    launchException =
-                        new RuntimeException("Application launch exception", ex);
-                } catch (Error err) {
-                    launchException =
-                        new RuntimeException("Application launch error", err);
-                } finally {
-                    launchLatch.countDown();
-                }
+        Thread launcherThread = new Thread(() -> {
+            try {
+                launchApplication1(appClass, preloaderClass, args);
+            } catch (RuntimeException rte) {
+                launchException = rte;
+            } catch (Exception ex) {
+                launchException =
+                    new RuntimeException("Application launch exception", ex);
+            } catch (Error err) {
+                launchException =
+                    new RuntimeException("Application launch error", err);
+            } finally {
+                launchLatch.countDown();
             }
         });
         launcherThread.setName("JavaFX-Launcher");
@@ -323,28 +321,26 @@ public class LauncherImpl {
         final ClassLoader loader = Thread.currentThread().getContextClassLoader();
         final AtomicReference<Class<?>> tmpClassRef = new AtomicReference<>();
         final AtomicReference<Class<? extends Preloader>> preClassRef = new AtomicReference<>();
-        PlatformImpl.runAndWait(new Runnable() {
-            @Override public void run() {
-                Class<?> clz = null;
+        PlatformImpl.runAndWait(() -> {
+            Class<?> clz = null;
+            try {
+                clz = Class.forName(mainClassName, true, loader);
+            } catch (ClassNotFoundException cnfe) {
+                abort(cnfe, "Missing JavaFX application class %1$s", mainClassName);
+            }
+            tmpClassRef.set(clz);
+
+            if (preloaderClassName != null) {
                 try {
-                    clz = Class.forName(mainClassName, true, loader);
+                    clz = Class.forName(preloaderClassName, true, loader);
                 } catch (ClassNotFoundException cnfe) {
-                    abort(cnfe, "Missing JavaFX application class %1$s", mainClassName);
+                    abort(cnfe, "Missing JavaFX preloader class %1$s", preloaderClassName);
                 }
-                tmpClassRef.set(clz);
 
-                if (preloaderClassName != null) {
-                    try {
-                        clz = Class.forName(preloaderClassName, true, loader);
-                    } catch (ClassNotFoundException cnfe) {
-                        abort(cnfe, "Missing JavaFX preloader class %1$s", preloaderClassName);
-                    }
-
-                    if (!Preloader.class.isAssignableFrom(clz)) {
-                        abort(null, "JavaFX preloader class %1$s does not extend javafx.application.Preloader", clz.getName());
-                    }
-                    preClassRef.set(clz.asSubclass(Preloader.class));
+                if (!Preloader.class.isAssignableFrom(clz)) {
+                    abort(null, "JavaFX preloader class %1$s does not extend javafx.application.Preloader", clz.getName());
                 }
+                preClassRef.set(clz.asSubclass(Preloader.class));
             }
         });
         preClass = preClassRef.get();
@@ -650,12 +646,7 @@ public class LauncherImpl {
         }
 
         final CountDownLatch startupLatch = new CountDownLatch(1);
-        PlatformImpl.startup(new Runnable() {
-            // Note, this method is called on the FX Application Thread
-            @Override public void run() {
-                startupLatch.countDown();
-            }
-        });
+        PlatformImpl.startup(() -> startupLatch.countDown());
 
         // Wait for FX platform to start
         startupLatch.await();
@@ -712,18 +703,16 @@ public class LauncherImpl {
                 // Construct an instance of the preloader on the FX thread, then
                 // call its init method on this (launcher) thread. Then call
                 // the start method on the FX thread.
-                PlatformImpl.runAndWait(new Runnable() {
-                    @Override public void run() {
-                        try {
-                            Constructor<? extends Preloader> c = preloaderClass.getConstructor();
-                            pldr.set(c.newInstance());
-                            // Set startup parameters
-                            ParametersImpl.registerParameters(pldr.get(), new ParametersImpl(args));
-                        } catch (Throwable t) {
-                            System.err.println("Exception in Preloader constructor");
-                            pConstructorError = t;
-                            error = true;
-                        }
+                PlatformImpl.runAndWait(() -> {
+                    try {
+                        Constructor<? extends Preloader> c = preloaderClass.getConstructor();
+                        pldr.set(c.newInstance());
+                        // Set startup parameters
+                        ParametersImpl.registerParameters(pldr.get(), new ParametersImpl(args));
+                    } catch (Throwable t) {
+                        System.err.println("Exception in Preloader constructor");
+                        pConstructorError = t;
+                        error = true;
                     }
                 });
             }
@@ -744,20 +733,18 @@ public class LauncherImpl {
             // Call start method unless exit called or error detected
             if (currentPreloader != null && !error && !exitCalled.get()) {
                 // Call the application start method on FX thread
-                PlatformImpl.runAndWait(new Runnable() {
-                    @Override public void run() {
-                        try {
-                            pStartCalled.set(true);
+                PlatformImpl.runAndWait(() -> {
+                    try {
+                        pStartCalled.set(true);
 
-                            // Create primary stage and call preloader start method
-                            final Stage primaryStage = new Stage();
-                            primaryStage.impl_setPrimary(true);
-                            currentPreloader.start(primaryStage);
-                        } catch (Throwable t) {
-                            System.err.println("Exception in Preloader start method");
-                            pStartError = t;
-                            error = true;
-                        }
+                        // Create primary stage and call preloader start method
+                        final Stage primaryStage = new Stage();
+                        primaryStage.impl_setPrimary(true);
+                        currentPreloader.start(primaryStage);
+                    } catch (Throwable t) {
+                        System.err.println("Exception in Preloader start method");
+                        pStartError = t;
+                        error = true;
                     }
                 });
 
@@ -784,19 +771,17 @@ public class LauncherImpl {
                             StateChangeNotification.Type.BEFORE_LOAD, null);
                 }
 
-                PlatformImpl.runAndWait(new Runnable() {
-                    @Override public void run() {
-                        try {
-                            Constructor<? extends Application> c = appClass.getConstructor();
-                            app.set(c.newInstance());
-                            // Set startup parameters
-                            ParametersImpl.registerParameters(app.get(), new ParametersImpl(args));
-                            PlatformImpl.setApplicationName(appClass);
-                        } catch (Throwable t) {
-                            System.err.println("Exception in Application constructor");
-                            constructorError = t;
-                            error = true;
-                        }
+                PlatformImpl.runAndWait(() -> {
+                    try {
+                        Constructor<? extends Application> c = appClass.getConstructor();
+                        app.set(c.newInstance());
+                        // Set startup parameters
+                        ParametersImpl.registerParameters(app.get(), new ParametersImpl(args));
+                        PlatformImpl.setApplicationName(appClass);
+                    } catch (Throwable t) {
+                        System.err.println("Exception in Application constructor");
+                        constructorError = t;
+                        error = true;
                     }
                 });
             }
@@ -826,20 +811,18 @@ public class LauncherImpl {
                             StateChangeNotification.Type.BEFORE_START, theApp);
                 }
                 // Call the application start method on FX thread
-                PlatformImpl.runAndWait(new Runnable() {
-                    @Override public void run() {
-                        try {
-                            startCalled.set(true);
+                PlatformImpl.runAndWait(() -> {
+                    try {
+                        startCalled.set(true);
 
-                            // Create primary stage and call application start method
-                            final Stage primaryStage = new Stage();
-                            primaryStage.impl_setPrimary(true);
-                            theApp.start(primaryStage);
-                        } catch (Throwable t) {
-                            System.err.println("Exception in Application start method");
-                            startError = t;
-                            error = true;
-                        }
+                        // Create primary stage and call application start method
+                        final Stage primaryStage = new Stage();
+                        primaryStage.impl_setPrimary(true);
+                        theApp.start(primaryStage);
+                    } catch (Throwable t) {
+                        System.err.println("Exception in Application start method");
+                        startError = t;
+                        error = true;
                     }
                 });
             }
@@ -852,15 +835,13 @@ public class LauncherImpl {
             // Call stop method if start was called
             if (startCalled.get()) {
                 // Call Application stop method on FX thread
-                PlatformImpl.runAndWait(new Runnable() {
-                    @Override public void run() {
-                        try {
-                            theApp.stop();
-                        } catch (Throwable t) {
-                            System.err.println("Exception in Application stop method");
-                            stopError = t;
-                            error = true;
-                        }
+                PlatformImpl.runAndWait(() -> {
+                    try {
+                        theApp.stop();
+                    } catch (Throwable t) {
+                        System.err.println("Exception in Application stop method");
+                        stopError = t;
+                        error = true;
                     }
                 });
             }
@@ -918,35 +899,25 @@ public class LauncherImpl {
             final StateChangeNotification.Type type,
             final Application app) {
 
-        PlatformImpl.runAndWait(new Runnable() {
-            @Override public void run() {
-                preloader.handleStateChangeNotification(
-                    new Preloader.StateChangeNotification(type, app));
-            }
-        });
+        PlatformImpl.runAndWait(() -> preloader.handleStateChangeNotification(
+            new StateChangeNotification(type, app)));
     }
 
     private static void notifyProgress(final Preloader preloader, final double d) {
-        PlatformImpl.runAndWait(new Runnable() {
-            @Override public void run() {
-                preloader.handleProgressNotification(
-                        new Preloader.ProgressNotification(d));
-            }
-        });
+        PlatformImpl.runAndWait(() -> preloader.handleProgressNotification(
+                new Preloader.ProgressNotification(d)));
     }
 
     private static boolean notifyError(final String msg, final Throwable constructorError) {
         final AtomicBoolean result = new AtomicBoolean(false);
-        PlatformImpl.runAndWait(new Runnable() {
-            @Override public void run() {
-                if (currentPreloader != null) {
-                    try {
-                        ErrorNotification evt = new ErrorNotification(null, msg, constructorError);
-                        boolean rval = currentPreloader.handleErrorNotification(evt);
-                        result.set(rval);
-                    } catch (Throwable t) {
-                        t.printStackTrace();
-                    }
+        PlatformImpl.runAndWait(() -> {
+            if (currentPreloader != null) {
+                try {
+                    ErrorNotification evt = new ErrorNotification(null, msg, constructorError);
+                    boolean rval = currentPreloader.handleErrorNotification(evt);
+                    result.set(rval);
+                } catch (Throwable t) {
+                    t.printStackTrace();
                 }
             }
         });
@@ -955,11 +926,9 @@ public class LauncherImpl {
     }
 
     private static void notifyCurrentPreloader(final PreloaderNotification pe) {
-        PlatformImpl.runAndWait(new Runnable() {
-            @Override public void run() {
-                if (currentPreloader != null) {
-                    currentPreloader.handleApplicationNotification(pe);
-                }
+        PlatformImpl.runAndWait(() -> {
+            if (currentPreloader != null) {
+                currentPreloader.handleApplicationNotification(pe);
             }
         });
     }

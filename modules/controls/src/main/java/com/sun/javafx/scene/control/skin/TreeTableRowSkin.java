@@ -25,15 +25,23 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.collections.FXCollections;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.control.Control;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableCell;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.scene.Node;
-import javafx.scene.control.TreeItem;
 
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
@@ -45,10 +53,6 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.control.Control;
-import javafx.scene.control.TableColumnBase;
-import javafx.scene.control.TreeTableCell;
-import javafx.scene.control.TreeTableColumn;
 import javafx.util.Callback;
 
 public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTableRow<T>, TreeTableRowBehavior<T>, TreeTableCell<T,?>> {
@@ -100,14 +104,12 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      *                                                                         *
      **************************************************************************/
 
-    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(new Callback<String, Void>() {
-        @Override public Void call(String p) {
-            if ("GRAPHIC".equals(p)) {
-                disclosureNodeDirty = true;
-                getSkinnable().requestLayout();
-            }
-            return null;
+    private MultiplePropertyChangeListenerHandler treeItemListener = new MultiplePropertyChangeListenerHandler(p -> {
+        if ("GRAPHIC".equals(p)) {
+            disclosureNodeDirty = true;
+            getSkinnable().requestLayout();
         }
+        return null;
     });
 
 
@@ -231,7 +233,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     }
 
     @Override protected int getIndentationLevel(TreeTableRow<T> control) {
-        return TreeTableView.getNodeLevel(control.getTreeItem());
+        return control.getTreeTableView().getTreeItemLevel(control.getTreeItem());
     }
 
     @Override protected double getIndentationPerLevel() {
@@ -337,7 +339,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             // RT-26625: [TreeView, TreeTableView] can lose arrows while scrolling
             // RT-28668: Ensemble tree arrow disappears
             if (disclosureNode.getScene() != null) {
-                disclosureNode.impl_processCSS(true);
+                disclosureNode.applyCss();
             }
         }
     }
@@ -396,5 +398,49 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
      */
     @Override public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
+    }
+
+
+
+    @Override
+    protected Object accGetAttribute(Attribute attribute,
+                                     Object... parameters) {
+        final TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
+        switch (attribute) {
+            case SELECTED_CELLS: {
+                // FIXME this could be optimised to iterate over cellsMap only
+                // (selectedCells could be big, cellsMap is much smaller)
+                List<Node> selection = new ArrayList<>();
+                int index = getSkinnable().getIndex();
+                for (TreeTablePosition pos : treeTableView.getSelectionModel().getSelectedCells()) {
+                    if (pos.getRow() == index) {
+                        TreeTableColumn column = pos.getTableColumn();
+                        if (column == null) {
+                            /* This is the row-based case */
+                            column = treeTableView.getVisibleLeafColumn(0);
+                        }
+                        TreeTableCell cell = cellsMap.get(column);
+                        if (cell != null) selection.add(cell);
+                    }
+                    return FXCollections.observableArrayList(selection);
+                }
+            }
+            case CELL_AT_ROW_COLUMN: {
+                int colIndex = (Integer)parameters[1];
+                TreeTableColumn column = treeTableView.getVisibleLeafColumn(colIndex);
+                return cellsMap.get(column);
+            }
+            case FOCUS_ITEM: {
+                TreeTableView.TreeTableViewFocusModel<T> fm = treeTableView.getFocusModel();
+                TreeTablePosition focusedCell = fm.getFocusedCell();
+                TreeTableColumn column = focusedCell.getTableColumn();
+                if (column == null) {
+                    /* This is the row-based case */
+                    column = treeTableView.getVisibleLeafColumn(0);
+                }
+                return cellsMap.get(column);
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

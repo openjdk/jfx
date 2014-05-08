@@ -246,6 +246,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_MacGLContext_nInitialize
             getProcAddress("glBufferSubData");
     ctxInfo->glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)
             getProcAddress("glGetShaderInfoLog");
+    ctxInfo->glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)
+            getProcAddress("glGetProgramInfoLog");
     ctxInfo->glTexImage2DMultisample = (PFNGLTEXIMAGE2DMULTISAMPLEPROC)
             getProcAddress("glTexImage2DMultisample");
     ctxInfo->glRenderbufferStorageMultisample = (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC)

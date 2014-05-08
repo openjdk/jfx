@@ -261,18 +261,21 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1mouseWheel
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getPixelColor
     (JNIEnv *env, jobject jrobot, jint x, jint y)
-{
+{    
+    jint val = 0;
     //NOTE: we don't use the ::GetPixel() on the screen DC because it's not capable of
     //      getting the correct colors when non-opaque windows are present
     jintArray ia = (jintArray)env->NewIntArray(1);
+    if (ia) {
+        Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture(env, jrobot, x, y, 1, 1, ia);
 
-    Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture(env, jrobot, x, y, 1, 1, ia);
-
-    jint * elems = env->GetIntArrayElements(ia, NULL);
-    jint val = elems[0];
-    env->ReleaseIntArrayElements(ia, elems, 0);
-    env->DeleteLocalRef(ia);
-
+        jint * elems = env->GetIntArrayElements(ia, NULL);
+        if (elems) {
+            val = elems[0];
+        }
+        env->ReleaseIntArrayElements(ia, elems, 0);
+        env->DeleteLocalRef(ia);
+    }
     return val;
 }
 
@@ -327,42 +330,44 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture
 
     BITMAPINFO * pinfo = (BITMAPINFO *)(new BYTE[sizeof(BITMAPINFOHEADER) + 3 * sizeof(RGBQUAD) + pixelDataSize]);
 
-    // pixel data starts after 3 RGBQUADS for color masks
-    RGBQUAD *pixelData = &pinfo->bmiColors[3];
+    if (pinfo) {
+        // pixel data starts after 3 RGBQUADS for color masks
+        RGBQUAD *pixelData = &pinfo->bmiColors[3];
 
-    // prepare BITMAPINFO for a 32-bit RGB bitmap
-    ::memset(pinfo, 0, sizeof(*pinfo));
-    pinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    pinfo->bmiHeader.biWidth = width;
-    pinfo->bmiHeader.biHeight = -height; // negative height means a top-down DIB
-    pinfo->bmiHeader.biPlanes = 1;
-    pinfo->bmiHeader.biBitCount = BITS_PER_PIXEL;
-    pinfo->bmiHeader.biCompression = BI_BITFIELDS;
+        // prepare BITMAPINFO for a 32-bit RGB bitmap
+        ::memset(pinfo, 0, sizeof(*pinfo));
+        pinfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        pinfo->bmiHeader.biWidth = width;
+        pinfo->bmiHeader.biHeight = -height; // negative height means a top-down DIB
+        pinfo->bmiHeader.biPlanes = 1;
+        pinfo->bmiHeader.biBitCount = BITS_PER_PIXEL;
+        pinfo->bmiHeader.biCompression = BI_BITFIELDS;
 
-    // Setup up color masks
-    static const RGBQUAD redMask =   {0, 0, 0xFF, 0};
-    static const RGBQUAD greenMask = {0, 0xFF, 0, 0};
-    static const RGBQUAD blueMask =  {0xFF, 0, 0, 0};
+        // Setup up color masks
+        static const RGBQUAD redMask =   {0, 0, 0xFF, 0};
+        static const RGBQUAD greenMask = {0, 0xFF, 0, 0};
+        static const RGBQUAD blueMask =  {0xFF, 0, 0, 0};
 
-    pinfo->bmiColors[0] = redMask;
-    pinfo->bmiColors[1] = greenMask;
-    pinfo->bmiColors[2] = blueMask;
+        pinfo->bmiColors[0] = redMask;
+        pinfo->bmiColors[1] = greenMask;
+        pinfo->bmiColors[2] = blueMask;
 
-    // Get the bitmap data in device-independent, 32-bit packed pixel format
-    ::GetDIBits(hdcMem, hbitmap, 0, height, pixelData, pinfo, DIB_RGB_COLORS);
+        // Get the bitmap data in device-independent, 32-bit packed pixel format
+        ::GetDIBits(hdcMem, hbitmap, 0, height, pixelData, pinfo, DIB_RGB_COLORS);
 
-    // convert Win32 pixel format (BGRX) to Java format (ARGB)
-    ASSERT(sizeof(jint) == sizeof(RGBQUAD));
-    for(int nPixel = 0; nPixel < numPixels; nPixel++) {
-        RGBQUAD * prgbq = &pixelData[nPixel];
-        jint jpixel = WinToJavaPixel(prgbq->rgbRed, prgbq->rgbGreen, prgbq->rgbBlue);
-        // stuff the 32-bit pixel back into the 32-bit RGBQUAD
-        *prgbq = *( (RGBQUAD *)(&jpixel) );
+        // convert Win32 pixel format (BGRX) to Java format (ARGB)
+        ASSERT(sizeof(jint) == sizeof(RGBQUAD));
+        for(int nPixel = 0; nPixel < numPixels; nPixel++) {
+            RGBQUAD * prgbq = &pixelData[nPixel];
+            jint jpixel = WinToJavaPixel(prgbq->rgbRed, prgbq->rgbGreen, prgbq->rgbBlue);
+            // stuff the 32-bit pixel back into the 32-bit RGBQUAD
+            *prgbq = *( (RGBQUAD *)(&jpixel) );
+        }
+
+        // copy pixels into Java array
+        env->SetIntArrayRegion(pixelArray, 0, numPixels, (jint *)pixelData);
+        delete pinfo;
     }
-
-    // copy pixels into Java array
-    env->SetIntArrayRegion(pixelArray, 0, numPixels, (jint *)pixelData);
-    delete pinfo;
 
     // free all the GDI objects we made
     ::SelectObject(hdcMem, hOldBitmap);

@@ -31,6 +31,6 @@ public class ListViewAnchorRetriever {
 
     // can only access the getAnchor method in ListCellBehavior from this package
     public static int getAnchor(ListView listView) {
-        return ListCellBehavior.getAnchor(listView);
+        return ListCellBehavior.getAnchor(listView, -1);
     }
 }

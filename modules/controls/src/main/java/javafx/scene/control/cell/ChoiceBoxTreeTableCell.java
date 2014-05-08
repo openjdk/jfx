@@ -155,11 +155,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>() {
-            @Override public TreeTableCell<S,T> call(TreeTableColumn<S,T> list) {
-                return new ChoiceBoxTreeTableCell<S,T>(converter, items);
-            }
-        };
+        return list -> new ChoiceBoxTreeTableCell<S,T>(converter, items);
     }
     
     

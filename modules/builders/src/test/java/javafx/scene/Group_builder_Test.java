@@ -45,7 +45,7 @@ public final class Group_builder_Test extends BuilderTestBase {
 
         cfg.addProperty("autoSizeChildren", false);
         cfg.addProperty("children", Node.class, Arrays.asList(new Rectangle()));
-        cfg.addProperty("impl_traversalEngine", new TraversalEngine(new Group(), true));
+//        cfg.addProperty("impl_traversalEngine", new TraversalEngine(new Group(), true));
         cfg.addProperty("stylesheets", String.class, Arrays.asList("test.css"));
 
         return Arrays.asList(new Object[] {

@@ -40,6 +40,7 @@ public enum DirtyBits {
     NODE_DEPTH_TEST,
     NODE_BLENDMODE,
     NODE_CSS,
+    NODE_FORCE_SYNC,
 
     // Dirty bits for various subclasses of Node
     NODE_GEOMETRY,  // Used by ImageView, MediaView, and subclasses of Shape and Shape3D

@@ -48,8 +48,8 @@
 #ifdef USE_FB_ROBOT
 
 jboolean fbFBRobotScreen(jint x, jint y,
-                                    jint width, jint height,
-                                    jint *pixels) {
+                            jint width, jint height,
+                            jint *pixels) {
 
     FILE *fb;
     unsigned char *pixelBuffer = NULL;
@@ -79,21 +79,24 @@ jboolean fbFBRobotScreen(jint x, jint y,
         GLASS_LOG_SEVERE("Cannot get screen info");
         return JNI_FALSE;
     }
-    GLASS_LOG_FINE("Read screen info: res=%ix%i, offset=%ix%i",
+    GLASS_LOG_FINE("Read screen info: res=%ix%i, offset=%ix%i depth=%d",
                    screenInfo.xres, screenInfo.yres,
-                   screenInfo.xoffset, screenInfo.yoffset);
+                   screenInfo.xoffset, screenInfo.yoffset,
+                   screenInfo.bits_per_pixel);
     GLASS_LOG_FINE("close(%s)", FB_DEVICE);
     close(fbFileHandle);
-    depth = screenInfo.bits_per_pixel / 8;
-    int pixelBufferLength = screenInfo.xres * screenInfo.yres * depth;
+    depth = screenInfo.bits_per_pixel / 8; // bytes per pixel
+
+    int inStride = screenInfo.xres * depth;
+
+    // allocate room for one scan line
+    int pixelBufferLength = inStride;
     pixelBuffer = (unsigned char *) malloc(pixelBufferLength);
-    if (pixelBuffer == NULL) {
+    if (pixelBuffer ==  ((unsigned char *)0)) {
         GLASS_LOG_SEVERE("Failed to allocate temporary pixel buffer");
         return JNI_FALSE;
     }
 
-    GLASS_LOG_FINE("fopen(%s, \"r\") to read %ix%i pixels at bit depth %i",
-                   FB_DEVICE, width, height, screenInfo.bits_per_pixel);
     fb = fopen(FB_DEVICE, "r");
     if (fb == NULL) {
         GLASS_LOG_SEVERE("FB: Cannot open framebuffer for reading");
@@ -101,55 +104,71 @@ jboolean fbFBRobotScreen(jint x, jint y,
         return JNI_FALSE;
     }
 
-    fseek(fb, screenInfo.yoffset * screenInfo.xres * depth, SEEK_SET);
-    int numRead = fread(pixelBuffer, 1,
-                        pixelBufferLength,
-                        fb);
+    int row, col;
 
-    if (x < 0) {
-        dst += -x * 4;
-        width += x;
-        x = 0;
-    }
-    if (y < 0) {
-        dst += -y * dstByteStride;
-        height += y;
-        y = 0;
+    // initial skip... offset plus a jump to the first row
+    int nextbyte = (screenInfo.yoffset * screenInfo.xres) * depth;
+
+    if ((y > 0) && (y < (int)screenInfo.yres)) {
+        nextbyte += y * inStride;
     }
 
-    int widthLimit = width;
-    int heightLimit = height;
-
-    // Required height is larger than screen's height
-    if ((int) screenInfo.yres < height) {
-        heightLimit = (int) screenInfo.yres;
-    }
-    // Required width is larger than screen's width
-    if ((int) screenInfo.xres < width) {
-        widthLimit = (int) screenInfo.xres;
-    }
-    // Required height is out of range
-    if (((int) screenInfo.yres - y) < height) {
-        heightLimit = (int) screenInfo.yres - y;
-    }
-    // Required width is out of range
-    if (((int) screenInfo.xres - x) < width) {
-        widthLimit = (int) screenInfo.xres - x;
-    }
-
-    if (widthLimit > 0 && heightLimit > 0) {
-        // copy the relevant portion of the screen to the supplied pixel array
-        int offset = y * screenInfo.xres * depth + x * depth;
-        for (i = 0; i < heightLimit; i++) {
-            memcpy(dst + i * dstByteStride, pixelBuffer + offset, widthLimit * depth);
-            offset += screenInfo.xres * depth;
-        }
-    } else {
+    if(fseek(fb, nextbyte, SEEK_SET)) {
+        GLASS_LOG_SEVERE("fseek(fb0) failed");
         free(pixelBuffer);
-        fclose(fb);
-        GLASS_LOG_FINE("fclose(%s)", FB_DEVICE);
-        GLASS_LOG_SEVERE("Failed to take a snapshot, some of parameters are illegal");
         return JNI_FALSE;
+    }
+
+    unsigned int * dstPixel = (unsigned int *)pixels;
+
+    for (row=y; row < y + height; row ++) {
+        if ((row < 0) || (row >= (int)screenInfo.yres))   {
+            // off the top or bottom of the window
+            for (col = 0; col < width; col ++ ,dstPixel ++) {
+                *dstPixel = 0xff000000; //black
+            }
+        } else {
+            // in the y body
+
+            // if off the edge, left
+            for (col = x; col < 0; col ++ ,dstPixel ++) {
+                *dstPixel = 0xff000000; //black
+            }
+
+            // real one row of pixels in the image 
+            if (col < (int)screenInfo.xres) {
+                int numRead = fread(pixelBuffer, 1,
+                            inStride,
+                            fb);
+                if (numRead != inStride) {
+                    GLASS_LOG_SEVERE("Mismatch reading pixels in screen capture");
+                    free(pixelBuffer);
+                    return JNI_FALSE;
+                }
+
+                unsigned short * srcShortPixel = (unsigned short *)pixelBuffer;
+                unsigned int * srcIntPixel = (unsigned int *)pixelBuffer;
+
+                for (; col < x + width && col < (int)screenInfo.xres ; col ++ ,dstPixel ++) {
+                   if (depth == 2) {
+                        // assuming 565 here
+                        unsigned short sp = srcShortPixel[col];
+                        unsigned int red = (int)((sp & 0xF800) >> 11) << 3;
+                        unsigned int green =(int) ((sp & 0x7E0) >> 5) << 2;
+                        unsigned int blue =(int) (sp & 0x1F) << 3;
+                        unsigned int pixel = (unsigned int) (0xff000000 | (red << 16) | (green << 8) | blue); 
+                        *dstPixel = pixel;
+                   } else {
+                        *dstPixel = 0xff000000 | srcIntPixel[col];
+                   }
+                }
+            }
+
+            // if off the edge right
+            for (; col < x + width; col ++ ,dstPixel ++) {
+                *dstPixel = 0xff000000; //black
+            }
+        }
     }
 
     free(pixelBuffer);
