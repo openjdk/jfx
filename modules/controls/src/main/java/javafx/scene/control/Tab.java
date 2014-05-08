@@ -645,7 +645,14 @@ public class Tab implements EventTarget, Styleable {
     }
     
     private void updateDisabled() {
-        setDisabled(isDisable() || (getTabPane() != null && getTabPane().isDisabled()));
+        boolean disabled = isDisable() || (getTabPane() != null && getTabPane().isDisabled());
+        setDisabled(disabled);
+
+        // Fix for RT-24658 - content should be disabled if the tab is disabled
+        Node content = getContent();
+        if (content != null) {
+            content.setDisable(disabled);
+        }
     }
     
      /**

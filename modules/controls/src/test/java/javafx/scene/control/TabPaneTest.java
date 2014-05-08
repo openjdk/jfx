@@ -964,4 +964,23 @@ public class TabPaneTest {
         assertEquals(1, pane.getSelectionModel().getSelectedIndex());
         assertEquals(tab1, pane.getSelectionModel().getSelectedItem());
     }
+
+    @Test public void test_rt_24658() {
+        Button btn = new Button("Button");
+        final Tab disabled = new Tab("Disabled");
+        disabled.setContent(btn);
+
+        TabPane pane = new TabPane();
+        pane.getTabs().addAll(disabled);
+
+        assertEquals(0, pane.getSelectionModel().getSelectedIndex());
+        assertEquals(disabled, pane.getSelectionModel().getSelectedItem());
+        assertFalse(btn.isDisabled());
+
+        disabled.setDisable(true);
+        assertTrue(btn.isDisabled());
+
+        disabled.setDisable(false);
+        assertFalse(btn.isDisabled());
+    }
 }
