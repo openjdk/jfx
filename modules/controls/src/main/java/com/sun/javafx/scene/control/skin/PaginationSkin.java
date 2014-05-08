@@ -746,16 +746,13 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 minButtonSize = newFont.getSize() * 2;
                 for(Node child: controlBox.getChildren()) {
                     ((Control)child).setMinSize(minButtonSize, minButtonSize);
-                    // RT-33327 : min size is set on the toggle button but the
-                    // pref size does not match as computed by LabeledSkinBase#computePrefHeight
-                    // so setting the prefSize ensures the desired size on the button.
-                    ((Control)child).setPrefSize(minButtonSize, minButtonSize);
                 }
                 // We want to relayout the indicator buttons because the size has changed.
                 requestLayout();
             });
             leftArrowButton.setMinSize(minButtonSize, minButtonSize);
-            leftArrowButton.setPrefSize(minButtonSize, minButtonSize);
+            leftArrowButton.prefWidthProperty().bind(leftArrowButton.minWidthProperty());
+            leftArrowButton.prefHeightProperty().bind(leftArrowButton.minHeightProperty());
             leftArrowButton.getStyleClass().add("left-arrow-button");
             leftArrowButton.setFocusTraversable(false);
             HBox.setMargin(leftArrowButton, new Insets(0, snapSize(arrowButtonGap.get()), 0, 0));
@@ -774,7 +771,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
             };
             rightArrowButton.setMinSize(minButtonSize, minButtonSize);
-            rightArrowButton.setPrefSize(minButtonSize, minButtonSize);
+            rightArrowButton.prefWidthProperty().bind(rightArrowButton.minWidthProperty());
+            rightArrowButton.prefHeightProperty().bind(rightArrowButton.minHeightProperty());
             rightArrowButton.getStyleClass().add("right-arrow-button");
             rightArrowButton.setFocusTraversable(false);
             HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSize(arrowButtonGap.get())));
@@ -1210,6 +1208,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             tooltipVisibleProperty().addListener((ov, oldValue, newValue) -> {
                 setTooltipVisible(newValue);
             });
+
+            prefHeightProperty().bind(minHeightProperty());
         }
 
         private void setIndicatorType() {
@@ -1217,10 +1217,16 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 getStyleClass().remove("number-button");
                 getStyleClass().add("bullet-button");
                 setText(null);
+
+                // Bind the width in addition to the height to ensure the region is square
+                prefWidthProperty().bind(minWidthProperty());
             } else {
                 getStyleClass().remove("bullet-button");
                 getStyleClass().add("number-button");
                 setText(Integer.toString(this.pageNumber + 1));
+
+                // Free the width to conform to the text content
+                prefWidthProperty().unbind();
             }
         }
 

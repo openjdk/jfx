@@ -102,6 +102,15 @@ public class HelloPagination extends Application {
             pagination.setCurrentPageIndex(8);
         });
 
+        Button setStyle = new Button("change style");
+        setStyle.setOnAction(t -> {
+            if (pagination.getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
+                pagination.getStyleClass().remove(Pagination.STYLE_CLASS_BULLET);
+            } else {
+                pagination.getStyleClass().add(Pagination.STYLE_CLASS_BULLET);
+            }
+        });
+
         Button getCurrentPageIndex = new Button("getCurrentPageIndex");
         getCurrentPageIndex.setOnAction(t -> System.out.println("getCurrentPageIndex = " + pagination.getCurrentPageIndex()));
 
@@ -132,7 +141,7 @@ public class HelloPagination extends Application {
         toolbar.getChildren().addAll(
                 setMaxPageIndicatorCount,
                 setCurrentPageIndex, setCurrentPageIndex2, setCurrentPageIndex3,
-                setOldPageFactory, setNewPageFactory,
+                setOldPageFactory, setNewPageFactory, setStyle,
                 setPageCount, setPageCount2, setPageCount3,
                 getMaxPageIndicatorCount,
                 getCurrentPageIndex);
