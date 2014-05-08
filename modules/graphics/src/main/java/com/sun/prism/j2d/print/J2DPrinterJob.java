@@ -70,6 +70,7 @@ import java.awt.print.PrinterException;
 import java.util.ArrayList;
 import java.util.Set;
 import com.sun.glass.ui.Application;
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.PrinterImpl;
 import com.sun.javafx.print.PrinterJobImpl;
@@ -103,7 +104,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
         printReqAttrSet = new HashPrintRequestAttributeSet();
         // dialog selection is a JDK 1.7 attribute.
         // We expect to run on 1.8 and above so this should be fine.
-        printReqAttrSet.add(DialogTypeSelection.NATIVE);
+        // Don't use on Linux where it has no effect and runs into a JDK bug
+        if (!PlatformUtil.isLinux()) {
+            printReqAttrSet.add(DialogTypeSelection.NATIVE);
+        }
         j2dPageable = new J2DPageable();
         pJob2D.setPageable(j2dPageable);
     }
