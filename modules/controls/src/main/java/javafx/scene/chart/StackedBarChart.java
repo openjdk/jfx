@@ -381,69 +381,43 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     @Override protected void updateAxisRange() {
         // This override is necessary to update axis range based on cumulative Y value for the
         // Y axis instead of the inherited way where the max value in the data range is used.
-        final Axis<X> xa = getXAxis();
-        final Axis<Y> ya = getYAxis();
-        if (xa.isAutoRanging()) {
-            List xData = new ArrayList<Number>();
-            if (xa instanceof CategoryAxis) {
-                xData.addAll(categoryAxis.getCategories());
-            } else {
-                int catIndex = 0;
-                for (String category : categoryAxis.getCategories()) {
-                    int index = 0;
-                    double totalXN = 0;
-                    double totalXP = 0;
-                    Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
-                    while (seriesIterator.hasNext()) {
-                        Series<X, Y> series = seriesIterator.next();
-                        for (final Data<X, Y> item : getDataItem(series, index, catIndex, category)) {;
-                            if (item != null) {
-                                boolean isNegative = item.getNode().getStyleClass().contains("negative");
-                                if (!isNegative) {
-                                    totalXP += xa.toNumericValue(item.getXValue());
-                                } else {
-                                    totalXN += xa.toNumericValue(item.getXValue());
-                                }
-                            }
-                        }
-                    }
-                    xData.add(totalXP);
-                    xData.add(totalXN);
-                    catIndex++;
+        boolean categoryIsX = categoryAxis == getXAxis();
+        if (categoryAxis.isAutoRanging()) {
+            List cData = new ArrayList();
+            for (Series<X, Y> series : getData()) {
+                for (Data<X, Y> data : series.getData()) {
+                    if (data != null) cData.add(categoryIsX ? data.getXValue() : data.getYValue());
                 }
             }
-            xa.invalidateRange(xData);
+            categoryAxis.invalidateRange(cData);
         }
-        if (ya.isAutoRanging()) {
-            List yData = new ArrayList<Number>();
-            if (ya instanceof CategoryAxis) {
-                yData.addAll(categoryAxis.getCategories());
-            } else {
-                int catIndex = 0;
-                for (String category : categoryAxis.getCategories()) {
-                    int index = 0;
-                    double totalYP = 0;
-                    double totalYN = 0;
-                    Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
-                    while (seriesIterator.hasNext()) {
-                        Series<X, Y> series = seriesIterator.next();
-                        for (final Data<X, Y> item : getDataItem(series, index, catIndex, category)) {;
-                            if(item != null) {
-                                boolean isNegative = item.getNode().getStyleClass().contains("negative");
-                                if (!isNegative) {
-                                    totalYP += ya.toNumericValue(item.getYValue());
-                                } else {
-                                    totalYN += ya.toNumericValue(item.getYValue());
-                                }
+        if (valueAxis.isAutoRanging()) {
+            List<Number> vData = new ArrayList<>();
+            int catIndex = 0;
+            for (String category : categoryAxis.getAllDataCategories()) {
+                int index = 0;
+                double totalXN = 0;
+                double totalXP = 0;
+                Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
+                while (seriesIterator.hasNext()) {
+                    Series<X, Y> series = seriesIterator.next();
+                    for (final Data<X, Y> item : getDataItem(series, index, catIndex, category)) {;
+                        if (item != null) {
+                            boolean isNegative = item.getNode().getStyleClass().contains("negative");
+                            Number value = (Number) (categoryIsX ? item.getYValue() : item.getXValue());
+                            if (!isNegative) {
+                                totalXP += valueAxis.toNumericValue(value);
+                            } else {
+                                totalXN += valueAxis.toNumericValue(value);
                             }
                         }
                     }
-                    yData.add(totalYP);
-                    yData.add(totalYN);
-                    catIndex++;
                 }
+                vData.add(totalXP);
+                vData.add(totalXN);
+                catIndex++;
             }
-            ya.invalidateRange(yData);
+            valueAxis.invalidateRange(vData);
         }
     }
 

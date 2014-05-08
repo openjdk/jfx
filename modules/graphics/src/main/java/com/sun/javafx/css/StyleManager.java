@@ -168,10 +168,10 @@ final public class StyleManager {
     // package for testing
     static final Map<Parent, CacheContainer> cacheContainerMap = new WeakHashMap<>();
 
+    // package for testing
+    CacheContainer getCacheContainer(Styleable styleable, SubScene subScene) {
 
-    private CacheContainer getCacheContainer(Styleable styleable, SubScene subScene) {
-
-        if (styleable == null) return null;
+        if (styleable == null && subScene == null) return null;
 
         Parent root = null;
 
@@ -182,14 +182,16 @@ final public class StyleManager {
 
             Node node = (Node)styleable;
             Scene scene = node.getScene();
-            root = scene.getRoot();
+            if (scene != null) root = scene.getRoot();
 
         } else if (styleable instanceof Window) {
             // this catches the PopupWindow case
             Scene scene = ((Window)styleable).getScene();
-            scene.getRoot();
+            if (scene != null) root = scene.getRoot();
         }
         // todo: what other Styleables need to be handled here?
+
+        if (root == null) return null;
 
         CacheContainer container = cacheContainerMap.computeIfAbsent(
                 root,
@@ -1684,7 +1686,8 @@ final public class StyleManager {
     private static List<String> cacheMapKey;
 
     // Each Scene has its own cache
-    private static class CacheContainer {
+    // package for testing
+    static class CacheContainer {
 
         private Map<StyleCache.Key,StyleCache> getStyleCache() {
             if (styleCache == null) styleCache = new HashMap<StyleCache.Key, StyleCache>();

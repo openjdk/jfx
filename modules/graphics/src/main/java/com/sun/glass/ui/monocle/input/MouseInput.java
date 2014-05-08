@@ -68,7 +68,8 @@ public class MouseInput {
         // Get the cached window for the old state and compute the window for
         // the new state
         MonocleWindow oldWindow = state.getWindow(false);
-        MonocleWindow window = newState.getWindow(true);
+        boolean recalculateWindow = state.getButtonsPressed().isEmpty();
+        MonocleWindow window = newState.getWindow(recalculateWindow);
         MonocleView view = (window == null) ? null : (MonocleView) window.getView();
         // send exit event
         if (oldWindow != window && oldWindow != null) {

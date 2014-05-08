@@ -322,6 +322,10 @@ ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
 
+// COMPILE_JFR specifies whether to build code that logs to JRockit Flight Recorder
+defineProperty("COMPILE_JFR", Boolean.toString(file("$JDK_HOME/jre/lib/jfr.jar").exists()))
+ext.IS_COMPILE_JFR = Boolean.parseBoolean(COMPILE_JFR)
+
 // RETAIN_PACKAGER_TESTS specifies whether the tests in fxpackager should
 // keep generated files instead of attempting to automatically delete them
 defineProperty("RETAIN_PACKAGER_TESTS", "false")
@@ -1215,7 +1219,7 @@ project(":base") {
         sourceSets.main.java.srcDirs += "src/main/java7"
     }
 
-    if (file("$JDK_HOME/jre/lib/jfr.jar").exists()) {
+    if (IS_COMPILE_JFR) {
         sourceSets.main.java.srcDirs += "src/main/java-jfr"
     }
 
@@ -1512,6 +1516,16 @@ project(":graphics") {
     classes << {
         // Copy all of the download libraries to the libs directory for the sake of the IDEs
         File libsDir = rootProject.file("build/libs");
+        
+        // In some IDEs (Eclipse for example), touching these libraries cauese a full build
+        // within the IDE.  When gradle is used outside of the IDE, for example to build the
+        // native code, a full rebuild is caused within the IDE.  The fix is to check for the 
+        // lib directory and not copy the files
+        //
+        // This means that in order to update the dependent libraries for the IDE's, a clean
+        // build is required
+        //
+        if (libsDir.exists()) return;
         libsDir.mkdirs();
         for (File f : [configurations.compile.files, configurations.antlr3.files].flatten()) {
             copy {

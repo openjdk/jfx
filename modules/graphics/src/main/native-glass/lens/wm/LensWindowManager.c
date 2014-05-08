@@ -159,6 +159,24 @@ LensResult lens_wm_notifyPlatformWindowRelease(JNIEnv *env, NativeWindow window)
     return LENS_OK;
 }
 
+void lens_wm_repaint_all(JNIEnv *env) {
+    render_lock();
+    glass_window_list_lock();
+    NativeWindow w = glass_window_list_getHead();
+    while (w) {
+        if (w && w->view) {
+            glass_application_notifyViewEvent(env,
+                                              w->view,
+                                              com_sun_glass_events_ViewEvent_REPAINT,
+                                              w->currentBounds.x, w->currentBounds.y,
+                                              w->currentBounds.width, w->currentBounds.height);
+        }
+        w = w->nextWindow;
+    }
+    glass_window_list_unlock();
+    render_unlock();
+}
+
 void lens_wm_repaint(JNIEnv *env, NativeWindow window) {
     render_lock();
 

@@ -145,7 +145,8 @@ public class TouchLagTest {
         }
         long t = System.currentTimeMillis() - startTime;
         // Make sure events could be sent in the required time
-        Assert.assertTrue("Took " + t + "ms to send 3000 events", t < 3000l);
+        Assert.assertTrue("Took " + t + "ms to send 3000 events",
+                          t < (long) (3000l * TestApplication.getTimeScale()));
         TestLog.log("Sent 3000 events in " + t + "ms");
         // move to 400, 410
         ui.writeValue(b, xs[0], 400);
@@ -158,7 +159,8 @@ public class TouchLagTest {
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
         // Make sure events could be delivered in the required time
-        TestLog.waitForLog("Touch moved: 400, 410", 3000l - t);
+        TestLog.waitForLog("Touch moved: 400, 410",
+                           (long) (3000l * TestApplication.getTimeScale()) - t);
     }
 
     /** Make sure we can process 1000 multitouch move events per second. We are
@@ -223,7 +225,8 @@ public class TouchLagTest {
         }
         long t = System.currentTimeMillis() - startTime;
         // Make sure events could be sent in the required time
-        Assert.assertTrue("Took " + t + "ms to send 3000 events", t < 3000l);
+        Assert.assertTrue("Took " + t + "ms to send 3000 events",
+                          t < (long) (3000l * TestApplication.getTimeScale()));
         TestLog.log("Sent 3000 events in " + t + "ms");
         // move to (400, 410), (350, 360);
         ui.writeValue(b, baseX, 400);
@@ -247,6 +250,7 @@ public class TouchLagTest {
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
         // Make sure events could be delivered in the required time
-        TestLog.waitForLog("Touch released: 400, 410", 3000l - t);
+        TestLog.waitForLog("Touch released: 400, 410",
+                           (long) (3000l * TestApplication.getTimeScale()) - t);
     }
 }

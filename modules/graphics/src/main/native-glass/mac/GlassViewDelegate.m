@@ -237,6 +237,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         }
         (*env)->CallVoidMethod(env, self->jView, jViewNotifyEvent, com_sun_glass_events_ViewEvent_REMOVE);
     }
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 - (void)setFrameOrigin:(NSPoint)newOrigin
@@ -1005,6 +1006,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                                                     self->jView, 
                                                     jViewNotifyInputMethodCandidatePosRequest, 
                                                     pos);
+        GLASS_CHECK_EXCEPTION(env);
         if (theArray != NULL) {
             jint n = (*env)->GetArrayLength(env, theArray);
             if (n == 2) {

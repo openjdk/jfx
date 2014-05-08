@@ -1530,6 +1530,13 @@ jboolean glass_cursor_supportsTranslucency(void);
  */
 void glass_cursor_terminate(void);
 
+/**
+ * Called when screen characteristics changed.
+ * @param env
+ */
+void glass_application_notifyScreenSettingsChanged(JNIEnv *env);
+
+
 
 #include "LensLogger.h"
 

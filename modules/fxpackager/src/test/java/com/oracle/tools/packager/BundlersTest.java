@@ -25,12 +25,6 @@
 
 package com.oracle.tools.packager;
 
-import com.oracle.tools.packager.Bundler;
-import com.oracle.tools.packager.BundlerParamInfo;
-import com.oracle.tools.packager.Bundlers;
-import com.oracle.tools.packager.StandardBundlerParam;
-import com.oracle.tools.packager.ConfigException;
-import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.oracle.tools.packager.windows.WinExeBundler;
 import com.oracle.tools.packager.windows.WinMsiBundler;
 import org.junit.Test;
@@ -38,7 +32,14 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -237,4 +238,20 @@ public class BundlersTest {
         assertTrue(WinMsiBundler.MSI_SYSTEM_WIDE.fetchFrom(params));
         assertTrue(WinExeBundler.EXE_SYSTEM_WIDE.fetchFrom(params));
     }
+
+    @Test
+    public void badMainJar() {
+        try {
+            Map<String, ? super Object> params = new TreeMap<>();
+            params.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(new File("."), Collections.emptySet()));
+            params.put(StandardBundlerParam.MAIN_JAR.getID(), "this_jar_must_not_exist.jar");
+
+            StandardBundlerParam.MAIN_JAR.fetchFrom(params);
+
+            fail("An exception should have been thrown");
+        } catch (RuntimeException re) {
+            assertTrue("RuntimeException wraps a ConfigException", re.getCause() instanceof ConfigException);
+        }
+    }
+
 }

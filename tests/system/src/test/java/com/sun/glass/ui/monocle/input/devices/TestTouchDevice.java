@@ -74,7 +74,7 @@ public abstract class TestTouchDevice extends TestDevice {
         if (absXMax == 0.0) {
             return (int) Math.round(x);
         } else {
-            Rectangle2D r = TestTouchDevices.getScreenBounds();
+            Rectangle2D r = TestApplication.getScreenBounds();
             return (int) Math.round(x * absXMax / r.getWidth());
         }
     }
@@ -83,7 +83,7 @@ public abstract class TestTouchDevice extends TestDevice {
         if (absXMax == 0.0) {
             return (int) Math.round(y);
         } else {
-            Rectangle2D r = TestTouchDevices.getScreenBounds();
+            Rectangle2D r = TestApplication.getScreenBounds();
             return (int) Math.round(y * absYMax / r.getHeight());
         }
     }

@@ -101,17 +101,20 @@ jobjectArray createJavaScreens(JNIEnv* env) {
 
     if (jScreenClass == NULL)
     {
-        jScreenClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/sun/glass/ui/Screen"));
+        jclass jcls = (*env)->FindClass(env, "com/sun/glass/ui/Screen");
+        GLASS_CHECK_EXCEPTION(env);
+        jScreenClass = (*env)->NewGlobalRef(env, jcls);
     }
 
     jobjectArray screenArray = (*env)->NewObjectArray(env,
                                                       [screens count],
                                                       jScreenClass,
                                                       NULL);
-
+    GLASS_CHECK_EXCEPTION(env);
     for (NSUInteger index = 0; index < [screens count]; index++) {
         jobject javaScreen = createJavaScreen(env, [screens objectAtIndex:index]);
         (*env)->SetObjectArrayElement(env, screenArray, index, javaScreen);
+        GLASS_CHECK_EXCEPTION(env);
     }
 
     return screenArray;
@@ -122,9 +125,11 @@ void GlassScreenDidChangeScreenParameters(JNIEnv *env)
     if (jScreenNotifySettingsChanged == NULL) 
     {
         jScreenNotifySettingsChanged = (*env)->GetStaticMethodID(env, jScreenClass, "notifySettingsChanged", "()V");
+        GLASS_CHECK_EXCEPTION(env);
     }
     
     (*env)->CallStaticVoidMethod(env, jScreenClass, jScreenNotifySettingsChanged);
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 @implementation NSScreen (FullscreenAdditions)

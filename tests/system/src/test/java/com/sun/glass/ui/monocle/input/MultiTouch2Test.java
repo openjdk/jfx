@@ -49,13 +49,10 @@ public class MultiTouch2Test extends ParameterizedTestBase {
 
     @Test
     public void twoFingerTap() throws Exception {
-        Rectangle2D r = TestTouchDevices.getScreenBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
-        final int x1 = Math.round(width * 0.5f);
-        final int y1 = Math.round(height * 0.5f);
-        final int x2 = Math.round(width * 0.75f);
-        final int y2 = Math.round(height * 0.75f);
+        final int x1 = (int) Math.round(width * 0.5f);
+        final int y1 = (int) Math.round(height * 0.5f);
+        final int x2 = (int) Math.round(width * 0.75f);
+        final int y2 = (int) Math.round(height * 0.75f);
         TestLog.reset();
         // first finger
         int p1 = device.addPoint(x1, y1);
@@ -181,10 +178,6 @@ public class MultiTouch2Test extends ParameterizedTestBase {
      */
     @Test
     public void pressReleasePressTest() throws Exception {
-
-        Rectangle2D r = TestTouchDevices.getScreenBounds();
-        final int width = (int) r.getWidth();
-        final int height = (int) r.getHeight();
         int x1 = (int) Math.round(width / 2);
         int y1 = (int) Math.round(height * 0.3);
         int x2 = (int) Math.round(width / 2);

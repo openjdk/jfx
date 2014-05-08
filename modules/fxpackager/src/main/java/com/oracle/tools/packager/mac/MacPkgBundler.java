@@ -476,7 +476,11 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
 
             return true;
         } catch (RuntimeException re) {
-            throw new ConfigException(re);
+            if (re.getCause() instanceof ConfigException) {
+                throw (ConfigException) re.getCause();
+            } else {
+                throw new ConfigException(re);
+            }
         }
     }
 

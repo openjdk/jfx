@@ -450,6 +450,10 @@ public final class CategoryAxis extends Axis<String> {
         allDataCategories.addAll(categoryNames);
     }
 
+    final List<String> getAllDataCategories() {
+        return allDataCategories;
+    }
+
     /**
      * Get the display position along this axis for a given value
      *

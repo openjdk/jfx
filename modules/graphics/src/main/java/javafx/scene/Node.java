@@ -26,6 +26,7 @@
 package javafx.scene;
 
 
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.BooleanExpression;
@@ -961,7 +962,13 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 protected void invalidated() {
-                    impl_reapplyCSS();
+                    // RT-36838 - don't reapply CSS in the middle of an update or reapply
+                    if ((cssFlag == CssFlags.UPDATE) || (cssFlag == CssFlags.REAPPLY)) {
+                        Platform.runLater(()->impl_reapplyCSS());
+                    }
+                    else {
+                        impl_reapplyCSS();
+                    }
                     if (PrismSettings.printRenderGraph) {
                         impl_markDirty(DirtyBits.DEBUG);
                     }
@@ -994,7 +1001,13 @@ public abstract class Node implements EventTarget, Styleable {
     private ObservableList<String> styleClass = new TrackableObservableList<String>() {
         @Override
         protected void onChanged(Change<String> c) {
-            impl_reapplyCSS();
+            // RT-36838 - don't reapply CSS in the middle of an update or reapply
+            if ((cssFlag == CssFlags.UPDATE) || (cssFlag == CssFlags.REAPPLY)) {
+                Platform.runLater(()->impl_reapplyCSS());
+            }
+            else {
+                impl_reapplyCSS();
+            }
         }
 
         @Override
@@ -1079,7 +1092,13 @@ public abstract class Node implements EventTarget, Styleable {
                 protected void invalidated() {
                     // If the style has changed, then styles of this node
                     // and child nodes might be affected.
-                    impl_reapplyCSS();
+                    // RT-36838 - don't reapply CSS in the middle of an update or reapply
+                    if ((cssFlag == CssFlags.UPDATE) || (cssFlag == CssFlags.REAPPLY)) {
+                        Platform.runLater(()->impl_reapplyCSS());
+                    }
+                    else {
+                        impl_reapplyCSS();
+                    }
                 }
 
                 @Override

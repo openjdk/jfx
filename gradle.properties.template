@@ -45,6 +45,10 @@
 #COMPILE_WEBKIT = true
 #COMPILE_MEDIA = true
 
+#To disable building support for JRockit Flight Recorder, uncomment the line below
+
+#COMPILE_JFR = false
+
 # The building of JavaDoc takes time. By default we disable the building of JavaDoc
 # so as to speed up the time in incremental builds. Uncomment this flag in order to
 # build all the JavaDoc

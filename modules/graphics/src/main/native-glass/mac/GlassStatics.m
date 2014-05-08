@@ -27,6 +27,7 @@
 #import <pthread.h>
 #import <QuartzCore/CVDisplayLink.h>
 #import "GlassStatics.h"
+#import "GlassMacros.h"
 
 pthread_key_t GlassThreadDataKey = 0;
 
@@ -91,21 +92,36 @@ JavaIDs javaIDs;
 void initJavaIDsList(JNIEnv* env)
 {
     if (!javaIDs.List.add) {
-        javaIDs.List.add = (*env)->GetMethodID(env, (*env)->FindClass(env, "java/util/List"), "add", "(Ljava/lang/Object;)Z");
+        jclass jcls = (*env)->FindClass(env, "java/util/List");
+        GLASS_CHECK_EXCEPTION(env);
+        if (jcls) {
+            javaIDs.List.add = (*env)->GetMethodID(env, jcls, "add", "(Ljava/lang/Object;)Z");
+            GLASS_CHECK_EXCEPTION(env);
+        }
     }
 }
 
 void initJavaIDsArrayList(JNIEnv* env)
 {
     if (!javaIDs.ArrayList.init) {
-        javaIDs.ArrayList.init = (*env)->GetMethodID(env, (*env)->FindClass(env, "java/util/ArrayList"), "<init>", "()V");
+        jclass jcls = (*env)->FindClass(env, "java/util/ArrayList");
+        GLASS_CHECK_EXCEPTION(env);
+        if (jcls) {
+            javaIDs.ArrayList.init = (*env)->GetMethodID(env, jcls, "<init>", "()V");
+            GLASS_CHECK_EXCEPTION(env);
+        }
     }
 }
 
 void initJavaIDsFile(JNIEnv* env)
 {
     if (!javaIDs.File.init) {
-        javaIDs.File.init = (*env)->GetMethodID(env, (*env)->FindClass(env, "java/io/File"), "<init>", "(Ljava/lang/String;)V");
+        jclass jcls = (*env)->FindClass(env, "java/io/File");
+        GLASS_CHECK_EXCEPTION(env);
+        if (jcls) {
+            javaIDs.File.init = (*env)->GetMethodID(env, jcls, "<init>", "(Ljava/lang/String;)V");
+            GLASS_CHECK_EXCEPTION(env);
+        }
     }
 }
 

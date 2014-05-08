@@ -76,6 +76,7 @@ public final class Screen {
     private static EventHandler eventHandler;
     
     private volatile long ptr;
+    private volatile int adapter;
 
     private final int depth;
 
@@ -231,7 +232,15 @@ public final class Screen {
     private void dispose() {
         this.ptr = 0L;
     }
-    
+
+    public int getAdapterOrdinal() {
+        return this.adapter;
+    }
+
+    public void setAdapterOrdinal(int adapter) {
+        this.adapter = adapter;
+    }
+
     public static void setEventHandler(EventHandler eh) {
         Application.checkEventThread();
         eventHandler = eh;
@@ -240,7 +249,7 @@ public final class Screen {
     /**
      * Called from native when the Screen definitions change.
      */
-    private static void notifySettingsChanged() {
+    public static void notifySettingsChanged() {
         // Save the old screens in order to dispose them later
         List<Screen> oldScreens = screens;
 
@@ -286,6 +295,7 @@ public final class Screen {
     @Override public String toString() {
         return  "Screen:"+"\n"+
                 "    ptr:"+getNativeScreen()+"\n"+
+                "    adapter:"+getAdapterOrdinal()+"\n"+
                 "    depth:"+getDepth()+"\n"+
                 "    x:"+getX()+"\n"+
                 "    y:"+getY()+"\n"+
@@ -306,6 +316,7 @@ public final class Screen {
 
         Screen screen = (Screen) o;
         return ptr == screen.ptr
+                && adapter == screen.adapter
                 && depth == screen.depth
                 && x == screen.x
                 && y == screen.y
@@ -323,6 +334,7 @@ public final class Screen {
     @Override public int hashCode() {
         int result = 17;
         result = 31 * result + (int) (ptr ^ (ptr >>> 32));
+        result = 31 * result + adapter;
         result = 31 * result + depth;
         result = 31 * result + x;
         result = 31 * result + y;

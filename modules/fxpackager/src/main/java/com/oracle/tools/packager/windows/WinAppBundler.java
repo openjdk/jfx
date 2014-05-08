@@ -174,7 +174,11 @@ public class WinAppBundler extends AbstractBundler {
 
             return doValidate(params);
         } catch (RuntimeException re) {
-            throw new ConfigException(re);
+            if (re.getCause() instanceof ConfigException) {
+                throw (ConfigException) re.getCause();
+            } else {
+                throw new ConfigException(re);
+            }
         }
     }
 

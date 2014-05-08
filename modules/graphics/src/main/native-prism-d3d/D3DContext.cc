@@ -737,7 +737,10 @@ D3DContext::TestCooperativeLevel()
 
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
-    HRESULT res = pd3dDevice->TestCooperativeLevel();
+    //TODO: call CheckDeviceState only if Present fails
+    HRESULT res = pd3dDeviceEx ?
+        pd3dDeviceEx->CheckDeviceState(NULL) :
+        pd3dDevice->TestCooperativeLevel();
 
     switch (res) {
     case S_OK: break;
@@ -748,6 +751,10 @@ D3DContext::TestCooperativeLevel()
     case D3DERR_DEVICENOTRESET:
         TraceLn1(NWT_TRACE_VERBOSE, "  device %d needs to be reset",
             adapterOrdinal);
+        break;
+    case S_PRESENT_OCCLUDED:
+        break;
+    case S_PRESENT_MODE_CHANGED:
         break;
     case E_FAIL:
         TraceLn(NWT_TRACE_VERBOSE, "  null device");

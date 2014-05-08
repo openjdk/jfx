@@ -439,7 +439,9 @@ class WindowStage extends GlassStage {
             } else {
                 // Note: This method is required to workaround a glass issue
                 // mentioned in RT-12607
-                if (owner != null && owner instanceof WindowStage) {
+                // If the hiding stage is unfocusable (i.e. it's a PopupStage),
+                // then we don't do this to avoid stealing the focus.
+                if (!isPopupStage && owner != null && owner instanceof WindowStage) {
                     WindowStage ownerStage = (WindowStage)owner;
                     ownerStage.requestToFront();
                 }

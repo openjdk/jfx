@@ -525,8 +525,8 @@ X86EGL.media.compiler = compiler
 X86EGL.media.linker = linker
 X86EGL.media.lib = "ar"
 
-X86EG.deploy = [:]
-X86EG.deploy.publicLibraryFilter = [
+X86EGL.deploy = [:]
+X86EGL.deploy.publicLibraryFilter = [
   "fxavcodecplugin-52.so",
   "fxavcodecplugin-53.so",
   "fxplugins.so",
@@ -536,4 +536,4 @@ X86EG.deploy.publicLibraryFilter = [
   "libprism_es2_eglx11.so",
   "libglass_lens_fb.so"
 ]
-X86EG.deploy.compressBigJar=true
+X86EGL.deploy.compressBigJar=true

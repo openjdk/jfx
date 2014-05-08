@@ -1847,9 +1847,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
     }
 
     vertexBufferSize = (*env)->GetArrayLength(env, vbArray);
-    vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
-
     indexBufferSize = (*env)->GetArrayLength(env, ibArray);
+    vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
     indexBuffer = (GLushort *) ((*env)->GetPrimitiveArrayCritical(env, ibArray, NULL));
 
     uvbSize = (GLuint) vbSize;
@@ -1917,9 +1916,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
     }
 
     vertexBufferSize = (*env)->GetArrayLength(env, vbArray);
-    vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
-
     indexBufferSize = (*env)->GetArrayLength(env, ibArray);
+    vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
     indexBuffer = (GLuint *) ((*env)->GetPrimitiveArrayCritical(env, ibArray, NULL));
 
     uvbSize = (GLuint) vbSize;

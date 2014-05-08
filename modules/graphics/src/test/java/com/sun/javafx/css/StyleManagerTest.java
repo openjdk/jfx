@@ -33,6 +33,8 @@ import javafx.scene.SubScene;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.PopupWindow;
+import javafx.stage.Window;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -822,6 +824,68 @@ public class StyleManagerTest {
 
         obj = styles.get(0).getParsedValueImpl().convert(null);
         assertEquals(Color.YELLOW, obj);
+    }
+
+    @Test
+    public void testGetCacheContainer() {
+
+        Rectangle rectangle = new Rectangle();
+        SubScene subScene = new SubScene(null, 0, 0);
+
+        StyleManager sm = StyleManager.getInstance();
+
+        // no scene, should return null
+        StyleManager.CacheContainer container = sm.getCacheContainer(rectangle, subScene);
+
+        assertNull(container);
+
+        // has scene, should return non-null
+        subScene.setRoot(new Group());
+        Scene scene = new Scene(new Group(rectangle,subScene));
+        container = sm.getCacheContainer(rectangle, subScene);
+
+        assertNotNull(container);
+
+    }
+
+    @Test
+    public void testGetCacheContainer_styleable() {
+        Rectangle rectangle = new Rectangle();
+
+        StyleManager sm = StyleManager.getInstance();
+
+        // no scene, should return null
+        StyleManager.CacheContainer container = sm.getCacheContainer(rectangle, null);
+
+        assertNull(container);
+
+        // has scene, should return non-null
+        Scene scene = new Scene(new Group(rectangle));
+        container = sm.getCacheContainer(rectangle, null);
+
+        assertNotNull(container);
+
+    }
+
+    @Test
+    public void testGetCacheContainer_subScene() {
+
+        SubScene subScene = new SubScene(null, 0, 0);
+
+        StyleManager sm = StyleManager.getInstance();
+
+        // no scene, should return null
+        StyleManager.CacheContainer container = sm.getCacheContainer(null, subScene);
+
+        assertNull(container);
+
+        // has scene, should return non-null
+        subScene.setRoot(new Group());
+        Scene scene = new Scene(new Group(subScene));
+        container = sm.getCacheContainer(null, subScene);
+
+        assertNotNull(container);
+
     }
 
 }

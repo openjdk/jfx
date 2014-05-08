@@ -176,6 +176,12 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (s, p) -> {
                         File appResourcesRoot = APP_RESOURCES.fetchFrom(p).getBaseDirectory();
                         File f = new File(appResourcesRoot, s);
+                        if (!f.exists()) {
+                            throw new IllegalArgumentException(
+                                new ConfigException(
+                                    MessageFormat.format(I18N.getString("error.main-jar-does-not-exist"), s),
+                                    I18N.getString("error.main-jar-does-not-exist.advice")));
+                        }
                         return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Arrays.asList(f)));
                     }
             );
@@ -467,7 +473,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             files = rfs.getIncludedFiles();
             srcdir = rfs.getBaseDirectory();
         }
-
 
         String declaredMainClass = (String) params.get(MAIN_CLASS.getID());
 

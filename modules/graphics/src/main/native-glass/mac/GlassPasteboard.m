@@ -115,17 +115,26 @@ static inline jbyteArray ByteArrayFromPixels(JNIEnv *env, void *data, size_t wid
         {
             jbyte *w = (jbyte*)&width;
             (*env)->SetByteArrayRegion(env, javaArray, 0, 1, (jbyte *)&w[3]);
+            GLASS_CHECK_EXCEPTION(env);
             (*env)->SetByteArrayRegion(env, javaArray, 1, 1, (jbyte *)&w[2]);
+            GLASS_CHECK_EXCEPTION(env);
             (*env)->SetByteArrayRegion(env, javaArray, 2, 1, (jbyte *)&w[1]);
+            GLASS_CHECK_EXCEPTION(env);
             (*env)->SetByteArrayRegion(env, javaArray, 3, 1, (jbyte *)&w[0]);
-            
+            GLASS_CHECK_EXCEPTION(env);
+
             jbyte *h = (jbyte*)&height;
             (*env)->SetByteArrayRegion(env, javaArray, 4, 1, (jbyte *)&h[3]);
+            GLASS_CHECK_EXCEPTION(env);
             (*env)->SetByteArrayRegion(env, javaArray, 5, 1, (jbyte *)&h[2]);
+            GLASS_CHECK_EXCEPTION(env);
             (*env)->SetByteArrayRegion(env, javaArray, 6, 1, (jbyte *)&h[1]);
+            GLASS_CHECK_EXCEPTION(env);
             (*env)->SetByteArrayRegion(env, javaArray, 7, 1, (jbyte *)&h[0]);
-            
+            GLASS_CHECK_EXCEPTION(env);
+
             (*env)->SetByteArrayRegion(env, javaArray, 8, length, (jbyte *)data);
+            GLASS_CHECK_EXCEPTION(env);
         }
     }
     
@@ -144,6 +153,7 @@ static inline jbyteArray ByteArrayFromNSData(JNIEnv *env, NSData *data)
         if (javaArray != NULL)
         {
             (*env)->SetByteArrayRegion(env, javaArray, 0, (jsize)[data length], (jbyte *)[data bytes]);
+            GLASS_CHECK_EXCEPTION(env);
         }
     }
     
@@ -430,7 +440,10 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getUTFs
         NSArray *items = [pasteboard pasteboardItems];
         if ([items count] > 0)
         {
-            utfs = (*env)->NewObjectArray(env, (jsize)[items count], (*env)->FindClass(env, "java/lang/Object"), NULL);
+            jclass jcls = (*env)->FindClass(env, "java/lang/Object");
+            GLASS_CHECK_EXCEPTION(env);
+            utfs = (*env)->NewObjectArray(env, (jsize)[items count], jcls, NULL);
+            GLASS_CHECK_EXCEPTION(env);
             for (NSUInteger i=0; i<[items count]; i++)
             {
                 NSPasteboardItem *item = [items objectAtIndex:i];
@@ -438,7 +451,10 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getUTFs
                 NSArray *types = [item types];
                 if ([types count] > 0)
                 {
-                    jobjectArray array = (*env)->NewObjectArray(env, (jsize)[types count], (*env)->FindClass(env, "java/lang/String"), NULL);
+                    jcls = (*env)->FindClass(env, "java/lang/String");
+                    GLASS_CHECK_EXCEPTION(env);
+                    jobjectArray array = (*env)->NewObjectArray(env, (jsize)[types count], jcls, NULL);
+                    GLASS_CHECK_EXCEPTION(env);
                     for (NSUInteger j=0; j<[types count]; j++)
                     {
                         NSString *type = [types objectAtIndex:j];
@@ -446,9 +462,11 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getUTFs
                         //if (property != nil) // allow null as the platform itself does
                         {
                             (*env)->SetObjectArrayElement(env, array, (jsize)j, (*env)->NewStringUTF(env, [type UTF8String]));
+                            GLASS_CHECK_EXCEPTION(env);
                         }
                     }
                     (*env)->SetObjectArrayElement(env, utfs, (jsize)i, array);
+                    GLASS_CHECK_EXCEPTION(env);
                 }
             }
         }
@@ -679,6 +697,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1putItemsFromAr
             for (int i=0; i<itemCount; i++)
             {
                 jobject array = (*env)->GetObjectArrayElement(env, jObjects, i);
+                GLASS_CHECK_EXCEPTION(env);
                 if (array != NULL)
                 {
                     NSPasteboardItem *item = NSPasteboardItemFromArray(env, array);

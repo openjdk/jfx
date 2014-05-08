@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class TestApplication extends Application {
@@ -60,6 +61,7 @@ public class TestApplication extends Application {
     private static String glassPlatform;
     private static boolean isMonocle;
     private static boolean isLens;
+    private static AtomicReference<Rectangle2D> screen = new AtomicReference<>();
 
     private static void initGlassPlatform() {
         if (glassPlatform == null) {
@@ -159,7 +161,6 @@ public class TestApplication extends Application {
                 Scene scene = new Scene(root, bounds.getWidth() / 2,
                                         bounds.getHeight() / 2);
                 stage.setScene(scene);
-                stage.centerOnScreen();
 
                 stage.show();
                 stage.requestFocus();
@@ -226,6 +227,14 @@ public class TestApplication extends Application {
         getStage().getScene().setOnMouseClicked((e) -> {
             TestLog.log("Mouse clicked: "
                     + (int) e.getScreenX() + ", " + (int) e.getScreenY());
+        });
+        getStage().getScene().setOnMouseEntered((e) -> {
+            TestLog.log("Mouse entered: "
+                                + (int) e.getScreenX() + ", " + (int) e.getScreenY());
+        });
+        getStage().getScene().setOnMouseExited((e) -> {
+            TestLog.log("Mouse exited: "
+                                + (int) e.getScreenX() + ", " + (int) e.getScreenY());
         });
     }
 
@@ -378,6 +387,33 @@ public class TestApplication extends Application {
 
     public static double getTimeScale() {
         return timeScale;
+    }
+
+
+    private static void fetchScreenBounds() {
+        if (Platform.isFxApplicationThread()) {
+            screen.set(Screen.getPrimary().getBounds());
+        } else {
+            CountDownLatch latch = new CountDownLatch(1);
+            Platform.runLater(() -> {
+                screen.set(Screen.getPrimary().getBounds());
+                latch.countDown();
+            });
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static Rectangle2D getScreenBounds() {
+        Rectangle2D r = screen.get();
+        if (r == null) {
+            fetchScreenBounds();
+            r = screen.get();
+        }
+        return r;
     }
 
 }
