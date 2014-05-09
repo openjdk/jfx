@@ -235,6 +235,7 @@ public class TreeTableViewMouseInputTest {
     }
 
     private int rt30394_count = 0;
+    @Ignore("RT-36955")
     @Test public void test_rt30394() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
