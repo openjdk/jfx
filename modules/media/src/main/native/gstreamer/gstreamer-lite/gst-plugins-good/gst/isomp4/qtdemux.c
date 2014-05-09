@@ -5902,6 +5902,8 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
 
     /* we might allocate a bit too much, at least allocate 1 segment */
 #ifdef GSTREAMER_LITE
+    n_segments = MAX (n_segments, 1);
+      
     if (n_segments < G_MAXSIZE / sizeof(QtDemuxSegment)) {
         stream->segments = g_try_malloc (sizeof(QtDemuxSegment) * n_segments);
           
