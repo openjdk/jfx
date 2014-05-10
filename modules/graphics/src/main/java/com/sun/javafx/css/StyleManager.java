@@ -643,7 +643,7 @@ final public class StyleManager {
                             forget(_parent); // _parent, not p!
                             break;
                         }
-                        p = _parent.getParent();
+                        p = p.getParent();
                     }
                 }
             }
