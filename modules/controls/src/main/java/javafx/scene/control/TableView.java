@@ -2110,19 +2110,23 @@ public class TableView<S> extends Control {
                         }
                     }
                 } else if (c.wasAdded() || c.wasRemoved()) {
-                    int position = c.getFrom();
+                    int startRow = c.getFrom();
                     int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                     
-                    if (position < 0) return;
+                    if (startRow < 0) return;
                     if (shift == 0) return;
                     
-                    List<TablePosition<S,?>> newIndices = new ArrayList<TablePosition<S,?>>(selectedCellsMap.size());
-        
+                    List<TablePosition<S,?>> newIndices = new ArrayList<>(selectedCellsMap.size());
+
                     for (int i = 0; i < selectedCellsMap.size(); i++) {
                         final TablePosition<S,?> old = selectedCellsMap.get(i);
                         final int oldRow = old.getRow();
-                        final int newRow = oldRow < position ? oldRow : oldRow + shift;
-                        
+                        final int newRow = oldRow < startRow ? oldRow : oldRow + shift;
+
+                        if (oldRow < startRow) {
+                            continue;
+                        }
+
                         // Special case for RT-28637 (See unit test in TableViewTest).
                         // Essentially the selectedItem was correct, but selectedItems
                         // was empty.
@@ -2130,17 +2134,21 @@ public class TableView<S> extends Control {
                             newIndices.add(new TablePosition<>(getTableView(), 0, old.getTableColumn()));
                             continue;
                         }
-                        
+
                         if (newRow < 0) continue;
                         newIndices.add(new TablePosition<>(getTableView(), newRow, old.getTableColumn()));
                     }
-                    
-                    quietClearSelection();
-                    
-                    // Fix for RT-22079
-                    for (int i = 0; i < newIndices.size(); i++) {
-                        TablePosition<S,?> tp = newIndices.get(i);
-                        select(tp.getRow(), tp.getTableColumn());
+
+                    final int newIndicesSize = newIndices.size();
+
+                    if (c.wasRemoved() || (c.wasAdded() && newIndicesSize > 0)) {
+                        quietClearSelection();
+
+                        // Fix for RT-22079
+                        for (int i = 0; i < newIndicesSize; i++) {
+                            TablePosition<S, ?> tp = newIndices.get(i);
+                            select(tp.getRow(), tp.getTableColumn());
+                        }
                     }
                 } else if (c.wasPermutated()) {
                     // General approach:

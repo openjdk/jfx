@@ -41,6 +41,7 @@ import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.*;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.*;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -3224,5 +3225,29 @@ public class TableViewTest {
         assertFalse(hbar.isVisible());
 
         sl.dispose();
+    }
+
+    private int rt_37061_index_counter = 0;
+    private int rt_37061_item_counter = 0;
+    @Test public void test_rt_37061() {
+        TableView<Integer> tv = new TableView<>();
+        tv.getItems().add(1);
+        tv.getSelectionModel().select(0);
+
+        // note we add the listeners after the selection is made, so the counters
+        // at this point are still both at zero.
+        tv.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_index_counter++;
+        });
+
+        tv.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_item_counter++;
+        });
+
+        // add a new item. This does not impact the selected index or selected item
+        // so the counters should remain at zero.
+        tv.getItems().add(2);
+        assertEquals(0, rt_37061_index_counter);
+        assertEquals(0, rt_37061_item_counter);
     }
 }
