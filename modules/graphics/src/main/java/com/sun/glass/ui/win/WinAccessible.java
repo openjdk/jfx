@@ -769,7 +769,7 @@ final class WinAccessible extends PlatformAccessible {
                 //TODO how to handle ControlElement versus ContentElement
                 variant = new WinVariant();
                 variant.vt = WinVariant.VT_BOOL;
-                variant.boolVal = !isIgnored();
+                variant.boolVal = getView() != null || !isIgnored();
                 break;
             }
             case UIA_IsEnabledPropertyId: {
