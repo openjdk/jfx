@@ -502,6 +502,7 @@ typedef struct _tagJavaIDs {
     } Screen;
     struct {
         jmethodID reportExceptionMID;
+        jmethodID notifyThemeChangedMID;
     } Application;
 } JavaIDs;
 

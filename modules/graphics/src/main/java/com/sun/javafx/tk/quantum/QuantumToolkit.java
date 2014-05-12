@@ -82,6 +82,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
@@ -309,6 +310,10 @@ public final class QuantumToolkit extends Toolkit {
             Application.GetApplication().setEventHandler(new Application.EventHandler() {
                 @Override public void handleQuitAction(Application app, long time) {
                     GlassStage.requestClosingAllWindows();
+                }
+
+                @Override public boolean handleThemeChanged(String themeName) {
+                    return PlatformImpl.setAccessibilityTheme(themeName);
                 }
             });
         }
@@ -1486,5 +1491,10 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public int getMultiClickMaxY() {
         return View.getMultiClickMaxY();
+    }
+
+    @Override
+    public String getThemeName() {
+        return Application.GetApplication().getHighContrastTheme();
     }
 }

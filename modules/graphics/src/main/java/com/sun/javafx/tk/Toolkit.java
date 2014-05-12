@@ -922,4 +922,7 @@ public abstract class Toolkit {
         return imageAccessor;
     }
 
+    public String getThemeName() {
+        return null;
+    }
 }

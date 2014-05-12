@@ -257,6 +257,12 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         }
     }
 
+    private native String _getHighContrastTheme();
+    @Override public String getHighContrastTheme() {
+    	checkEventThread();
+        return _getHighContrastTheme();
+    }
+ 
     @Override
     protected boolean _supportsInputMethods() {
         return true;
