@@ -3250,4 +3250,31 @@ public class TableViewTest {
         assertEquals(0, rt_37061_index_counter);
         assertEquals(0, rt_37061_item_counter);
     }
+
+    @Test public void test_rt_37058_noContent() {
+        test_rt_37058(false);
+    }
+
+    @Test public void test_rt_37058_withContent() {
+        test_rt_37058(true);
+    }
+
+    private void test_rt_37058(boolean hasContent) {
+        // create table with a bunch of column and no rows...
+        TableView<Integer> table = new TableView<>();
+        TableColumn<Integer, Integer> column = new TableColumn<>("Column");
+        table.getColumns().add(column);
+        column.setPrefWidth(150);
+
+        if (hasContent) {
+            table.getItems().add(1);
+        }
+
+        StageLoader sl = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(150, column.getWidth(), 0.0);
+
+        sl.dispose();
+    }
 }

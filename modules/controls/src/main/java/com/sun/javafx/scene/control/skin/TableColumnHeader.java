@@ -469,7 +469,7 @@ public class TableColumnHeader extends Region {
             if (getTableColumn() == null || getTableColumn().getWidth() != DEFAULT_WIDTH || getScene() == null) {
                 return;
             }
-            getTableViewSkin().resizeColumnToFitContent(getTableColumn(), n);
+            doColumnAutoSize(getTableColumn(), n);
             autoSizeComplete = true;
         }
     }
@@ -516,7 +516,7 @@ public class TableColumnHeader extends Region {
             // The font has changed (probably due to CSS being applied), so we
             // need to re-run the column resizing algorithm to ensure columns
             // fit nicely based on their content and their header
-            getTableViewSkin().resizeColumnToFitContent(column, 30);
+            doColumnAutoSize(column, 30);
         });
 
         // ---- container for the sort arrow (which is not supported on embedded
@@ -524,6 +524,15 @@ public class TableColumnHeader extends Region {
         if (isSortingEnabled()) {
             // put together the grid
             updateSortGrid();
+        }
+    }
+
+    private void doColumnAutoSize(TableColumnBase<?,?> column, int cellsToMeasure) {
+        double prefWidth = column.getPrefWidth();
+
+        // if the prefWidth has been set, we do _not_ autosize columns
+        if (prefWidth == DEFAULT_WIDTH) {
+            getTableViewSkin().resizeColumnToFitContent(column, cellsToMeasure);
         }
     }
     
