@@ -127,7 +127,7 @@ public class StyleManagerTest {
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
         int index = indexOf(sm.platformUserAgentStylesheetContainers, "/com/sun/javafx/css/ua0.css");
-        assertEquals(0,index);
+        assertEquals(0, index);
     }
 
     @Test
@@ -346,7 +346,7 @@ public class StyleManagerTest {
         assertEquals(-1, index);
 
         index = indexOf(sm.userAgentStylesheetContainers,"/com/sun/javafx/css/ua1.css");
-        assertEquals(0,index);
+        assertEquals(0, index);
 
         index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua1.css");
         assertEquals(-1, index);
@@ -455,7 +455,7 @@ public class StyleManagerTest {
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
-        assertEquals(0,index);
+        assertEquals(0, index);
 
         index = indexOf(sm.userAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(-1, index);
@@ -551,7 +551,7 @@ public class StyleManagerTest {
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
-        assertEquals(0,index);
+        assertEquals(0, index);
 
         index = indexOf(sm.userAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(-1, index);
@@ -885,6 +885,57 @@ public class StyleManagerTest {
         container = sm.getCacheContainer(null, subScene);
 
         assertNotNull(container);
+
+    }
+
+    @Test
+    public void testRT_37025() {
+
+        //
+        // The issue in RT-37025 was that the stylesheet container wasn't getting removed even
+        // though the parent had been forgotten. The StyleManager#forget(Parent) method didn't
+        // look to see if _any_ stylesheet container had the parent as a reference.
+        //
+        final StyleManager sm = StyleManager.getInstance();
+
+        // This test needs a bit more complexity to the scene-graph
+        Group group = null;
+        Pane pane = new Pane(
+                new Group(
+                        new Pane(
+                                // I want these to be a Parent, not a Node
+                                new Group(new Pane(){{ getStyleClass().add("rect"); }}),
+                                group = new Group(new Pane(){{ getStyleClass().add("rect"); }})
+                        )
+                )
+        );
+        pane.getStylesheets().add("/com/sun/javafx/css/ua0.css");
+        group.getStylesheets().add("/com/sun/javafx/css/ua1.css");
+
+        Group root = new Group(pane);
+        Scene scene = new Scene(root);
+
+        root.applyCss();
+
+        assertTrue(sm.stylesheetContainerMap.containsKey("/com/sun/javafx/css/ua0.css"));
+        StyleManager.StylesheetContainer container = sm.stylesheetContainerMap.get("/com/sun/javafx/css/ua0.css");
+        assertEquals(7, container.parentUsers.list.size());
+
+        assertTrue(sm.stylesheetContainerMap.containsKey("/com/sun/javafx/css/ua1.css"));
+        container = sm.stylesheetContainerMap.get("/com/sun/javafx/css/ua1.css");
+        assertEquals(2, container.parentUsers.list.size());
+
+        ((Pane)group.getParent()).getChildren().remove(group);
+
+        assertFalse(sm.stylesheetContainerMap.containsKey("/com/sun/javafx/css/ua1.css"));
+        assertTrue(sm.stylesheetContainerMap.containsKey("/com/sun/javafx/css/ua0.css"));
+        container = sm.stylesheetContainerMap.get("/com/sun/javafx/css/ua0.css");
+        assertEquals(5, container.parentUsers.list.size());
+
+        scene.setRoot(new Group());
+        assertFalse(sm.stylesheetContainerMap.containsKey("/com/sun/javafx/css/ua0.css"));
+        assertFalse(StyleManager.cacheContainerMap.containsKey(root));
+        assertTrue(StyleManager.cacheContainerMap.containsKey(scene.getRoot()));
 
     }
 

@@ -553,6 +553,27 @@ final public class StyleManager {
                 stylesheetRemoved(parent, fname);
             }
         }
+
+        Iterator<StylesheetContainer> containerIterator = stylesheetContainerMap.values().iterator();
+        while (containerIterator.hasNext()) {
+            StylesheetContainer container = containerIterator.next();
+            container.parentUsers.remove(parent);
+            if (container.parentUsers.list.isEmpty()) {
+
+                containerIterator.remove();
+
+                if (container.selectorPartitioning != null) {
+                    container.selectorPartitioning.reset();
+                }
+
+
+                // clean up image cache by removing images from the cache that
+                // might have come from this stylesheet
+                final String fname = container.fname;
+                cleanUpImageCache(fname);
+            }
+        }
+
         // Do not iterate over children since this method will be called on each from Parent#scenesChanged
     }
 
