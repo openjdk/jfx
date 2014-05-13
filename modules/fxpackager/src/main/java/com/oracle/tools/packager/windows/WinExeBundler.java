@@ -151,27 +151,19 @@ public class WinExeBundler extends AbstractBundler {
 
     public static Collection<BundlerParamInfo<?>> getExeBundleParameters() {
         return Arrays.asList(
-                APP_BUNDLER,
-                APP_RESOURCES,
-                BUILD_ROOT,
-                //CONFIG_ROOT, // duplicate from getAppBundleParameters
                 DESCRIPTION,
                 COPYRIGHT,
-                EXE_SYSTEM_WIDE,
-                IDENTIFIER,
-                EXE_IMAGE_DIR,
-                IMAGES_ROOT,
                 LICENSE_FILE,
                 MENU_GROUP,
                 MENU_HINT,
+//                RUN_AT_STARTUP,
                 SHORTCUT_HINT,
-                SERVICE_HINT,
-                START_ON_INSTALL,
-                STOP_ON_UNINSTALL,
-                RUN_AT_STARTUP,
+//                SERVICE_HINT,
+//                START_ON_INSTALL,
+//                STOP_ON_UNINSTALL,
+                SYSTEM_WIDE,
                 TITLE,
-                VENDOR,
-                VERSION
+                VENDOR
         );
     }
 

@@ -39,6 +39,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
 
 public class LinuxDebBundler extends AbstractBundler {
 
@@ -484,7 +485,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
         //prepare installer icon
         File iconTarget = getConfig_IconFile(params);
-        File icon = LinuxAppBundler.ICON_PNG.fetchFrom(params);
+        File icon = ICON_PNG.fetchFrom(params);
         if (icon == null || !icon.exists()) {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.menu-icon"),
@@ -606,26 +607,16 @@ public class LinuxDebBundler extends AbstractBundler {
 
     public static Collection<BundlerParamInfo<?>> getDebBundleParameters() {
         return Arrays.asList(
-                APP_BUNDLER,
-                APP_IMAGE_ROOT,
-                APP_RESOURCES,
                 BUNDLE_NAME,
-                CONFIG_DIR,
                 COPYRIGHT,
                 CATEGORY,
                 DESCRIPTION,
                 EMAIL,
-                FULL_PACKAGE_NAME,
-                LinuxAppBundler.ICON_PNG,
-                DEB_IMAGE_DIR,
-                IMAGES_ROOT,
+                ICON_PNG,
                 LICENSE_FILE,
-                LICENSE_TEXT,
                 LICENSE_TYPE,
-                MAINTAINER,
                 TITLE,
-                VENDOR,
-                VERSION
+                VENDOR
         );
     }
 

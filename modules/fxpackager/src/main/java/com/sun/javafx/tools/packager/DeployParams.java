@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tools.packager;
 
+import com.oracle.tools.packager.StandardBundlerParam;
 import com.sun.javafx.tools.ant.Callback;
 import com.sun.javafx.tools.packager.bundlers.*;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
@@ -32,6 +33,7 @@ import com.sun.javafx.tools.resource.DeployResource;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -464,9 +466,31 @@ public class DeployParams extends CommonParams {
 
         return arch;
     }
-    
+
+    static final Set<String> multi_args = new TreeSet<>(Arrays.asList(
+            StandardBundlerParam.JVM_PROPERTIES.getID(),
+            StandardBundlerParam.JVM_OPTIONS.getID(),
+            StandardBundlerParam.USER_JVM_OPTIONS.getID()
+    ));
+
+    @SuppressWarnings("unchecked")
     public void addBundleArgument(String key, String value) {
-        bundlerArguments.put(key, value);
+        // special hack for multi-line arguments
+        if (multi_args.contains(key)) {
+            Object existingValue = bundlerArguments.get(key);
+            if (existingValue instanceof String) {
+                bundlerArguments.put(key, existingValue + "\n\n" + value);
+            } else if (existingValue instanceof List) {
+                ((List<String>)existingValue).add(value);
+            } else if (existingValue instanceof Map && value.contains("=")) {
+                String[] mapValues = value.split("=", 2);
+                ((Map)existingValue).put(mapValues[0], mapValues[1]);
+            } else {
+                bundlerArguments.put(key, value);
+            }
+        } else {
+            bundlerArguments.put(key, value);
+        }
     }
 
     public BundleParams getBundleParams() {
@@ -517,7 +541,7 @@ public class DeployParams extends CommonParams {
             bundleParams.setLicenseType(licenseType);
             bundleParams.setDescription(description);
             bundleParams.setTitle(title);
-            if (verbose) bundleParams.setVerbose(verbose);
+            if (verbose) bundleParams.setVerbose(true);
 
             bundleParams.setJvmProperties(properties);
             bundleParams.setJvmargs(jvmargs);

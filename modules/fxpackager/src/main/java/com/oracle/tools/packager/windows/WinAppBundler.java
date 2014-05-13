@@ -462,21 +462,17 @@ public class WinAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
-                BUILD_ROOT,
-                CONFIG_ROOT,
                 ICON_ICO,
-                IDENTIFIER,
                 JVM_OPTIONS,
                 JVM_PROPERTIES,
                 MAIN_CLASS,
                 MAIN_JAR,
                 MAIN_JAR_CLASSPATH,
                 PREFERENCES_ID,
-                RAW_EXECUTABLE_URL,
-                WIN_RUNTIME,
                 USER_JVM_OPTIONS,
-                VERSION
-        );
+                VERSION,
+                WIN_RUNTIME
+            );
     }
 
     @Override

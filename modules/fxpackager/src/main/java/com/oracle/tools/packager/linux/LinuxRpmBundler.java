@@ -445,21 +445,14 @@ public class LinuxRpmBundler extends AbstractBundler {
 
     public static Collection<BundlerParamInfo<?>> getRpmBundleParameters() {
         return Arrays.asList(
-                APP_BUNDLER,
-                APP_NAME,
-                BUILD_ROOT,
                 BUNDLE_NAME,
-                CONFIG_ROOT,
                 CATEGORY,
                 DESCRIPTION,
                 LinuxAppBundler.ICON_PNG,
-                RPM_IMAGE_DIR,
-                IMAGES_ROOT,
                 LICENSE_FILE,
                 LICENSE_TYPE,
                 TITLE,
-                VENDOR,
-                VERSION
+                VENDOR
         );
     }
 

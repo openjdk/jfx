@@ -4,6 +4,6 @@ Section: unknown
 Maintainer: APPLICATION_MAINTAINER
 Priority: optional
 Architecture: APPLICATION_ARCH
-Provides: APPLICATION_NAME
+Provides: APPLICATION_PACKAGE
 Description: APPLICATION_SUMMARY
 Installed-Size: APPLICATION_INSTALLED_SIZE

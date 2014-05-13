@@ -262,6 +262,11 @@ public class LinuxAppBundler extends AbstractBundler {
             out.println("jvmarg."+idx+"="+a);
             idx++;
         }
+        Map<String, String> jvmProps = JVM_PROPERTIES.fetchFrom(params);
+        for (Map.Entry<String, String> entry : jvmProps.entrySet()) {
+            out.println("jvmarg."+idx+"=-D"+entry.getKey()+"="+entry.getValue());
+            idx++;
+        }
 
         //app.id required for setting user preferences (Java Preferences API)
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
@@ -327,14 +332,13 @@ public class LinuxAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
-                BUILD_ROOT,
                 JVM_OPTIONS,
+                JVM_PROPERTIES,
+                LINUX_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
                 MAIN_JAR_CLASSPATH,
                 PREFERENCES_ID,
-                RAW_EXECUTABLE_URL,
-                LINUX_RUNTIME,
                 USER_JVM_OPTIONS,
                 VERSION
         );

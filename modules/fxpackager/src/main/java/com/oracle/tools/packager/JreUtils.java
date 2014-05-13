@@ -120,6 +120,8 @@ public class JreUtils {
     }
 
     public static RelativeFileSet extractJreAsRelativeFileSet(String root, JreUtils.Rule[] ruleset) {
+        if (root.isEmpty()) return null;
+
         File baseDir = new File(root);
 
         Set<File> lst = new HashSet<>();
