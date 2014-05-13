@@ -129,7 +129,7 @@ jstring GlassApplication::GetThemeName(JNIEnv* env)
     contrastInfo.cbSize = sizeof(HIGHCONTRAST);
     ::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0);
     if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
-        size_t length = wcslen(contrastInfo.lpszDefaultScheme);
+        jsize length = (jsize) wcslen(contrastInfo.lpszDefaultScheme);
         return env->NewString((jchar*)contrastInfo.lpszDefaultScheme, length);
     }
     return NULL;
