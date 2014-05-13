@@ -43,6 +43,9 @@ static jmethodID mid_SetFocus;
 static jmethodID mid_ElementProviderFromPoint;
 static jmethodID mid_GetFocus;
 
+static jmethodID mid_AdviseEventAdded;
+static jmethodID mid_AdviseEventRemoved;
+
 static jmethodID mid_Invoke;
 
 static jmethodID mid_GetSelection;
@@ -282,6 +285,8 @@ IFACEMETHODIMP GlassAccessible::QueryInterface(REFIID riid, void** ppInterface)
         *ppInterface = static_cast<IRawElementProviderFragment*>(this);
     } else if (riid == __uuidof(IRawElementProviderFragmentRoot)) {
         *ppInterface = static_cast<IRawElementProviderFragmentRoot*>(this);
+    } else if (riid == __uuidof(IRawElementProviderAdviseEvents)) {
+        *ppInterface = static_cast<IRawElementProviderAdviseEvents*>(this);
     } else if (riid == __uuidof(IInvokeProvider)) {
         *ppInterface = static_cast<IInvokeProvider*>(this);
     } else if (riid == __uuidof(ISelectionProvider)) {
@@ -445,6 +450,26 @@ IFACEMETHODIMP GlassAccessible::GetFocus(IRawElementProviderFragment **pRetVal)
     HRESULT hr = callLongMethod(mid_GetFocus, &ptr);
     *pRetVal = reinterpret_cast<IRawElementProviderFragment*>(ptr);
     return hr;
+}
+
+/***********************************************/
+/*     IRawElementProviderAdviseEvents         */
+/***********************************************/
+IFACEMETHODIMP GlassAccessible::AdviseEventAdded(EVENTID eventId, SAFEARRAY *propertyIDs)
+{
+    JNIEnv* env = GetEnv();
+    env->CallVoidMethod(m_jAccessible, mid_AdviseEventAdded, eventId, (jlong)propertyIDs);
+    if (CheckAndClearException(env)) return E_FAIL;
+    return S_OK;
+}
+
+
+IFACEMETHODIMP GlassAccessible::AdviseEventRemoved(EVENTID eventId, SAFEARRAY *propertyIDs)
+{
+    JNIEnv* env = GetEnv();
+    env->CallVoidMethod(m_jAccessible, mid_AdviseEventRemoved, eventId, (jlong)propertyIDs);
+    if (CheckAndClearException(env)) return E_FAIL;
+    return S_OK;
 }
 
 /***********************************************/
@@ -994,6 +1019,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinAccessible__1initIDs
     mid_GetFocus = env->GetMethodID(jClass, "GetFocus", "()J");
     if (env->ExceptionCheck()) return;
 
+    /* IRawElementProviderAdviseEvents */
+    mid_AdviseEventAdded = env->GetMethodID(jClass, "AdviseEventAdded", "(IJ)V");
+    if (env->ExceptionCheck()) return;
+    mid_AdviseEventRemoved = env->GetMethodID(jClass, "AdviseEventRemoved", "(IJ)V");
+    if (env->ExceptionCheck()) return;
+
     /* IInvokeProvider */
     mid_Invoke = env->GetMethodID(jClass, "Invoke", "()V");
     if (env->ExceptionCheck()) return;
@@ -1215,3 +1246,13 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinAccessible_UiaRaiseAutomati
     return (jlong)UiaRaiseAutomationPropertyChangedEvent(pProvider, (PROPERTYID)id, ov, nv);
 }
 
+/*
+ * Class:     com_sun_glass_ui_win_WinAccessible
+ * Method:    UiaClientsAreListening
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinAccessible_UiaClientsAreListening
+  (JNIEnv *env, jclass jClass)
+{
+    return UiaClientsAreListening();
+}

@@ -31,6 +31,7 @@
 class GlassAccessible : public IRawElementProviderSimple,
                         public IRawElementProviderFragment,
                         public IRawElementProviderFragmentRoot,
+                        public IRawElementProviderAdviseEvents,
                         public IInvokeProvider,
                         public ISelectionProvider,
                         public ISelectionItemProvider,
@@ -73,6 +74,10 @@ public:
     // IRawElementProviderFragmentRoot methods
     IFACEMETHODIMP ElementProviderFromPoint(double x, double y, IRawElementProviderFragment **pRetVal);
     IFACEMETHODIMP GetFocus(IRawElementProviderFragment **pRetVal);
+
+    // IRawElementProviderAdviseEvents
+    IFACEMETHODIMP AdviseEventAdded(EVENTID eventId, SAFEARRAY *propertyIDs);
+    IFACEMETHODIMP AdviseEventRemoved(EVENTID eventId, SAFEARRAY *propertyIDs);
 
     // IInvokeProvider
     IFACEMETHODIMP Invoke();

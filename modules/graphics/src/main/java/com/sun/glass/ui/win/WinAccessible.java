@@ -216,6 +216,7 @@ final class WinAccessible extends PlatformAccessible {
 
     private native static long UiaRaiseAutomationEvent(long pProvider, int id);
     private native static long UiaRaiseAutomationPropertyChangedEvent(long pProvider, int id, WinVariant oldV, WinVariant newV);
+    private native static boolean UiaClientsAreListening();
 
     private WinAccessible(Accessible accessible) {
         super(accessible);
@@ -979,6 +980,19 @@ final class WinAccessible extends PlatformAccessible {
         Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
         if (item != null) return getAccessible(item);
         return getAccessible(node);
+    }
+    /***********************************************/
+    /*     IRawElementProviderAdviseEvents         */
+    /***********************************************/
+    void AdviseEventAdded(int eventId, long propertyIDs) {
+        /* Implementing IRawElementProviderAdviseEvents ensures
+         * that the window is announced by Narrator when it first
+         * opens. No further action is required.
+         */
+    }
+
+    void AdviseEventRemoved(int eventId, long propertyIDs) {
+        /* See AdviseEventAdded() */
     }
 
     /***********************************************/
