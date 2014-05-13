@@ -576,11 +576,11 @@ public class ContextMenuContent extends Region {
                 MenuItem item = ((MenuItemContainer)n).item;
                 if (item instanceof Menu) {
                     final Menu menu = (Menu) item;
-                    if (menu == openSubmenu) {
-                        if( submenu != null && submenu != null && submenu.isShowing() ) {
-                            hideSubmenu();
-                            ke.consume();
-                        }
+
+                    // if the submenu for this menu is showing, hide it
+                    if (menu == openSubmenu && submenu != null && submenu.isShowing()) {
+                        hideSubmenu();
+                        ke.consume();
                     }
                 }
             }
@@ -596,10 +596,14 @@ public class ContextMenuContent extends Region {
                     final Menu menu = (Menu) item;
                     if (menu.isDisable()) return;
                     selectedBackground = ((MenuItemContainer)n);
+
                     // RT-15103
                     // if submenu for this menu is already showing then do nothing
                     // Menubar will process the right key and move to the next menu
-                    if (openSubmenu == menu && submenu != null && submenu.isShowing()) return;
+                    if (openSubmenu == menu && submenu != null && submenu.isShowing()) {
+                        return;
+                    }
+
                     showMenu(menu);
                     ke.consume();
                 }
