@@ -664,6 +664,8 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public void exit() {
+        PaintCollector.getInstance().waitForRenderingToComplete();
+
         notifyShutdownHooks();
 
         ViewPainter.renderLock.lock();
