@@ -762,22 +762,8 @@ public class ContextMenuContent extends Region {
         // - but that can't be done until we have the bean in the
         // ObservableValue
         while (c.next()) {
-            List<MenuItem> toRemove = new ArrayList<>();
-            List<MenuItem> toAdd = new ArrayList<>();
-
-            if (c.wasRemoved()) {
-                toRemove.addAll(c.getRemoved());
-            }
-
-            if (c.wasAdded()) {
-                toAdd.addAll(c.getAddedSubList());
-            }
-
-            toRemove.removeAll(toAdd);
-            toAdd.removeAll(c.getList());
-
-            updateMenuShowingListeners(toRemove, false);
-            updateMenuShowingListeners(toAdd, true);
+            updateMenuShowingListeners(c.getRemoved(), false);
+            updateMenuShowingListeners(c.getAddedSubList(), true);
         }
 
         // Listener to items in PopupMenu to update items in PopupMenuContent
