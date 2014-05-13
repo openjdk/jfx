@@ -233,6 +233,8 @@ public class StyleManagerTest {
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
+        scene.getRoot().applyCss();
+
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0,index);
 
@@ -255,6 +257,8 @@ public class StyleManagerTest {
 
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
+
+        scene.getRoot().applyCss();
 
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0,index);
@@ -279,6 +283,8 @@ public class StyleManagerTest {
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
+        scene.getRoot().applyCss();
+
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0,index);
 
@@ -299,7 +305,7 @@ public class StyleManagerTest {
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
-//        sm.findMatchingStyles(scene.getRoot(), null, null);
+        scene.getRoot().applyCss();
 
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0,index);
@@ -335,6 +341,9 @@ public class StyleManagerTest {
 
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
+
+        scene0.getRoot().applyCss();
+        scene1.getRoot().applyCss();
 
         // even though there are two scenes using this stylesheet, there should only be one container.
         assertEquals(1, sm.userAgentStylesheetContainers.size());
@@ -377,6 +386,8 @@ public class StyleManagerTest {
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
+        scene.getRoot().applyCss();
+
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0, index);
 
@@ -407,6 +418,8 @@ public class StyleManagerTest {
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
+        scene.getRoot().applyCss();
+
         assertTrue(sm.userAgentStylesheetContainers.isEmpty());
 
         StyleManager.StylesheetContainer container = sm.stylesheetContainerMap.get("/com/sun/javafx/css/ua1.css");
@@ -435,6 +448,8 @@ public class StyleManagerTest {
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
+        scene.getRoot().applyCss();
+
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0,index);
 
@@ -454,6 +469,8 @@ public class StyleManagerTest {
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
+        scene.getRoot().applyCss();
+        
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0, index);
 
@@ -487,6 +504,9 @@ public class StyleManagerTest {
 
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
+
+        scene0.getRoot().applyCss();
+        scene1.getRoot().applyCss();
 
         // even though there are two scenes using this stylesheet, there should only be one container.
         assertEquals(1, sm.userAgentStylesheetContainers.size());
@@ -528,6 +548,8 @@ public class StyleManagerTest {
 
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
+
+        scene.getRoot().applyCss();
 
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0,index);
@@ -587,6 +609,8 @@ public class StyleManagerTest {
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
+        scene.getRoot().applyCss();
+
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0,index);
 
@@ -620,6 +644,12 @@ public class StyleManagerTest {
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
 
+        scene.getRoot().applyCss();
+
+        scene.getRoot().applyCss();
+
+        scene.getRoot().applyCss();
+
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(0,index);
 
@@ -634,6 +664,7 @@ public class StyleManagerTest {
         sm.forget(subScene);
 
         subScene.setUserAgentStylesheet("/com/sun/javafx/css/ua2.css");
+        scene.getRoot().applyCss();
 
         index = indexOf(sm.userAgentStylesheetContainers,"/com/sun/javafx/css/ua2.css");
         assertEquals(0, index);
@@ -677,6 +708,8 @@ public class StyleManagerTest {
         StyleMap matchingStyles = sm.findMatchingStyles(rect, null, null);
         Map<String,List<CascadingStyle>> styleMap = matchingStyles.getCascadingStyles();
 
+        scene.getRoot().applyCss();
+
         // scene stylesheet should totally replace default
         assertFalse(styleMap.containsKey("-fx-fill"));
         assertTrue(styleMap.containsKey("-fx-stroke"));
@@ -701,6 +734,8 @@ public class StyleManagerTest {
 
         StyleMap matchingStyles = sm.findMatchingStyles(rect, null, null);
         Map<String,List<CascadingStyle>> styleMap = matchingStyles.getCascadingStyles();
+
+        scene.getRoot().applyCss();
 
         // ua2.css has fill
         assertTrue(styleMap.containsKey("-fx-fill"));
@@ -737,6 +772,8 @@ public class StyleManagerTest {
         StyleMap matchingStyles = sm.findMatchingStyles(rect, subScene, null);
         Map<String,List<CascadingStyle>> styleMap = matchingStyles.getCascadingStyles();
 
+        scene.getRoot().applyCss();
+
         // SubScene stylesheet should totally replace default
         assertFalse(styleMap.containsKey("-fx-fill"));
         assertTrue(styleMap.containsKey("-fx-stroke"));
@@ -764,6 +801,8 @@ public class StyleManagerTest {
 
         StyleMap matchingStyles = sm.findMatchingStyles(rect, subScene, null);
         Map<String,List<CascadingStyle>> styleMap = matchingStyles.getCascadingStyles();
+
+        scene.getRoot().applyCss();
 
         // ua2.css has fill
         assertTrue(styleMap.containsKey("-fx-fill"));
@@ -796,6 +835,8 @@ public class StyleManagerTest {
 
         StyleManager sm = StyleManager.getInstance();
         sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua0.css");
+
+        scene.getRoot().applyCss();
 
         StyleMap matchingStyles = sm.findMatchingStyles(rect, subScene, null);
         Map<String,List<CascadingStyle>> styleMap = matchingStyles.getCascadingStyles();

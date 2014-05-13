@@ -1231,9 +1231,6 @@ public abstract class Parent extends Node {
             super.processCSS();
             return;
         }
-        // remember the flag we started with since super.impl_processCSS
-        // resets it to CLEAN and we need it for setting children.
-        CssFlags flag = cssFlag;
 
         // Let the super implementation handle CSS for this node
         super.impl_processCSS(unused);
@@ -1264,8 +1261,8 @@ public abstract class Parent extends Node {
             // If the parent styles are being updated, recalculated or
             // reapplied, then make sure the children get the same treatment.
             // Unless the child is already more dirty than this parent (RT-29074).
-            if(flag.compareTo(child.cssFlag) > 0) {
-                child.cssFlag = flag;
+            if(CssFlags.UPDATE.compareTo(child.cssFlag) > 0) {
+                child.cssFlag = CssFlags.UPDATE;
             }
             child.impl_processCSS(unused);
         }

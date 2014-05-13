@@ -8737,49 +8737,14 @@ public abstract class Node implements EventTarget, Styleable {
 
         if (cssFlag == CssFlags.REAPPLY) return;
 
-        // Hang on to current styleHelper so we can know whether
-        // createStyleHelper returned the same styleHelper
-        final CssStyleHelper oldStyleHelper = styleHelper;
-
-        // CSS state is "REAPPLY"
-        cssFlag = CssFlags.REAPPLY;
-
-        styleHelper = CssStyleHelper.createStyleHelper(this);
-
-        // REAPPLY to my children, too.
-        if (this instanceof Parent) {
-
-            final boolean visitChildren =
-                    (oldStyleHelper != styleHelper) ||
-                        (getParent() == null) ||
-                            (getParent().cssFlag != CssFlags.CLEAN);
-
-            if (visitChildren) {
-
-                List<Node> children = ((Parent) this).getChildren();
-                for (int n = 0, nMax = children.size(); n < nMax; n++) {
-                    Node child = children.get(n);
-                    child.impl_reapplyCSS();
-                }
-            }
-
-        } else if (this instanceof SubScene) {
-
-            final Parent subSceneRoot = ((SubScene)this).getRoot();
-            if (subSceneRoot != null) {
-                subSceneRoot.impl_reapplyCSS();
-            }
-
-        } else if (styleHelper == null) {
-            //
-            // If this is not a Parent and there is no styleHelper, then the CSS state is "CLEAN"
-            // since there are no styles to apply or children to update.
-            //
-            cssFlag = CssFlags.CLEAN;
+        // RT-36838 - don't reapply CSS in the middle of an update
+        if (cssFlag == CssFlags.UPDATE) {
+            cssFlag = CssFlags.REAPPLY;
+            notifyParentsOfInvalidatedCSS();
             return;
         }
 
-        cssFlag = CssFlags.UPDATE;
+        reapplyCss();
 
         //
         // One idiom employed by developers is to, during the layout pass,
@@ -8795,6 +8760,66 @@ public abstract class Node implements EventTarget, Styleable {
         } else {
             notifyParentsOfInvalidatedCSS();
         }
+
+    }
+
+    //
+    // This method "reapplies" CSS to this node and all of its children. Reapplying CSS
+    // means that new style maps are calculated for the node. The process of reapplying
+    // CSS may reset the CSS properties of a node to their initial state, but the _new_
+    // styles are not applied as part of this process.
+    //
+    // There is no check of the CSS state of a child since reapply takes precedence
+    // over other CSS states.
+    //
+    private void reapplyCss() {
+
+        // Hang on to current styleHelper so we can know whether
+        // createStyleHelper returned the same styleHelper
+        final CssStyleHelper oldStyleHelper = styleHelper;
+
+        // CSS state is "REAPPLY"
+        cssFlag = CssFlags.REAPPLY;
+
+        styleHelper = CssStyleHelper.createStyleHelper(this);
+
+        // REAPPLY to my children, too.
+        if (this instanceof Parent) {
+
+            // minor optimization to avoid calling createStyleHelper on children
+            // when we know there will not be any change in the style maps.
+            final boolean visitChildren =
+                    (oldStyleHelper != styleHelper) ||
+                            (getParent() == null) ||
+                            (getParent().cssFlag != CssFlags.CLEAN);
+
+            if (visitChildren) {
+
+                List<Node> children = ((Parent) this).getChildren();
+                for (int n = 0, nMax = children.size(); n < nMax; n++) {
+                    Node child = children.get(n);
+                    child.reapplyCss();
+                }
+            }
+
+        } else if (this instanceof SubScene) {
+
+            // SubScene root is a Parent, but reapplyCss is a private method in Node
+            final Node subSceneRoot = ((SubScene)this).getRoot();
+            if (subSceneRoot != null) {
+                subSceneRoot.reapplyCss();
+            }
+
+        } else if (styleHelper == null) {
+            //
+            // If this is not a Parent and there is no styleHelper, then the CSS state is "CLEAN"
+            // since there are no styles to apply or children to update.
+            //
+            cssFlag = CssFlags.CLEAN;
+            return;
+        }
+
+        cssFlag = CssFlags.UPDATE;
 
     }
 
@@ -8815,8 +8840,6 @@ public abstract class Node implements EventTarget, Styleable {
                 break;
             }
             case REAPPLY:
-                impl_reapplyCSS();
-                // fall through to update
             case UPDATE:
             default:
                 impl_processCSS(null);
@@ -8880,8 +8903,8 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // update
-        cssFlag = CssFlags.UPDATE;
+        // update, unless reapply
+        if (cssFlag != CssFlags.REAPPLY) cssFlag = CssFlags.UPDATE;
 
         //
         // RT-28394 - need to see if any ancestor has a flag UPDATE
@@ -8938,7 +8961,12 @@ public abstract class Node implements EventTarget, Styleable {
     protected void impl_processCSS(WritableValue<Boolean> unused) {
 
         // Nothing to do...
-        if (cssFlag != CssFlags.UPDATE) return;
+        if (cssFlag == CssFlags.CLEAN) return;
+
+        // if REAPPLY was deferred, process it now...
+        if (cssFlag == CssFlags.REAPPLY) {
+            reapplyCss();
+        }
 
         // Clear the flag first in case the flag is set to something
         // other than clean by downstream processing.
