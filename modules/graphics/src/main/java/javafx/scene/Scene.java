@@ -3893,6 +3893,11 @@ public class Scene implements EventTarget {
             if (getFocusOwner() != null) {
                 getFocusOwner().setFocused(windowFocused);
             }
+            if (windowFocused) {
+                if (accessible != null) {
+                    accessible.sendNotification(Attribute.FOCUS_NODE);
+                }
+            }
         }
 
         private void windowForSceneChanged(Window oldWindow, Window window) {
