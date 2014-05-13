@@ -898,7 +898,18 @@ public class HelloListView extends Application implements InvalidationListener {
 
         @Override
         public int size() {
-            return Integer.MAX_VALUE;
+            // We have to be somewhat conscious of memory use, in relation to
+            // the ListView selection model, which is currently implemented as a
+            // BitSet. This means that if we have too many items in a list
+            // (e.g Integer.MAX_VALUE) and we select an item towards the end of
+            // the list, we will get an OOME as we require a bit for every item
+            // up to the selected item (although they would all be 0/false, it
+            // still costs memory). Therefore, we limit the size of the list
+            // to prevent this from being a concern.
+            // A future improvement would be to use a more memory-efficient
+            // selection model implementation when the number of items is large
+            // (e.g. a simple List<Integer>, rather than a BitSet).
+            return Integer.MAX_VALUE / 4;
         }
 
         @Override
