@@ -35,8 +35,8 @@ import com.sun.prism.paint.Color;
  */
 public class NGLightBase extends NGNode {
 
-    private Color DEFAULT_COLOR = Color.WHITE;
-    private Color color = DEFAULT_COLOR;
+    // The default color is Color.WHITE
+    private Color color = Color.WHITE;
     private boolean lightOn = true;
     private Affine3D worldTransform;
 
@@ -62,7 +62,8 @@ public class NGLightBase extends NGNode {
     }
 
     public void setColor(Object value) {
-        if (value == null) { value = DEFAULT_COLOR; }
+        // Null check is done on the scenegraph side, 
+        // by design value can never be null. 
         if (!this.color.equals(value)) {
             this.color = (Color)value;
             visualsChanged();
