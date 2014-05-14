@@ -208,6 +208,15 @@ GLASS_NS_WINDOW_IMPLEMENTATION
                 ignored = YES;
                 *stop = YES;
             }
+            /* Tooltips are exposed by AXHelp attribute and there is no API in Mac
+             * to represent the tooltip window.
+             * Nonetheless, the window must be ignored to prevent interfering with
+             * VoiceOver focus.
+             */
+            if ([@"AXJFXTOOLTIP" isEqualToString: role]) {
+                ignored = YES;
+                *stop = YES;
+            }
         }];
     }
     return ignored;

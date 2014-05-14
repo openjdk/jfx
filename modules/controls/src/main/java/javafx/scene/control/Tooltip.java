@@ -59,6 +59,8 @@ import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -672,6 +674,14 @@ public class Tooltip extends PopupControl {
 
     private final class CSSBridge extends PopupControl.CSSBridge {
         private Tooltip tooltip = Tooltip.this;
+
+        @Override
+        public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            switch (attribute) {
+                case ROLE: return Role.TOOLTIP;
+                default: return super.accGetAttribute(attribute, parameters);
+            }
+        }
     }
 
     private static class TooltipBehavior {

@@ -226,6 +226,13 @@ public enum Role {
      * Action: FIRE
      */
     TOGGLE_BUTTON,
+    
+    /**
+     * Tooltip
+     * Attributes: (none)
+     * Action: (none)
+     */
+    TOOLTIP,
 
     /**
      * ScrollBar
