@@ -57,10 +57,12 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     private final Path minorTickPath  = new Path();
 
     private double offset;
-    /** This is the minimum current data value and it is used while auto ranging. */
-    private double dataMinValue;
-    /** This is the maximum current data value and it is used while auto ranging. */
-    private double dataMaxValue;
+    /** This is the minimum current data value and it is used while auto ranging.
+     *  Package private solely for test purposes */
+    double dataMinValue;
+    /** This is the maximum current data value and it is used while auto ranging.
+     *  Package private solely for test purposes */
+    double dataMaxValue;
     /** List of the values at which there are minor ticks */
     private List<T> minorTickMarkValues = null;
     // -------------- PRIVATE PROPERTIES -------------------------------------------------------------------------------

@@ -419,32 +419,95 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         final Axis<Y> ya = getYAxis();
         if (xa.isAutoRanging()) {
             List xData = new ArrayList<Number>();
-            if(xData != null) {
-                for(Series<X,Y> series : getData()) {
-                    for(Data<X,Y> data: series.getData()) {
-                        if(xData != null) xData.add(data.getXValue());
-                    }
+            for(Series<X,Y> series : getData()) {
+                for(Data<X,Y> data: series.getData()) {
+                    xData.add(data.getXValue());
                 }
-                if(xData != null) xa.invalidateRange(xData);
             }
+            xa.invalidateRange(xData);
         }
         if (ya.isAutoRanging()) {
-            List yData = new ArrayList<Number>();
-            if(yData != null) {
-                double totalY = 0;
-                Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
-                while (seriesIterator.hasNext()) {
-                    double maxY = 0;
-                    Series<X, Y> series = seriesIterator.next();
-                    for(Data<X,Y> item : series.getData()) {
-                        if(item != null) maxY = Math.max(maxY, ya.toNumericValue(item.getYValue()));
+            double totalMinY = Double.MAX_VALUE;
+            Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
+            boolean first = true;
+            NavigableMap<Double, Double> accum = new TreeMap<>();
+            NavigableMap<Double, Double> prevAccum = new TreeMap<>();
+            NavigableMap<Double, Double> currentValues = new TreeMap<>();
+            while (seriesIterator.hasNext()) {
+                currentValues.clear();
+                Series<X, Y> series = seriesIterator.next();
+                for(Data<X,Y> item : series.getData()) {
+                    if(item != null) {
+                        final double xv = xa.toNumericValue(item.getXValue());
+                        final double yv = ya.toNumericValue(item.getYValue());
+                        currentValues.put(xv, yv);
+                        if (first) {
+                            // On the first pass, just fill the map
+                            accum.put(xv, yv);
+                            // minimum is applicable only in the first series
+                            totalMinY = Math.min(totalMinY, yv);
+                        } else {
+                            if (prevAccum.containsKey(xv)) {
+                                accum.put(xv, prevAccum.get(xv) + yv);
+                            } else {
+                                // If the point wasn't yet in the previous (accumulated) series
+                                Map.Entry<Double, Double> he = prevAccum.higherEntry(xv);
+                                Map.Entry<Double, Double> le = prevAccum.lowerEntry(xv);
+                                if (he != null && le != null) {
+                                    // If there's both point above and below this point, interpolate
+                                    accum.put(xv, ((xv - le.getKey()) / (he.getKey() - le.getKey())) *
+                                            (le.getValue() + he.getValue()) + yv);
+                                } else if (he != null) {
+                                    // The point is before the first point in the previously accumulated series
+                                    accum.put(xv, he.getValue() + yv);
+                                } else if (le != null) {
+                                    // The point is after the last point in the previously accumulated series
+                                    accum.put(xv, le.getValue() + yv);
+                                } else {
+                                    // The previously accumulated series is empty
+                                    accum.put(xv, yv);
+                                }
+                            }
+                        }
                     }
-                    totalY += maxY;
+                }
+                // Now update all the keys that were in the previous series, but not in the new one
+                for (Map.Entry<Double, Double> e : prevAccum.entrySet()) {
+                    if (accum.keySet().contains(e.getKey())) {
+                        continue;
+                    }
+                    Double k = e.getKey();
+                    final Double v = e.getValue();
+                    // Look at the values of the current series
+                    Map.Entry<Double, Double> he = currentValues.higherEntry(k);
+                    Map.Entry<Double, Double> le = currentValues.lowerEntry(k);
+                    if (he != null && le != null) {
+                        // Interpolate the for the point from current series and add the accumulated value
+                        accum.put(k, ((k - le.getKey()) / (he.getKey() - le.getKey())) *
+                                (le.getValue() + he.getValue()) + v);
+                    } else if (he != null) {
+                        // There accumulated value is before the first value in the current series
+                        accum.put(k, he.getValue() + v);
+                    } else if (le != null) {
+                        // There accumulated value is after the last value in the current series
+                        accum.put(k, le.getValue() + v);
+                    } else {
+                        // The current series are empty
+                        accum.put(k, v);
+                    }
 
                 }
-                if(totalY > 0) yData.add(totalY);
-                ya.invalidateRange(yData);
+
+                prevAccum.clear();
+                prevAccum.putAll(accum);
+                accum.clear();
+                first = (totalMinY == Double.MAX_VALUE); // If there was already some value in the series, we can consider as
+                                                         // being past the first series
+
             }
+            if(totalMinY != Double.MAX_VALUE) ya.invalidateRange(Arrays.asList(ya.toRealValue(totalMinY),
+                    ya.toRealValue(Collections.max(prevAccum.values()))));
+
         }
     }
 
