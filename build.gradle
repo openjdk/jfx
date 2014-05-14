@@ -610,17 +610,32 @@ ext.COMPILE_SWT = false;
 ext.COMPILE_FXPACKAGER = false;
 ext.COMPILE_DESIGN_TIME = false;
 compileTargets { t ->
-    if (project.ext[t.upper].compileSwing) COMPILE_SWING = true
-    if (project.ext[t.upper].compileSWT) COMPILE_SWT = true
-    if (project.ext[t.upper].compileFXPackager) COMPILE_FXPACKAGER = true
-    if (project.ext[t.upper].compileDesignTime) COMPILE_DESIGN_TIME = true
+    def targetProperties = project.rootProject.ext[t.upper]
 
+    if (targetProperties.compileSwing) COMPILE_SWING = true
+    if (targetProperties.compileSWT) COMPILE_SWT = true
+    if (targetProperties.compileFXPackager) COMPILE_FXPACKAGER = true
+    if (targetProperties.compileDesignTime) COMPILE_DESIGN_TIME = true
+
+    if (!targetProperties.containsKey('compileWebnodeNative')) {
+        // unless specified otherwise, we will compile native Webnode if IS_COMPILE_WEBKIT
+        targetProperties.compileWebnodeNative = true
+    }
+
+    if (!targetProperties.containsKey('compileMediaNative')) {
+        // unless specified otherwise, we will compile native Media if IS_COMPILE_MEDIA
+        targetProperties.compileMediaNative = true
+    }
+
+    // This value is used to under ./build/${sdkDirName} to allow for
+    // a common name for the hosted build (for use when building apps)
+    // and a unique name for cross builds.
     if (rootProject.defaultHostTarget.equals(t.name)) { 
         // use a simple common default for the "host" build
-        project.ext[t.upper].sdkDirName="sdk"
+        targetProperties.sdkDirName="sdk"
     } else {
         // and a more complex one for cross builds
-        project.ext[t.upper].sdkDirName="${t.name}-sdk"
+        targetProperties.sdkDirName="${t.name}-sdk"
     }
 }
 
@@ -2040,12 +2055,17 @@ project(":media") {
     }
     
     compileTargets { t->        
+        def targetProperties = project.rootProject.ext[t.upper]
         def nativeOutputDir = file("${buildDir}/native/${t.name}")
         def projectDir = t.name.startsWith("arm") ? "linux" : t.name
-        def mediaProperties = project.rootProject.ext[t.upper].media
+        def mediaProperties = targetProperties.media
         
         def buildNative = task("build${t.capital}Native", dependsOn: [generateHeaders, generateMediaErrorHeader]) {
-            enabled = IS_COMPILE_MEDIA
+            enabled = targetProperties.compileMediaNative
+            if (!targetProperties.compileMediaNative) {
+                println("Not compiling native Media for ${t.name} per configuration request");
+            } 
+
             doLast {
                 exec {
                     commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/jfxmedia/projects/${projectDir}")
@@ -2276,6 +2296,7 @@ project(":web") {
     task compileGenerated()
 
     compileTargets { t ->
+        def targetProperties = project.rootProject.ext[t.upper]
         def classifier = (t.name != "linux" && t.name != "win") ? t.name :
                           IS_64 ? "${t.name}-amd64" : "${t.name}-i586"
         dependencies {
@@ -2410,6 +2431,11 @@ load(qt_config)""")
         }
 
         compileGenerated.dependsOn compileGeneratedTask
+            
+        if (!targetProperties.compileWebnodeNative) {
+            println("Not compiling native Webkit for ${t.name} per configuration request");
+            compileNativeTask.enabled = false
+        }
     }
     
     def drtClasses = "com/sun/javafx/webkit/drt/**"

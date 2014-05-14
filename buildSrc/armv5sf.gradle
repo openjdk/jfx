@@ -66,6 +66,8 @@ ARMV5SF.compileSwing = false;
 ARMV5SF.compileSWT = false;
 ARMV5SF.compileFXPackager = false;
 ARMV5SF.compileDesignTime = false;
+ARMV5SF.compileWebnodeNative = false;
+ARMV5SF.compileMediaNative = false;
 
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
 ARMV5SF.arch = "arm"
