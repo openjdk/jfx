@@ -308,7 +308,7 @@ public class Stylesheet {
             throw new IllegalArgumentException("cannot read source file");
         }
 
-        if ((destination.exists() && destination.canWrite() == false) || destination.createNewFile() == false) {
+        if (destination.exists() ? (destination.canWrite() == false) : (destination.createNewFile() == false)) {
             throw new IllegalArgumentException("cannot write destination file");
         }
 
