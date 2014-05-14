@@ -62,6 +62,7 @@ public class X11Screen implements NativeScreen {
         int y = 0;
         int w = X.WidthOfScreen(screen);
         int h = X.HeightOfScreen(screen);
+        boolean fullScreen = true;
         String geometry = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("x11.geometry"));
         if (geometry != null) {
             try {
@@ -80,6 +81,7 @@ public class X11Screen implements NativeScreen {
                     i = location.indexOf(",");
                     x = Integer.parseInt(location.substring(0, i));
                     y = Integer.parseInt(location.substring(i + 1));
+                    fullScreen = false;
                 } else {
                     size = geometry;
                 }
@@ -87,11 +89,16 @@ public class X11Screen implements NativeScreen {
                     int i = size.indexOf("x");
                     w = Integer.parseInt(size.substring(0, i));
                     h = Integer.parseInt(size.substring(i + 1));
+                    fullScreen = false;
                 }
             } catch (NumberFormatException e) {
                 System.err.println("Cannot parse geometry string: '"
                         + geometry + "'");
             }
+        }
+        if (fullScreen) {
+            X.XSetWindowAttributes.setOverrideRedirect(attrs.p, true);
+            cwMask |= X.CWOverrideRedirect;
         }
         long window = X.XCreateWindow(
                 display,
@@ -104,6 +111,29 @@ public class X11Screen implements NativeScreen {
                 cwMask,
                 attrs.p);
         X.XMapWindow(display, window);
+        if (fullScreen) {
+            X.XClientMessageEvent event = new X.XClientMessageEvent(
+                    new X.XEvent());
+            X.XEvent.setWindow(event.p, window);
+            X.XClientMessageEvent.setMessageType(event.p,
+                                                 X.XInternAtom(display,
+                                                               "_NET_WM_STATE",
+                                                               false)
+            );
+            X.XClientMessageEvent.setFormat(event.p, 32);
+            X.XClientMessageEvent.setDataLong(event.p, 0, X._NET_WM_STATE_ADD);
+            X.XClientMessageEvent.setDataLong(event.p, 1,
+                                              X.XInternAtom(display,
+                                                            "_NET_WM_STATE_FULLSCREEN",
+                                                            false)
+            );
+            X.XClientMessageEvent.setDataLong(event.p, 2, 0);
+            X.XSendEvent(display, X.RootWindowOfScreen(screen), false,
+                         X.SubstructureRedirectMask | X.SubstructureNotifyMask,
+                         event.p);
+            X.XGrabKeyboard(display, window, true,
+                            X.GrabModeAsync, X.GrabModeAsync, X.CurrentTime);
+        }
         X.XStoreName(display, window, "JavaFX framebuffer container");
         X.XSync(display, false);
         int[] widthA = new int[1];
