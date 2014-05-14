@@ -427,7 +427,9 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             dataMinValue = getLowerBound();
         } else {
             dataMinValue = Double.MAX_VALUE;
-            dataMaxValue = Double.MIN_VALUE;
+            // We need to init to the lowest negative double (which is NOT Double.MIN_VALUE)
+            // in order to find the maximum (positive or negative)
+            dataMaxValue = -Double.MAX_VALUE;
         }
         for(T dataValue: data) {
             dataMinValue = Math.min(dataMinValue, dataValue.doubleValue());
