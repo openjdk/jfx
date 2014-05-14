@@ -102,7 +102,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             // focus border will not be shown when the user interacts with the
             // scrollbars, and more importantly, keyboard navigation won't be
             // available to the user.
-            listView.requestFocus();
+            if (listView.isFocusTraversable()) {
+                listView.requestFocus();
+            }
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);

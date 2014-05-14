@@ -75,7 +75,9 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
             // focus border will not be shown when the user interacts with the
             // scrollbars, and more importantly, keyboard navigation won't be
             // available to the user.
-            tableView.requestFocus();
+            if (tableView.isFocusTraversable()) {
+                tableView.requestFocus();
+            }
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);

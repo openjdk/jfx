@@ -83,7 +83,10 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             // focus border will not be shown when the user interacts with the
             // scrollbars, and more importantly, keyboard navigation won't be
             // available to the user.
-            treeView.requestFocus(); };
+            if (treeView.isFocusTraversable()) {
+                treeView.requestFocus();
+            }
+        };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 

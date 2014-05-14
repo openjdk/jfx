@@ -31,7 +31,9 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
+import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -477,5 +479,35 @@ public class TableViewMouseInputTest {
         MouseEventFirer mouse = new MouseEventFirer(row);
         mouse.fireMousePressAndRelease(1, 100, 10);
         mouse.dispose();
+    }
+
+    @Test public void test_rt_37069() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+        tableView.setFocusTraversable(false);
+
+        Button btn = new Button("Button");
+        VBox vbox = new VBox(btn, tableView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        btn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        Scene scene = sl.getStage().getScene();
+
+        assertTrue(btn.isFocused());
+        assertFalse(tableView.isFocused());
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(tableView);
+        MouseEventFirer mouse = new MouseEventFirer(vbar);
+        mouse.fireMousePressAndRelease();
+
+        assertTrue(btn.isFocused());
+        assertFalse(tableView.isFocused());
+
+        sl.dispose();
     }
 }

@@ -32,12 +32,15 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import org.junit.After;
@@ -429,5 +432,37 @@ public class TreeViewMouseInputTest {
         // expand again
         VirtualFlowTestUtils.clickOnRow(treeView, 0, 2);
         assertTrue(root.isExpanded());
+    }
+
+    @Test public void test_rt_37069() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        treeView.setRoot(root);
+        treeView.setFocusTraversable(false);
+
+        Button btn = new Button("Button");
+        VBox vbox = new VBox(btn, treeView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        btn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        Scene scene = sl.getStage().getScene();
+
+        assertTrue(btn.isFocused());
+        assertFalse(treeView.isFocused());
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(treeView);
+        MouseEventFirer mouse = new MouseEventFirer(vbar);
+        mouse.fireMousePressAndRelease();
+
+        assertTrue(btn.isFocused());
+        assertFalse(treeView.isFocused());
+
+        sl.dispose();
     }
 }
