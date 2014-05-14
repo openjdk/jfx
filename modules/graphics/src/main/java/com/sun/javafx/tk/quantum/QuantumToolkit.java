@@ -664,22 +664,22 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public void exit() {
-            notifyShutdownHooks();
+        notifyShutdownHooks();
 
-            ViewPainter.renderLock.lock();
-            try {
-                //TODO - should update glass scene view state
-                //TODO - doesn't matter because we are exiting
-                Application app = Application.GetApplication();
-                app.terminate();
-            } finally {
-                ViewPainter.renderLock.unlock();
-            }
+        ViewPainter.renderLock.lock();
+        try {
+            //TODO - should update glass scene view state
+            //TODO - doesn't matter because we are exiting
+            Application app = Application.GetApplication();
+            app.terminate();
+        } finally {
+            ViewPainter.renderLock.unlock();
+        }
 
-            dispose();
+        dispose();
 
-            super.exit();
-}
+        super.exit();
+    }
 
     public void dispose() {
         if (toolkitRunning.compareAndSet(true, false)) {
