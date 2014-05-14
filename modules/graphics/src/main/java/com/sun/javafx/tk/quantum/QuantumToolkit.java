@@ -664,6 +664,11 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public void exit() {
+        // This method must run on the FX application thread
+        checkFxUserThread();
+
+        // We need to wait for the last frame to finish so that the renderer
+        // is not running while we are shutting down glass.
         PaintCollector.getInstance().waitForRenderingToComplete();
 
         notifyShutdownHooks();
