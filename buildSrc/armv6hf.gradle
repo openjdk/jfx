@@ -77,38 +77,16 @@ ARMV6HF.compileSWT = false;
 ARMV6HF.compileFXPackager = false;
 ARMV6HF.compileDesignTime = false;
 
+ARMV6HF.includeLens = true
+ARMV6HF.includeNull3d = true
+ARMV6HF.includeEGL = true
+ARMV6HF.includeSwing = false
+ARMV6HF.includeSWT = false
+ARMV6HF.includeGTK = true
+
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
 ARMV6HF.arch = "arm"
 ARMV6HF.libDest = "lib/arm"
-
-// TODO this is garbage. Each target file should define what it includes,
-// not what it excludes.
-ARMV6HF.jfxrtJarExcludes = [
-    "**/*.hlsl",
-    "com/sun/glass/ui/win",
-    "com/sun/prism/d3d",
-    "com/sun/prism/es2/gl/win",
-    //"com/sun/prism/null3d",
-    "com/sun/scenario/effect/impl/hw/d3d",
-    
-    "com/sun/glass/events/mac",
-    "com/sun/glass/ui/mac",
-    "com/sun/prism/es2/gl/mac",
-    
-    "com/sun/glass/ui/android",
-    
-    "com/sun/glass/ui/ios",
-    
-    "com/sun/glass/ui/swt", // SWT glass
-    
-    "javafx/embed/swing", // Swing Interop
-    
-    "javafx/embed/swt", // SWT Interop
-
-    "com/sun/prism/es2/MacGL*",
-    "com/sun/prism/es2/IOSGL*",
-    "com/sun/prism/es2/WinGL*",
-]
 
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags

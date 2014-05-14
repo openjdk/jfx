@@ -69,38 +69,16 @@ ARMV5SF.compileDesignTime = false;
 ARMV5SF.compileWebnodeNative = false;
 ARMV5SF.compileMediaNative = false;
 
+ARMV5SF.includeLens = true
+ARMV5SF.includeNull3d = true
+ARMV5SF.includeEGL = true
+ARMV5SF.includeSwing = false
+ARMV5SF.includeSWT = false
+
+
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
 ARMV5SF.arch = "arm"
 ARMV5SF.libDest = "lib/arm"
-
-// TODO this is garbage. Each target file should define what it includes,
-// not what it excludes.
-ARMV5SF.jfxrtJarExcludes = [
-    "**/*.hlsl",
-    "com/sun/glass/ui/win",
-    "com/sun/prism/d3d",
-    "com/sun/prism/es2/gl/win",
-    //"com/sun/prism/null3d",
-    "com/sun/scenario/effect/impl/hw/d3d",
-    
-    "com/sun/glass/events/mac",
-    "com/sun/glass/ui/mac",
-    "com/sun/prism/es2/gl/mac",
-        
-    "com/sun/glass/ui/android",
-    
-    "com/sun/glass/ui/ios",
-    
-    "com/sun/glass/ui/swt", // SWT glass
-    
-    "javafx/embed/swing", // Swing Interop
-    
-    "javafx/embed/swt", // SWT Interop
-
-    "com/sun/prism/es2/MacGL*",
-    "com/sun/prism/es2/IOSGL*",
-    "com/sun/prism/es2/WinGL*",
-]
 
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags

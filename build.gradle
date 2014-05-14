@@ -595,7 +595,7 @@ compileTargets { t ->
     // Every platform must define these variables
     if (!project.hasProperty(t.upper)) throw new Exception("ERROR: Incorrectly configured compile flags file, missing ${t.name} property")
     def props = project.ext[t.upper];
-    ["jfxrtJarExcludes", "compileSwing", "compileSWT", "compileFXPackager", "compileDesignTime", "libDest"].each { prop ->
+    ["compileSwing", "compileSWT", "compileFXPackager", "compileDesignTime", "libDest"].each { prop ->
         if (!props.containsKey(prop)) throw new Exception("ERROR: Incorrectly configured compile flags file, missing ${prop} property on ${t.name}")
     }
 }
@@ -626,6 +626,14 @@ compileTargets { t ->
         // unless specified otherwise, we will compile native Media if IS_COMPILE_MEDIA
         targetProperties.compileMediaNative = true
     }
+
+    if (!targetProperties.containsKey('includeSWT')) targetProperties.includeSWT = true
+    if (!targetProperties.containsKey('includeSwing')) targetProperties.includeSwing = true
+    if (!targetProperties.containsKey('includeNull3d')) targetProperties.includeNull3d = true
+    if (!targetProperties.containsKey('includeLens')) targetProperties.includeLens = false
+    if (!targetProperties.containsKey('includeEGL')) targetProperties.includeEGL = false
+
+    if (!targetProperties.containsKey('includeGTK')) targetProperties.includeGTK = IS_LINUX
 
     // This value is used to under ./build/${sdkDirName} to allow for
     // a common name for the hosted build (for use when building apps)
@@ -2698,10 +2706,52 @@ compileTargets { t ->
              "modules/media/build/resources/main")
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
 
-        if (t.name != 'mac') 
-            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/osx/**")
-        if (t.name != 'ios') 
-            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/ios/**")
+        if (!IS_MAC) {
+            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/osx/**",
+                     "com/sun/prism/es2/MacGL*",
+                     "com/sun/glass/events/mac",
+                     "com/sun/glass/ui/mac",
+                     "com/sun/prism/es2/gl/mac"
+                     )
+        }
+        if (!IS_WINDOWS) {
+            exclude ("**/*.hlsl",
+                     "com/sun/glass/ui/win",
+                     "com/sun/prism/d3d",
+                     "com/sun/prism/es2/gl/win",
+                     "com/sun/prism/es2/WinGL*",
+                     "com/sun/scenario/effect/impl/hw/d3d"
+                     )
+        }
+        if (!targetProperties.includeGTK) { //usually IS_LINUX 
+            exclude (
+                     "com/sun/glass/ui/gtk",
+                     "com/sun/prism/es2/EGL*",
+                     "com/sun/prism/es2/gl/eglfb",
+                     "com/sun/prism/es2/gl/eglx11",
+                     "com/sun/prism/es2/gl/x11",
+                     "com/sun/prism/es2/X11GL*"
+                     )
+        }
+        if (!targetProperties.includeEGL) {
+            exclude ("com/sun/prism/es2/EGL*")
+        }
+        if (!targetProperties.includeLens) {
+            exclude ("com/sun/glass/ui/lens")
+        }
+        if (!targetProperties.includeNull3d) {
+            // "com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
+            exclude ("com/sun/prism/null3d")
+        }
+        if (t.name != 'ios') {
+            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/ios/**",
+                     "com/sun/glass/ui/ios",
+                     "com/sun/prism/es2/IOS*"
+                     )
+        }
+        if (t.name != 'android') {
+            exclude ("com/sun/glass/ui/android/*")
+        }
 
         if (t.name == 'android') {
             from ("modules/web/build/classes/android",
@@ -2715,14 +2765,25 @@ compileTargets { t ->
         } else {
             from ("modules/web/build/classes/main", "modules/web/build/resources/main")
         }
+
         exclude("**/javafx/embed/swt/**")
+
+        if (!targetProperties.includeSWT) {
+            exclude("com/sun/glass/ui/swt")
+        }
+
+        if (!targetProperties.includeSwing) {
+            exclude("javafx/embed/swing")
+        }
         exclude("js/**/*", // er...
                 "PrismLoaderBackend*", // More decora stuff
                 "**/*.stg",    // any glue files for decora must be excluded
                 "**/*.java");  // Builder java files are in build/classes and should be excluded
 
         // Filter out platform specific Java sources (glass) when compiling for other targets
-        exclude(targetProperties.jfxrtJarExcludes)
+        if (targetProperties.containsKey('jfxrtJarExcludes')) {
+            exclude(targetProperties.jfxrtJarExcludes)
+        }
 
         dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
     }
