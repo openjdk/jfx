@@ -40,6 +40,7 @@ import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.*;
 import javafx.beans.InvalidationListener;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -3523,6 +3524,61 @@ public class TableViewTest {
         assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
         assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header4));
         assertEquals(2, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37054_noScroll() {
+        test_rt_37054(false);
+    }
+
+    @Test public void test_rt_37054_scroll() {
+        test_rt_37054(true);
+    }
+
+    private void test_rt_37054(boolean scroll) {
+        ObjectProperty<Integer> offset = new SimpleObjectProperty<Integer>(0);
+
+        // create table with a bunch of rows and 1 column...
+        TableView<Integer> table = new TableView<>();
+        for ( int i = 1; i <= 50; i++ ) {
+            table.getItems().add(i);
+        }
+        final TableColumn<Integer, Integer> column = new TableColumn<>("Column");
+        table.getColumns().add( column );
+        column.setPrefWidth( 150 );
+
+        // each cell displays x, where x = "cell row number + offset"
+        column.setCellValueFactory( cdf -> new ObjectBinding<Integer>() {
+            { super.bind( offset ); }
+
+            @Override protected Integer computeValue() {
+                return cdf.getValue() + offset.get();
+            }
+        });
+
+        StackPane root = new StackPane();
+        root.getChildren().add( table );
+
+        StageLoader sl = new StageLoader(root);
+
+        int index = scroll ? 0 : 25;
+
+        if (scroll) {
+            // we scroll to force the table cells to update the objects they observe
+            table.scrollTo(index);
+            Toolkit.getToolkit().firePulse();
+        }
+
+        TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, index + 3, 0);
+        final int initialValue = (Integer) cell.getItem();
+
+        // increment the offset value
+        offset.setValue(offset.get() + 1);
+        Toolkit.getToolkit().firePulse();
+
+        final int incrementedValue = (Integer) cell.getItem();
+        assertEquals(initialValue + 1, incrementedValue);
 
         sl.dispose();
     }

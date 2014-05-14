@@ -243,14 +243,17 @@ public class TableRow<T> extends IndexedCell<T> {
         final boolean isEmpty = isEmpty();
 
         // Cause the cell to update itself
-        if (valid) {
+        outer: if (valid) {
             final T newValue = items.get(newIndex);
 
-            // RT-34566 - if the index didn't change, then avoid calling updateItem
+            // RT-35864 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == newIndex) {
                 if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
-                    return;
+                    // RT-37054:  we break out of the if/else code here and
+                    // proceed with the code following this, so that we may
+                    // still update references, listeners, etc as required.
+                    break outer;
                 }
             }
             updateItem(newValue, false);

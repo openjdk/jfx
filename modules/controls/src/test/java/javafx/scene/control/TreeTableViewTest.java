@@ -43,6 +43,7 @@ import com.sun.javafx.scene.control.test.Data;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -3424,5 +3425,63 @@ public class TreeTableViewTest {
         tv.getRoot().getChildren().add(new TreeItem("1"));
         assertEquals(0, rt_37061_index_counter);
         assertEquals(0, rt_37061_item_counter);
+    }
+
+    @Test public void test_rt_37054_noScroll() {
+        test_rt_37054(false);
+    }
+
+    @Test public void test_rt_37054_scroll() {
+        test_rt_37054(true);
+    }
+
+    private void test_rt_37054(boolean scroll) {
+        ObjectProperty<Integer> offset = new SimpleObjectProperty<Integer>(0);
+
+        // create table with a bunch of rows and 1 column...
+        TreeItem<Integer> root = new TreeItem<>(0);
+        root.setExpanded(true);
+        for (int i = 1; i <= 50; i++) {
+            root.getChildren().add(new TreeItem<>(i));
+        }
+
+        final TreeTableColumn<Integer, Integer> column = new TreeTableColumn<>("Column");
+
+        final TreeTableView<Integer> table = new TreeTableView<>(root);
+        table.getColumns().add( column );
+        column.setPrefWidth( 150 );
+
+        // each cell displays x, where x = "cell row number + offset"
+        column.setCellValueFactory( cdf -> new ObjectBinding<Integer>() {
+            { super.bind( offset ); }
+
+            @Override protected Integer computeValue() {
+                return cdf.getValue().getValue() + offset.get();
+            }
+        });
+
+        StackPane stack = new StackPane();
+        stack.getChildren().add(table);
+        StageLoader sl = new StageLoader(stack);
+
+        int index = scroll ? 0 : 25;
+
+        if (scroll) {
+            // we scroll to force the table cells to update the objects they observe
+            table.scrollTo(index);
+            Toolkit.getToolkit().firePulse();
+        }
+
+        TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, index + 3, 0);
+        final int initialValue = (Integer) cell.getItem();
+
+        // increment the offset value
+        offset.setValue(offset.get() + 1);
+        Toolkit.getToolkit().firePulse();
+
+        final int incrementedValue = (Integer) cell.getItem();
+        assertEquals(initialValue + 1, incrementedValue);
+
+        sl.dispose();
     }
 }
