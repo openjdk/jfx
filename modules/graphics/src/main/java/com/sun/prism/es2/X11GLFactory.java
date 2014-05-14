@@ -48,7 +48,27 @@ class X11GLFactory extends GLFactory {
         new GLGPUInfo("x.org", null)
     };
 
-    private GLGPUInfo blackList[] = null;
+    private GLGPUInfo blackList[] = {
+        new GLGPUInfo("nvidia", "geforce 6100"),
+        new GLGPUInfo("nvidia", "geforce 6150"),
+        new GLGPUInfo("nvidia", "geforce 6200"),
+        new GLGPUInfo("nvidia", "geforce 6500"),
+        new GLGPUInfo("nvidia", "geforce 6600"),
+        new GLGPUInfo("nvidia", "geforce 6700"),
+        new GLGPUInfo("nvidia", "geforce 6800"),
+        new GLGPUInfo("nvidia", "geforce 7025"),
+        new GLGPUInfo("nvidia", "geforce 7100"),
+        new GLGPUInfo("nvidia", "geforce 7150"),
+        new GLGPUInfo("nvidia", "geforce 7200"),
+        new GLGPUInfo("nvidia", "geforce 7300"),
+        new GLGPUInfo("nvidia", "geforce 7350"),
+        new GLGPUInfo("nvidia", "geforce 7500"),
+        new GLGPUInfo("nvidia", "geforce 7600"),
+        new GLGPUInfo("nvidia", "geforce 7650"),
+        new GLGPUInfo("nvidia", "geforce 7800"),
+        new GLGPUInfo("nvidia", "geforce 7900"),
+        new GLGPUInfo("nvidia", "geforce 7950")
+    };
 
     @Override
     GLGPUInfo[] getPreQualificationFilter() {
