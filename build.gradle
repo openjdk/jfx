@@ -810,21 +810,6 @@ ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
  *        in the name of the final library, such as libprism-common.dylib.
  */
 void addNative(Project project, String name) {
-    addNative(project, name, null)
-}
-
-/**
- * Convenience method for creating javah, cc, link, and "native" tasks in the given project. These
- * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
- * named tasks.
- * 
- * @param project The project to add tasks to
- * @param name The name of the project, such as "prism-common". This name is used
- *        in the name of the generated task, such as ccPrismCommon, and also
- *        in the name of the final library, such as libprism-common.dylib.
- * @param list of compile targets. Library is applicable only for these targets.
- */
-void addNative(Project project, String name, List<String> includeTargets) {
     // TODO if we want to handle 32/64 bit windows in the same build,
     // Then we will need to modify the win compile target to be win32 or win64
     def capitalName = name.split("-").collect{it.capitalize()}.join()
@@ -845,14 +830,25 @@ void addNative(Project project, String name, List<String> includeTargets) {
     def libRootDir = project.file("$project.buildDir/libs/$name")
     // For each compile target, create a javah / cc / link triplet
     compileTargets { t ->
-        if (includeTargets != null && !includeTargets.contains(t.name)) {
-            return
-        }
         def targetProperties = project.rootProject.ext[t.upper]
         def library = targetProperties.library
         def properties = targetProperties.get(name)
         def nativeDir = file("$nativeRootDir/${t.name}")
         def headerDir = file("$headerRootDir/${t.name}")
+
+        // If there is not a library clause in the properties, assume it is not wanted
+        if (!targetProperties.containsKey(name)) {
+            println("Ignoring native library ${name}. Not defined in ${t.name} project properties");
+            return
+        }
+
+        // check for the property disable${name} = true
+        def String disableKey = "disable${name}"
+        def boolean disabled = targetProperties.containsKey(disableKey) ? targetProperties.get(disableKey) : false
+        if (disabled) {
+            println("Native library ${name} disabled in ${t.name} project properties");
+            return
+        }
         
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
             description = "Generates JNI Headers for ${name} for ${t.name}"
@@ -1281,9 +1277,8 @@ project(":graphics") {
     addNative(project, "prismES2")
 
     if (IS_COMPILE_PANGO) {
-        // TODO: embedded support
-        addNative(project, "fontFreetype", ["linux"])
-        addNative(project, "fontPango", ["linux"])
+        addNative(project, "fontFreetype")
+        addNative(project, "fontPango")
     }
 
     if (IS_WINDOWS) {
@@ -2087,7 +2082,9 @@ project(":media") {
             }
         }        
         
-        if (!t.name.startsWith("arm")) {
+        // check for the property disable${name} = true
+        def boolean disabled = targetProperties.containsKey('disableMedia') ? targetProperties.get('disableMedia') : false
+        if (!disabled) {
             // Building GStreamer
             def buildGStreamer = task("build${t.capital}GStreamer") {
                 enabled = IS_COMPILE_MEDIA
@@ -2785,10 +2782,7 @@ compileTargets { t ->
                 from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
                 def libs = ['font', 'prism', 'prismSW', 'prismES2', 'glass', 'iio']
                 if (IS_COMPILE_PANGO) {
-                    // TODO: embedded support
-                    if ("${defaultHostTarget}" == "${t.name}") {
-                        libs += ['fontFreetype', 'fontPango'];
-                    }
+                    libs += ['fontFreetype', 'fontPango'];
                 }
                 libs.each { lib ->
                     def variants = targetProperties[lib].containsKey('variants') && !useLipo ? targetProperties[lib].variants : [null]

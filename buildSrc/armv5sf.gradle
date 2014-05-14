@@ -573,6 +573,7 @@ ARMV5SF.fontT2K.linker = linker
 ARMV5SF.fontT2K.linkFlags = fontLFlags
 ARMV5SF.fontT2K.lib = "javafx_font_t2k"
 
+ARMV5SF.disablefontFreetype = true // Need to fix the imports
 ARMV5SF.fontFreetype = [:]
 ARMV5SF.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class"]
 ARMV5SF.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
@@ -582,6 +583,7 @@ ARMV5SF.fontFreetype.linker = linker
 ARMV5SF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags].flatten()
 ARMV5SF.fontFreetype.lib = "javafx_font_freetype"
 
+ARMV5SF.disablefontPango = true
 ARMV5SF.fontPango = [:]
 ARMV5SF.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
 ARMV5SF.fontPango.nativeSource = ["src/main/native-font/pango.c"]
@@ -601,6 +603,7 @@ ARMV5SF.webkit.strip    = file("$compilerHome/bin/${compilerPrefix}strip").getAb
 ARMV5SF.webkit.ccFlags  = extraCFlags.join(' ')
 ARMV5SF.webkit.linkFlags = extraLFlags.join(' ')
 
+ARMV5SF.disableMedia = true
 ARMV5SF.media = [:]
 ARMV5SF.media.compiler = compiler
 ARMV5SF.media.linker = linker
