@@ -26,11 +26,19 @@ package com.sun.glass.ui.monocle;/*
 public class MonocleTrace {
 
     public static void traceEvent(String format, Object... args) {
+        trace("traceEvent", format, args);
+    }
+
+    public static void traceConfig(String format, Object... args) {
+        trace("traceConfig", format, args);
+    }
+
+    private static void trace(String prefix, String format, Object[] args) {
         synchronized (System.out) {
-            System.out.print("traceEvent: ");
+            System.out.print(prefix);
+            System.out.print(": ");
             System.out.format(format, args);
             System.out.println();
         }
     }
-
 }
