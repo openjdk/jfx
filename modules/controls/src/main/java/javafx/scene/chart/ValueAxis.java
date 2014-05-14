@@ -350,7 +350,9 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         minorTickPath.getElements().clear();
 
         double minorTickLength = Math.max(0, getMinorTickLength());
-        if (minorTickLength > 0) {
+        // The length must be greater then the space required for tick marks, otherwise, there's no reason to create
+        // minor tick marks
+        if (minorTickLength > 0 && length > 2 * getTickMarks().size()) {
             // Strip factor is >= 1. When == 1, all minor ticks will fit.
             // It's computed as number of minor tick marks divided by available length
             int stripFactor = (int)Math.ceil(2 * minorTickMarkValues.size() / (length - 2 * getTickMarks().size()));
