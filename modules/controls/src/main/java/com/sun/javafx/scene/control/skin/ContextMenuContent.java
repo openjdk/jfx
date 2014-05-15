@@ -23,11 +23,6 @@
  * questions.
  */
 
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
-
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.MultiplePropertyChangeListenerHandler;
@@ -216,18 +211,9 @@ public class ContextMenuContent extends Region {
     }
     
     private void updateVisualItems() {
-        // clean up itemsContainer
         ObservableList<Node> itemsContainerChilder = itemsContainer.getChildren();
-        for (int i = 0, max = itemsContainerChilder.size(); i < max; i++) {
-            Node n = itemsContainerChilder.get(i);
-            
-            if (n instanceof MenuItemContainer) {
-                MenuItemContainer container = (MenuItemContainer) n;
-                container.visibleProperty().unbind();
-                container.dispose();
-            }
-        }
-        itemsContainerChilder.clear();
+
+        disposeVisualItems();
         
         for (int row = 0; row < getItems().size(); row++) {
             final MenuItem item = getItems().get(row);
@@ -265,6 +251,21 @@ public class ContextMenuContent extends Region {
         impl_reapplyCSS();
     }
 
+    private void disposeVisualItems() {
+        // clean up itemsContainer
+        ObservableList<Node> itemsContainerChilder = itemsContainer.getChildren();
+        for (int i = 0, max = itemsContainerChilder.size(); i < max; i++) {
+            Node n = itemsContainerChilder.get(i);
+
+            if (n instanceof MenuItemContainer) {
+                MenuItemContainer container = (MenuItemContainer) n;
+                container.visibleProperty().unbind();
+                container.dispose();
+            }
+        }
+        itemsContainerChilder.clear();
+    }
+
     /**
      * Can be called by Skins when they need to clean up the content of any 
      * ContextMenu instances they might have created. This ensures that contents 
@@ -272,6 +273,7 @@ public class ContextMenuContent extends Region {
      */
     public void dispose() {
         disposeBinds();
+        disposeVisualItems();
 
         disposeContextMenu(submenu);
         submenu = null;
@@ -618,6 +620,7 @@ public class ContextMenuContent extends Region {
         if (cmContent != null) {
            if (cmContent.itemsContainer.getChildren().size() > 0) {
                cmContent.itemsContainer.getChildren().get(0).requestFocus();
+               cmContent.currentFocusedIndex = 0;
            } else {
                cmContent.requestFocus();
            }
@@ -664,7 +667,6 @@ public class ContextMenuContent extends Region {
     }
     
     private void moveToNextSibling() {
-        currentFocusedIndex = findFocusedIndex();
         // If focusedIndex is -1 then start from 0th menu item.
         // Note that this will cycle through such that when you move to last item,
         // it will move to 1st item on the next Down key press.
@@ -677,10 +679,10 @@ public class ContextMenuContent extends Region {
         // request focus on the next sibling which currentFocusIndex points to
         if (currentFocusedIndex != -1) {
             Node n = itemsContainer.getChildren().get(currentFocusedIndex);
+            selectedBackground = ((MenuItemContainer)n);
             n.requestFocus();
             ensureFocusedMenuItemIsVisible(n);
         }
-
     }
     
     /*
@@ -703,7 +705,6 @@ public class ContextMenuContent extends Region {
     }
 
      private void moveToPreviousSibling() {
-         currentFocusedIndex = findFocusedIndex();
         // If focusedIndex is -1 then start from the last menu item to go up.
         // Note that this will cycle through such that when you move to first item,
         // it will move to last item on the next Up key press.
@@ -716,6 +717,7 @@ public class ContextMenuContent extends Region {
         // request focus on the previous sibling which currentFocusIndex points to
         if (currentFocusedIndex != -1) {
             Node n = itemsContainer.getChildren().get(currentFocusedIndex);
+            selectedBackground = ((MenuItemContainer)n);
             n.requestFocus();
             ensureFocusedMenuItemIsVisible(n);
         }
@@ -806,6 +808,10 @@ public class ContextMenuContent extends Region {
         return submenu;
     }
 
+    Menu getOpenSubMenu() {
+        return openSubmenu;
+    }
+
     private void createSubmenu() {
         if (submenu == null) {
             submenu = new ContextMenu();
@@ -841,6 +847,7 @@ public class ContextMenuContent extends Region {
         if (submenu == null) return;
 
         submenu.hide();
+        openSubmenu = null;
 
         // Fix for RT-37022 - we dispose content so that we do not process CSS
         // on hidden submenus
@@ -867,7 +874,8 @@ public class ContextMenuContent extends Region {
     // FIXME: HACKY. We use this so that a submenu knows where to open from
     // but this will only work for mouse hovers currently - and won't work
     // programmatically.
-    private Region selectedBackground;
+    // package protected for testing only!
+    Region selectedBackground;
     
     void scroll(double delta) {
         double newTy = ty + delta;
