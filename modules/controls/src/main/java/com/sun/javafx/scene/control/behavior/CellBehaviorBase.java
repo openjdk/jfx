@@ -127,7 +127,7 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         if (e.isSynthesized()) {
             latePress = true;
         } else {
-            latePress  = getControl().isSelected();
+            latePress  = isSelected();
             if (!latePress) {
                 doSelect(e.getX(), e.getY(), e.getButton(), e.getClickCount(),
                         e.isShiftDown(), e.isShortcutDown());
@@ -294,5 +294,9 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
                 getSelectionModel().selectRange(maxRow, minRow - 1);
             }
         }
+    }
+
+    protected boolean isSelected() {
+        return getControl().isSelected();
     }
 }

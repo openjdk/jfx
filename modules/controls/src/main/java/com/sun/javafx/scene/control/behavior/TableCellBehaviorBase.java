@@ -221,7 +221,8 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         return -1;
     }
 
-    private boolean isSelected() {
+    @Override
+    protected boolean isSelected() {
         TableSelectionModel<S> sm = getSelectionModel();
         if (sm == null) return false;
 
