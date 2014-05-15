@@ -71,9 +71,9 @@ X86EGL.compileDesignTime = false;
 X86EGL.compileWebnodeNative = false;
 X86EGL.compileMediaNative = false;
 
-// Libraries end up in the sdk/rt/lib/i386 directory for i386 builds
-X86EGL.arch = "i386"
-X86EGL.libDest = "lib/i386"
+// Libraries end up in the sdk/rt/lib/[i386|amd46] directory depending on machine arch
+X86EGL.arch = OS_ARCH
+X86EGL.libDest = "lib/${OS_ARCH}"
 
 // TODO this is garbage. Each target file should define what it includes,
 // not what it excludes.
