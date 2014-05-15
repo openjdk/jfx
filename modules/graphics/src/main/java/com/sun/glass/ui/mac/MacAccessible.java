@@ -1479,6 +1479,11 @@ final class MacAccessible extends PlatformAccessible {
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr != null) {
             switch (attr) {
+                case NSAccessibilityExpandedAttribute:
+                    if (getAttribute(ROLE) == Role.COMBOBOX) {
+                        executeAction(Action.EXPAND);
+                    }
+                    break;
                 case NSAccessibilitySelectedCellsAttribute:
                 case NSAccessibilitySelectedRowsAttribute: {
                     MacVariant variant = idToMacVariant(value, MacVariant.NSArray_id);
