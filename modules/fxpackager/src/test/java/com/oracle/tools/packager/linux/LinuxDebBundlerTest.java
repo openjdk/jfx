@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.linux.LinuxDebBundler.BUNDLE_NAME;
@@ -84,7 +85,7 @@ public class LinuxDebBundlerTest {
         if (retain) {
             tmpBase = new File("build/tmp/tests/linuxdeb");
         } else {
-            tmpBase = BUILD_ROOT.fetchFrom(null);
+            tmpBase = BUILD_ROOT.fetchFrom(new TreeMap<>());
         }
         tmpBase.mkdir();
     }

@@ -107,7 +107,7 @@ public class MacAppStoreBundlerTest {
         if (retain) {
             tmpBase = new File("build/tmp/tests/macappstore");
         } else {
-            tmpBase = BUILD_ROOT.fetchFrom(null);
+            tmpBase = BUILD_ROOT.fetchFrom(new TreeMap<>());
         }
         tmpBase.mkdir();
     }

@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
@@ -86,7 +87,7 @@ public class LinuxRpmBundlerTest {
         if (retain) {
             tmpBase = new File("build/tmp/tests/linuxrpm");
         } else {
-            tmpBase = BUILD_ROOT.fetchFrom(null);
+            tmpBase = BUILD_ROOT.fetchFrom(new TreeMap<>());
         }
         tmpBase.mkdir();
     }

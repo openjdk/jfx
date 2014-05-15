@@ -47,6 +47,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
@@ -82,7 +83,7 @@ public class LinuxAppBundlerTest {
         if (retain) {
             tmpBase = new File("build/tmp/tests/linuxapp");
         } else {
-            tmpBase = BUILD_ROOT.fetchFrom(null);
+            tmpBase = BUILD_ROOT.fetchFrom(new TreeMap<>());
         }
         tmpBase.mkdir();
     }
