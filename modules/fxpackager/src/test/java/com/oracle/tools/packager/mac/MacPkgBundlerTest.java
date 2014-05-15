@@ -298,6 +298,9 @@ public class MacPkgBundlerTest {
         // only run the bundle with full tests
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
+        // but first remove signing keys, test servers don't have these...
+        bundleParams.remove(DEVELOPER_ID_INSTALLER_SIGNING_KEY.getID());
+
         File result = bundler.execute(bundleParams, new File(workDir, "everything"));
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
