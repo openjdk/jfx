@@ -1813,6 +1813,9 @@ is being used to size a border should also be in pixels.
 .titled-pane {
     -fx-text-fill: -fx-text-base-color;
 }
+.titled-pane:focused {
+    -fx-color: -fx-base;
+}
 .titled-pane > .title {
     -fx-background-color:
         linear-gradient(to bottom,
