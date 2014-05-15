@@ -252,19 +252,21 @@ public final class NumberAxis extends ValueAxis<Number> {
             tickValues.add(upperBound);
         } else if (tickUnit > 0) {
             tickValues.add(lowerBound);
-            if(((upperBound - lowerBound) / tickUnit) > 2000) {
+            if (((upperBound - lowerBound) / tickUnit) > 2000) {
                 // This is a ridiculous amount of major tick marks, something has probably gone wrong
                 System.err.println("Warning we tried to create more than 2000 major tick marks on a NumberAxis. " +
                         "Lower Bound=" + lowerBound + ", Upper Bound=" + upperBound + ", Tick Unit=" + tickUnit);
             } else {
                 if (lowerBound + tickUnit < upperBound) {
-                    for (double major = Math.ceil(lowerBound); major < upperBound; major += tickUnit) {
+                    // If tickUnit is integer, start with the nearest integer
+                    double first = Math.rint(tickUnit) == tickUnit ? Math.ceil(lowerBound) : lowerBound + tickUnit;
+                    for (double major = first; major < upperBound; major += tickUnit) {
                         tickValues.add(major);
                     }
                 }
             }
             tickValues.add(upperBound);
-        } 
+        }
         return tickValues;
     }
 
@@ -286,12 +288,16 @@ public final class NumberAxis extends ValueAxis<Number> {
                         "Lower Bound=" + getLowerBound() + ", Upper Bound=" + getUpperBound() + ", Tick Unit=" + tickUnit);
                 return minorTickMarks;
             }
-            for (double minor = Math.floor(lowerBound) + minorUnit; minor < Math.ceil(lowerBound); minor += minorUnit) {
-                if (minor > lowerBound)
-                    minorTickMarks.add(minor);
+            final boolean tickUnitIsInteger = Math.rint(tickUnit) == tickUnit;
+            if (tickUnitIsInteger) {
+                for (double minor = Math.floor(lowerBound) + minorUnit; minor < Math.ceil(lowerBound); minor += minorUnit) {
+                    if (minor > lowerBound) {
+                        minorTickMarks.add(minor);
+                    }
+                }
             }
-            double major;
-            for (major = Math.ceil(lowerBound); major < upperBound; major += tickUnit)  {
+            double major = tickUnitIsInteger ? Math.ceil(lowerBound) : lowerBound;
+            for (; major < upperBound; major += tickUnit)  {
                 final double next = Math.min(major + tickUnit, upperBound);
                 for (double minor = major + minorUnit; minor < next; minor += minorUnit) {
                     minorTickMarks.add(minor);
