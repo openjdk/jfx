@@ -556,7 +556,7 @@ ARMV7HF.webkit.strip    = file("$compilerHome/bin/${compilerPrefix}strip").getAb
 ARMV7HF.webkit.ccFlags  = extraCFlags.join(' ')
 ARMV7HF.webkit.linkFlags = extraLFlags.join(' ')
 
-ARMV7SF.disableMedia = true
+ARMV7HF.disableMedia = true
 ARMV7HF.media = [:]
 ARMV7HF.media.compiler = compiler
 ARMV7HF.media.linker = linker
