@@ -39,6 +39,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.linux.LinuxAppBundler.APP_FS_NAME;
 import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
 
 public class LinuxDebBundler extends AbstractBundler {
@@ -388,12 +389,12 @@ public class LinuxDebBundler extends AbstractBundler {
         Map<String, String> data = new HashMap<>();
 
         data.put("APPLICATION_NAME", APP_NAME.fetchFrom(params));
+        data.put("APPLICATION_FS_NAME", APP_FS_NAME.fetchFrom(params));
         data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params));
         data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
         data.put("APPLICATION_MAINTAINER", MAINTAINER.fetchFrom(params));
         data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
-        data.put("APPLICATION_LAUNCHER_FILENAME",
-                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getName());
+        data.put("APPLICATION_LAUNCHER_FILENAME", APP_FS_NAME.fetchFrom(params));
         data.put("DEPLOY_BUNDLE_CATEGORY", CATEGORY.fetchFrom(params));
         data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
         data.put("APPLICATION_SUMMARY", TITLE.fetchFrom(params));
@@ -518,21 +519,18 @@ public class LinuxDebBundler extends AbstractBundler {
     }
 
     private File getConfig_DesktopShortcutFile(Map<String, ? super Object> params) {
-        return new File(
-                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
-                APP_NAME.fetchFrom(params) + ".desktop");
+        return new File(LinuxAppBundler.getRootDir(APP_IMAGE_ROOT.fetchFrom(params), params),
+                APP_FS_NAME.fetchFrom(params) + ".desktop");
     }
 
     private File getConfig_IconFile(Map<String, ? super Object> params) {
-        return new File(
-                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
-                APP_NAME.fetchFrom(params) + ".png");
+        return new File(LinuxAppBundler.getRootDir(APP_IMAGE_ROOT.fetchFrom(params), params),
+                APP_FS_NAME.fetchFrom(params) + ".png");
     }
 
     private File getConfig_InitScriptFile(Map<String, ? super Object> params) {
-        return new File(
-                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
-                BUNDLE_NAME.fetchFrom(params) + ".init");
+        return new File(LinuxAppBundler.getRootDir(APP_IMAGE_ROOT.fetchFrom(params), params),
+                APP_FS_NAME.fetchFrom(params) + ".init");
     }
 
     private File getConfig_ControlFile(Map<String, ? super Object> params) {

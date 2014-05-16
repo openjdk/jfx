@@ -160,7 +160,7 @@ public class MacAppStoreBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),

@@ -48,7 +48,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static org.junit.Assert.*;
@@ -131,7 +130,7 @@ public class LinuxAppBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
@@ -194,7 +193,6 @@ public class LinuxAppBundlerTest {
     public void configureEverything() throws Exception {
         Bundler bundler = new LinuxAppBundler();
         Collection<BundlerParamInfo<?>> parameters = bundler.getBundleParameters();
-        System.out.println(parameters.stream().map(BundlerParamInfo::getID).collect(Collectors.toList()));
 
         Map<String, Object> bundleParams = new HashMap<>();
 
