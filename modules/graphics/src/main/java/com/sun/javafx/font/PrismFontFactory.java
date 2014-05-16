@@ -1109,7 +1109,7 @@ public abstract class PrismFontFactory implements FontFactory {
                     String name = unmappedFontNames.get(i);
                     String familyName = fontToFamilyNameMap.get(name);
                     if (familyName != null) {
-                        ArrayList family = familyToFontListMap.get(familyName);
+                        ArrayList<String> family = familyToFontListMap.get(familyName);
                         if (family != null) {
                             if (family.size() <= 1) {
                                 familyToFontListMap.remove(familyName);
@@ -1440,8 +1440,8 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
-    public PGFont loadEmbeddedFont0(String name, InputStream fontStream,
-                                    float size, boolean register) {
+    private PGFont loadEmbeddedFont0(String name, InputStream fontStream,
+                                     float size, boolean register) {
         PrismFontFile fr = null;
         FontFileWriter fontWriter = new FontFileWriter();
         try {
