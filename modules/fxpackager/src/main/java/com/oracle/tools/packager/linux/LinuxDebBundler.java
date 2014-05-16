@@ -170,14 +170,14 @@ public class LinuxDebBundler extends AbstractBundler {
     private final static String DEFAULT_DESKTOP_FILE_TEMPLATE = "template.desktop";
     private final static String DEFAULT_INIT_SCRIPT_TEMPLATE = "template.deb.init.script";
 
-    private final static String TOOL_DPKG = "dpkg-deb";
+    public final static String TOOL_DPKG = "dpkg-deb";
 
     public LinuxDebBundler() {
         super();
         baseResourceLoader = LinuxResources.class;
     }
 
-    private boolean testTool(String toolName, String minVersion) {
+    public static boolean testTool(String toolName, String minVersion) {
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     toolName,

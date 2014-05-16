@@ -66,6 +66,8 @@ public class LinuxDebBundlerTest {
         // only run on linux
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().startsWith("linux"));
 
+        Assume.assumeTrue(LinuxDebBundler.testTool(LinuxDebBundler.TOOL_DPKG, "1"));
+
         Log.setLogger(new Log.Logger(true));
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
