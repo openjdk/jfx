@@ -138,7 +138,9 @@ public class TreeTableViewMouseInputTest {
     }
     
     @After public void tearDown() {
-        tableView.getSkin().dispose();
+        if (tableView.getSkin() != null) {
+            tableView.getSkin().dispose();
+        }
         sm = null;
     }
     
