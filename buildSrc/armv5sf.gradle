@@ -158,21 +158,6 @@ def mediaLFlags = [extraLFlags, "-lgstreamer-0.10", "-lgstapp-0.10",
 def webCFlags = [extraCFlags].flatten()
 def webLFlags = [extraLFlags].flatten()
 
-// libraries to remove from the sdk
-//deploy.trim.public.library.filter= \
-//  fxavcodecplugin-52.so \
-//  fxavcodecplugin-53.so \
-//  fxplugins.so \
-//  libjfxwebkit.so \
-//  libgstplugins-lite.so \
-//  libgstreamer-lite.so \
-//  libprism-es2-eglx11.so \
-//  libglass-lens-fb.so \
-
-//defineProperty("CC", "gcc");
-//defineProperty("PRISM_CC", "cc");
-//defineProperty("PRISM_SW_CC", "cc");
-
 def gtkCFlags = [extraCFlags].flatten()
 def gtkLFlags = [extraLFlags].flatten()
 setupTools("ARMV5SF_tools",
