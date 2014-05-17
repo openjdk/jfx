@@ -25,9 +25,6 @@
 
 package javafx.scene.text;
 
-import com.sun.javafx.accessible.AccessibleNode;
-import com.sun.javafx.accessible.AccessibleText;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
@@ -44,14 +41,17 @@ import com.sun.javafx.sg.prism.NGText;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
 import javafx.css.*;
 import javafx.geometry.*;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.StrokeType;
@@ -113,18 +113,10 @@ public class Text extends Shape {
      * Creates an empty instance of Text.
      */
     public Text() {
-        InvalidationListener listener = new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                checkSpan();
-            }
-        };
+        InvalidationListener listener = observable -> checkSpan();
         parentProperty().addListener(listener);
         managedProperty().addListener(listener);
-        effectiveNodeOrientationProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                checkOrientation();
-            }
-        });
+        effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
         setPickOnBounds(true);
     }
 
@@ -257,15 +249,13 @@ public class Text extends Shape {
          * extra work is necessary. Other times the layout is caused by changes
          * in the text flow object (wrapping width and text alignment for example).
          * In the second case the dirty bits must be set here using
-         * needsTextLayout(). Note that needsTextLayout() uses impl_geomChanged()
-         * which causes another (undesired) layout request in the parent.
-         * In general this is not a problem because shapes are not resizable and
-         * region do not propagate layout changes to the parent.
+         * geomChanged() and impl_markDirty().
          * This is a special case where a shape is resized by the parent during
-         * layoutChildren().  See TextFlow#requestLayout() for information how
+         * layoutChildren(). See TextFlow#requestLayout() for information how
          * text flow deals with this situation.
          */
-        needsTextLayout();
+        geomChanged();
+        impl_markDirty(DirtyBits.NODE_CONTENTS);
 
         spanBoundsInvalid = true;
         int count = 0;
@@ -407,6 +397,7 @@ public class Text extends Shape {
                     if ((value == null) && !isBound()) {
                         set("");
                     }
+                    accSendNotification(Attribute.TITLE);
                 }
             };
         }
@@ -770,6 +761,10 @@ public class Text extends Shape {
     @Override
     protected final void impl_geomChanged() {
         super.impl_geomChanged();
+        geomChanged();
+    }
+
+    private void geomChanged() {
         if (attributes != null) {
             if (attributes.impl_caretBinding != null) {
                 attributes.impl_caretBinding.invalidate();
@@ -1506,17 +1501,6 @@ public class Text extends Shape {
         updatePGText();
     }
 
-    private AccessibleNode accText ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated public AccessibleProvider impl_getAccessible() {
-        if( accText == null)
-            accText = new AccessibleText(this);
-        return (AccessibleProvider)accText ;
-    }
-
     /***************************************************************************
      *                                                                         *
      *                       Seldom Used Properties                            *
@@ -1753,6 +1737,7 @@ public class Text extends Shape {
                         @Override public String getName() { return "impl_selectionStart"; }
                         @Override protected void invalidated() {
                             impl_markDirty(DirtyBits.TEXT_SELECTION);
+                            accSendNotification(Attribute.SELECTION_START);
                         }
                 };
             }
@@ -1776,6 +1761,7 @@ public class Text extends Shape {
                         @Override public String getName() { return "impl_selectionEnd"; }
                         @Override protected void invalidated() {
                             impl_markDirty(DirtyBits.TEXT_SELECTION);
+                            accSendNotification(Attribute.SELECTION_END);
                         }
                     };
             }
@@ -1822,7 +1808,13 @@ public class Text extends Shape {
         public final IntegerProperty impl_caretPositionProperty() {
             if (impl_caretPosition == null) {
                 impl_caretPosition =
-                        new SimpleIntegerProperty(Text.this, "impl_caretPosition", DEFAULT_CARET_POSITION);
+                    new IntegerPropertyBase(DEFAULT_CARET_POSITION) {
+                        @Override public Object getBean() { return Text.this; }
+                        @Override public String getName() { return "impl_caretPosition"; }
+                        @Override protected void invalidated() {
+                            accSendNotification(Attribute.SELECTION_END);
+                        }
+                    };
             }
             return impl_caretPosition;
         }
@@ -1894,5 +1886,91 @@ public class Text extends Shape {
         }
 
         return sb.append("]").toString();
+    }
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TEXT;
+            case TITLE: return getText();
+            case FONT: return getFont();
+            case CARET_OFFSET: {
+                int sel = getImpl_caretPosition();
+                if (sel >=  0) return sel;
+                return getText().length();
+            }
+            case SELECTION_START: {
+                int sel = getImpl_selectionStart();
+                if (sel >=  0) return sel;
+                sel = getImpl_caretPosition();
+                if (sel >=  0) return sel;
+                return getText().length();
+            }
+            case SELECTION_END:  {
+                int sel = getImpl_selectionEnd();
+                if (sel >=  0) return sel;
+                sel = getImpl_caretPosition();
+                if (sel >=  0) return sel;
+                return getText().length();
+            }
+            case LINE_FOR_OFFSET: {
+                int offset = (Integer)parameters[0];
+                if (offset > getTextInternal().length()) return null;
+                TextLine[] lines = getTextLayout().getLines();
+                int lineIndex = 0;
+                for (int i = 1; i < lines.length; i++) {
+                    TextLine line = lines[i];
+                    if (line.getStart() > offset) break;
+                    lineIndex++;
+                }
+                return lineIndex;
+            }
+            case LINE_START: {
+                int lineIndex = (Integer)parameters[0];
+                TextLine[] lines = getTextLayout().getLines();
+                if (0 <= lineIndex && lineIndex < lines.length) {
+                    TextLine line = lines[lineIndex];
+                    return line.getStart();
+                }
+                return null;
+            }
+            case LINE_END: {
+                int lineIndex = (Integer)parameters[0];
+                TextLine[] lines = getTextLayout().getLines();
+                if (0 <= lineIndex && lineIndex < lines.length) {
+                    TextLine line = lines[lineIndex];
+                    return line.getStart() + line.getLength();
+                }
+                return null;
+            }
+            case OFFSET_AT_POINT: {
+                Point2D point = (Point2D)parameters[0];
+                point = screenToLocal(point);
+                return impl_hitTestChar(point).getCharIndex();
+            }
+            case BOUNDS_FOR_RANGE: {
+                int start = (Integer)parameters[0];
+                int end = (Integer)parameters[1];
+                PathElement[] elements = impl_getRangeShape(start, end + 1);
+                /* Each bounds is defined by a MoveTo (top-left) followed by 
+                 * 4 LineTo (to top-right, bottom-right, bottom-left, back to top-left).
+                 */
+                Bounds[] bounds = new Bounds[elements.length / 5];
+                int index = 0;
+                for (int i = 0; i < bounds.length; i++) {
+                    MoveTo topLeft = (MoveTo)elements[index];
+                    LineTo topRight = (LineTo)elements[index+1];
+                    LineTo bottomRight = (LineTo)elements[index+2];
+                    BoundingBox b = new BoundingBox(topLeft.getX(), topLeft.getY(), 
+                                                    topRight.getX() - topLeft.getX(),
+                                                    bottomRight.getY() - topRight.getY());
+                    bounds[i] = localToScreen(b);
+                    index += 5;
+                }
+                return bounds;
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

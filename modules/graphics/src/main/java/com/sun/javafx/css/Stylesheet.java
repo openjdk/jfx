@@ -242,15 +242,10 @@ public class Stylesheet {
         if (url == null) return null;
 
         Stylesheet stylesheet = null;
-        InputStream inputStream = null;
-        BufferedInputStream bufferedInputStream = null;
-        DataInputStream dataInputStream = null;
-        try {
-            inputStream = url.openStream();
-            // current bss file is 33k so this leaves a little scope at 40k
-            bufferedInputStream = new BufferedInputStream(inputStream, 40 * 1024);
 
-            dataInputStream = new DataInputStream(bufferedInputStream);
+        try (DataInputStream dataInputStream =
+                     new DataInputStream(new BufferedInputStream(url.openStream(), 40 * 1024))) {
+
             // read file version
             final int bssVersion = dataInputStream.readShort();
             if (bssVersion > Stylesheet.BINARY_CSS_VERSION) {
@@ -263,7 +258,6 @@ public class Stylesheet {
             // read binary data
             stylesheet = new Stylesheet(url.toExternalForm());
 
-            boolean retry = false;
             try {
 
                 dataInputStream.mark(Integer.MAX_VALUE);
@@ -286,11 +280,6 @@ public class Stylesheet {
         } catch (FileNotFoundException fnfe) {
             // This comes from url.openStream() and is expected.
             // It just means that the .bss file doesn't exist.
-        } finally {
-            try {
-                if (dataInputStream != null) dataInputStream.close();
-            } catch (IOException ignored) {
-            }
         }
 
         // return stylesheet

@@ -271,11 +271,8 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
                                 sampleButton.setContentDisplay(ContentDisplay.TOP);
                                 sampleButton.setText(sample.name);
                                 sampleButton.setGraphic(sample.getMediumPreview());
-                                sampleButton.setOnAction(new EventHandler<ActionEvent>() {
-                                    
-                                    @Override public void handle(ActionEvent actionEvent) {
-                                        pageBrowser.goToSample(sample);
-                                    }
+                                sampleButton.setOnAction((ActionEvent actionEvent) -> {
+                                    pageBrowser.goToSample(sample);
                                 });
                                 buttonCache.put(sample, sampleButton);
                             }
@@ -300,11 +297,8 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
             sampleButton.getStyleClass().setAll("sample-button");
             sampleButton.setGraphic(Samples.HIGHLIGHTS[highlightIndex].getLargePreview());
             sampleButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-            sampleButton.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent actionEvent) {
-//                    System.out.println("Clicked " + Samples.HIGHLIGHTS[highlightIndex].name);
-                    pageBrowser.goToSample(Samples.HIGHLIGHTS[highlightIndex]);
-                }
+            sampleButton.setOnAction((ActionEvent actionEvent) -> {
+                pageBrowser.goToSample(Samples.HIGHLIGHTS[highlightIndex]);
             });
             return sampleButton;
         }

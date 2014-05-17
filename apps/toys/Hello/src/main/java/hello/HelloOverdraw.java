@@ -27,12 +27,9 @@ package hello;
 
 import javafx.animation.RotateTransition;
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
@@ -81,19 +78,16 @@ public class HelloOverdraw extends Application {
         stage.setScene(scene);
         stage.show();
 
-        scene.setOnKeyReleased(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent event) {
-                switch (event.getCode()) {
-                    case DIGIT0: toggle(russianDolls0); break;
-                    case DIGIT1: toggle(russianDolls1); break;
-                    case DIGIT2: toggle(russianDolls2); break;
-                    case DIGIT3: toggle(russianDolls3); break;
-                    case DIGIT4: toggle(russianDolls4); break;
-                    case DIGIT5: toggle(russianDolls5); break;
-                    case DIGIT6: toggle(russianDolls6); break;
-                    case DIGIT7: toggle(russianDolls7); break;
-                }
+        scene.setOnKeyReleased(event -> {
+            switch (event.getCode()) {
+                case DIGIT0: toggle(russianDolls0); break;
+                case DIGIT1: toggle(russianDolls1); break;
+                case DIGIT2: toggle(russianDolls2); break;
+                case DIGIT3: toggle(russianDolls3); break;
+                case DIGIT4: toggle(russianDolls4); break;
+                case DIGIT5: toggle(russianDolls5); break;
+                case DIGIT6: toggle(russianDolls6); break;
+                case DIGIT7: toggle(russianDolls7); break;
             }
         });
     }
@@ -138,26 +132,13 @@ public class HelloOverdraw extends Application {
         r.setArcHeight(20);
         r.setArcWidth(20);
         r.setFill(c);
-        r.setOnMouseEntered(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                squareUp(r);
-            }
-        });
-        r.setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                round(r);
-            }
-        });
-        r.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                if (event.isMetaDown()) {
-                    rotate3D(r);
-                } else {
-                    rotate(r);
-                }
+        r.setOnMouseEntered(event -> squareUp(r));
+        r.setOnMouseExited(event -> round(r));
+        r.setOnMouseClicked(event -> {
+            if (event.isMetaDown()) {
+                rotate3D(r);
+            } else {
+                rotate(r);
             }
         });
         return r;

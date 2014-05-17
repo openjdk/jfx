@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.scene.Node;
 
 /**
@@ -45,10 +44,8 @@ public class DoubleFieldSkin extends InputFieldSkin {
         // Whenever the value changes on the control, we need to update the text
         // in the TextField. The only time this is not the case is when the update
         // to the control happened as a result of an update in the text textField.
-        control.valueProperty().addListener(doubleFieldValueListener = new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                updateText();
-            }
+        control.valueProperty().addListener(doubleFieldValueListener = observable -> {
+            updateText();
         });
     }
 
@@ -101,10 +98,8 @@ public class DoubleFieldSkin extends InputFieldSkin {
         } catch (NumberFormatException ex) {
             // Empty string most likely
             ((DoubleField) control).setValue(0);
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    getTextField().positionCaret(1);
-                }
+            Platform.runLater(() -> {
+                getTextField().positionCaret(1);
             });
         }
     }

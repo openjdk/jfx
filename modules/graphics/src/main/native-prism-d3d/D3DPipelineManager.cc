@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,6 +72,7 @@ D3DPipelineManager::D3DPipelineManager(IConfig &cfg)
     pd3d9Ex = NULL;
     pAdapters = NULL;
     adapterCount = 0;
+    isVsyncEnabled = cfg.getBool("isVsyncEnabled");
 
     devType = SelectDeviceType();
 
@@ -204,12 +205,36 @@ BOOL D3DPPLM_OsVersionMatches(USHORT osInfo) {
         if (bVersOk && osvi.dwPlatformId == VER_PLATFORM_WIN32_NT &&
             osvi.dwMajorVersion > 4)
         {
-            if (osvi.dwMajorVersion >= 6 && osvi.dwMinorVersion >= 0) {
+            if (osvi.dwMajorVersion > 6 || (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion >= 3)) {
                 if (osvi.wProductType == VER_NT_WORKSTATION) {
-                    RlsTrace(NWT_TRACE_INFO, "OS_VISTA or newer\n");
+                    RlsTrace(NWT_TRACE_INFO, "OS_WIN8.1 or newer\n");
+                    currentOS = OS_WIN81;
+                } else {
+                    RlsTrace(NWT_TRACE_INFO, "OS_WINSERV_2012_R2 or newer\n");
+                    currentOS = OS_WINSERV_2012_R2;
+                }
+            } else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 2) {
+                if (osvi.wProductType == VER_NT_WORKSTATION) {
+                    RlsTrace(NWT_TRACE_INFO, "OS_WIN8\n");
+                    currentOS = OS_WIN8;
+                } else {
+                    RlsTrace(NWT_TRACE_INFO, "OS_WINSERV_2012\n");
+                    currentOS = OS_WINSERV_2012;
+                }
+            } else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1) {
+                if (osvi.wProductType == VER_NT_WORKSTATION) {
+                    RlsTrace(NWT_TRACE_INFO, "OS_WIN7\n");
+                    currentOS = OS_WIN7;
+                } else {
+                    RlsTrace(NWT_TRACE_INFO, "OS_WINSERV_2008_R2\n");
+                    currentOS = OS_WINSERV_2008_R2;
+                }
+            } else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 0) {
+                if (osvi.wProductType == VER_NT_WORKSTATION) {
+                    RlsTrace(NWT_TRACE_INFO, "OS_VISTA\n");
                     currentOS = OS_VISTA;
                 } else {
-                    RlsTrace(NWT_TRACE_INFO, "OS_WINSERV_2008 or newer\n");
+                    RlsTrace(NWT_TRACE_INFO, "OS_WINSERV_2008\n");
                     currentOS = OS_WINSERV_2008;
                 }
             } else if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 2) {
@@ -585,7 +610,7 @@ HRESULT D3DPipelineManager::GetD3DContext(UINT adapterOrdinal,
                         "  initializing context for adapter %d",adapterOrdinal);
 
             if (SUCCEEDED(res = D3DEnabledOnAdapter(adapterOrdinal))) {
-                res = D3DContext::CreateInstance(pd3d9, pd3d9Ex, adapterOrdinal, &pCtx);
+                res = D3DContext::CreateInstance(pd3d9, pd3d9Ex, adapterOrdinal, isVsyncEnabled, &pCtx);
                 if (FAILED(res)) {
                     RlsTraceLn1(NWT_TRACE_ERROR,
                         "D3DPPLM::GetD3DContext: failed to create context "\

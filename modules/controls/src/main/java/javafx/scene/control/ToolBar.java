@@ -31,16 +31,20 @@ import java.util.List;
 
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
-
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.ToolBarSkin;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -113,7 +117,7 @@ public class ToolBar extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         
         // initialize css pseudo-class state
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
@@ -194,8 +198,6 @@ public class ToolBar extends Control {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "tool-bar";
-    private static final String PSEUDO_CLASS_VERTICAL = "vertical";
-    private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
 
     private static class StyleableProperties {
         private static final CssMetaData<ToolBar,Orientation> ORIENTATION = 
@@ -216,7 +218,7 @@ public class ToolBar extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(ToolBar n) {
-                return (StyleableProperty<Orientation>)n.orientationProperty();
+                return (StyleableProperty<Orientation>)(WritableValue<Orientation>)n.orientationProperty();
             }
         };
 
@@ -262,4 +264,19 @@ public class ToolBar extends Control {
         return Boolean.FALSE;
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TOOLBAR;
+            case OVERFLOW_BUTTON: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

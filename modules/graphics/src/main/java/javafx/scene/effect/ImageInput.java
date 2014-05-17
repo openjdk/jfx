@@ -25,6 +25,7 @@
 
 package javafx.scene.effect;
 
+import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -32,6 +33,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
 
+import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.effect.EffectDirtyBits;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
@@ -91,12 +93,40 @@ public class ImageInput extends Effect {
         return source == null ? null : source.get();
     }
 
+    private final AbstractNotifyListener platformImageChangeListener =
+        new AbstractNotifyListener() {
+            @Override
+            public void invalidated(Observable valueModel) {
+                markDirty(EffectDirtyBits.EFFECT_DIRTY);
+                effectBoundsChanged();
+            }
+        };
+    private Image oldImage;
     public final ObjectProperty<Image> sourceProperty() {
         if (source == null) {
             source = new ObjectPropertyBase<Image>() {
 
+                private boolean needsListeners = false;
+
                 @Override
                 public void invalidated() {
+                    Image _image = get();
+
+                    Toolkit.ImageAccessor accessor = Toolkit.getImageAccessor();
+
+                    if (needsListeners) {
+                        accessor.getImageProperty(oldImage).
+                                removeListener(platformImageChangeListener.getWeakListener());
+                    }
+
+                    needsListeners = _image != null && (accessor.isAnimation(_image) ||
+                                                        _image.getProgress() < 1);
+                    oldImage = _image;
+
+                    if (needsListeners) {
+                        accessor.getImageProperty(_image).
+                                addListener(platformImageChangeListener.getWeakListener());
+                    }
                     markDirty(EffectDirtyBits.EFFECT_DIRTY);
                     effectBoundsChanged();
                 }

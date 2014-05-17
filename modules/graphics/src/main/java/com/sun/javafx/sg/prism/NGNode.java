@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrEffectHelper;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
@@ -161,7 +161,7 @@ public abstract class NGNode {
      * essentially the rectangle formed by the union of the dirtyBounds
      * and the transformedBounds.
      */
-    private BaseBounds dirtyBounds = new RectBounds();
+    BaseBounds dirtyBounds = new RectBounds();
 
     /**
      * Whether the node is visible. We need to know about the visibility of
@@ -356,6 +356,9 @@ public abstract class NGNode {
      * @param tx must not be null
      */
     public void setTransformMatrix(BaseTransform tx) {
+        if (transform.equals(tx)) {
+            return;
+        }
         // If the transform matrix has changed, then we need to update it,
         // and mark this node as dirty. If this node is cached, we DO NOT
         // invalidate the cache. The cacheFilter will compare its cached
@@ -368,7 +371,7 @@ public abstract class NGNode {
         boolean useHint = false;
 
         // If the parent is cached, try to check if the transformation is only a translation
-        if (parent != null && parent.cacheFilter != null) {
+        if (parent != null && parent.cacheFilter != null && PrismSettings.scrollCacheOpt) {
             if (hint == null) {
                 // If there's no hint created yet, this is the first setTransformMatrix
                 // call and we have nothing to compare to yet.
@@ -1263,6 +1266,9 @@ public abstract class NGNode {
                                           final BaseTransform tx,
                                           final GeneralTransform3D pvTx)
     {
+        if (cacheFilter != null) {
+            return cacheFilter.computeDirtyBounds(dirtyRegionTemp, tx, pvTx);
+        }
         // The passed in region is a scratch object that exists for me to use,
         // such that I don't have to create a temporary object. So I just
         // hijack it right here to start with. Note that any of the calls
@@ -1281,16 +1287,16 @@ public abstract class NGNode {
             // the group exceeds the bounds of the clip on the group. Just trust me.
             region = region.deriveWithNewBounds(transformedBounds);
         }
-
+        
         // We shouldn't do anything with empty region, as we may accidentally make
         // it non empty or turn it into some nonsense (like (-1,-1,0,0) )
         if (!region.isEmpty()) {
-            // Now that we have the dirty region, we will simply apply the tx
-            // to it (after slightly padding it for good luck) to get the scene
-            // coordinates for this.
-            region = computePadding(region);
-            region = tx.transform(region, region);
-            region = pvTx.transform(region, region);
+                // Now that we have the dirty region, we will simply apply the tx
+                // to it (after slightly padding it for good luck) to get the scene
+                // coordinates for this.
+                region = computePadding(region);
+                region = tx.transform(region, region);
+                region = pvTx.transform(region, region);
         }
         return region;
     }
@@ -1939,7 +1945,9 @@ public abstract class NGNode {
      * @param g The graphics object we're rendering to. This must never be null.
      */
     public final void render(Graphics g) {
-        if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.renderIncrementCounter("Nodes visited during render");
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.incrementCounter("Nodes visited during render");
+        }
         // Clear the visuals changed flag
         clearDirty();
         // If it isn't visible, then punt
@@ -1949,6 +1957,22 @@ public abstract class NGNode {
         // doRender method, which subclasses implement to do the actual
         // rendering work.
         doRender(g);
+    }
+
+    /**
+     * Called on every render pulse for all nodes in case they have render-time
+     * operations that must be completed on a pulse, but were not otherwise
+     * rendered by the ordinary damage management logic.
+     * The graphics argument will be the graphics that was used to render the
+     * scene if it is available, but may be null for cases when the scene
+     * required no visible updates and thus no back buffer graphics was
+     * actually obtained.  Implementors must have a backup plan for that
+     * case when the Graphics object is null.
+     * 
+     * @param gOptional the Graphics object that was used to render the
+     *                  Scene, or null
+     */
+    public void renderForcedContent(Graphics gOptional) {
     }
 
     // This node requires 2D graphics state for rendering
@@ -2058,7 +2082,9 @@ public abstract class NGNode {
         // restore previous depth test state
         g.setDepthTest(prevDepthTest);
 
-        if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.renderIncrementCounter("Nodes rendered");
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.incrementCounter("Nodes rendered");
+        }
 
         // Used for debug purposes. This is not entirely accurate, as it doesn't measure the
         // number of times this node drew to the pixels, and in some cases reports a node as
@@ -2462,7 +2488,7 @@ public abstract class NGNode {
             }
         }
     }
-
+    
     public void applyEffect(final EffectFilter effectFilter, DirtyRegionContainer drc, DirtyRegionPool regionPool) {
         Effect effect = effectFilter.getEffect();
         EffectDirtyBoundsHelper helper = EffectDirtyBoundsHelper.getInstance();

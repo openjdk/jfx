@@ -1146,8 +1146,8 @@ public class Tiger extends Region {
      * Spits out the Java code needed to draw the tiger. Just feed it the Tiger.svg file,
      * copy the output and replace the code in the constructor with the output.
      *
-     * @param args
-     * @throws Exception
+     * @param args main arguments
+     * @throws Exception exceptions from XML parsing
      */
     public static void main(String[] args) throws Exception {
         File file = new File(Tiger.class.getResource("Tiger.svg").toURI());

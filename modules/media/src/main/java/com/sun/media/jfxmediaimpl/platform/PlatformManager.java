@@ -47,11 +47,9 @@ import java.util.List;
 public final class PlatformManager {
     private static String enabledPlatforms;
     static {
-        AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
-                getPlatformSettings();
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction) () -> {
+            getPlatformSettings();
+            return null;
         });
     }
 

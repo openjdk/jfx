@@ -54,10 +54,7 @@ public final class Node_properties_Test extends PropertiesTestBase {
         testParent.getChildren().add(testNode);
         
         final EventHandler testEventHandler =
-                new EventHandler<Event>() {
-                    @Override
-                    public void handle(Event event) {
-                    }
+                event -> {
                 };
 
         return Arrays.asList(new Object[] {

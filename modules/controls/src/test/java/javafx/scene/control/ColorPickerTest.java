@@ -146,9 +146,7 @@ public class ColorPickerTest {
     }
      
     @Test public void ensureCanSetOnAction() {
-        EventHandler<ActionEvent> onAction = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) { }
-        };
+        EventHandler<ActionEvent> onAction = t -> { };
         colorPicker.setOnAction(onAction);
         assertEquals(onAction, colorPicker.getOnAction());
     }
@@ -199,6 +197,7 @@ public class ColorPickerTest {
         Hyperlink hyperlink = ColorPickerPaletteRetriever.getCustomColorLink(colorPalette);
         MouseEventFirer mouse = new MouseEventFirer(hyperlink);
         mouse.fireMousePressAndRelease();
+        mouse.dispose();
 
         Stage dialog = ColorPickerPaletteRetriever.getCustomColorDialog(colorPalette);
         assertNotNull(dialog);

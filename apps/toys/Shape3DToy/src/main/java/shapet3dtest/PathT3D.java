@@ -30,11 +30,9 @@ import javafx.animation.RotateTransition;
 import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcTo;
 import javafx.scene.shape.HLineTo;
@@ -63,24 +61,9 @@ public class PathT3D extends Application {
         path.getElements().clear();
         path.getElements().addAll(new MoveTo(10.0F, 50.0F), new HLineTo(70.0F), new QuadCurveTo(100.0F, 0.0F, 120.0F, 60.0F), new LineTo(175.0F, 55.0F), arcto);
         path.setFill(Color.BLUE);
-        path.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Mouse Clicked:" + e);
-                }
-            });
-        path.setOnMouseEntered(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Mouse Entered");
-                }
-            });
-        path.setOnMouseExited(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Mouse Exited");
-                }
-            });
+        path.setOnMouseClicked(e -> System.out.println("Mouse Clicked:" + e));
+        path.setOnMouseEntered(e -> System.out.println("Mouse Entered"));
+        path.setOnMouseExited(e -> System.out.println("Mouse Exited"));
         group.getChildren().addAll(path);
         ((Group)scene.getRoot()).getChildren().addAll(group);
         stage.setScene(scene);

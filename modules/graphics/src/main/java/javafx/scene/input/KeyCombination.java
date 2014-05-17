@@ -275,6 +275,52 @@ public abstract class KeyCombination {
     }
 
     /**
+     * Returns a string representation of this {@code KeyCombination} that is
+     * suitable for display in a user interface (for example, beside a menu item).
+     *
+     * @return A string representation of this {@code KeyCombination}, suitable
+     *      for display in a user interface.
+     * @since JavaFX 8u20
+     */
+    public String getDisplayText() {
+        StringBuilder stringBuilder = new StringBuilder();
+        if (com.sun.javafx.PlatformUtil.isMac()) {
+            // Macs have a different convention for keyboard accelerators -
+            // no pluses to separate modifiers, and special symbols for
+            // each modifier (in a particular order), etc
+            if (getControl() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("\u2303");
+            }
+            if (getAlt() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("\u2325");
+            }
+            if (getShift() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("\u21e7");
+            }
+            if (getMeta() == KeyCombination.ModifierValue.DOWN || getShortcut() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("\u2318");
+            }
+            // TODO refer to RT-14486 for remaining glyphs
+        }
+        else {
+            if (getControl() == KeyCombination.ModifierValue.DOWN || getShortcut() == KeyCombination.ModifierValue.DOWN ) {
+                stringBuilder.append("Ctrl+");
+            }
+            if (getAlt() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("Alt+");
+            }
+            if (getShift() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("Shift+");
+            }
+            if (getMeta() == KeyCombination.ModifierValue.DOWN) {
+                stringBuilder.append("Meta+");
+            }
+        }
+
+        return stringBuilder.toString();
+    }
+
+    /**
      * Tests whether this {@code KeyCombination} equals to the specified object.
      *
      * @param obj the object to compare to

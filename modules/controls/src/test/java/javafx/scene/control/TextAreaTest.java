@@ -153,14 +153,14 @@ public class TextAreaTest {
         txtArea.setStyle("-fx-pref-column-count: 100");
         Scene s = new Scene(txtArea);
         txtArea.impl_processCSS(true);
-        assertEquals(100, txtArea.getPrefColumnCount(), 0);
+        assertEquals(100, txtArea.getPrefColumnCount());
     }
 
     @Test public void prefRowCountSetFromCSS() {
         txtArea.setStyle("-fx-pref-row-count: 100");
         Scene s = new Scene(txtArea);
         txtArea.impl_processCSS(true);
-        assertEquals(100, txtArea.getPrefRowCount(), 0);
+        assertEquals(100, txtArea.getPrefRowCount());
     }
 
     /*********************************************************************

@@ -27,11 +27,12 @@ package com.sun.scenario.effect;
 
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * A filter that produces a sepia tone effect, similar to antique photographs.
  */
-public class SepiaTone extends CoreEffect {
+public class SepiaTone extends CoreEffect<RenderState> {
 
     private float level;
 
@@ -111,14 +112,13 @@ public class SepiaTone extends CoreEffect {
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
-        // Trivially, this effect simply modifies the colors of the pixels
-        // of the input on a 1:1 basis so the input clip is the same as the
-        // output clip.
-        return outputClip;
+        return RenderState.RenderSpaceRenderState;
     }
 
     @Override

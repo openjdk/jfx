@@ -32,6 +32,7 @@ import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * An effect that renders a rectangular region that is filled ("flooded")
@@ -39,7 +40,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
  * filled rectangle into an image and using an {@code Identity} effect,
  * except that it is more convenient and potentially much more efficient.
  */
-public class Flood extends CoreEffect {
+public class Flood extends CoreEffect<RenderState> {
 
     private Object paint;
     private RectBounds bounds = new RectBounds();
@@ -164,12 +165,16 @@ public class Flood extends CoreEffect {
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
-        // TODO: Intersect with the flood bounds?
-        return outputClip;
+        // TODO: Intersect with the flood bounds?  For now just use the
+        // stock RenderSpaceRenderState which performs no modifications
+        // on the output bounds for its inputs.
+        return RenderState.RenderSpaceRenderState;
     }
 
     @Override

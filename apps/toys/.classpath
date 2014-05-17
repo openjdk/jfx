@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+    <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+    <classpathentry kind="src" path="FX8-3DFeatures/src"/>
+    <classpathentry kind="src" path="FXSlideShow/src"/>
+    <classpathentry kind="src" path="Hello/src/main/java"/>
+    <!--
+    <classpathentry kind="src" path="iOS/iPodAccessTest/src"/>
+    <classpathentry kind="src" path="iOS/SensorsTest/src"/>
+    -->
+    <classpathentry kind="src" path="Shape3DToy/src/main/java"/>
+    <classpathentry kind="src" path="Shape3DToy/src/main/resources"/>
+    <classpathentry kind="src" path="StretchyGrid/src/main/java"/>
+    <classpathentry combineaccessrules="false" kind="src" path="/rt">
+    <attributes>
+        <attribute name="optional" value="true"/>
+        </attributes>
+    </classpathentry>
+    <classpathentry kind="output" path="bin"/>
+</classpath>

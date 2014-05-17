@@ -2274,11 +2274,7 @@ public class Mouse3DTest {
         MouseEventGenerator g = new MouseEventGenerator();
         final Box b1 = box().handleFullPDR(MouseDragEvent.MOUSE_DRAG_EXITED, smde);
         b1.setTranslateX(55);
-        b1.setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                b1.startFullDrag();
-            }
-        });
+        b1.setOnDragDetected(event -> b1.startFullDrag());
 
         Box b2 = box().handleFullPDR(MouseDragEvent.MOUSE_DRAG_ENTERED, tmde)
                 .handleFullPDR(MouseDragEvent.MOUSE_DRAG_OVER, tmde2);
@@ -2391,10 +2387,8 @@ public class Mouse3DTest {
         stage.setScene(scene);
         stage.show();
 
-        b.setOnMouseMoved(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                me.event = event;
-            }
+        b.setOnMouseMoved(event -> {
+            me.event = event;
         });
 
         me.event = null;
@@ -2573,10 +2567,8 @@ public class Mouse3DTest {
 
     private static void doHandleMove(Node node, final EventHolder<MouseEvent> holder) {
         holder.event = null;
-        node.setOnMouseMoved(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                holder.event = event;
-            }
+        node.setOnMouseMoved(event -> {
+            holder.event = event;
         });
     }
 
@@ -2592,10 +2584,8 @@ public class Mouse3DTest {
 
         public TestScene handleMove(final EventHolder<MouseEvent> holder) {
             holder.event = null;
-            setOnMouseMoved(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    holder.event = event;
-                }
+            setOnMouseMoved(event -> {
+                holder.event = event;
             });
             return this;
         }
@@ -2650,10 +2640,8 @@ public class Mouse3DTest {
 
         public TestBox handleDrag(final EventHolder<MouseEvent> holder) {
             holder.event = null;
-            setOnMouseDragged(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    holder.event = event;
-                }
+            setOnMouseDragged(event -> {
+                holder.event = event;
             });
             return this;
         }
@@ -2661,10 +2649,8 @@ public class Mouse3DTest {
         public TestBox handle(final EventType<MouseEvent> type,
                 final EventHolder<MouseEvent> holder) {
             holder.event = null;
-            addEventHandler(type, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    holder.event = event;
-                }
+            addEventHandler(type, event -> {
+                holder.event = event;
             });
             return this;
         }
@@ -2672,10 +2658,8 @@ public class Mouse3DTest {
         public TestBox handleFullPDR(final EventType<MouseDragEvent> type,
                 final EventHolder<MouseDragEvent> holder) {
             holder.event = null;
-            addEventHandler(type, new EventHandler<MouseDragEvent>() {
-                @Override public void handle(MouseDragEvent event) {
-                    holder.event = event;
-                }
+            addEventHandler(type, event -> {
+                holder.event = event;
             });
             return this;
         }

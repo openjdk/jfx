@@ -518,11 +518,9 @@ public abstract class ScheduledService<V> extends Service<V> {
         assert task != null;
         return new TimerTask() {
             @Override public void run() {
-                Runnable r = new Runnable() {
-                    @Override public void run() {
-                        executeTaskNow(task);
-                        delayTask = null;
-                    }
+                Runnable r = () -> {
+                    executeTaskNow(task);
+                    delayTask = null;
                 };
 
                 // We must make sure that executeTaskNow is called from the FX thread.

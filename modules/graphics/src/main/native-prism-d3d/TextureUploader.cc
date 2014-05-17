@@ -58,19 +58,6 @@ void TextureUpdater::transferRGBtoA8R8G8B8( BYTE const *pSrcPixels, int srcStrid
     }
 }
 
-bool TextureUpdater::isConversionNeeded() const {
-    switch (format) {
-    case PFORMAT_INT_ARGB_PRE:
-    case PFORMAT_BYTE_RGBA_PRE:
-        return srcStride != 4*srcW ||
-            (pDesc->Format != D3DFMT_A8R8G8B8 && pDesc->Format != D3DFMT_X8R8G8B8);
-    case PFORMAT_FLOAT_XYZW:
-        return srcStride != 16*srcW || pDesc->Format != D3DFMT_A32B32G32R32F;
-    default:
-        return true;
-    }
-}
-
 void TextureUpdater::unimplementedError() {
     RlsTrace(NWT_TRACE_ERROR, "Texture transfer is not implemented\n");
 }
@@ -162,52 +149,27 @@ int TextureUpdater::updateLockableTexture() {
     return numTransferBytes;
 }
 
-int TextureUpdater::updateD3D9ExTexture(IDirect3DDevice9 *pDev) {
-    IDirect3DTexture9 * temp = 0;
-    HANDLE pData = isConversionNeeded() ? 0 : data;
-    HRESULT hr = pDev->CreateTexture(srcW, srcH, 1, 0, pDesc->Format, D3DPOOL_SYSTEMMEM, &temp, pData ? &pData : 0);
+int TextureUpdater::updateD3D9ExTexture(D3DContext *pCtx) {
+    IDirect3DSurface9 *tempSurface = NULL;
+    IDirect3DTexture9 *tempTexture = pCtx->getTextureCache(format, pDesc->Format, srcW, srcH, &tempSurface);
     int size = 0;
 
-    if (SUCCEEDED(hr)) {
+    if (tempTexture && tempSurface && pSurface) {
         // need to upload data into the system texture
-        if (pData == 0) {
-            TextureUpdater updater;
-            updater.setTarget(temp, pDesc, 0, 0);
-            updater.setSource(data, srcSize, format, 0, 0, srcW, srcH, srcStride);
-            size = updater.updateLockableTexture();
-        } else {
-            size = getPixelSize(format) * srcW * srcH;
-        }
 
-        if (srcW == pDesc->Width && srcH == pDesc->Height && dstX==0 && dstY==0) {
-            hr = pDev->UpdateTexture(temp, pTexture);
-            if (FAILED(hr)) {
-                RlsTraceLn1(NWT_TRACE_ERROR, "Failed to update texture: %08X", hr);
-                size = 0;
-            }
-        } else {
-            IDirect3DSurface9 *src = 0, *dst = 0;
-            HRESULT hr1 = temp->GetSurfaceLevel(0, &src);
-            HRESULT hr2 = pTexture->GetSurfaceLevel(0, &dst);
-            if (SUCCEEDED(hr1) && SUCCEEDED(hr2)) {
-                RECT sRect = { 0, 0, srcW, srcH };
-                POINT dPos = { dstX, dstY };
-                hr = pDev->UpdateSurface( src, &sRect, dst, &dPos);
-                if (FAILED(hr)) {
-                    RlsTraceLn1(NWT_TRACE_ERROR, "Failed to update surface: %08X", hr);
-                    size = 0;
-                }
-            } else {
-                RlsTraceLn1(NWT_TRACE_ERROR, "Failed to get surfaceLevel 0x%08X", (hr1 | hr2));
-            }
-            SafeRelease(src); SafeRelease(dst);
+        TextureUpdater updater;
+        updater.setTarget(tempTexture, tempSurface, pDesc, 0, 0);
+        updater.setSource(data, srcSize, format, 0, 0, srcW, srcH, srcStride);
+        size = updater.updateLockableTexture();
+
+        RECT sRect = { 0, 0, srcW, srcH };
+        POINT dPos = { dstX, dstY };
+        HRESULT hr = pCtx->Get3DExDevice()->UpdateSurface(tempSurface, &sRect, pSurface, &dPos);
+        if (FAILED(hr)) {
+            RlsTraceLn1(NWT_TRACE_ERROR, "Failed to update surface: %08X", hr);
+            size = 0;
         }
-    } else {
-        RlsTraceLn1(NWT_TRACE_ERROR, "Failed to create system memory texture for update operation: %08X", hr);
-        return 0;
     }
-
-    SafeRelease(temp);
 
     return size;
 }

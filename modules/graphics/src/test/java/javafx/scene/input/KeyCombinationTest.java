@@ -501,4 +501,66 @@ public class KeyCombinationTest {
         assertEquals("Alt'Q'\\'",
                 ((KeyCharacterCombination) multiChar).getCharacter());
     }
+
+
+
+
+    // ------ Tests for getDisplayText() method
+
+    private void assertPlatformEquals(String expectedWin, String expectedMac, String actual) {
+        if (com.sun.javafx.PlatformUtil.isMac()) {
+            assertEquals(expectedMac, actual);
+        } else {
+            assertEquals(expectedWin, actual);
+        }
+    }
+
+    private void assertPlatformEquals(KeyCombination expectedWin, KeyCombination expectedMac, KeyCombination actual) {
+        if (com.sun.javafx.PlatformUtil.isMac()) {
+            assertEquals(expectedMac.getDisplayText(), actual.getDisplayText());
+        } else {
+            assertEquals(expectedWin.getDisplayText(), actual.getDisplayText());
+        }
+    }
+
+    /*
+     * check that a KeyCombination constructed with a KeyCodeCombination
+     * and one constucted with a KeyCharacterCombination will have
+     * the same text if they are for the same key.
+     */
+    @Test public void SameDisplayStringKeyCombinationForCharOrCode() {
+        KeyCodeCombination acceleratorKeyComboACode = new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN);
+        KeyCharacterCombination acceleratorKeyComboAChar = new KeyCharacterCombination("A", KeyCombination.CONTROL_DOWN);
+        assertEquals(acceleratorKeyComboACode.getDisplayText(), acceleratorKeyComboAChar.getDisplayText());
+    }
+
+    /*
+     * check that an accelerator constructed with a Shortcut
+     * displays appropriate platform text.
+     */
+    @Test public void checkShortcutModifierChangesDisplayString() {
+        KeyCombination acceleratorShortcutA = KeyCodeCombination.keyCombination("Shortcut+A");
+
+        // on Windows / Unix shortcut maps to ctrl
+        KeyCodeCombination acceleratorControlA = new KeyCodeCombination(KeyCode.A, KeyCombination.CONTROL_DOWN);
+
+        // on Mac it maps to meta
+        KeyCodeCombination acceleratorMetaA = new KeyCodeCombination(KeyCode.A, KeyCombination.META_DOWN);
+
+        assertPlatformEquals(acceleratorControlA, acceleratorMetaA, acceleratorShortcutA);
+    }
+
+    @Test public void validStringForNonKeyCode() {
+        KeyCharacterCombination acceleratorKeyCombo = new KeyCharacterCombination("[");
+        assertEquals("[", acceleratorKeyCombo.getDisplayText());
+    }
+
+    /*
+     * check that the KeyCodeCombination for KeyCode.DELETE produces something printable.
+     * We only display the unicode DELETE char on mac, otherwise we use "Delete".
+     */
+    @Test public void validStringForDELETE() {
+        KeyCodeCombination keyComboDELETE = new KeyCodeCombination(KeyCode.DELETE);
+        assertPlatformEquals("Delete", "\u2326", keyComboDELETE.getDisplayText());
+    }
 }

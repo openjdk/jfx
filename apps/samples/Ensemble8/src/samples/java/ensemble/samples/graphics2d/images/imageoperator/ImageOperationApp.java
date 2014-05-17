@@ -83,24 +83,15 @@ public class ImageOperationApp extends Application {
     public Parent createContent() {
          StackPane root = new StackPane();
         final WritableImage img = new WritableImage(200, 200);
-        gridSize.addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
-            }
-        });
-        hueFactor.addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
-            }
-        });
-        hueOffset.addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
-            }
-        });
+        gridSize.addListener((Observable observable) -> {
+            renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
+         });
+        hueFactor.addListener((Observable observable) -> {
+            renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
+         });
+        hueOffset.addListener((Observable observable) -> {
+            renderImage(img, gridSize.doubleValue(), hueFactor.doubleValue(), hueOffset.doubleValue());
+         });
         renderImage(img, 3.0, 12.0, 240.0);
 
         ImageView view = new ImageView(img);

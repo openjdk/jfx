@@ -426,12 +426,7 @@ public final class SelectorPartitioning {
     }
 
     private static final Comparator<Selector> COMPARATOR =
-            new Comparator<Selector>() {
-                @Override
-                public int compare(Selector o1, Selector o2) {
-                    return o1.getOrdinal() - o2.getOrdinal();
-                }
-            };
+            (o1, o2) -> o1.getOrdinal() - o2.getOrdinal();
 
 
 }

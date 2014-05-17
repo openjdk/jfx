@@ -25,17 +25,16 @@
 
 package com.sun.scenario.effect.impl.state;
 
-import java.nio.FloatBuffer;
-import com.sun.scenario.effect.impl.BufferUtil;
+import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.Color4f;
 
 /**
  * The state and implementation class for calculating 1 dimensional
- * linear convolution kernels for performing gaussian blurs.
+ * linear convolution kernels for performing Gaussian blurs.
  */
 public class GaussianBlurState extends HVSeparableKernel {
     private float hradius;
     private float vradius;
-    private FloatBuffer weights;
 
     void checkRadius(float radius) {
         if (radius < 0f || radius > 63f) {
@@ -80,21 +79,8 @@ public class GaussianBlurState extends HVSeparableKernel {
         return hradius == 0 && vradius == 0;
     }
 
-    @Override
-    public boolean isNop(int pass) {
-        return getRadius(pass) == 0;
-    }
-
     public int getPad(int pass) {
         return (int) Math.ceil(getRadius(pass));
-    }
-
-    public int getScaledPad(int pass) {
-        return getPad(pass);
-    }
-
-    public float getScaledRadius(int pass) {
-        return getRadius(pass);
     }
 
     @Override
@@ -106,54 +92,14 @@ public class GaussianBlurState extends HVSeparableKernel {
         return 0f;
     }
 
-    @Override
-    public FloatBuffer getWeights(int pass) {
-        float r0 = getScaledRadius(0);
-        float r1 = getScaledRadius(1);
-        // We need to apply the spread on only one pass
-        // Prefer pass1 if r1 is not tiny (or at least bigger than r0)
-        // Otherwise use pass 0 so that it doesn't disappear
-        int spreadpass = (r1 > 1f || r1 >= r0) ? 1 : 0;
-
-        float r = (pass == 0) ? r0 : r1;
-        float s = (pass == spreadpass) ? getSpread() : 0f;
-        weights = getGaussianWeights(weights, getScaledPad(pass), r, s);
-        return weights;
+    public Color4f getShadowColor() {
+        return null;
     }
 
-    static FloatBuffer getGaussianWeights(FloatBuffer weights,
-                                          int pad,
-                                          float radius,
-                                          float spread)
-    {
-        int r = pad;
-        int klen = (r * 2) + 1;
-        if (weights == null) {
-            weights = BufferUtil.newFloatBuffer(128);
-        }
-        weights.clear();
-        float sigma = radius / 3;
-        float sigma22 = 2 * sigma * sigma;
-        if (sigma22 < Float.MIN_VALUE) {
-            // Avoid divide by 0 below (it can generate NaN values).
-            sigma22 = Float.MIN_VALUE;
-        }
-        float total = 0.0F;
-        for (int row = -r; row <= r; row++) {
-            float kval = (float) Math.exp(-(row * row) / sigma22);
-            weights.put(kval);
-            total += kval;
-        }
-        total += (weights.get(0) - total) * spread;
-        for (int i = 0; i < klen; i++) {
-            weights.put(i, weights.get(i) / total);
-        }
-        int limit = getPeerSize(klen);
-        while (weights.position() < limit) {
-            weights.put(0.0F);
-        }
-        weights.limit(limit);
-        weights.rewind();
-        return weights;
+    @Override
+    public LinearConvolveRenderState getRenderState(BaseTransform filtertx) {
+        return new GaussianRenderState(hradius, vradius, getSpread(),
+                                       this instanceof GaussianShadowState, getShadowColor(),
+                                       filtertx);
     }
 }

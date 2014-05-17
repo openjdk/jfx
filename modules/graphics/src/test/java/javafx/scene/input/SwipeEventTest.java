@@ -34,6 +34,7 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -179,10 +180,8 @@ public class SwipeEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         swiped = false;
-        rect.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                swiped = true;
-            }
+        rect.setOnSwipeLeft(event -> {
+            swiped = true;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
@@ -206,11 +205,9 @@ public class SwipeEventTest {
 
         swiped = false;
 
-        rect.setOnSwipeUp(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                assertEquals(3, event.getTouchCount());
-                swiped = true;
-            }
+        rect.setOnSwipeUp(event -> {
+            Assert.assertEquals(3, event.getTouchCount());
+            swiped = true;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
@@ -228,14 +225,12 @@ public class SwipeEventTest {
 
         swiped = false;
 
-        rect.setOnSwipeUp(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                assertEquals(151.0, event.getX(), 0.0001);
-                assertEquals(152.0, event.getY(), 0.0001);
-                assertEquals(153.0, event.getScreenX(), 0.0001);
-                assertEquals(154.0, event.getScreenY(), 0.0001);
-                swiped = true;
-            }
+        rect.setOnSwipeUp(event -> {
+            Assert.assertEquals(151.0, event.getX(), 0.0001);
+            Assert.assertEquals(152.0, event.getY(), 0.0001);
+            Assert.assertEquals(153.0, event.getScreenX(), 0.0001);
+            Assert.assertEquals(154.0, event.getScreenY(), 0.0001);
+            swiped = true;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
@@ -253,11 +248,9 @@ public class SwipeEventTest {
 
         swiped = false;
 
-        rect.setOnSwipeDown(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                assertEquals(swiped, event.isDirect());
-                swiped = !swiped;
-            }
+        rect.setOnSwipeDown(event -> {
+            Assert.assertEquals(swiped, event.isDirect());
+            swiped = !swiped;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
@@ -282,22 +275,18 @@ public class SwipeEventTest {
 
         swiped = false;
         swiped2 = false;
-        rect.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                assertEquals(150, event.getX(), 0.00001);
-                assertEquals(150, event.getY(), 0.00001);
-                assertEquals(0, event.getZ(), 0.00001);
-                swiped = true;
-            }
+        rect.setOnSwipeLeft(event -> {
+            Assert.assertEquals(150, event.getX(), 0.00001);
+            Assert.assertEquals(150, event.getY(), 0.00001);
+            Assert.assertEquals(0, event.getZ(), 0.00001);
+            swiped = true;
         });
 
-        scene.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                assertEquals(150, event.getX(), 0.00001);
-                assertEquals(150, event.getY(), 0.00001);
-                assertEquals(50, event.getZ(), 0.00001);
-                swiped2 = true;
-            }
+        scene.setOnSwipeLeft(event -> {
+            Assert.assertEquals(150, event.getX(), 0.00001);
+            Assert.assertEquals(150, event.getY(), 0.00001);
+            Assert.assertEquals(50, event.getZ(), 0.00001);
+            swiped2 = true;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
@@ -316,16 +305,14 @@ public class SwipeEventTest {
 
         swiped = false;
 
-        rect.setOnSwipeUp(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                PickResult pickRes = event.getPickResult();
-                assertNotNull(pickRes);
-                assertSame(rect, pickRes.getIntersectedNode());
-                assertEquals(151, pickRes.getIntersectedPoint().getX(), 0.00001);
-                assertEquals(152, pickRes.getIntersectedPoint().getY(), 0.00001);
-                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
-                swiped = true;
-            }
+        rect.setOnSwipeUp(event -> {
+            PickResult pickRes = event.getPickResult();
+            assertNotNull(pickRes);
+            assertSame(rect, pickRes.getIntersectedNode());
+            assertEquals(151, pickRes.getIntersectedPoint().getX(), 0.00001);
+            assertEquals(152, pickRes.getIntersectedPoint().getY(), 0.00001);
+            assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+            swiped = true;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().swipeEvent(
@@ -341,10 +328,8 @@ public class SwipeEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        rect.addEventHandler(SwipeEvent.ANY, new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                swiped = true;
-            }
+        rect.addEventHandler(SwipeEvent.ANY, event -> {
+            swiped = true;
         });
 
         swiped = false;
@@ -379,12 +364,10 @@ public class SwipeEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        rect.setOnSwipeRight(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                swiped = true;
-            }
+        rect.setOnSwipeRight(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            swiped = true;
         });
 
         swiped = false;

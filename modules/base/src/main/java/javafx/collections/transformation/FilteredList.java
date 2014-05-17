@@ -53,14 +53,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
     private int size;
 
     private SortHelper helper;
-    private static final Predicate ALWAYS_TRUE = new Predicate() {
-
-        @Override
-        public boolean test(Object t) {
-            return true;
-        }
-
-    };
+    private static final Predicate ALWAYS_TRUE = t -> true;
 
     /**
      * Constructs a new FilteredList wrapper around the source list.

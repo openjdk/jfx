@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,11 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
@@ -58,21 +57,34 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         arrow = new Region();
         arrow.setFocusTraversable(false);
         arrow.getStyleClass().setAll("arrow");
+        arrow.setId("arrow");
         arrow.setMaxWidth(Region.USE_PREF_SIZE);
         arrow.setMaxHeight(Region.USE_PREF_SIZE);
+        arrow.setMouseTransparent(true);
+
         arrowButton = new StackPane();
         arrowButton.setFocusTraversable(false);
         arrowButton.setId("arrow-button");
         arrowButton.getStyleClass().setAll("arrow-button");
         arrowButton.getChildren().add(arrow);
+
+        if (comboBox.isEditable()) {
+            //
+            // arrowButton behaves like a button.
+            // This is strongly tied to the implementation in ComboBoxBaseBehavior.
+            //
+            arrowButton.addEventHandler(MouseEvent.MOUSE_ENTERED,  (e) -> getBehavior().mouseEntered(e));
+            arrowButton.addEventHandler(MouseEvent.MOUSE_PRESSED,  (e) -> { getBehavior().mousePressed(e);  e.consume(); });
+            arrowButton.addEventHandler(MouseEvent.MOUSE_RELEASED, (e) -> { getBehavior().mouseReleased(e); e.consume();});
+            arrowButton.addEventHandler(MouseEvent.MOUSE_EXITED, (e) -> getBehavior().mouseExited(e));
+
+        }
         getChildren().add(arrowButton);
-        
+
         // When ComboBoxBase focus shifts to another node, it should hide.
-        getSkinnable().focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                if (!newValue) {
-                    focusLost();
-                }
+        getSkinnable().focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                focusLost();
             }
         });
         
@@ -124,20 +136,18 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
     }
     
     private void updateDisplayArea() {
-        List<Node> children = getChildren();
-        if (displayNode != null) {
-            children.remove(displayNode);
-        }
+        final List<Node> children = getChildren();
+        final Node oldDisplayNode = displayNode;
         displayNode = getDisplayNode();
+
+        // don't remove displayNode if it hasn't changed.
+        if (oldDisplayNode != null && oldDisplayNode != displayNode) {
+            children.remove(oldDisplayNode);
+        }
+
         if (displayNode != null && !children.contains(displayNode)) {
             children.add(displayNode);
-
-            // RT-20575: The display node is being brought into the scenegraph
-            // early so we get the correct prefHeight, but at this point it
-            // may not have had a layout pass run over it itself, so the
-            // displayNode will return a prefHeight of 0. Here we are forcing
-            // a one-off run of the layout over the displayNode.
-            displayNode.impl_processCSS(true);
+            displayNode.applyCss();
         }
     }
     
@@ -159,13 +169,13 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         if (displayNode != null) {
             displayNode.resizeRelocate(x, y, w - arrowButtonWidth, h);
         }
-        
-        if (isButton()) return;
-        
-        arrowButton.resize(arrowButtonWidth, h);
-        positionInArea(arrowButton, 
-                (x+w) - arrowButtonWidth, y,
-                arrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
+
+        arrowButton.setVisible(! isButton());
+        if (! isButton()) {
+            arrowButton.resize(arrowButtonWidth, h);
+            positionInArea(arrowButton, (x + w) - arrowButtonWidth, y,
+                    arrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
+        }
     }
     
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -174,7 +184,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         }
 
         final double arrowWidth = snapSize(arrow.prefWidth(-1));
-        final double arrowButtonWidth = (isButton()) ? 0 : 
+        final double arrowButtonWidth = isButton() ? 0 :
                                         arrowButton.snappedLeftInset() +
                                         arrowWidth + 
                                         arrowButton.snappedRightInset();

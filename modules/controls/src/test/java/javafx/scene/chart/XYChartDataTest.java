@@ -71,12 +71,7 @@ public class XYChartDataTest {
         series.setData(list);
 
         lineChart.getData().add(series);
-        FXCollections.sort(list, new Comparator<XYChart.Data<Number, Number>>() {
-            @Override
-            public int compare(XYChart.Data<Number, Number> o1, XYChart.Data<Number, Number> o2) {
-                return Double.compare(o1.getXValue().intValue(), o2.getXValue().intValue());
-            }
-        });
+        FXCollections.sort(list, (o1, o2) -> Double.compare(o1.getXValue().intValue(), o2.getXValue().intValue()));
         ObservableList<XYChart.Data<Number, Number>> data = series.getData();
         // check sorted data 
         assertEquals(1, data.get(0).getXValue());

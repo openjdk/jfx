@@ -47,13 +47,7 @@ public class Event extends EventObject implements Cloneable {
     /**
      * The constant which represents an unknown event source / target.
      */
-    public static final EventTarget NULL_SOURCE_TARGET = new EventTarget() {
-        @Override
-        public EventDispatchChain buildEventDispatchChain(
-                final EventDispatchChain tail) {
-            return tail;
-        }
-    };
+    public static final EventTarget NULL_SOURCE_TARGET = tail -> tail;
 
     /**
      * Common supertype for all event types.

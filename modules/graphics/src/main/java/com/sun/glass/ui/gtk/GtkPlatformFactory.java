@@ -34,23 +34,11 @@ import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
-import com.sun.glass.ui.accessible.AccessibleBaseProvider;
-import com.sun.glass.ui.accessible.AccessibleRoot;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 
 public final class GtkPlatformFactory extends PlatformFactory {
 
     @Override public Application createApplication(){
         return new GtkApplication();
-    }
-    
-    @Override
-    public AccessibleRoot createAccessibleRoot(Object node, Window window) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-    
-    @Override public AccessibleBaseProvider createAccessibleProvider(Object node) {
-        throw new UnsupportedOperationException("Not supported yet.");
     }
     
     @Override public MenuBarDelegate createMenuBarDelegate(MenuBar menubar) {

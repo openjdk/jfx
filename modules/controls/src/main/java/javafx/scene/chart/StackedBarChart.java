@@ -215,11 +215,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         final Node bar = item.getNode();
         if (shouldAnimate()) {
             Timeline t = createDataRemoveTimeline(item, bar, series);
-            t.setOnFinished(new EventHandler<ActionEvent>() {
-
-                public void handle(ActionEvent event) {
-                    removeDataItemFromDisplay(series, item);
-                }
+            t.setOnFinished(event -> {
+                removeDataItemFromDisplay(series, item);
             });
             t.play();
         } else {
@@ -323,10 +320,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             t.getKeyFrames().addAll(
                     new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item), 
                     getCurrentDisplayedYValue(item))),
-                    new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().remove(bar);
-                        }
+                    new KeyFrame(Duration.millis(700), actionEvent -> {
+                        getPlotChildren().remove(bar);
                     },
                     new KeyValue(currentDisplayedYValueProperty(item), item.getYValue(), Interpolator.EASE_BOTH)));
         } else {
@@ -334,10 +329,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             t.getKeyFrames().addAll(
                     new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item), 
                     getCurrentDisplayedXValue(item))),
-                    new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().remove(bar);
-                        }
+                    new KeyFrame(Duration.millis(700), actionEvent -> {
+                        getPlotChildren().remove(bar);
                     },
                     new KeyValue(currentDisplayedXValueProperty(item), item.getXValue(), Interpolator.EASE_BOTH)));
         }
@@ -348,12 +341,9 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         // remove all symbol nodes
         if (shouldAnimate()) {
             ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(new EventHandler<ActionEvent>() {
-
-                public void handle(ActionEvent event) {
-                    removeSeriesFromDisplay(series);
-                    requestChartLayout();
-                }
+            pt.setOnFinished(event -> {
+                removeSeriesFromDisplay(series);
+                requestChartLayout();
             });
             for (Data<X, Y> d : series.getData()) {
                 final Node bar = d.getNode();
@@ -369,12 +359,9 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                     FadeTransition ft = new FadeTransition(Duration.millis(700), bar);
                     ft.setFromValue(1);
                     ft.setToValue(0);
-                    ft.setOnFinished(new EventHandler<ActionEvent>() {
-
-                        @Override
-                        public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().remove(bar);
-                        }
+                    ft.setOnFinished(actionEvent -> {
+                        getPlotChildren().remove(bar);
+                        bar.setOpacity(1.0);
                     });
                     pt.getChildren().add(ft);
                 }

@@ -114,11 +114,7 @@ public class PlatformImpl {
      * @param appClass the Application class.
      */
     public static void setApplicationName(final Class appClass) {
-        runLater(new Runnable() {
-            @Override public void run() {
-                com.sun.glass.ui.Application.GetApplication().setName(appClass.getName());
-            }
-        });
+        runLater(() -> com.sun.glass.ui.Application.GetApplication().setName(appClass.getName()));
     }
 
     /**
@@ -151,50 +147,46 @@ public class PlatformImpl {
             runLater(r);
             return;
         }
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override public Void run() {
-                contextual2DNavigation = Boolean.getBoolean(
-                        "com.sun.javafx.isContextual2DNavigation");
-                String s = System.getProperty("com.sun.javafx.twoLevelFocus");
-                if (s != null) {
-                    hasTwoLevelFocus = Boolean.valueOf(s);
-                }
-                s = System.getProperty("com.sun.javafx.virtualKeyboard");
-                if (s != null) {
-                    if (s.equalsIgnoreCase("none")) {
-                        hasVirtualKeyboard = false;
-                    } else if (s.equalsIgnoreCase("javafx")) {
-                        hasVirtualKeyboard = true;
-                    } else if (s.equalsIgnoreCase("native")) {
-                        hasVirtualKeyboard = true;
-                    }
-                }
-                s = System.getProperty("com.sun.javafx.touch");
-                if (s != null) {
-                    hasTouch = Boolean.valueOf(s);
-                }
-                s = System.getProperty("com.sun.javafx.multiTouch");
-                if (s != null) {
-                    hasMultiTouch = Boolean.valueOf(s);
-                }
-                s = System.getProperty("com.sun.javafx.pointer");
-                if (s != null) {
-                    hasPointer = Boolean.valueOf(s);
-                }
-                s = System.getProperty("javafx.embed.singleThread");
-                if (s != null) {
-                    isThreadMerged = Boolean.valueOf(s);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            contextual2DNavigation = Boolean.getBoolean(
+                    "com.sun.javafx.isContextual2DNavigation");
+            String s = System.getProperty("com.sun.javafx.twoLevelFocus");
+            if (s != null) {
+                hasTwoLevelFocus = Boolean.valueOf(s);
             }
+            s = System.getProperty("com.sun.javafx.virtualKeyboard");
+            if (s != null) {
+                if (s.equalsIgnoreCase("none")) {
+                    hasVirtualKeyboard = false;
+                } else if (s.equalsIgnoreCase("javafx")) {
+                    hasVirtualKeyboard = true;
+                } else if (s.equalsIgnoreCase("native")) {
+                    hasVirtualKeyboard = true;
+                }
+            }
+            s = System.getProperty("com.sun.javafx.touch");
+            if (s != null) {
+                hasTouch = Boolean.valueOf(s);
+            }
+            s = System.getProperty("com.sun.javafx.multiTouch");
+            if (s != null) {
+                hasMultiTouch = Boolean.valueOf(s);
+            }
+            s = System.getProperty("com.sun.javafx.pointer");
+            if (s != null) {
+                hasPointer = Boolean.valueOf(s);
+            }
+            s = System.getProperty("javafx.embed.singleThread");
+            if (s != null) {
+                isThreadMerged = Boolean.valueOf(s);
+            }
+            return null;
         });
 
         if (!taskbarApplication) {
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override public Void run() {
-                    System.setProperty("glass.taskbarApplication", "false");
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                System.setProperty("glass.taskbarApplication", "false");
+                return null;
             });
         }
 
@@ -213,11 +205,9 @@ public class PlatformImpl {
         };
         Toolkit.getToolkit().addTkListener(toolkitListener);
 
-        Toolkit.getToolkit().startup(new Runnable() {
-            @Override public void run() {
-                startupLatch.countDown();
-                r.run();
-            }
+        Toolkit.getToolkit().startup(() -> {
+            startupLatch.countDown();
+            r.run();
         });
 
         //Initialize the thread merging mechanism
@@ -292,20 +282,15 @@ public class PlatformImpl {
 
             final AccessControlContext acc = AccessController.getContext();
             // Don't catch exceptions, they are handled by Toolkit.defer()
-            Toolkit.getToolkit().defer(new Runnable() {
-                @Override public void run() {
-                    try {
-                        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                            @Override
-                            public Void run() {
-                                r.run();
-                                return null;
-                            }
-                        }, acc);
-                    } finally {
-                        pendingRunnables.decrementAndGet();
-                        checkIdle();
-                    }
+            Toolkit.getToolkit().defer(() -> {
+                try {
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        r.run();
+                        return null;
+                    }, acc);
+                } finally {
+                    pendingRunnables.decrementAndGet();
+                    checkIdle();
                 }
             });
         }
@@ -329,13 +314,11 @@ public class PlatformImpl {
              }
         } else {
             final CountDownLatch doneLatch = new CountDownLatch(1);
-            runLater(new Runnable() {
-                @Override public void run() {
-                    try {
-                        r.run();
-                    } finally {
-                        doneLatch.countDown();
-                    }
+            runLater(() -> {
+                try {
+                    r.run();
+                } finally {
+                    doneLatch.countDown();
                 }
             }, exiting);
 
@@ -399,9 +382,7 @@ public class PlatformImpl {
         if (!isFxApplicationThread()) {
             // Add a dummy runnable to the runLater queue, which will then call
             // checkIdle() on the FX application thread.
-            runLater(new Runnable() {
-                @Override public void run() {
-                }
+            runLater(() -> {
             });
             return;
         }
@@ -431,10 +412,8 @@ public class PlatformImpl {
                     lastWindowClosed = false;
                 } else {
 //                    System.err.println("Queuing up a dummy idle check runnable");
-                    runLater(new Runnable() {
-                        @Override public void run() {
+                    runLater(() -> {
 //                            System.err.println("Dummy runnable");
-                        }
                     });
                 }
             }
@@ -459,12 +438,7 @@ public class PlatformImpl {
         if (initialized.get()) {
             // Always call toolkit exit on FX app thread
 //            System.err.println("PlatformImpl.tkExit: scheduling Toolkit.exit");
-            PlatformImpl.runAndWait(new Runnable() {
-                @Override public void run() {
-//                    System.err.println("PlatformImpl.tkExit: calling Toolkit.exit");
-                    Toolkit.getToolkit().exit();
-                }
-            }, true);
+            PlatformImpl.runAndWait(() -> Toolkit.getToolkit().exit(), true);
 
             if (isThreadMerged) {
                 removeFwEventQueue();
@@ -559,11 +533,7 @@ public class PlatformImpl {
         if (isFxApplicationThread()) {
             _setPlatformUserAgentStylesheet(stylesheetUrl);
         } else {
-            runLater(new Runnable() {
-                @Override public void run() {
-                    _setPlatformUserAgentStylesheet(stylesheetUrl);
-                }
-            });
+            runLater(() -> _setPlatformUserAgentStylesheet(stylesheetUrl));
         }
     }
 
@@ -571,11 +541,7 @@ public class PlatformImpl {
         isModena = isCaspian = false;
         // check for command line override
         final String overrideStylesheetUrl = AccessController.doPrivileged(
-            new PrivilegedAction<String>() {
-                @Override public String run() {
-                    return System.getProperty("javafx.userAgentStylesheetUrl");
-                }
-            });
+                (PrivilegedAction<String>) () -> System.getProperty("javafx.userAgentStylesheetUrl"));
 
         if (overrideStylesheetUrl != null) {
             stylesheetUrl = overrideStylesheetUrl;
@@ -585,68 +551,62 @@ public class PlatformImpl {
         if (Application.STYLESHEET_CASPIAN.equalsIgnoreCase(stylesheetUrl)) {
             isCaspian = true;
             AccessController.doPrivileged(
-                    new PrivilegedAction() {
-                        @Override public Object run() {
-                            StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
+                    (PrivilegedAction) () -> {
+                        StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
 
-                            if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
-                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");                              
-                                if (com.sun.javafx.Utils.isQVGAScreen()) {
-                                    StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
-                                }
-                                if (PlatformUtil.isAndroid()) {
-                                    StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/android.css");
-                                }
+                        if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
+                            if (com.sun.javafx.Utils.isQVGAScreen()) {
+                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
                             }
-
-                            if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
-                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/two-level-focus.css");
+                            if (PlatformUtil.isAndroid()) {
+                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/android.css");
                             }
-
-                            if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
-                            }
-                            return null;
                         }
-                    });
+
+                        if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
+                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/two-level-focus.css");
+                        }
+
+                        if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
+                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
+                        }
+                        return null;
+                    }
+            );
         } else if (Application.STYLESHEET_MODENA.equalsIgnoreCase(stylesheetUrl)) {
             isModena = true;
             AccessController.doPrivileged(
-                    new PrivilegedAction() {
-                        @Override public Object run() {
-                            StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
+                    (PrivilegedAction) () -> {
+                        StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
 
-                            if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
-                                StyleManager.getInstance().addUserAgentStylesheet(
-                                        "com/sun/javafx/scene/control/skin/modena/touch.css");
-                            }
-                            // when running on embedded add a extra stylesheet to tune performance of modena theme
-                            if (PlatformUtil.isEmbedded()) {
-                                StyleManager.getInstance().addUserAgentStylesheet(
-                                        "com/sun/javafx/scene/control/skin/modena/modena-embedded-performance.css");
-                            }
-                            if (PlatformUtil.isAndroid()) {
-                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/android.css");
-                            }
-
-                            if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
-                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/two-level-focus.css");
-                            }
-
-                            if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
-                            }
-                            return null;
+                        if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                            StyleManager.getInstance().addUserAgentStylesheet(
+                                    "com/sun/javafx/scene/control/skin/modena/touch.css");
                         }
-                    });
+                        // when running on embedded add a extra stylesheet to tune performance of modena theme
+                        if (PlatformUtil.isEmbedded()) {
+                            StyleManager.getInstance().addUserAgentStylesheet(
+                                    "com/sun/javafx/scene/control/skin/modena/modena-embedded-performance.css");
+                        }
+                        if (PlatformUtil.isAndroid()) {
+                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/android.css");
+                        }
+
+                        if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
+                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/two-level-focus.css");
+                        }
+
+                        if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
+                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
+                        }
+                        return null;
+                    }
+            );
 
             // check to see if there is an override to enable a high-contrast theme
             final String highContrastName = AccessController.doPrivileged(
-                    new PrivilegedAction<String>() {
-                        @Override public String run() {
-                            return System.getProperty("com.sun.javafx.highContrastTheme");
-                        }
-                    });
+                    (PrivilegedAction<String>) () -> System.getProperty("com.sun.javafx.highContrastTheme"));
             if (highContrastName != null) {
                 switch (highContrastName.toUpperCase()) {
                     case "BLACKONWHITE": StyleManager.getInstance().addUserAgentStylesheet(
@@ -667,20 +627,16 @@ public class PlatformImpl {
 
     public static void addNoTransparencyStylesheetToScene(final Scene scene) {
         if (PlatformImpl.isCaspian()) {
-            AccessController.doPrivileged(new PrivilegedAction() {
-                @Override public Object run() {
-                    StyleManager.getInstance().addUserAgentStylesheet(scene,
-                            "com/sun/javafx/scene/control/skin/caspian/caspian-no-transparency.css");
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction) () -> {
+                StyleManager.getInstance().addUserAgentStylesheet(scene,
+                        "com/sun/javafx/scene/control/skin/caspian/caspian-no-transparency.css");
+                return null;
             });
         } else if (PlatformImpl.isModena()) {
-            AccessController.doPrivileged(new PrivilegedAction() {
-                @Override public Object run() {
-                    StyleManager.getInstance().addUserAgentStylesheet(scene,
-                            "com/sun/javafx/scene/control/skin/modena/modena-no-transparency.css");
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction) () -> {
+                StyleManager.getInstance().addUserAgentStylesheet(scene,
+                        "com/sun/javafx/scene/control/skin/modena/modena-no-transparency.css");
+                return null;
             });
         }
     }

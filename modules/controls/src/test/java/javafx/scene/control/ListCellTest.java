@@ -557,10 +557,8 @@ public class ListCellTest {
         cell.updateListView(list);
         cell.updateIndex(2);
         final boolean[] called = new boolean[] { false };
-        list.setOnEditStart(new EventHandler<ListView.EditEvent<String>>() {
-            @Override public void handle(ListView.EditEvent<String> event) {
-                called[0] = true;
-            }
+        list.setOnEditStart(event -> {
+            called[0] = true;
         });
         cell.startEdit();
         assertTrue(called[0]);
@@ -588,10 +586,8 @@ public class ListCellTest {
         cell.updateIndex(1);
         cell.startEdit();
         final boolean[] called = new boolean[] { false };
-        list.setOnEditCommit(new EventHandler<ListView.EditEvent<String>>() {
-            @Override public void handle(ListView.EditEvent<String> event) {
-                called[0] = true;
-            }
+        list.setOnEditCommit(event -> {
+            called[0] = true;
         });
         cell.commitEdit("Watermelon");
         assertTrue(called[0]);
@@ -620,10 +616,8 @@ public class ListCellTest {
         cell.updateIndex(1);
         cell.startEdit();
         final boolean[] called = new boolean[] { false };
-        list.setOnEditCancel(new EventHandler<ListView.EditEvent<String>>() {
-            @Override public void handle(ListView.EditEvent<String> event) {
-                called[0] = true;
-            }
+        list.setOnEditCancel(event -> {
+            called[0] = true;
         });
         cell.cancelEdit();
         assertTrue(called[0]);

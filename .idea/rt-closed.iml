@@ -1,81 +1,140 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
   <component name="EclipseModuleManager">
-    <libelement value="jar://$MODULE_DIR$/../caches/sdk/build/lib/desktop/jfxmedia.jar!/" />
-    <libelement value="file://../caches/sdk/build/lib/desktop/deploy.jar" />
-    <libelement value="jar://$MODULE_DIR$/../import/swt-3.7.1/swt-debug.jar!/" />
+    <libelement value="jar://$MODULE_DIR$/../import/benchmarks-2.1.1/benchmarks-2.1.1.jar!/" />
     <src_description expected_position="0">
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/benchmark/VMPerformance/src" expected_position="0" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/glass/glass-test/test" expected_position="1" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/glass/UseCases/src" expected_position="2" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/javafx-android/webnode/src" expected_position="3" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/javafx-font-t2k/src" expected_position="4" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/javafx-ios/src" expected_position="5" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/javafx-mx-common/src" expected_position="6" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/javafx-mx-impl/src" expected_position="7" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/javafx-mx-impl/test/unit" expected_position="8" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/javafx-ui-desktop/src" expected_position="9" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/porting/src" expected_position="10" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/prism-bench/src" expected_position="11" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/ES2NativeTest/test" expected_position="12" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/GetWindowsTest/test" expected_position="13" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/LoaderDisposeTest/test" expected_position="14" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/MediaFuzzing/src" expected_position="15" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/MediaFuzzing/test" expected_position="16" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/BlendTest/src" expected_position="17" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/CameraTests/src" expected_position="18" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/CanvasTest/src" expected_position="19" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/ColorCube/src" expected_position="20" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/CursorFXTest/src" expected_position="21" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/DirectoryBrowser/src" expected_position="22" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/DragDropColor/src" expected_position="23" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/DragDropText/src" expected_position="24" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/DragDropWithControls/src" expected_position="25" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/EarthCubeFX2/src" expected_position="26" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/EmbeddedSwing/src" expected_position="27" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/FX8-3DAPI/src" expected_position="28" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/GlassRobotTest/src" expected_position="29" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/Gradients/src" expected_position="30" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/GridExamples/src" expected_position="31" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/HelloFXCanvas/src" expected_position="32" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/HelloWorld/src" expected_position="33" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/LinuxInputTest/src" expected_position="34" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/LinuxInputTest/test" expected_position="35" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/NodeBlendTests/src" expected_position="36" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/PickTest3D/src" expected_position="37" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/SceneLeak/src" expected_position="38" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/ShapeT3DTest/src" expected_position="39" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/SwingBalls/src" expected_position="40" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/SwingBalls/css" expected_position="41" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/SwingNodeMark/src" expected_position="42" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/TextTest/src" expected_position="43" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/TouchSuite/src" expected_position="44" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/VideoCube/src" expected_position="45" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/Visual3DTest/src" expected_position="46" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/WebLauncher/src" expected_position="47" />
-      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/ZBufferTest/src" expected_position="48" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/glass/glass-test/test" expected_position="0" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/glass/UseCases/src" expected_position="1" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/javafx-font-t2k/src" expected_position="2" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/BenchShapes/src" expected_position="3" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/Charts/src" expected_position="4" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/ColorfulShapes/src" expected_position="5" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/Controls/src" expected_position="6" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/DirtyArea/src" expected_position="7" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/embedded/ui-performance/src" expected_position="8" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/Fire/src" expected_position="9" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/FXBenchmark/src" expected_position="10" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/FXTester/src" expected_position="11" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/GUIMark2/src" expected_position="12" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/GUIMark2-SE/src" expected_position="13" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/GUIMark3/src" expected_position="14" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/LayoutTest/src" expected_position="15" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/ListView/src" expected_position="16" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/MediaSystemTest/src" expected_position="17" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/MouseResponseTest/src" expected_position="18" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/NodeMemory/src" expected_position="19" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/SDKSizeAnalyzer/src" expected_position="20" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/SpiralText/src" expected_position="21" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/Surface/src" expected_position="22" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/performance/WebNodeTestSuite/src" expected_position="23" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/porting/src" expected_position="24" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/prism-bench/src" expected_position="25" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/prism-bench/options" expected_position="26" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/DragOverTest/src" expected_position="27" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/ES2NativeTest/test" expected_position="28" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/EvilFXApplet/src" expected_position="29" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/FullScreen/FullScreenHelper/src" expected_position="30" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/FullScreen/FullScreenRunner/src" expected_position="31" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/FullScreen/FullScreenTest/src" expected_position="32" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/FXMLDefaultClassLoader/test" expected_position="33" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/GetWindowsTest/test" expected_position="34" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/LoaderDisposeTest/test" expected_position="35" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/MediaFuzzing/src" expected_position="36" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/MediaFuzzing/test" expected_position="37" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/MediaFuzzing/mediafiles" expected_position="38" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/NativeHandleTest/test" expected_position="39" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/PulseCallbackHelper/src" expected_position="40" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/PulseCallbackTest/test" expected_position="41" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/SandboxedClipboardTest/test" expected_position="42" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/ServiceHelper/src" expected_position="43" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/ServiceTest/test" expected_position="44" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/TestUtils/src" expected_position="45" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/tests/security/TransparentWindowsTest/test" expected_position="46" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/a11y/src" expected_position="47" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/BlendTest/src" expected_position="48" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/CameraTests/src" expected_position="49" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/CanvasTest/src" expected_position="50" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/ColorCube/src" expected_position="51" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/CursorFXTest/src" expected_position="52" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/DirectoryBrowser/src" expected_position="53" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/DragDropColor/src" expected_position="54" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/DragDropText/src" expected_position="55" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/DragDropWithControls/src" expected_position="56" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/EarthCubeFX2/src" expected_position="57" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/EmbeddedSwing/src" expected_position="58" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/FX8-3DAPI/src" expected_position="59" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/GlassRobotTest/src" expected_position="60" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/Gradients/src" expected_position="61" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/GridExamples/src" expected_position="62" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/HelloBenchmark/perf" expected_position="63" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/HelloFXCanvas/src" expected_position="64" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/HelloWorld/src" expected_position="65" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/NodeBlendTests/src" expected_position="66" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/PickTest3D/src" expected_position="67" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/SceneLeak/src" expected_position="68" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/ShapeT3DTest/src" expected_position="69" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/SwingBalls/src" expected_position="70" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/SwingBalls/css" expected_position="71" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/SwingNodeMark/src" expected_position="72" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/TextTest/src" expected_position="73" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/TouchSuite/src" expected_position="74" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/VideoCube/src" expected_position="75" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/Visual3DTest/src" expected_position="76" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/WebLauncher/src" expected_position="77" />
+      <src_folder value="file://$MODULE_DIR$/../rt-closed/toys/ZBufferTest/src" expected_position="78" />
     </src_description>
   </component>
   <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <output url="file://$MODULE_DIR$/../rt-closed/bin" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../rt-closed">
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/benchmark/VMPerformance/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/glass/glass-test/test" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/glass/UseCases/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/javafx-android/webnode/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/javafx-font-t2k/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/javafx-ios/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/javafx-mx-common/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/javafx-mx-impl/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/javafx-mx-impl/test/unit" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/javafx-ui-desktop/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/BenchShapes/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/Charts/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/ColorfulShapes/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/Controls/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/DirtyArea/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/embedded/ui-performance/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/Fire/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/FXBenchmark/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/FXTester/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/GUIMark2/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/GUIMark2-SE/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/GUIMark3/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/LayoutTest/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/ListView/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/MediaSystemTest/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/MouseResponseTest/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/NodeMemory/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/SDKSizeAnalyzer/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/SpiralText/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/Surface/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/performance/WebNodeTestSuite/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/porting/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/prism-bench/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/prism-bench/options" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/DragOverTest/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/ES2NativeTest/test" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/EvilFXApplet/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/FullScreen/FullScreenHelper/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/FullScreen/FullScreenRunner/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/FullScreen/FullScreenTest/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/FXMLDefaultClassLoader/test" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/GetWindowsTest/test" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/LoaderDisposeTest/test" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/MediaFuzzing/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/MediaFuzzing/test" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/MediaFuzzing/mediafiles" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/NativeHandleTest/test" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/PulseCallbackHelper/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/PulseCallbackTest/test" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/SandboxedClipboardTest/test" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/ServiceHelper/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/ServiceTest/test" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/TestUtils/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/tests/security/TransparentWindowsTest/test" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/a11y/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/BlendTest/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/CameraTests/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/CanvasTest/src" isTestSource="false" />
@@ -91,10 +150,9 @@
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/GlassRobotTest/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/Gradients/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/GridExamples/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/HelloBenchmark/perf" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/HelloFXCanvas/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/HelloWorld/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/LinuxInputTest/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/LinuxInputTest/test" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/NodeBlendTests/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/PickTest3D/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/SceneLeak/src" isTestSource="false" />
@@ -108,12 +166,29 @@
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/Visual3DTest/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/WebLauncher/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/ZBufferTest/src" isTestSource="false" />
-      <excludeFolder url="file://$MODULE_DIR$/../rt-closed/javafx-android" />
+      <sourceFolder url="file://$MODULE_DIR$/../rt-closed/glass/glass-test/test" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="deploy" exported="" />
     <orderEntry type="module" module-name="rt" exported="" />
+    <orderEntry type="module-library">
+      <library name="benchmarks-2.1.1.jar">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../import/benchmarks-2.1.1/benchmarks-2.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
     <orderEntry type="inheritedJdk" />
+    <orderEntry type="module-library">
+      <library name="junit4">
+        <CLASSES>
+          <root url="jar://$APPLICATION_HOME_DIR$/lib/junit-4.11.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
   </component>
 </module>
 

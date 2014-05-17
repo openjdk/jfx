@@ -134,10 +134,8 @@ public class DocsPage extends Region implements ChangeListener<String>, Page{
                 sampleButton.getStyleClass().setAll("sample-button");
                 sampleButton.setGraphic(sample.getMediumPreview());
                 sampleButton.setContentDisplay(ContentDisplay.TOP);
-                sampleButton.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        pageBrowser.goToSample(sample);
-                    }
+                sampleButton.setOnAction((ActionEvent actionEvent) -> {
+                    pageBrowser.goToSample(sample);
                 });
                 sideBar.getChildren().add(sampleButton);
             }

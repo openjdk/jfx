@@ -96,22 +96,16 @@ public class Clock extends Parent {
         // wait till start of next second then start a timeline to call refreshClocks() every second
         delayTimeline = new Timeline();
         delayTimeline.getKeyFrames().add(
-                new KeyFrame(new Duration(1000 - (System.currentTimeMillis() % 1000)), new EventHandler<ActionEvent>() {            
-            @Override public void handle(ActionEvent event) {
-                if (secondTimeline != null) {
-                    secondTimeline.stop();
-                }
-                secondTimeline = new Timeline();
-                secondTimeline.setCycleCount(Timeline.INDEFINITE);
-                secondTimeline.getKeyFrames().add(
-                        new KeyFrame(Duration.seconds(1), new EventHandler<ActionEvent>() {
-                    
-                    @Override public void handle(ActionEvent event) {
-                        refreshClocks();
+                new KeyFrame(new Duration(1000 - (System.currentTimeMillis() % 1000)), (ActionEvent event) -> {
+                    if (secondTimeline != null) {
+                        secondTimeline.stop();
                     }
-                }));
-                secondTimeline.play();
-            }
+            secondTimeline = new Timeline();
+            secondTimeline.setCycleCount(Timeline.INDEFINITE);
+            secondTimeline.getKeyFrames().add(new KeyFrame(Duration.seconds(1), (ActionEvent event1) -> {
+                refreshClocks();
+            }));
+            secondTimeline.play();
         }));
         delayTimeline.play();
     }

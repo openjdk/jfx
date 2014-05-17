@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,15 +27,14 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.geometry.HPos;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -99,11 +98,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
      *
      * This is package private ONLY FOR THE SAKE OF TESTING
      */
-    final InvalidationListener graphicPropertyChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            invalidText = true;
-            getSkinnable().requestLayout();
-        }
+    final InvalidationListener graphicPropertyChangedListener = valueModel -> {
+        invalidText = true;
+        getSkinnable().requestLayout();
     };
 
     private Rectangle textClip;
@@ -150,7 +147,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         registerChangeListener(labeled.wrapTextProperty(), "WRAP_TEXT");
         registerChangeListener(labeled.underlineProperty(), "UNDERLINE");
         registerChangeListener(labeled.lineSpacingProperty(), "LINE_SPACING");
-        registerChangeListener(labeled.parentProperty(), "PARENT");
+        registerChangeListener(labeled.sceneProperty(), "SCENE");
     }
 
     /***************************************************************************
@@ -222,8 +219,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             textMetricsChanged();
         } else if ("LINE_SPACING".equals(p)) {
             textMetricsChanged();
-        } else if ("PARENT".equals(p)) {
-            parentChanged();
+        } else if ("SCENE".equals(p)) {
+            sceneChanged();
         }
     }
 
@@ -261,41 +258,18 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     */
     protected void mnemonicTargetChanged() {
         if (containsMnemonic == true) {
-            KeyCombination mnemonicKeyCombo = mnemonicCode;
-
             /*
-            ** was there previously a labelFor
+            ** was there previously a labelFor  
             */
-            if (mnemonicScene != null) {
-                if (labeledNode != null) {
-                    Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                    mnemonicScene.removeMnemonic(myMnemonic);
-                    mnemonicScene = null;
-                }
-                else {
-                    /*
-                    ** maybe we were a target ourselves
-                    */
-                    Mnemonic myMnemonic = new Mnemonic(getSkinnable(), mnemonicKeyCombo);
-                    mnemonicScene.removeMnemonic(myMnemonic);
-                    mnemonicScene = null;
-                }
-            }
+            removeMnemonic();
 
             /*
             ** is there a new labelFor
             */
             Control control = getSkinnable();
             if (control instanceof Label) {
-                Node newNode = ((Label)control).getLabelFor();
-                if (newNode != null) {
-                    Mnemonic myMnemonic = new Mnemonic(newNode, mnemonicKeyCombo);
-                    mnemonicScene = newNode.getScene();
-                    if (mnemonicScene != null) {
-                        mnemonicScene.addMnemonic(myMnemonic);
-                    }
-                }
-                labeledNode = newNode;
+                labeledNode = ((Label)control).getLabelFor();
+                addMnemonic();
             }
             else {
                 labeledNode = null;
@@ -303,45 +277,14 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
     }
 
-    /*
-    ** parent has changed,
-    ** if it's null then remove any mnemonics from the scene,
-    ** if it's valid then check to see if mnemonics should
-    ** be added
-    */
-    private void parentChanged() {
+    private void sceneChanged() {
         final Labeled labeled = getSkinnable();
-        Parent newParent = labeled.getParent();
+        Scene scene = labeled.getScene();
 
-        if (newParent == null) {
-            /*
-            ** we're here because we lost our parent
-            ** tidy up any mnemonics that may have been
-            ** left on the scene
-            */
-            if (mnemonicScene != null) {
-                KeyCombination mnemonicKeyCombo = mnemonicCode;
-                Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                mnemonicScene.removeMnemonic(myMnemonic);
-                mnemonicScene = null;
-            }
+        if (scene != null && containsMnemonic) {
+            addMnemonic();
         }
-        else {
-            /*
-            ** we're here because we just got a parent,
-            ** add any mnemonics etc to the scene.
-            */
-            if (containsMnemonic == true) {
-                KeyCombination mnemonicKeyCombo = mnemonicCode;
-                if (labeledNode != null) {
-                    Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                    mnemonicScene = labeledNode.getScene();
-                    if (mnemonicScene != null) {
-                        mnemonicScene.addMnemonic(myMnemonic);
-                    }
-                }
-            }
-        }
+
     }
 
     /**
@@ -383,7 +326,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                     */
                     if (labeled instanceof Label) {
                         // buttons etc
-                        labeledNode = (Node)((Label)labeled).getLabelFor();
+                        labeledNode = ((Label)labeled).getLabelFor();
                     } else {
                         labeledNode = labeled;
                     }
@@ -398,18 +341,14 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             /*
             ** we were previously a mnemonic
             */
-            if (containsMnemonic == true) {
+            if (containsMnemonic) {
                 /*
                 ** are we no longer a mnemonic, or have we changed code?
                 */
                 if (mnemonicScene != null) {
                     if (mnemonicIndex == -1 ||
-                        (bindings != null && !bindings.getMnemonicKeyCombination().equals(mnemonicCode))) {
-
-                        KeyCombination mnemonicKeyCombo = mnemonicCode;
-                        Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                        mnemonicScene.removeMnemonic(myMnemonic);
-                        mnemonicScene = null;
+                            (bindings != null && !bindings.getMnemonicKeyCombination().equals(mnemonicCode))) {
+                        removeMnemonic();
                     }
                     containsMnemonic = false;
                 }
@@ -419,12 +358,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 ** this can happen if mnemonic parsing is
                 ** disabled on a previously valid mnemonic
                 */
-                if (mnemonicScene != null && labeledNode != null) {
-                    KeyCombination mnemonicKeyCombo = mnemonicCode;
-                    Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                    mnemonicScene.removeMnemonic(myMnemonic);
-                    mnemonicScene = null;
-                }
+                removeMnemonic();
             }
 
             /*
@@ -434,15 +368,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 if (mnemonicIndex >= 0 && containsMnemonic == false) {
                     containsMnemonic = true;
                     mnemonicCode = bindings.getMnemonicKeyCombination();
-
-                    KeyCombination mnemonicKeyCombo = mnemonicCode;
-                    if (labeledNode != null) {
-                        Mnemonic myMnemonic = new Mnemonic(labeledNode, mnemonicKeyCombo);
-                        mnemonicScene = labeledNode.getScene();
-                        if (mnemonicScene != null) {
-                            mnemonicScene.addMnemonic(myMnemonic);
-                        }
-                    }
+                    addMnemonic();
                 }
             }
 
@@ -471,12 +397,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 }
                 if (mnemonic_underscore != null) {
                     if (getChildren().contains(mnemonic_underscore)) {
-                        Platform.runLater(new Runnable() {
-                           @Override
-                               public void run() {
-                                 getChildren().remove(mnemonic_underscore);
-                                 mnemonic_underscore = null;
-                           }
+                        Platform.runLater(() -> {
+                              getChildren().remove(mnemonic_underscore);
+                              mnemonic_underscore = null;
                         });
                     }
                 }
@@ -586,6 +509,23 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
     }
 
+    private void addMnemonic() {
+        if (labeledNode != null) {
+            mnemonicScene = labeledNode.getScene();
+            if (mnemonicScene != null) {
+                mnemonicScene.addMnemonic(new Mnemonic(labeledNode, mnemonicCode));
+            }
+        }
+    }
+
+
+    private void removeMnemonic() {
+        if (mnemonicScene != null && labeledNode != null) {
+            mnemonicScene.removeMnemonic(new Mnemonic(labeledNode, mnemonicCode));
+            mnemonicScene = null;
+        }
+    }
+
     /**
      * Updates the wrapping width of the text node. Although changing the font
      * does affect the metrics used for text layout, this method does not
@@ -642,11 +582,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 getChildren().setAll(graphic, text);
             }
         }
-
-        // Fix for RT-31120
-        if (graphic != null) {
-            graphic.impl_processCSS(false);
-        }
     }
 
     /**
@@ -698,17 +633,16 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         // made by the ellipsis "...", and then by checking the width of the
         // string made up by labeled.text. We want the smaller of the two.
         final Labeled labeled = getSkinnable();
+        final ContentDisplay contentDisplay = labeled.getContentDisplay();
+        final double gap = labeled.getGraphicTextGap();
+        double minTextWidth = 0;
+
         final Font font = text.getFont();
         OverrunStyle truncationStyle = labeled.getTextOverrun();
         String ellipsisString = labeled.getEllipsisString();
         final String string = labeled.getText();
         final boolean emptyText = string == null || string.isEmpty();
-        final ContentDisplay contentDisplay = labeled.getContentDisplay();
-        final double gap = labeled.getGraphicTextGap();
-        final double widthPadding = leftInset + leftLabelPadding() +
-                                    rightInset + rightLabelPadding();
 
-        double minTextWidth = 0;
         if (!emptyText) {
             // We only want to recompute the full text width if the font or text changed
             if (truncationStyle == CLIP) {
@@ -742,7 +676,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             width = Math.max(minTextWidth, graphic.minWidth(-1));
         }
 
-        return width + widthPadding;
+        return width + leftInset + leftLabelPadding() +
+                rightInset + rightLabelPadding();
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -773,9 +708,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             final Node graphic = labeled.getGraphic();
             if (labeled.getContentDisplay() == ContentDisplay.TOP
                 || labeled.getContentDisplay() == ContentDisplay.BOTTOM) {
-                h = graphic.minHeight(-1) + labeled.getGraphicTextGap() + textHeight;
+                h = graphic.minHeight(width) + labeled.getGraphicTextGap() + textHeight;
             } else {
-                h = Math.max(textHeight, graphic.minHeight(-1));
+                h = Math.max(textHeight, graphic.minHeight(width));
             }
         }
 
@@ -812,8 +747,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         final Font font = text.getFont();
         final ContentDisplay contentDisplay = labeled.getContentDisplay();
         final double gap = labeled.getGraphicTextGap();
-        double widthPadding = leftInset + leftLabelPadding() +
-                              rightInset + rightLabelPadding();
+        width -= leftInset + leftLabelPadding() +
+                rightInset + rightLabelPadding();
 
         String str = labeled.getText();
         if (str != null && str.endsWith("\n")) {
@@ -821,16 +756,15 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             str = str.substring(0, str.length() - 1);
         }
 
+        double textWidth = width;
         if (!isIgnoreGraphic() &&
             (contentDisplay == LEFT || contentDisplay == RIGHT)) {
-            width -= (graphic.prefWidth(-1) + gap);
+            textWidth -= (graphic.prefWidth(-1) + gap);
         }
-
-        width -= widthPadding;
 
         // TODO figure out how to cache this effectively.
         final double textHeight = Utils.computeTextHeight(font, str,
-                                                          labeled.isWrapText() ? width : 0,
+                                                          labeled.isWrapText() ? textWidth : 0,
                                                           labeled.getLineSpacing(), text.getBoundsType());
 
         // Now we want to add on the graphic if necessary!
@@ -838,9 +772,9 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         if (!isIgnoreGraphic()) {
             final Node graphic = labeled.getGraphic();
             if (contentDisplay == TOP || contentDisplay == BOTTOM) {
-                h = graphic.prefHeight(-1) + gap + textHeight;
+                h = graphic.prefHeight(width) + gap + textHeight;
             } else {
-                h = Math.max(textHeight, graphic.prefHeight(-1));
+                h = Math.max(textHeight, graphic.prefHeight(width));
             }
         }
 
@@ -861,11 +795,11 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         final Labeled labeled = getSkinnable();
         final Node g = labeled.getGraphic();
         if (!isIgnoreGraphic()) {
-            if (labeled.getContentDisplay() == ContentDisplay.TOP
-                || labeled.getContentDisplay() == ContentDisplay.BOTTOM) {
+            ContentDisplay contentDisplay = labeled.getContentDisplay();
+            if (contentDisplay == ContentDisplay.TOP) {
                 h = g.prefHeight(-1) + labeled.getGraphicTextGap() + textBaselineOffset;
-            } else {
-                h = Math.max(textBaselineOffset, g.prefHeight(-1));
+            } else if (contentDisplay == ContentDisplay.LEFT || contentDisplay == RIGHT) {
+                h = textBaselineOffset + (g.prefHeight(-1) - text.prefHeight(-1)) / 2;
             }
         }
                 
@@ -1170,6 +1104,26 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             if (text.getClip() != null) {
                 text.setClip(null);
             }
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TITLE: {
+                if (bindings != null) {
+                    return bindings.getText();
+                }
+                final Labeled labeled = getSkinnable();
+                return labeled != null ? labeled.getText() : null;
+            }
+            case MNEMONIC: {
+                if (bindings != null) {
+                    return bindings.getMnemonic();
+                }
+                return null;
+            }
+            default: return super.accGetAttribute(attribute, parameters);
         }
     }
 }

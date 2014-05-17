@@ -54,7 +54,9 @@ public class CellTest {
                 {ListCell.class},
                 {TableRow.class},
                 {TableCell.class},
-                {TreeCell.class}
+                {TreeCell.class},
+                {TreeTableRow.class},
+                {TreeTableCell.class}
         });
     }
 
@@ -75,6 +77,12 @@ public class CellTest {
             TableRow tableRow = new TableRow();
             tableRow.updateItem("TableRow", false);
             ((TableCell)cell).updateTableRow(tableRow);
+            ((TableCell)cell).lockItemOnEdit = true;
+        } else if (cell instanceof TreeTableCell) {
+            TreeTableRow tableRow = new TreeTableRow();
+            tableRow.updateItem("TableRow", false);
+            ((TreeTableCell)cell).updateTreeTableRow(tableRow);
+            ((TreeTableCell)cell).lockItemOnEdit = true;
         }
     }
 
@@ -215,30 +223,34 @@ public class CellTest {
      * Tests for editing                                                 *
      ********************************************************************/
 
-    public void editingAnEmptyCellResultsInNoChange() {
+    @Test public void editingAnEmptyCellResultsInNoChange() {
         cell.startEdit();
         assertFalse(cell.isEditing());
     }
 
-    public void editingAnEmptyCellResultsInNoChange2() {
+    @Test public void editingAnEmptyCellResultsInNoChange2() {
         cell.updateItem(null, false);
         cell.updateItem(null, true);
         cell.startEdit();
         assertFalse(cell.isEditing());
     }
 
-    @Test public void updatingACellBeingEditedResultsInFirstACancelOfEdit() {
+    @Test public void updatingACellBeingEditedDoesNotResultInACancelOfEdit() {
         cell.updateItem("Apples", false);
         cell.startEdit();
+        assertFalse(cell.isEmpty());
+        assertTrue(cell.isEditing());
         cell.updateItem("Oranges", false);
-        assertFalse(cell.isEditing());
+        assertTrue(cell.isEditing());
     }
 
-    @Test public void updatingACellBeingEditedResultsInFirstACancelOfEdit2() {
+    @Test public void updatingACellBeingEditedDoesNotResultInACancelOfEdit2() {
         cell.updateItem("Apples", false);
         cell.startEdit();
+        assertFalse(cell.isEmpty());
+        assertTrue(cell.isEditing());
         cell.updateItem(null, true);
-        assertFalse(cell.isEditing());
+        assertTrue(cell.isEditing());
     }
 
     @Test public void startEditWhenEditableIsTrue() {

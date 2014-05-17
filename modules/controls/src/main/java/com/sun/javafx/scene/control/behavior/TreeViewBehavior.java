@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -125,6 +126,22 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         TREE_VIEW_BINDINGS.add(new KeyBinding(ESCAPE, "CancelEdit"));
     }
 
+    @Override protected /*final*/ String matchActionForEvent(KeyEvent e) {
+        String action = super.matchActionForEvent(e);
+        if (getControl().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            // Rather than switching the result of the action lookup in this way, the preferred
+            // way to do this according to the current architecture would be to hoist the
+            // getEffectiveNodeOrientation call up into the key bindings, the same way that ListView
+            // orientation (horizontal vs. vertical) is handled with the OrientedKeyBinding class.
+            if ("CollapseRow".equals(action) && (e.getCode() == LEFT || e.getCode() == KP_LEFT)) {
+                action = "ExpandRow";
+            } else if ("ExpandRow".equals(action) && (e.getCode() == RIGHT || e.getCode() == KP_RIGHT)) {
+                action = "CollapseRow";
+            }
+        }
+        return action;
+    }
+
     @Override protected void callAction(String name) {
         if ("SelectPreviousRow".equals(name)) selectPreviousRow();
         else if ("SelectNextRow".equals(name)) selectNextRow();
@@ -187,11 +204,11 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     // set when focus is moved by keyboard to allow for proper selection positions
 //    private int selectPos = -1;
     
-    private Callback<Integer, Integer> onScrollPageUp;
-    public void setOnScrollPageUp(Callback<Integer, Integer> c) { onScrollPageUp = c; }
+    private Callback<Boolean, Integer> onScrollPageUp;
+    public void setOnScrollPageUp(Callback<Boolean, Integer> c) { onScrollPageUp = c; }
 
-    private Callback<Integer, Integer> onScrollPageDown;
-    public void setOnScrollPageDown(Callback<Integer, Integer> c) { onScrollPageDown = c; }
+    private Callback<Boolean, Integer> onScrollPageDown;
+    public void setOnScrollPageDown(Callback<Boolean, Integer> c) { onScrollPageDown = c; }
 
     private Runnable onSelectPreviousRow;
     public void setOnSelectPreviousRow(Runnable r) { onSelectPreviousRow = r; }
@@ -213,26 +230,24 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     
     private boolean selectionChanging = false;
     
-    private final ListChangeListener<Integer> selectedIndicesListener = new ListChangeListener<Integer>() {
-        @Override public void onChanged(ListChangeListener.Change<? extends Integer> c) {
-            while (c.next()) {
-                MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
-                
-                // there are no selected items, so lets clear out the anchor
-                if (! selectionChanging) {
-                    if (sm.isEmpty()) {
-                        setAnchor(-1);
-                    } else if (! sm.isSelected(getAnchor())) {
-                        setAnchor(-1);
-                    }
-                }
+    private final ListChangeListener<Integer> selectedIndicesListener = c -> {
+        while (c.next()) {
+            MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
 
-                int addedSize = c.getAddedSize();
-                if (addedSize > 0 && ! hasAnchor()) {
-                    List<? extends Integer> addedSubList = c.getAddedSubList();
-                    int index = addedSubList.get(addedSize - 1);
-                    setAnchor(index);
+            // there are no selected items, so lets clear out the anchor
+            if (! selectionChanging) {
+                if (sm.isEmpty()) {
+                    setAnchor(-1);
+                } else if (! sm.isSelected(getAnchor())) {
+                    setAnchor(-1);
                 }
+            }
+
+            int addedSize = c.getAddedSize();
+            if (addedSize > 0 && ! hasAnchor()) {
+                List<? extends Integer> addedSubList = c.getAddedSubList();
+                int index = addedSubList.get(addedSize - 1);
+                setAnchor(index);
             }
         }
     };
@@ -272,11 +287,11 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void setAnchor(int anchor) {
-        TreeCellBehavior.setAnchor(getControl(), anchor);
+        TreeCellBehavior.setAnchor(getControl(), anchor < 0 ? null : anchor);
     }
     
     private int getAnchor() {
-        return TreeCellBehavior.getAnchor(getControl());
+        return TreeCellBehavior.getAnchor(getControl(), getControl().getFocusModel().getFocusedIndex());
     }
     
     private boolean hasAnchor() {
@@ -304,7 +319,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private void scrollUp() {
         int newSelectedIndex = -1;
         if (onScrollPageUp != null) {
-            newSelectedIndex = onScrollPageUp.call(getAnchor());
+            newSelectedIndex = onScrollPageUp.call(false);
         }
         if (newSelectedIndex == -1) return;
         
@@ -316,7 +331,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     private void scrollDown() {
         int newSelectedIndex = -1;
         if (onScrollPageDown != null) {
-            newSelectedIndex = onScrollPageDown.call(getAnchor());
+            newSelectedIndex = onScrollPageDown.call(false);
         }
         if (newSelectedIndex == -1) return;
         
@@ -374,7 +389,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void focusPageUp() {
-        int newFocusIndex = onScrollPageUp.call(getAnchor());
+        int newFocusIndex = onScrollPageUp.call(true);
         
         FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -382,7 +397,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void focusPageDown() {
-        int newFocusIndex = onScrollPageDown.call(getAnchor());
+        int newFocusIndex = onScrollPageDown.call(true);
         
         FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
@@ -396,17 +411,19 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
         
-//        final int focusIndex = fm.getFocusedIndex();
-        
         if (isShiftDown && getAnchor() != -1) {
             int newRow = fm.getFocusedIndex() - 1;
+            if (newRow < 0) return;
+            
             int anchor = getAnchor();
             
             if (! hasAnchor()) {
                 setAnchor(fm.getFocusedIndex());
-            } 
-            
-            clearSelectionOutsideRange(anchor, newRow);
+            }
+
+            if (sm.getSelectedIndices().size() > 1) {
+                clearSelectionOutsideRange(anchor, newRow);
+            }
 
             if (anchor > newRow) {
                 sm.selectRange(anchor, newRow - 1);
@@ -434,8 +451,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             if (! hasAnchor()) {
                 setAnchor(fm.getFocusedIndex());
             } 
-            
-            clearSelectionOutsideRange(anchor, newRow);
+
+            if (sm.getSelectedIndices().size() > 1) {
+                clearSelectionOutsideRange(anchor, newRow);
+            }
 
             if (anchor > newRow) {
                 sm.selectRange(anchor, newRow - 1);
@@ -562,7 +581,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
+        int leadSelectedIndex = onScrollPageUp.call(false);
+
+        // fix for RT-34407
+        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
         
         MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -572,7 +594,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             sm.select(leadSelectedIndex);
         } else {
             sm.clearSelection();
-            sm.selectRange(leadIndex, leadSelectedIndex - 1);
+            sm.selectRange(leadIndex, leadSelectedIndex + adjust);
         }
         selectionChanging = false;
     }
@@ -587,7 +609,10 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             setAnchor(leadIndex);
         }
         
-        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
+        int leadSelectedIndex = onScrollPageDown.call(false);
+
+        // fix for RT-34407
+        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
         
         MultipleSelectionModel<TreeItem<T>> sm = getControl().getSelectionModel();
         if (sm == null) return;
@@ -597,14 +622,14 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
             sm.select(leadSelectedIndex);
         } else {
             sm.clearSelection();
-            sm.selectRange(leadIndex, leadSelectedIndex + 1);
+            sm.selectRange(leadIndex, leadSelectedIndex + adjust);
         }
         selectionChanging = false;
     }
     
     private void selectAllToFocus(boolean setAnchorToFocusIndex) {
         // Fix for RT-31241
-        final TreeView treeView = getControl();
+        final TreeView<T> treeView = getControl();
         if (treeView.getEditingItem() != null) return;
 
         MultipleSelectionModel<TreeItem<T>> sm = treeView.getSelectionModel();
@@ -624,11 +649,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
     }
     
     private void expandRow() {
-        Callback<TreeItem<T>, Integer> getIndex = new Callback<TreeItem<T>, Integer>() {
-            @Override public Integer call(TreeItem<T> p) {
-                return getControl().getRow(p);
-            }
-        };
+        Callback<TreeItem<T>, Integer> getIndex = p -> getControl().getRow(p);
         TreeViewBehavior.expandRow(getControl().getSelectionModel(), getIndex);
     }
     
@@ -804,7 +825,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (fm == null) return;
 
         int leadIndex = fm.getFocusedIndex();
-        int leadSelectedIndex = onScrollPageUp.call(getAnchor());
+        int leadSelectedIndex = onScrollPageUp.call(false);
         sm.selectRange(leadIndex, leadSelectedIndex - 1);
     }
     
@@ -816,7 +837,7 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         if (fm == null) return;
         
         int leadIndex = fm.getFocusedIndex();
-        int leadSelectedIndex = onScrollPageDown.call(getAnchor());
+        int leadSelectedIndex = onScrollPageDown.call(false);
         sm.selectRange(leadIndex, leadSelectedIndex + 1);
     }
     

@@ -30,11 +30,12 @@ import com.sun.javafx.geom.DirtyRegionContainer;
 import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * Zoom radial blur effect with a configurable center and radius of the kernel.
  */
-public class ZoomRadialBlur extends CoreEffect {
+public class ZoomRadialBlur extends CoreEffect<RenderState> {
 
     private int r;
     private float centerX;
@@ -43,7 +44,7 @@ public class ZoomRadialBlur extends CoreEffect {
 
     /**
      * Constructs a new {@code ZoomRadialBlur} effect with the default
-     * radius (1), using the defalt input for source data.
+     * radius (1), using the default input for source data.
      * This is a shorthand equivalent to:
      * <pre>
      *     new ZoomRadialBlur(1, DefaultInput)
@@ -189,27 +190,25 @@ public class ZoomRadialBlur extends CoreEffect {
     public ImageData filterImageDatas(FilterContext fctx,
                                       BaseTransform transform,
                                       Rectangle outputClip,
+                                      RenderState rstate,
                                       ImageData... inputs)
     {
         Rectangle bnd = inputs[0].getUntransformedBounds();
         state.updateDeltas(1f/bnd.width, 1f/bnd.height);
-        return super.filterImageDatas(fctx, transform, outputClip, inputs);
+        return super.filterImageDatas(fctx, transform, outputClip, rstate, inputs);
     }
 
     @Override
-    public boolean operatesInUserSpace() {
-        return true;
-    }
-
-    @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
         // This effect does not appear to expand bounds as it operates,
         // the blur may zoom "outward", but only to the edge of the
         // original image...
-        return outputClip;
+        return RenderState.UserSpaceRenderState;
     }
 
     @Override

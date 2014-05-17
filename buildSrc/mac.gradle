@@ -41,7 +41,6 @@ MAC.libDest = "lib"
 MAC.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
-    "com/sun/glass/ui/accessible/win",
     "com/sun/prism/d3d",
     "com/sun/prism/es2/gl/win",
     //"com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
@@ -101,8 +100,7 @@ MAC.glass = [:]
 MAC.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
-    "com/sun/glass/ui/mac/*",
-    "com/sun/glass/ui/accessible/mac/*"]
+    "com/sun/glass/ui/mac/*"]
 MAC.glass.nativeSource = file("modules/graphics/src/main/native-glass/mac")
 MAC.glass.compiler = compiler
 MAC.glass.ccFlags = [ccFlags].flatten()

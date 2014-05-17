@@ -94,13 +94,10 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
         return property instanceof ReadOnlyFloatProperty ? (ReadOnlyFloatProperty) property:
            new ReadOnlyFloatPropertyBase() {
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 
@@ -141,13 +138,10 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
         return new ReadOnlyObjectPropertyBase<Float>() {
 
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 

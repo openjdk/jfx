@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,14 @@
 
 package javafx.scene.control;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.application.Application;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -38,7 +41,10 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.geometry.Side;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
@@ -168,16 +174,16 @@ public abstract class Control extends Region implements Skinnable {
      * classes which we'd otherwise have to create. When lambda expressions
      * are supported, we could do it that way instead (or use MethodHandles).
      */
-    private final static EventHandler<ContextMenuEvent> contextMenuHandler = new EventHandler<ContextMenuEvent>() {
-        @Override public void handle(ContextMenuEvent event) {
-            // If a context menu was shown, consume the event to prevent multiple context menus
-            Object source = event.getSource();
-            if (source instanceof Control) {
-                Control c = (Control) source;
-                if (c.getContextMenu() != null) {
-                    c.getContextMenu().show(c, event.getScreenX(), event.getScreenY());
-                    event.consume();
-                }
+    private final static EventHandler<ContextMenuEvent> contextMenuHandler = event -> {
+        if (event.isConsumed()) return;
+
+        // If a context menu was shown, consume the event to prevent multiple context menus
+        Object source = event.getSource();
+        if (source instanceof Control) {
+            Control c = (Control) source;
+            if (c.getContextMenu() != null) {
+                c.getContextMenu().show(c, event.getScreenX(), event.getScreenY());
+                event.consume();
             }
         }
     };
@@ -377,18 +383,27 @@ public abstract class Control extends Region implements Skinnable {
      * The ContextMenu to show for this control.
      */
     private ObjectProperty<ContextMenu> contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu") {
+        private WeakReference<ContextMenu> contextMenuRef;
+
         @Override protected void invalidated() {
-            // set this flag so contextmenu show will be relative to parent window not anchor
+            ContextMenu oldMenu = contextMenuRef == null ? null : contextMenuRef.get();
+            if (oldMenu != null) {
+                ControlAcceleratorSupport.removeAcceleratorsFromScene(oldMenu.getItems(), Control.this);
+            }
+
             ContextMenu ctx = get();
-            if (ctx != null) ctx.setImpl_showRelativeToWindow(true); //RT-15160
-        }
-        @Override
-        public Object getBean() {
-            return Control.this;
-        }
-        @Override
-        public String getName() {
-            return "contextMenu";
+            contextMenuRef = new WeakReference<>(ctx);
+
+            if (ctx != null) {
+                // set this flag so contextmenu show will be relative to parent window not anchor
+                ctx.setImpl_showRelativeToWindow(true); //RT-15160
+
+                // if a context menu is set, we need to install any accelerators
+                // belonging to its menu items ASAP into the scene that this
+                // Control is in (if the control is not in a Scene, we will need
+                // to wait until it is and then do it).
+                ControlAcceleratorSupport.addAcceleratorsIntoScene(ctx.getItems(), Control.this);
+            }
         }
     };
     public final ObjectProperty<ContextMenu> contextMenuProperty() { return contextMenu; }
@@ -412,7 +427,7 @@ public abstract class Control extends Region implements Skinnable {
         // override. Initializing focusTraversable by calling applyStyle
         // with null for StyleOrigin ensures that css will be able to override
         // the value.
-        final StyleableProperty<Boolean> prop = (StyleableProperty<Boolean>)focusTraversableProperty();
+        final StyleableProperty<Boolean> prop = (StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty();
         prop.applyStyle(null, Boolean.TRUE);
 
         // we add a listener for menu request events to show the context menu
@@ -771,7 +786,7 @@ public abstract class Control extends Region implements Skinnable {
 
             @Override
             public StyleableProperty<String> getStyleableProperty(Control n) {
-                return (StyleableProperty<String>)n.skinClassNameProperty();
+                return (StyleableProperty<String>)(WritableValue<String>)n.skinClassNameProperty();
             }
         };
 
@@ -858,8 +873,7 @@ public abstract class Control extends Region implements Skinnable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    @Override protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
-
+    @Override protected void impl_processCSS(WritableValue<Boolean> unused) {
         // don't muck with this if block without first reading the comments in skin property's set method!
         if (skinClassNameProperty().get() == null) {
             // TODO: using skinClassName as a flag in skin property's set method is probably a bad idea
@@ -869,14 +883,14 @@ public abstract class Control extends Region implements Skinnable {
             }
         }
 
-        super.impl_processCSS(cacheHint);
+        super.impl_processCSS(unused);
 
         if (getSkin() == null) {
             // try to create default skin
             final Skin<?> defaultSkin = createDefaultSkin();
             if (defaultSkin != null) {
                 skinProperty().set(defaultSkin);
-                super.impl_processCSS(cacheHint);
+                super.impl_processCSS(unused);
             } else {
                 final String msg = "The -fx-skin property has not been defined in CSS for " + this +
                                    " and createDefaultSkin() returned null.";
@@ -898,5 +912,44 @@ public abstract class Control extends Region implements Skinnable {
     @Deprecated @Override
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.TRUE;
+    }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TOOLTIP:
+                Tooltip tooltip = getTooltip();
+                return tooltip == null ? "" : tooltip.getText();
+            default:
+        }
+        if (skinBase != null) {
+            Object result = skinBase.accGetAttribute(attribute, parameters);
+            if (result != null) return result;
+        }
+        return super.accGetAttribute(attribute, parameters);
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SHOW_MENU:
+                ContextMenu menu = getContextMenu();
+                if (menu != null) {
+                    menu.show(this, Side.RIGHT, 0, 0);
+                }
+                break;
+            default:
+        }
+        if (skinBase != null) {
+            skinBase.accExecuteAction(action, parameters);
+        }
+        super.accExecuteAction(action, parameters);
     }
 }

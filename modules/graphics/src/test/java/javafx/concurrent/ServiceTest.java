@@ -77,9 +77,7 @@ public class ServiceTest {
      * then set on the service
      */
     @Test public void executorCanBeSet() {
-        final Executor e = new Executor() {
-            @Override public void execute(Runnable command) { }
-        };
+        final Executor e = command -> { };
         service.setExecutor(e);
         assertSame(e, service.getExecutor());
         assertSame(e, service.executorProperty().get());
@@ -89,9 +87,7 @@ public class ServiceTest {
      * Tests that you can bind the executor property of a Service
      */
     @Test public void executorCanBeBound() {
-        final Executor e = new Executor() {
-            @Override public void execute(Runnable command) { }
-        };
+        final Executor e = command -> { };
         ObjectProperty<Executor> other = new SimpleObjectProperty<Executor>(e);
         service.executorProperty().bind(other);
         assertSame(e, service.getExecutor());
@@ -107,11 +103,7 @@ public class ServiceTest {
      */
     @Test public void executorIsUsed() {
         final AtomicBoolean results = new AtomicBoolean(false);
-        final Executor e = new Executor() {
-            @Override public void execute(Runnable command) {
-                results.set(true);
-            }
-        };
+        final Executor e = command -> results.set(true);
         service.setExecutor(e);
         service.start();
         assertTrue(results.get());

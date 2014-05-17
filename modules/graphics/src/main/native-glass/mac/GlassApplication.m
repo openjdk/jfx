@@ -533,7 +533,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 [app setDelegate:self];
 
                 // [app activateIgnoringOtherApps:YES] won't activate the menu bar on OS X 10.9, so instead we do this:
-                [[NSRunningApplication currentApplication] activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+                [[NSRunningApplication currentApplication] activateWithOptions:(NSApplicationActivateIgnoringOtherApps | NSApplicationActivateAllWindows)];
             }
             else
             {
@@ -591,6 +591,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
             GLASS_CHECK_EXCEPTION(jEnv);
 
+            (*jEnv)->CallVoidMethod(jEnv, self->jApplication, javaIDs.MacApplication.notifyApplicationDidTerminate);
+            GLASS_CHECK_EXCEPTION(jEnv);
+            
             jint err = (*jVM)->DetachCurrentThread(jVM);
             if (err < 0)
             {
@@ -724,6 +727,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
 
     javaIDs.Application.reportException = (*env)->GetStaticMethodID(
             env, jClass, "reportException", "(Ljava/lang/Throwable;)V");
+
+    javaIDs.MacApplication.notifyApplicationDidTerminate = (*env)->GetMethodID(
+            env, jClass, "notifyApplicationDidTerminate", "()V");
 
     if (jRunnableRun == NULL)
     {
@@ -1042,3 +1048,15 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getDataDire
     return string;
 }
 
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _getMacKey
+ * Signature: (I)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getMacKey
+(JNIEnv *env, jclass jClass, jint code)
+{
+	unsigned short macCode = 0;
+    GetMacKey(code, &macCode);
+    return (macCode & 0xFFFF);
+}

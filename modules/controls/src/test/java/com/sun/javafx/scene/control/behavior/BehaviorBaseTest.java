@@ -39,6 +39,7 @@ import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.skin.BehaviorSkinBase;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -65,6 +66,11 @@ public class BehaviorBaseTest {
         button.setSkin(skin);
         keyboard = new KeyEventFirer(button);
         mouse = new MouseEventFirer(button);
+    }
+
+    @After
+    public void after() {
+        mouse.dispose();
     }
 
     /**

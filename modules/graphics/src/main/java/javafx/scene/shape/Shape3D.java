@@ -105,16 +105,11 @@ public abstract class Shape3D extends Node {
 
                 private Material old = null;
                 private final ChangeListener<Boolean> materialChangeListener =
-                        new ChangeListener<Boolean>() {
-                            
-                    @Override
-                    public void changed(ObservableValue<? extends Boolean> observable,
-                            Boolean oldValue, Boolean newValue) {
-                        if (newValue) {
-                            impl_markDirty(DirtyBits.MATERIAL);
-                        }
-                    }
-                };
+                        (observable, oldValue, newValue) -> {
+                            if (newValue) {
+                                impl_markDirty(DirtyBits.MATERIAL);
+                            }
+                        };
                 private final WeakChangeListener<Boolean> weakMaterialChangeListener =
                         new WeakChangeListener(materialChangeListener);
 

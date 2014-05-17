@@ -62,11 +62,7 @@ public class BufferUtil {
             try {
                 if (byteOrderClass == null) {
                     byteOrderClass = (Class) AccessController.doPrivileged(
-                      new PrivilegedExceptionAction() {
-                       public Object run() throws ClassNotFoundException {
-                         return Class.forName("java.nio.ByteOrder", true, null);
-                       }
-                    });
+                            (PrivilegedExceptionAction) () -> Class.forName("java.nio.ByteOrder", true, null));
                     orderMethod = ByteBuffer.class.getMethod("order", new Class[]{byteOrderClass});
                     Method nativeOrderMethod = byteOrderClass.getMethod("nativeOrder", (Class[])null);
                     nativeOrderObject = nativeOrderMethod.invoke(null, (Object[])null);

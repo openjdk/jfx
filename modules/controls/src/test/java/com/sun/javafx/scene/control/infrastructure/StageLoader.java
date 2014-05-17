@@ -24,6 +24,7 @@
  */
 package com.sun.javafx.scene.control.infrastructure;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -52,16 +53,20 @@ public class StageLoader {
         stage.setScene(scene);
         stage.show();
     }
-    
+
     public Stage getStage() {
         return stage;
     }
     
     public void dispose() {
-        stage.hide();
-        group.getChildren().clear();
-        group = null;
-        scene = null;
-        stage = null;
+        if (group != null) {
+            group.getChildren().clear();
+            group = null;
+        }
+        if (stage != null) {
+            stage.hide();
+            scene = null;
+            stage = null;
+        }
     }
 }

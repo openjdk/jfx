@@ -33,6 +33,7 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 public class PrCropPeer extends EffectPeer {
 
@@ -42,6 +43,7 @@ public class PrCropPeer extends EffectPeer {
 
     @Override
     public ImageData filter(Effect effect,
+                            RenderState rstate,
                             BaseTransform transform,
                             Rectangle outputClip,
                             ImageData... inputs)

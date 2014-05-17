@@ -26,13 +26,10 @@
 package com.sun.glass.ui.swt;
 
 import com.sun.glass.ui.*;
-import com.sun.glass.ui.accessible.AccessibleBaseProvider;
-import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 
 public final class swtPlatformFactory extends PlatformFactory {
 
@@ -58,28 +55,15 @@ public final class swtPlatformFactory extends PlatformFactory {
     }
 
     public ClipboardDelegate createClipboardDelegate() {
-        return new ClipboardDelegate() {
-            public Clipboard createClipboard(String clipboardName) {
-                if (Clipboard.SYSTEM.equals(clipboardName)) {
-                    return new SWTClipboard(clipboardName);
-                }
-                if (Clipboard.DND.equals(clipboardName)) {
-                    return new SWTClipboard(clipboardName);
-                }
-                return null;
+        return clipboardName -> {
+            if (Clipboard.SYSTEM.equals(clipboardName)) {
+                return new SWTClipboard(clipboardName);
             }
+            if (Clipboard.DND.equals(clipboardName)) {
+                return new SWTClipboard(clipboardName);
+            }
+            return null;
         };
     }
 
-    @Override
-    public AccessibleRoot createAccessibleRoot(Object node, Window window) {
-        //TODO - implement accessibility
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public AccessibleBaseProvider createAccessibleProvider(Object node) {
-        //TODO - implement accessibility
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 }

@@ -137,7 +137,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         initialize();
     }
 
-    @FXML
+    //@FXML
     private void initialize() {
         entryField.focusedProperty().addListener(new ChangeListener<Boolean>() {
 

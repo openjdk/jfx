@@ -109,13 +109,9 @@ public class IosImageLoader extends ImageLoaderImpl {
 
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-
-            @Override
-            public Object run() {
-                NativeLibLoader.loadLibrary("nativeiio");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            NativeLibLoader.loadLibrary("nativeiio");
+            return null;
         });
 
         colorSpaceMapping.put(GRAY, ImageType.GRAY);

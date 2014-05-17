@@ -28,7 +28,7 @@
 #include "D3DContext.h"
 #include "D3DPipelineManager.h"
 
-HRESULT D3DContext::InitContext() {
+HRESULT D3DContext::InitContext(bool isVsyncEnabled) {
 
     D3DDEVTYPE devType = D3DPipelineManager::GetInstance()->GetDeviceType();
 
@@ -39,6 +39,9 @@ HRESULT D3DContext::InitContext() {
     params.Windowed = TRUE;
     params.SwapEffect = D3DSWAPEFFECT_DISCARD;
     params.hDeviceWindow = GetDesktopWindow();
+    params.PresentationInterval = isVsyncEnabled ?
+        D3DPRESENT_INTERVAL_ONE :
+        D3DPRESENT_INTERVAL_IMMEDIATE;
 
     D3DCAPS9 d3dCaps;
 

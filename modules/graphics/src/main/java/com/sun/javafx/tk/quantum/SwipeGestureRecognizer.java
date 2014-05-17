@@ -152,21 +152,18 @@ class SwipeGestureRecognizer implements GestureRecognizer {
             System.err.println("handleSwipeType swipeType=" + swipeType);
         }
 
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (scene.sceneListener != null) {
-                    scene.sceneListener.swipeEvent(swipeType, touchCount,
-                        cc.getX(), cc.getY(),
-                        cc.getAbsX(), cc.getAbsY(),
-                        (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
-                        (modifiers & KeyEvent.MODIFIER_ALT) != 0,
-                        (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                        isDirect);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (scene.sceneListener != null) {
+                scene.sceneListener.swipeEvent(swipeType, touchCount,
+                    cc.getX(), cc.getY(),
+                    cc.getAbsX(), cc.getAbsY(),
+                    (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
+                    (modifiers & KeyEvent.MODIFIER_ALT) != 0,
+                    (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
+                    isDirect);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 

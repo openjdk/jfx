@@ -47,6 +47,8 @@ public class ByteRgb {
         ByteRgb.ToIntFrgbConv.premult;
     public static final ByteToBytePixelConverter ToByteArgbConverter =
         ByteRgb.ToByteFrgbConv.nonpremult;
+    public static final ByteToBytePixelConverter ToByteBgrConverter =
+        ByteRgb.SwapThreeByteConverter.rgbToBgrInstance;
 
     static class Getter implements BytePixelGetter {
         static final BytePixelGetter instance = new Getter();
@@ -247,6 +249,54 @@ public class ByteRgb {
                     dstbuf.put(dstoff++, srcbuf.get(srcoff++));
                     dstbuf.put(dstoff++, srcbuf.get(srcoff++));
                     dstbuf.put(dstoff++, srcbuf.get(srcoff++));
+                }
+                srcoff += srcscanbytes;
+                dstoff += dstscanbytes;
+            }
+        }
+    }
+
+    static class SwapThreeByteConverter extends BaseByteToByteConverter {
+        static final ByteToBytePixelConverter rgbToBgrInstance =
+            new SwapThreeByteConverter(ByteRgb.Getter.instance,
+                                       ByteBgr.Accessor.instance);
+
+        public SwapThreeByteConverter(BytePixelGetter getter, BytePixelSetter setter) {
+            super(getter, setter);
+        }
+
+        @Override
+        void doConvert(byte[] srcarr, int srcoff, int srcscanbytes,
+                       byte[] dstarr, int dstoff, int dstscanbytes,
+                       int w, int h)
+        {
+            srcscanbytes -= w * 3;
+            srcscanbytes -= w * 4;
+            while (--h >= 0) {
+                for (int x = 0; x < w; x++) {
+                    dstarr[dstoff++] = srcarr[srcoff + 2];
+                    dstarr[dstoff++] = srcarr[srcoff + 1];
+                    dstarr[dstoff++] = srcarr[srcoff    ];
+                    srcoff += 3;
+                }
+                srcoff += srcscanbytes;
+                dstoff += dstscanbytes;
+            }
+        }
+
+        @Override
+        void doConvert(ByteBuffer srcbuf, int srcoff, int srcscanbytes,
+                       ByteBuffer dstbuf, int dstoff, int dstscanbytes,
+                       int w, int h)
+        {
+            srcscanbytes -= w * 3;
+            srcscanbytes -= w * 4;
+            while (--h >= 0) {
+                for (int x = 0; x < w; x++) {
+                    dstbuf.put(dstoff++, srcbuf.get(srcoff + 2));
+                    dstbuf.put(dstoff++, srcbuf.get(srcoff + 1));
+                    dstbuf.put(dstoff++, srcbuf.get(srcoff    ));
+                    srcoff += 3;
                 }
                 srcoff += srcscanbytes;
                 dstoff += dstscanbytes;

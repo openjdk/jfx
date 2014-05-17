@@ -6,8 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/apps/toys/StretchyGrid/src/main/java" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module" module-name="base" />
-    <orderEntry type="module" module-name="graphics" />
+    <orderEntry type="module" module-name="rt" />
     <orderEntry type="inheritedJdk" />
   </component>
 </module>

@@ -55,13 +55,19 @@ JNI_OnLoad_javafx_font(JavaVM * vm, void * reserved) {
 
 #endif
 
+extern jboolean checkAndClearException(JNIEnv *env);
 
 jstring createJavaString(JNIEnv *env, CFStringRef stringRef)
 {
     CFIndex length = CFStringGetLength(stringRef);
     UniChar buffer[length];
     CFStringGetCharacters(stringRef, CFRangeMake(0, length), buffer);
-    return (*env)->NewString(env, (jchar *)buffer, length);
+    jstring jStr = (*env)->NewString(env, (jchar *)buffer, length);
+    if (checkAndClearException(env) || !jStr) {
+        fprintf(stderr, "createJavaString error: JNI exception or jStr == NULL");
+        return NULL;
+    }
+    return jStr;
 }
 
 /*
@@ -108,9 +114,14 @@ CFIndex addCTFontDescriptor(CTFontDescriptorRef fd, JNIEnv *env, jobjectArray re
             jstring jname = createJavaString(env, name);
             jstring jfamily = createJavaString(env, family);
             jstring jfile = createJavaString(env, file);
-            (*env)->SetObjectArrayElement(env, result, index++, jname);
-            (*env)->SetObjectArrayElement(env, result, index++, jfamily);
-            (*env)->SetObjectArrayElement(env, result, index++, jfile);
+            if (jname && jfamily && jfile) {
+                (*env)->SetObjectArrayElement(env, result, index++, jname);
+                checkAndClearException(env);
+                (*env)->SetObjectArrayElement(env, result, index++, jfamily);
+                checkAndClearException(env);
+                (*env)->SetObjectArrayElement(env, result, index++, jfile);
+                checkAndClearException(env);
+            }
         }
         if (name) CFRelease(name);
         if (family) CFRelease(family);
@@ -130,7 +141,10 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_javafx_font_MacFontFinder_getFontDat
 {
     /* No caching as this method is only invoked once */
     jclass jStringClass = (*env)->FindClass(env, "java/lang/String");
-    if (jStringClass == NULL) return NULL;
+    if (checkAndClearException(env) || !jStringClass) {
+        fprintf(stderr, "getFontData error: JNI exception or jStringClass == NULL");
+        return NULL;
+    }
 
     CTFontCollectionRef collection = CTFontCollectionCreateFromAvailableFonts(NULL);
     CFArrayRef fonts = CTFontCollectionCreateMatchingFontDescriptors(collection);
@@ -138,7 +152,8 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_javafx_font_MacFontFinder_getFontDat
 
     CFIndex count = CFArrayGetCount(fonts);
     jobjectArray result = (*env)->NewObjectArray(env, (count + 2) * 3, jStringClass, NULL);
-    if (result == NULL) {
+    if (checkAndClearException(env) || !result) {
+        fprintf(stderr, "getFontData error: JNI exception or result == NULL");
         /* out of memory */
         CFRelease(fonts);
         return NULL;

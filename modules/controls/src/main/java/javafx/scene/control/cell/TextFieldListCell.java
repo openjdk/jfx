@@ -84,11 +84,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
      *      ListView, that enables textual editing of the content.
      */
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(final StringConverter<T> converter) {
-        return new Callback<ListView<T>, ListCell<T>>() {
-            @Override public ListCell<T> call(ListView<T> list) {
-                return new TextFieldListCell<T>(converter);
-            }
-        };
+        return list -> new TextFieldListCell<T>(converter);
     }
     
     

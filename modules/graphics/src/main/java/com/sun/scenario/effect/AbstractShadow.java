@@ -39,7 +39,7 @@ package com.sun.scenario.effect;
  * set to something different then the radius parameter will be an average
  * of the corresponding individual dimensional radius values.
  */
-public abstract class AbstractShadow extends CoreEffect {
+public abstract class AbstractShadow extends LinearConvolveCoreEffect {
     public AbstractShadow(Effect input) {
         super(input);
     }

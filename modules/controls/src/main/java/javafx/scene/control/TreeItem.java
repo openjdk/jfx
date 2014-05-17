@@ -225,8 +225,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     public static <T> EventType<TreeModificationEvent<T>> treeNotificationEvent() {
         return (EventType<TreeModificationEvent<T>>) TREE_NOTIFICATION_EVENT;
     }
-    private static final EventType TREE_NOTIFICATION_EVENT
-            = new EventType(Event.ANY, "TreeNotificationEvent");
+    private static final EventType<?> TREE_NOTIFICATION_EVENT
+            = new EventType<>(Event.ANY, "TreeNotificationEvent");
 
     /**
      * The general EventType used when the TreeItem receives a modification that
@@ -243,8 +243,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     public static <T> EventType<TreeModificationEvent<T>> expandedItemCountChangeEvent() {
         return (EventType<TreeModificationEvent<T>>) EXPANDED_ITEM_COUNT_CHANGE_EVENT;
     }
-    private static final EventType EXPANDED_ITEM_COUNT_CHANGE_EVENT
-            = new EventType(treeNotificationEvent(), "ExpandedItemCountChangeEvent");
+    private static final EventType<?> EXPANDED_ITEM_COUNT_CHANGE_EVENT
+            = new EventType<>(treeNotificationEvent(), "ExpandedItemCountChangeEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -257,7 +257,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) BRANCH_EXPANDED_EVENT;
     }
     private static final EventType<?> BRANCH_EXPANDED_EVENT
-            = new EventType(expandedItemCountChangeEvent(), "BranchExpandedEvent");
+            = new EventType<>(expandedItemCountChangeEvent(), "BranchExpandedEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -270,7 +270,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) BRANCH_COLLAPSED_EVENT;
     }
     private static final EventType<?> BRANCH_COLLAPSED_EVENT
-            = new EventType(expandedItemCountChangeEvent(), "BranchCollapsedEvent");
+            = new EventType<>(expandedItemCountChangeEvent(), "BranchCollapsedEvent");
 
     /**
      * An EventType used when the TreeItem receives a direct modification to its
@@ -283,7 +283,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) CHILDREN_MODIFICATION_EVENT;
     }
     private static final EventType<?> CHILDREN_MODIFICATION_EVENT
-            = new EventType(expandedItemCountChangeEvent(), "ChildrenModificationEvent");
+            = new EventType<>(expandedItemCountChangeEvent(), "ChildrenModificationEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -296,7 +296,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) VALUE_CHANGED_EVENT;
     }
     private static final EventType<?> VALUE_CHANGED_EVENT
-            = new EventType(treeNotificationEvent(), "ValueChangedEvent");
+            = new EventType<>(treeNotificationEvent(), "ValueChangedEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -309,7 +309,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) GRAPHIC_CHANGED_EVENT;
     }
     private static final EventType<?> GRAPHIC_CHANGED_EVENT
-            = new EventType(treeNotificationEvent(), "GraphicChangedEvent");
+            = new EventType<>(treeNotificationEvent(), "GraphicChangedEvent");
     
     
 
@@ -405,12 +405,10 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      **************************************************************************/
 
     // called whenever the contents of the children sequence changes
-    private ListChangeListener<TreeItem<T>> childrenListener = new ListChangeListener<TreeItem<T>>() {
-        @Override public void onChanged(Change<? extends TreeItem<T>> c) {
-            expandedDescendentCountDirty = true;
-            while (c.next()) {
-                updateChildren(c.getAddedSubList(), c.getRemoved());
-            }
+    private ListChangeListener<TreeItem<T>> childrenListener = c -> {
+        expandedDescendentCountDirty = true;
+        while (c.next()) {
+            updateChildren(c.getAddedSubList(), c.getRemoved());
         }
     };
 
@@ -812,7 +810,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         // if we're at the root node, we'll fire an event so that the control
         // can update its display
         if (getParent() == null) {
-            TreeModificationEvent e = new TreeModificationEvent<T>(TreeItem.childrenModificationEvent(), this);
+            TreeModificationEvent<T> e = new TreeModificationEvent<T>(TreeItem.childrenModificationEvent(), this);
             e.wasPermutated = true;
             fireEvent(e);
         }
@@ -1038,6 +1036,10 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
             this.removed = removed;
             this.wasExpanded = false;
             this.wasCollapsed = false;
+
+            this.wasPermutated = added != null && removed != null &&
+                                 added.size() == removed.size() &&
+                                 added.containsAll(removed);
         }
 
         /**

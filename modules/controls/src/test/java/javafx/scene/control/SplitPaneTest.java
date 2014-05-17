@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.css.CssMetaData;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
@@ -39,7 +40,9 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import static org.junit.Assert.*;
 
@@ -283,7 +286,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -301,7 +304,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -325,7 +328,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -354,7 +357,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -387,7 +390,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -420,7 +423,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -453,7 +456,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -481,7 +484,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -506,7 +509,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -531,7 +534,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -571,7 +574,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -603,7 +606,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -618,7 +621,7 @@ public class SplitPaneTest {
         assertEquals(232, spCenter.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(77, spRight.getLayoutBounds().getWidth(), 1e-100);
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.resize(405, 400);
         root.layout();
 
@@ -653,7 +656,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -668,7 +671,7 @@ public class SplitPaneTest {
         assertEquals(232, spCenter.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(77, spRight.getLayoutBounds().getWidth(), 1e-100);
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.resize(405, 400);
         root.layout();
 
@@ -701,7 +704,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -716,7 +719,7 @@ public class SplitPaneTest {
         assertEquals(29, spCenter.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(29, spRight.getLayoutBounds().getWidth(), 1e-100);
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.resize(405, 400);
         root.layout();
 
@@ -746,7 +749,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -771,7 +774,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -801,7 +804,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -835,7 +838,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -869,7 +872,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -903,7 +906,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -933,7 +936,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -960,7 +963,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -986,7 +989,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -1027,7 +1030,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -1060,7 +1063,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -1075,7 +1078,7 @@ public class SplitPaneTest {
         assertEquals(232, spCenter.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(77, spRight.getLayoutBounds().getHeight(), 1e-100);
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.resize(400, 405);
         root.layout();
 
@@ -1111,7 +1114,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -1126,7 +1129,7 @@ public class SplitPaneTest {
         assertEquals(232, spCenter.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(77, spRight.getLayoutBounds().getHeight(), 1e-100);
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.resize(400, 405);
         root.layout();
 
@@ -1160,7 +1163,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -1175,7 +1178,7 @@ public class SplitPaneTest {
         assertEquals(29, spCenter.getLayoutBounds().getHeight(), 1e-100);
         assertEquals(29, spRight.getLayoutBounds().getHeight(), 1e-100);
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.resize(400, 405);
         root.layout();
 
@@ -1208,7 +1211,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -1252,7 +1255,7 @@ public class SplitPaneTest {
         root.getChildren().add(splitPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.autosize();
         root.layout();
 
@@ -1277,23 +1280,20 @@ public class SplitPaneTest {
         st.setScene(new Scene(sp, 2000, 2000));
         st.show();
            
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-                StackPane rightsp = new StackPane();
-                Label right = new Label("right");
-                rightsp.getChildren().add(right);
-                
-                StackPane leftsp = new StackPane();
-                Label left = new Label("left");
-                leftsp.getChildren().add(left);
-                
-                sp.getItems().addAll(rightsp, leftsp);
-            }
+        Runnable runnable = () -> {
+            StackPane rightsp = new StackPane();
+            Label right = new Label("right");
+            rightsp.getChildren().add(right);
+
+            StackPane leftsp = new StackPane();
+            Label left = new Label("left");
+            leftsp.getChildren().add(left);
+
+            sp.getItems().addAll(rightsp, leftsp);
         };
         Platform.runLater(runnable);
                         
-        sp.impl_reapplyCSS();
+        sp.applyCss();
         sp.resize(400, 400);
         sp.layout();
         
@@ -1302,5 +1302,27 @@ public class SplitPaneTest {
         double pos[] = sp.getDividerPositions();
         double p0 = convertDividerPostionToAbsolutePostion(pos[0], 398);
         assertEquals(196, p0, 1e-100);        
-    }    
+    }
+
+    @Test public void test_rt_36392() {
+        AnchorPane item0 = new AnchorPane();
+        item0.setId("xxx");
+
+        VBox item1 = new VBox();
+        item1.setId("myvbox");
+
+        SplitPane splitPane = new SplitPane();
+        splitPane.getItems().addAll(item0, item1);
+
+        AnchorPane page = new AnchorPane();
+        page.setId("AnchorPane");
+        page.getChildren().add(splitPane);
+
+        StageLoader sl = new StageLoader(page);
+
+        VBox myvbox = (VBox) page.lookup("#myvbox");
+        myvbox.getChildren().add(new Button("Hello world !!!"));
+
+        sl.dispose();
+    }
 }

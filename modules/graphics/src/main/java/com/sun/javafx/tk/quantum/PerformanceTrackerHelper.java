@@ -165,13 +165,7 @@ abstract class PerformanceTrackerHelper {
                 if ((Long) getStartTimeMethod.invoke(null) <= 0) {
                     // Standalone apps record launch time as sysprop
                     String launchTimeString = AccessController.doPrivileged(
-                            new PrivilegedAction<String>() {
-
-                                @Override
-                                public String run() {
-                                    return System.getProperty("launchTime");
-                                }
-                            });
+                            (PrivilegedAction<String>) () -> System.getProperty("launchTime"));
                     
                     if (launchTimeString != null
                             && !launchTimeString.equals("")) {

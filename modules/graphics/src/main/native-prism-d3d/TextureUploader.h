@@ -63,12 +63,13 @@ struct TextureUpdater {
     PFormat format;
     UINT srcW, srcH, srcStride, srcSize;
 
-    // destinition
+    // destination
     IDirect3DTexture9 *pTexture;
+    IDirect3DSurface9 *pSurface;
     D3DSURFACE_DESC *pDesc;
     UINT dstX, dstY;
 
-    TextureUpdater() : pTexture(0), data(0), pDesc(0) {}
+    TextureUpdater() : pTexture(0), pSurface(0), data(0), pDesc(0) {}
 
     // return false if paramenters are incorrect
     // dstW and dstH are real texture size from its D3DSURFACE_DESC
@@ -88,8 +89,9 @@ struct TextureUpdater {
         return dstOk && srcOk;
     }
 
-    void setTarget(IDirect3DTexture9 *t, D3DSURFACE_DESC *desc, UINT x, UINT y) {
-        pTexture = t;
+    void setTarget(IDirect3DTexture9 *tex, IDirect3DSurface9 *surface, D3DSURFACE_DESC *desc, UINT x, UINT y) {
+        pTexture = tex;
+        pSurface = surface;
         pDesc = desc;
         dstX = x; dstY = y;
     }
@@ -109,7 +111,7 @@ struct TextureUpdater {
       returns number of bytes transferred
     */
     int updateLockableTexture();
-    int updateD3D9ExTexture(IDirect3DDevice9 *pDev);
+    int updateD3D9ExTexture(D3DContext *pCtx);
 
 private:
 
@@ -118,8 +120,6 @@ private:
     static void transferA8toA8R8G8B8( BYTE const *pSrcPixels, int srcStride, DWORD *pDstPixels, int dstStride, int w, int h);
 
     static void transferRGBtoA8R8G8B8( BYTE const *pSrcPixels, int srcStride, DWORD *pDstPixels, int dstStride, int w, int h);
-
-    bool isConversionNeeded() const;
 
     void unimplementedError();
 };

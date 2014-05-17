@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,6 @@ import javafx.animation.ParallelTransition;
 import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
@@ -88,12 +86,14 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         symbol.getStyleClass().setAll("chart-symbol", "series" + getData().indexOf(series), "data" + itemIndex,
                 series.defaultColorStyleClass);
         // add and fade in new symbol if animated
-        if (shouldAnimate()) symbol.setOpacity(0);
-        getPlotChildren().add(symbol);
         if (shouldAnimate()) {
+            symbol.setOpacity(0);
+            getPlotChildren().add(symbol);
             FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
             ft.setToValue(1);
             ft.play();
+        } else {
+            getPlotChildren().add(symbol);
         }
     }
 
@@ -104,11 +104,10 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
             // fade out old symbol
             FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
             ft.setToValue(0);
-            ft.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent actionEvent) {
-                    getPlotChildren().remove(symbol);
-                    removeDataItemFromDisplay(series, item);
-                }
+            ft.setOnFinished(actionEvent -> {
+                getPlotChildren().remove(symbol);
+                removeDataItemFromDisplay(series, item);
+                symbol.setOpacity(1.0);
             });
             ft.play();
         } else {
@@ -134,20 +133,17 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         // remove all symbol nodes
         if (shouldAnimate()) {
             ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(new EventHandler<ActionEvent>() {
-                public void handle(ActionEvent event) {
-                    removeSeriesFromDisplay(series);
-                }
+            pt.setOnFinished(event -> {
+                removeSeriesFromDisplay(series);
             });
             for (final Data<X,Y> d : series.getData()) {
                 final Node symbol = d.getNode();
                 // fade out old symbol
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
                 ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(symbol);
-                    }
+                ft.setOnFinished(actionEvent -> {
+                    getPlotChildren().remove(symbol);
+                    symbol.setOpacity(1.0);
                 });
                 pt.getChildren().add(ft);
             }
@@ -169,6 +165,9 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
             for (Data<X,Y> item = series.begin; item != null; item = item.next) {
                 double x = getXAxis().getDisplayPosition(item.getCurrentX());
                 double y = getYAxis().getDisplayPosition(item.getCurrentY());
+                if (Double.isNaN(x) || Double.isNaN(y)) {
+                    continue;
+                }
                 Node symbol = item.getNode();
                 if (symbol != null) {
                     final double w = symbol.prefWidth(-1);

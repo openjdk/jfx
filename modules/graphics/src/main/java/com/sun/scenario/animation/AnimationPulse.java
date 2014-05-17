@@ -119,61 +119,21 @@ public class AnimationPulse implements AnimationPulseMBean {
             public long get(PulseData pulseData, TimeUnit unit);
         }
         
-        static final Accessor PulseStartAccessor = new Accessor() {
-            @Override
-            public long get(PulseData pulseData, TimeUnit unit) {
-                return pulseData.getPulseStart(unit);
-            }
-        };
+        static final Accessor PulseStartAccessor = (pulseData1, unit) -> pulseData1.getPulseStart(unit);
         
-        static final Accessor AnimationDurationAccessor = new Accessor() {
-            @Override
-            public long get(PulseData pulseData, TimeUnit unit) {
-                return pulseData.getAnimationDuration(unit);
-            }
-        };
+        static final Accessor AnimationDurationAccessor = (pulseData1, unit) -> pulseData1.getAnimationDuration(unit);
         
-        static final Accessor PaintingDurationAccessor = new Accessor() {
-            @Override
-            public long get(PulseData pulseData, TimeUnit unit) {
-                return pulseData.getPaintingDuration(unit);
-            }
-        };
+        static final Accessor PaintingDurationAccessor = (pulseData1, unit) -> pulseData1.getPaintingDuration(unit);
         
-        static final Accessor ScenePaintingDurationAccessor = new Accessor() {
-            @Override
-            public long get(PulseData pulseData, TimeUnit unit) {
-                return pulseData.getScenePaintingDuration(unit);
-            }
-        };
+        static final Accessor ScenePaintingDurationAccessor = (pulseData1, unit) -> pulseData1.getScenePaintingDuration(unit);
         
-        static final Accessor PulseDurationAccessor = new Accessor() {
-            @Override
-            public long get(PulseData pulseData, TimeUnit unit) {
-               return pulseData.getPulseDuration(unit);
-            }  
-        };
+        static final Accessor PulseDurationAccessor = (pulseData1, unit) -> pulseData1.getPulseDuration(unit);
         
-        static final Accessor PulseEndAccessor = new Accessor() {
-            @Override
-            public long get(PulseData pulseData, TimeUnit unit) {
-               return pulseData.getPulseEnd(unit);
-            }  
-        };
+        static final Accessor PulseEndAccessor = (pulseData1, unit) -> pulseData1.getPulseEnd(unit);
         
-        static final Accessor PaintingPreparationDuration = new Accessor() {
-            @Override
-            public long get(PulseData pulseData, TimeUnit unit) {
-               return pulseData.getPaintingDuration(unit);
-            }  
-        };
+        static final Accessor PaintingPreparationDuration = (pulseData1, unit) -> pulseData1.getPaintingDuration(unit);
         
-        static final Accessor PaintingFinalizationDuration = new Accessor() {
-            @Override
-            public long get(PulseData pulseData, TimeUnit unit) {
-               return pulseData.getPaintingFinalizationDuration(unit);
-            }  
-        };
+        static final Accessor PaintingFinalizationDuration = (pulseData1, unit) -> pulseData1.getPaintingFinalizationDuration(unit);
         
 //        @Override
 //        public String toString() {

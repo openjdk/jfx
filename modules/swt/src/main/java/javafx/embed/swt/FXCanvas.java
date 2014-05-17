@@ -89,6 +89,7 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
@@ -158,21 +159,34 @@ public class FXCanvas extends Canvas {
     private IntBuffer pixelsBuf = null;
     
     // This filter runs when any widget is moved
-    Listener moveFilter = new Listener() {
-        public void handleEvent(Event event) {
-            // If a parent has moved, send a move event to FX
-            Control control = FXCanvas.this;
-            while (control != null) {
-                if (control == event.widget) {
-                    sendMoveEventToFX();
-                    break;
-                }
-                control = control.getParent();
-            };
-        }
+    Listener moveFilter = event -> {
+        // If a parent has moved, send a move event to FX
+        Control control = FXCanvas.this;
+        while (control != null) {
+            if (control == event.widget) {
+                sendMoveEventToFX();
+                break;
+            }
+            control = control.getParent();
+        };
     };
-    
-    private double scaleFactor = 1.0;
+
+    private double getScaleFactor() {
+        if (SWT.getPlatform().equals("cocoa")) {
+            if (windowField == null || screenMethod == null || backingScaleFactorMethod == null) {
+                return 1.0;
+            }
+            try {
+                Object nsWindow = windowField.get(this.getShell());
+                Object nsScreen = screenMethod.invoke(nsWindow);
+                Object bsFactor = backingScaleFactorMethod.invoke(nsScreen);
+                return ((Double) bsFactor).doubleValue();
+            } catch (Exception e) {
+                // FAIL silently should the reflection fail
+            }
+        }
+        return 1.0;
+    }
     
     private DropTarget dropTarget;
     
@@ -207,7 +221,7 @@ public class FXCanvas extends Canvas {
         return transfer;
     }
     
-    private static Field viewField;
+    private static Field windowField;
     private static Method windowMethod;
     private static Method screenMethod;
     private static Method backingScaleFactorMethod;
@@ -215,8 +229,8 @@ public class FXCanvas extends Canvas {
     static {
         if (SWT.getPlatform().equals("cocoa")) {
             try {
-                viewField = GCData.class.getDeclaredField("view");
-                viewField.setAccessible(true);
+                windowField = Shell.class.getDeclaredField("window");
+                windowField.setAccessible(true);
 
                 Class nsViewClass = Class.forName("org.eclipse.swt.internal.cocoa.NSView");            
                 windowMethod = nsViewClass.getDeclaredMethod("window");
@@ -248,11 +262,9 @@ public class FXCanvas extends Canvas {
     }
 
     private static void initFx() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                System.setProperty("javafx.embed.isEventThread", "true");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            System.setProperty("javafx.embed.isEventThread", "true");
+            return null;
         });
         Map map = Application.getDeviceDetails();
         if (map == null) {
@@ -276,11 +288,8 @@ public class FXCanvas extends Canvas {
             map.put("javafx.embed.eventProc", eventProc);
         }
         // Note that calling PlatformImpl.startup more than once is OK
-        PlatformImpl.startup(new Runnable() {
-            @Override
-            public void run() {
-                Application.GetApplication().setName(Display.getAppName());
-            }
+        PlatformImpl.startup(() -> {
+            Application.GetApplication().setName(Display.getAppName());
         });
     }
     
@@ -378,11 +387,8 @@ public class FXCanvas extends Canvas {
             }
         });
 
-        addPaintListener(new PaintListener() {
-            @Override
-            public void paintControl(PaintEvent pe) {
-                FXCanvas.this.paintControl(pe);
-            }
+        addPaintListener(pe -> {
+            FXCanvas.this.paintControl(pe);
         });
 
         addMouseListener(new MouseListener() {
@@ -400,22 +406,16 @@ public class FXCanvas extends Canvas {
             }
         });
 
-        addMouseMoveListener(new MouseMoveListener() {
-            @Override
-            public void mouseMove(MouseEvent me) {
-                if ((me.stateMask & SWT.BUTTON_MASK) != 0) {
-                    FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_DRAGGED);
-                } else {
-                    FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_MOVED);
-                }
+        addMouseMoveListener(me -> {
+            if ((me.stateMask & SWT.BUTTON_MASK) != 0) {
+                FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_DRAGGED);
+            } else {
+                FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_MOVED);
             }
         });
 
-        addMouseWheelListener(new MouseWheelListener() {
-            @Override
-            public void mouseScrolled(MouseEvent me) {
-                FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_WHEEL);
-            }
+        addMouseWheelListener(me -> {
+            FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_WHEEL);
         });
 
         addMouseTrackListener(new MouseTrackListener() {
@@ -467,10 +467,20 @@ public class FXCanvas extends Canvas {
             }
         });
         
-        addMenuDetectListener(new MenuDetectListener() {
-            @Override
-            public void menuDetected(MenuDetectEvent e) {
+        addMenuDetectListener(e -> {
+            Runnable r = () -> {
+                if (isDisposed()) return;
                 FXCanvas.this.sendMenuEventToFX(e);
+            };
+            // In SWT, MenuDetect comes before the equivalent mouse event
+            // On Mac, the order is MenuDetect, MouseDown, MouseUp.  FX
+            // does not expect this order and when it gets the MouseDown,
+            // it closes the menu.  The fix is to defer the MenuDetect
+            // notification until after the MouseDown is sent to FX.
+            if ("cocoa".equals(SWT.getPlatform())) {
+                getDisplay().asyncExec(r);
+            } else {
+                r.run();
             }
         });
     }
@@ -482,11 +492,19 @@ public class FXCanvas extends Canvas {
         }
     }
 
+    double lastScaleFactor = 1.0;
     int lastWidth, lastHeight;
     IntBuffer lastPixelsBuf =  null;
     private void paintControl(PaintEvent pe) {
         if ((scenePeer == null) || (pixelsBuf == null)) {
             return;
+        }
+
+        double scaleFactor = getScaleFactor();
+        if (lastScaleFactor != scaleFactor) {
+            resizePixelBuffer(scaleFactor);
+            lastScaleFactor = scaleFactor;
+            scenePeer.setPixelScaleFactor((float)scaleFactor);
         }
 
         // if we can't get the pixels, draw the bits that were there before
@@ -537,31 +555,6 @@ public class FXCanvas extends Canvas {
         Image image = new Image(Display.getDefault(), imageData);
         pe.gc.drawImage(image, 0, 0, width, height, 0, 0, pWidth, pHeight);
         image.dispose();
-        
-        double newScaleFactor = getScaleFactor(pe.gc);
-        if (scaleFactor != newScaleFactor) {
-            resizePixelBuffer(newScaleFactor);
-            // The scene will request repaint.
-            scenePeer.setPixelScaleFactor((float)newScaleFactor);
-            scaleFactor = newScaleFactor;
-        }
-    }
-    
-    private double getScaleFactor(GC gc) {
-        double scale = 1.0;
-        if (SWT.getPlatform().equals("cocoa")) {
-            if (viewField != null && windowMethod != null && screenMethod != null && backingScaleFactorMethod != null) {
-                try {
-                    Object nsWindow = windowMethod.invoke(viewField.get(gc.getGCData()));
-                    Object nsScreen = screenMethod.invoke(nsWindow);
-                    Object bsFactor = backingScaleFactorMethod.invoke(nsScreen);
-                    scale = ((Double)bsFactor).doubleValue();
-                } catch (Exception e) {
-                    //Fail silently.  If we can't get the methods, then the current version of SWT has no retina support
-                }
-            }
-        }
-        return scale;
     }
     
     private void sendMoveEventToFX() {
@@ -661,7 +654,7 @@ public class FXCanvas extends Canvas {
         pWidth = getClientArea().width;
         pHeight = getClientArea().height;
 
-        resizePixelBuffer(scaleFactor);
+        resizePixelBuffer(lastScaleFactor);
 
         if (scenePeer == null) {
             return;
@@ -891,11 +884,9 @@ public class FXCanvas extends Canvas {
                     data = null;
                     //transferData = null;
                     currentTransferData = null;
-                    getDisplay().asyncExec(new Runnable () {
-                        public void run () {
-                            if (ignoreLeave) return;
-                            fxDropTarget.handleDragLeave();
-                        }
+                    getDisplay().asyncExec(() -> {
+                        if (ignoreLeave) return;
+                        fxDropTarget.handleDragLeave();
                     });
                 }
                 public void dragOperationChanged(DropTargetEvent event) {
@@ -950,21 +941,20 @@ public class FXCanvas extends Canvas {
             if (pWidth > 0 && pHeight > 0) {
                 scenePeer.setSize(pWidth, pHeight);
             }
-            scenePeer.setDragStartListener(new HostDragStartListener() {
-                @Override
-                public void dragStarted(final EmbeddedSceneDSInterface fxDragSource, final TransferMode dragAction) {
-                    Platform.runLater(new Runnable ()  {
-                        public void run () {
-                            DragSource dragSource = createDragSource(fxDragSource, dragAction);
-                            if (dragSource == null) {
-                                fxDragSource.dragDropEnd(null);
-                            } else {
-                                updateDropTarget();
-                                FXCanvas.this.notifyListeners(SWT.DragDetect, null);
-                            }
-                        }
-                    });
-                }
+            double scaleFactor = getScaleFactor();
+            resizePixelBuffer(scaleFactor);
+            lastScaleFactor = scaleFactor;
+            scenePeer.setPixelScaleFactor((float)scaleFactor);
+            scenePeer.setDragStartListener((fxDragSource, dragAction) -> {
+                Platform.runLater(() -> {
+                    DragSource dragSource = createDragSource(fxDragSource, dragAction);
+                    if (dragSource == null) {
+                        fxDragSource.dragDropEnd(null);
+                    } else {
+                        updateDropTarget();
+                        FXCanvas.this.notifyListeners(SWT.DragDetect, null);
+                    }
+                });
             });
             //Force the old drop target to be disposed before creating a new one
             setDropTarget(null);
@@ -973,12 +963,9 @@ public class FXCanvas extends Canvas {
 
         @Override
         public boolean requestFocus() {
-            Display.getDefault().asyncExec(new Runnable() {
-                @Override
-                public void run() {
-                    if (isDisposed()) return;
-                    FXCanvas.this.forceFocus();
-                }
+            Display.getDefault().asyncExec(() -> {
+                if (isDisposed()) return;
+                FXCanvas.this.forceFocus();
             });
             return true;
         }
@@ -995,16 +982,13 @@ public class FXCanvas extends Canvas {
             synchronized (lock) {
                 if (queued) return;
                 queued = true;
-                Display.getDefault().asyncExec(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            if (isDisposed()) return;
-                            FXCanvas.this.redraw();
-                        } finally {
-                            synchronized (lock) {
-                                queued = false;
-                            }
+                Display.getDefault().asyncExec(() -> {
+                    try {
+                        if (isDisposed()) return;
+                        FXCanvas.this.redraw();
+                    } finally {
+                        synchronized (lock) {
+                            queued = false;
                         }
                     }
                 });

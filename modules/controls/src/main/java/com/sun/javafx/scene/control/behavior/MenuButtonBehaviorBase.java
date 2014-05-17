@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import static javafx.scene.input.KeyEvent.KEY_PRESSED;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Side;
 import javafx.scene.control.MenuButton;
 import javafx.scene.input.MouseButton;
@@ -95,6 +96,16 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
     @Override protected void callAction(String name) {
         MenuButton button = getControl();
         Side popupSide = button.getPopupSide();
+        
+        if (button.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
+            // Swap L/R direction for RTL
+            if (popupSide == Side.LEFT) {
+                popupSide = Side.RIGHT;
+            } else if (popupSide == Side.RIGHT) {
+                popupSide = Side.LEFT;
+            }
+        }
+
         if (CLOSE_ACTION.equals(name)) {
             button.hide();
         } else if (OPEN_ACTION.equals(name)) {

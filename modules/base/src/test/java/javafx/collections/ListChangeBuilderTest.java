@@ -451,13 +451,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Update() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         
@@ -469,13 +464,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Add() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         
@@ -487,13 +477,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Remove() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         
@@ -505,13 +490,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Composed() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         
@@ -525,13 +505,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Permutation() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         

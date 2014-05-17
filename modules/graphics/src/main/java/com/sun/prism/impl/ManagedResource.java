@@ -305,9 +305,9 @@ public abstract class ManagedResource<T> implements GraphicsResource {
                 }
             }
         }
+        double avg_age = ((double) total_age) / total;
         System.err.println(total+" total resources being managed");
-        System.err.println("average resource age is "+
-                           Math.round((total_age * 10.0)/total)/10.0+" frames");
+        System.err.println(String.format("average resource age is %.1f frames", avg_age));
         printpoolpercent(numancient, total, "at maximum supported age");
         printpoolpercent(numpermanent, total, "marked permanent");
         printpoolpercent(nummismatched, total, "have had mismatched locks");
@@ -318,8 +318,8 @@ public abstract class ManagedResource<T> implements GraphicsResource {
     }
 
     private static void printpoolpercent(int stat, int total, String desc) {
-        double percent = Math.round(stat * 1000.0 / total)/10.0;
-        String str = String.format("%d resources %s (%f)", stat, desc, percent);
+        double percent = stat * 100.0 / total;
+        String str = String.format("%,d resources %s (%.1f%%)", stat, desc, percent);
         System.err.println(str);
     }
 

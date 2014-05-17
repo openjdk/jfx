@@ -29,6 +29,7 @@
 #import "GlassHostView.h"
 #import "GlassFullscreenWindow.h"
 #import "GlassDragSource.h"
+#import "GlassAccessible.h"
 
 // helper class that implements the custom GlassView functionality
 @interface GlassViewDelegate : NSObject <GlassDragSourceDelegate>
@@ -49,6 +50,7 @@
     
     BOOL                    mouseIsDown;
     BOOL                    mouseIsOver;
+    int                     mouseDownMask; // bit 0 - left, 1 - right, 2 - other button
     
     BOOL                    gestureInProgress;
     
@@ -94,5 +96,7 @@
 - (void)setFrameOrigin:(NSPoint)newOrigin;
 
 - (jobject)jView;
+
+- (GlassAccessible*)getAccessible;
 
 @end

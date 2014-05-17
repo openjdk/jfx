@@ -34,7 +34,6 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.TreeItem;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -54,6 +53,16 @@ import javafx.util.StringConverter;
  * that the CheckBox in the cell will set/unset this property based on user 
  * interactions, and the CheckBox will reflect the state of the 
  * ObservableValue<Boolean>, if it changes externally).
+ *
+ * <p>Note that the CheckBoxListCell renders the CheckBox 'live', meaning that
+ * the CheckBox is always interactive and can be directly toggled by the user.
+ * This means that it is not necessary that the cell enter its
+ * {@link #editingProperty() editing state} (usually by the user double-clicking
+ * on the cell). A side-effect of this is that the usual editing callbacks
+ * (such as {@link javafx.scene.control.ListView#onEditCommitProperty() on edit commit})
+ * will <strong>not</strong> be called. If you want to be notified of changes,
+ * it is recommended to directly observe the boolean properties that are
+ * manipulated by the CheckBox.</p>
  * 
  * @see CheckBox
  * @see ListCell
@@ -116,11 +125,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final Callback<T, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<T> converter) {
-        return new Callback<ListView<T>, ListCell<T>>() {
-            @Override public ListCell<T> call(ListView<T> list) {
-                return new CheckBoxListCell<T>(getSelectedProperty, converter);
-            }
-        };
+        return list -> new CheckBoxListCell<T>(getSelectedProperty, converter);
     }
     
     /***************************************************************************
@@ -257,7 +262,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
         super.updateItem(item, empty);
         
         if (! empty) {
-            StringConverter c = getConverter();
+            StringConverter<T> c = getConverter();
             Callback<T, ObservableValue<Boolean>> callback = getSelectedStateCallback();
             if (callback == null) {
                 throw new NullPointerException(

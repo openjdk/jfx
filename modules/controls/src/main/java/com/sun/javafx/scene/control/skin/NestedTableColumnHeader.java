@@ -127,10 +127,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      *                                                                         *
      **************************************************************************/
     
-    private final ListChangeListener<TableColumnBase> columnsListener = new ListChangeListener<TableColumnBase>() {
-        @Override public void onChanged(Change<? extends TableColumnBase> c) {
-            setHeadersNeedUpdate();
-        }
+    private final ListChangeListener<TableColumnBase> columnsListener = c -> {
+        setHeadersNeedUpdate();
     };
     
     private final WeakListChangeListener weakColumnsListener =
@@ -147,9 +145,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
                 // the user wants to resize the column such that its
                 // width is equal to the widest element in the column
-                if (column.isResizable()) {
-                    header.getTableViewSkin().resizeColumnToFitContent(column, -1);
-                }
+                header.getTableViewSkin().resizeColumnToFitContent(column, -1);
             } else {
                 // rather than refer to the rect variable, we just grab
                 // it from the source to prevent a small memory leak.
@@ -194,8 +190,10 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             TableColumnBase column = (TableColumnBase) rect.getProperties().get(TABLE_COLUMN_KEY);
             NestedTableColumnHeader header = (NestedTableColumnHeader) rect.getProperties().get(TABLE_COLUMN_HEADER_KEY);
 
-            rect.setCursor(header.isColumnResizingEnabled() && rect.isHover() &&
-                    column.isResizable() ? Cursor.H_RESIZE : Cursor.DEFAULT);
+            if (header.getCursor() == null) { // If there's a cursor for the whole header, don't override it
+                rect.setCursor(header.isColumnResizingEnabled() && rect.isHover() &&
+                        column.isResizable() ? Cursor.H_RESIZE : null);
+            }
         }
     };
     
@@ -259,16 +257,16 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
         // update the column headers...
 
-        // iterate through all current headers, telling them to clean up
-        for (int i = 0; i < getColumnHeaders().size(); i++) {
-            TableColumnHeader header = getColumnHeaders().get(i);
-            header.dispose();
-        }
-        
-        // then iterate through all columns, unless we've got no child columns
+        // iterate through all columns, unless we've got no child columns
         // any longer, in which case we should switch to a TableColumnHeader 
         // instead
         if (getColumns().isEmpty()) {
+            // iterate through all current headers, telling them to clean up
+            for (int i = 0; i < getColumnHeaders().size(); i++) {
+                TableColumnHeader header = getColumnHeaders().get(i);
+                header.dispose();
+            }
+
             // switch out to be a TableColumn instead, if we have a parent header
             NestedTableColumnHeader parentHeader = getParentHeader();
             if (parentHeader != null) {
@@ -282,15 +280,37 @@ public class NestedTableColumnHeader extends TableColumnHeader {
                 getColumnHeaders().clear();
             }
         } else {
-            List<TableColumnHeader> newHeaders = new ArrayList<TableColumnHeader>();
+            List<TableColumnHeader> oldHeaders = new ArrayList<>(getColumnHeaders());
+            List<TableColumnHeader> newHeaders = new ArrayList<>();
             
             for (int i = 0; i < getColumns().size(); i++) {
                 TableColumnBase<?,?> column = getColumns().get(i);
                 if (column == null || ! column.isVisible()) continue;
-                newHeaders.add(createColumnHeader(column));
+
+                // check if the header already exists and reuse it
+                boolean found = false;
+                for (int j = 0; j < oldHeaders.size(); j++) {
+                    TableColumnHeader oldColumn = oldHeaders.get(j);
+                    if (column == oldColumn.getTableColumn()) {
+                        newHeaders.add(oldColumn);
+                        found = true;
+                        break;
+                    }
+                }
+
+                // otherwise create a new table column header
+                if (!found) {
+                    newHeaders.add(createColumnHeader(column));
+                }
             }
             
             getColumnHeaders().setAll(newHeaders);
+
+            // dispose all old headers
+            oldHeaders.removeAll(newHeaders);
+            for (int i = 0; i < oldHeaders.size(); i++) {
+                oldHeaders.get(i).dispose();
+            }
         }
         
         // update the content
@@ -298,7 +318,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         
         // RT-33596: Do CSS now, as we are in the middle of layout pass and the headers are new Nodes w/o CSS done
         for (TableColumnHeader header : getColumnHeaders()) {
-            header.impl_processCSS(false);
+            header.applyCss();
         }
     }
     
@@ -317,10 +337,11 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             TableColumnHeader header = getColumnHeaders().get(i);
             header.dispose();
         }
-        
-        for (int i = 0; i < dragRects.size(); i++) {
-            Rectangle rect = dragRects.get(i);
-            rect.visibleProperty().unbind();
+
+        for (Rectangle rect : dragRects.values()) {
+            if (rect != null) {
+                rect.visibleProperty().unbind();
+            }
         }
         dragRects.clear();
         getChildren().clear();
@@ -374,10 +395,15 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             // position drag overlay to intercept column resize requests
             Rectangle dragRect = dragRects.get(n.getTableColumn());
             if (dragRect != null) {
-                dragRect.setHeight(getHeight() - label.getHeight());
+                dragRect.setHeight(n.getDragRectHeight());
                 dragRect.relocate(x - DRAG_RECT_WIDTH / 2, snappedTopInset() + labelHeight);
             }
         }
+    }
+
+    @Override
+    double getDragRectHeight() {
+        return label.prefHeight(-1);
     }
 
     // sum up all children columns
@@ -544,6 +570,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     }
 
     private void columnResizingStarted(double startX) {
+        setCursor(Cursor.H_RESIZE);
         columnReorderLine.setLayoutX(startX);
     }
 
@@ -560,7 +587,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     }
 
     private void columnResizingComplete(TableColumnBase col, MouseEvent me) {
-//        getTableHeaderRow().getColumnReorderLine().setVisible(true);
+        setCursor(null);
         columnReorderLine.setTranslateX(0.0F);
         columnReorderLine.setLayoutX(0.0F);
         lastX = 0.0F;

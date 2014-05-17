@@ -88,6 +88,9 @@ static jfieldID  jDelegateMenuField = 0;
                                                                    keyEquivalent:@""];
         [self->item setEnabled:(BOOL)jenabled];
         [self->item setTarget:self];
+
+        self->menu = [[NSMenu allocWithZone:[NSMenu menuZone]] initWithTitle:[self->item title]];
+        [self->menu setDelegate: self];
     }
     return self;
 }
@@ -162,7 +165,7 @@ static jfieldID  jDelegateMenuField = 0;
 }
 
 
-- (void)menuWillOpen: (NSMenu *)menu
+- (void)menuNeedsUpdate: (NSMenu *)menu
 {
     GET_MAIN_JENV;
     if (env != NULL)
@@ -194,7 +197,7 @@ static jfieldID  jDelegateMenuField = 0;
         (*env)->CallVoidMethod(env, self->jCallback, jMenuValidateMethod, NULL);
 
         return ([glassTargetItem->item isEnabled]);
-    } 
+    }
     return YES;
 }
 
@@ -432,11 +435,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1insert
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        if (menu->menu == nil)
-        {
-            menu->menu = [[NSMenu allocWithZone:[NSMenu menuZone]] initWithTitle:[menu->item title]];
-            [menu->menu setDelegate: menu];
-        }
 
         if (jSubmenuPtr != 0)
         {
