@@ -39,6 +39,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Writer;
+import java.net.URLEncoder;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -287,7 +288,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
         out.println("</choice>");
         out.println("<pkg-ref id=\"" + appId + "\" version=\"" + VERSION.fetchFrom(params) +
                 "\" onConclusion=\"none\">" +
-                getPackages_AppPackage(params).getName() + "</pkg-ref>");
+                        URLEncoder.encode(getPackages_AppPackage(params).getName(), "UTF-8") + "</pkg-ref>");
 
         if (SERVICE_HINT.fetchFrom(params)) {
             out.println("<choice id=\"" + daemonId + "\" visible=\"false\">");
@@ -295,7 +296,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             out.println("</choice>");
             out.println("<pkg-ref id=\"" + daemonId + "\" version=\"" + VERSION.fetchFrom(params) +
                     "\" onConclusion=\"none\">" +
-                    getPackages_DaemonPackage(params).getName() + "</pkg-ref>");
+                    URLEncoder.encode(getPackages_DaemonPackage(params).getName(), "UTF-8") + "</pkg-ref>");
         }
 
         out.println("</installer-gui-script>");
@@ -430,19 +431,10 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
 
         results.addAll(MacAppBundler.getAppBundleParameters());
         results.addAll(Arrays.asList(
-                APP_BUNDLER,
-                APP_IMAGE_BUILD_ROOT,
-                APP_NAME,
-                APP_RESOURCES,
-                CONFIG_ROOT,
-                DAEMON_BUNDLER,
-                DAEMON_IMAGE_BUILD_ROOT,
                 DEVELOPER_ID_INSTALLER_SIGNING_KEY,
-                IDENTIFIER,
-                LICENSE_FILE,
-                MAC_APP_IMAGE,
-                SERVICE_HINT,
-                SIGNING_KEY_USER
+                //IDENTIFIER,
+                LICENSE_FILE
+                //SERVICE_HINT
         ));
 
         return results;

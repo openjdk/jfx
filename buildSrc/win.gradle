@@ -33,29 +33,12 @@ WIN.compileSWT = true;
 WIN.compileFXPackager = true;
 WIN.compileDesignTime = true;
 
+WIN.includeNull3d = true
+
 // Lambda for naming the generated libs
 WIN.library = { name -> return "${name}.dll" as String }
 
 WIN.libDest = "bin"
-WIN.jfxrtJarExcludes = [
-    "com/sun/glass/events/mac",
-    "com/sun/glass/ui/mac",
-    "com/sun/prism/es2/gl/mac",
-    //"com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
-
-    "com/sun/glass/ui/gtk",
-    
-    "com/sun/glass/ui/ios",
-    
-    "com/sun/glass/ui/lens",
-    "com/sun/prism/es2/gl/eglfb",
-    "com/sun/prism/es2/gl/eglx11",
-    "com/sun/prism/es2/gl/x11",
-    "com/sun/prism/es2/EGL*",
-    "com/sun/prism/es2/IOSGL*",
-    "com/sun/prism/es2/MacGL*",
-    "com/sun/prism/es2/X11GL*",
-]
 
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",

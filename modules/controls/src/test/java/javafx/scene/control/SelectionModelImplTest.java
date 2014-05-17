@@ -28,6 +28,7 @@ package javafx.scene.control;
 import java.util.Arrays;
 import java.util.Collection;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -484,8 +485,10 @@ public class SelectionModelImplTest {
             // for list / table
             model.select(1);
             assertEquals(ROW_2_VALUE, model.getSelectedItem());
+            assertEquals(1, model.getSelectedIndex());
             data.remove(1);
             assertEquals(ROW_1_VALUE, model.getSelectedItem());
+            assertEquals(0, model.getSelectedIndex());
         }
 
         // we also check that the cell itself is selected (as often the selection
@@ -493,8 +496,9 @@ public class SelectionModelImplTest {
         // TODO remove the ComboBox conditional and test for that too
         if (! (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox)) {
             // selection moves up from 1 to 0 in the current impl
-            IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, model.getSelectedIndex());
-            assertTrue(cell.isSelected());
+            int index = model.getSelectedIndex();
+            IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, index);
+            assertTrue("Cell in index " + index + " should be selected, but isn't", cell.isSelected());
         }
     }
 

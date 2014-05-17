@@ -207,19 +207,11 @@ class PrismCompositeFontResource implements CompositeFontResource {
             return false;
         }
         final PrismCompositeFontResource other = (PrismCompositeFontResource)obj;
-
-        return primaryResource.getFullName().equals(other.getFullName());
+        return primaryResource.equals(other.primaryResource);
     }
 
-    private int hash;
     @Override
     public int hashCode() {
-        if (hash != 0) {
-            return hash;
-        }
-        else {
-            hash = primaryResource.getFullName().hashCode();
-            return hash;
-        }
+        return primaryResource.hashCode();
     }
 }

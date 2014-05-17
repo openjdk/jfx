@@ -658,29 +658,34 @@
         public API and is subject to change. <br>
     </p>
     <h3><a name="introlimitations" id="introlimitations">Limitations</a></h3>
-    <p> While the JavaFX CSS parser will parse valid CSS syntax, it is not a
+    <ol>
+    <li> While the JavaFX CSS parser will parse valid CSS syntax, it is not a
         fully compliant CSS parser. One should not expect the parser to handle
-        syntax not specified in this document.</p>
-    <p>With the exception of @font&#8209;face and @import, @-keyword statements are ignored.</p>
-    <p>The structural pseudo&#8209;classes are not supported. </p>
-    <p>The ":active" and ":focus" dynamic pseudo&#8209;classes are not supported.
+        syntax not specified in this document.</li>
+    <li>With the exception of @font&#8209;face and @import, @-keyword statements are ignored.</li>
+    <li>All @font&#8209;face descriptors are ignored except for the <code>src</code> descriptor. The
+        <code>src</code> descriptor is expected to be a <a href="#typeurl" class="typelink">&lt;url&gt;</a>
+        The <code>format</code> hint is ignored.</li>.
+    <li>The &lt;media-query-list&gt; of the @import statement is not parsed.</li>
+    <li>The structural pseudo&#8209;classes are not supported. </li>
+    <li>The ":active" and ":focus" dynamic pseudo&#8209;classes are not supported.
         However, <a href="#node">Nodes</a> do support the ":pressed" and
-        ":focused" pseudo&#8209;classes, which are similar. </p>
-    <p>The ":link" and ":visited" pseudo&#8209;classes are not supported in general.
+        ":focused" pseudo&#8209;classes, which are similar. </li>
+    <li>The ":link" and ":visited" pseudo&#8209;classes are not supported in general.
         However, <a href="#hyperlink">Hyperlink</a> objects can be styled, and
-        they support the ":visited" pseudo&#8209;class. </p>
-    <p>JavaFX CSS does not support comma-separated series of font family names
+        they support the ":visited" pseudo&#8209;class. </li>
+    <li>JavaFX CSS does not support comma-separated series of font family names
         in the -fx-font-family property. The optional line height parameter when
         specifying fonts is not supported. There is no equivalent for the
-        font-variant property.</p>
-    <p>JavaFX CSS uses the HSB color model instead of the HSL color model. </p>
-    <p>If a property of a node is initialized by calling the set method of the
+        font-variant property.</li>
+    <li>JavaFX CSS uses the HSB color model instead of the HSL color model. </li>
+    <li>If a property of a node is initialized by calling the set method of the
         property, the CSS implementation will see this as a user set value and the
         value will not be overwritten by a style from a user agent style
-        sheet.</p>
-    <p>When parsing a <a href="http://www.w3.org/TR/CSS2/syndata.html#uri">URI</a>,
-        the parser doesn't handle URI escapes nor \&lt;hex-digit&gt;[1,6] code points.</p>
-
+        sheet.</li>
+    <li>When parsing a <a href="http://www.w3.org/TR/CSS2/syndata.html#uri">URI</a>,
+        the parser doesn't handle URI escapes nor \&lt;hex-digit&gt;[1,6] code points.</li>
+    </ol>
     <h2><a name="types" id="types">Types</a></h2>
     <h3><a name="typeinherit" id="typeinherit">inherit</a></h3>
     <p>Each property has a type, which determines what kind of value and the

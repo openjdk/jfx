@@ -26,8 +26,9 @@
 package com.oracle.tools.packager.linux;
 
 import com.oracle.tools.packager.Bundler;
-import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.ConfigException;
+import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import org.junit.After;
@@ -39,13 +40,17 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class LinuxAppBundlerTest {
 
@@ -77,7 +82,7 @@ public class LinuxAppBundlerTest {
         if (retain) {
             tmpBase = new File("build/tmp/tests/linuxapp");
         } else {
-            tmpBase = Files.createTempDirectory("fxpackagertests").toFile();
+            tmpBase = BUILD_ROOT.fetchFrom(new TreeMap<>());
         }
         tmpBase.mkdir();
     }
@@ -125,7 +130,7 @@ public class LinuxAppBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
@@ -184,5 +189,60 @@ public class LinuxAppBundlerTest {
         }
     }
 
+    @Test
+    public void configureEverything() throws Exception {
+        Bundler bundler = new LinuxAppBundler();
+        Collection<BundlerParamInfo<?>> parameters = bundler.getBundleParameters();
 
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(APP_NAME.getID(), "Everything App Name");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LinuxAppBundler.LINUX_RUNTIME.getID(), System.getProperty("java.home"));
+        bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
+        bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
+        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
+        bundleParams.put(VERSION.getID(), "1.2.3.4");
+
+        // assert they are set
+        for (BundlerParamInfo bi :parameters) {
+            assertTrue("Bundle args should contain " + bi.getID(), bundleParams.containsKey(bi.getID()));
+        }
+
+        // and only those are set
+        bundleParamLoop:
+        for (String s :bundleParams.keySet()) {
+            for (BundlerParamInfo<?> bpi : parameters) {
+                if (s.equals(bpi.getID())) {
+                    continue bundleParamLoop;
+                }
+            }
+            fail("Enumerated parameters does not contain " + s);
+        }
+
+        // assert they resolve
+        for (BundlerParamInfo bi :parameters) {
+            bi.fetchFrom(bundleParams);
+        }
+
+        // add verbose now that we are done scoping out parameters
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        // assert it validates
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        File result = bundler.execute(bundleParams, new File(workDir, "everything"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
+    }
 }

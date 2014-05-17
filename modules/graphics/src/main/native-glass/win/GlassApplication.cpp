@@ -123,6 +123,18 @@ LPCTSTR GlassApplication::GetWindowClassNameSuffix()
     return szGlassToolkitWindow;
 }
 
+jstring GlassApplication::GetThemeName(JNIEnv* env)
+{
+    HIGHCONTRAST contrastInfo;
+    contrastInfo.cbSize = sizeof(HIGHCONTRAST);
+    ::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0);
+    if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
+        jsize length = (jsize) wcslen(contrastInfo.lpszDefaultScheme);
+        return env->NewString((jchar*)contrastInfo.lpszDefaultScheme, length);
+    }
+    return NULL;
+}
+
 LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg) {
@@ -174,6 +186,13 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_DISPLAYCHANGE:
             GlassScreen::HandleDisplayChange();
             break;
+        case WM_THEMECHANGED: {
+            JNIEnv* env = GetEnv();
+            jstring themeName = GlassApplication::GetThemeName(env);
+            jboolean result = env->CallBooleanMethod(m_grefThis, javaIDs.Application.notifyThemeChangedMID, themeName);
+            if (CheckAndClearException(env)) return 1;
+            return !result;
+        }
     }
     return ::DefWindowProc(GetHWND(), msg, wParam, lParam);
 }
@@ -333,6 +352,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
     ASSERT(javaIDs.Application.reportExceptionMID);
     if (CheckAndClearException(env)) return;
 
+    javaIDs.Application.notifyThemeChangedMID =
+        env->GetMethodID(cls, "notifyThemeChanged", "(Ljava/lang/String;)Z");
+    ASSERT(javaIDs.Application.notifyThemeChangedMID);
+    if (CheckAndClearException(env)) return;
+
     //NOTE: substitute the cls
     cls = (jclass)env->FindClass("java/lang/Runnable");
     if (CheckAndClearException(env)) return;
@@ -423,6 +447,17 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication__1enterNested
   (JNIEnv * env, jobject self)
 {
     return GlassApplication::EnterNestedEventLoop(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinApplication
+ * Method:    _getHighContrastTheme
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_win_WinApplication__1getHighContrastTheme
+  (JNIEnv * env, jobject self)
+{
+    return GlassApplication::GetThemeName(env);
 }
 
 /*

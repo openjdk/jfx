@@ -39,6 +39,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.linux.LinuxAppBundler.APP_FS_NAME;
+import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
 
 public class LinuxDebBundler extends AbstractBundler {
 
@@ -168,14 +170,14 @@ public class LinuxDebBundler extends AbstractBundler {
     private final static String DEFAULT_DESKTOP_FILE_TEMPLATE = "template.desktop";
     private final static String DEFAULT_INIT_SCRIPT_TEMPLATE = "template.deb.init.script";
 
-    private final static String TOOL_DPKG = "dpkg-deb";
+    public final static String TOOL_DPKG = "dpkg-deb";
 
     public LinuxDebBundler() {
         super();
         baseResourceLoader = LinuxResources.class;
     }
 
-    private boolean testTool(String toolName, String minVersion) {
+    public static boolean testTool(String toolName, String minVersion) {
         try {
             ProcessBuilder pb = new ProcessBuilder(
                     toolName,
@@ -387,12 +389,12 @@ public class LinuxDebBundler extends AbstractBundler {
         Map<String, String> data = new HashMap<>();
 
         data.put("APPLICATION_NAME", APP_NAME.fetchFrom(params));
+        data.put("APPLICATION_FS_NAME", APP_FS_NAME.fetchFrom(params));
         data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params));
         data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
         data.put("APPLICATION_MAINTAINER", MAINTAINER.fetchFrom(params));
         data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
-        data.put("APPLICATION_LAUNCHER_FILENAME",
-                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getName());
+        data.put("APPLICATION_LAUNCHER_FILENAME", APP_FS_NAME.fetchFrom(params));
         data.put("DEPLOY_BUNDLE_CATEGORY", CATEGORY.fetchFrom(params));
         data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
         data.put("APPLICATION_SUMMARY", TITLE.fetchFrom(params));
@@ -484,7 +486,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
         //prepare installer icon
         File iconTarget = getConfig_IconFile(params);
-        File icon = LinuxAppBundler.ICON_PNG.fetchFrom(params);
+        File icon = ICON_PNG.fetchFrom(params);
         if (icon == null || !icon.exists()) {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.menu-icon"),
@@ -517,21 +519,18 @@ public class LinuxDebBundler extends AbstractBundler {
     }
 
     private File getConfig_DesktopShortcutFile(Map<String, ? super Object> params) {
-        return new File(
-                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
-                APP_NAME.fetchFrom(params) + ".desktop");
+        return new File(LinuxAppBundler.getRootDir(APP_IMAGE_ROOT.fetchFrom(params), params),
+                APP_FS_NAME.fetchFrom(params) + ".desktop");
     }
 
     private File getConfig_IconFile(Map<String, ? super Object> params) {
-        return new File(
-                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
-                APP_NAME.fetchFrom(params) + ".png");
+        return new File(LinuxAppBundler.getRootDir(APP_IMAGE_ROOT.fetchFrom(params), params),
+                APP_FS_NAME.fetchFrom(params) + ".png");
     }
 
     private File getConfig_InitScriptFile(Map<String, ? super Object> params) {
-        return new File(
-                LinuxAppBundler.getLauncher(APP_IMAGE_ROOT.fetchFrom(params), params).getParentFile(),
-                BUNDLE_NAME.fetchFrom(params) + ".init");
+        return new File(LinuxAppBundler.getRootDir(APP_IMAGE_ROOT.fetchFrom(params), params),
+                APP_FS_NAME.fetchFrom(params) + ".init");
     }
 
     private File getConfig_ControlFile(Map<String, ? super Object> params) {
@@ -606,26 +605,16 @@ public class LinuxDebBundler extends AbstractBundler {
 
     public static Collection<BundlerParamInfo<?>> getDebBundleParameters() {
         return Arrays.asList(
-                APP_BUNDLER,
-                APP_IMAGE_ROOT,
-                APP_RESOURCES,
                 BUNDLE_NAME,
-                CONFIG_DIR,
                 COPYRIGHT,
                 CATEGORY,
                 DESCRIPTION,
                 EMAIL,
-                FULL_PACKAGE_NAME,
-                LinuxAppBundler.ICON_PNG,
-                DEB_IMAGE_DIR,
-                IMAGES_ROOT,
+                ICON_PNG,
                 LICENSE_FILE,
-                LICENSE_TEXT,
                 LICENSE_TYPE,
-                MAINTAINER,
                 TITLE,
-                VENDOR,
-                VERSION
+                VENDOR
         );
     }
 

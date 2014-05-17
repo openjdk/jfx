@@ -301,17 +301,19 @@ public class FXMLLoader {
                     throw constructLoadException("Cannot bind to builder property.");
                 }
 
-                value = value.substring(BINDING_EXPRESSION_PREFIX.length(),
-                        value.length() - 1);
-                expression = Expression.valueOf(value);
+                if (!impl_isStaticLoad()) {
+                    value = value.substring(BINDING_EXPRESSION_PREFIX.length(),
+                            value.length() - 1);
+                    expression = Expression.valueOf(value);
 
-                // Create the binding
-                BeanAdapter targetAdapter = new BeanAdapter(this.value);
-                ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
-                Class<?> type = targetAdapter.getType(attribute.name);
+                    // Create the binding
+                    BeanAdapter targetAdapter = new BeanAdapter(this.value);
+                    ObservableValue<Object> propertyModel = targetAdapter.getPropertyModel(attribute.name);
+                    Class<?> type = targetAdapter.getType(attribute.name);
 
-                if (propertyModel instanceof Property<?>) {
-                    ((Property<Object>)propertyModel).bind(new ExpressionValue(namespace, expression, type));
+                    if (propertyModel instanceof Property<?>) {
+                        ((Property<Object>) propertyModel).bind(new ExpressionValue(namespace, expression, type));
+                    }
                 }
             } else if (isBidirectionalBindingExpression(value)) {
                 throw constructLoadException(new UnsupportedOperationException("This feature is not currently enabled."));

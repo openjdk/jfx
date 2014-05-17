@@ -82,6 +82,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
@@ -309,6 +310,10 @@ public final class QuantumToolkit extends Toolkit {
             Application.GetApplication().setEventHandler(new Application.EventHandler() {
                 @Override public void handleQuitAction(Application app, long time) {
                     GlassStage.requestClosingAllWindows();
+                }
+
+                @Override public boolean handleThemeChanged(String themeName) {
+                    return PlatformImpl.setAccessibilityTheme(themeName);
                 }
             });
         }
@@ -659,22 +664,29 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override public void exit() {
-            notifyShutdownHooks();
+        // This method must run on the FX application thread
+        checkFxUserThread();
 
-            ViewPainter.renderLock.lock();
-            try {
-                //TODO - should update glass scene view state
-                //TODO - doesn't matter because we are exiting
-                Application app = Application.GetApplication();
-                app.terminate();
-            } finally {
-                ViewPainter.renderLock.unlock();
-            }
+        // We need to wait for the last frame to finish so that the renderer
+        // is not running while we are shutting down glass.
+        PaintCollector.getInstance().waitForRenderingToComplete();
 
-            dispose();
+        notifyShutdownHooks();
 
-            super.exit();
-}
+        ViewPainter.renderLock.lock();
+        try {
+            //TODO - should update glass scene view state
+            //TODO - doesn't matter because we are exiting
+            Application app = Application.GetApplication();
+            app.terminate();
+        } finally {
+            ViewPainter.renderLock.unlock();
+        }
+
+        dispose();
+
+        super.exit();
+    }
 
     public void dispose() {
         if (toolkitRunning.compareAndSet(true, false)) {
@@ -1486,5 +1498,10 @@ public final class QuantumToolkit extends Toolkit {
     @Override
     public int getMultiClickMaxY() {
         return View.getMultiClickMaxY();
+    }
+
+    @Override
+    public String getThemeName() {
+        return Application.GetApplication().getHighContrastTheme();
     }
 }

@@ -69,7 +69,7 @@ public final class MouseEventFirer {
             sl = new StageLoader(scene);
             targetBounds = new BoundingBox(0, 0, scene.getWidth(), scene.getHeight());
         } else {
-            throw new RuntimeException("EventTarget of invalid type");
+            throw new RuntimeException("EventTarget of invalid type (" + target + ")");
         }
     }
 

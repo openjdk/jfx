@@ -25,8 +25,13 @@
 
 package com.oracle.tools.packager.mac;
 
-import com.oracle.tools.packager.*;
+import com.oracle.tools.packager.AbstractBundler;
 import com.oracle.tools.packager.Bundler;
+import com.oracle.tools.packager.BundlerParamInfo;
+import com.oracle.tools.packager.ConfigException;
+import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.RelativeFileSet;
+import com.oracle.tools.packager.UnsupportedPlatformException;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -35,12 +40,17 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static com.oracle.tools.packager.mac.MacAppBundler.*;
+import static org.junit.Assert.*;
 
 public class MacDmgBundlerTest {
 
@@ -48,6 +58,7 @@ public class MacDmgBundlerTest {
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
+    static File hdpiIcon;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -61,6 +72,7 @@ public class MacDmgBundlerTest {
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
         workDir = new File("build/tmp/tests", "macdmg");
+        hdpiIcon = new File("build/tmp/tests", "GenericAppHiDPI.icns");
         appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
@@ -75,7 +87,7 @@ public class MacDmgBundlerTest {
         if (retain) {
             tmpBase = new File("build/tmp/tests/macdmg");
         } else {
-            tmpBase = Files.createTempDirectory("fxpackagertests").toFile();
+            tmpBase = BUILD_ROOT.fetchFrom(new TreeMap<>());
         }
         tmpBase.mkdir();
     }
@@ -120,13 +132,12 @@ public class MacDmgBundlerTest {
         assertNotNull(bundler.getName());
         assertNotNull(bundler.getID());
         assertNotNull(bundler.getDescription());
-        //assertNotNull(bundler.getBundleParameters());
 
         Map<String, Object> bundleParams = new HashMap<>();
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
@@ -137,9 +148,6 @@ public class MacDmgBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(VERBOSE.getID(), true);
-//        bundleParams.put(StandardBundlerParam.RUNTIME.getID(),
-//                JreUtils.extractJreAsRelativeFileSet(MacAppBundler.adjustMacRuntimePath(System.getProperty("java.home")),
-//                        MacAppBundler.macJDKRules));
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -190,5 +198,70 @@ public class MacDmgBundlerTest {
         bundleParams.put(LICENSE_FILE.getID(), "BOGUS_LICENSE");
 
         bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void configureEverything() throws Exception {
+        AbstractBundler bundler = new MacDmgBundler();
+        Collection<BundlerParamInfo<?>> parameters = bundler.getBundleParameters();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(APP_NAME.getID(), "Everything App Name");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
+        bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
+        bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
+        bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
+        bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
+        bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
+        bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
+        bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
+        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
+        bundleParams.put(VERSION.getID(), "1.2.3.4");
+
+        bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
+        bundleParams.put(SYSTEM_WIDE.getID(), false);
+
+        // assert they are set
+        for (BundlerParamInfo bi :parameters) {
+            assertNotNull("Bundle args Contains " + bi.getID(), bundleParams.containsKey(bi.getID()));
+        }
+
+        // and only those are set
+        bundleParamLoop:
+        for (String s :bundleParams.keySet()) {
+            for (BundlerParamInfo<?> bpi : parameters) {
+                if (s.equals(bpi.getID())) {
+                    continue bundleParamLoop;
+                }
+            }
+            fail("Enumerated parameters does not contain " + s);
+        }
+
+        // assert they resolve
+        for (BundlerParamInfo bi :parameters) {
+            bi.fetchFrom(bundleParams);
+        }
+
+        // add verbose now that we are done scoping out parameters
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        // assert it validates
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        File result = bundler.execute(bundleParams, new File(workDir, "everything"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
     }
 }

@@ -34,31 +34,12 @@ MAC.compileSWT = true;
 MAC.compileFXPackager = true;
 MAC.compileDesignTime = true;
 
+MAC.includeNull3d = true
+
 // Lambda for naming the generated libs
 MAC.library = { name -> return "lib${name}.dylib" as String }
 
 MAC.libDest = "lib"
-MAC.jfxrtJarExcludes = [
-    "**/*.hlsl",
-    "com/sun/glass/ui/win",
-    "com/sun/prism/d3d",
-    "com/sun/prism/es2/gl/win",
-    //"com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
-    "com/sun/scenario/effect/impl/hw/d3d",
-    
-    "com/sun/glass/ui/gtk",
-    
-    "com/sun/glass/ui/ios",
-    
-    "com/sun/glass/ui/lens",
-    "com/sun/prism/es2/gl/eglfb",
-    "com/sun/prism/es2/gl/eglx11",
-    "com/sun/prism/es2/gl/x11",
-    "com/sun/prism/es2/EGL*",
-    "com/sun/prism/es2/IOSGL*",
-    "com/sun/prism/es2/WinGL*",
-    "com/sun/prism/es2/X11GL*",
-]
 
 // Define settings for Mac compilation. This is much easier than Windows because we know what version we're
 // compiling against and Mac always puts it in the same place. In extreme cases you can provide your own

@@ -81,7 +81,9 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
             // focus border will not be shown when the user interacts with the
             // scrollbars, and more importantly, keyboard navigation won't be
             // available to the user.
-            treeTableView.requestFocus();
+            if (treeTableView.isFocusTraversable()) {
+                treeTableView.requestFocus();
+            }
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);

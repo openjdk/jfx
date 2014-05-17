@@ -116,7 +116,7 @@ public class WinServiceBundlerTest {
         Map<String, Object> bundleParams = new HashMap<>();
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(VERBOSE.getID(), true);
 
         boolean valid = bundler.validate(bundleParams);

@@ -1507,29 +1507,30 @@ public class ListView<T> extends Control {
             @Override public void onChanged(Change<? extends T> c) {
                 updateItemCount();
                 
-                c.next();
-                // looking at the first change
-                int from = c.getFrom();
-                if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
-                    return;
-                }
-                
-                c.reset();
-                boolean added = false;
-                boolean removed = false;
-                int addedSize = 0;
-                int removedSize = 0;
                 while (c.next()) {
-                    added |= c.wasAdded();
-                    removed |= c.wasRemoved();
-                    addedSize += c.getAddedSize();
-                    removedSize += c.getRemovedSize();
-                }
-                
-                if (added && !removed) {
-                    focus(getFocusedIndex() + addedSize);
-                } else if (!added && removed) {
-                    focus(getFocusedIndex() - removedSize);
+                    // looking at the first change
+                    int from = c.getFrom();
+                    if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
+                        return;
+                    }
+
+                    c.reset();
+                    boolean added = false;
+                    boolean removed = false;
+                    int addedSize = 0;
+                    int removedSize = 0;
+                    while (c.next()) {
+                        added |= c.wasAdded();
+                        removed |= c.wasRemoved();
+                        addedSize += c.getAddedSize();
+                        removedSize += c.getRemovedSize();
+                    }
+
+                    if (added && !removed) {
+                        focus(getFocusedIndex() + addedSize);
+                    } else if (!added && removed) {
+                        focus(getFocusedIndex() - removedSize);
+                    }
                 }
             }
         };

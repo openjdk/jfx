@@ -28,11 +28,16 @@ package com.sun.glass.ui.monocle.x11;
 import com.sun.glass.ui.monocle.NativePlatform;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 public class X11PlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
-        return true;
+        String display = AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> System.getenv("DISPLAY"));
+        return display != null;
     }
 
     @Override

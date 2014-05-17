@@ -582,6 +582,7 @@ public class SubScene extends Node {
      * @return the userAgentStylesheet property.
      * @see #getUserAgentStylesheet()
      * @see #setUserAgentStylesheet(String)
+     * @since  JavaFX 8u20
      */
     public final ObjectProperty<String> userAgentStylesheetProperty() {
         if (userAgentStylesheet == null) {
@@ -604,6 +605,7 @@ public class SubScene extends Node {
      * </p>
      * @return The URL of the user-agent stylesheet that will be used by this SubScene,
      * or null if has not been set.
+     * @since  JavaFX 8u20
      */
     public final String getUserAgentStylesheet() {
         return userAgentStylesheet == null ? null : userAgentStylesheet.get();
@@ -621,6 +623,7 @@ public class SubScene extends Node {
      * does not have a [scheme:] component, the URL is considered to be the [path] component only.
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
+     * @since  JavaFX 8u20
      */
     public final void setUserAgentStylesheet(String url) {
         userAgentStylesheetProperty().set(url);

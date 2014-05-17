@@ -40,7 +40,9 @@ import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.*;
 import javafx.beans.InvalidationListener;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -71,6 +73,7 @@ import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
 
 import static com.sun.javafx.scene.control.skin.TableColumnHeaderRetriever.*;
+import static org.junit.Assert.assertEquals;
 
 public class TableViewTest {
     private TableView<String> table;
@@ -3222,6 +3225,360 @@ public class TableViewTest {
         Toolkit.getToolkit().firePulse();
         assertTrue(vbar.isVisible());
         assertFalse(hbar.isVisible());
+
+        sl.dispose();
+    }
+
+    private int rt_37061_index_counter = 0;
+    private int rt_37061_item_counter = 0;
+    @Test public void test_rt_37061() {
+        TableView<Integer> tv = new TableView<>();
+        tv.getItems().add(1);
+        tv.getSelectionModel().select(0);
+
+        // note we add the listeners after the selection is made, so the counters
+        // at this point are still both at zero.
+        tv.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_index_counter++;
+        });
+
+        tv.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_item_counter++;
+        });
+
+        // add a new item. This does not impact the selected index or selected item
+        // so the counters should remain at zero.
+        tv.getItems().add(2);
+        assertEquals(0, rt_37061_index_counter);
+        assertEquals(0, rt_37061_item_counter);
+    }
+
+    @Test public void test_rt_37058_noContent() {
+        test_rt_37058(false);
+    }
+
+    @Test public void test_rt_37058_withContent() {
+        test_rt_37058(true);
+    }
+
+    private void test_rt_37058(boolean hasContent) {
+        // create table with a bunch of column and no rows...
+        TableView<Integer> table = new TableView<>();
+        TableColumn<Integer, Integer> column = new TableColumn<>("Column");
+        table.getColumns().add(column);
+        column.setPrefWidth(150);
+
+        if (hasContent) {
+            table.getItems().add(1);
+        }
+
+        StageLoader sl = new StageLoader(table);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(150, column.getWidth(), 0.0);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37057_test1_MoveColumn() {
+        // create table with a bunch of column and no rows...
+        TableView<Integer> table = new TableView<>();
+        for ( int i = 1; i <= 10; i++ ) {
+            TableColumn<Integer, Integer> column = new TableColumn<>("" + i);
+            table.getColumns().add( column );
+
+            // sneak some hidden columns in there
+            column = new TableColumn<>("h" + i);
+            column.setVisible( false );
+            table.getColumns().add( column );
+        }
+
+        StageLoader sl = new StageLoader(table);
+
+        TableColumn column1 = table.getVisibleLeafColumn(0);
+        TableColumn column2 = table.getVisibleLeafColumn(1);
+
+        // get the headers of a few columns
+        TableColumnHeader header1 = VirtualFlowTestUtils.getTableColumnHeader(table, column1);
+        TableColumnHeader header2 = VirtualFlowTestUtils.getTableColumnHeader(table, column2);
+
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // move as per first instructions in RT-37057. Note that the moveColumn
+        // positions seem counter-intuitive. I got these numbers by printing
+        // the positions when in a manual test run (using the test script in
+        // RT-37057).
+
+        // Drag column 1 to slot 1. As expected, the column position doesn't change.
+        TableColumnHeaderRetriever.moveColumn(column1, 0);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column2, table.getVisibleLeafColumn(1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions.
+        TableColumnHeaderRetriever.moveColumn(column1, 1);
+        assertEquals(column2, table.getVisibleLeafColumn(0));
+        assertEquals(column1, table.getVisibleLeafColumn(1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 1 to slot 0. As expected, the column 1 and 2 swap positions.
+        TableColumnHeaderRetriever.moveColumn(column1, 0);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column2, table.getVisibleLeafColumn(1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 1 to slot 1 again. What? Why did they swap positions this time?
+        TableColumnHeaderRetriever.moveColumn(column1, 0);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column2, table.getVisibleLeafColumn(1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37057_test1_MouseEvents() {
+        // create table with a bunch of column and no rows...
+        TableView<Integer> table = new TableView<>();
+        for ( int i = 1; i <= 10; i++ ) {
+            TableColumn<Integer, Integer> column = new TableColumn<>("" + i);
+            table.getColumns().add( column );
+
+            // sneak some hidden columns in there
+            column = new TableColumn<>("h" + i);
+            column.setVisible( false );
+            column.impl_setWidth(50);
+            column.setResizable(false);
+            table.getColumns().add( column );
+        }
+
+        StageLoader sl = new StageLoader(table);
+
+        TableColumn column1 = table.getVisibleLeafColumn(0);
+        TableColumn column2 = table.getVisibleLeafColumn(1);
+
+        // get the headers of a few columns
+        TableColumnHeader header1 = VirtualFlowTestUtils.getTableColumnHeader(table, column1);
+        TableColumnHeader header2 = VirtualFlowTestUtils.getTableColumnHeader(table, column2);
+
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // move as per first instructions in RT-37057. The dragOffset and sceneX
+        // values passed into moveColumn have been derived from a manual run of
+        // the test application attached to RT-37057 with debug output printed
+        // in TableColumnHeader
+
+        // Drag column 1 to slot 1. As expected, the column position doesn't change.
+        TableColumnHeaderRetriever.moveColumn(column1, 9, 61);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column2, table.getVisibleLeafColumn(1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions.
+        TableColumnHeaderRetriever.moveColumn(column1, 12, 139);
+        assertEquals(column2, table.getVisibleLeafColumn(0));
+        assertEquals(column1, table.getVisibleLeafColumn(1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 1 to slot 0. As expected, the column 1 and 2 swap positions.
+        TableColumnHeaderRetriever.moveColumn(column1, 45, 21);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column2, table.getVisibleLeafColumn(1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 1 to slot 1 again. What? Why did they swap positions this time?
+        TableColumnHeaderRetriever.moveColumn(column1, 19, 63);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column2, table.getVisibleLeafColumn(1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        sl.dispose();
+    }
+
+
+
+
+
+
+
+    @Test public void test_rt_37057_test2_MoveColumn() {
+        // create table with a bunch of column and no rows...
+        TableView<Integer> table = new TableView<>();
+        for ( int i = 1; i <= 10; i++ ) {
+            TableColumn<Integer, Integer> column = new TableColumn<>("" + i);
+            table.getColumns().add( column );
+
+            // sneak some hidden columns in there
+            column = new TableColumn<>("h" + i);
+            column.setVisible( false );
+            table.getColumns().add( column );
+        }
+
+        StageLoader sl = new StageLoader(table);
+
+        TableColumn column1 = table.getVisibleLeafColumn(0);
+        TableColumn column2 = table.getVisibleLeafColumn(1);
+        TableColumn column4 = table.getVisibleLeafColumn(3);
+
+        // get the headers of a few columns
+        TableColumnHeader header1 = VirtualFlowTestUtils.getTableColumnHeader(table, column1);
+        TableColumnHeader header2 = VirtualFlowTestUtils.getTableColumnHeader(table, column2);
+        TableColumnHeader header4 = VirtualFlowTestUtils.getTableColumnHeader(table, column4);
+
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // move as per second instructions in RT-37057. Note that the moveColumn
+        // positions seem counter-intuitive. I got these numbers by printing
+        // the positions when in a manual test run (using the test script in
+        // RT-37057).
+
+        // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions
+        TableColumnHeaderRetriever.moveColumn(column1, 1);
+        assertEquals(column2, table.getVisibleLeafColumn(0));
+        assertEquals(column1, table.getVisibleLeafColumn(1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 1 to slot 0. As expected, the column 1 and 2 swap positions.
+        TableColumnHeaderRetriever.moveColumn(column1, 0);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column2, table.getVisibleLeafColumn(1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 4 to slot 1. What? It behaves like it was dragged to slot 0?!
+        TableColumnHeaderRetriever.moveColumn(column4, 1);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column4, table.getVisibleLeafColumn(1));
+        assertEquals(column2, table.getVisibleLeafColumn(2));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header4));
+        assertEquals(2, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37057_test2_MouseEvents() {
+        // create table with a bunch of column and no rows...
+        TableView<Integer> table = new TableView<>();
+        for ( int i = 1; i <= 10; i++ ) {
+            TableColumn<Integer, Integer> column = new TableColumn<>("" + i);
+            table.getColumns().add( column );
+
+            // sneak some hidden columns in there
+            column = new TableColumn<>("h" + i);
+            column.setVisible( false );
+            column.impl_setWidth(50);
+            column.setResizable(false);
+            table.getColumns().add( column );
+        }
+
+        StageLoader sl = new StageLoader(table);
+
+        TableColumn column1 = table.getVisibleLeafColumn(0);
+        TableColumn column2 = table.getVisibleLeafColumn(1);
+        TableColumn column4 = table.getVisibleLeafColumn(3);
+
+        // get the headers of a few columns
+        TableColumnHeader header1 = VirtualFlowTestUtils.getTableColumnHeader(table, column1);
+        TableColumnHeader header2 = VirtualFlowTestUtils.getTableColumnHeader(table, column2);
+        TableColumnHeader header4 = VirtualFlowTestUtils.getTableColumnHeader(table, column4);
+
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // move as per second instructions in RT-37057. The dragOffset and sceneX
+        // values passed into moveColumn have been derived from a manual run of
+        // the test application attached to RT-37057 with debug output printed
+        // in TableColumnHeader
+
+        // Drag column 1 to slot 2. As expected, the column 1 and 2 swap positions
+        TableColumnHeaderRetriever.moveColumn(column1, 25, 136);
+        assertEquals(column2, table.getVisibleLeafColumn(0));
+        assertEquals(column1, table.getVisibleLeafColumn(1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 1 to slot 0. As expected, the column 1 and 2 swap positions.
+        TableColumnHeaderRetriever.moveColumn(column1, 51, 23);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column2, table.getVisibleLeafColumn(1));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        // Drag column 4 to slot 1. What? It behaves like it was dragged to slot 0?!
+        TableColumnHeaderRetriever.moveColumn(column4, 56, 103);
+        assertEquals(column1, table.getVisibleLeafColumn(0));
+        assertEquals(column4, table.getVisibleLeafColumn(1));
+        assertEquals(column2, table.getVisibleLeafColumn(2));
+        assertEquals(0, TableColumnHeaderRetriever.getColumnIndex(header1));
+        assertEquals(1, TableColumnHeaderRetriever.getColumnIndex(header4));
+        assertEquals(2, TableColumnHeaderRetriever.getColumnIndex(header2));
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37054_noScroll() {
+        test_rt_37054(false);
+    }
+
+    @Test public void test_rt_37054_scroll() {
+        test_rt_37054(true);
+    }
+
+    private void test_rt_37054(boolean scroll) {
+        ObjectProperty<Integer> offset = new SimpleObjectProperty<Integer>(0);
+
+        // create table with a bunch of rows and 1 column...
+        TableView<Integer> table = new TableView<>();
+        for ( int i = 1; i <= 50; i++ ) {
+            table.getItems().add(i);
+        }
+        final TableColumn<Integer, Integer> column = new TableColumn<>("Column");
+        table.getColumns().add( column );
+        column.setPrefWidth( 150 );
+
+        // each cell displays x, where x = "cell row number + offset"
+        column.setCellValueFactory( cdf -> new ObjectBinding<Integer>() {
+            { super.bind( offset ); }
+
+            @Override protected Integer computeValue() {
+                return cdf.getValue() + offset.get();
+            }
+        });
+
+        StackPane root = new StackPane();
+        root.getChildren().add( table );
+
+        StageLoader sl = new StageLoader(root);
+
+        int index = scroll ? 0 : 25;
+
+        if (scroll) {
+            // we scroll to force the table cells to update the objects they observe
+            table.scrollTo(index);
+            Toolkit.getToolkit().firePulse();
+        }
+
+        TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, index + 3, 0);
+        final int initialValue = (Integer) cell.getItem();
+
+        // increment the offset value
+        offset.setValue(offset.get() + 1);
+        Toolkit.getToolkit().firePulse();
+
+        final int incrementedValue = (Integer) cell.getItem();
+        assertEquals(initialValue + 1, incrementedValue);
 
         sl.dispose();
     }

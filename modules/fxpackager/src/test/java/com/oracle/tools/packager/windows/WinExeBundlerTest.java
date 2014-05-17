@@ -25,9 +25,11 @@
 
 package com.oracle.tools.packager.windows;
 
+import com.oracle.tools.packager.AbstractBundler;
 import com.oracle.tools.packager.Bundler;
-import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.ConfigException;
+import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import org.junit.After;
@@ -38,13 +40,19 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static com.oracle.tools.packager.windows.WinAppBundler.ICON_ICO;
+import static com.oracle.tools.packager.windows.WinAppBundler.WIN_RUNTIME;
+import static com.oracle.tools.packager.windows.WindowsBundlerParam.MENU_GROUP;
+import static org.junit.Assert.*;
 
 public class WinExeBundlerTest {
 
@@ -82,7 +90,7 @@ public class WinExeBundlerTest {
         if (retain) {
             tmpBase = new File("build/tmp/tests/winexe");
         } else {
-            tmpBase = Files.createTempDirectory("fxpackagertests").toFile();
+            tmpBase = BUILD_ROOT.fetchFrom(new TreeMap<>());
         }
         tmpBase.mkdir();
     }
@@ -130,7 +138,7 @@ public class WinExeBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
@@ -257,5 +265,77 @@ public class WinExeBundlerTest {
         bundleParams.put(COPYRIGHT.getID(), "Copyright (c) 2014 Way to many people to name because there are just so may of them I don't know where to start but I will just start with Alice, Bob, Charlie, Dave, Eve, well, there are just too many to say.");
 
         bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void configureEverything() throws Exception {
+        AbstractBundler bundler = new WinExeBundler();
+        Collection<BundlerParamInfo<?>> parameters = bundler.getBundleParameters();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(APP_NAME.getID(), "Everything App Name");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(ICON_ICO.getID(), new File(appResourcesDir, "javalogo_white_48.ico"));
+        bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
+        bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
+        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
+        bundleParams.put(VERSION.getID(), "1.2.3.4");
+        bundleParams.put(WIN_RUNTIME.getID(), System.getProperty("java.home"));
+
+        bundleParams.put(COPYRIGHT.getID(), "(C) 2014 Everything Copyright");
+        bundleParams.put(DESCRIPTION.getID(), "Everything Description");
+        bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
+        bundleParams.put(MENU_GROUP.getID(), "EverythingMenuGroup");
+        bundleParams.put(MENU_HINT.getID(), true);
+//                RUN_AT_STARTUP,
+        bundleParams.put(SHORTCUT_HINT.getID(), true);
+//                SERVICE_HINT,
+//                START_ON_INSTALL,
+//                STOP_ON_UNINSTALL,
+        bundleParams.put(SYSTEM_WIDE.getID(), false);
+        bundleParams.put(TITLE.getID(), "Everything Title");
+        bundleParams.put(VENDOR.getID(), "Everything Vendor");
+
+        // assert they are set
+        for (BundlerParamInfo bi :parameters) {
+            assertTrue("Bundle args should contain " + bi.getID(), bundleParams.containsKey(bi.getID()));
+        }
+
+        // and only those are set
+        bundleParamLoop:
+        for (String s :bundleParams.keySet()) {
+            for (BundlerParamInfo<?> bpi : parameters) {
+                if (s.equals(bpi.getID())) {
+                    continue bundleParamLoop;
+                }
+            }
+            fail("Enumerated parameters does not contain " + s);
+        }
+
+        // assert they resolve
+        for (BundlerParamInfo bi :parameters) {
+            bi.fetchFrom(bundleParams);
+        }
+
+        // add verbose now that we are done scoping out parameters
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        // assert it validates
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        File result = bundler.execute(bundleParams, new File(workDir, "everything"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
     }
 }

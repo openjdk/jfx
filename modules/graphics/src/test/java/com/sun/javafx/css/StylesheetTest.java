@@ -36,7 +36,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
@@ -580,4 +582,16 @@ public class StylesheetTest {
         return com.sun.javafx.css.parser.CSSParserTest.checkFontFace(stylesheet);
     }
 
+   @Test
+   public void testRT_37122() {
+       try {
+           URL url = StylesheetTest.class.getResource("RT-37122.css");
+           File source = new File(url.toURI());
+           File target = File.createTempFile("RT_37122_", "bss");
+           Stylesheet.convertToBinary(source, target);
+           Stylesheet.convertToBinary(source, target);
+       } catch (URISyntaxException | IOException e) {
+           fail(e.toString());
+       }
+   }
 }

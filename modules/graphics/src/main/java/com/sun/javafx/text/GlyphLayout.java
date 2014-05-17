@@ -108,7 +108,15 @@ public abstract class GlyphLayout {
     private TextRun addTextRun(PrismTextLayout layout, char[] chars,
                                int start, int length, PGFont font,
                                TextSpan span, byte level, boolean complex) {
-        if (complex) {
+
+        /* The complex flag indicates complex script, and in general all
+         * bidi scripts are consider complex. That said, using directional 
+         * control (RLO) is possible to force RTL direction on non-complex
+         * scripts. Thus, odd level must be threat as complex.
+         * Note: This code expects the FLAGS_HAS_COMPLEX flag to be set
+         * in  breakRuns() when the directional control is analyzed.
+         */
+        if (complex || (level & 1) != 0) {
             return addTextRun(layout, chars, start, length, font, span, level);
         }
         TextRun run = new TextRun(start, length, level, false, 0, span, 0, false);

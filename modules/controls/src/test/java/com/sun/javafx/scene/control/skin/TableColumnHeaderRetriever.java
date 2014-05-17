@@ -35,6 +35,10 @@ public class TableColumnHeaderRetriever {
         return colHeader == null ? -1 : colHeader.columnIndex;
     }
 
+    public static int getColumnIndex(TableColumnHeader colHeader) {
+        return colHeader == null ? -1 : colHeader.columnIndex;
+    }
+
     public static void moveColumn(TableColumn col, int newPos) {
         TableColumnHeader colHeader = VirtualFlowTestUtils.getTableColumnHeader(col.getTableView(), col);
         colHeader.moveColumn(col, newPos);
@@ -42,5 +46,12 @@ public class TableColumnHeaderRetriever {
 
     public static int getSortPos(TableColumnHeader header) {
         return header.sortPos;
+    }
+
+    public static void moveColumn(TableColumn col, int dragOffset, int x) {
+        TableColumnHeader colHeader = VirtualFlowTestUtils.getTableColumnHeader(col.getTableView(), col);
+        colHeader.columnReorderingStarted(dragOffset);
+        colHeader.columnReordering(x, 0);
+        colHeader.columnReorderingComplete();
     }
 }

@@ -66,39 +66,19 @@ ARMV5SF.compileSwing = false;
 ARMV5SF.compileSWT = false;
 ARMV5SF.compileFXPackager = false;
 ARMV5SF.compileDesignTime = false;
+ARMV5SF.compileWebnodeNative = false;
+ARMV5SF.compileMediaNative = false;
+
+ARMV5SF.includeLens = true
+ARMV5SF.includeNull3d = true
+ARMV5SF.includeEGL = true
+ARMV5SF.includeSwing = false
+ARMV5SF.includeSWT = false
+
 
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
 ARMV5SF.arch = "arm"
 ARMV5SF.libDest = "lib/arm"
-
-// TODO this is garbage. Each target file should define what it includes,
-// not what it excludes.
-ARMV5SF.jfxrtJarExcludes = [
-    "**/*.hlsl",
-    "com/sun/glass/ui/win",
-    "com/sun/prism/d3d",
-    "com/sun/prism/es2/gl/win",
-    //"com/sun/prism/null3d",
-    "com/sun/scenario/effect/impl/hw/d3d",
-    
-    "com/sun/glass/events/mac",
-    "com/sun/glass/ui/mac",
-    "com/sun/prism/es2/gl/mac",
-        
-    "com/sun/glass/ui/android",
-    
-    "com/sun/glass/ui/ios",
-    
-    "com/sun/glass/ui/swt", // SWT glass
-    
-    "javafx/embed/swing", // Swing Interop
-    
-    "javafx/embed/swt", // SWT Interop
-
-    "com/sun/prism/es2/MacGL*",
-    "com/sun/prism/es2/IOSGL*",
-    "com/sun/prism/es2/WinGL*",
-]
 
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
@@ -177,21 +157,6 @@ def mediaLFlags = [extraLFlags, "-lgstreamer-0.10", "-lgstapp-0.10",
 
 def webCFlags = [extraCFlags].flatten()
 def webLFlags = [extraLFlags].flatten()
-
-// libraries to remove from the sdk
-//deploy.trim.public.library.filter= \
-//  fxavcodecplugin-52.so \
-//  fxavcodecplugin-53.so \
-//  fxplugins.so \
-//  libjfxwebkit.so \
-//  libgstplugins-lite.so \
-//  libgstreamer-lite.so \
-//  libprism-es2-eglx11.so \
-//  libglass-lens-fb.so \
-
-//defineProperty("CC", "gcc");
-//defineProperty("PRISM_CC", "cc");
-//defineProperty("PRISM_SW_CC", "cc");
 
 def gtkCFlags = [extraCFlags].flatten()
 def gtkLFlags = [extraLFlags].flatten()
@@ -571,6 +536,7 @@ ARMV5SF.fontT2K.linker = linker
 ARMV5SF.fontT2K.linkFlags = fontLFlags
 ARMV5SF.fontT2K.lib = "javafx_font_t2k"
 
+ARMV5SF.disablefontFreetype = true // Need to fix the imports
 ARMV5SF.fontFreetype = [:]
 ARMV5SF.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class"]
 ARMV5SF.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
@@ -580,6 +546,7 @@ ARMV5SF.fontFreetype.linker = linker
 ARMV5SF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags].flatten()
 ARMV5SF.fontFreetype.lib = "javafx_font_freetype"
 
+ARMV5SF.disablefontPango = true
 ARMV5SF.fontPango = [:]
 ARMV5SF.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
 ARMV5SF.fontPango.nativeSource = ["src/main/native-font/pango.c"]
@@ -599,6 +566,7 @@ ARMV5SF.webkit.strip    = file("$compilerHome/bin/${compilerPrefix}strip").getAb
 ARMV5SF.webkit.ccFlags  = extraCFlags.join(' ')
 ARMV5SF.webkit.linkFlags = extraLFlags.join(' ')
 
+ARMV5SF.disableMedia = true
 ARMV5SF.media = [:]
 ARMV5SF.media.compiler = compiler
 ARMV5SF.media.linker = linker

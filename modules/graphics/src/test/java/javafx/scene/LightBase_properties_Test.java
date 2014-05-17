@@ -1,4 +1,4 @@
-package com.sun.glass.ui.monocle;/*
+/*
  * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -22,23 +22,38 @@ package com.sun.glass.ui.monocle;/*
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import com.sun.javafx.test.PropertiesTestBase;
+import java.util.ArrayList;
+import java.util.Collection;
+import javafx.scene.paint.Color;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
-public class MonocleSettings {
+@RunWith(Parameterized.class)
+public final class LightBase_properties_Test extends PropertiesTestBase {
 
-    public static final MonocleSettings settings = AccessController.doPrivileged(
-            (PrivilegedAction<MonocleSettings>) () -> new MonocleSettings());
+    @Parameters
+    public static Collection data() {
+        ArrayList array = new ArrayList();
 
-    public final boolean traceEvents;
-    public final boolean traceEventsVerbose;
-    public final boolean tracePlatformConfig;
+        // simple property tests
+        PointLight testLight = createPointLight();
 
-    private MonocleSettings() {
-        traceEvents = Boolean.getBoolean("monocle.input.traceEvents");
-        traceEventsVerbose = Boolean.getBoolean("monocle.input.traceEvents.verbose");
-        tracePlatformConfig = Boolean.getBoolean("monocle.platform.traceConfig");
+        array.add(config(testLight, "lightOn", true, false));
+        array.add(config(testLight, "color", Color.WHITE, null));
+
+        return array;
+    }
+
+    public LightBase_properties_Test(final Configuration configuration) {
+        super(configuration);
+    }
+
+    private static PointLight createPointLight() {
+        return new PointLight();
     }
 
 }

@@ -1802,4 +1802,30 @@ public class TreeViewTest {
         assertEquals(4, fm.getFocusedIndex());
         assertEquals(b1, fm.getFocusedItem());
     }
+
+    private int rt_37061_index_counter = 0;
+    private int rt_37061_item_counter = 0;
+    @Test public void test_rt_37061() {
+        TreeItem<Integer> root = new TreeItem<>(0);
+        root.setExpanded(true);
+        TreeView<Integer> tv = new TreeView<>();
+        tv.setRoot(root);
+        tv.getSelectionModel().select(0);
+
+        // note we add the listeners after the selection is made, so the counters
+        // at this point are still both at zero.
+        tv.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_index_counter++;
+        });
+
+        tv.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_item_counter++;
+        });
+
+        // add a new item. This does not impact the selected index or selected item
+        // so the counters should remain at zero.
+        tv.getRoot().getChildren().add(new TreeItem("1"));
+        assertEquals(0, rt_37061_index_counter);
+        assertEquals(0, rt_37061_item_counter);
+    }
 }

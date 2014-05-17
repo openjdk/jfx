@@ -25,6 +25,8 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.beans.WeakInvalidationListener;
+import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import javafx.geometry.*;
 import javafx.scene.control.*;
@@ -137,8 +139,16 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         getSkinnable().layoutYProperty().addListener(layoutPosListener);
         getSkinnable().widthProperty().addListener(layoutPosListener);
         getSkinnable().heightProperty().addListener(layoutPosListener);
+
+        // RT-36966 - if skinnable's scene becomes null, ensure popup is closed
+        getSkinnable().sceneProperty().addListener(o -> {
+            if (((ObservableValue)o).getValue() == null) {
+                hide();
+            }
+        });
+
     }
-    
+
     void reconfigurePopup() {
         // RT-26861. Don't call getPopup() here because it may cause the popup
         // to be created too early, which leads to memory leaks like those noted

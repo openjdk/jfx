@@ -28,16 +28,16 @@ APPLICATION_DESCRIPTION
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/opt
-cp -r %{_sourcedir}/APPLICATION_NAME %{buildroot}/opt
+cp -r %{_sourcedir}/APPLICATION_FS_NAME %{buildroot}/opt
 
 %files
 APPLICATION_LICENSE_FILE
-/opt/APPLICATION_NAME
+/opt/APPLICATION_FS_NAME
 
 %post
-cp /opt/APPLICATION_NAME/APPLICATION_NAME.desktop /usr/share/applications/
+cp /opt/APPLICATION_FS_NAME/APPLICATION_FS_NAME.desktop /usr/share/applications/
 if [ "SERVICE_HINT" = "true" ]; then
-    cp /opt/APPLICATION_NAME/APPLICATION_PACKAGE.init /etc/init.d/APPLICATION_PACKAGE
+    cp /opt/APPLICATION_FS_NAME/APPLICATION_PACKAGE.init /etc/init.d/APPLICATION_PACKAGE
     if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
         /sbin/chkconfig --add APPLICATION_PACKAGE
         if [ "START_ON_INSTALL" = "true" ]; then
@@ -47,7 +47,7 @@ if [ "SERVICE_HINT" = "true" ]; then
 fi
 
 %preun
-rm -f /usr/share/applications/APPLICATION_NAME.desktop
+rm -f /usr/share/applications/APPLICATION_FS_NAME.desktop
 if [ "SERVICE_HINT" = "true" ]; then
     if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
         if [ "STOP_ON_UNINSTALL" = "true" ]; then

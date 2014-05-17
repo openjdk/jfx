@@ -1,4 +1,4 @@
-package com.sun.glass.ui.monocle;/*
+/*
  * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -22,23 +22,42 @@ package com.sun.glass.ui.monocle;/*
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package javafx.scene.shape;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Collection;
 
-public class MonocleSettings {
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
+import com.sun.javafx.test.PropertiesTestBase;
+import javafx.scene.paint.PhongMaterial;
 
-    public static final MonocleSettings settings = AccessController.doPrivileged(
-            (PrivilegedAction<MonocleSettings>) () -> new MonocleSettings());
+@RunWith(Parameterized.class)
+public final class Shape3D_properties_Test extends PropertiesTestBase {
 
-    public final boolean traceEvents;
-    public final boolean traceEventsVerbose;
-    public final boolean tracePlatformConfig;
+    @Parameters
+    public static Collection data() {
+        ArrayList array = new ArrayList();
 
-    private MonocleSettings() {
-        traceEvents = Boolean.getBoolean("monocle.input.traceEvents");
-        traceEventsVerbose = Boolean.getBoolean("monocle.input.traceEvents.verbose");
-        tracePlatformConfig = Boolean.getBoolean("monocle.platform.traceConfig");
+        // simple property tests
+        Shape3D testShape = createTestBox();
+        PhongMaterial DEFAULT_MATERIAL = new PhongMaterial();
+
+        array.add(config(testShape, "cullFace", CullFace.BACK, CullFace.FRONT));
+        array.add(config(testShape, "drawMode", DrawMode.FILL, DrawMode.LINE));
+        array.add(config(testShape, "material", DEFAULT_MATERIAL, null));
+
+        return array;
+    }
+
+    public Shape3D_properties_Test(final Configuration configuration) {
+        super(configuration);
+    }
+
+    private static Box createTestBox() {
+        Box b = new Box(10, 10, 10);
+        return b;
     }
 
 }

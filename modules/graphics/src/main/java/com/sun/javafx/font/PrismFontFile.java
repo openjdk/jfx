@@ -1218,4 +1218,20 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return table;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (!(obj instanceof PrismFontFile)) {
+            return false;
+        }
+        final PrismFontFile other = (PrismFontFile)obj;
+        return filename.equals(other.filename) && fullName.equals(other.fullName);
+    }
+
+    @Override
+    public int hashCode() {
+        return filename.hashCode() + (71 * fullName.hashCode());
+    }
 }

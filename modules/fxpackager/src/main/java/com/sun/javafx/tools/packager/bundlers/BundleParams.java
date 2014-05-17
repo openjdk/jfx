@@ -97,14 +97,6 @@ public class BundleParams {
     /* Main application class. Not used directly but used to derive default values */
     public static final String PARAM_APPLICATION_CLASS      = "applicationClass"; // String
 
-    //list of jvm args (in theory string can contain spaces and need to be escaped
-    private List<String> jvmargs = new LinkedList<>();
-    //list of jvm args (in theory string can contain spaces and need to be escaped
-    private Map<String, String> jvmUserArgs = new HashMap<>();
-
-    //list of jvm properties (can also be passed as VM args
-    private Map<String, String> jvmProperties = new HashMap<>();
-
     /**
      * create a new bundle with all default values
      */
@@ -156,30 +148,16 @@ public class BundleParams {
     }
 
     public void setJvmargs(List<String> jvmargs) {
-        this.jvmargs = jvmargs;
+        putUnlessNull(JVM_OPTIONS.getID(), jvmargs);
     }
 
     public void setJvmUserArgs(Map<String, String> userArgs) {
-        this.jvmUserArgs = userArgs;
+
+        putUnlessNull(USER_JVM_OPTIONS.getID(), userArgs);
     }
 
     public void setJvmProperties(Map<String, String> jvmProperties) {
-        this.jvmProperties = jvmProperties;
-    }
-
-    public List<String> getAllJvmOptions() {
-        List<String> all = new LinkedList<>();
-        all.addAll(jvmargs);
-        for(String k: jvmProperties.keySet()) {
-            all.add("-D"+k+"="+jvmProperties.get(k)); //TODO: We are not escaping values here...
-        }
-        return all;
-    }
-
-    public Map<String, String> getAllJvmUserOptions() {
-        Map<String, String> all = new HashMap<>();
-        all.putAll(jvmUserArgs);
-        return all;
+        putUnlessNull(JVM_PROPERTIES.getID(), jvmProperties);
     }
 
     public String getApplicationID() {
@@ -280,10 +258,12 @@ public class BundleParams {
         putUnlessNull(PARAM_NAME, name);
     }
 
+    @SuppressWarnings("deprecation")
     public BundleType getType() {
         return fetchParam(BundleType.class, PARAM_TYPE); 
     }
 
+    @SuppressWarnings("deprecation")
     public void setType(BundleType type) {
         putUnlessNull(PARAM_TYPE, type);
     }
@@ -309,7 +289,7 @@ public class BundleParams {
     }
 
     public List<String> getJvmargs() {
-        return jvmargs;
+        return JVM_OPTIONS.fetchFrom(params);
     }
 
     //Validation approach:

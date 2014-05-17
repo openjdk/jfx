@@ -57,10 +57,12 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     private final Path minorTickPath  = new Path();
 
     private double offset;
-    /** This is the minimum current data value and it is used while auto ranging. */
-    private double dataMinValue;
-    /** This is the maximum current data value and it is used while auto ranging. */
-    private double dataMaxValue;
+    /** This is the minimum current data value and it is used while auto ranging.
+     *  Package private solely for test purposes */
+    double dataMinValue;
+    /** This is the maximum current data value and it is used while auto ranging.
+     *  Package private solely for test purposes */
+    double dataMaxValue;
     /** List of the values at which there are minor ticks */
     private List<T> minorTickMarkValues = null;
     // -------------- PRIVATE PROPERTIES -------------------------------------------------------------------------------
@@ -350,7 +352,9 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         minorTickPath.getElements().clear();
 
         double minorTickLength = Math.max(0, getMinorTickLength());
-        if (minorTickLength > 0) {
+        // The length must be greater then the space required for tick marks, otherwise, there's no reason to create
+        // minor tick marks
+        if (minorTickLength > 0 && length > 2 * getTickMarks().size()) {
             // Strip factor is >= 1. When == 1, all minor ticks will fit.
             // It's computed as number of minor tick marks divided by available length
             int stripFactor = (int)Math.ceil(2 * minorTickMarkValues.size() / (length - 2 * getTickMarks().size()));
@@ -425,7 +429,9 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             dataMinValue = getLowerBound();
         } else {
             dataMinValue = Double.MAX_VALUE;
-            dataMaxValue = Double.MIN_VALUE;
+            // We need to init to the lowest negative double (which is NOT Double.MIN_VALUE)
+            // in order to find the maximum (positive or negative)
+            dataMaxValue = -Double.MAX_VALUE;
         }
         for(T dataValue: data) {
             dataMinValue = Math.min(dataMinValue, dataValue.doubleValue());
@@ -441,6 +447,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * @return display position or Double.NaN if zero is not in current range;
      */
     @Override public double getDisplayPosition(T value) {
+        if (value.doubleValue() < getLowerBound() || value.doubleValue() > getUpperBound()) return Double.NaN;
         return Math.round(offset + ((value.doubleValue() - currentLowerBound.get()) * getScale()));
     }
 

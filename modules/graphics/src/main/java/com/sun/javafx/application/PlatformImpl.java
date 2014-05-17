@@ -537,6 +537,63 @@ public class PlatformImpl {
         }
     }
 
+    private static String accessibilityTheme;
+    public static boolean setAccessibilityTheme(String platformTheme) {
+        if (accessibilityTheme != null) {
+            StyleManager.getInstance().removeUserAgentStylesheet(accessibilityTheme);
+            accessibilityTheme = null;
+        }
+
+        // check to see if there is an override to enable a high-contrast theme
+        final String userTheme = AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> System.getProperty("com.sun.javafx.highContrastTheme"));
+
+        if (isCaspian()) {
+            if (platformTheme != null || userTheme != null) {
+                // caspian has only one high contrast theme, use it regardless of the user or platform theme.
+                accessibilityTheme = "com/sun/javafx/scene/control/skin/caspian/highcontrast.css";
+            }
+        } else if (isModena()) {
+            // User-defined property takes precedence
+            if (userTheme != null) {
+                switch (userTheme.toUpperCase()) {
+                    case "BLACKONWHITE":
+                        accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css";
+                        break;
+                    case "WHITEONBLACK":
+                        accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css";
+                        break;
+                    case "YELLOWONBLACK":
+                        accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css";
+                        break;
+                    default:
+                }
+            } else {
+                if (platformTheme != null) {
+                    // The following names are Platform specific (Windows 7 and 8)
+                    switch (platformTheme) {
+                        case "High Contrast White":
+                            accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css";
+                            break;
+                        case "High Contrast Black":
+                            accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css";
+                            break;
+                        case "High Contrast #1":
+                        case "High Contrast #2": //TODO #2 should be green on black
+                            accessibilityTheme = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css";
+                            break;
+                        default:
+                    }
+                }   
+            }
+        }
+        if (accessibilityTheme != null) {
+            StyleManager.getInstance().addUserAgentStylesheet(accessibilityTheme);
+            return true;
+        }
+        return false;
+    }
+
     private static void _setPlatformUserAgentStylesheet(String stylesheetUrl) {
         isModena = isCaspian = false;
         // check for command line override
@@ -603,26 +660,11 @@ public class PlatformImpl {
                         return null;
                     }
             );
-
-            // check to see if there is an override to enable a high-contrast theme
-            final String highContrastName = AccessController.doPrivileged(
-                    (PrivilegedAction<String>) () -> System.getProperty("com.sun.javafx.highContrastTheme"));
-            if (highContrastName != null) {
-                switch (highContrastName.toUpperCase()) {
-                    case "BLACKONWHITE": StyleManager.getInstance().addUserAgentStylesheet(
-                                                "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css");
-                                         break;
-                    case "WHITEONBLACK": StyleManager.getInstance().addUserAgentStylesheet(
-                                                "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css");
-                                         break;
-                    case "YELLOWONBLACK": StyleManager.getInstance().addUserAgentStylesheet(
-                                                "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css");
-                                         break;
-                }
-            }
         } else {
             StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheetUrl);
         }
+        // Ensure that accessibility starts right
+        setAccessibilityTheme(Toolkit.getToolkit().getThemeName());
     }
 
     public static void addNoTransparencyStylesheetToScene(final Scene scene) {

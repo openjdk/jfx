@@ -1512,6 +1512,7 @@ public class Scene implements EventTarget {
      * @return the userAgentStylesheet property.
      * @see #getUserAgentStylesheet()
      * @see #setUserAgentStylesheet(String)
+     * @since  JavaFX 8u20
      */
     public final ObjectProperty<String> userAgentStylesheetProperty() {
         if (userAgentStylesheet == null) {
@@ -1534,6 +1535,7 @@ public class Scene implements EventTarget {
      * </p>
      * @return The URL of the user-agent stylesheet that will be used by this Scene,
      * or null if has not been set.
+     * @since  JavaFX 8u20
      */
     public final String getUserAgentStylesheet() {
         return userAgentStylesheet == null ? null : userAgentStylesheet.get();
@@ -1551,6 +1553,7 @@ public class Scene implements EventTarget {
      * does not have a [scheme:] component, the URL is considered to be the [path] component only.
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
+     * @since  JavaFX 8u20
      */
     public final void setUserAgentStylesheet(String url) {
         userAgentStylesheetProperty().set(url);
@@ -3892,6 +3895,11 @@ public class Scene implements EventTarget {
             windowFocused = value;
             if (getFocusOwner() != null) {
                 getFocusOwner().setFocused(windowFocused);
+            }
+            if (windowFocused) {
+                if (accessible != null) {
+                    accessible.sendNotification(Attribute.FOCUS_NODE);
+                }
             }
         }
 

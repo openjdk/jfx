@@ -945,7 +945,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         if (! dirtyCells.isEmpty()) {
             int index;
-            while ((index = dirtyCells.nextSetBit(0)) != -1) {
+            final int cellsSize = cells.size();
+            while ((index = dirtyCells.nextSetBit(0)) != -1 && index < cellsSize) {
                 T cell = cells.get(index);
                 // updateIndex(-1) works for TableView, but breaks ListView.
                 // For now, the TableView just does not use the dirtyCells API

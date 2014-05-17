@@ -180,7 +180,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             prepareEntitlements(p);
 
             String signingIdentity = MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(p);
-            String identifierPrefix = IDENTIFIER.fetchFrom(p) + ".";
+            String identifierPrefix = MacAppBundler.BUNDLE_ID_SIGNING_PREFIX.fetchFrom(p);
             String entitlementsFile = getConfig_Entitlements(p).toString();
             String inheritEntitlements = getConfig_Inherit_Entitlements(p).toString();
 
@@ -302,17 +302,11 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
         Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();
 
         results.addAll(MacAppBundler.getAppBundleParameters());
+        results.remove(MacAppBundler.DEVELOPER_ID_APP_SIGNING_KEY);
         results.addAll(Arrays.asList(
-                APP_BUNDLER,
-                APP_IMAGE_BUILD_ROOT,
-                APP_NAME,
-                APP_RESOURCES,
-                CONFIG_ROOT,
-                MAC_APP_IMAGE,
                 MAC_APP_STORE_APP_SIGNING_KEY,
                 MAC_APP_STORE_ENTITLEMENTS,
-                MAC_APP_STORE_PKG_SIGNING_KEY,
-                SIGNING_KEY_USER
+                MAC_APP_STORE_PKG_SIGNING_KEY
         ));
 
         return results;

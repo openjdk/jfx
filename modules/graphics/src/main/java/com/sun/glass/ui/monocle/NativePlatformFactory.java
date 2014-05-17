@@ -40,7 +40,7 @@ public abstract class NativePlatformFactory {
         if (platform == null) {
             String platformFactoryProperty =
                     AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("monocle.platform",
-                                              "MX6,OMAP,Dispman,Linux,Headless"));
+                                              "MX6,OMAP,Dispman,X11,Linux,Headless"));
             String[] platformFactories = platformFactoryProperty.split(",");
             for (int i = 0; i < platformFactories.length; i++) {
                 String factoryName = platformFactories[i].trim();
@@ -52,15 +52,26 @@ public abstract class NativePlatformFactory {
                         + factoryName.toLowerCase(Locale.ROOT)
                         + "." + factoryName + "PlatformFactory";
                 }
+                if (MonocleSettings.settings.tracePlatformConfig) {
+                    MonocleTrace.traceConfig("Trying platform %s with class %s",
+                                             factoryName, factoryClassName);
+                }
                 try {
                     NativePlatformFactory npf = (NativePlatformFactory)
                             Class.forName(factoryClassName)
                             .newInstance();
                     if (npf.matches()) {
                         platform = npf.createNativePlatform();
+                        if (MonocleSettings.settings.tracePlatformConfig) {
+                            MonocleTrace.traceConfig("Matched %s", factoryName);
+                        }
                         return platform;
                     }
                 } catch (Exception e) {
+                    if (MonocleSettings.settings.tracePlatformConfig) {
+                        MonocleTrace.traceConfig("Failed to create platform %s",
+                                                 factoryClassName);
+                    }
                     e.printStackTrace();
                 }
             }

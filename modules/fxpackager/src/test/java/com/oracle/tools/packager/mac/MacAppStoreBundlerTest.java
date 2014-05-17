@@ -25,8 +25,13 @@
 
 package com.oracle.tools.packager.mac;
 
-import com.oracle.tools.packager.*;
+import com.oracle.tools.packager.AbstractBundler;
+import com.oracle.tools.packager.BundlerParamInfo;
+import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
+import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.RelativeFileSet;
+import com.oracle.tools.packager.UnsupportedPlatformException;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -37,12 +42,18 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.file.Files;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static com.oracle.tools.packager.mac.MacAppBundler.*;
+import static com.oracle.tools.packager.mac.MacAppStoreBundler.*;
+import static org.junit.Assert.*;
 
 public class MacAppStoreBundlerTest {
 
@@ -50,6 +61,7 @@ public class MacAppStoreBundlerTest {
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
+    static File hdpiIcon;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -83,6 +95,7 @@ public class MacAppStoreBundlerTest {
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
         workDir = new File("build/tmp/tests", "macappstore");
+        hdpiIcon = new File("build/tmp/tests", "GenericAppHiDPI.icns");
         appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
@@ -94,7 +107,7 @@ public class MacAppStoreBundlerTest {
         if (retain) {
             tmpBase = new File("build/tmp/tests/macappstore");
         } else {
-            tmpBase = Files.createTempDirectory("fxpackagertests").toFile();
+            tmpBase = BUILD_ROOT.fetchFrom(new TreeMap<>());
         }
         tmpBase.mkdir();
     }
@@ -147,7 +160,7 @@ public class MacAppStoreBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(APP_NAME.getID(), "Smoke");
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
@@ -169,28 +182,69 @@ public class MacAppStoreBundlerTest {
         assertTrue(result.exists());
     }
 
-//    /**
-//     * The bare minimum configuration needed to make it work
-//     * <ul>
-//     *     <li>Where to build it</li>
-//     *     <li>The jar containing the application (with a main-class attribute)</li>
-//     * </ul>
-//     *
-//     * All other values will be driven off of those two values.
-//     */
-//    @Test
-//    public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
-//        Bundler bundler = new MacAppStoreBundler();
-//
-//        Map<String, Object> bundleParams = new HashMap<>();
-//
-//        bundleParams.put(StandardBundlerParam.BUILD_ROOT.getID(), tmpBase);
-//
-//        bundleParams.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-//
-//        File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
-//        System.err.println("Bundle written to " + output);
-//        assertTrue(output.isFile());
-//        //TODO assert file name
-//    }
+    @Test
+    public void configureEverything() throws Exception {
+        AbstractBundler bundler = new MacAppStoreBundler();
+        Collection<BundlerParamInfo<?>> parameters = bundler.getBundleParameters();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(APP_NAME.getID(), "Everything App Name");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
+        bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
+        bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
+        bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
+        bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
+        bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
+        bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
+        bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
+        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
+        bundleParams.put(VERSION.getID(), "1.2.3.4");
+
+        bundleParams.put(MAC_APP_STORE_APP_SIGNING_KEY.getID(), "3rd Party Mac Developer Application");
+        bundleParams.put(MAC_APP_STORE_ENTITLEMENTS.getID(), null);
+        bundleParams.put(MAC_APP_STORE_PKG_SIGNING_KEY.getID(), "3rd Party Mac Developer Installer");
+
+                // assert they are set
+        for (BundlerParamInfo bi :parameters) {
+            assertNotNull("Bundle args Contains " + bi.getID(), bundleParams.containsKey(bi.getID()));
+        }
+
+        // and only those are set
+        bundleParamLoop:
+        for (String s :bundleParams.keySet()) {
+            for (BundlerParamInfo<?> bpi : parameters) {
+                if (s.equals(bpi.getID())) {
+                    continue bundleParamLoop;
+                }
+            }
+            fail("Enumerated parameters does not contain " + s);
+        }
+
+        // assert they resolve
+        for (BundlerParamInfo bi :parameters) {
+            bi.fetchFrom(bundleParams);
+        }
+
+        // now that we are done scoping out parameters add more esoteric values
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        // assert it validates
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        File result = bundler.execute(bundleParams, new File(workDir, "everything"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
+    }
 }

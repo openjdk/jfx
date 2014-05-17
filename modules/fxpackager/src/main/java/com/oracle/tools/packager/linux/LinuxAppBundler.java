@@ -44,10 +44,13 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 public class LinuxAppBundler extends AbstractBundler {
+
+    private static Pattern TO_FS_NAME = Pattern.compile("[^-a-zA-Z0-9.]");
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(LinuxAppBundler.class.getName());
@@ -55,6 +58,16 @@ public class LinuxAppBundler extends AbstractBundler {
     protected static final String LINUX_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "linux" + File.separator;
     private static final String EXECUTABLE_NAME = "JavaAppLauncher";
+
+    public static final StandardBundlerParam<String> APP_FS_NAME =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.app-fs-name.name"),
+                    I18N.getString("param.app-fs-name.description"),
+                    "name.fs",
+                    String.class,
+                    params -> TO_FS_NAME.matcher(APP_NAME.fetchFrom(params)).replaceAll(""),
+                    (s, p) -> s
+            );
 
     public static final BundlerParamInfo<File> ICON_PNG = new StandardBundlerParam<>(
             I18N.getString("param.icon-png.name"),
@@ -165,12 +178,8 @@ public class LinuxAppBundler extends AbstractBundler {
 
     //it is static for the sake of sharing with "installer" bundlers
     // that may skip calls to validate/bundle in this class!
-    private static File getRootDir(File outDir, Map<String, ? super Object> p) {
-        return new File(outDir, APP_NAME.fetchFrom(p));
-    }
-
-    public static File getLauncher(File outDir, Map<String, ? super Object> p) {
-        return new File(getRootDir(outDir, p), APP_NAME.fetchFrom(p));
+    public static File getRootDir(File outDir, Map<String, ? super Object> p) {
+        return new File(outDir, APP_FS_NAME.fetchFrom(p));
     }
 
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
@@ -183,7 +192,7 @@ public class LinuxAppBundler extends AbstractBundler {
             }
 
             // Create directory structure
-            File rootDirectory = new File(outputDirectory, APP_NAME.fetchFrom(p));
+            File rootDirectory = new File(outputDirectory, APP_FS_NAME.fetchFrom(p));
             IOUtils.deleteRecursive(rootDirectory);
             rootDirectory.mkdirs();
 
@@ -197,7 +206,7 @@ public class LinuxAppBundler extends AbstractBundler {
             appDirectory.mkdirs();
 
             // Copy executable to Linux folder
-            File executableFile = getLauncher(outputDirectory, p);
+            File executableFile = new File(getRootDir(outputDirectory, p), APP_FS_NAME.fetchFrom(p));
             IOUtils.copyFromURL(
                     RAW_EXECUTABLE_URL.fetchFrom(p),
                     executableFile);
@@ -260,6 +269,11 @@ public class LinuxAppBundler extends AbstractBundler {
         int idx = 1;
         for (String a : jvmargs) {
             out.println("jvmarg."+idx+"="+a);
+            idx++;
+        }
+        Map<String, String> jvmProps = JVM_PROPERTIES.fetchFrom(params);
+        for (Map.Entry<String, String> entry : jvmProps.entrySet()) {
+            out.println("jvmarg."+idx+"=-D"+entry.getKey()+"="+entry.getValue());
             idx++;
         }
 
@@ -327,14 +341,13 @@ public class LinuxAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
-                BUILD_ROOT,
                 JVM_OPTIONS,
+                JVM_PROPERTIES,
+                LINUX_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
                 MAIN_JAR_CLASSPATH,
                 PREFERENCES_ID,
-                RAW_EXECUTABLE_URL,
-                LINUX_RUNTIME,
                 USER_JVM_OPTIONS,
                 VERSION
         );

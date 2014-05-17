@@ -1421,10 +1421,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                     });
                     return result;
                 } else {
-                    // There may have been some intermediate result in the
-                    // task set from the background thread, so I want to be
-                    // sure to return the most recent intermediate value
-                    return task.getValue();
+                    // Since cancelled Future/FutureTask doesn't return any value,
+                    // the returned value is going to be trashed, so we can jus return null
+                    return null;
                 }
             } catch (final Throwable th) {
                 // Be sure to set the state after setting the cause of failure

@@ -199,4 +199,237 @@ public class StackedAreaChartTest extends XYChartTestBase {
          ac.getData().addAll(series1);
          assertEquals(5, countSymbols(ac, "chart-area-symbol"));
      }
+
+    @Test
+    public void  testAutoRange_AdditionalPointInSeries1() {
+        ac.getData().clear();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+        yAxis.setAutoRanging(true);
+        yAxis.setForceZeroInRange(false);
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0, 4),
+                new StackedAreaChart.Data(2, 5),
+                new StackedAreaChart.Data(4, 4),
+                new StackedAreaChart.Data(6, 2),
+                new StackedAreaChart.Data(7, 12),
+                new StackedAreaChart.Data(8, 6),
+                new StackedAreaChart.Data(10, 8)
+        )));
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0,8),
+                new StackedAreaChart.Data(2,1),
+                new StackedAreaChart.Data(4,9),
+                new StackedAreaChart.Data(6,7),
+                new StackedAreaChart.Data(8,5),
+                new StackedAreaChart.Data(10,7)
+        )));
+
+        ac.updateAxisRange();
+
+        assertEquals(2, yAxis.dataMinValue, 1e-100);
+        assertEquals(18, yAxis.dataMaxValue, 1e-100);
+    }
+
+    @Test
+    public void testAutoRange_AdditionalPointInSeries1AtTheEnd() {
+        ac.getData().clear();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+        yAxis.setAutoRanging(true);
+        yAxis.setForceZeroInRange(false);
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0, 4),
+                new StackedAreaChart.Data(2, 5),
+                new StackedAreaChart.Data(4, 4),
+                new StackedAreaChart.Data(6, 2),
+                new StackedAreaChart.Data(8, 6),
+                new StackedAreaChart.Data(10, 8),
+                new StackedAreaChart.Data(11, 12)
+        )));
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0,8),
+                new StackedAreaChart.Data(2,1),
+                new StackedAreaChart.Data(4,9),
+                new StackedAreaChart.Data(6,7),
+                new StackedAreaChart.Data(8,5),
+                new StackedAreaChart.Data(10,7)
+        )));
+
+        ac.updateAxisRange();
+
+        assertEquals(2, yAxis.dataMinValue, 1e-100);
+        assertEquals(19, yAxis.dataMaxValue, 1e-100);
+    }
+
+    @Test
+    public void testAutoRange_AdditionalPointInSeries1AtTheBeginning() {
+        ac.getData().clear();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+        yAxis.setAutoRanging(true);
+        yAxis.setForceZeroInRange(false);
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(-1, 12),
+                new StackedAreaChart.Data(0, 4),
+                new StackedAreaChart.Data(2, 5),
+                new StackedAreaChart.Data(4, 4),
+                new StackedAreaChart.Data(6, 2),
+                new StackedAreaChart.Data(8, 6),
+                new StackedAreaChart.Data(10, 8)
+        )));
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0,8),
+                new StackedAreaChart.Data(2,1),
+                new StackedAreaChart.Data(4,9),
+                new StackedAreaChart.Data(6,7),
+                new StackedAreaChart.Data(8,5),
+                new StackedAreaChart.Data(10,7)
+        )));
+
+        ac.updateAxisRange();
+
+        assertEquals(2, yAxis.dataMinValue, 1e-100);
+        assertEquals(20, yAxis.dataMaxValue, 1e-100);
+    }
+
+    @Test
+    public void testAutoRange_AdditionalPointInSeries2() {
+        ac.getData().clear();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+        yAxis.setAutoRanging(true);
+        yAxis.setForceZeroInRange(false);
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0, 4),
+                new StackedAreaChart.Data(2, 5),
+                new StackedAreaChart.Data(4, 4),
+                new StackedAreaChart.Data(6, 2),
+                new StackedAreaChart.Data(8, 6),
+                new StackedAreaChart.Data(10, 8)
+        )));
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0,8),
+                new StackedAreaChart.Data(2,1),
+                new StackedAreaChart.Data(4,9),
+                new StackedAreaChart.Data(6,7),
+                new StackedAreaChart.Data(7, 12),
+                new StackedAreaChart.Data(8,5),
+                new StackedAreaChart.Data(10,7)
+        )));
+
+        ac.updateAxisRange();
+
+        assertEquals(2, yAxis.dataMinValue, 1e-100);
+        assertEquals(16, yAxis.dataMaxValue, 1e-100);
+    }
+
+    @Test
+    public void testAutoRange_AdditionalPointInSeries2AtTheEnd() {
+        ac.getData().clear();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+        yAxis.setAutoRanging(true);
+        yAxis.setForceZeroInRange(false);
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0, 4),
+                new StackedAreaChart.Data(2, 5),
+                new StackedAreaChart.Data(4, 4),
+                new StackedAreaChart.Data(6, 2),
+                new StackedAreaChart.Data(8, 6),
+                new StackedAreaChart.Data(10, 8)
+        )));
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0,8),
+                new StackedAreaChart.Data(2,1),
+                new StackedAreaChart.Data(4,9),
+                new StackedAreaChart.Data(6,7),
+                new StackedAreaChart.Data(8,5),
+                new StackedAreaChart.Data(10,7),
+                new StackedAreaChart.Data(12, 12)
+        )));
+
+        ac.updateAxisRange();
+
+        assertEquals(2, yAxis.dataMinValue, 1e-100);
+        assertEquals(20, yAxis.dataMaxValue, 1e-100);
+    }
+
+    @Test
+    public void testAutoRange_AdditionalPointInSeries2AtTheBeginning() {
+        ac.getData().clear();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+        yAxis.setAutoRanging(true);
+        yAxis.setForceZeroInRange(false);
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0, 4),
+                new StackedAreaChart.Data(2, 5),
+                new StackedAreaChart.Data(4, 4),
+                new StackedAreaChart.Data(6, 2),
+                new StackedAreaChart.Data(8, 6),
+                new StackedAreaChart.Data(10, 8)
+        )));
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(-1, 15),
+                new StackedAreaChart.Data(0,8),
+                new StackedAreaChart.Data(2,1),
+                new StackedAreaChart.Data(4,9),
+                new StackedAreaChart.Data(6,7),
+                new StackedAreaChart.Data(8,5),
+                new StackedAreaChart.Data(10,7)
+        )));
+
+        ac.updateAxisRange();
+
+        assertEquals(2, yAxis.dataMinValue, 1e-100);
+        assertEquals(19, yAxis.dataMaxValue, 1e-100);
+    }
+
+    @Test
+    public void testAutoRange_EmptySeries1() {
+        ac.getData().clear();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+        yAxis.setAutoRanging(true);
+        yAxis.setForceZeroInRange(false);
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+        )));
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0,8),
+                new StackedAreaChart.Data(2,1),
+                new StackedAreaChart.Data(4,9),
+                new StackedAreaChart.Data(6,7),
+                new StackedAreaChart.Data(8,5),
+                new StackedAreaChart.Data(10,7)
+        )));
+
+        ac.updateAxisRange();
+
+        assertEquals(1, yAxis.dataMinValue, 1e-100);
+        assertEquals(9, yAxis.dataMaxValue, 1e-100);
+    }
+
+    @Test
+    public void testAutoRange_EmptySeries2() {
+        ac.getData().clear();
+        final NumberAxis yAxis = (NumberAxis) ac.getYAxis();
+        yAxis.setAutoRanging(true);
+        yAxis.setForceZeroInRange(false);
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0, 4),
+                new StackedAreaChart.Data(2, 5),
+                new StackedAreaChart.Data(4, 4),
+                new StackedAreaChart.Data(6, 2),
+                new StackedAreaChart.Data(8, 6),
+                new StackedAreaChart.Data(10, 8)
+        )));
+        ac.getData().add(new StackedAreaChart.Series<>());
+        ac.getData().add(new StackedAreaChart.Series<Number, Number>(FXCollections.observableArrayList(
+                new StackedAreaChart.Data(0,8),
+                new StackedAreaChart.Data(2,1),
+                new StackedAreaChart.Data(4,9),
+                new StackedAreaChart.Data(6,7),
+                new StackedAreaChart.Data(8,5),
+                new StackedAreaChart.Data(10,7)
+        )));
+
+        ac.updateAxisRange();
+
+        assertEquals(2, yAxis.dataMinValue, 1e-100);
+        assertEquals(15, yAxis.dataMaxValue, 1e-100);
+    }
 }

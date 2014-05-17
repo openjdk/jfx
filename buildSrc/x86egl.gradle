@@ -68,10 +68,12 @@ X86EGL.compileSwing = false;
 X86EGL.compileSWT = false;
 X86EGL.compileFXPackager = false;
 X86EGL.compileDesignTime = false;
+X86EGL.compileWebnodeNative = false;
+X86EGL.compileMediaNative = false;
 
-// Libraries end up in the sdk/rt/lib/i386 directory for i386 builds
-X86EGL.arch = "i386"
-X86EGL.libDest = "lib/i386"
+// Libraries end up in the sdk/rt/lib/[i386|amd46] directory depending on machine arch
+X86EGL.arch = OS_ARCH
+X86EGL.libDest = "lib/${OS_ARCH}"
 
 // TODO this is garbage. Each target file should define what it includes,
 // not what it excludes.
@@ -231,7 +233,7 @@ monocle.prism.maxvram=128m
 monocle.prism.targetvram=112m
 monocle.use.egl=true
 monocle.use.gles2=true
-monocle.embedded=eglfb
+monocle.embedded=monocle
 monocle.com.sun.javafx.isEmbedded=true
 monocle.doNativeComposite=true
 monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
@@ -268,7 +270,7 @@ gtk.com.sun.javafx.gestures.scroll=true"""
 
 def pangoCCFlags = ["-D_ENABLE_PANGO"];
 def pangoLinkFlags = [];
-setupTools("linux_pango_tools",
+setupTools("x86egl_pango_tools",
         { propFile ->
             ByteArrayOutputStream results = new ByteArrayOutputStream();
             exec {
@@ -288,6 +290,31 @@ setupTools("linux_pango_tools",
             pangoCCFlags.addAll(properties.getProperty("cflags").split(" "))
             pangoLinkFlags.addAll(properties.getProperty("libs").split(" "))
         }
+)
+
+def freetypeCCFlags = [ext.IS_COMPILE_PANGO ? "-D_ENABLE_PANGO" :
+                       ext.IS_COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
+def freetypeLinkFlags = []
+setupTools("x86egl_freetype_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--cflags", "freetype2"
+            standardOutput = results
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--libs", "freetype2"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        freetypeCCFlags.addAll(properties.getProperty("cflags").split(" "))
+        freetypeLinkFlags.addAll(properties.getProperty("libs").split(" "))
+    }
 )
 
 def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
@@ -509,17 +536,25 @@ X86EGL.fontT2K.linker = linker
 X86EGL.fontT2K.linkFlags = fontLFlags
 X86EGL.fontT2K.lib = "javafx_font_t2k"
 
+X86EGL.fontFreetype = [:]
+X86EGL.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class"]
+X86EGL.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
+X86EGL.fontFreetype.compiler = compiler
+X86EGL.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", ccFlags, freetypeCCFlags].flatten()
+X86EGL.fontFreetype.linker = linker
+X86EGL.fontFreetype.linkFlags = [linkFlags, freetypeLinkFlags].flatten()
+X86EGL.fontFreetype.lib = "javafx_font_freetype"
+
 X86EGL.fontPango = [:]
-X86EGL.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]
-X86EGL.fontPango.nativeSource = [
-    "src/main/native-font/pango.c",
-    "src/main/native-font/freetype.c"]
+X86EGL.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
+X86EGL.fontPango.nativeSource = ["src/main/native-font/pango.c"]
 X86EGL.fontPango.compiler = compiler
 X86EGL.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 X86EGL.fontPango.linker = linker
 X86EGL.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
 X86EGL.fontPango.lib = "javafx_font_pango"
 
+X86EGL.disableMedia = true
 X86EGL.media =[:]
 X86EGL.media.compiler = compiler
 X86EGL.media.linker = linker

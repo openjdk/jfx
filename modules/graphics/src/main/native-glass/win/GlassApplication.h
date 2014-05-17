@@ -81,6 +81,7 @@ public:
     static void ExecActionLater(Action *action);
     void RegisterClipboardViewer(jobject clipboard);
     void UnregisterClipboardViewer();
+    static jstring GetThemeName(JNIEnv* env);
 
     inline static DWORD GetMainThreadId()
     {

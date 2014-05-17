@@ -108,6 +108,13 @@ JNIEXPORT void JNICALL
 }
 
 JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_x11_X_00024XSetWindowAttributes_setOverrideRedirect
+ (JNIEnv *UNUSED(env), jclass UNUSED(attrClass), jlong attrsL, jboolean override) {
+    XSetWindowAttributes *attrs = (XSetWindowAttributes *) asPtr(attrsL);
+    attrs->override_redirect = override ? True : False;
+}
+
+JNIEXPORT void JNICALL
  Java_com_sun_glass_ui_monocle_x11_X_XStoreName
  (JNIEnv *UNUSED(env), jclass UNUSED(xClass), jlong display, jlong window,
         jstring nameString) {
@@ -164,10 +171,61 @@ JNIEXPORT void JNICALL
 }
 
 JNIEXPORT jlong JNICALL
+ Java_com_sun_glass_ui_monocle_x11_X_XInternAtom
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass), jlong display,
+        jstring atomNameString, jboolean onlyIfExists) {
+    const char *atomName = NULL;
+    Atom atom;
+    if (atomNameString) {
+        atomName = (*env)->GetStringUTFChars(env, atomNameString, NULL);
+    }
+    atom = XInternAtom((Display *) asPtr(display),
+                       atomName,
+                       onlyIfExists ? True : False);
+    if (atomNameString) {
+        (*env)->ReleaseStringUTFChars(env, atomNameString, atomName);
+    }
+    return (jlong) atom;
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_x11_X_XSendEvent
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
+        jlong display, jlong window, jboolean propagate,
+        jlong mask, jlong eventL) {
+    XSendEvent((Display *) asPtr(display),
+               (Window) window,
+               propagate ? True : False,
+               (long) mask,
+               (XEvent *) asPtr(eventL));
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_x11_X_XGrabKeyboard
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
+        jlong display, jlong window, jboolean ownerEvents,
+        jlong pointerMode, jlong keyboardMode, jlong time) {
+    XGrabKeyboard((Display *) asPtr(display),
+                  (Window) window,
+                  ownerEvents ? True : False,
+                  (int) pointerMode,
+                  (int) keyboardMode,
+                  (Time) time);
+}
+
+JNIEXPORT jlong JNICALL
  Java_com_sun_glass_ui_monocle_x11_X_00024XEvent_getWindow
  (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong eventL) {
     XEvent *event = (XEvent *) asPtr(eventL);
     return (jlong) event->xany.window;
+}
+
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_x11_X_00024XEvent_setWindow
+ (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong eventL, jlong window) {
+    XEvent *event = (XEvent *) asPtr(eventL);
+    event->xany.window = (Window) window;
 }
 
 JNIEXPORT jint JNICALL
@@ -196,4 +254,25 @@ JNIEXPORT jint JNICALL
  (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong eventL) {
     XMotionEvent *event = (XMotionEvent *) asPtr(eventL);
     return (jint) event->y;
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_x11_X_00024XClientMessageEvent_setMessageType
+ (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong eventL, jlong messageType) {
+    XClientMessageEvent *event = (XClientMessageEvent *) asPtr(eventL);
+    event->message_type = (Atom) messageType;
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_x11_X_00024XClientMessageEvent_setFormat
+ (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong eventL, jlong format) {
+    XClientMessageEvent *event = (XClientMessageEvent *) asPtr(eventL);
+    event->format = (int) format;
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_x11_X_00024XClientMessageEvent_setDataLong
+ (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong eventL, jint index, jlong element) {
+    XClientMessageEvent *event = (XClientMessageEvent *) asPtr(eventL);
+    event->data.l[index] = (long) element;
 }

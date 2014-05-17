@@ -21,7 +21,7 @@
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-exec=/opt/APPLICATION_NAME/APPLICATION_LAUNCHER_FILENAME
+exec=/opt/APPLICATION_FS_NAME/APPLICATION_LAUNCHER_FILENAME
 prog=APPLICATION_LAUNCHER_FILENAME
 
 lockfile=/var/lock/subsys/$prog

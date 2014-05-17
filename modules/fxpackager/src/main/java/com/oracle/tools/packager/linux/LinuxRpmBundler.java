@@ -40,6 +40,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.linux.LinuxAppBundler.APP_FS_NAME;
 
 public class LinuxRpmBundler extends AbstractBundler {
 
@@ -275,7 +276,7 @@ public class LinuxRpmBundler extends AbstractBundler {
                 sb.append("\n");
             }
             sb.append("%doc /opt/");
-            sb.append(APP_NAME.fetchFrom(params));
+            sb.append(APP_FS_NAME.fetchFrom(params));
             sb.append("/app/");
             sb.append(f);
         }
@@ -286,11 +287,11 @@ public class LinuxRpmBundler extends AbstractBundler {
         Map<String, String> data = new HashMap<>();
 
         data.put("APPLICATION_NAME", APP_NAME.fetchFrom(params));
+        data.put("APPLICATION_FS_NAME", APP_FS_NAME.fetchFrom(params));
         data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params));
         data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
         data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
-        data.put("APPLICATION_LAUNCHER_FILENAME",
-                LinuxAppBundler.getLauncher(RPM_IMAGE_DIR.fetchFrom(params), params).getName());
+        data.put("APPLICATION_LAUNCHER_FILENAME", APP_FS_NAME.fetchFrom(params));
         data.put("DEPLOY_BUNDLE_CATEGORY", CATEGORY.fetchFrom(params)); //TODO rpm categories
         data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
         data.put("APPLICATION_SUMMARY", TITLE.fetchFrom(params));
@@ -354,23 +355,23 @@ public class LinuxRpmBundler extends AbstractBundler {
     }
 
     private File getConfig_DesktopShortcutFile(Map<String, ? super Object> params) {
-        return new File(LinuxAppBundler.getLauncher(RPM_IMAGE_DIR.fetchFrom(params), params).getParentFile(),
-                BUNDLE_NAME.fetchFrom(params) + ".desktop");
+        return new File(LinuxAppBundler.getRootDir(RPM_IMAGE_DIR.fetchFrom(params), params),
+                APP_FS_NAME.fetchFrom(params) + ".desktop");
     }
 
     private File getConfig_IconFile(Map<String, ? super Object> params) {
-        return new File(LinuxAppBundler.getLauncher(RPM_IMAGE_DIR.fetchFrom(params), params).getParentFile(),
-                BUNDLE_NAME.fetchFrom(params) + ".png");
+        return new File(LinuxAppBundler.getRootDir(RPM_IMAGE_DIR.fetchFrom(params), params),
+                APP_FS_NAME.fetchFrom(params) + ".png");
     }
 
     private File getConfig_InitScriptFile(Map<String, ? super Object> params) {
-        return new File(LinuxAppBundler.getLauncher(RPM_IMAGE_DIR.fetchFrom(params), params).getParentFile(),
-                BUNDLE_NAME.fetchFrom(params) + ".init");
+        return new File(LinuxAppBundler.getRootDir(RPM_IMAGE_DIR.fetchFrom(params), params),
+                APP_FS_NAME.fetchFrom(params) + ".init");
     }
 
     private File getConfig_SpecFile(Map<String, ? super Object> params) {
         return new File(RPM_IMAGE_DIR.fetchFrom(params),
-                BUNDLE_NAME.fetchFrom(params) + ".spec");
+                APP_FS_NAME.fetchFrom(params) + ".spec");
     }
 
     private File buildRPM(Map<String, ? super Object> params, File outdir) throws IOException {
@@ -445,21 +446,14 @@ public class LinuxRpmBundler extends AbstractBundler {
 
     public static Collection<BundlerParamInfo<?>> getRpmBundleParameters() {
         return Arrays.asList(
-                APP_BUNDLER,
-                APP_NAME,
-                BUILD_ROOT,
                 BUNDLE_NAME,
-                CONFIG_ROOT,
                 CATEGORY,
                 DESCRIPTION,
                 LinuxAppBundler.ICON_PNG,
-                RPM_IMAGE_DIR,
-                IMAGES_ROOT,
                 LICENSE_FILE,
                 LICENSE_TYPE,
                 TITLE,
-                VENDOR,
-                VERSION
+                VENDOR
         );
     }
 

@@ -123,11 +123,20 @@ public class MacAppBundler extends AbstractBundler {
 
     public static final BundlerParamInfo<String> MAC_CF_BUNDLE_NAME =
             new StandardBundlerParam<>(
-                    I18N.getString("param.cfbundle-name"),
+                    I18N.getString("param.cfbundle-name.name"),
                     I18N.getString("param.cfbundle-name.description"),
                     "mac.CFBundleName",
                     String.class,
                     params -> null,
+                    (s, p) -> s);
+
+    public static final BundlerParamInfo<String> MAC_CF_BUNDLE_IDENTIFIER =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.cfbundle-identifier.name"),
+                    I18N.getString("param.cfbundle-identifier.description"),
+                    "mac.CFBundleIdentifier",
+                    String.class,
+                    IDENTIFIER::fetchFrom,
                     (s, p) -> s);
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
@@ -241,6 +250,14 @@ public class MacAppBundler extends AbstractBundler {
             },
             (s, p) -> s);
 
+    public static final BundlerParamInfo<String> BUNDLE_ID_SIGNING_PREFIX = new StandardBundlerParam<>(
+            I18N.getString("param.bundle-id-signing-prefix.name"),
+            I18N.getString("param.bundle-id-signing-prefix.description"),
+            "mac.bundle-id-signing-prefix",
+            String.class,
+            params -> IDENTIFIER.fetchFrom(params) + ".",
+            (s, p) -> s);
+
     public static final BundlerParamInfo<File> ICON_ICNS = new StandardBundlerParam<>(
             I18N.getString("param.icon-icns.name"),
             I18N.getString("param.icon-icns.description"),
@@ -257,7 +274,9 @@ public class MacAppBundler extends AbstractBundler {
             (s, p) -> new File(s));
 
     public static RelativeFileSet extractMacRuntime(String base, Map<String, ? super Object> params) {
-        if (base.endsWith("/Home")) {
+        if (base.isEmpty()) {
+            return null;
+        } else if (base.endsWith("/Home")) {
             throw new IllegalArgumentException(I18N.getString("message.no-mac-jre-support"));
         } else if (base.endsWith("/Home/jre")) {
             File baseDir = new File(base).getParentFile().getParentFile().getParentFile();
@@ -412,7 +431,7 @@ public class MacAppBundler extends AbstractBundler {
             // maybe sign
             String signingIdentity = DEVELOPER_ID_APP_SIGNING_KEY.fetchFrom(p);
             if (signingIdentity != null) {
-                MacBaseInstallerBundler.signAppBundle(p, rootDirectory, signingIdentity, IDENTIFIER.fetchFrom(p) + ".");
+                MacBaseInstallerBundler.signAppBundle(p, rootDirectory, signingIdentity, BUNDLE_ID_SIGNING_PREFIX.fetchFrom(p));
             }
         } catch (IOException ex) {
             Log.info(ex.toString());
@@ -520,11 +539,6 @@ public class MacAppBundler extends AbstractBundler {
         }
     }
 
-    private String getBundleIdentifier(Map<String, ? super Object> params) {
-        //TODO: Check to see what rules/limits are in place for CFBundleIdentifier
-        return  IDENTIFIER.fetchFrom(params);
-    }
-
     private void writeInfoPlist(File file, Map<String, ? super Object> params) throws IOException {
         Log.verbose(MessageFormat.format(I18N.getString("message.preparing-info-plist"), file.getAbsolutePath()));
 
@@ -533,7 +547,7 @@ public class MacAppBundler extends AbstractBundler {
         Map<String, String> data = new HashMap<>();
         data.put("DEPLOY_ICON_FILE", getConfig_Icon(params).getName());
         data.put("DEPLOY_BUNDLE_IDENTIFIER",
-                getBundleIdentifier(params));
+                MAC_CF_BUNDLE_IDENTIFIER.fetchFrom(params));
         data.put("DEPLOY_BUNDLE_NAME",
                 getBundleName(params));
         data.put("DEPLOY_BUNDLE_COPYRIGHT",
@@ -565,6 +579,18 @@ public class MacAppBundler extends AbstractBundler {
             sb.append(newline).append("    <string>").append(o).append("</string>");
             newline = "\n";
         }
+
+        Map<String, String> jvmProps = JVM_PROPERTIES.fetchFrom(params);
+        for (Map.Entry<String, String> entry : jvmProps.entrySet()) {
+            sb.append(newline)
+                    .append("    <string>-D")
+                    .append(entry.getKey())
+                    .append("=")
+                    .append(entry.getValue())
+                    .append("</string>");
+            newline = "\n";
+        }
+
         data.put("DEPLOY_JVM_OPTIONS", sb.toString());
 
         newline = "";
@@ -643,18 +669,21 @@ public class MacAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
-                BUILD_ROOT,
+                BUNDLE_ID_SIGNING_PREFIX,
+                DEVELOPER_ID_APP_SIGNING_KEY,
+                ICON_ICNS,
                 JVM_OPTIONS,
+                JVM_PROPERTIES,
+                MAC_CATEGORY,
+                MAC_CF_BUNDLE_IDENTIFIER,
+                MAC_CF_BUNDLE_NAME,
+                MAC_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
                 MAIN_JAR_CLASSPATH,
                 PREFERENCES_ID,
-                RAW_EXECUTABLE_URL,
-                MAC_RUNTIME,
                 USER_JVM_OPTIONS,
-                VERSION,
-                ICON,
-                MAC_CATEGORY
+                VERSION
         );
     }
 

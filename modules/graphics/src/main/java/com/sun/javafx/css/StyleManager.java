@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css;
 
+import javafx.application.Application;
 import javafx.css.Styleable;
 import java.io.FileNotFoundException;
 import java.io.FilePermission;
@@ -552,6 +553,27 @@ final public class StyleManager {
                 stylesheetRemoved(parent, fname);
             }
         }
+
+        Iterator<StylesheetContainer> containerIterator = stylesheetContainerMap.values().iterator();
+        while (containerIterator.hasNext()) {
+            StylesheetContainer container = containerIterator.next();
+            container.parentUsers.remove(parent);
+            if (container.parentUsers.list.isEmpty()) {
+
+                containerIterator.remove();
+
+                if (container.selectorPartitioning != null) {
+                    container.selectorPartitioning.reset();
+                }
+
+
+                // clean up image cache by removing images from the cache that
+                // might have come from this stylesheet
+                final String fname = container.fname;
+                cleanUpImageCache(fname);
+            }
+        }
+
         // Do not iterate over children since this method will be called on each from Parent#scenesChanged
     }
 
@@ -1271,6 +1293,41 @@ final public class StyleManager {
         // RT-20643
         CssError.setCurrentScene(null);
 
+    }
+    
+    /**
+     * Removes the specified stylesheet from the application default user agent
+     * stylesheet list.
+     * @param url  The file URL, either relative or absolute, as a String.
+     */
+    public void removeUserAgentStylesheet(String url) {
+        if (url == null ) {
+            throw new IllegalArgumentException("null arg url");
+        }
+ 
+        final String fname = url.trim();
+        if (fname.isEmpty()) {
+            return;
+        }
+ 
+        // if we already have this stylesheet, remove it!
+        boolean removed = false;
+        for (int n = platformUserAgentStylesheetContainers.size() - 1; n >= 0; n--) {
+            // don't remove the platform default user agent stylesheet
+            if (fname.equals(Application.getUserAgentStylesheet())) {
+                continue;
+            }
+ 
+            StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+            if (fname.equals(container.fname)) {
+                platformUserAgentStylesheetContainers.remove(n);
+                removed = true;
+            }
+        }
+ 
+        if (removed) {
+            userAgentStylesheetsChanged();
+        }
     }
 
     /**

@@ -95,7 +95,7 @@ public class TableColumnHeader extends Region {
     private boolean autoSizeComplete = false;
 
     private double dragOffset;
-    private final TableViewSkinBase skin;
+    private final TableViewSkinBase<?,?,?,?,?,TableColumnBase<?,?>> skin;
     private NestedTableColumnHeader nestedColumnHeader;
     private final TableColumnBase<?,?> column;
     private TableHeaderRow tableHeaderRow;
@@ -213,7 +213,7 @@ public class TableColumnHeader extends Region {
         header.getTableViewSkin().getSkinnable().requestFocus();
 
         if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
-            header.columnReorderingStarted(me);
+            header.columnReorderingStarted(me.getX());
         }
         me.consume();
     };
@@ -222,7 +222,7 @@ public class TableColumnHeader extends Region {
         TableColumnHeader header = (TableColumnHeader) me.getSource();
 
         if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
-            header.columnReordering(me);
+            header.columnReordering(me.getSceneX(), me.getSceneY());
         }
         me.consume();
     };
@@ -236,7 +236,7 @@ public class TableColumnHeader extends Region {
         ContextMenu menu = tableColumn.getContextMenu();
         if (menu != null && menu.isShowing()) return;
         if (header.getTableHeaderRow().isReordering() && header.isColumnReorderingEnabled()) {
-            header.columnReorderingComplete(me);
+            header.columnReorderingComplete();
         } else if (me.isStillSincePress()) {
             header.sortColumn(me.isShiftDown());
         }
@@ -342,7 +342,7 @@ public class TableColumnHeader extends Region {
         }
     }
     
-    protected TableViewSkinBase getTableViewSkin() {
+    protected TableViewSkinBase<?,?,?,?,?,TableColumnBase<?,?>> getTableViewSkin() {
         return skin;
     }
 
@@ -469,7 +469,7 @@ public class TableColumnHeader extends Region {
             if (getTableColumn() == null || getTableColumn().getWidth() != DEFAULT_WIDTH || getScene() == null) {
                 return;
             }
-            getTableViewSkin().resizeColumnToFitContent(getTableColumn(), n);
+            doColumnAutoSize(getTableColumn(), n);
             autoSizeComplete = true;
         }
     }
@@ -516,7 +516,7 @@ public class TableColumnHeader extends Region {
             // The font has changed (probably due to CSS being applied), so we
             // need to re-run the column resizing algorithm to ensure columns
             // fit nicely based on their content and their header
-            getTableViewSkin().resizeColumnToFitContent(column, 30);
+            doColumnAutoSize(column, 30);
         });
 
         // ---- container for the sort arrow (which is not supported on embedded
@@ -524,6 +524,15 @@ public class TableColumnHeader extends Region {
         if (isSortingEnabled()) {
             // put together the grid
             updateSortGrid();
+        }
+    }
+
+    private void doColumnAutoSize(TableColumnBase<?,?> column, int cellsToMeasure) {
+        double prefWidth = column.getPrefWidth();
+
+        // if the prefWidth has been set, we do _not_ autosize columns
+        if (prefWidth == DEFAULT_WIDTH) {
+            getTableViewSkin().resizeColumnToFitContent(column, cellsToMeasure);
         }
     }
     
@@ -658,39 +667,60 @@ public class TableColumnHeader extends Region {
         sortOrderDots.setMaxWidth(arrowWidth);
     }
 
-    // Package for testing purposes only
-    void moveColumn(TableColumnBase column, int newColumnPos) {
+    // Package for testing purposes only.
+    void moveColumn(TableColumnBase column, final int newColumnPos) {
         if (column == null || newColumnPos < 0) return;
 
-        ObservableList<TableColumnBase> columns = column.getParentColumn() == null ?
-            getTableViewSkin().getColumns() :
-            column.getParentColumn().getColumns();
+        ObservableList<TableColumnBase<?,?>> columns = getColumns(column);
 
         final int columnsCount = columns.size();
         final int currentPos = columns.indexOf(column);
 
+        int actualNewColumnPos = newColumnPos;
+
         // Fix for RT-35141: We need to account for hidden columns
-        for (int i = 0; i <= newColumnPos && i < columnsCount; i++) {
-            newColumnPos += columns.get(i).isVisible() ? 0 : 1;
-        }
-        for (int i = newColumnPos + 1; i <= currentPos && i < columnsCount; i++) {
-            newColumnPos += columns.get(i).isVisible() ? 0 : -1;
+        final int max = actualNewColumnPos;
+        for (int i = 0; i <= max && i < columnsCount; i++) {
+            actualNewColumnPos += columns.get(i).isVisible() ? 0 : 1;
         }
         // --- end of RT-35141 fix
 
-        if (newColumnPos >= columnsCount) {
-            newColumnPos = columnsCount - 1;
-        } else if (newColumnPos < 0) {
-            newColumnPos = 0;
+        if (actualNewColumnPos >= columnsCount) {
+            actualNewColumnPos = columnsCount - 1;
+        } else if (actualNewColumnPos < 0) {
+            actualNewColumnPos = 0;
         }
 
-        if (newColumnPos == currentPos) return;
+        if (actualNewColumnPos == currentPos) return;
 
-        List<TableColumnBase> tempList = new ArrayList<>(columns);
+        List<TableColumnBase<?,?>> tempList = new ArrayList<>(columns);
         tempList.remove(column);
-        tempList.add(newColumnPos, column);
+        tempList.add(actualNewColumnPos, column);
         
         columns.setAll(tempList);
+    }
+
+    private ObservableList<TableColumnBase<?,?>> getColumns(TableColumnBase column) {
+        return column.getParentColumn() == null ?
+                getTableViewSkin().getColumns() :
+                column.getParentColumn().getColumns();
+    }
+
+    private int getIndex(TableColumnBase<?,?> column) {
+        if (column == null) return -1;
+
+        ObservableList<? extends TableColumnBase<?,?>> columns = getColumns(column);
+
+        int index = -1;
+        for (int i = 0; i < columns.size(); i++) {
+            TableColumnBase<?,?> _column = columns.get(i);
+            if (! _column.isVisible()) continue;
+
+            index++;
+            if (column.equals(_column)) break;
+        }
+
+        return index;
     }
 
     private void updateColumnIndex() {
@@ -796,7 +826,7 @@ public class TableColumnHeader extends Region {
     }
 
     private List<TableColumnBase> getVisibleSortOrderColumns() {
-        final ObservableList<TableColumnBase> sortOrder = getTableViewSkin().getSortOrder();
+        final ObservableList<TableColumnBase<?,?>> sortOrder = getTableViewSkin().getSortOrder();
 
         List<TableColumnBase> visibleSortOrderColumns = new ArrayList<>();
         for (int i = 0; i < sortOrder.size(); i++) {
@@ -826,21 +856,23 @@ public class TableColumnHeader extends Region {
      *                                                                         *
      **************************************************************************/   
 
-    private void columnReorderingStarted(MouseEvent me) {
+    // package for testing
+    void columnReorderingStarted(double dragOffset) {
         if (! column.impl_isReorderable()) return;
         
         // Used to ensure the column ghost is positioned relative to where the
         // user clicked on the column header
-        dragOffset = me.getX();
+        this.dragOffset = dragOffset;
 
         // Note here that we only allow for reordering of 'root' columns
         getTableHeaderRow().setReorderingColumn(column);
         getTableHeaderRow().setReorderingRegion(this);
     }
 
-    private void columnReordering(MouseEvent me) {
+    // package for testing
+    void columnReordering(double sceneX, double sceneY) {
         if (! column.impl_isReorderable()) return;
-        
+
         // this is for handling the column drag to reorder columns.
         // It shows a line to indicate where the 'drop' will be.
 
@@ -854,10 +886,10 @@ public class TableColumnHeader extends Region {
 
         // x represents where the mouse is relative to the parent
         // NestedTableColumnHeader
-        final double x = getParentHeader().sceneToLocal(me.getSceneX(), me.getSceneY()).getX();
+        final double x = getParentHeader().sceneToLocal(sceneX, sceneY).getX();
 
         // calculate where the ghost column header should be
-        double dragX = getTableViewSkin().getSkinnable().sceneToLocal(me.getSceneX(), me.getSceneY()).getX() - dragOffset;
+        double dragX = getTableViewSkin().getSkinnable().sceneToLocal(sceneX, sceneY).getX() - dragOffset;
         getTableHeaderRow().setDragHeaderX(dragX);
 
         double startX = 0;
@@ -865,6 +897,8 @@ public class TableColumnHeader extends Region {
         double headersWidth = 0;
         newColumnPos = 0;
         for (TableColumnHeader header : getParentHeader().getColumnHeaders()) {
+            if (! header.isVisible()) continue;
+
             double headerWidth = header.prefWidth(-1);
             headersWidth += headerWidth;
 
@@ -896,7 +930,7 @@ public class TableColumnHeader extends Region {
 
         // Based on where the mouse actually is, we have to shuffle
         // where we want the column to end up. This code handles that.
-        int currentPos = getIndex();
+        int currentPos = getIndex(column);
         newColumnPos += newColumnPos > currentPos && beforeMidPoint ?
             -1 : (newColumnPos < currentPos && !beforeMidPoint ? 1 : 0);
         
@@ -916,13 +950,8 @@ public class TableColumnHeader extends Region {
         getTableHeaderRow().setReordering(true);
     }
 
-    private int getIndex() {
-        return column.getParentColumn() == null ?
-            getTableViewSkin().getColumns().indexOf(column) :
-            column.getParentColumn().getColumns().indexOf(column);
-    }
-    
-    protected void columnReorderingComplete(MouseEvent me) {
+    // package for testing
+    void columnReorderingComplete() {
         if (! column.impl_isReorderable()) return;
         
         // Move col from where it is now to the new position.
@@ -1006,7 +1035,7 @@ public class TableColumnHeader extends Region {
         switch (attribute) {
             /* Having TableColumn role parented by TableColumn causes VoiceOver to be unhappy */
             case ROLE: return column != null ? Role.TABLE_COLUMN : super.accGetAttribute(attribute, parameters);
-            case INDEX: return getIndex();
+            case INDEX: return getIndex(column);
             case TITLE: return column != null ? column.getText() : null;
             default: return super.accGetAttribute(attribute, parameters);
         }

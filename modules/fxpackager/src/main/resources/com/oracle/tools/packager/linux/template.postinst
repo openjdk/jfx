@@ -20,11 +20,11 @@ set -e
 case "$1" in
     configure)
         echo Adding shortcut to the menu
-        cp /opt/APPLICATION_NAME/APPLICATION_NAME.desktop /usr/share/applications/
+        cp /opt/APPLICATION_FS_NAME/APPLICATION_FS_NAME.desktop /usr/share/applications/
 
         if [ "SERVICE_HINT" = "true" ]; then
             echo Installing daemon
-            cp /opt/APPLICATION_NAME/APPLICATION_PACKAGE.init /etc/init.d/APPLICATION_PACKAGE
+            cp /opt/APPLICATION_FS_NAME/APPLICATION_PACKAGE.init /etc/init.d/APPLICATION_PACKAGE
 
             if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
                 update-rc.d APPLICATION_PACKAGE defaults

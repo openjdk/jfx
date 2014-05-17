@@ -595,7 +595,7 @@ compileTargets { t ->
     // Every platform must define these variables
     if (!project.hasProperty(t.upper)) throw new Exception("ERROR: Incorrectly configured compile flags file, missing ${t.name} property")
     def props = project.ext[t.upper];
-    ["jfxrtJarExcludes", "compileSwing", "compileSWT", "compileFXPackager", "compileDesignTime", "libDest"].each { prop ->
+    ["compileSwing", "compileSWT", "compileFXPackager", "compileDesignTime", "libDest"].each { prop ->
         if (!props.containsKey(prop)) throw new Exception("ERROR: Incorrectly configured compile flags file, missing ${prop} property on ${t.name}")
     }
 }
@@ -610,17 +610,40 @@ ext.COMPILE_SWT = false;
 ext.COMPILE_FXPACKAGER = false;
 ext.COMPILE_DESIGN_TIME = false;
 compileTargets { t ->
-    if (project.ext[t.upper].compileSwing) COMPILE_SWING = true
-    if (project.ext[t.upper].compileSWT) COMPILE_SWT = true
-    if (project.ext[t.upper].compileFXPackager) COMPILE_FXPACKAGER = true
-    if (project.ext[t.upper].compileDesignTime) COMPILE_DESIGN_TIME = true
+    def targetProperties = project.rootProject.ext[t.upper]
 
+    if (targetProperties.compileSwing) COMPILE_SWING = true
+    if (targetProperties.compileSWT) COMPILE_SWT = true
+    if (targetProperties.compileFXPackager) COMPILE_FXPACKAGER = true
+    if (targetProperties.compileDesignTime) COMPILE_DESIGN_TIME = true
+
+    if (!targetProperties.containsKey('compileWebnodeNative')) {
+        // unless specified otherwise, we will compile native Webnode if IS_COMPILE_WEBKIT
+        targetProperties.compileWebnodeNative = true
+    }
+
+    if (!targetProperties.containsKey('compileMediaNative')) {
+        // unless specified otherwise, we will compile native Media if IS_COMPILE_MEDIA
+        targetProperties.compileMediaNative = true
+    }
+
+    if (!targetProperties.containsKey('includeSWT')) targetProperties.includeSWT = true
+    if (!targetProperties.containsKey('includeSwing')) targetProperties.includeSwing = true
+    if (!targetProperties.containsKey('includeNull3d')) targetProperties.includeNull3d = true
+    if (!targetProperties.containsKey('includeLens')) targetProperties.includeLens = false
+    if (!targetProperties.containsKey('includeEGL')) targetProperties.includeEGL = false
+
+    if (!targetProperties.containsKey('includeGTK')) targetProperties.includeGTK = IS_LINUX
+
+    // This value is used to under ./build/${sdkDirName} to allow for
+    // a common name for the hosted build (for use when building apps)
+    // and a unique name for cross builds.
     if (rootProject.defaultHostTarget.equals(t.name)) { 
         // use a simple common default for the "host" build
-        project.ext[t.upper].sdkDirName="sdk"
+        targetProperties.sdkDirName="sdk"
     } else {
         // and a more complex one for cross builds
-        project.ext[t.upper].sdkDirName="${t.name}-sdk"
+        targetProperties.sdkDirName="${t.name}-sdk"
     }
 }
 
@@ -795,21 +818,6 @@ ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
  *        in the name of the final library, such as libprism-common.dylib.
  */
 void addNative(Project project, String name) {
-    addNative(project, name, null)
-}
-
-/**
- * Convenience method for creating javah, cc, link, and "native" tasks in the given project. These
- * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
- * named tasks.
- * 
- * @param project The project to add tasks to
- * @param name The name of the project, such as "prism-common". This name is used
- *        in the name of the generated task, such as ccPrismCommon, and also
- *        in the name of the final library, such as libprism-common.dylib.
- * @param list of compile targets. Library is applicable only for these targets.
- */
-void addNative(Project project, String name, List<String> includeTargets) {
     // TODO if we want to handle 32/64 bit windows in the same build,
     // Then we will need to modify the win compile target to be win32 or win64
     def capitalName = name.split("-").collect{it.capitalize()}.join()
@@ -830,14 +838,25 @@ void addNative(Project project, String name, List<String> includeTargets) {
     def libRootDir = project.file("$project.buildDir/libs/$name")
     // For each compile target, create a javah / cc / link triplet
     compileTargets { t ->
-        if (includeTargets != null && !includeTargets.contains(t.name)) {
-            return
-        }
         def targetProperties = project.rootProject.ext[t.upper]
         def library = targetProperties.library
         def properties = targetProperties.get(name)
         def nativeDir = file("$nativeRootDir/${t.name}")
         def headerDir = file("$headerRootDir/${t.name}")
+
+        // If there is not a library clause in the properties, assume it is not wanted
+        if (!targetProperties.containsKey(name)) {
+            println("Ignoring native library ${name}. Not defined in ${t.name} project properties");
+            return
+        }
+
+        // check for the property disable${name} = true
+        def String disableKey = "disable${name}"
+        def boolean disabled = targetProperties.containsKey(disableKey) ? targetProperties.get(disableKey) : false
+        if (disabled) {
+            println("Native library ${name} disabled in ${t.name} project properties");
+            return
+        }
         
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
             description = "Generates JNI Headers for ${name} for ${t.name}"
@@ -1266,9 +1285,8 @@ project(":graphics") {
     addNative(project, "prismES2")
 
     if (IS_COMPILE_PANGO) {
-        // TODO: embedded support
-        addNative(project, "fontFreetype", ["linux"])
-        addNative(project, "fontPango", ["linux"])
+        addNative(project, "fontFreetype")
+        addNative(project, "fontPango")
     }
 
     if (IS_WINDOWS) {
@@ -1939,10 +1957,10 @@ project(":fxpackager") {
 
         doFirst {
             copy {
+                from "$projectDir/src/main/resources/com/oracle/tools/packager/linux/javalogo_white_48.png"
+                from "$projectDir/src/main/resources/com/oracle/tools/packager/mac/GenericAppHiDPI.icns"
+                from "$projectDir/src/main/resources/com/oracle/tools/packager/windows/javalogo_white_48.ico"
                 from "$projectDir/src/test/resources/hello/java-logo2.gif"
-                into project.file("$projectDir/build/tmp/tests/appResources")
-            }
-            copy {
                 from "$projectDir/../../LICENSE"
                 into project.file("$projectDir/build/tmp/tests/appResources")
             }
@@ -2040,12 +2058,17 @@ project(":media") {
     }
     
     compileTargets { t->        
+        def targetProperties = project.rootProject.ext[t.upper]
         def nativeOutputDir = file("${buildDir}/native/${t.name}")
         def projectDir = t.name.startsWith("arm") ? "linux" : t.name
-        def mediaProperties = project.rootProject.ext[t.upper].media
+        def mediaProperties = targetProperties.media
         
         def buildNative = task("build${t.capital}Native", dependsOn: [generateHeaders, generateMediaErrorHeader]) {
-            enabled = IS_COMPILE_MEDIA
+            enabled = targetProperties.compileMediaNative
+            if (!targetProperties.compileMediaNative) {
+                println("Not compiling native Media for ${t.name} per configuration request");
+            } 
+
             doLast {
                 exec {
                     commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/jfxmedia/projects/${projectDir}")
@@ -2067,7 +2090,9 @@ project(":media") {
             }
         }        
         
-        if (!t.name.startsWith("arm")) {
+        // check for the property disable${name} = true
+        def boolean disabled = targetProperties.containsKey('disableMedia') ? targetProperties.get('disableMedia') : false
+        if (!disabled) {
             // Building GStreamer
             def buildGStreamer = task("build${t.capital}GStreamer") {
                 enabled = IS_COMPILE_MEDIA
@@ -2276,6 +2301,7 @@ project(":web") {
     task compileGenerated()
 
     compileTargets { t ->
+        def targetProperties = project.rootProject.ext[t.upper]
         def classifier = (t.name != "linux" && t.name != "win") ? t.name :
                           IS_64 ? "${t.name}-amd64" : "${t.name}-i586"
         dependencies {
@@ -2410,6 +2436,11 @@ load(qt_config)""")
         }
 
         compileGenerated.dependsOn compileGeneratedTask
+            
+        if (!targetProperties.compileWebnodeNative) {
+            println("Not compiling native Webkit for ${t.name} per configuration request");
+            compileNativeTask.enabled = false
+        }
     }
     
     def drtClasses = "com/sun/javafx/webkit/drt/**"
@@ -2675,10 +2706,52 @@ compileTargets { t ->
              "modules/media/build/resources/main")
         if (COMPILE_SWING) from ("modules/swing/build/classes/main", "modules/swing/build/resources/main")
 
-        if (t.name != 'mac') 
-            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/osx/**")
-        if (t.name != 'ios') 
-            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/ios/**")
+        if (!IS_MAC) {
+            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/osx/**",
+                     "com/sun/prism/es2/MacGL*",
+                     "com/sun/glass/events/mac",
+                     "com/sun/glass/ui/mac",
+                     "com/sun/prism/es2/gl/mac"
+                     )
+        }
+        if (!IS_WINDOWS) {
+            exclude ("**/*.hlsl",
+                     "com/sun/glass/ui/win",
+                     "com/sun/prism/d3d",
+                     "com/sun/prism/es2/gl/win",
+                     "com/sun/prism/es2/WinGL*",
+                     "com/sun/scenario/effect/impl/hw/d3d"
+                     )
+        }
+        if (!targetProperties.includeGTK) { //usually IS_LINUX 
+            exclude (
+                     "com/sun/glass/ui/gtk",
+                     "com/sun/prism/es2/EGL*",
+                     "com/sun/prism/es2/gl/eglfb",
+                     "com/sun/prism/es2/gl/eglx11",
+                     "com/sun/prism/es2/gl/x11",
+                     "com/sun/prism/es2/X11GL*"
+                     )
+        }
+        if (!targetProperties.includeEGL) {
+            exclude ("com/sun/prism/es2/EGL*")
+        }
+        if (!targetProperties.includeLens) {
+            exclude ("com/sun/glass/ui/lens")
+        }
+        if (!targetProperties.includeNull3d) {
+            // "com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
+            exclude ("com/sun/prism/null3d")
+        }
+        if (t.name != 'ios') {
+            exclude ("modules/media/build/classes/main/com/sun/media/jfxmediaimpl/platform/ios/**",
+                     "com/sun/glass/ui/ios",
+                     "com/sun/prism/es2/IOS*"
+                     )
+        }
+        if (t.name != 'android') {
+            exclude ("com/sun/glass/ui/android/*")
+        }
 
         if (t.name == 'android') {
             from ("modules/web/build/classes/android",
@@ -2692,14 +2765,25 @@ compileTargets { t ->
         } else {
             from ("modules/web/build/classes/main", "modules/web/build/resources/main")
         }
+
         exclude("**/javafx/embed/swt/**")
+
+        if (!targetProperties.includeSWT) {
+            exclude("com/sun/glass/ui/swt")
+        }
+
+        if (!targetProperties.includeSwing) {
+            exclude("javafx/embed/swing")
+        }
         exclude("js/**/*", // er...
                 "PrismLoaderBackend*", // More decora stuff
                 "**/*.stg",    // any glue files for decora must be excluded
                 "**/*.java");  // Builder java files are in build/classes and should be excluded
 
         // Filter out platform specific Java sources (glass) when compiling for other targets
-        exclude(targetProperties.jfxrtJarExcludes)
+        if (targetProperties.containsKey('jfxrtJarExcludes')) {
+            exclude(targetProperties.jfxrtJarExcludes)
+        }
 
         dependsOn(subprojects.collect { project -> project.getTasksByName("assemble", true)});
     }
@@ -2759,10 +2843,7 @@ compileTargets { t ->
                 from("modules/graphics/build/libs/jsl-decora/${t.name}/${library(targetProperties.decora.lib)}")
                 def libs = ['font', 'prism', 'prismSW', 'prismES2', 'glass', 'iio']
                 if (IS_COMPILE_PANGO) {
-                    // TODO: embedded support
-                    if ("${defaultHostTarget}" == "${t.name}") {
-                        libs += ['fontFreetype', 'fontPango'];
-                    }
+                    libs += ['fontFreetype', 'fontPango'];
                 }
                 libs.each { lib ->
                     def variants = targetProperties[lib].containsKey('variants') && !useLipo ? targetProperties[lib].variants : [null]

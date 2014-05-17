@@ -211,6 +211,8 @@ final class MacAccessible extends PlatformAccessible {
             new MacAction[] {MacAction.NSAccessibilityPressAction},
             null
         ),
+        /* AXJFXTOOLTIP is a custom name used to ignore the tooltip window. See GlassWindow.m for details. */
+        AXJFXTOOLTIP(Role.TOOLTIP, null, null),
         NSAccessibilityImageRole(Role.IMAGE, null, null),
         NSAccessibilityRadioButtonRole(new Role[] {Role.RADIO_BUTTON, Role.TAB_ITEM, Role.PAGE},
             new MacAttribute[] {
@@ -1477,6 +1479,11 @@ final class MacAccessible extends PlatformAccessible {
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr != null) {
             switch (attr) {
+                case NSAccessibilityExpandedAttribute:
+                    if (getAttribute(ROLE) == Role.COMBOBOX) {
+                        executeAction(Action.EXPAND);
+                    }
+                    break;
                 case NSAccessibilitySelectedCellsAttribute:
                 case NSAccessibilitySelectedRowsAttribute: {
                     MacVariant variant = idToMacVariant(value, MacVariant.NSArray_id);

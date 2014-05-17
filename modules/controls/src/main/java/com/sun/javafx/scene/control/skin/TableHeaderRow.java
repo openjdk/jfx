@@ -342,6 +342,11 @@ public class TableHeaderRow extends StackPane {
     protected void updateScrollX() {
         scrollX = flow.getHbar().isVisible() ? -flow.getHbar().getValue() : 0.0F;
         requestLayout();
+
+        // Fix for RT-36392: without this call even though we call requestLayout()
+        // we don't seem to ever see the layoutChildren() method above called,
+        // which means the layout is not always updated to use the latest scrollX.
+        layout();
     }
 
     public final void setReordering(boolean value) {

@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TreeTableViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.*;
@@ -48,6 +49,7 @@ import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.KeyCode;
 
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.junit.After;
 
@@ -136,7 +138,9 @@ public class TreeTableViewMouseInputTest {
     }
     
     @After public void tearDown() {
-        tableView.getSkin().dispose();
+        if (tableView.getSkin() != null) {
+            tableView.getSkin().dispose();
+        }
         sm = null;
     }
     
@@ -235,8 +239,13 @@ public class TreeTableViewMouseInputTest {
     }
 
     private int rt30394_count = 0;
-    @Ignore("RT-36955")
     @Test public void test_rt30394() {
+        if (PlatformUtil.isLinux()) {
+            // we get odd test failures on some linux machines
+            // TODO remove this check - refer to RT-36955
+            return;
+        }
+
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearSelection();
@@ -256,6 +265,7 @@ public class TreeTableViewMouseInputTest {
         // select the first row with the shift key held down. The focus event
         // should only fire once - for focus on 0 (never -1 as this bug shows).
         VirtualFlowTestUtils.clickOnRow(tableView, 0, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
         assertEquals(1, rt30394_count);
         assertTrue(fm.isFocused(0));
     }
@@ -655,5 +665,37 @@ public class TreeTableViewMouseInputTest {
         // expand again
         VirtualFlowTestUtils.clickOnRow(tableView, 0, 2);
         assertTrue(root.isExpanded());
+    }
+
+    @Test public void test_rt_37069() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+        tableView.setFocusTraversable(false);
+
+        Button btn = new Button("Button");
+        VBox vbox = new VBox(btn, tableView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        btn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        Scene scene = sl.getStage().getScene();
+
+        assertTrue(btn.isFocused());
+        assertFalse(tableView.isFocused());
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(tableView);
+        MouseEventFirer mouse = new MouseEventFirer(vbar);
+        mouse.fireMousePressAndRelease();
+
+        assertTrue(btn.isFocused());
+        assertFalse(tableView.isFocused());
+
+        sl.dispose();
     }
 }

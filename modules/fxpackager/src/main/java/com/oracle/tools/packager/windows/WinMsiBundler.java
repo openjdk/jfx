@@ -198,25 +198,17 @@ public class WinMsiBundler  extends AbstractBundler {
 
     public static Collection<BundlerParamInfo<?>> getMsiBundleParameters() {
         return Arrays.asList(
-                APP_BUNDLER,
-                WIN_APP_IMAGE,
-                BUILD_ROOT,
-                CAN_USE_WIX36,
-                //CONFIG_ROOT, // duplicate from getAppBundleParameters
                 DESCRIPTION,
-                MSI_IMAGE_DIR,
-                IMAGES_ROOT,
                 MENU_GROUP,
                 MENU_HINT,
-                MSI_SYSTEM_WIDE,
+//                RUN_AT_STARTUP,
                 SHORTCUT_HINT,
-                SERVICE_HINT,
-                START_ON_INSTALL,
-                STOP_ON_UNINSTALL,
-                RUN_AT_STARTUP,
+//                SERVICE_HINT,
+//                START_ON_INSTALL,
+//                STOP_ON_UNINSTALL,
+                SYSTEM_WIDE,
                 //UPGRADE_UUID,
-                VENDOR,
-                VERSION
+                VENDOR
         );
     }
 

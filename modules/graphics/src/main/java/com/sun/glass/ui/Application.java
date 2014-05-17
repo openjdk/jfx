@@ -86,7 +86,10 @@ public abstract class Application {
         }
         // currently used only on Mac OS X
         public void handleQuitAction(Application app, long time) {
-    }
+        }
+        public boolean handleThemeChanged(String themeName) {
+            return false;
+        }
     }
 
     private EventHandler eventHandler;
@@ -254,6 +257,14 @@ public abstract class Application {
         }
     }
     
+    private boolean notifyThemeChanged(String themeName) {
+        EventHandler handler = getEventHandler();
+        if (handler != null) {
+            return handler.handleThemeChanged(themeName);
+        }
+        return false;
+    }
+
     private void notifyDidResignActive() {
         EventHandler handler = getEventHandler();
         if (handler != null) {
@@ -659,6 +670,15 @@ public abstract class Application {
     protected abstract long staticView_getMultiClickTime();
     protected abstract int staticView_getMultiClickMaxX();
     protected abstract int staticView_getMultiClickMaxY();
+
+    /**
+     * Gets the Name of the currently active high contrast theme.
+     * If null, then high contrast is not enabled.
+     */
+    public String getHighContrastTheme() {
+        checkEventThread();
+        return null;
+    }
 
     protected boolean _supportsInputMethods() {
         // Overridden in subclasses

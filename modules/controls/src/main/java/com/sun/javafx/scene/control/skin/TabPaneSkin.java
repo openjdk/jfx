@@ -346,13 +346,17 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             removeTabs(tabsToRemove);
 
             // and add in any new tabs (that we don't already have showing)
-            for (TabContentRegion tabContentRegion : tabContentRegions) {
-                if (tabsToAdd.contains(tabContentRegion.getTab())) {
-                    tabsToAdd.remove(tabContentRegion.getTab());
+            if (! tabsToAdd.isEmpty()) {
+                for (TabContentRegion tabContentRegion : tabContentRegions) {
+                    Tab tab = tabContentRegion.getTab();
+                    TabHeaderSkin tabHeader = tabHeaderArea.getTabHeaderSkin(tab);
+                    if (!tabHeader.isClosing && tabsToAdd.contains(tabContentRegion.getTab())) {
+                        tabsToAdd.remove(tabContentRegion.getTab());
+                    }
                 }
-            }
 
-            addTabs(tabsToAdd, insertPos == -1 ? tabContentRegions.size() : insertPos);
+                addTabs(tabsToAdd, insertPos == -1 ? tabContentRegions.size() : insertPos);
+            }
 
             // Fix for RT-34692
             getSkinnable().requestLayout();
@@ -1691,6 +1695,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         private void showControlButtons() {
             setVisible(true);
+            if (popup == null) {
+                setupPopupMenu();
+            }
         }
 
         private void hideControlButtons() {

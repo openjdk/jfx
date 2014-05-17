@@ -448,17 +448,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
 
         results.addAll(MacAppBundler.getAppBundleParameters());
         results.addAll(Arrays.asList(
-                APP_BUNDLER,
-                APP_IMAGE_BUILD_ROOT,
-                APP_NAME,
-                APP_RESOURCES,
-                CONFIG_ROOT,
-                DAEMON_BUNDLER,
-                DAEMON_IMAGE_BUILD_ROOT,
-                ICON,
                 LICENSE_FILE,
-                MAC_APP_IMAGE,
-                SERVICE_HINT,
                 SYSTEM_WIDE
         ));
 

@@ -488,7 +488,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         final TreeItem<T> oldTreeItem = getTreeItem();
 
         // Cause the cell to update itself
-        if (valid) {
+        outer: if (valid) {
             // update the TreeCell state.
             // get the new treeItem that is about to go in to the TreeCell
             TreeItem<T> newTreeItem = tv.getTreeItem(index);
@@ -501,11 +501,14 @@ public class TreeCell<T> extends IndexedCell<T> {
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
 
-            // RT-34566 - if the index didn't change, then avoid calling updateItem
+            // RT-35864 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == index) {
                 if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
-                    return;
+                    // RT-37054:  we break out of the if/else code here and
+                    // proceed with the code following this, so that we may
+                    // still update references, listeners, etc as required.
+                    break outer;
                 }
             }
             updateTreeItem(newTreeItem);
