@@ -1216,7 +1216,7 @@ public class TestBuilder {
 
         VBox vb = new VBox(10);
         vb.setPadding(new Insets(13, 13, 13, 13));
-
+        final Stage stage1 = new Stage();
         Label l = new Label("Windows Demo");
 
         Button PopUpBtn = new Button("Pop-Up Test");
@@ -1229,11 +1229,13 @@ public class TestBuilder {
         popup.getContent().addAll(inRectangle,new TextField("Insert Text"));
         PopUpBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
+                if (stage1.isShowing()) {
+                    stage1.close();
+                }
                 popup.show(WindowsStage);
             }
         });
 
-        final Stage stage1 = new Stage();
         final Group SmallGroup = new Group();
         final Button setFull = new Button("Toggle Fullscreen");
         setFull.setFont(new Font(18));
@@ -1288,6 +1290,7 @@ public class TestBuilder {
                 stage1.setScene(s1);
                 stage1.setX(WindowsStage.getX()+300);
                 stage1.setY(WindowsStage.getY()+150);
+		 stage1.setAlwaysOnTop(true);
                 stage1.show();
                 setMini.setDisable(false);
                 resVerBtn.setDisable(false);
