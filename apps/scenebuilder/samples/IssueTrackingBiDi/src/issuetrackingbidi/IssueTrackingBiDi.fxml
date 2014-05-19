@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane id="AnchorPane" focusTraversable="false" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" styleClass="theme" stylesheets="@IssueTrackingBiDi.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="issuetrackingbidi.IssueTrackingBiDiController">
+  <children>
+    <SplitPane id="splitPaneHorizontal1" dividerPositions="0.25125" focusTraversable="true" prefHeight="535.0" prefWidth="800.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="65.0">
+      <items>
+            <ListView fx:id="list" prefHeight="535.0" prefWidth="198.0" styleClass="darkList" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" SplitPane.resizableWithParent="false" />
+            <SplitPane id="splitPaneVertical1" dividerPositions="0.33271028037383177" focusTraversable="true" orientation="VERTICAL" prefHeight="598.0" prefWidth="595.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+              <items>
+                    <TableView id="tableView1" fx:id="table" prefHeight="206.0" prefWidth="593.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                      <columns>
+                        <TableColumn fx:id="colName" maxWidth="750.0" minWidth="75.0" prefWidth="75.0" text="%table.column.name" />
+                        <TableColumn fx:id="colStatus" maxWidth="750.0" minWidth="75.0" prefWidth="75.0" text="%table.column.status" />
+                        <TableColumn fx:id="colSynopsis" maxWidth="4430.0" minWidth="306.0" prefWidth="350.0" text="%table.column.synopsis" /><TableColumn fx:id="colNeeded" prefWidth="94.0" text="%table.column.neededBy" />
+                      </columns>
+                    </TableView>
+                <AnchorPane id="anchorPane4" fx:id="details" minHeight="0.0" minWidth="0.0" prefHeight="100.0" prefWidth="160.0">
+                  <children>
+                    <TextArea id="textArea1" fx:id="descriptionValue" prefHeight="220.0" prefWidth="555.0" styleClass="descriptionValue" text="TextArea" wrapText="true" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="113.0" />
+                    <Label id="label2" layoutX="20.0" layoutY="91.0" text="%details.label.description" />
+                    <HBox id="HBox" alignment="CENTER" layoutY="14.0" prefHeight="22.0" prefWidth="558.0" spacing="15.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0">
+                      <children>
+                        <Label id="label4" fx:id="displayedIssueLabel" minWidth="-Infinity" text="PROJECT / ID" />
+                        <TextField id="textField1" fx:id="synopsis" prefHeight="22.0" prefWidth="378.0" text="SYNOPSIS" HBox.hgrow="ALWAYS" />
+                      </children>
+                    </HBox>
+                    <HBox alignment="CENTER_LEFT" layoutX="20.0" layoutY="51.0" spacing="15.0">
+                      <children>
+                        <Label layoutX="60.353271484375" layoutY="68.0" text="%details.label.neededBy" />
+                        <DatePicker fx:id="neededBy" layoutX="193.7734375" layoutY="64.0" />
+                      </children>
+                    </HBox>
+                  </children>
+                </AnchorPane>
+              </items>
+            </SplitPane>
+      </items>
+    </SplitPane>
+    <HBox id="HBox" alignment="CENTER" spacing="15.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="22.0">
+      <children>
+        <Button id="button1" fx:id="newIssue" onAction="#newIssueFired" text="%button.new.text" />
+        <Button id="button1" fx:id="saveIssue" onAction="#saveIssueFired" text="%button.save.text" />
+        <Button id="button1" fx:id="deleteIssue" onAction="#deleteIssueFired" text="%button.delete.text" />
+      </children>
+    </HBox>
+    <ImageView id="IssueTrackingBiDi" layoutX="14.0" layoutY="20.0">
+      <image>
+        <Image preserveRatio="true" smooth="true" url="@IssueTrackingBiDi.png" />
+      </image>
+    </ImageView>
+  </children>
+</AnchorPane>

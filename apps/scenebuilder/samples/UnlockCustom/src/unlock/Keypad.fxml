@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<fx:root type="javafx.scene.layout.VBox" id="VBox" alignment="CENTER" focusTraversable="false" spacing="5.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="unlock.KeypadController">
+  <children>
+    <GridPane id="GridPane" hgap="14.0" prefWidth="210.0" vgap="11.0">
+      <children>
+        <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="1" GridPane.columnIndex="0" GridPane.rowIndex="0">
+          <font>
+            <Font size="24.0" fx:id="x1" />
+          </font>
+        </Button>
+        <Button font="$x1" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="2" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        <Button font="$x1" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="3" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+        <Button font="$x1" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="4" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <Button font="$x1" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="5" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        <Button font="$x1" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="6" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+        <Button font="$x1" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="7" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+        <Button font="$x1" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="8" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+        <Button font="$x1" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="9" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+        <Button fx:id="del" mnemonicParsing="false" onAction="#keyPressed" text="Del" GridPane.columnIndex="0" GridPane.rowIndex="3" />
+        <Button font="$x1" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#keyPressed" text="0" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+        <Button fx:id="ok" mnemonicParsing="false" onAction="#keyPressed" text="OK" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+      </children>
+      <columnConstraints>
+        <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="10.0" />
+        <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="10.0" />
+        <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="10.0" />
+      </columnConstraints>
+      <rowConstraints>
+        <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" vgrow="SOMETIMES" />
+        <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" vgrow="SOMETIMES" />
+        <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" vgrow="SOMETIMES" />
+        <RowConstraints maxHeight="1.7976931348623157E308" minHeight="10.0" vgrow="SOMETIMES" />
+      </rowConstraints>
+    </GridPane>
+    <PasswordField id="password" fx:id="display" alignment="CENTER" prefHeight="41.0" prefWidth="194.0" />
+  </children>
+   <padding>
+      <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+   </padding>
+</fx:root>
