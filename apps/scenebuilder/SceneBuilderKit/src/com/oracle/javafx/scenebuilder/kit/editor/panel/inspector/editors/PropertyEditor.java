@@ -682,10 +682,10 @@ public abstract class PropertyEditor extends Editor {
             ((TextField) node).setText(""); //NOI18N
             ((TextField) node).setPromptText(Editor.INDETERMINATE_STR);
         } else if (node instanceof ComboBox) {
-            ((ComboBox) node).getEditor().setText("");//NOI18N
-            ((ComboBox) node).setPromptText(Editor.INDETERMINATE_STR);
+            ((ComboBox<?>) node).getEditor().setText("");//NOI18N
+            ((ComboBox<?>) node).setPromptText(Editor.INDETERMINATE_STR);
         } else if (node instanceof ChoiceBox) {
-            ((ChoiceBox) node).getSelectionModel().clearSelection();
+            ((ChoiceBox<?>) node).getSelectionModel().clearSelection();
         } else if (node instanceof CheckBox) {
             ((CheckBox) node).setIndeterminate(true);
         } else if (node instanceof MenuButton) {

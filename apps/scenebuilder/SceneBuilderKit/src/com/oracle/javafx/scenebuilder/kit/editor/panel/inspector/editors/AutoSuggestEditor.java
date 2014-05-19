@@ -31,7 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor.handleIndeterminate;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,15 +63,15 @@ import javafx.scene.layout.Priority;
 public abstract class AutoSuggestEditor extends PropertyEditor {
 
     @FXML
-    protected ListView<String> suggestedLv;
+    public ListView<String> suggestedLv;
     @FXML
-    protected TextField textField;
+    public TextField textField;
     @FXML
-    protected DoubleField doubleField;
+    public DoubleField doubleField;
     @FXML
-    protected IntegerField integerField;
+    public IntegerField integerField;
     @FXML
-    protected MenuButton menuButton;
+    public MenuButton menuButton;
 
     private Parent root;
     private TextField entryField;
@@ -137,7 +136,6 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         initialize();
     }
 
-    @FXML
     private void initialize() {
         entryField.focusedProperty().addListener(new ChangeListener<Boolean>() {
 

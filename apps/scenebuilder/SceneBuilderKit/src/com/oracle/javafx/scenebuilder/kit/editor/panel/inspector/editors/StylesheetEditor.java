@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue.Type;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -48,6 +49,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -154,7 +156,7 @@ public class StylesheetEditor extends InlineListEditor {
             return;
         }
         assert value instanceof List;
-        if (((List) value).isEmpty()) {
+        if (((List<?>) value).isEmpty()) {
             reset();
             return;
         }
@@ -621,10 +623,12 @@ public class StylesheetEditor extends InlineListEditor {
             }
         }
 
+        @SuppressWarnings("unused")
         protected void disablePlusButton(boolean disable) {
             plusBt.setDisable(disable);
         }
 
+        @SuppressWarnings("unused")
         protected void disableRemove(boolean disable) {
             removeMi.setDisable(disable);
         }

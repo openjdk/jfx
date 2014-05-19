@@ -228,27 +228,8 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
             public void handle(DragEvent event) {
                 final TreeItem<HierarchyItem> treeItem
                         = HierarchyTreeCell.this.getTreeItem();
-                final DroppingMouseLocation location;
-                if (treeItem != null) {
-                    // REORDER ABOVE gesture
-                    if ((getHeight() * 0.25) > event.getY()) {
-                        location = DroppingMouseLocation.TOP;
-                    } //
-                    // REORDER BELOW gesture
-                    else if ((getHeight() * 0.75) < event.getY()) {
-                        location = DroppingMouseLocation.BOTTOM;
-                    } //
-                    // REPARENT gesture
-                    else {
-                        location = DroppingMouseLocation.CENTER;
-                    }
-                } else {
-                    // TreeItem is null when dropping below the datas
-                    location = DroppingMouseLocation.BOTTOM;
-                }
-
                 // Forward to the DND controller
-                dndController.handleOnDragDropped(treeItem, event, location);
+                dndController.handleOnDragDropped(treeItem, event);
 
                 // CSS
                 panelController.clearBorderColor(HierarchyTreeCell.this);

@@ -86,7 +86,7 @@
                 </items>
             </Menu>
             <MenuItem fx:id="closeMenuItem" mnemonicParsing="true" text="%menu.title.close" />
-            <SeparatorMenuItem fx:id="separatorAbovePreferencesMenuItem" mnemonicParsing="false" />
+            <SeparatorMenuItem mnemonicParsing="false" />
             <MenuItem fx:id="showPreferencesMenuItem" mnemonicParsing="false" text="%menu.title.preferences" />
             <MenuItem fx:id="exitMenuItem" mnemonicParsing="true" text="%menu.title.quit" />
           </items>
@@ -192,6 +192,7 @@
             <Menu fx:id="wrapMenu" mnemonicParsing="true" text="%menu.title.wrap">
               <items>
                 <MenuItem fx:id="wrapInAnchorPaneMenuItem" mnemonicParsing="false" text="AnchorPane" />
+                <MenuItem fx:id="wrapInFlowPaneMenuItem" mnemonicParsing="false" text="FlowPane" />
                 <MenuItem fx:id="wrapInGridPaneMenuItem" mnemonicParsing="false" text="GridPane" />
                 <MenuItem fx:id="wrapInGroupMenuItem" mnemonicParsing="false" text="Group" />
                 <MenuItem fx:id="wrapInHBoxMenuItem" mnemonicParsing="false" text="HBox" />
@@ -200,6 +201,7 @@
                 <MenuItem fx:id="wrapInSplitPaneMenuItem" mnemonicParsing="false" text="SplitPane" />
                 <MenuItem fx:id="wrapInStackPaneMenuItem" mnemonicParsing="false" text="StackPane" />
                 <MenuItem fx:id="wrapInTabPaneMenuItem" mnemonicParsing="false" text="TabPane" />
+                <MenuItem fx:id="wrapInTilePaneMenuItem" mnemonicParsing="false" text="TilePane" />
                 <MenuItem fx:id="wrapInTitledPaneMenuItem" mnemonicParsing="false" text="TitledPane" />
                 <MenuItem fx:id="wrapInToolBarMenuItem" mnemonicParsing="false" text="ToolBar" />
                 <MenuItem fx:id="wrapInVBoxMenuItem" mnemonicParsing="false" text="VBox" />
@@ -211,8 +213,6 @@
         <Menu fx:id="previewMenu" mnemonicParsing="true" text="%menu.title.preview">
           <items>
             <MenuItem fx:id="showPreviewMenuItem" mnemonicParsing="true" text="%menu.title.show.preview" />
-            <SeparatorMenuItem fx:id="separatorAboveChooseBackgroundColorMenuItem" mnemonicParsing="false" />
-            <MenuItem fx:id="chooseBackgroundColorMenuItem" mnemonicParsing="false" text="%menu.title.choose.background.color" />
             <SeparatorMenuItem mnemonicParsing="false" />
             <Menu fx:id="themeMenu" mnemonicParsing="true" text="%menu.title.theme">
               <items>

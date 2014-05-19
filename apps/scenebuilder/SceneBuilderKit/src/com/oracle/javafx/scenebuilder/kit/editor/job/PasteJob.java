@@ -133,7 +133,7 @@ public class PasteJob extends CompositeJob {
                                     targetObject,
                                     targetMask.getSubComponentCount(),
                                     getEditorController());
-                            result.add(subJob);
+                            result.add(0, subJob);
                             insertJobs.add(subJob);
                             if ((relocateDelta != 0.0) && newObject.isNode()) {
                                 final Node sceneGraphNode = (Node) newObject.getSceneGraphObject();

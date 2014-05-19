@@ -179,6 +179,7 @@ public class EditorController {
         SEND_BACKWARD,
         UNWRAP,
         WRAP_IN_ANCHOR_PANE,
+        WRAP_IN_FLOW_PANE,
         WRAP_IN_GRID_PANE,
         WRAP_IN_GROUP,
         WRAP_IN_HBOX,
@@ -187,6 +188,7 @@ public class EditorController {
         WRAP_IN_SPLIT_PANE,
         WRAP_IN_STACK_PANE,
         WRAP_IN_TAB_PANE,
+        WRAP_IN_TILE_PANE,
         WRAP_IN_TITLED_PANE,
         WRAP_IN_TOOL_BAR,
         WRAP_IN_VBOX
@@ -617,6 +619,7 @@ public class EditorController {
      * @param sampleDataEnabled true if sample data should be displayed
      */
     public void setSampleDataEnabled(boolean sampleDataEnabled) {
+        setPickModeEnabled(false);
         sampleDataEnabledProperty.setValue(sampleDataEnabled);
         if (getFxomDocument() != null) {
             getFxomDocument().setSampleDataEnabled(isSampleDataEnabled());
@@ -1051,6 +1054,10 @@ public class EditorController {
                 performWrap(javafx.scene.layout.AnchorPane.class);
                 break;
             }
+            case WRAP_IN_FLOW_PANE: {
+                performWrap(javafx.scene.layout.FlowPane.class);
+                break;
+            }
             case WRAP_IN_GRID_PANE: {
                 performWrap(javafx.scene.layout.GridPane.class);
                 break;
@@ -1081,6 +1088,10 @@ public class EditorController {
             }
             case WRAP_IN_TAB_PANE: {
                 performWrap(javafx.scene.control.TabPane.class);
+                break;
+            }
+            case WRAP_IN_TILE_PANE: {
+                performWrap(javafx.scene.layout.TilePane.class);
                 break;
             }
             case WRAP_IN_TITLED_PANE: {
@@ -1269,6 +1280,10 @@ public class EditorController {
                 result = canPerformWrap(javafx.scene.layout.AnchorPane.class);
                 break;
             }
+            case WRAP_IN_FLOW_PANE: {
+                result = canPerformWrap(javafx.scene.layout.FlowPane.class);
+                break;
+            }
             case WRAP_IN_GRID_PANE: {
                 result = canPerformWrap(javafx.scene.layout.GridPane.class);
                 break;
@@ -1299,6 +1314,10 @@ public class EditorController {
             }
             case WRAP_IN_TAB_PANE: {
                 result = canPerformWrap(javafx.scene.control.TabPane.class);
+                break;
+            }
+            case WRAP_IN_TILE_PANE: {
+                result = canPerformWrap(javafx.scene.layout.TilePane.class);
                 break;
             }
             case WRAP_IN_TITLED_PANE: {
@@ -1648,6 +1667,7 @@ public class EditorController {
         if (classesSupportingWrapping == null) {
             classesSupportingWrapping = new ArrayList<>();
             classesSupportingWrapping.add(javafx.scene.layout.AnchorPane.class);
+            classesSupportingWrapping.add(javafx.scene.layout.FlowPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.GridPane.class);
             classesSupportingWrapping.add(javafx.scene.Group.class);
             classesSupportingWrapping.add(javafx.scene.layout.HBox.class);
@@ -1656,6 +1676,7 @@ public class EditorController {
             classesSupportingWrapping.add(javafx.scene.control.SplitPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.StackPane.class);
             classesSupportingWrapping.add(javafx.scene.control.TabPane.class);
+            classesSupportingWrapping.add(javafx.scene.layout.TilePane.class);
             classesSupportingWrapping.add(javafx.scene.control.TitledPane.class);
             classesSupportingWrapping.add(javafx.scene.control.ToolBar.class);
             classesSupportingWrapping.add(javafx.scene.layout.VBox.class);

@@ -192,7 +192,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
                     && item.hasDisplayInfo(option)) {
                 final TreeCell<?> tc = HierarchyTreeViewUtils.getTreeCell(treeView, selectedTreeItem);
                 assert tc instanceof HierarchyTreeCell;
-                final HierarchyTreeCell<?> htc = (HierarchyTreeCell) tc;
+                final HierarchyTreeCell<?> htc = (HierarchyTreeCell<?>) tc;
                 htc.startEditingDisplayInfo();
             }
         }
@@ -210,7 +210,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
         assert cells != null;
         for (Node node : cells) {
             assert node instanceof Cell;
-            clearBorderColor((Cell) node);
+            clearBorderColor((Cell<?>) node);
         }
     }
 
@@ -275,7 +275,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
             // MIDDLE TreeItems
             for (Node node : treeCells) {
                 assert node instanceof TreeCell;
-                final TreeCell<?> treeCell = (TreeCell) node;
+                final TreeCell<?> treeCell = (TreeCell<?>) node;
                 final int index = treeCell.getIndex();
                 if (index > treeCellTopIndex && index < treeCellBottomIndex) {
                     treeCell.setBorder(getBorder(BorderSide.RIGHT_LEFT));
@@ -291,7 +291,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
         assert cells != null;
         for (Node node : cells) {
             assert node instanceof HierarchyTreeCell;
-            final HierarchyTreeCell<?> cell = (HierarchyTreeCell) node;
+            final HierarchyTreeCell<?> cell = (HierarchyTreeCell<?>) node;
             cell.updatePlaceHolder();
         }
     }

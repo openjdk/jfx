@@ -313,12 +313,11 @@ class ControllerClass {
         try {
             assert str != null;
             int index = str.length() - 1;
-            Character c;
-            while (!Character.isJavaIdentifierPart(c = str.charAt(index)) && index >= 0) {
+            while (!Character.isJavaIdentifierPart(str.charAt(index)) && index >= 0) {
                 index--;
             }
             int indexEnd = index + 1;
-            while (Character.isJavaIdentifierPart(c = str.charAt(index)) && index >= 0) {
+            while (Character.isJavaIdentifierPart(str.charAt(index)) && index >= 0) {
                 index--;
             }
             int indexStart = index + 1;

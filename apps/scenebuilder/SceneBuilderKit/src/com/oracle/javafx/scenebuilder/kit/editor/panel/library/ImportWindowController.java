@@ -335,13 +335,14 @@ public class ImportWindowController extends AbstractModalDialog {
         String userLibraryDir = ((UserLibrary) libPanelController.getEditorController().getLibrary()).getPath();
         Path userLibraryPath = new File(userLibraryDir).toPath();
 
-        Stream<Path> pathStream = Files.list(userLibraryPath);
-        Iterator<Path> pathIterator = pathStream.iterator();
-        while (pathIterator.hasNext()) {
-            Path element = pathIterator.next();
-            if (element.toString().endsWith(".jar")) { //NOI18N
+        try (Stream<Path> pathStream = Files.list(userLibraryPath)) {
+            Iterator<Path> pathIterator = pathStream.iterator();
+            while (pathIterator.hasNext()) {
+                Path element = pathIterator.next();
+                if (element.toString().endsWith(".jar")) { //NOI18N
 //                    System.out.println("ImportWindowController::buildListOfAllFiles: Adding " + element); //NOI18N
-                res.add(element.toFile());
+                    res.add(element.toFile());
+                }
             }
         }
         

@@ -333,11 +333,8 @@ public class EditorPlatform {
      *
      * @return true if the jvm is running with assertions enabled.
      */
-    @SuppressWarnings("AssertWithSideEffects")
     public static boolean isAssertionEnabled() {
-        boolean result = false;
-        assert result = true;
-        return result;
+        return EditorPlatform.class.desiredAssertionStatus();
     }
 
     /*

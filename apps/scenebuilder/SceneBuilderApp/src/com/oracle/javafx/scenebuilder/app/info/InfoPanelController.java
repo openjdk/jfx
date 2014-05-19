@@ -103,7 +103,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
     protected void fxomDocumentDidChange(FXOMDocument oldDocument) {
         requestEntriesUpdate();
         updateAsPerRootNodeStatus();
-        updateController();
+        updateControllerAndControllerClassEditor();
         
         if (fxrootCheckBox != null) {
             fxrootCheckBox.selectedProperty().removeListener(checkBoxListener);
@@ -127,7 +127,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
     protected void jobManagerRevisionDidChange() {
         requestEntriesUpdate();
         updateAsPerRootNodeStatus();
-        updateController();
+        updateControllerClassEditor();
         fxrootCheckBox.selectedProperty().removeListener(checkBoxListener);
         fxrootCheckBox.setSelected(isFxRoot());
         fxrootCheckBox.selectedProperty().addListener(checkBoxListener);
@@ -201,7 +201,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
 
             @Override
             public void changed(ObservableValue<? extends Object> ov, Object t, Object t1) {
-                updateController((String)t1);
+                InfoPanelController.this.updateControllerAndControllerClassEditor((String)t1);
             }
         });
 
@@ -224,7 +224,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
             public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
                 if (!t1) {
                     // Focus loss triggers an update. The text field can be empty.
-                    updateController(controllerClassEditor.getTextField().getText());
+                    updateControllerAndControllerClassEditor(controllerClassEditor.getTextField().getText());
                 }
             }
         });
@@ -240,7 +240,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
         controllerDidLoadFxmlOver = true; // Must be called before updateAsPerRootNodeStatus()
         requestEntriesUpdate();
         updateAsPerRootNodeStatus();
-        updateController();
+        updateControllerAndControllerClassEditor();
     }
     
 
@@ -249,38 +249,61 @@ public class InfoPanelController extends AbstractFxmlPanelController {
      */
     private final static String IGNORED = "ignored"; //NOI18N
     
-    private synchronized void updateController() {
-        updateController(IGNORED);
+    private synchronized void updateControllerAndControllerClassEditor() {
+        updateControllerAndControllerClassEditor(IGNORED);
     }
     
-    private synchronized void updateController(String className) {
+    private synchronized void updateControllerAndControllerClassEditor(String className) {
         if (getEditorController().getFxomDocument() != null) {
             FXOMObject root = getEditorController().getFxomDocument().getFxomRoot();
             if (root != null) {
-                if (className != null && className.equals(IGNORED)) {
-                    className = root.getFxController();
-                }
-
-                // When the user set an empty string we consider it means
-                // no controller value needs to be set.
-                if (className != null && className.isEmpty()) {
-                    className = null;
-                }
+                String zeClassName = computeProperClassName(className, root);
 
                 final ModifyFxControllerJob job
-                        = new ModifyFxControllerJob(root, className, getEditorController());
+                        = new ModifyFxControllerJob(root, zeClassName, getEditorController());
 
                 if (job.isExecutable()) {
                     getEditorController().getJobManager().push(job);
                 }
-
+                
+                updateControllerClassEditor(zeClassName);
+            }
+        }
+    }
+    
+    private void updateControllerClassEditor() {
+        updateControllerClassEditor(IGNORED);
+    }
+    
+    private void updateControllerClassEditor(String className) {
+        if (getEditorController().getFxomDocument() != null) {
+            FXOMObject root = getEditorController().getFxomDocument().getFxomRoot();
+            if (root != null) {
+                String zeClassName = computeProperClassName(className, root);
+                
                 if (controllerClassEditor != null) {
                     controllerClassEditor.setUpdateFromModel(true);
-                    controllerClassEditor.setValue(className);
+                    controllerClassEditor.setValue(zeClassName);
                     controllerClassEditor.setUpdateFromModel(false);
                 }
             }
         }
+    }
+    
+    private String computeProperClassName(String className, FXOMObject root) {
+        String res = className;
+        
+        if (className != null && className.equals(IGNORED)) {
+            res = root.getFxController();
+        }
+
+        // When the user set an empty string we consider it means
+        // no controller value needs to be set.
+        if (className != null && className.isEmpty()) {
+            res = null;
+        }
+
+        return res;
     }
     
     private void requestEntriesUpdate() {
@@ -314,6 +337,12 @@ public class InfoPanelController extends AbstractFxmlPanelController {
                     case RESOURCE_KEY: {
                         break;
                     }
+                    
+                    case STYLECLASS:
+                        break;
+                        
+                    default:
+                        break;
                 }
             }
 

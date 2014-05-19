@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -29,34 +29,32 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker;
+package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
-import javafx.scene.effect.Effect;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import javafx.scene.layout.FlowPane;
 
 /**
- * Effect path item for the color input effect.
+ * Job used to wrap selection in a FlowPane.
  */
-public class ColorInputPathItem extends EffectPathItem {
+public class WrapInFlowPaneJob extends AbstractWrapInSubComponentJob {
 
-    public ColorInputPathItem(EffectPickerController epc, Effect effect, EffectPathItem hostPathItem) {
-        super(epc, effect, hostPathItem);
-        assert effect instanceof javafx.scene.effect.ColorInput;
-        initialize();
+    public WrapInFlowPaneJob(EditorController editorController) {
+        super(editorController);
+        newContainerClass = FlowPane.class;
     }
 
     @Override
-    EffectPathItem getSelectedInputPathItem() {
-        return null;
+    protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
+        return Collections.emptyList();
     }
 
     @Override
-    void setSelectedInputEffect(Effect input) {
-        // No input
-    }
-
-    private void initialize() {
-        // Remove replace/delete input Menu
-        menu_button.getItems().remove(delete_input_menuitem);
-        menu_button.getItems().remove(replace_input_menu);
+    protected void modifyContainer(final Set<FXOMObject> children) {
     }
 }

@@ -31,32 +31,29 @@
  */
 package com.oracle.javafx.scenebuilder.app.selectionbar;
 
-import com.oracle.javafx.scenebuilder.app.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
-import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReport;
-import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReportEntry;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.net.URL;
-import java.util.List;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+
+import com.oracle.javafx.scenebuilder.app.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 
 /**
  *
@@ -67,7 +64,6 @@ public class SelectionBarController extends AbstractFxmlPanelController {
     private HBox pathBox;
 
     private final Image selectionChevronImage;
-    private final Image warningBadgeImage;
 
     public SelectionBarController(EditorController editorController) {
         super(SelectionBarController.class.getResource("SelectionBar.fxml"), I18N.getBundle(), editorController); //NOI18N
@@ -76,7 +72,6 @@ public class SelectionBarController extends AbstractFxmlPanelController {
         final URL selectionChevronURL = SelectionBarController.class.getResource("selection-chevron.png"); //NOI18N
         assert selectionChevronURL != null;
         selectionChevronImage = new Image(selectionChevronURL.toExternalForm());
-        warningBadgeImage = ImageUtils.getWarningBadgeImage();
     }
 
     /*

@@ -575,7 +575,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             public void handle(DragEvent t) {
 //                System.out.println("libPane onDragDropped");
                 AbstractDragSource dragSource = getEditorController().getDragController().getDragSource();
-                if (dragSource != null && dragSource instanceof DocumentDragSource) {
+                if (dragSource instanceof DocumentDragSource) {
                     processInternalImport(((DocumentDragSource)dragSource).getDraggedObjects());
                 } else {
                     initiateImportDialog = false;

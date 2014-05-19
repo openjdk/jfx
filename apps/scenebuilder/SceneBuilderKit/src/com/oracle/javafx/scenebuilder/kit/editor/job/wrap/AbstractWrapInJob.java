@@ -83,6 +83,8 @@ public abstract class AbstractWrapInJob extends Job {
         final AbstractWrapInJob job;
         if (wrappingClass == javafx.scene.layout.AnchorPane.class) {
             job = new WrapInAnchorPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.layout.FlowPane.class) {
+            job = new WrapInFlowPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.GridPane.class) {
             job = new WrapInGridPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.Group.class) {
@@ -99,6 +101,8 @@ public abstract class AbstractWrapInJob extends Job {
             job = new WrapInStackPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.control.TabPane.class) {
             job = new WrapInTabPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.layout.TilePane.class) {
+            job = new WrapInTilePaneJob(editorController);
         } else if (wrappingClass == javafx.scene.control.TitledPane.class) {
             job = new WrapInTitledPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.control.ToolBar.class) {

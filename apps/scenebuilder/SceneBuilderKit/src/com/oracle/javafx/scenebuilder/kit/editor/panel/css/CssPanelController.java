@@ -65,7 +65,6 @@ import java.net.URL;
 import java.text.MessageFormat;
 import java.util.*;
 import javafx.animation.FadeTransition;
-import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
@@ -174,7 +173,6 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     private Object selectedObject; // Can be either an FXOMObject (selection mode), or a Node (pick mode)
     private Selection selection;
-    @SuppressWarnings("rawtypes")
     private final EditorController editorController;
     private final Delegate applicationDelegate;
     private final ObjectProperty<NodeCssState> cssStateProperty = new SimpleObjectProperty<>();
@@ -637,25 +635,11 @@ public class CssPanelController extends AbstractFxmlPanelController {
             viewMessage(I18N.getString("csspanel.multiselection"));
             return;
         }
-
-        //
-        // Workaround for:
-        //     RT-35742: GridPane content is not updated as it should
-        //
-        // The TableView setItems is put in a runLater() so that 
-        // the TableView is rendered empty first, then with the new content.
-        // This is an ugly (and temporary) workaround, since one can see the TableView flashing on model update.
-        //
-        Platform.runLater(new Runnable() {
-
-            @Override
-            public void run() {
-                if (selectedObject != null) { // Update content.
-                    fillSelectionContent();
-                    collectCss();
-                }
-            }
-        });
+        
+        if (selectedObject != null) { // Update content.
+            fillSelectionContent();
+            collectCss();
+        }
     }
 
     private boolean isMultipleSelection() {
@@ -1595,7 +1579,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private static Node getCustomContent(Object value) {
         Node ret = null;
         if (value instanceof ParsedValue) {
-            ParsedValue<?, ?> pv = (ParsedValue) value;
+            ParsedValue<?, ?> pv = (ParsedValue<?, ?>) value;
             value = CssValueConverter.convert(pv);
         }
         if (value != null) {
@@ -1978,7 +1962,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private static Node createValueUI(CssProperty item, PropertyState ps, Object value, CssStyle style, ParsedValue<?, ?>[] parsedValues) {
         Node ret = null;
         if (value instanceof ParsedValue) {
-            ParsedValue<?, ?> pv = (ParsedValue) value;
+            ParsedValue<?, ?> pv = (ParsedValue<?, ?>) value;
             value = CssValueConverter.convert(pv);
         }
         if (value != null) {
@@ -1995,7 +1979,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
                     boolean lookup = false;
                     if (parsedValues != null) {
                         ParsedValue<?, ?> pv = parsedValues[i];
-                        lookup = ((ParsedValueImpl) pv).isContainsLookups();
+                        lookup = ((ParsedValueImpl<?, ?>) pv).isContainsLookups();
                     }
                     if (lookup) {
                         assert style != null;
@@ -2048,7 +2032,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
                         boolean lookup = false;
                         if (parsedValues != null) {
                             ParsedValue<?, ?> pv = parsedValues[index];
-                            lookup = ((ParsedValueImpl) pv).isContainsLookups();
+                            lookup = ((ParsedValueImpl<?, ?>) pv).isContainsLookups();
                         }
                         if (lookup) {
                             CssStyle lookupRoot = null;

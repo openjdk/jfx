@@ -38,7 +38,6 @@ import com.oracle.javafx.scenebuilder.app.message.MessageBarController;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesController;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordDocument;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
-import com.oracle.javafx.scenebuilder.app.preview.BackgroundColorDialogController;
 import com.oracle.javafx.scenebuilder.app.preview.PreviewWindowController;
 import com.oracle.javafx.scenebuilder.app.report.JarAnalysisReportController;
 import com.oracle.javafx.scenebuilder.app.selectionbar.SelectionBarController;
@@ -114,7 +113,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
-import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 
 /**
@@ -144,7 +142,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         TOGGLE_OUTLINES_VISIBILITY,
         TOGGLE_GUIDES_VISIBILITY,
         SHOW_PREVIEW_WINDOW,
-        CHOOSE_BACKGROUND_COLOR,
         ADD_SCENE_STYLE_SHEET,
         SET_RESOURCE,
         REMOVE_RESOURCE,
@@ -518,10 +515,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 result = true;
                 break;
                 
-            case CHOOSE_BACKGROUND_COLOR:
-                result = false;
-                break;
-                
             case SAVE_FILE:
                 result = isDocumentDirty()
                         || editorController.getFxomDocument().getLocation() == null; // Save new empty document
@@ -600,10 +593,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     previewWindowController.setToolStylesheet(getToolStylesheet());
                 }
                 previewWindowController.openWindow();
-                break;
-                
-            case CHOOSE_BACKGROUND_COLOR:
-                performChooseBackgroundColor(getStage());
                 break;
                 
             case SAVE_FILE:
@@ -1054,7 +1043,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     AbstractSelectionGroup asg = getEditorController().getSelection().getGroup();
                     libraryImportSelection.setDisable(true);
 
-                    if (asg != null && asg instanceof ObjectSelectionGroup) {
+                    if (asg instanceof ObjectSelectionGroup) {
                         if (((ObjectSelectionGroup)asg).getItems().size() >= 1) {
                             libraryImportSelection.setDisable(false);
                         }
@@ -1754,13 +1743,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         final PreferencesController pc = PreferencesController.getSingleton();
         final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
         recordDocument.resetDocumentPreferences();
-    }
-    
-    private void performChooseBackgroundColor(Window owner) {
-        final BackgroundColorDialogController bcdc 
-                = new BackgroundColorDialogController(owner);
-        bcdc.setToolStylesheet(getToolStylesheet());
-        bcdc.openWindow();
     }
     
     ActionStatus performSaveOrSaveAsAction() {

@@ -273,8 +273,8 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private final SectionId[] sections = {SectionId.PROPERTIES, SectionId.LAYOUT, SectionId.CODE};
     //
     // State variables
-    private ViewMode viewMode;
-    private ShowMode showMode;
+    private ViewMode viewMode = ViewMode.SECTION;
+    private ShowMode showMode = ShowMode.ALL;
 
     // Inspector state
     private SelectionState selectionState;

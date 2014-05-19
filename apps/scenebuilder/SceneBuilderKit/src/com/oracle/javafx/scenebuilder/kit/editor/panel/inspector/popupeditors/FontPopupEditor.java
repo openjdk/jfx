@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.AutoSug
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.BoundedDoubleEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,6 +50,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -250,6 +252,7 @@ public class FontPopupEditor extends PopupEditor {
             return getTextField().getText();
         }
 
+        @SuppressWarnings("unused")
         public List<String> getFamilies() {
             return families;
         }

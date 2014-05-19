@@ -42,7 +42,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.editor.util.ContextMenuController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
@@ -419,7 +418,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     public void addToPanelControlSkin(final Node node) {
         final Skin<?> skin = getPanelControl().getSkin();
         assert skin instanceof SkinBase;
-        final SkinBase<?> skinbase = (SkinBase) skin;
+        final SkinBase<?> skinbase = (SkinBase<?>) skin;
         skinbase.getChildren().add(node);
     }
 
@@ -430,7 +429,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     public void removeFromPanelControlSkin(final Node node) {
         final Skin<?> skin = getPanelControl().getSkin();
         assert skin instanceof SkinBase;
-        final SkinBase<?> skinbase = (SkinBase) skin;
+        final SkinBase<?> skinbase = (SkinBase<?>) skin;
         skinbase.getChildren().remove(node);
     }
 
@@ -1216,6 +1215,9 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
                         }
                     }
                 }
+                break;
+                
+            default:
                 break;
         }
     }

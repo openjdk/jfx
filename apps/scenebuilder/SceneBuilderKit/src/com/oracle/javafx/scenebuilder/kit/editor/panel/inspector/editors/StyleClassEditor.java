@@ -39,6 +39,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
 import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -47,6 +48,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -463,10 +465,12 @@ public class StyleClassEditor extends InlineListEditor {
             }
         }
 
+        @SuppressWarnings("unused")
         protected void disablePlusButton(boolean disable) {
             plusBt.setDisable(disable);
         }
 
+        @SuppressWarnings("unused")
         protected void disableRemove(boolean disable) {
             removeMi.setDisable(disable);
         }

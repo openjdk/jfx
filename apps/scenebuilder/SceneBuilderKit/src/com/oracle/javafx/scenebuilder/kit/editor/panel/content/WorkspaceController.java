@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import java.net.URL;
 import java.util.List;
 import javafx.animation.FadeTransition;
+import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -324,7 +325,14 @@ class WorkspaceController {
             }
             scalingGroup.setScaleX(actualScaling);
             scalingGroup.setScaleY(actualScaling);
-            scalingGroup.setScaleZ(actualScaling);
+            
+            if (Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                scalingGroup.setScaleZ(actualScaling);
+            }
+            // else {
+            //      leave scaleZ unchanged else it breaks zooming when running
+            //      with the software pipeline (see DTL-6661).
+            // }
         }
     }
     

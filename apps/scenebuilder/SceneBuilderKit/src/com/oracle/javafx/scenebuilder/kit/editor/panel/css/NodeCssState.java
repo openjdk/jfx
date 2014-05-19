@@ -110,7 +110,6 @@ public class NodeCssState {
         private final ObjectProperty<CssContentMaker.PropertyState> fxmlModel = new SimpleObjectProperty<>();
         private CssContentMaker.PropertyState currentState;
 
-        @SuppressWarnings("rawtypes")
         CssProperty(NodeCssState nodeCssState, CssMetaData cssMeta, Node target, FXOMObject fxomObject) {
             this(nodeCssState, null, cssMeta, target, fxomObject);
         }
@@ -168,7 +167,6 @@ public class NodeCssState {
             return name;
         }
 
-        @SuppressWarnings("rawtypes")
         public CssMetaData getStyleable() {
             return cssMeta;
         }

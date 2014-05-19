@@ -74,6 +74,10 @@ public class InsertAsAccessoryJob extends Job {
         this.accessory = accessory;
     }
 
+    FXOMObject getNewObject() {
+        return newObject;
+    }
+    
     /*
      * Job
      */

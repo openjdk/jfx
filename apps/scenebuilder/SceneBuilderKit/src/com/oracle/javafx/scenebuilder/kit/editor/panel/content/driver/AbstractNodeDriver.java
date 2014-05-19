@@ -178,7 +178,7 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
         
         final Object sceneGraphObject = fxomObject.getSceneGraphObject();
         if (sceneGraphObject instanceof ComboBox) {
-            result = (ComboBox) sceneGraphObject;
+            result = (ComboBox<?>) sceneGraphObject;
         } else if (sceneGraphObject instanceof Labeled) {
             result = (Labeled) sceneGraphObject;
         } else if (sceneGraphObject instanceof Text) {

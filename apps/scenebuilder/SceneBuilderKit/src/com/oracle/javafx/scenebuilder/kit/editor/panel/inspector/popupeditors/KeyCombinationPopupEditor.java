@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.AutoSuggestEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +46,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -500,6 +502,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             return label;
         }
 
+        @SuppressWarnings("unused")
         public void setLabel(Label label) {
             this.label = label;
         }
@@ -508,6 +511,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             return choiceBox;
         }
 
+        @SuppressWarnings("unused")
         public void setChoiceBox(ChoiceBox<KeyCombination.Modifier> choiceBox) {
             this.choiceBox = choiceBox;
         }

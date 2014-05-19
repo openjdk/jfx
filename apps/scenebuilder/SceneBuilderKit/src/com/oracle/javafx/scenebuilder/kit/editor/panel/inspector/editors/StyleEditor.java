@@ -38,11 +38,13 @@ import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
 import com.sun.javafx.css.CssError;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.parser.CSSParser;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -470,10 +472,12 @@ public class StyleEditor extends InlineListEditor {
             }
         }
 
+        @SuppressWarnings("unused")
         protected void disablePlusButton(boolean disable) {
             plusBt.setDisable(disable);
         }
 
+        @SuppressWarnings("unused")
         protected void disableRemove(boolean disable) {
             removeMi.setDisable(disable);
         }

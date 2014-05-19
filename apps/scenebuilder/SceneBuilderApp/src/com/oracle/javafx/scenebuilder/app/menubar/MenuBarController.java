@@ -159,8 +159,6 @@ public class MenuBarController {
     @FXML
     private MenuItem showPreferencesMenuItem;
     @FXML
-    private MenuItem separatorAbovePreferencesMenuItem; // Useless as soon as Preferences menu item is implemented
-    @FXML
     private MenuItem exitMenuItem;
 
     // Edit
@@ -277,6 +275,8 @@ public class MenuBarController {
     @FXML
     private MenuItem wrapInAnchorPaneMenuItem;
     @FXML
+    private MenuItem wrapInFlowPaneMenuItem;
+    @FXML
     private MenuItem wrapInGridPaneMenuItem;
     @FXML
     private MenuItem wrapInHBoxMenuItem;
@@ -290,6 +290,8 @@ public class MenuBarController {
     private MenuItem wrapInStackPaneMenuItem;
     @FXML
     private MenuItem wrapInTabPaneMenuItem;
+    @FXML
+    private MenuItem wrapInTilePaneMenuItem;
     @FXML
     private MenuItem wrapInTitledPaneMenuItem;
     @FXML
@@ -322,10 +324,6 @@ public class MenuBarController {
     private RadioMenuItem caspianEmbeddedThemeMenuItem;
     @FXML
     private RadioMenuItem caspianEmbeddedQVGAThemeMenuItem;
-    @FXML
-    private MenuItem separatorAboveChooseBackgroundColorMenuItem;
-    @FXML
-    private MenuItem chooseBackgroundColorMenuItem;
     @FXML
     private MenuItem addSceneStyleSheetMenuItem;
     @FXML
@@ -459,7 +457,6 @@ public class MenuBarController {
         assert includeFileMenuItem != null;
         assert editIncludedFileMenuItem != null;
         assert revealIncludedFileMenuItem != null;
-        assert separatorAbovePreferencesMenuItem != null;
         assert showPreferencesMenuItem != null;
         assert exitMenuItem != null;
 
@@ -520,6 +517,7 @@ public class MenuBarController {
         assert bringForwardMenuItem != null;
         assert sendBackwardMenuItem != null;
         assert wrapInAnchorPaneMenuItem != null;
+        assert wrapInFlowPaneMenuItem != null;
         assert wrapInGridPaneMenuItem != null;
         assert wrapInHBoxMenuItem != null;
         assert wrapInPaneMenuItem != null;
@@ -527,6 +525,7 @@ public class MenuBarController {
         assert wrapInSplitPaneMenuItem != null;
         assert wrapInStackPaneMenuItem != null;
         assert wrapInTabPaneMenuItem != null;
+        assert wrapInTilePaneMenuItem != null;
         assert wrapInTitledPaneMenuItem != null;
         assert wrapInToolBarMenuItem != null;
         assert wrapInVBoxMenuItem != null;
@@ -543,7 +542,6 @@ public class MenuBarController {
         assert caspianHighContrastThemeMenuItem != null;
         assert caspianEmbeddedThemeMenuItem != null;
         assert caspianEmbeddedQVGAThemeMenuItem != null;
-        assert chooseBackgroundColorMenuItem != null;
         assert addSceneStyleSheetMenuItem != null;
         assert removeSceneStyleSheetMenu != null;
         assert openSceneStyleSheetMenu != null;
@@ -909,6 +907,7 @@ public class MenuBarController {
         sendBackwardMenuItem.setAccelerator(
                 new KeyCharacterCombination("[", modifier)); //NOI18N
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
+        wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
         wrapInGridPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GRID_PANE));
         wrapInHBoxMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_HBOX));
@@ -917,6 +916,7 @@ public class MenuBarController {
         wrapInSplitPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_SPLIT_PANE));
         wrapInStackPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_STACK_PANE));
         wrapInTabPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TAB_PANE));
+        wrapInTilePaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TILE_PANE));
         wrapInTitledPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TITLED_PANE));
         wrapInToolBarMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TOOL_BAR));
         wrapInVBoxMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_VBOX));
@@ -930,8 +930,6 @@ public class MenuBarController {
          */
         showPreviewMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_WINDOW));
         showPreviewMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
-        chooseBackgroundColorMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.CHOOSE_BACKGROUND_COLOR));
-        chooseBackgroundColorMenuItem.setDisable(true);
         caspianHighContrastThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST));
         caspianThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN));
         caspianEmbeddedThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_EMBEDDED));
@@ -1021,12 +1019,6 @@ public class MenuBarController {
         insertMenu.setOnMenuValidation(onCustomPartOfInsertMenuValidationHandler);
         
         windowMenu.setOnMenuValidation(onWindowMenuValidationHandler);
-        
-        /*
-         * Until Preference menu is implemented, we remove it (see DTL-5854).
-         */
-        previewMenu.getItems().remove(separatorAboveChooseBackgroundColorMenuItem);
-        previewMenu.getItems().remove(chooseBackgroundColorMenuItem);
     }
 
     /*

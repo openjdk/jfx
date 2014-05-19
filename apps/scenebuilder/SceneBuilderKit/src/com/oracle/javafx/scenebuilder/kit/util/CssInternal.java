@@ -319,7 +319,6 @@ public class CssInternal {
         for (@SuppressWarnings("rawtypes") Map.Entry<StyleableProperty, List<Style>> entry : map.entrySet()) {//NOI18N
             StyleableProperty<?> beanProp = entry.getKey();
             List<Style> styles = new ArrayList<>(entry.getValue());
-            @SuppressWarnings("unchecked") //NOI18N
             String name = getBeanPropertyName(beanProp);
             if (!name.equals(prop.getName().getName())) {
                 continue;
@@ -444,13 +443,12 @@ public class CssInternal {
     public static String getBeanPropertyName(StyleableProperty<?> val) {
         String property = null;
         if (val instanceof ReadOnlyProperty) {
-            property = ((ReadOnlyProperty) val).getName();
+            property = ((ReadOnlyProperty<?>) val).getName();
         }
         return property;
     }
 
     public static void attachMapToNode(Node node) {
-        @SuppressWarnings("rawtypes")
         Map<StyleableProperty<?>, List<Style>> smap = new HashMap<>();
         Deprecation.setStyleMap(node, FXCollections.observableMap(smap));
     }

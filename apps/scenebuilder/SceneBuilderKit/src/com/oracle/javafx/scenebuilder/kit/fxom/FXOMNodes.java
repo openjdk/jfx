@@ -31,6 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueInstruction;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.klass.ComponentClassMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.PropertyMetadata;
@@ -267,11 +269,28 @@ public class FXOMNodes {
     }
     
     public static FXOMDocument newDocument(FXOMObject source) {
+        assert source != null;
+        
         final FXOMDocument result = new FXOMDocument();
         
+        final FXOMDocument sourceDocument 
+                = source.getFxomDocument();
+        assert sourceDocument.getFxomRoot() != null; // contains at least source
+        final List<FXOMObject> unresolvedObjects 
+                = collectUnresolvedObjects(sourceDocument.getFxomRoot());
+        if (unresolvedObjects.isEmpty() == false) {
+            // Copy all the imports from the source document to the new document
+            final GlueDocument sourceGlue = sourceDocument.getGlue();
+            final GlueDocument resultGlue = result.getGlue();
+            for (GlueInstruction i : sourceGlue.collectInstructions("import")) {
+                final GlueInstruction ci = new GlueInstruction(resultGlue, i.getTarget(), i.getData());
+                resultGlue.getHeader().add(ci);
+            }
+        }
+        
         result.beginUpdate();
-        result.setLocation(source.getFxomDocument().getLocation());
-        result.setClassLoader(source.getFxomDocument().getClassLoader());
+        result.setLocation(sourceDocument.getLocation());
+        result.setClassLoader(sourceDocument.getClassLoader());
         result.setFxomRoot(FXOMNodes.newObject(source, result));
         if (result.getFxomRoot() instanceof FXOMInstance) {
             trimStaticProperties((FXOMInstance) result.getFxomRoot());
@@ -523,6 +542,19 @@ public class FXOMNodes {
                         result.add(pt);
                     }
                 }
+            }
+        }
+        
+        return result;
+    }
+    
+    
+    public static List<FXOMObject> collectUnresolvedObjects(FXOMObject fxomObject) {
+        final List<FXOMObject> result = new ArrayList<>();
+        
+        for (FXOMObject o : serializeObjects(fxomObject)) {
+            if (o.getSceneGraphObject() == null) {
+                result.add(o);
             }
         }
         

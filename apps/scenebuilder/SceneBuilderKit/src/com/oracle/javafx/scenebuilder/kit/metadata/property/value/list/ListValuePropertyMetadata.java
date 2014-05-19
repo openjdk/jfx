@@ -219,7 +219,7 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
     @Override
     public void setValueObject(FXOMInstance fxomInstance, Object valueObject) {
         assert valueObject instanceof List;
-        setValue(fxomInstance, castItemList((List)valueObject));
+        setValue(fxomInstance, castItemList((List<?>)valueObject));
     }
     
     /*
