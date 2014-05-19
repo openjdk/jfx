@@ -67,6 +67,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.library.Library;
 import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
@@ -157,7 +158,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         CUT,
         PASTE,
         IMPORT_FXML,
-        IMPORT_MEDIA
+        IMPORT_MEDIA,
+        INCLUDE_FXML
     }
     
     public enum ActionStatus {
@@ -788,13 +790,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case IMPORT_FXML:
-                result = true;
-                break;
-                
             case IMPORT_MEDIA:
                 result = true;
                 break;
-                
+
+            case INCLUDE_FXML:
+                // Cannot include as root or if the document is not saved yet
+                final FXOMDocument fxomDocument = editorController.getFxomDocument();
+                result = (fxomDocument != null) 
+                        && (fxomDocument.getFxomRoot() != null)
+                        && (fxomDocument.getLocation() != null);
+                break;
+            
             case PASTE:
                 result = canPerformPaste();
                 break;
@@ -826,6 +833,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 
             case IMPORT_MEDIA:
                 performImportMedia();
+                break;
+
+            case INCLUDE_FXML:
+                performIncludeFxml();
                 break;
 
             case PASTE:
@@ -958,7 +969,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         
         // Add a border to the Windows app, because of the specific window decoration on Windows.
         if (EditorPlatform.IS_WINDOWS) {
-            getRoot().getStyleClass().add("windows-app-border");//NOI18N
+            getRoot().getStyleClass().add("windows-document-decoration");//NOI18N
         }
         
         mainSplitPane.addEventFilter(KeyEvent.KEY_PRESSED, mainKeyEventFilter);
@@ -1455,11 +1466,13 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             assert false;
         }
         
-        // Collects fx:ids in selected objects and their descendants
+        // Collects fx:ids in selected objects and their descendants.
+        // We filter out toggle groups because their fx:ids are managed automatically.
         final Map<String, FXOMObject> fxIdMap = new HashMap<>();
         for (FXOMObject selectedObject : selectedObjects) {
             fxIdMap.putAll(selectedObject.collectFxIds());
         }
+        FXOMNodes.removeToggleGroups(fxIdMap);
         
         // Checks if deleted objects have some fx:ids and ask for confirmation.
         final boolean deleteConfirmed;
@@ -1502,6 +1515,12 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 = new ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                         "*.fxml"); //NOI18N
         fileChooser.getExtensionFilters().add(f);
+            
+        final File nextInitialDirectory 
+                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
+        if (nextInitialDirectory != null) {
+            fileChooser.setInitialDirectory(nextInitialDirectory);
+        }
 
         File fxmlFile = fileChooser.showOpenDialog(getStage());
         if (fxmlFile != null) {
@@ -1510,6 +1529,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             if (!path.endsWith(".fxml")) { //NOI18N
                 fxmlFile = new File(path + ".fxml"); //NOI18N
             }
+
+            // Keep track of the user choice for next time
+            SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
 
             this.getEditorController().performImportFxml(fxmlFile);
         }
@@ -1536,8 +1558,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         fileChooser.getExtensionFilters().add(audioFilter);
         fileChooser.getExtensionFilters().add(videoFilter);
 
+        final File nextInitialDirectory 
+                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
+        if (nextInitialDirectory != null) {
+            fileChooser.setInitialDirectory(nextInitialDirectory);
+        }
+
         File mediaFile = fileChooser.showOpenDialog(getStage());
         if (mediaFile != null) {
+            
+            // Keep track of the user choice for next time
+            SceneBuilderApp.getSingleton().updateNextInitialDirectory(mediaFile);
+
             this.getEditorController().performImportMedia(mediaFile);
         }
     }
@@ -1592,6 +1624,35 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         return mediaExtensions;
     }
     
+    private void performIncludeFxml() {
+
+        final FileChooser fileChooser = new FileChooser();
+        final ExtensionFilter f
+                = new ExtensionFilter(I18N.getString("file.filter.label.fxml"),
+                        "*.fxml"); //NOI18N
+        fileChooser.getExtensionFilters().add(f);
+
+        final File nextInitialDirectory 
+                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
+        if (nextInitialDirectory != null) {
+            fileChooser.setInitialDirectory(nextInitialDirectory);
+        }
+
+        File fxmlFile = fileChooser.showOpenDialog(getStage());
+        if (fxmlFile != null) {
+            // See DTL-5948: on Linux we anticipate an extension less path.
+            final String path = fxmlFile.getPath();
+            if (!path.endsWith(".fxml")) { //NOI18N
+                fxmlFile = new File(path + ".fxml"); //NOI18N
+            }
+
+            // Keep track of the user choice for next time
+            SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
+
+            this.getEditorController().performIncludeFxml(fxmlFile);
+        }
+    }
+
     /**
      * Returns true if the specified node is part of the main scene and is
      * either a TextInputControl or a ComboBox.
@@ -1953,6 +2014,15 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         // Makes sure that our window is front 
         getStage().toFront();
         
+        // Check if an editing session is on going
+        if (getEditorController().isTextEditingSessionOnGoing()) {
+            // Check if we can commit the editing session
+            if (getEditorController().canGetFxmlText() == false) {
+                // Commit failed
+                return ActionStatus.CANCELLED;
+            }
+        }
+
         // Checks if there are some pending changes
         final boolean closeConfirmed;
         if (isDocumentDirty()) {

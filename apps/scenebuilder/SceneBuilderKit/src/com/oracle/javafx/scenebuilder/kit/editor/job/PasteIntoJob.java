@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
@@ -89,6 +90,7 @@ public class PasteIntoJob extends CompositeJob {
                                     getEditorController());
                             result.add(subJob);
                         }
+                        result.add(new AdjustAllToggleGroupJob(getEditorController()));
                         result.add(new UpdateSelectionJob(newObjects, getEditorController()));
                     }
                 }

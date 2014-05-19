@@ -148,6 +148,7 @@ public class StylesheetEditor extends InlineListEditor {
     @SuppressWarnings("unchecked")
     @Override
     public void setValue(Object value) {
+        setValueGeneric(value);
         if (value == null) {
             reset();
             return;
@@ -275,10 +276,6 @@ public class StylesheetEditor extends InlineListEditor {
         } catch (MalformedURLException ex) {
             throw new RuntimeException("Invalid URL", ex); //NOI18N
         }
-        if (alreadyUsed(url.toExternalForm())) {
-            System.err.println(I18N.getString("inspector.stylesheet.alreadyexist", url)); // should go to message panel
-            return;
-        }
 
         switchToItemList();
         // Add editor item
@@ -290,6 +287,10 @@ public class StylesheetEditor extends InlineListEditor {
         } else {
             urlStr = url.toExternalForm();
             switchType(Type.PLAIN_STRING);
+        }
+        if (alreadyUsed(url.toExternalForm())) {
+            System.err.println(I18N.getString("inspector.stylesheet.alreadyexist", url)); // should go to message panel
+            return;
         }
         addItem(new StylesheetItem(this, urlStr));
 
@@ -591,11 +592,7 @@ public class StylesheetEditor extends InlineListEditor {
             String suffix = new PrefixedValue(getValue()).getSuffix();
             String fileName = null;
             if (!suffix.isEmpty()) {
-                String[] urlParts = suffix.split("\\/");
-                fileName = urlParts[urlParts.length - 1];
-                // On windows, we may have "\" separators.
-                urlParts = fileName.split("\\\\");
-                fileName = urlParts[urlParts.length - 1];
+                fileName = EditorUtils.getSimpleFileName(suffix);
             }
             if (fileName != null) {
                 openMi.setVisible(true);

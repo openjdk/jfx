@@ -36,7 +36,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.DragController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AccessoryDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ContainerZDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyFxIdJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyObjectJob;
@@ -45,9 +47,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyItem;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.BorderSide;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.HIERARCHY_READWRITE_LABEL;
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.TREE_CELL_GRAPHIC;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyDNDController.DroppingMouseLocation;
+import com.oracle.javafx.scenebuilder.kit.editor.report.CSSParsingReport;
 import com.oracle.javafx.scenebuilder.kit.editor.util.InlineEditController;
 import com.oracle.javafx.scenebuilder.kit.editor.util.InlineEditController.Type;
 import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReport;
@@ -55,13 +56,16 @@ import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReportEntry;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNode;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.glossary.Glossary;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import com.sun.javafx.css.CssError;
 import java.net.URL;
 import java.util.List;
 import java.util.Set;
@@ -111,7 +115,10 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
 
     private final AbstractHierarchyPanelController panelController;
 
+    static final String TREE_CELL_GRAPHIC = "tree-cell-graphic";
     static final String HIERARCHY_FIRST_CELL = "hierarchy-first-cell";
+    static final String HIERARCHY_PLACE_HOLDER_LABEL = "hierarchy-place-holder-label";
+    static final String HIERARCHY_READWRITE_LABEL = "hierarchy-readwrite-label";
     // Style class used for lookup
     static final String HIERARCHY_TREE_CELL = "hierarchy-tree-cell";
 
@@ -183,6 +190,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         graphic.getStyleClass().add(TREE_CELL_GRAPHIC);
         updatePlaceHolder();
         displayInfoLabel.getStyleClass().add(HIERARCHY_READWRITE_LABEL);
+        placeHolderLabel.getStyleClass().add(HIERARCHY_PLACE_HOLDER_LABEL);
         // Layout
         classNameInfoLabel.setMinWidth(Control.USE_PREF_SIZE);
         displayInfoLabel.setMaxWidth(Double.MAX_VALUE);
@@ -367,7 +375,8 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                     // Need to handle the insert line indicator.
                     //==========================================================
                     else {
-                        assert dropTarget instanceof ContainerZDropTarget;
+                        assert dropTarget instanceof ContainerZDropTarget
+                                || dropTarget instanceof GridPaneDropTarget;
                         TreeItem<?> startTreeItem;
                         TreeCell<?> startCell, stopCell;
 
@@ -662,6 +671,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         final ObservableList<String> styleSheets
                 = panelController.getPanelRoot().getStylesheets();
         editor.getStylesheets().addAll(styleSheets);
+        editor.getStyleClass().add("theme-presets"); //NOI18N
         editor.getStyleClass().add(InlineEditController.INLINE_EDITOR);
 
         // 2) Build the COMMIT Callback
@@ -781,7 +791,8 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         if (entries != null) {
             assert !entries.isEmpty();
             // Update tooltip with the first entry
-            warningBadgeTooltip.setText(entries.get(0).toString());
+            final ErrorReportEntry entry = entries.get(0);
+            warningBadgeTooltip.setText(getErrorReport(entry));
             warningBadgeImageView.setImage(ImageUtils.getWarningBadgeImage());
             warningBadgeImageView.setManaged(true);
             iconsLabel.setTooltip(warningBadgeTooltip);
@@ -828,7 +839,47 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         assert fxomObject != null;
         return errorReport.query(fxomObject, !getTreeItem().isExpanded());
     }
+    
+    public String getErrorReport(final ErrorReportEntry entry) {
 
+        final StringBuilder result = new StringBuilder();
+
+        final FXOMNode fxomNode = entry.getFxomNode();
+
+        switch (entry.getType()) {
+            case UNRESOLVED_CLASS:
+                result.append(I18N.getString("hierarchy.unresolved.class"));
+                break;
+            case UNRESOLVED_LOCATION:
+                result.append(I18N.getString("hierarchy.unresolved.location"));
+                break;
+            case UNRESOLVED_RESOURCE:
+                result.append(I18N.getString("hierarchy.unresolved.resource"));
+                break;
+            case INVALID_CSS_CONTENT:
+                assert entry.getCssParsingReport() != null;
+                result.append(makeCssParsingErrorString(entry.getCssParsingReport()));
+                break;
+            case UNSUPPORTED_EXPRESSION:
+                result.append(I18N.getString("hierarchy.unsupported.expression"));
+                break;
+        }
+        result.append(" "); //NOI18N
+        if (fxomNode instanceof FXOMPropertyT) {
+            final FXOMPropertyT fxomProperty = (FXOMPropertyT) fxomNode;
+            result.append(fxomProperty.getValue());
+        } else if (fxomNode instanceof FXOMIntrinsic) {
+            final FXOMIntrinsic fxomIntrinsic = (FXOMIntrinsic) fxomNode;
+            result.append(fxomIntrinsic.getSource());
+        } else if (fxomNode instanceof FXOMObject) {
+            final FXOMObject fxomObject = (FXOMObject) fxomNode;
+            final DesignHierarchyMask mask = new DesignHierarchyMask(fxomObject);
+            result.append(mask.getClassNameInfo());
+        }
+
+        return result.toString();
+    }
+    
     private void updateInsertLineIndicator(
             final TreeCell<?> startTreeCell,
             final TreeCell<?> stopTreeCell) {
@@ -908,4 +959,28 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
         }
         return location;
     }
+    
+    private String makeCssParsingErrorString(CSSParsingReport r) {
+        final StringBuilder result = new StringBuilder();
+        
+        if (r.getIOException() != null) {
+            result.append(r.getIOException());
+        } else {
+            assert r.getCssErrors().isEmpty() == false;
+            int errorCount = 0;
+            for (CssError e : r.getCssErrors()) {
+                result.append(e.getMessage());
+                errorCount++;
+                if (errorCount < 5) {
+                    result.append('\n');
+                } else {
+                    result.append("...");
+                    break;
+                }
+            }
+        }
+        
+        return result.toString();
+    }
+    
 }

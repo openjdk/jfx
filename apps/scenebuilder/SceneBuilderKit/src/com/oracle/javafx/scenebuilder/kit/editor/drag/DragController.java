@@ -75,6 +75,7 @@ public class DragController {
     
     public void begin(AbstractDragSource dragSource) {
         assert dragSource != null;
+        assert dragSource.isAcceptable();
         assert getDragSource() == null;
         assert getDropTarget() == null;
         assert liveUpdater == null;

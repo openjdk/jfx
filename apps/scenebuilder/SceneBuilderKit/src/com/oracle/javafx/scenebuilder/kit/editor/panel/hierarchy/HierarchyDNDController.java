@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AccessoryDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ContainerZDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -44,6 +45,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.DragEvent;
+import javafx.scene.layout.GridPane;
 
 /**
  * Controller for all drag and drop gestures in hierarchy panel. This class does
@@ -401,18 +403,22 @@ public class HierarchyDNDController {
                         = new DesignHierarchyMask(dropTargetInstance);
                 // Check if the drop target accepts sub components
                 if (dropTargetMask.isAcceptingSubComponent(dragSource.getDraggedObjects())) {
-                    final FXOMObject beforeChild;
-                    if (targetIndex == -1) {
-                        beforeChild = null;
+                    if (dropTargetInstance.getSceneGraphObject() instanceof GridPane) {
+                        result = new GridPaneDropTarget(dropTargetInstance, targetIndex);
                     } else {
-                        // targetIndex is the last sub component
-                        if (targetIndex == dropTargetMask.getSubComponentCount()) {
+                        final FXOMObject beforeChild;
+                        if (targetIndex == -1) {
                             beforeChild = null;
                         } else {
-                            beforeChild = dropTargetMask.getSubComponentAtIndex(targetIndex);
+                            // targetIndex is the last sub component
+                            if (targetIndex == dropTargetMask.getSubComponentCount()) {
+                                beforeChild = null;
+                            } else {
+                                beforeChild = dropTargetMask.getSubComponentAtIndex(targetIndex);
+                            }
                         }
+                        result = new ContainerZDropTarget(dropTargetInstance, beforeChild);
                     }
-                    result = new ContainerZDropTarget(dropTargetInstance, beforeChild);
                 } //
                 // Check if the drop target accepts accessories
                 else {

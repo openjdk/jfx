@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.List;
@@ -87,7 +88,12 @@ public class EnumerationPropertyMetadata extends ValuePropertyMetadata {
             } else {
                 assert fxomProperty instanceof FXOMPropertyT;
                 final FXOMPropertyT fxomPropertyT = (FXOMPropertyT) fxomProperty;
-                result = fxomPropertyT.getValue();
+                final PrefixedValue pv = new PrefixedValue(fxomPropertyT.getValue());
+                if (pv.isBindingExpression()) {
+                    result = getDefaultValue();
+                } else {
+                    result = fxomPropertyT.getValue();
+                }
             }
         } else {
             final Object o = getName().getValue(fxomInstance.getSceneGraphObject());

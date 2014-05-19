@@ -32,7 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIndex;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMFxIdIndex;
 import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import java.util.ArrayList;
 import java.util.List;
@@ -94,7 +94,7 @@ public class FxIdEditor extends AutoSuggestEditor {
     }
 
     private List<String> getFxIdsInUse() {
-        FXOMIndex fxomIndex = new FXOMIndex(editorController.getFxomDocument());
+        FXOMFxIdIndex fxomIndex = new FXOMFxIdIndex(editorController.getFxomDocument());
         return new ArrayList<>(fxomIndex.getFxIds().keySet());
     }
 

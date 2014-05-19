@@ -42,6 +42,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.GridSnapshot;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.InsertColumnJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.InsertRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.MoveCellContentJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -67,6 +68,7 @@ public class GridPaneDropTarget extends AbstractDropTarget {
     }
 
     private final FXOMObject targetGridPane;
+    private final int targetIndex;
     private final int targetColumnIndex;
     private final int targetRowIndex;
     private final ColumnArea targetColumnArea;
@@ -81,10 +83,34 @@ public class GridPaneDropTarget extends AbstractDropTarget {
         assert rowIndex >= 0;
         
         this.targetGridPane = targetGridPane;
+        this.targetIndex = -1;
         this.targetColumnIndex = columnIndex;
         this.targetRowIndex = rowIndex;
         this.targetColumnArea = targetColumnArea;
         this.targetRowArea = targetRowArea;
+    }
+
+    public GridPaneDropTarget(FXOMObject targetGridPane, int targetIndex) {
+        assert targetGridPane != null;
+        assert targetGridPane.getSceneGraphObject() instanceof GridPane;
+        assert targetIndex >= -1;
+        
+        this.targetGridPane = targetGridPane;
+        this.targetIndex = targetIndex;
+        this.targetColumnIndex = 0;
+        this.targetRowIndex = 0;
+        
+        final GridPane gridPane = (GridPane) targetGridPane.getSceneGraphObject();
+        if (Deprecation.getGridPaneColumnCount(gridPane) == 0) {
+            this.targetColumnArea = ColumnArea.LEFT;
+        } else {
+            this.targetColumnArea = ColumnArea.CENTER;
+        }
+        if (Deprecation.getGridPaneRowCount(gridPane) == 0) {
+            this.targetRowArea = RowArea.TOP;
+        } else {
+            this.targetRowArea = RowArea.CENTER;
+        }
     }
 
     public int getTargetColumnIndex() {
@@ -176,9 +202,10 @@ public class GridPaneDropTarget extends AbstractDropTarget {
         //  4) add new columns/rows in target grip pane as needed
         //  5) add drag source objects to this drop target
         //  6) restore grid related properties
-        //  7) select the dragged objects
+        //  7) adjust toggle group declaration
+        //  8) select the dragged objects
         //
-        //  Note: if source and target parents are the same, skip #2,#3,#5 and #7
+        //  Note: if source and target parents are the same, skip #2,#3,#5,#7 and #8
                         
         // Step #1
         final GridSnapshot gridSnapshot;
@@ -268,7 +295,7 @@ public class GridPaneDropTarget extends AbstractDropTarget {
             // Step #5
             for (FXOMObject draggedObject : draggedObjects) {
                 final Job j = new InsertAsSubComponentJob(draggedObject, 
-                        targetGridPane, -1, editorController);
+                        targetGridPane, targetIndex, editorController);
                 result.addSubJob(j);
             }
         }
@@ -282,6 +309,9 @@ public class GridPaneDropTarget extends AbstractDropTarget {
         
         if (reparenting) {
             // Step #7
+            result.addSubJob(new AdjustAllToggleGroupJob(editorController));
+        
+            // Step #8
             result.addSubJob(new UpdateSelectionJob(draggedObjects, editorController));
         }
         

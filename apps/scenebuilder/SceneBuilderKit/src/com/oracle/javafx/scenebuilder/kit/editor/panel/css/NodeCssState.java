@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -628,7 +628,7 @@ public class NodeCssState {
     private Set<CssContentMaker.CssPropertyState> getAppliedStyles(StyleOrigin origin) {
         SortedSet<CssContentMaker.CssPropertyState> propertyStates = new TreeSet<>();
 
-//            if (origin == StyleOrigin.AUTHOR) {
+//            if (origin == StyleOrigin.USER_AGENT) {
 //                System.out.println("===========================");
 //                System.out.println("getAppliedStyles() called!");
 //                System.out.println("===========================");
@@ -637,7 +637,7 @@ public class NodeCssState {
 //                    System.out.println("Styleable property: " + sp);
 //                    System.out.println("---------------------------");
 //                    List<Style> styles = map.get(sp);
-//                    printStyles(styles);
+//                    CssContentMaker.printStyles(styles);
 //                }
 //                System.out.println("\n\n\n");
 //            }

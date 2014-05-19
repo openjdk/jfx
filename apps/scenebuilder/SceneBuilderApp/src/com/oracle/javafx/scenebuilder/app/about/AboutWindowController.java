@@ -147,7 +147,7 @@ public final class AboutWindowController extends AbstractFxmlWindowController {
     
     private StringBuilder getVersionParagraph() {
         StringBuilder sb = new StringBuilder(I18N.getString("about.product.version"));
-        sb.append("\nJavaFX Scene Builder 2.0 (Developer Preview)\n\n"); //NOI18N
+        sb.append("\nJavaFX Scene Builder 2.0\n\n"); //NOI18N
         return sb;
     }
     private String getLogFilePath() {

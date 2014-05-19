@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.util;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractPopupController;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
@@ -220,7 +221,10 @@ public class InlineEditController {
             final Callback<String, Boolean> requestCommit,
             final String newValue) {
 
-        boolean commitSucceeded = requestCommit.call(newValue);
+        // Using PrefixedValue PLAIN_STRING allow to consider special characters (such as @, %,...)
+        // as "standard" characters (i.e. to backslash them)
+        final String newPlainValue = new PrefixedValue(PrefixedValue.Type.PLAIN_STRING, newValue).toString();
+        boolean commitSucceeded = requestCommit.call(newPlainValue);
         // If the commit succeeded, stop the editing session,
         // otherwise keeps the editing session on-going
         if (commitSucceeded) {

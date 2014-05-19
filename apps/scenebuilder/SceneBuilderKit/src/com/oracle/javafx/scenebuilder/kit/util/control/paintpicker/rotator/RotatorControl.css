@@ -30,7 +30,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 .button {
-    -fx-padding: 8 16 8 16;
+    -fx-min-width: 30;
+    -fx-max-width: 30;
+    -fx-min-height: 30;
+    -fx-min-height: 30;
 }
 .rotation-dial {
     -fx-background-radius: 100;

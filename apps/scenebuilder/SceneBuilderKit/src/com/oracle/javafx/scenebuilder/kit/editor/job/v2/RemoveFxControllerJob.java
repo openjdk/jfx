@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -30,7 +30,58 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-.text-area, .text-area:focused, .text-area:selected {
-    -fx-background-color: null;
-    -fx-padding: 0px;
+package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
+
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+
+/**
+ *
+ */
+public class RemoveFxControllerJob extends Job {
+    
+    private final FXOMObject fxomObject;
+    private String oldFxController;
+
+    public RemoveFxControllerJob(FXOMObject fxomObject, EditorController editorController) {
+        super(editorController);
+        assert fxomObject != null;
+        this.fxomObject = fxomObject;
+    }
+
+    /*
+     * Job
+     */
+    
+    @Override
+    public boolean isExecutable() {
+        return fxomObject.getFxController() != null;
+    }
+
+    @Override
+    public void execute() {
+        assert oldFxController == null;
+        oldFxController = fxomObject.getFxController();
+        // Now like redo()
+        redo();
+    }
+
+    @Override
+    public void undo() {
+        assert oldFxController != null;
+        fxomObject.setFxController(oldFxController);
+    }
+
+    @Override
+    public void redo() {
+        assert oldFxController != null;
+        fxomObject.setFxController(null);
+    }
+
+    @Override
+    public String getDescription() {
+        return getClass().getSimpleName(); // Should not reach user
+    }
+    
 }

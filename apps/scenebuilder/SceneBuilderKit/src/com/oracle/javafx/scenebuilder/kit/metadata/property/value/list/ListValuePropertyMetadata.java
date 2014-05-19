@@ -41,6 +41,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.SingleValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -86,7 +87,12 @@ public abstract class ListValuePropertyMetadata<T> extends ValuePropertyMetadata
                 result = defaultValue;
             } else if (fxomProperty instanceof FXOMPropertyT) {
                 final FXOMPropertyT fxomPropertyT = (FXOMPropertyT) fxomProperty;
-                result = makeValueFromString(fxomPropertyT.getValue());
+                final PrefixedValue pv = new PrefixedValue(fxomPropertyT.getValue());
+                if (pv.isBindingExpression()) {
+                    result = getDefaultValue();
+                } else {
+                    result = makeValueFromString(fxomPropertyT.getValue());
+                }
             } else if (fxomProperty instanceof FXOMPropertyC) {
                 final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomProperty;
                 result = new ArrayList<>();

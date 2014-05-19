@@ -93,6 +93,7 @@ public class ImportWindowController extends AbstractModalDialog {
     Node zeNode = new Label(I18N.getString("import.preview.unable"));
     double builtinPrefWidth;
     double builtinPrefHeight;
+    private int numOfImportedJar;
     
     // At first we put in this collection the items which are already excluded,
     // basically all which are listed in the filter file.
@@ -261,9 +262,7 @@ public class ImportWindowController extends AbstractModalDialog {
         
         // Setup dialog buttons
         setOKButtonVisible(true);
-        setOKButtonTitle(I18N.getString("import.button.import"));
-        setOKButtonDisable(true);
-        setDefaultButtonID(ButtonID.CANCEL);
+        setDefaultButtonID(ButtonID.OK);
         setShowDefaultButton(true);
         
         // Setup size choice box
@@ -355,7 +354,7 @@ public class ImportWindowController extends AbstractModalDialog {
             @Override
             protected List<JarReport> call() throws Exception {
                 final List<JarReport> res = new ArrayList<>();
-                final int max = importFiles.size();
+                numOfImportedJar = importFiles.size();
                 // The classloader takes in addition all already existing
                 // jar files stored in the user lib dir.
                 final List<File> allFiles = buildListOfAllFiles(importFiles);
@@ -371,11 +370,11 @@ public class ImportWindowController extends AbstractModalDialog {
                     final JarExplorer explorer = new JarExplorer(Paths.get(file.getAbsolutePath()));
                     final JarReport jarReport = explorer.explore(classLoader);
                     res.add(jarReport);
-                    updateProgress(index, max);
+                    updateProgress(index, numOfImportedJar);
                     index++;
                 }
 
-                updateProgress(max, max);
+                updateProgress(numOfImportedJar, numOfImportedJar);
                 updateImportClassLoader(classLoader);
                 return res;
             }
@@ -393,7 +392,7 @@ public class ImportWindowController extends AbstractModalDialog {
             public void handle(WorkerStateEvent t) {
                 // See in setOnSucceeded the explanation for the toFront below.
                 getStage().toFront();
-                updateNumOfItemsLabelAndSelectionToggle();
+                updateNumOfItemsLabelAndSelectionToggleState();
             }
         });
         
@@ -447,16 +446,9 @@ public class ImportWindowController extends AbstractModalDialog {
 
                                     @Override
                                     public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                                        final boolean importRequired;
-                                        // First check the current row
-                                        if (newValue) {
-                                            importRequired = true;
-                                        } else {
-                                            // If the current row does not require import,
-                                            // check the other list rows
-                                            importRequired = isImportRequired(importList);
-                                        }
-                                        updateButtons(importRequired);
+                                        final int numOfComponentToImport = getNumOfComponentToImport(importList);
+                                        updateOKButtonTitle(numOfComponentToImport);
+                                        updateSelectionToggleText(numOfComponentToImport);
                                     }
                                 });
                             }
@@ -466,16 +458,10 @@ public class ImportWindowController extends AbstractModalDialog {
                     // Sort based on the simple class name.
                     Collections.sort(importList.getItems(), new ImportRowComparator());
 
-                    if (jarReportList.isEmpty()) {
-                        // We might want to handle this case in a different manner
-                        // (e.g. alert dialog saying there is nothing at all to import) ?
-                        setOKButtonDisable(true);
-                        setDefaultButtonID(ButtonID.CANCEL);
-                    } else {
-                        updateButtons(isImportRequired(importList));
-                    }
-                    
-                    updateNumOfItemsLabelAndSelectionToggle();
+                    final int numOfComponentToImport = getNumOfComponentToImport(importList);
+                    updateOKButtonTitle(numOfComponentToImport);
+                    updateSelectionToggleText(numOfComponentToImport);
+                    updateNumOfItemsLabelAndSelectionToggleState();
                 } catch (InterruptedException | ExecutionException | IOException ex) {
                     getStage().close();
                     showErrorDialog(ex);
@@ -585,19 +571,16 @@ public class ImportWindowController extends AbstractModalDialog {
         cancelButton.setDefaultButton(true);
     }
 
-    /**
-     * Returns true if at least one row of the specified list requires import.
-     * @param list
-     * @return
-     */
-    private boolean isImportRequired(final ListView<ImportRow> list) {
+    private int getNumOfComponentToImport(final ListView<ImportRow> list) {
+        int res = 0;
+        
         for (final ImportRow row : list.getItems()) {
             if (row.isImportRequired()) {
-                return true;
+                res++;
             }
         }
         
-        return false;
+        return res;
     }
     
     private List<String> getExcludedItems() {
@@ -611,17 +594,28 @@ public class ImportWindowController extends AbstractModalDialog {
         return res;
     }
 
-    private void updateButtons(boolean importRequired) {
-        setOKButtonDisable(!importRequired);
-        // If the OK button is disabled, it cannot be default
-        if (importRequired) {
-            setDefaultButtonID(ButtonID.OK);
+    // The title of the button is important in the sense it says to the user
+    // what action will be taken.
+    // In the most common case one or more component are selected in the list,
+    // but it is also possible to get an empty list, in which case the user may
+    // want to import the jar file anyway; it makes sense in ooder to resolve
+    // dependencies other jars have onto it.
+    // See DTL-6531 for details.
+    private void updateOKButtonTitle(int numOfComponentToImport) {
+        if (numOfComponentToImport == 0) {
+            if (numOfImportedJar == 1) {
+                setOKButtonTitle(I18N.getString("import.button.import.jar"));
+            } else {
+                setOKButtonTitle(I18N.getString("import.button.import.jars"));
+            }
+        } else if (numOfComponentToImport == 1) {
+            setOKButtonTitle(I18N.getString("import.button.import.component"));
         } else {
-            setDefaultButtonID(ButtonID.CANCEL);
+            setOKButtonTitle(I18N.getString("import.button.import.components"));
         }
     }
     
-    void updateNumOfItemsLabelAndSelectionToggle() {
+    void updateNumOfItemsLabelAndSelectionToggleState() {
         final int num = importList.getItems().size();
         if (num == 0 || num == 1) {
             numOfItemsLabel.setText(num + " " //NOI18N
@@ -635,7 +629,15 @@ public class ImportWindowController extends AbstractModalDialog {
             checkAllUncheckAllToggle.setDisable(false);
         }
     }
-    
+
+    private void updateSelectionToggleText(int numOfComponentToImport) {
+        if (numOfComponentToImport == 0) {
+            checkAllUncheckAllToggle.setText(I18N.getString("import.toggle.checkall"));
+        } else {
+            checkAllUncheckAllToggle.setText(I18N.getString("import.toggle.uncheckall"));
+        }
+    }
+        
     // NOTE At the end of the day some tooling in metadata will supersedes the
     // use of this method that is only able to deal with a Region, ignoring all
     // other cases.

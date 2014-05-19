@@ -38,7 +38,7 @@
 
 <HBox alignment="CENTER" prefHeight="-1.0" prefWidth="-1.0" spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
-    <StackPane fx:id="textSp" maxWidth="45.0" minWidth="45.0" opacity="0.71" prefWidth="45.0" HBox.hgrow="NEVER" />
+    <StackPane fx:id="textSp" maxWidth="45.0" minWidth="45.0" prefWidth="45.0" HBox.hgrow="NEVER" />
     <Slider fx:id="slider" HBox.hgrow="ALWAYS" />
   </children>
 </HBox>

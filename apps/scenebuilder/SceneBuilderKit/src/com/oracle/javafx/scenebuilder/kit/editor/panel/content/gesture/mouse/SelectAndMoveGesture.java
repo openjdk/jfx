@@ -180,13 +180,15 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
                         osg.getSortedItems(), selectedHitObject, 
                         hitPoint.getX(), hitPoint.getY(), ownerWindow);
                 
-                final Node glassLayer = contentPanelController.getGlassLayer();
-                final Dragboard db = glassLayer.startDragAndDrop(TransferMode.COPY_OR_MOVE);
-                db.setContent(dragSource.makeClipboardContent());
-                db.setDragView(dragSource.makeDragView());
-                
-                assert editorController.getDragController().getDragSource() == null;
-                editorController.getDragController().begin(dragSource);
+                if (dragSource.isAcceptable()) {
+                    final Node glassLayer = contentPanelController.getGlassLayer();
+                    final Dragboard db = glassLayer.startDragAndDrop(TransferMode.COPY_OR_MOVE);
+                    db.setContent(dragSource.makeClipboardContent());
+                    db.setDragView(dragSource.makeDragView());
+
+                    assert editorController.getDragController().getDragSource() == null;
+                    editorController.getDragController().begin(dragSource);
+                }
             }
         }
     }

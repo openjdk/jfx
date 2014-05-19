@@ -29,13 +29,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-.text-field,
-.label {
-    -fx-font-size: 0.833em;
-    -fx-padding: 0.25em 0.417em 0.167em 0.417em; /* 3 5 2 5 */
-    -fx-background-radius: 0;
-}
 
 .toggle-button {
-    -fx-font-size: 0.833em;
+    -fx-text-fill: -sb-content-text;
 }

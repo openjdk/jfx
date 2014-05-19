@@ -121,6 +121,12 @@ public class InsertAsAccessoryJob extends Job {
             subJob.addSubJob(addPropertyJob);
         }
 
+        final Job pruneJob = new PrunePropertiesJob(newObject, targetObject, 
+                getEditorController());
+        if (pruneJob.isExecutable()) {
+            subJob.prependSubJob(pruneJob);
+        }
+            
         /*
          * Executes the subjob.
          */

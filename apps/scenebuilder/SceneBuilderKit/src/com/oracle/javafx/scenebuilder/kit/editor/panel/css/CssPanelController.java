@@ -79,7 +79,6 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Orientation;
-import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -317,8 +316,8 @@ public class CssPanelController extends AbstractFxmlPanelController {
                     // Switch to pick mode
                     editorController.setPickModeEnabled(true);
 //                    // Select the sub node
-//                            selection = editorController.getSelection();
-//                            selection.select(getFXOMInstance(selection), Point2D.ZERO);
+                    selection = editorController.getSelection();
+                    selection.select(getFXOMInstance(selection), selectedSubNode);
                 }
             }
         };
@@ -590,7 +589,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 // In pick mode:
                 // If the selected node is the "root" node ==> we get its FXOMInstance
                 // Else, we don't have an FXOMInstance
-                Object pickObject = selection.findHitNode();
+                Object pickObject = selection.getCheckedHitNode();
                 FXOMInstance fxomInstance = getFXOMInstance(selection);
                 if (fxomInstance != null && fxomInstance.getSceneGraphObject() == pickObject) {
                     selectedObject = fxomInstance;
@@ -991,13 +990,13 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
             private Value(Node value) {
                 vbox = new VBox(2);
-                getStyleClass().add("value");//NOI18N
                 setAlignment(Pos.CENTER_LEFT);
                 vbox.getChildren().add(value);
                 getChildren().add(vbox);
-                AnchorPane.setTopAnchor(vbox, 0.0);
-                AnchorPane.setLeftAnchor(vbox, 0.0);
-                AnchorPane.setRightAnchor(vbox, 0.0);
+                AnchorPane.setTopAnchor(vbox, 4.0);
+                AnchorPane.setLeftAnchor(vbox, 4.0);
+                AnchorPane.setRightAnchor(vbox, 4.0);
+                AnchorPane.setBottomAnchor(vbox, 4.0);
                 setOnMouseEntered(new EventHandler<MouseEvent>() {
                     @Override
                     public void handle(MouseEvent arg0) {
@@ -1026,8 +1025,8 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 vbox.getChildren().add(navigationLabel);
                 if (navigationMenuButton != null) {
                     getChildren().add(navigationMenuButton);
-                    AnchorPane.setTopAnchor(navigationMenuButton, 0.0);
-                    AnchorPane.setRightAnchor(navigationMenuButton, 0.0);
+                    AnchorPane.setTopAnchor(navigationMenuButton, 4.0);
+                    AnchorPane.setRightAnchor(navigationMenuButton, 4.0);
                 }
             }
 
@@ -1419,7 +1418,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
             PropertyState ps = getPropertyState(item);
             if (ps == null || ps instanceof CssPropertyState) {
                 return I18N.getString("csspanel.fxtheme.defaults.navigation")
-                        + " (" + CssInternal.getThemeName(style.getStyle()) + ".css)";//NOI18N
+                        + " (" + CssInternal.getThemeDisplayName(style.getStyle()) + ")";//NOI18N
             } else {
                 return I18N.getString("csspanel.api.defaults.navigation");
             }
@@ -1481,7 +1480,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private static String getNavigationInfo(
             CssProperty item, CssStyle cssStyle, StyleOrigin origin) {
         if (origin == StyleOrigin.USER_AGENT) {
-            return CssInternal.getThemeName(cssStyle.getStyle()) + ".css"; //NOI18N
+            return CssInternal.getThemeDisplayName(cssStyle.getStyle());
         }
         if (origin == StyleOrigin.USER) {
             BeanPropertyState state = (BeanPropertyState) item.modelState().get();
@@ -2092,7 +2091,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
                         n = getLabel(style);
                     }
                     if (style != null && !style.getLookupChain().isEmpty()) {
-                        ret = createLookupUI(item, ps, style, style.getLookupChain().get(0), n);
+                        ret = createLookupUI(item, ps, style, style, n);
                     } else {
                         ret = n;
                     }

@@ -651,12 +651,12 @@ implements AbstractGesture.Observer {
     }
     
     private void mouseExitedGlassLayer(MouseEvent e) {
-        assert activeGesture == null : "activateGesture=" + activeGesture;
+        assert activeGesture == null : "activeGesture=" + activeGesture;
         glassGesture = null;
     }
     
     private void mouseMovedOnGlassLayer(MouseEvent e) {
-        assert activeGesture == null : "activateGesture=" + activeGesture;
+        assert activeGesture == null : "activeGesture=" + activeGesture;
         
         /*
          *   1) hitObject == null
@@ -700,7 +700,10 @@ implements AbstractGesture.Observer {
     }
     
     private void mousePressedOnGlassLayer(MouseEvent e) {
-        
+
+        // Make sure that glass layer has keyboard focus
+        contentPanelController.getGlassLayer().requestFocus();
+
         /*
          * At that point, is expected that a "mouse entered" or "mouse moved" 
          * event was received before and that this.glassGesture is setup.
@@ -807,6 +810,7 @@ implements AbstractGesture.Observer {
             final ObservableList<String> styleSheets
                     = getContentPanelController().getPanelRoot().getStylesheets();
             inlineEditor.getStylesheets().addAll(styleSheets);
+            inlineEditor.getStyleClass().add("theme-presets"); //NOI18N
             inlineEditor.getStyleClass().add(InlineEditController.INLINE_EDITOR);
             final Callback<String, Boolean> requestCommit
                     = new Callback<String, Boolean>() {
@@ -865,7 +869,7 @@ implements AbstractGesture.Observer {
     }
     
     private void keyPressedOnGlassLayer(KeyEvent e) {
-        assert activeGesture == null : "activateGesture=" + activeGesture;
+        assert activeGesture == null : "activeGesture=" + activeGesture;
         switch(e.getCode()) {
             case UP:
             case DOWN:
@@ -877,6 +881,19 @@ implements AbstractGesture.Observer {
                     System.out.println("Selection is not movable");
                 }
                 e.consume();
+                break;
+            case ENTER:
+                final Selection selection = contentPanelController.getEditorController().getSelection();
+                if (selection.getGroup() instanceof ObjectSelectionGroup) {
+                    final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+                    if (osg.getItems().size() == 1) {
+                        final DesignHierarchyMask mask = new DesignHierarchyMask(osg.getSortedItems().get(0));
+                        final FXOMObject nodeFxomObject = mask.getClosestFxNode();
+                        if (nodeFxomObject instanceof FXOMInstance) {
+                            handleInlineEditing((FXOMInstance)nodeFxomObject);
+                        }
+                    }
+                }
                 break;
             default:
                 // We let other key events flow up in the scene graph
@@ -897,19 +914,27 @@ implements AbstractGesture.Observer {
     private void mousePressedOnHandleLayer(MouseEvent e) {
         assert e.getTarget() instanceof Node;
         
-        final Node target = (Node) e.getTarget();
-        Node hitNode = target;
-        AbstractHandles<?> hitHandles = AbstractHandles.lookupHandles(hitNode);
-        while ((hitHandles == null) && (hitNode.getParent() != null)) {
-            hitNode = hitNode.getParent();
-            hitHandles = AbstractHandles.lookupHandles(hitNode);
-        }
-        
-        if (hitHandles != null) {
-            activateGesture(hitHandles.findEnabledGesture(hitNode), e);
+        if (e.getButton() == MouseButton.SECONDARY) {
+            final ContextMenuController contextMenuController
+                    = contentPanelController.getEditorController().getContextMenuController();
+            // The context menu items depend on the selection so
+            // we need to rebuild it each time it is invoked.
+            contextMenuController.updateContextMenuItems();
         } else {
-            // Emergency code
-            assert false : "event target has no HANDLES property :" + target;
+            final Node target = (Node) e.getTarget();
+            Node hitNode = target;
+            AbstractHandles<?> hitHandles = AbstractHandles.lookupHandles(hitNode);
+            while ((hitHandles == null) && (hitNode.getParent() != null)) {
+                hitNode = hitNode.getParent();
+                hitHandles = AbstractHandles.lookupHandles(hitNode);
+            }
+
+            if (hitHandles != null) {
+                activateGesture(hitHandles.findEnabledGesture(hitNode), e);
+            } else {
+                // Emergency code
+                assert false : "event target has no HANDLES property :" + target;
+            }
         }
         e.consume();
     }
@@ -946,7 +971,7 @@ implements AbstractGesture.Observer {
          */
         final EditorController editorController
                 = contentPanelController.getEditorController();
-        if ((editorController.getFxomDocument() != null) && editorController.canGetFxmlText()) {
+        if (contentPanelController.isContentDisplayable() && editorController.canGetFxmlText()) {
             
             contentPanelController.beginInteraction();
             
@@ -957,9 +982,6 @@ implements AbstractGesture.Observer {
             // Note that some gestures may terminates immediately.
             // So activeGesture may have switch back to null.
             assert (activeGesture == gesture) || (activeGesture == null);
-
-            // Make sure that glass layer has keyboard focus
-            contentPanelController.getGlassLayer().requestFocus();
         }
     }
     

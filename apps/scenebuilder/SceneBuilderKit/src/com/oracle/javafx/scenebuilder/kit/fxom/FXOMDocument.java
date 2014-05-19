@@ -70,7 +70,7 @@ public class FXOMDocument {
     
     
     
-    public FXOMDocument(String fxmlText, URL location, ClassLoader classLoader, ResourceBundle resources) throws IOException {
+    public FXOMDocument(String fxmlText, URL location, ClassLoader classLoader, ResourceBundle resources, boolean normalize) throws IOException {
         this.glue = new GlueDocument(fxmlText);
         this.location = location;
         this.classLoader = classLoader;
@@ -78,14 +78,21 @@ public class FXOMDocument {
         if (this.glue.getRootElement() != null) {
             final FXOMLoader loader = new FXOMLoader(this);
             loader.load(fxmlText);
-            final FXOMNormalizer normalizer = new FXOMNormalizer(this);
-            normalizer.normalize();
+            if (normalize) {
+                final FXOMNormalizer normalizer = new FXOMNormalizer(this);
+                normalizer.normalize();
+            }
         } else {
             // Document is empty
             assert GlueDocument.isEmptyXmlText(fxmlText);
             // Keeps this.fxomRoot == null
             // Keeps this.sceneGraphRoot == null
         }
+    }
+    
+    
+    public FXOMDocument(String fxmlText, URL location, ClassLoader classLoader, ResourceBundle resources) throws IOException {
+        this(fxmlText, location, classLoader, resources, true /* normalize */);
     }
     
     

@@ -56,7 +56,7 @@
     </ScrollPane>
     <HBox alignment="CENTER_RIGHT" spacing="0.0" styleClass="message-panel-clear">
       <children>
-        <Button fx:id="clearButton" mnemonicParsing="false" onAction="#onClear" text="Button" />
+        <Button fx:id="clearButton" mnemonicParsing="false" onAction="#onClear" text="%message.panel.clear" />
       </children>
     </HBox>
 </children></VBox><Region minHeight="4.0" styleClass="message-panel-shadow" />

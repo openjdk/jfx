@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +45,7 @@ public abstract class ArrangeZOrderJob extends Job {
 
     protected final List<ReIndexObjectJob> subJobs = new ArrayList<>();
     protected String description; // final but initialized lazily
+    private AdjustAllToggleGroupJob adjustToggleGroups; // created by execute()
 
     public ArrangeZOrderJob(EditorController editorController) {
         super(editorController);
@@ -65,6 +67,8 @@ public abstract class ArrangeZOrderJob extends Job {
         for (ReIndexObjectJob subJob : subJobs) {
             subJob.execute();
         }
+        adjustToggleGroups = new AdjustAllToggleGroupJob(getEditorController());
+        adjustToggleGroups.execute();
         fxomDocument.endUpdate();
     }
 
@@ -73,6 +77,8 @@ public abstract class ArrangeZOrderJob extends Job {
         final FXOMDocument fxomDocument
                 = getEditorController().getFxomDocument();
         fxomDocument.beginUpdate();
+        assert adjustToggleGroups != null;
+        adjustToggleGroups.undo();
         for (int i = subJobs.size() - 1; i >= 0; i--) {
             subJobs.get(i).undo();
         }
@@ -87,6 +93,8 @@ public abstract class ArrangeZOrderJob extends Job {
         for (ReIndexObjectJob subJob : subJobs) {
             subJob.redo();
         }
+        assert adjustToggleGroups != null;
+        adjustToggleGroups.redo();
         fxomDocument.endUpdate();
     }
 }

@@ -31,7 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.selection;
 
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.Picker;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
@@ -42,8 +41,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import javafx.geometry.Bounds;
-import javafx.geometry.Point2D;
 import javafx.scene.Node;
 
 /**
@@ -54,31 +51,25 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
     
     private final Set<FXOMObject> items = new HashSet<>();
     private final FXOMObject hitItem;
-    private final Point2D hitPoint;
+    private final Object hitSceneGraphObject;
+    private final Node hitNode;
     
-    ObjectSelectionGroup(FXOMObject fxomObject, Point2D hitPoint) {
+    ObjectSelectionGroup(FXOMObject fxomObject, Node hitNode) {
         assert fxomObject != null;
         this.items.add(fxomObject);
         this.hitItem = fxomObject;
-        this.hitPoint = hitPoint;
+        this.hitSceneGraphObject = fxomObject.getSceneGraphObject();
+        this.hitNode = hitNode;
     }
     
-    ObjectSelectionGroup(Collection<FXOMObject> fxomObjects, FXOMObject hitItem, Point2D hitPoint) {
+    public ObjectSelectionGroup(Collection<FXOMObject> fxomObjects, FXOMObject hitItem, Node hitNode) {
         assert fxomObjects != null;
         assert hitItem != null;
         assert fxomObjects.contains(hitItem);
         this.items.addAll(fxomObjects);
         this.hitItem = hitItem;
-        this.hitPoint = hitPoint;
-    }
-    
-    ObjectSelectionGroup(FXOMObject fxomObject, Node hitNode) {
-        assert fxomObject != null;
-        assert (hitNode == null) || (hitNode.getScene() != null);
-        
-        this.items.add(fxomObject);
-        this.hitItem = fxomObject;
-        this.hitPoint = computeHitPoint(hitNode);
+        this.hitSceneGraphObject = this.hitItem.getSceneGraphObject();
+        this.hitNode = hitNode;
     }
     
     public Set<FXOMObject> getItems() {
@@ -89,8 +80,41 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
         return hitItem;
     }
 
-    public Point2D getHitPoint() {
-        return hitPoint;
+    public Node getHitNode() {
+        return hitNode;
+    }
+    
+    public boolean isExpired() {
+        return hitItem.getSceneGraphObject() != hitSceneGraphObject;
+    }
+    
+    public Node getCheckedHitNode() {
+        final Node result;
+        
+        if ((hitNode == null) || isExpired()) {
+            result = getFallbackHitNode();
+        } else {
+            result = hitNode;
+        }
+        
+        return result;
+    }
+    
+    public Node getFallbackHitNode() {
+        final Node result;
+        
+        if (hitItem.isNode()) {
+            result = (Node) hitItem.getSceneGraphObject();
+        } else {
+            final FXOMObject closestNodeObject = hitItem.getClosestNode();
+            if (closestNodeObject != null) {
+                result = (Node) closestNodeObject.getSceneGraphObject();
+            } else {
+                result = null;
+            }
+        }
+        
+        return result;
     }
     
     public Set<FXOMObject> getFlattenItems() {
@@ -112,35 +136,6 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
                 parents.add(i.getParentObject());
             }
             result = parents.size() == 1;
-        }
-        
-        return result;
-    }
-    
-    public Node findHitNode() {
-        final Node result;
-        
-        if (hitPoint == null) {
-            if (hitItem.isNode()) {
-                result = (Node) hitItem.getSceneGraphObject();
-            } else {
-                result = null;
-            }
-        } else {
-            final FXOMObject nodeObject = hitItem.getClosestNode();
-            if (nodeObject == null) {
-                result = null;
-            } else {
-                final Node closestNode = (Node)nodeObject.getSceneGraphObject();
-                final Picker picker = new Picker();
-                final List<Node> pick = picker.pickInLocal(closestNode, hitPoint.getX(), hitPoint.getY());
-                if (pick == null) {
-                    result = null;
-                } else {
-                    assert pick.isEmpty() == false;
-                    result = pick.get(0);
-                }
-            }
         }
         
         return result;
@@ -227,7 +222,7 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
         int hash = 3;
         hash = 41 * hash + Objects.hashCode(this.items);
         hash = 41 * hash + Objects.hashCode(this.hitItem);
-        hash = 41 * hash + Objects.hashCode(this.hitPoint);
+        hash = 41 * hash + Objects.hashCode(this.hitNode);
         return hash;
     }
 
@@ -246,39 +241,9 @@ public class ObjectSelectionGroup extends AbstractSelectionGroup {
         if (!Objects.equals(this.hitItem, other.hitItem)) {
             return false;
         }
-        if (!Objects.equals(this.hitPoint, other.hitPoint)) {
+        if (this.hitNode != other.hitNode) {
             return false;
         }
         return true;
-    }
-    
-    /*
-     * Private
-     */
-    
-    private Point2D computeHitPoint(Node hitNode) {
-        final Point2D result;
-        
-        if (hitNode == null) {
-            result = null;
-        } else {
-            final FXOMObject nodeObject = hitItem.getClosestNode();
-            if (nodeObject == null) {
-                result = null;
-            } else {
-                final Node closestNode = (Node)nodeObject.getSceneGraphObject();
-                final Bounds hnb = hitNode.getLayoutBounds();
-                final double midX = (hnb.getMinX() + hnb.getMaxX()) / 2.0;
-                final double midY = (hnb.getMinY() + hnb.getMaxY()) / 2.0;
-                if (hitNode == closestNode) {
-                    result = new Point2D(midX, midY);
-                } else {
-                    result = closestNode.sceneToLocal(hitNode.localToScene(midX, midY));
-                }
-                assert findHitNode() == hitNode;
-            }
-        }
-        
-        return result;
     }
 }

@@ -85,6 +85,7 @@ public class LibraryDragSource extends AbstractDragSource {
             assert itemDocument.getFxomRoot() != null;
             libraryItemObject = itemDocument.getFxomRoot();
             libraryItemObject.moveToFxomDocument(targetDocument);
+            assert itemDocument.getFxomRoot() == null;
             
             if (libraryItemObject.getSceneGraphObject() instanceof Node) {
                 // We put the library item node in a Scene and layout it.
@@ -106,6 +107,13 @@ public class LibraryDragSource extends AbstractDragSource {
     /*
      * AbstractDragSource
      */
+    
+    @Override
+    public boolean isAcceptable() {
+        // All library drag sources are 'acceptable'
+        return true;
+    }
+
     
     @Override
     public List<FXOMObject> getDraggedObjects() {
@@ -165,10 +173,6 @@ public class LibraryDragSource extends AbstractDragSource {
         // Add to content a string which is the Lib Item as an FXML string
         result.putString(libraryItem.getFxmlText());
         
-        // Add an entry that indicates that this clipboard content has
-        // been created by Scene Builder itself.
-        result.put(INTERNAL_DATA_FORMAT, "" /* Unused */); //NOI18N
-        
         return result;
     }
 
@@ -183,7 +187,8 @@ public class LibraryDragSource extends AbstractDragSource {
         }
 
         final Image imageFromIcon = new Image(iconURL.toExternalForm());
-        final Label visualNode = new Label(libraryItem.getName());
+//        final Label visualNode = new Label(libraryItem.getName());
+        final Label visualNode = new Label();
         visualNode.setGraphic(new ImageView(imageFromIcon));
         visualNode.getStylesheets().add(EditorController.getStylesheet().toString());
         visualNode.getStyleClass().add("drag-preview"); //NOI18N

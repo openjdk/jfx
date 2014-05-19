@@ -34,11 +34,12 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIndex;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMFxIdIndex;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 
@@ -75,7 +76,7 @@ public class TrimSelectionJob extends Job {
                 if (fxomObject instanceof FXOMInstance) {
                     final FXOMDocument fxomDocument = fxomObject.getFxomDocument();
                     result = (fxomObject != fxomDocument.getFxomRoot())
-                            && FXOMIndex.isSelfContainedObject(fxomObject);
+                            && FXOMFxIdIndex.isSelfContainedObject(fxomObject);
                 } else {
                     result = false;
                 }
@@ -141,6 +142,9 @@ public class TrimSelectionJob extends Job {
         final Job setDocumentRoot = new SetDocumentRootJob(candidateRoot, getEditorController());
         batchJob.addSubJob(setDocumentRoot);
 
+        final Job adjustToggleGroups = new AdjustAllToggleGroupJob(getEditorController());
+        batchJob.addSubJob(adjustToggleGroups);
+               
         // Finally add the fx:controller/fx:root to the new root object
         if (isFxRoot) {
             final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());

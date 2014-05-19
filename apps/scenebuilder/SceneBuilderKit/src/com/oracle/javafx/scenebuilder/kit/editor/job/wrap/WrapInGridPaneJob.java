@@ -74,6 +74,11 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
+        // When wrapping the root node, indices are not yet initialized
+        // (modifyContainer method not called)
+        if (indices.isEmpty()) {
+            modifyContainer(children);
+        }
         for (FXOMObject child : children) {
             int[] childIndices = indices.get(child);
 

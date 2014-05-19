@@ -103,6 +103,13 @@ public class ExternalDragSource extends AbstractDragSource {
      */
     
     @Override
+    public boolean isAcceptable() {
+        // All external drag sources are 'acceptable'
+        return true;
+    }
+
+    
+    @Override
     public List<FXOMObject> getDraggedObjects() {
         if (draggedObjects == null) {
             draggedObjects = new ArrayList<>();

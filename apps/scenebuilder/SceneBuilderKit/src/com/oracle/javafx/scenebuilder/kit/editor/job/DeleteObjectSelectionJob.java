@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
@@ -76,6 +77,9 @@ public class DeleteObjectSelectionJob extends CompositeJob {
                 cannotDeleteCount++;
             }
         }
+        
+        // Finally we adjust toggle groups
+        result.add(new AdjustAllToggleGroupJob(getEditorController()));
         
         // If some objects cannot be deleted, then we clear all to
         // make this job not executable.

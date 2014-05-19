@@ -42,6 +42,7 @@ import com.oracle.javafx.scenebuilder.kit.util.CssInternal.CssPropAuthorInfo;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.BooleanProperty;
@@ -104,7 +105,6 @@ public abstract class PropertyEditor extends Editor {
     private final Set<ChangeListener<Object>> valueListeners = new HashSet<>();
     private final Set<ChangeListener<Object>> transientValueListeners = new HashSet<>();
     private final Set<ChangeListener<Boolean>> editingListeners = new HashSet<>();
-    private final Set<ChangeListener<Boolean>> indeterminateListeners = new HashSet<>();
     private ChangeListener<String> navigateRequestListener = null;
     private EventHandler<?> commitListener;
     // State properties
@@ -156,8 +156,8 @@ public abstract class PropertyEditor extends Editor {
                         }
                     } else {
                         // Special case for non-properties (fx:id, ...)
-                        EditorPlatform.open(EditorPlatform.JAVADOC_HOME + 
-                                "javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html"); //NOI18N
+                        EditorPlatform.open(EditorPlatform.JAVADOC_HOME
+                                + "javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html"); //NOI18N
                     }
                     // Selection of multiple different classes ==> no link
                 } catch (IOException ex) {
@@ -200,12 +200,11 @@ public abstract class PropertyEditor extends Editor {
     public final MenuButton getMenu() {
         if (menu == null) {
             menu = new MenuButton();
-            
+
             Region region = new Region();
             menu.setGraphic(region);
             region.getStyleClass().add("cog-shape"); //NOI18N
-            
-            
+
             menu.disableProperty().bind(disableProperty);
             menu.getStyleClass().add("cog-menubutton"); //NOI18N
             menu.setOpacity(0);
@@ -284,18 +283,6 @@ public abstract class PropertyEditor extends Editor {
         editingListeners.remove(listener);
     }
 
-    public void addIndeterminateListener(ChangeListener<Boolean> listener) {
-        if (!indeterminateListeners.contains(listener)) {
-            indeterminateProperty().addListener(listener);
-            indeterminateListeners.add(listener);
-        }
-    }
-
-    public void removeIndeterminateListener(ChangeListener<Boolean> listener) {
-        indeterminateProperty().removeListener(listener);
-        indeterminateListeners.remove(listener);
-    }
-
     public void addNavigateListener(ChangeListener<String> listener) {
         // We should have a single listener here
         if (navigateRequestListener == null) {
@@ -322,10 +309,6 @@ public abstract class PropertyEditor extends Editor {
         Set<ChangeListener<Boolean>> editListeners = new HashSet<>(editingListeners);
         for (ChangeListener<Boolean> listener : editListeners) {
             removeEditingListener(listener);
-        }
-        Set<ChangeListener<Boolean>> indetermListeners = new HashSet<>(indeterminateListeners);
-        for (ChangeListener<Boolean> listener : indetermListeners) {
-            removeIndeterminateListener(listener);
         }
         removeNavigateListener(navigateRequestListener);
     }
@@ -419,6 +402,7 @@ public abstract class PropertyEditor extends Editor {
     }
 
     public void setIndeterminate(boolean indeterminate) {
+//        System.out.println(propName.getText() + " : setIndeterminate() to " + indeterminate);
         if (!indeterminateProperty.getValue() && indeterminate) {
             valueIsIndeterminate();
         }
@@ -512,31 +496,16 @@ public abstract class PropertyEditor extends Editor {
 
     @SuppressWarnings("unchecked")
     boolean isValueChanged(Object value) {
+        if (value == null || valueProperty.getValue() == null) {
+            return value != valueProperty.getValue();
+        }
         if (value instanceof List) {
             List<Object> valueList = (List<Object>) value;
             List<Object> valuePropertyList = (List<Object>) valueProperty.getValue();
-            if (valueList.size() != valuePropertyList.size()) {
-                return true;
-            }
-            boolean changed = false;
-            for (int ii = 0; ii < valueList.size(); ii++) {
-                assert valueProperty.getValue() instanceof List;
-                if (!valueList.get(ii).equals(valuePropertyList.get(ii))) {
-                    changed = true;
-                }
-            }
-            return changed;
+            return isIndeterminate() || !Objects.equals(valueList, valuePropertyList);
         } else {
-            return isSimpleValueChanged(value);
+            return isIndeterminate() || !Objects.equals(value, valueProperty.getValue());
         }
-    }
-
-    boolean isSimpleValueChanged(Object newVal) {
-        Object oldVal = valueProperty.getValue();
-        if (oldVal == null || newVal == null) {
-            return newVal != oldVal;
-        }
-        return isIndeterminate() || !newVal.equals(oldVal);
     }
 
     public BooleanProperty editingProperty() {
@@ -667,6 +636,7 @@ public abstract class PropertyEditor extends Editor {
         ButtonID buttonClicked = alertDialog.showAndWait();
         if (buttonClicked == ButtonID.OK) {
             setValue(valueProperty().getValue());
+            invalidValueProperty.setValue(false);
         }
         alertDialog.getStage().close();
         // Get the focus back

@@ -51,8 +51,12 @@ public abstract class ImageUtils {
     static final String NODE_ICONS_DIR = "nodeicons"; //NOI18N
     static final String UI_DIR = "ui"; //NOI18N
     static final String MISSING_ICON = "MissingIcon.png"; //NOI18N
+    static final String CLOSED_HAND = "ClosedHand.png"; //NOI18N
+    static final String OPEN_HAND = "OpenHand.png"; //NOI18N
     static final String WARNING_BADGE = "WarningBadge.png"; //NOI18N
     static final String CSS_CURSOR = "css-cursor.png"; //NOI18N
+    private static Cursor closed_hand_cursor;
+    private static Cursor open_hand_cursor;
     private static Image warning_badge_image;
     private static ImageCursor css_cursor;
     private static final WeakHashMap<String, Reference<Image>> imageCache = new WeakHashMap<>();
@@ -95,6 +99,24 @@ public abstract class ImageUtils {
         hiddenScene.setRoot(new Group());
         hiddenStage.close();
         return contentImage;
+    }
+    
+    public static synchronized Cursor getClosedHandCursor() {
+        if (closed_hand_cursor == null) {
+            final URL url = ImageUtils.class.getResource(UI_DIR + "/" + CLOSED_HAND); //NOI18N
+            // The image is of size 32 x 32 and we set hotspot on the middle.
+            closed_hand_cursor = new ImageCursor(new Image(url.toExternalForm()), 16, 10);
+        }
+        return closed_hand_cursor;
+    }
+    
+    public static synchronized Cursor getOpenHandCursor() {
+        if (open_hand_cursor == null) {
+            final URL url = ImageUtils.class.getResource(UI_DIR + "/" + OPEN_HAND); //NOI18N
+            // The image is of size 32 x 32 and we set hotspot on the middle.
+            open_hand_cursor = new ImageCursor(new Image(url.toExternalForm()), 16, 10);
+        }
+        return open_hand_cursor;
     }
     
     public static synchronized Image getWarningBadgeImage() {

@@ -251,27 +251,6 @@ public class GlueElement extends GlueNode {
     }
     
     
-    public GlueElement lookup(String attrName, String attrValue) {
-        GlueElement result;
-        
-        assert attrName != null;
-        assert attrValue != null;
-        
-        final String v = attributes.get(attrName);
-        if ((v != null) && v.equals(attrValue)) {
-            result = this;
-        } else {
-            result = null;
-            final Iterator<GlueElement> it = children.iterator();
-            while ((result == null) && it.hasNext()) {
-                result = it.next().lookup(attrName, attrValue);
-            }
-        }
-        
-        return result;
-    }
-    
-    
     public void moveToDocument(GlueDocument targetDocument) {
         
         assert targetDocument != null;

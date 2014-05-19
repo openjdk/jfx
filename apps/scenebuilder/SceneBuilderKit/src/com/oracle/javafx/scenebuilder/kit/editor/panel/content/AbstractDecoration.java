@@ -82,6 +82,10 @@ public abstract class AbstractDecoration<T> {
                 rootNodeSceneDidChange();
             }
         });
+        
+        // This is workaround for DTL-6628 
+        rootNode.getStyleClass().add("theme-presets"); //NOI18N
+        rootNode.getStyleClass().add("SBKIT-content-panel"); //NOI18N
     }
 
     public ContentPanelController getContentPanelController() {

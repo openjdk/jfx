@@ -46,7 +46,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.media.Media;
@@ -137,13 +140,13 @@ public class FXOMNodes {
     
     
     
-    public static FXOMNode newNode(FXOMNode source) {
+    public static FXOMNode newNode(FXOMNode source, FXOMDocument targetDocument) {
         final FXOMNode result;
         
         if (source instanceof FXOMObject) {
-            result = newObject((FXOMObject) source);
+            result = newObject((FXOMObject) source, targetDocument);
         } else if (source instanceof FXOMProperty) {
-            result = newProperty((FXOMProperty) source);
+            result = newProperty((FXOMProperty) source, targetDocument);
         } else {
             throw new IllegalArgumentException(FXOMNodes.class.getSimpleName()
                     + " needs some additional implementation"); //NOI18N
@@ -152,15 +155,15 @@ public class FXOMNodes {
         return result;
     }
     
-    public static FXOMObject newObject(FXOMObject source) {
+    public static FXOMObject newObject(FXOMObject source, FXOMDocument targetDocument) {
         final FXOMObject result;
         
         if (source instanceof FXOMCollection) {
-            result = FXOMCollection.newInstance((FXOMCollection) source);
+            result = FXOMCollection.newInstance((FXOMCollection) source, targetDocument);
         } else if (source instanceof FXOMInstance) {
-            result = FXOMInstance.newInstance((FXOMInstance) source);
+            result = FXOMInstance.newInstance((FXOMInstance) source, targetDocument);
         } else if (source instanceof FXOMIntrinsic) {
-            result = FXOMIntrinsic.newInstance((FXOMIntrinsic) source);
+            result = FXOMIntrinsic.newInstance((FXOMIntrinsic) source, targetDocument);
         } else {
             throw new IllegalArgumentException(FXOMNodes.class.getSimpleName()
                     + " needs some additional implementation"); //NOI18N
@@ -218,14 +221,43 @@ public class FXOMNodes {
 
         return result;
     }
+    
+    public static FXOMIntrinsic newInclude(FXOMDocument targetDocument, File file)
+            throws IOException {
+        assert targetDocument != null;
+        assert targetDocument.getLocation() != null;
+        assert file != null;
+        FXOMIntrinsic result = null;
+        if (file.getAbsolutePath().endsWith(".fxml")) { //NOI18N
+            final URL fxmlURL = file.toURI().toURL();
+            final String fxmlText = FXOMDocument.readContentFromURL(fxmlURL);
+            final FXOMDocument transientDoc = new FXOMDocument(
+                    fxmlText,
+                    fxmlURL,
+                    targetDocument.getClassLoader(),
+                    targetDocument.getResources());
+            if (transientDoc.getFxomRoot() != null) {
+                final PrefixedValue pv 
+                        = PrefixedValue.makePrefixedValue(fxmlURL, targetDocument.getLocation());
+                assert pv.isDocumentRelativePath();
+                assert pv.toString().startsWith(FXMLLoader.RELATIVE_PATH_PREFIX);
+                final String includeRef
+                        = pv.toString().substring(FXMLLoader.RELATIVE_PATH_PREFIX.length());
+                result = new FXOMIntrinsic(targetDocument, FXOMIntrinsic.Type.FX_INCLUDE, includeRef);
+                result.setSourceSceneGraphObject(transientDoc.getFxomRoot().getSceneGraphObject());
+            }
+        }
 
-    public static FXOMProperty newProperty(FXOMProperty source) {
+        return result;
+    }
+
+    public static FXOMProperty newProperty(FXOMProperty source, FXOMDocument targetDocument) {
         final FXOMProperty result;
         
         if (source instanceof FXOMPropertyC) {
-            result = FXOMPropertyC.newInstance((FXOMPropertyC) source);
+            result = FXOMPropertyC.newInstance((FXOMPropertyC) source, targetDocument);
         } else if (source instanceof FXOMPropertyT) {
-            result = FXOMPropertyT.newInstance((FXOMPropertyT) source);
+            result = FXOMPropertyT.newInstance((FXOMPropertyT) source, targetDocument);
         }else {
             throw new IllegalArgumentException(FXOMNodes.class.getSimpleName()
                     + " needs some additional implementation");
@@ -235,17 +267,15 @@ public class FXOMNodes {
     }
     
     public static FXOMDocument newDocument(FXOMObject source) {
-        final FXOMObject copy = FXOMNodes.newObject(source);
-        
-        if (copy instanceof FXOMInstance) {
-            trimStaticProperties((FXOMInstance) copy);
-        }
-        
         final FXOMDocument result = new FXOMDocument();
+        
         result.beginUpdate();
         result.setLocation(source.getFxomDocument().getLocation());
-        copy.moveToFxomDocument(result);
-        result.setFxomRoot(copy);
+        result.setClassLoader(source.getFxomDocument().getClassLoader());
+        result.setFxomRoot(FXOMNodes.newObject(source, result));
+        if (result.getFxomRoot() instanceof FXOMInstance) {
+            trimStaticProperties((FXOMInstance) result.getFxomRoot());
+        }
         result.endUpdate();
         
         return result;
@@ -446,6 +476,31 @@ public class FXOMNodes {
     }
     
     
+    public static List<FXOMPropertyT> collectReferenceExpression(FXOMObject fxomRoot, String fxId) {
+        assert fxomRoot != null;
+        assert fxId != null;
+        
+        final List<FXOMPropertyT> result = new ArrayList<>();
+        
+        for (FXOMPropertyT p : fxomRoot.collectPropertiesT()) {
+            final PrefixedValue pv = new PrefixedValue(p.getValue());
+            if (pv.isExpression()) {
+                /*
+                 * p is an FXOMPropertyT like this:
+                 * 
+                 * <.... property="$id" .... />
+                 */
+                final String id = pv.getSuffix();
+                if (id.equals(fxId)) {
+                    result.add(p);
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    
     public static List<FXOMPropertyT> collectToggleGroupReferences(FXOMObject fxomRoot, String toggleGroupId) {
         assert fxomRoot != null;
         assert toggleGroupId != null;
@@ -485,6 +540,18 @@ public class FXOMNodes {
         return result;
     }
    
+    public static void removeToggleGroups(Map<String, FXOMObject> fxIdMap) {
+        assert fxIdMap != null;
+        
+        for (String fxId : new HashSet<>(fxIdMap.keySet())) {
+            final FXOMObject fxomObject = fxIdMap.get(fxId);
+            if (fxomObject.getSceneGraphObject() instanceof ToggleGroup) {
+                fxIdMap.remove(fxId);
+            }
+        }
+    }
+    
+    
     /*
      * Private
      */

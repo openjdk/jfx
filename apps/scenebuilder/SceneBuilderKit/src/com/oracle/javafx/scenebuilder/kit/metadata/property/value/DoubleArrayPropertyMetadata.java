@@ -31,9 +31,11 @@
  */
 package com.oracle.javafx.scenebuilder.kit.metadata.property.value;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.ListValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -51,5 +53,28 @@ public class DoubleArrayPropertyMetadata extends ListValuePropertyMetadata<Doubl
 
     public DoubleArrayPropertyMetadata(PropertyName name, boolean readWrite, List<Double> defaultValue, InspectorPath inspectorPath) {
         super(name, Double.class, doubleMetadata, readWrite, defaultValue, inspectorPath);
+    }
+
+    
+    public void synchronizeWithSceneGraphObject(FXOMInstance fxomInstance) {
+        /*
+         * This routine transfers property value from the scene graph object
+         * to the matching FXOMProperty. This is primarily used for the
+         * SplitPane.dividerPositions property.
+         */
+        
+        final Object sceneGraphValue = getValueInSceneGraphObject(fxomInstance);
+        final List<Double> value;
+        if (sceneGraphValue == null) {
+            value = getDefaultValue(); // Mmmh... not so sure
+        } else {
+            assert sceneGraphValue.getClass().getComponentType() == double.class;
+            value = new ArrayList<>();
+            for (double d : (double[]) sceneGraphValue) {
+                value.add(Double.valueOf(d));
+            }
+        }
+        
+        setValue(fxomInstance, value);
     }
 }

@@ -42,7 +42,7 @@
     <children>
         <VBox>
             <children>
-                <TextArea fx:id="textArea" editable="false" focusTraversable="false" prefHeight="500.0" VBox.vgrow="ALWAYS" />
+                <TextArea fx:id="textArea" editable="false" focusTraversable="false" prefHeight="500.0" styleClass="theme-presets" VBox.vgrow="ALWAYS" />
                 <HBox alignment="BASELINE_RIGHT" prefWidth="600.0" spacing="20.0">
                     <children>
                         <Button mnemonicParsing="false" onAction="#onCopyAction" text="%label.copy" HBox.hgrow="ALWAYS" />

@@ -119,13 +119,19 @@ public class WrapJobUtils {
         if (container instanceof FXOMInstance == false) {
             return false;
         }
+        final FXOMInstance containerInstance = (FXOMInstance) container;
+        
+        // Unresolved custom type
+        if (container.getSceneGraphObject() == null) {
+            return false;
+        }
+        
         // Can unwrap the following containers only
         final Class<?>[] containerClasses = { // (1)
             AnchorPane.class,
             GridPane.class,
             Group.class,
             HBox.class,
-            Pane.class,
             ScrollPane.class,
             SplitPane.class,
             StackPane.class,
@@ -136,9 +142,11 @@ public class WrapJobUtils {
         boolean isAssignableFrom = false;
         for (Class<?> clazz : containerClasses) {
             isAssignableFrom |= clazz.isAssignableFrom(
-                    ((FXOMInstance) container).getDeclaredClass());
+                    containerInstance.getDeclaredClass());
         }
-        if (!isAssignableFrom) {
+        // Not all Pane subclasses can be unwrapped (ex : BorderPane and TextFlow)
+        boolean isPane = Pane.class.equals(containerInstance.getDeclaredClass());
+        if (!isAssignableFrom && isPane == false) {
             return false;
         }
 

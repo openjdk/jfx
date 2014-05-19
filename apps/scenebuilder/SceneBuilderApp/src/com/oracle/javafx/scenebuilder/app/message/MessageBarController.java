@@ -200,12 +200,12 @@ public class MessageBarController extends AbstractFxmlPanelController {
                 = getEditorController().getMessageLog().getYoungestEntry();
         int logSize = getEditorController().getMessageLog().getEntries().size();
 
-        // When a old message is dismissed the message log changes but there's
+        // When an old message is dismissed the message log changes but there's
         // no need to display anything in the message bar.
         if (entry != null && logSize > previousTotalNumOfMessages) {
             // We mask the host
             HBox.setHgrow(messagePart, Priority.ALWAYS);
-            getSelectionBarHost().getChildren().get(0).setVisible(false);
+            getSelectionBarHost().setVisible(false);
             getSelectionBarHost().setManaged(false);
             messageLabel.setManaged(true);
             
@@ -247,18 +247,18 @@ public class MessageBarController extends AbstractFxmlPanelController {
                     }
                     resetStyle();
                     getSelectionBarHost().setManaged(true);
-                    getSelectionBarHost().getChildren().get(0).setOpacity(1.0);
-                    getSelectionBarHost().getChildren().get(0).setVisible(true);
+                    getSelectionBarHost().setVisible(true);
                     messagePart.setOpacity(1.0);
                     HBox.setHgrow(messagePart, Priority.NEVER);
                 }
             });
             showHost.play();
         } else if (getEditorController().getMessageLog().getEntryCount() == 0) {
+            messageButton.setVisible(false);
+            messageButton.setManaged(false);
+            
             if (messageWindowController != null && messageWindowController.isWindowOpened()) {
                 messageWindowController.closeWindow();
-                messageButton.setVisible(false);
-                messageButton.setManaged(false);
             }
         }
 

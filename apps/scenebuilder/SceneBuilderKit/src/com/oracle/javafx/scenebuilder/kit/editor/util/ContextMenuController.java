@@ -60,7 +60,7 @@ import javafx.stage.WindowEvent;
 public class ContextMenuController {
 
     private final EditorController editorController;
-    private ContextMenu contextMenu;
+    private ContextMenu contextMenu; // Initialized lazily
 
     private MenuItem cutMenuItem;
     private MenuItem copyMenuItem;
@@ -149,7 +149,10 @@ public class ContextMenuController {
 
     public ContextMenu getContextMenu() {
         if (contextMenu == null) {
-            makeContextMenu();
+            // Initialization of context menu
+            contextMenu = new ContextMenu();
+            contextMenu.setConsumeAutoHidingEvents(false);
+            contextMenu.setOnShowing(onShowingContextMenuEventHandler);
         }
         return contextMenu;
     }
@@ -159,6 +162,10 @@ public class ContextMenuController {
      */
     public void updateContextMenuItems() {
 
+        // Lazely initialization of context menu items
+        if (copyMenuItem == null) {
+            initializeMenuItems();
+        }
         getContextMenu().getItems().clear();
 
         final Selection selection = editorController.getSelection();
@@ -338,9 +345,7 @@ public class ContextMenuController {
         }
     }
 
-    private void makeContextMenu() {
-        this.contextMenu = new ContextMenu();
-        this.contextMenu.setConsumeAutoHidingEvents(false);
+    private void initializeMenuItems() {
 
         copyMenuItem = new MenuItem(I18N.getString("menu.title.copy"));
         copyMenuItem.setOnAction(onActionEventHandler);
@@ -479,13 +484,8 @@ public class ContextMenuController {
         decreaseColumnSpan.setOnAction(onActionEventHandler);
         decreaseColumnSpan.setUserData(new EditActionController(EditAction.DECREASE_COLUMN_SPAN));
 
-        contextMenu.setOnShowing(onShowingContextMenuEventHandler);
         wrapInMenu.setOnShowing(onShowingMenuEventHandler);
         gridPaneMenu.setOnShowing(onShowingMenuEventHandler);
-
-        for (MenuItem child : contextMenu.getItems()) {
-            child.setOnAction(onActionEventHandler);
-        }
     }
 
     class EditActionController extends MenuItemController {

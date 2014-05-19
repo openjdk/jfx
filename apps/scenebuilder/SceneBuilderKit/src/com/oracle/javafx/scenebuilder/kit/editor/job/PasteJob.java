@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
@@ -45,12 +46,16 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.ClipboardDecoder;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.scene.Node;
 import javafx.scene.input.Clipboard;
 
 /**
  *
  */
 public class PasteJob extends CompositeJob {
+    
+    private final List<Job> insertJobs = new ArrayList<>();
+    private FXOMObject targetObject;
 
     public PasteJob(EditorController editorController) {
         super(editorController);
@@ -82,7 +87,6 @@ public class PasteJob extends CompositeJob {
                 // If the selection is root or is empty, the target object is
                 // the root object.
                 // Otherwise, the target object is the selection common ancestor.
-                final FXOMObject targetObject;
                 if (fxomDocument.getFxomRoot() == null) {
                     targetObject = null;
                 } else {
@@ -105,12 +109,23 @@ public class PasteJob extends CompositeJob {
                                 newObject0,
                                 getEditorController());
                         result.add(subJob);
+                        result.add(new AdjustAllToggleGroupJob(getEditorController()));
                         result.add(new UpdateSelectionJob(newObject0, getEditorController()));
+                        insertJobs.add(subJob);
                     }
                 } else {
+                    // Checks if pasted objects are
                     // Build InsertAsSubComponent jobs
                     final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
                     if (targetMask.isAcceptingSubComponent(newObjects)) {
+                        
+                        final double relocateDelta;
+                        if (targetMask.isFreeChildPositioning()) {
+                            final int pasteJobCount = countPasteJobs();
+                            relocateDelta = 10.0 * (pasteJobCount + 1);
+                        } else {
+                            relocateDelta = 0.0;
+                        }
                         result.add(new ClearSelectionJob(getEditorController()));
                         for (FXOMObject newObject : newObjects) {
                             final InsertAsSubComponentJob subJob = new InsertAsSubComponentJob(
@@ -119,7 +134,19 @@ public class PasteJob extends CompositeJob {
                                     targetMask.getSubComponentCount(),
                                     getEditorController());
                             result.add(subJob);
+                            insertJobs.add(subJob);
+                            if ((relocateDelta != 0.0) && newObject.isNode()) {
+                                final Node sceneGraphNode = (Node) newObject.getSceneGraphObject();
+                                final RelocateNodeJob relocateJob = new RelocateNodeJob(
+                                        (FXOMInstance) newObject,
+                                        sceneGraphNode.getLayoutX() + relocateDelta,
+                                        sceneGraphNode.getLayoutY() + relocateDelta,
+                                        getEditorController()
+                                );
+                                result.add(relocateJob);
+                            }
                         }
+                        result.add(new AdjustAllToggleGroupJob(getEditorController()));
                         result.add(new UpdateSelectionJob(newObjects, getEditorController()));
                     }
                 }
@@ -134,7 +161,7 @@ public class PasteJob extends CompositeJob {
     protected String makeDescription() {
         final String result;
         
-        if (getSubJobs().size() == 3) { // ClearSelectionJob + Insert/SetDocumentRootJob + UpdateSelectionJob
+        if (insertJobs.size() == 1) {
             result = makeSingleSelectionDescription();
         } else {
             result = makeMultipleSelectionDescription();
@@ -149,8 +176,8 @@ public class PasteJob extends CompositeJob {
     private String makeSingleSelectionDescription() {
         final String result;
 
-        assert getSubJobs().size() == 3; // ClearSelectionJob + Insert/SetDocumentRootJob + UpdateSelectionJob
-        final Job subJob0 = getSubJobs().get(1);
+        assert insertJobs.size() == 1;
+        final Job subJob0 = insertJobs.get(0);
         final FXOMObject newObject;
         if (subJob0 instanceof InsertAsSubComponentJob) {
             final InsertAsSubComponentJob insertJob = (InsertAsSubComponentJob) subJob0;
@@ -178,7 +205,27 @@ public class PasteJob extends CompositeJob {
     }
 
     private String makeMultipleSelectionDescription() {
-        final int objectCount = getSubJobs().size() - 2;
+        final int objectCount = insertJobs.size();
         return I18N.getString("label.action.edit.paste.n", objectCount);
+    }
+    
+    private int countPasteJobs() {
+        int result = 0;
+        
+        final List<Job> undoStack = getEditorController().getJobManager().getUndoStack();
+        for (Job job : undoStack) {
+            if (job instanceof PasteJob) {
+                final PasteJob pasteJob = (PasteJob) job;
+                if (this.targetObject == pasteJob.targetObject) {
+                    result++;
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+        
+        return result;
     }
 }

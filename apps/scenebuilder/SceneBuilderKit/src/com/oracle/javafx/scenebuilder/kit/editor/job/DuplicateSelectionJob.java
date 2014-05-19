@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
@@ -83,8 +84,9 @@ public class DuplicateSelectionJob extends CompositeJob {
             final Map<FXOMObject, FXOMObject> newFxomObjects = new HashMap<>();
             for (FXOMObject selectedObject : osg.getItems()) {
                 final FXOMDocument newDocument = FXOMNodes.newDocument(selectedObject);
-                newDocument.getFxomRoot().moveToFxomDocument(targetDocument);
                 final FXOMObject newObject = newDocument.getFxomRoot();
+                newObject.moveToFxomDocument(targetDocument);
+                assert newDocument.getFxomRoot() == null;
                 newFxomObjects.put(selectedObject, newObject);
             }
             assert newFxomObjects.isEmpty() == false; // Because of (1)
@@ -118,6 +120,7 @@ public class DuplicateSelectionJob extends CompositeJob {
                         result.add(relocateSubJob);
                     }
                 }
+                result.add(new AdjustAllToggleGroupJob(getEditorController()));
                 result.add(new UpdateSelectionJob(newFxomObjects.values(), getEditorController()));
             }
         }
@@ -155,6 +158,11 @@ public class DuplicateSelectionJob extends CompositeJob {
             return false;
         }
         final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+        for (FXOMObject fxomObject : osg.getItems()) {
+            if (fxomObject.getSceneGraphObject() == null) { // Unresolved custom type
+                return false;
+            }
+        }
         return osg.hasSingleParent() == true;
     }
 

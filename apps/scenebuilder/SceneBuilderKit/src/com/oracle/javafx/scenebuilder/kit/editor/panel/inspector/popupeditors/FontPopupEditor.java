@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -216,6 +217,7 @@ public class FontPopupEditor extends PopupEditor {
     private static class FamilyEditor extends AutoSuggestEditor {
 
         private List<String> families;
+        private String family = null;
 
         @SuppressWarnings("LeakingThisInConstructor")
         public FamilyEditor(String name, String defaultValue, List<String> families, EditorController editorController) {
@@ -224,14 +226,18 @@ public class FontPopupEditor extends PopupEditor {
             EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent event) {
-                    String value = getTextField().getText();
-                    if (value.isEmpty() || !FamilyEditor.this.families.contains(value)) {
+                    if (Objects.equals(family, getTextField().getText())) {
+                        // no change
+                        return;
+                    }
+                    family = getTextField().getText();
+                    if (family.isEmpty() || !FamilyEditor.this.families.contains(family)) {
                         editorController.getMessageLog().logWarningMessage(
-                                "inspector.font.invalidfamily", value); //NOI18N
+                                "inspector.font.invalidfamily", family); //NOI18N
                         return;
                     }
 //                    System.out.println("Setting family from '" + valueProperty().get() + "' to '" + value + "'");
-                    valueProperty().setValue(value);
+                    valueProperty().setValue(family);
                 }
             };
 
@@ -250,6 +256,8 @@ public class FontPopupEditor extends PopupEditor {
     }
 
     private static class StyleEditor extends AutoSuggestEditor {
+        
+        private String style = null;
 
         @SuppressWarnings("LeakingThisInConstructor")
         public StyleEditor(String name, String defaultValue, List<String> suggestedList, EditorController editorController) {
@@ -257,13 +265,17 @@ public class FontPopupEditor extends PopupEditor {
             EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
                 @Override
                 public void handle(ActionEvent event) {
-                    String value = getTextField().getText();
-                    if (value.isEmpty() || !getSuggestedList().contains(value)) {
-                        editorController.getMessageLog().logWarningMessage(
-                                "inspector.font.invalidstyle", value); //NOI18N
+                    if (Objects.equals(style, getTextField().getText())) {
+                        // no change
                         return;
                     }
-                    valueProperty().setValue(value);
+                    style = getTextField().getText();
+                    if (style.isEmpty() || !getSuggestedList().contains(style)) {
+                        editorController.getMessageLog().logWarningMessage(
+                                "inspector.font.invalidstyle", style); //NOI18N
+                        return;
+                    }
+                    valueProperty().setValue(style);
                 }
             };
 

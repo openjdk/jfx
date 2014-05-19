@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -40,12 +40,12 @@ import javafx.scene.control.ToggleGroup;
 /**
  *
  */
-public class FXOMIndex {
+public class FXOMFxIdIndex {
     
     private final FXOMDocument fxomDocument;
     private final Map<String, FXOMObject> fxIds;
     
-    public FXOMIndex(FXOMDocument fxomDocument) {
+    public FXOMFxIdIndex(FXOMDocument fxomDocument) {
         assert fxomDocument != null;
         this.fxomDocument = fxomDocument;
         this.fxIds = fxomDocument.collectFxIds();
@@ -104,14 +104,14 @@ public class FXOMIndex {
     
     
     /**
-     * Facility : creates an FXOMIndex and check if the specified object is
-     * self-contained. Use this only if you have one object to check.
+     * Facility : creates an FXOMFxIdIndex and check if the specified object is
+ self-contained. Use this only if you have one object to check.
      * 
      * @param fxomObject an fxom object (cannot be null)
      * @return true if fxom object is self contained
      */
     public static boolean isSelfContainedObject(FXOMObject fxomObject) {
-        final FXOMIndex fxomIndex = new FXOMIndex(fxomObject.getFxomDocument());
+        final FXOMFxIdIndex fxomIndex = new FXOMFxIdIndex(fxomObject.getFxomDocument());
         return fxomIndex.isSelfContained(fxomObject);
     }
 }

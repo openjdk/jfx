@@ -142,32 +142,36 @@ public class SelectionBarController extends AbstractFxmlPanelController {
                 assert osg.getItems().isEmpty() == false;
 
                 FXOMObject fxomObject = osg.getItems().iterator().next();
+                // Recursive error report for the leaf object only
+//                boolean recursive = true;
                 while (fxomObject != null) {
                     final DesignHierarchyMask mask = new DesignHierarchyMask(fxomObject);
                     final String entryText = makeEntryText(mask);
                     final Hyperlink boxItem = new Hyperlink();
                     boxItem.setText(entryText);
                     final Node graphic;
-                    final List<ErrorReportEntry> entries = getErrorReportEntries(fxomObject);
-                    if (entries != null) {
-                        assert !entries.isEmpty();
-                        final ImageView classNameImageView
-                                = new ImageView(mask.getClassNameIcon());
-                        final ImageView warningBadgeImageView
-                                = new ImageView(warningBadgeImage);
-                        final StackPane iconsStack = new StackPane();
-                        iconsStack.getChildren().setAll(classNameImageView, warningBadgeImageView);
-                        // Update tooltip with the first entry
-                        final Tooltip iconsTooltip = new Tooltip(entries.get(0).toString());
-
-                        // We use a label to set a tooltip over the node icon 
-                        // (StackPane does not allow to set tooltips)
-                        graphic = new Label();
-                        ((Label) graphic).setGraphic(iconsStack);
-                        ((Label) graphic).setTooltip(iconsTooltip);
-                    } else {
+                    // Do not display warning icon anymore :
+                    // See DTL-6535 : Should we show warnings in the selection bar ?
+//                    final List<ErrorReportEntry> entries = getErrorReportEntries(fxomObject, recursive);
+//                    if (entries != null) {
+//                        assert !entries.isEmpty();
+//                        final ImageView classNameImageView
+//                                = new ImageView(mask.getClassNameIcon());
+//                        final ImageView warningBadgeImageView
+//                                = new ImageView(warningBadgeImage);
+//                        final StackPane iconsStack = new StackPane();
+//                        iconsStack.getChildren().setAll(classNameImageView, warningBadgeImageView);
+//                        // Update tooltip with the first entry
+//                        final Tooltip iconsTooltip = new Tooltip(entries.get(0).toString());
+//
+//                        // We use a label to set a tooltip over the node icon 
+//                        // (StackPane does not allow to set tooltips)
+//                        graphic = new Label();
+//                        ((Label) graphic).setGraphic(iconsStack);
+//                        ((Label) graphic).setTooltip(iconsTooltip);
+//                    } else {
                         graphic = new ImageView(mask.getClassNameIcon());
-                    }
+//                    }
                     boxItem.setGraphic(graphic);
                     boxItem.setFocusTraversable(false);
                     boxItem.setUserData(fxomObject);
@@ -193,6 +197,8 @@ public class SelectionBarController extends AbstractFxmlPanelController {
                         sp.setMinWidth(selectionChevronImage.getWidth());
                         pathBox.getChildren().add(0, sp);
                     }
+                    // Non recursive error report for the parent
+//                    recursive = false;
                 }
 
             } else {
@@ -232,9 +238,9 @@ public class SelectionBarController extends AbstractFxmlPanelController {
         selection.select(fxomObject);
     }
 
-    private List<ErrorReportEntry> getErrorReportEntries(FXOMObject fxomObject) {
-        assert fxomObject != null;
-        final ErrorReport errorReport = getEditorController().getErrorReport();
-        return errorReport.query(fxomObject, false);
-    }
+//    private List<ErrorReportEntry> getErrorReportEntries(FXOMObject fxomObject, boolean recursive) {
+//        assert fxomObject != null;
+//        final ErrorReport errorReport = getEditorController().getErrorReport();
+//        return errorReport.query(fxomObject, recursive);
+//    }
 }

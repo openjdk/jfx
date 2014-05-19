@@ -116,7 +116,6 @@ public class InfoPanelController extends AbstractFxmlPanelController {
     protected void sceneGraphRevisionDidChange() {
         requestEntriesUpdate();
         updateAsPerRootNodeStatus();
-        updateController();
     }
 
     @Override
@@ -155,7 +154,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
         }
         startListeningToTableViewSelection();
     }
-
+    
     /*
      * AbstractFxmlPanelController
      */
@@ -170,23 +169,33 @@ public class InfoPanelController extends AbstractFxmlPanelController {
         assert controllerClassVBox != null;
         assert fxrootCheckBox != null;
         assert controllerAndCogHBox != null;
-        
+
+        performInitialization();
+    }
+    
+    // This method is a step to a lazy initialization, to reduce startup time.
+    // We didn't find a smart way to detect when the TitledPane containing
+    // the InfoPanel is opened for the first time, except by putting a listener
+    // on the expandedProperty: this approach means DocumentWindowController
+    // has to call performInitialization (turned public), a path we do not want
+    // to take.
+    private void performInitialization() {
         if (controllerClassEditor != null) {
             controllerClassEditor.reset(getSuggestedControllerClasses(null));
         } else {
             controllerClassEditor = new ControllerClassEditor(getSuggestedControllerClasses(null));
         }
-        
+
         HBox propNameNode = controllerClassEditor.getPropNameNode();
-        
+
         // Make so that the property name appears left justified in the VBox
         propNameNode.setAlignment(Pos.CENTER_LEFT);
         controllerClassVBox.getChildren().add(0, propNameNode);
-        
+
         // Initialize field with current value, if defined.
         controllerAndCogHBox.getChildren().add(controllerClassEditor.getValueEditor());
         controllerAndCogHBox.getChildren().add(controllerClassEditor.getMenu());
-        
+
         // Need to react each time value of fx controller is changed (direct user input)
         controllerClassEditor.valueProperty().addListener(new ChangeListener<Object>() {
 
@@ -195,7 +204,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
                 updateController((String)t1);
             }
         });
-        
+
         // We e.g. an Untitled document is saved we need to trigger a scan for
         // potential controller classes.
         getEditorController().fxmlLocationProperty().addListener(new ChangeListener<URL>() {
@@ -208,11 +217,23 @@ public class InfoPanelController extends AbstractFxmlPanelController {
             }
         });
         
+        // DTL-6626
+        controllerClassEditor.getTextField().focusedProperty().addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
+                if (!t1) {
+                    // Focus loss triggers an update. The text field can be empty.
+                    updateController(controllerClassEditor.getTextField().getText());
+                }
+            }
+        });
+
         leftTableColumn.setCellValueFactory(new PropertyValueFactory<>("key")); //NOI18N
         rightTableColumn.setCellValueFactory(new PropertyValueFactory<>("fxomObject")); //NOI18N
         leftTableColumn.setCellFactory(new LeftCell.Factory());
         rightTableColumn.setCellFactory(new RightCell.Factory());
-        
+
         fxrootCheckBox.setSelected(isFxRoot());
         fxrootCheckBox.selectedProperty().addListener(checkBoxListener);
 
@@ -239,20 +260,20 @@ public class InfoPanelController extends AbstractFxmlPanelController {
                 if (className != null && className.equals(IGNORED)) {
                     className = root.getFxController();
                 }
-                
+
                 // When the user set an empty string we consider it means
                 // no controller value needs to be set.
                 if (className != null && className.isEmpty()) {
                     className = null;
                 }
-                
+
                 final ModifyFxControllerJob job
                         = new ModifyFxControllerJob(root, className, getEditorController());
-                
+
                 if (job.isExecutable()) {
                     getEditorController().getJobManager().push(job);
                 }
-                
+
                 if (controllerClassEditor != null) {
                     controllerClassEditor.setUpdateFromModel(true);
                     controllerClassEditor.setValue(className);
