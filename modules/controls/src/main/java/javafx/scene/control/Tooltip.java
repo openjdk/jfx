@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 
+import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.css.StyleManager;
 
 import javafx.css.SimpleStyleableBooleanProperty;
@@ -109,6 +110,7 @@ import javafx.util.Duration;
  * </pre>
  * @since JavaFX 2.0
  */
+@IDProperty("id")
 public class Tooltip extends PopupControl {
 //    private static TooltipBehavior BEHAVIOR = new TooltipBehavior(
 //        new Duration(1000), new Duration(5000), new Duration(600), true);
