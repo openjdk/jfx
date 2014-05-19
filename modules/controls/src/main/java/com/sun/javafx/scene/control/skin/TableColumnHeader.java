@@ -82,7 +82,7 @@ public class TableColumnHeader extends Region {
 
     // Copied from TableColumn. The value here should always be in-sync with
     // the value in TableColumn
-    private static final double DEFAULT_WIDTH = 80.0F;
+    static final double DEFAULT_COLUMN_WIDTH = 80.0F;
 
 
 
@@ -466,7 +466,7 @@ public class TableColumnHeader extends Region {
         // width will be suitable for most values in the column
         final int n = 30;
         if (! autoSizeComplete) {
-            if (getTableColumn() == null || getTableColumn().getWidth() != DEFAULT_WIDTH || getScene() == null) {
+            if (getTableColumn() == null || getTableColumn().getWidth() != DEFAULT_COLUMN_WIDTH || getScene() == null) {
                 return;
             }
             doColumnAutoSize(getTableColumn(), n);
@@ -531,7 +531,7 @@ public class TableColumnHeader extends Region {
         double prefWidth = column.getPrefWidth();
 
         // if the prefWidth has been set, we do _not_ autosize columns
-        if (prefWidth == DEFAULT_WIDTH) {
+        if (prefWidth == DEFAULT_COLUMN_WIDTH) {
             getTableViewSkin().resizeColumnToFitContent(column, cellsToMeasure);
         }
     }

@@ -168,6 +168,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         };
         flow.getHbar().valueProperty().addListener(hbarValueListener);
 
+        // RT-37152
+        flow.getHbar().setUnitIncrement(15);
+        flow.getHbar().setBlockIncrement(TableColumnHeader.DEFAULT_COLUMN_WIDTH);
+
         columnReorderLine = new Region();
         columnReorderLine.getStyleClass().setAll("column-resize-line");
         columnReorderLine.setManaged(false);
