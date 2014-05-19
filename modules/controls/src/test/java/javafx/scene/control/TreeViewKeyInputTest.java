@@ -27,6 +27,7 @@ package javafx.scene.control;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.ListChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -2228,5 +2229,81 @@ public class TreeViewKeyInputTest {
 
         // reset the exception handler
         Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
+    @Test public void test_rt_37130_pageUpAtTop() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(treeView);
+
+        sm.select(5);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageUpAtBottom() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(treeView);
+
+        sm.select(95);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageDownAtTop() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(treeView);
+
+        sm.select(5);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageDownAtBottom() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(treeView);
+
+        sm.select(95);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
     }
 }

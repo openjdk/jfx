@@ -2703,7 +2703,10 @@ public class TreeTableView<S> extends Control {
 
             final int startChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition<>(treeTableView, minRow, (TreeTableColumn<S,?>)minColumn));
             final int endChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition<>(treeTableView, maxRow, (TreeTableColumn<S,?>)maxColumn));
-            handleSelectedCellsListChangeEvent(new NonIterableChange.SimpleAddChange<>(startChangeIndex, endChangeIndex + 1, selectedCellsSeq));
+
+            if (startChangeIndex > -1 && endChangeIndex > -1) {
+                handleSelectedCellsListChangeEvent(new NonIterableChange.SimpleAddChange<>(startChangeIndex, endChangeIndex + 1, selectedCellsSeq));
+            }
         }
 
         @Override public void clearSelection(int index) {

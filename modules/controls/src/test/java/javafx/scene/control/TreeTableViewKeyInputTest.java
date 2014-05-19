@@ -4063,4 +4063,100 @@ public class TreeTableViewKeyInputTest {
         // reset the exception handler
         Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
+
+    @Test public void test_rt_37130_pageUpAtTop() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+        tableView.getColumns().setAll(col);
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        sm.select(5, col);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageUpAtBottom() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+        tableView.getColumns().setAll(col);
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        sm.select(95, col);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageDownAtTop() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+        tableView.getColumns().setAll(col);
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        sm.select(5, col);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageDownAtBottom() {
+        final int items = 100;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+        tableView.getColumns().setAll(col);
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        sm.select(95, col);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
 }

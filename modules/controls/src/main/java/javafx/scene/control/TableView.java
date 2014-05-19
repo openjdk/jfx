@@ -2480,7 +2480,11 @@ public class TableView<S> extends Control {
 
             final int startChangeIndex = selectedCellsMap.indexOf(new TablePosition<>(tableView, minRow, (TableColumn<S,?>)minColumn));
             final int endChangeIndex = selectedCellsMap.indexOf(new TablePosition<>(tableView, maxRow, (TableColumn<S,?>)maxColumn));
-            handleSelectedCellsListChangeEvent(new NonIterableChange.SimpleAddChange<>(startChangeIndex, endChangeIndex + 1, selectedCellsSeq));
+
+            if (startChangeIndex > -1 && endChangeIndex > -1) {
+                ListChangeListener.Change c = new NonIterableChange.SimpleAddChange<>(startChangeIndex, endChangeIndex + 1, selectedCellsSeq);
+                handleSelectedCellsListChangeEvent(c);
+            }
         }
 
         @Override public void clearSelection(int index) {
