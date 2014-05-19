@@ -283,7 +283,9 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
              }
          };
         weakSceneKeyEventHandler = new WeakEventHandler<KeyEvent>(keyEventHandler);
-        control.getScene().addEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
+        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
+            scene.addEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
+        });
         
         // When we click else where in the scene - menu selection should be cleared.
         mouseEventHandler = t -> {
@@ -292,7 +294,9 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             }
         };
         weakSceneMouseEventHandler = new WeakEventHandler<MouseEvent>(mouseEventHandler);
-        control.getScene().addEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
+        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
+            scene.addEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
+        });
         
         weakWindowFocusListener = new WeakChangeListener<Boolean>((ov, t, t1) -> {
             if (!t1) {
@@ -300,16 +304,20 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             }
         });
         // When the parent window looses focus - menu selection should be cleared
-        if (control.getScene().getWindow() != null) {
-            control.getScene().getWindow().focusedProperty().addListener(weakWindowFocusListener);
-        } else {
-            ChangeListener<Window> sceneWindowListener = (observable, oldValue, newValue) -> {
-                if (oldValue != null) oldValue.focusedProperty().removeListener(weakWindowFocusListener);
-                if (newValue != null) newValue.focusedProperty().addListener(weakWindowFocusListener);
-            };
-            weakWindowSceneListener = new WeakChangeListener<Window>(sceneWindowListener);
-            control.getScene().windowProperty().addListener(weakWindowSceneListener);
-        }
+        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
+            if (scene.getWindow() != null) {
+                scene.getWindow().focusedProperty().addListener(weakWindowFocusListener);
+            } else {
+                ChangeListener<Window> sceneWindowListener = (observable, oldValue, newValue) -> {
+                    if (oldValue != null)
+                        oldValue.focusedProperty().removeListener(weakWindowFocusListener);
+                    if (newValue != null)
+                        newValue.focusedProperty().addListener(weakWindowFocusListener);
+                };
+                weakWindowSceneListener = new WeakChangeListener<>(sceneWindowListener);
+                scene.windowProperty().addListener(weakWindowSceneListener);
+            }
+        });
 
         rebuildUI();
         control.getMenus().addListener((ListChangeListener<Menu>) c -> {
@@ -349,7 +357,10 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         } else {
            acceleratorKeyCombo = KeyCombination.keyCombination("F10");
         }
-        getSkinnable().getScene().getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
+        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
+            scene.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
+        });
+
         ParentTraversalEngine engine = new ParentTraversalEngine(getSkinnable());
         engine.addTraverseListener(this);
         getSkinnable().setImpl_traversalEngine(engine);

@@ -32,10 +32,15 @@ package com.sun.javafx.scene.control.skin;
 
 import java.text.Bidi;
 import java.text.BreakIterator;
+import java.util.function.Consumer;
 
 import static javafx.scene.control.OverrunStyle.*;
 import javafx.application.Platform;
 import javafx.application.ConditionalFeature;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.property.Property;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
@@ -55,6 +60,7 @@ import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.tk.Toolkit;
+import javafx.util.Callback;
 
 /**
  * BE REALLY CAREFUL WITH RESTORING OR RESETTING STATE OF helper NODE AS LEFTOVER
@@ -758,5 +764,28 @@ public class Utils {
             }
         }
         return charIndex;
+    }
+
+    // useful method for linking things together when before a property is
+    // necessarily set
+    public static <T> void executeOnceWhenPropertyIsNonNull(ObservableValue<T> p, Consumer<T> consumer) {
+        if (p == null) return;
+
+        T value = p.getValue();
+        if (value != null) {
+            consumer.accept(value);
+        } else {
+            final InvalidationListener listener = new InvalidationListener() {
+                @Override public void invalidated(Observable observable) {
+                    T value = p.getValue();
+
+                    if (value != null) {
+                        p.removeListener(this);
+                        consumer.accept(value);
+                    }
+                }
+            };
+            p.addListener(listener);
+        }
     }
 }

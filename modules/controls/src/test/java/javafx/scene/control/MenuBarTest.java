@@ -28,6 +28,8 @@ package javafx.scene.control;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import javafx.application.Application;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -412,5 +414,10 @@ public class MenuBarTest {
         //remove menuitem from menu that was just removed itself.
         menu.getItems().remove(menuItem1);
         assertEquals(true, menu.getItems().isEmpty());
+    }
+
+    @Test public void test_rt_37118() {
+        MenuBar menuBar = new MenuBar();
+        MenuBarSkin menuBarSkin = new MenuBarSkin(menuBar);
     }
 }
