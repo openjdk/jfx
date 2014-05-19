@@ -29,7 +29,6 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/rt-closed.iml" filepath="$PROJECT_DIR$/.idea/rt-closed.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/swing.iml" filepath="$PROJECT_DIR$/.idea/swing.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/swt.iml" filepath="$PROJECT_DIR$/.idea/swt.iml" />
-      <module fileurl="file://$PROJECT_DIR$/../team/.idea/team.iml" filepath="$PROJECT_DIR$/../team/.idea/team.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/web.iml" filepath="$PROJECT_DIR$/.idea/web.iml" />
     </modules>
   </component>
