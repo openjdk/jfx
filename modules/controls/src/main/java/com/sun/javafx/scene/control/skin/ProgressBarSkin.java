@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.application.Platform;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -42,41 +41,30 @@ import javafx.css.CssMetaData;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
-import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
-import javafx.stage.Window;
 import javafx.util.Duration;
 
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.behavior.ProgressBarBehavior;
 
 import javafx.css.Styleable;
 
 
-public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBehavior<ProgressBar>> {
+public class ProgressBarSkin extends ProgressIndicatorSkin {
 
     /***************************************************************************
      *                                                                         *
-     * UI Subcomponents                                                        *
+     * CSS properties                                                          *
      *                                                                         *
      **************************************************************************/
-
-    private Bar bar;
-    private StackPane track;
-    private Region clipRegion;
-
-    // clean up progress so we never go out of bounds or update graphics more than twice per pixel
-    private double barWidth;
 
     /** The length of the bouncing progress bar in indeterminate state */
     private DoubleProperty indeterminateBarLength = null;
@@ -203,8 +191,22 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         return indeterminateBarAnimationTime == null ? 2.0 : indeterminateBarAnimationTime.get();
     };
 
-    private Timeline indeterminateTimeline;
-    private boolean timelineNulled = false;
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Private fields                                                          *
+     *                                                                         *
+     **************************************************************************/
+
+    private StackPane bar;
+    private StackPane track;
+    private Region clipRegion;
+
+    // clean up progress so we never go out of bounds or update graphics more than twice per pixel
+    private double barWidth;
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -213,54 +215,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
      **************************************************************************/
 
     public ProgressBarSkin(ProgressBar control) {
-        super(control, new ProgressBarBehavior<ProgressBar>(control));
-
-        InvalidationListener indeterminateListener = valueModel -> {
-            initialize();
-        };
-        control.indeterminateProperty().addListener(indeterminateListener);
-
-        InvalidationListener visibilityListener = valueModel -> {
-            if (getSkinnable().isIndeterminate() && timelineNulled && indeterminateTimeline == null) {
-                timelineNulled = false;
-                createIndeterminateTimeline();
-            }
-
-            if (indeterminateTimeline != null) {
-                if (getSkinnable().impl_isTreeVisible() && getSkinnable().getScene() != null) {
-                    indeterminateTimeline.play();
-                }
-                else {
-                    indeterminateTimeline.pause();
-                    indeterminateTimeline = null;
-                    timelineNulled = true;
-                }
-            }
-        };
-        control.visibleProperty().addListener(visibilityListener);
-        control.parentProperty().addListener(visibilityListener);
-
-        InvalidationListener sceneListener = valueModel -> {
-            if (indeterminateTimeline != null) {
-                if (getSkinnable().getScene() == null) {
-                    indeterminateTimeline.pause();
-                    indeterminateTimeline = null;
-                    timelineNulled = true;
-                }
-            }
-            else {
-                if (getSkinnable().getScene() != null && getSkinnable().isIndeterminate()) {
-                    timelineNulled = false;
-                    createIndeterminateTimeline();
-                    if (getSkinnable().impl_isTreeVisible()) {
-                        indeterminateTimeline.play();
-                    }
-                    getSkinnable().requestLayout();
-                }
-            }
-        };
-        control.sceneProperty().addListener(sceneListener);
-
+        super(control);
 
         barWidth = ((int) (control.getWidth() - snappedLeftInset() - snappedRightInset()) * 2 * Math.min(1, Math.max(0, control.getProgress()))) / 2.0F;
 
@@ -268,123 +223,53 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             updateProgress();
         };
         control.widthProperty().addListener(listener);
-        control.progressProperty().addListener(listener);
 
         initialize();
         getSkinnable().requestLayout();
     }
 
-    private void initialize() {
-        ProgressBar control = getSkinnable();
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Implementation                                                          *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override protected void initialize() {
         track = new StackPane();
         track.getStyleClass().setAll("track");
 
-        bar = new Bar(this);
+        bar = new StackPane() {
+            {
+                impl_treeVisibleProperty().addListener(treeVisibleListener);
+            }
+        };
         bar.getStyleClass().setAll("bar");
 
         getChildren().setAll(track, bar);
 
         // create a region to use as the clip for skin for animated indeterminate state
         clipRegion = new Region();
+
         // listen to the backgrounds on the bar and apply them to the clip but making them solid black for 100%
         // solid anywhere the bar draws
-        bar.backgroundProperty().addListener(
-                (observable, oldValue, newValue) -> {
-                    if (newValue != null && !newValue.getFills().isEmpty()) {
-                        final BackgroundFill[] fills = new BackgroundFill[newValue.getFills().size()];
-                        for (int i = 0; i < newValue.getFills().size(); i++) {
-                            BackgroundFill bf = newValue.getFills().get(i);
-                            fills[i] = new BackgroundFill(Color.BLACK,bf.getRadii(),bf.getInsets());
-                        }
-                        clipRegion.setBackground(new Background(fills));
-                    }
+        bar.backgroundProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.getFills().isEmpty()) {
+                final BackgroundFill[] fills = new BackgroundFill[newValue.getFills().size()];
+                for (int i = 0; i < newValue.getFills().size(); i++) {
+                    BackgroundFill bf = newValue.getFills().get(i);
+                    fills[i] = new BackgroundFill(Color.BLACK,bf.getRadii(),bf.getInsets());
                 }
-        );
-    }
-
-    void pauseBar(boolean pause) {
-        if (indeterminateTimeline != null) {
-            if (pause) {
-                indeterminateTimeline.pause();
+                clipRegion.setBackground(new Background(fills));
             }
-            else {
-                indeterminateTimeline.play();
-            }
-        }
+        });
     }
 
-    class Bar extends StackPane {
-        ProgressBarSkin pbSkin;
-        Bar(ProgressBarSkin pb) {
-            super();
-            pbSkin = pb;
-            InvalidationListener treeVisibilityListener = valueModel -> {
-                if (getSkinnable().impl_isTreeVisible()) {
-                    pbSkin.pauseBar(false);
-                }
-                else {
-                    pbSkin.pauseBar(true);
-                }
-            };
-            impl_treeVisibleProperty().addListener(treeVisibilityListener);
-        }
-    }
-
-    private boolean isVisibleInClip() {
-        Parent p1 = getSkinnable();
-
-        Bounds ourBounds1 = p1.localToScene(getSkinnable().getLayoutBounds());
-        while (p1 != null) {
-            Node clip = p1.getClip();
-            if (clip != null) {
-                Bounds clipBounds1 = p1.localToScene(clip.getLayoutBounds());
-                if (!ourBounds1.intersects(clipBounds1)) {
-                    return false;
-                }
-            }
-            p1 = p1.getParent();
-        }
-        return true;
-    }
-
-    private boolean isInvisibleOrDisconnected() {
-        Scene s = getSkinnable().getScene();
-        if (s == null) {
-            return true;
-        }
-        Window w = s.getWindow();
-        if (w == null) {
-            return true;
-        }
-        if (w.impl_getPeer() == null) {
-            return true;
-        }
-        if (!getSkinnable().impl_isTreeVisible()) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private boolean stopIfInvisibleOrDisconnected() {
-        if (isInvisibleOrDisconnected()) {
-            if (indeterminateTimeline != null) {
-            indeterminateTimeline.stop();
-            indeterminateTimeline = null;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    static final private Duration CLIPPED_DELAY = new Duration(300);
-    static final private Duration UNCLIPPED_DELAY = new Duration(0);
-
-    private void createIndeterminateTimeline() {
+    @Override protected void createIndeterminateTimeline() {
         if (indeterminateTimeline != null) indeterminateTimeline.stop();
 
-        ProgressBar control = getSkinnable();
+        ProgressIndicator control = getSkinnable();
         final double w = control.getWidth() - (snappedLeftInset() + snappedRightInset());
         final double startX = getIndeterminateBarEscape()? -getIndeterminateBarLength() : 0;
         final double endX = getIndeterminateBarEscape()? w : w - getIndeterminateBarLength();
@@ -402,110 +287,52 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
 
         if (getIndeterminateBarFlip()) {
             indeterminateTimeline.getKeyFrames().addAll(
-                    new KeyFrame(
-                            Duration.millis(0),
-                            event -> {
-                                bar.setScaleX(-1);
+                new KeyFrame(Duration.millis(0), event -> {
+                    bar.setScaleX(-1);
 
-                                /**
-                                 * Stop the animation if the ProgressBar is removed
-                                 * from a Scene, or is invisible.
-                                 * Pause the animation if it's outside of a clipped
-                                 * region (e.g. not visible in a ScrollPane)
-                                */
-                                if (indeterminateTimeline != null) {
-                                    stopIfInvisibleOrDisconnected();
-                                    if (!isVisibleInClip()) {
-                                        Platform.runLater(() -> {
-                                            if (indeterminateTimeline != null) {
-                                                if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
-                                                    indeterminateTimeline.setDelay(CLIPPED_DELAY);
-                                                }
-                                                indeterminateTimeline.stop();
-                                                indeterminateTimeline.jumpTo(Duration.ZERO);
-                                                indeterminateTimeline.play();
-                                            }
-                                        });
-                                    }
-                                    else {
-                                        Platform.runLater(() -> {
-                                            if (indeterminateTimeline != null) {
-                                                if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
-                                                    indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
-                                                }
-                                            }
-                                        });
-                                    }
-                                }
-                            },
-                            new KeyValue(bar.translateXProperty(), startX)
-                    ),
-                    new KeyFrame(
-                            Duration.millis(getIndeterminateBarAnimationTime() * 1000),
-                            event -> {
-                                bar.setScaleX(1);                            },
-                            new KeyValue(bar.translateXProperty(), endX)
-                    ),
-                    new KeyFrame(
-                            Duration.millis((getIndeterminateBarAnimationTime() * 1000)+1)
-                    ),
-                    new KeyFrame(
-                            Duration.millis(getIndeterminateBarAnimationTime() * 2000),
-                            new KeyValue(bar.translateXProperty(), startX)
-                    )
+                    /**
+                     * Stop the animation if the ProgressBar is removed
+                     * from a Scene, or is invisible.
+                     * Pause the animation if it's outside of a clipped
+                     * region (e.g. not visible in a ScrollPane)
+                    */
+                    optimiseAnimation();
+                },
+                new KeyValue(bar.translateXProperty(), startX)
+                ),
+                new KeyFrame(
+                    Duration.millis(getIndeterminateBarAnimationTime() * 1000),
+                    event -> bar.setScaleX(1),
+                    new KeyValue(bar.translateXProperty(), endX)
+                ),
+                new KeyFrame(
+                    Duration.millis((getIndeterminateBarAnimationTime() * 1000)+1)
+                ),
+                new KeyFrame(
+                    Duration.millis(getIndeterminateBarAnimationTime() * 2000),
+                    new KeyValue(bar.translateXProperty(), startX)
+                )
             );
         } else {
             indeterminateTimeline.getKeyFrames().addAll(
-                    new KeyFrame(
-                            Duration.millis(0),
-                            event -> {
-                                bar.setScaleX(-1);
-                                /**
-                                 * Stop the animation if the ProgressBar is removed
-                                 * from a Scene, or is invisible.
-                                 * Pause the animation if it's outside of a clipped
-                                 * region (e.g. not visible in a ScrollPane)
-                                */
-                                if (indeterminateTimeline != null) {
-                                    stopIfInvisibleOrDisconnected();
-                                    if (!isVisibleInClip()) {
-                                        Platform.runLater(() -> {
-                                            if (indeterminateTimeline != null) {
-                                                if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
-                                                    indeterminateTimeline.setDelay(CLIPPED_DELAY);
-                                                }
-                                                indeterminateTimeline.stop();
-                                                indeterminateTimeline.jumpTo(Duration.ZERO);
-                                                indeterminateTimeline.play();
-                                            }
-                                        });
-                                    }
-                                    else {
-                                        Platform.runLater(() -> {
-                                            if (indeterminateTimeline != null) {
-                                                if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
-                                                    indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
-                                                }
-                                            }
-                                        });
-                                    }
-                                }
-                            },
-
-                            new KeyValue(bar.translateXProperty(), startX)
-                    ),
-                    new KeyFrame(
-                            Duration.millis(getIndeterminateBarAnimationTime() * 1000*2),
-                            new KeyValue(bar.translateXProperty(), endX)
-                    )
+                new KeyFrame(Duration.millis(0), event -> {
+                        bar.setScaleX(-1);
+                        optimiseAnimation();
+                    },
+                    new KeyValue(bar.translateXProperty(), startX)
+                ),
+                new KeyFrame(
+                    Duration.millis(getIndeterminateBarAnimationTime() * 1000*2),
+                    new KeyValue(bar.translateXProperty(), endX)
+                )
             );
         }
 
     }
 
     boolean wasIndeterminate = false;
-    private void updateProgress() {
-        ProgressBar control = getSkinnable();
+    @Override protected void updateProgress() {
+        ProgressIndicator control = getSkinnable();
         // RT-33789: if the ProgressBar was indeterminate and still is indeterminate, don't update the bar width
         final boolean isIndeterminate = control.isIndeterminate();
         if (!(isIndeterminate && wasIndeterminate)) {
@@ -515,26 +342,18 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         wasIndeterminate = isIndeterminate;
     }
 
-    @Override
-    public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
-        return Node.BASELINE_OFFSET_SAME_AS_HEIGHT;
-    }
 
-    @Override public void dispose() {
-        super.dispose();
-
-        if (indeterminateTimeline != null) {
-            indeterminateTimeline.stop();
-            indeterminateTimeline.getKeyFrames().clear();
-            indeterminateTimeline = null;
-        }
-    }
 
     /***************************************************************************
      *                                                                         *
      * Layout                                                                  *
      *                                                                         *
      **************************************************************************/
+
+    @Override
+    public double computeBaselineOffset(double topInset, double rightInset, double bottomInset, double leftInset) {
+        return Node.BASELINE_OFFSET_SAME_AS_HEIGHT;
+    }
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Math.max(100, leftInset + bar.prefWidth(getSkinnable().getWidth()) + rightInset);
@@ -555,7 +374,7 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
 
-        final ProgressBar control = getSkinnable();
+        final ProgressIndicator control = getSkinnable();
         boolean isIndeterminate = control.isIndeterminate();
 
         // resize clip
@@ -584,6 +403,8 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
         }
     }
 
+
+    
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -669,7 +490,6 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
 
          private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
          static {
-
             final List<CssMetaData<? extends Styleable, ?>> styleables =
                 new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
             styleables.add(INDETERMINATE_BAR_LENGTH);
@@ -677,7 +497,6 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
             styleables.add(INDETERMINATE_BAR_FLIP);
             styleables.add(INDETERMINATE_BAR_ANIMATION_TIME);
             STYLEABLES = Collections.unmodifiableList(styleables);
-
          }
     }
 
@@ -696,5 +515,4 @@ public class ProgressBarSkin extends BehaviorSkinBase<ProgressBar, ProgressBarBe
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
     }
-
 }
