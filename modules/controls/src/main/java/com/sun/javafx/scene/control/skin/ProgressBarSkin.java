@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.List;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.animation.Transition;
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.When;
 import javafx.beans.property.BooleanProperty;
@@ -66,7 +68,9 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
      *                                                                         *
      **************************************************************************/
 
-    /** The length of the bouncing progress bar in indeterminate state */
+    /**
+     * The length of the bouncing progress bar in indeterminate state
+     */
     private DoubleProperty indeterminateBarLength = null;
     private DoubleProperty indeterminateBarLengthProperty() {
         if (indeterminateBarLength == null) {
@@ -96,7 +100,9 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         return indeterminateBarLength == null ? 60.0 : indeterminateBarLength.get();
     }
 
-    /** If the progress bar should escape the ends of the progress bar region in indeterminate state*/
+    /**
+     * If the progress bar should escape the ends of the progress bar region in indeterminate state
+     */
     private BooleanProperty indeterminateBarEscape = null;
     private BooleanProperty indeterminateBarEscapeProperty() {
         if (indeterminateBarEscape == null) {
@@ -127,7 +133,9 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         return indeterminateBarEscape == null ? true : indeterminateBarEscape.get();
     }
 
-    /** If the progress bar should flip when it gets to the ends in indeterminate state*/
+    /**
+     * If the progress bar should flip when it gets to the ends in indeterminate state
+     */
     private BooleanProperty indeterminateBarFlip = null;
     private BooleanProperty indeterminateBarFlipProperty() {
         if (indeterminateBarFlip == null) {
@@ -162,6 +170,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
      * one edge to the other
      */
     private DoubleProperty indeterminateBarAnimationTime = null;
+
     private DoubleProperty indeterminateBarAnimationTimeProperty() {
         if (indeterminateBarAnimationTime == null) {
             indeterminateBarAnimationTime = new StyleableDoubleProperty(2.0) {
@@ -187,10 +196,6 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         return indeterminateBarAnimationTime;
     }
 
-    private Double getIndeterminateBarAnimationTime() {
-        return indeterminateBarAnimationTime == null ? 2.0 : indeterminateBarAnimationTime.get();
-    };
-
 
 
     /***************************************************************************
@@ -213,7 +218,6 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
      * Constructors                                                            *
      *                                                                         *
      **************************************************************************/
-
     public ProgressBarSkin(ProgressBar control) {
         super(control);
 
@@ -227,7 +231,6 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         initialize();
         getSkinnable().requestLayout();
     }
-
 
 
     /***************************************************************************
@@ -266,72 +269,30 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         });
     }
 
-    @Override protected void createIndeterminateTimeline() {
-        if (indeterminateTimeline != null) indeterminateTimeline.stop();
+    @Override
+    protected void createIndeterminateTimeline() {
+        if (indeterminateTransition != null) indeterminateTransition.stop();
 
         ProgressIndicator control = getSkinnable();
         final double w = control.getWidth() - (snappedLeftInset() + snappedRightInset());
-        final double startX = getIndeterminateBarEscape()? -getIndeterminateBarLength() : 0;
-        final double endX = getIndeterminateBarEscape()? w : w - getIndeterminateBarLength();
+        final double startX = getIndeterminateBarEscape() ? -getIndeterminateBarLength() : 0;
+        final double endX = getIndeterminateBarEscape() ? w : w - getIndeterminateBarLength();
 
         // Set up the timeline.  We do not want to reverse if we are not flipping.
-        indeterminateTimeline = new Timeline();
-        indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
-        indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+        indeterminateTransition = new IndeterminateTransition(startX, endX, getIndeterminateBarFlip(), this);
+        indeterminateTransition.setCycleCount(Timeline.INDEFINITE);
 
         if (!clipRegion.translateXProperty().isBound()) {
             clipRegion.translateXProperty().bind(new When(bar.scaleXProperty().isEqualTo(-1.0, 1e-100)).
                     then(bar.translateXProperty().subtract(w).add(getIndeterminateBarLength())).
                     otherwise(bar.translateXProperty().negate()));
         }
-
-        if (getIndeterminateBarFlip()) {
-            indeterminateTimeline.getKeyFrames().addAll(
-                new KeyFrame(Duration.millis(0), event -> {
-                    bar.setScaleX(-1);
-
-                    /**
-                     * Stop the animation if the ProgressBar is removed
-                     * from a Scene, or is invisible.
-                     * Pause the animation if it's outside of a clipped
-                     * region (e.g. not visible in a ScrollPane)
-                    */
-                    optimiseAnimation();
-                },
-                new KeyValue(bar.translateXProperty(), startX)
-                ),
-                new KeyFrame(
-                    Duration.millis(getIndeterminateBarAnimationTime() * 1000),
-                    event -> bar.setScaleX(1),
-                    new KeyValue(bar.translateXProperty(), endX)
-                ),
-                new KeyFrame(
-                    Duration.millis((getIndeterminateBarAnimationTime() * 1000)+1)
-                ),
-                new KeyFrame(
-                    Duration.millis(getIndeterminateBarAnimationTime() * 2000),
-                    new KeyValue(bar.translateXProperty(), startX)
-                )
-            );
-        } else {
-            indeterminateTimeline.getKeyFrames().addAll(
-                new KeyFrame(Duration.millis(0), event -> {
-                        bar.setScaleX(-1);
-                        optimiseAnimation();
-                    },
-                    new KeyValue(bar.translateXProperty(), startX)
-                ),
-                new KeyFrame(
-                    Duration.millis(getIndeterminateBarAnimationTime() * 1000*2),
-                    new KeyValue(bar.translateXProperty(), endX)
-                )
-            );
-        }
-
     }
 
     boolean wasIndeterminate = false;
-    @Override protected void updateProgress() {
+
+    @Override
+    protected void updateProgress() {
         ProgressIndicator control = getSkinnable();
         // RT-33789: if the ProgressBar was indeterminate and still is indeterminate, don't update the bar width
         final boolean isIndeterminate = control.isIndeterminate();
@@ -341,7 +302,6 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         }
         wasIndeterminate = isIndeterminate;
     }
-
 
 
     /***************************************************************************
@@ -355,33 +315,38 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         return Node.BASELINE_OFFSET_SAME_AS_HEIGHT;
     }
 
-    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+    @Override
+    protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Math.max(100, leftInset + bar.prefWidth(getSkinnable().getWidth()) + rightInset);
     }
 
-    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+    @Override
+    protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset + bar.prefHeight(width) + bottomInset;
     }
 
-    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+    @Override
+    protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefWidth(height);
     }
 
-    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+    @Override
+    protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return getSkinnable().prefHeight(width);
     }
 
-    @Override protected void layoutChildren(final double x, final double y,
-            final double w, final double h) {
+    @Override
+    protected void layoutChildren(final double x, final double y,
+                                  final double w, final double h) {
 
         final ProgressIndicator control = getSkinnable();
         boolean isIndeterminate = control.isIndeterminate();
 
         // resize clip
-        clipRegion.resizeRelocate(0,0, w, h);
+        clipRegion.resizeRelocate(0, 0, w, h);
 
         track.resizeRelocate(x, y, w, h);
-        bar.resizeRelocate(x, y, isIndeterminate? getIndeterminateBarLength() : barWidth,h);
+        bar.resizeRelocate(x, y, isIndeterminate ? getIndeterminateBarLength() : barWidth, h);
 
         // things should be invisible only when well below minimum length
         track.setVisible(true);
@@ -390,13 +355,15 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         if (isIndeterminate) {
             createIndeterminateTimeline();
             if (getSkinnable().impl_isTreeVisible()) {
-                indeterminateTimeline.play();
+                indeterminateTransition.play();
             }
+
             // apply clip
             bar.setClip(clipRegion);
-        } else if (indeterminateTimeline != null) {
-            indeterminateTimeline.stop();
-            indeterminateTimeline = null;
+        } else if (indeterminateTransition != null) {
+            indeterminateTransition.stop();
+            indeterminateTransition = null;
+
             // remove clip
             bar.setClip(null);
             clipRegion.translateXProperty().unbind();
@@ -404,100 +371,101 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
     }
 
 
-    
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
      *                                                                         *
      **************************************************************************/
 
-     /**
-      * Super-lazy instantiation pattern from Bill Pugh.
-      * @treatAsPrivate implementation detail
-      */
-     private static class StyleableProperties {
-         private static final CssMetaData<ProgressBar,Number> INDETERMINATE_BAR_LENGTH =
-            new CssMetaData<ProgressBar,Number>("-fx-indeterminate-bar-length",
-                 SizeConverter.getInstance(), 60.0) {
+    /**
+     * Super-lazy instantiation pattern from Bill Pugh.
+     *
+     * @treatAsPrivate implementation detail
+     */
+    private static class StyleableProperties {
+        private static final CssMetaData<ProgressBar, Number> INDETERMINATE_BAR_LENGTH =
+                new CssMetaData<ProgressBar, Number>("-fx-indeterminate-bar-length",
+                        SizeConverter.getInstance(), 60.0) {
 
-            @Override
-            public boolean isSettable(ProgressBar n) {
-                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return skin.indeterminateBarLength == null ||
-                        !skin.indeterminateBarLength.isBound();
-            }
+                    @Override
+                    public boolean isSettable(ProgressBar n) {
+                        final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                        return skin.indeterminateBarLength == null ||
+                                !skin.indeterminateBarLength.isBound();
+                    }
 
-            @Override
-            public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
-                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indeterminateBarLengthProperty();
-            }
-        };
+                    @Override
+                    public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
+                        final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                        return (StyleableProperty<Number>) (WritableValue<Number>) skin.indeterminateBarLengthProperty();
+                    }
+                };
 
-         private static final CssMetaData<ProgressBar,Boolean> INDETERMINATE_BAR_ESCAPE =
-            new CssMetaData<ProgressBar,Boolean>("-fx-indeterminate-bar-escape",
-                 BooleanConverter.getInstance(), Boolean.TRUE) {
+        private static final CssMetaData<ProgressBar, Boolean> INDETERMINATE_BAR_ESCAPE =
+                new CssMetaData<ProgressBar, Boolean>("-fx-indeterminate-bar-escape",
+                        BooleanConverter.getInstance(), Boolean.TRUE) {
 
-            @Override
-            public boolean isSettable(ProgressBar n) {
-                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return skin.indeterminateBarEscape == null ||
-                        !skin.indeterminateBarEscape.isBound();
-            }
+                    @Override
+                    public boolean isSettable(ProgressBar n) {
+                        final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                        return skin.indeterminateBarEscape == null ||
+                                !skin.indeterminateBarEscape.isBound();
+                    }
 
-            @Override
-            public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
-                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.indeterminateBarEscapeProperty();
-            }
-        };
+                    @Override
+                    public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
+                        final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                        return (StyleableProperty<Boolean>) (WritableValue<Boolean>) skin.indeterminateBarEscapeProperty();
+                    }
+                };
 
-         private static final CssMetaData<ProgressBar,Boolean> INDETERMINATE_BAR_FLIP =
-            new CssMetaData<ProgressBar,Boolean>("-fx-indeterminate-bar-flip",
-                 BooleanConverter.getInstance(), Boolean.TRUE) {
+        private static final CssMetaData<ProgressBar, Boolean> INDETERMINATE_BAR_FLIP =
+                new CssMetaData<ProgressBar, Boolean>("-fx-indeterminate-bar-flip",
+                        BooleanConverter.getInstance(), Boolean.TRUE) {
 
-            @Override
-            public boolean isSettable(ProgressBar n) {
-                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return skin.indeterminateBarFlip == null ||
-                        !skin.indeterminateBarFlip.isBound();
-            }
+                    @Override
+                    public boolean isSettable(ProgressBar n) {
+                        final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                        return skin.indeterminateBarFlip == null ||
+                                !skin.indeterminateBarFlip.isBound();
+                    }
 
-            @Override
-            public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
-                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)skin.indeterminateBarFlipProperty();
-            }
-        };
+                    @Override
+                    public StyleableProperty<Boolean> getStyleableProperty(ProgressBar n) {
+                        final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                        return (StyleableProperty<Boolean>) (WritableValue<Boolean>) skin.indeterminateBarFlipProperty();
+                    }
+                };
 
-         private static final CssMetaData<ProgressBar,Number> INDETERMINATE_BAR_ANIMATION_TIME =
-            new CssMetaData<ProgressBar,Number>("-fx-indeterminate-bar-animation-time",
-                 SizeConverter.getInstance(), 2.0) {
+        private static final CssMetaData<ProgressBar, Number> INDETERMINATE_BAR_ANIMATION_TIME =
+                new CssMetaData<ProgressBar, Number>("-fx-indeterminate-bar-animation-time",
+                        SizeConverter.getInstance(), 2.0) {
 
-            @Override
-            public boolean isSettable(ProgressBar n) {
-                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return skin.indeterminateBarAnimationTime == null ||
-                        !skin.indeterminateBarAnimationTime.isBound();
-            }
+                    @Override
+                    public boolean isSettable(ProgressBar n) {
+                        final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                        return skin.indeterminateBarAnimationTime == null ||
+                                !skin.indeterminateBarAnimationTime.isBound();
+                    }
 
-            @Override
-            public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
-                final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
-                return (StyleableProperty<Number>)(WritableValue<Number>)skin.indeterminateBarAnimationTimeProperty();
-            }
-        };
+                    @Override
+                    public StyleableProperty<Number> getStyleableProperty(ProgressBar n) {
+                        final ProgressBarSkin skin = (ProgressBarSkin) n.getSkin();
+                        return (StyleableProperty<Number>) (WritableValue<Number>) skin.indeterminateBarAnimationTimeProperty();
+                    }
+                };
 
-         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-         static {
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+
+        static {
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+                    new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
             styleables.add(INDETERMINATE_BAR_LENGTH);
             styleables.add(INDETERMINATE_BAR_ESCAPE);
             styleables.add(INDETERMINATE_BAR_FLIP);
             styleables.add(INDETERMINATE_BAR_ANIMATION_TIME);
             STYLEABLES = Collections.unmodifiableList(styleables);
-         }
+        }
     }
 
     /**
@@ -514,5 +482,37 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
+    }
+
+
+    private static class IndeterminateTransition extends Transition {
+        private final WeakReference<ProgressBarSkin> skin;
+        private final double startX;
+        private final double endX;
+        private final boolean flip;
+
+        public IndeterminateTransition(double startX, double endX, boolean flip, ProgressBarSkin progressBarSkin) {
+            this.startX = startX;
+            this.endX = endX;
+            this.flip = flip;
+            this.skin = new WeakReference<>(progressBarSkin);
+            setCycleDuration(Duration.seconds(3));
+        }
+
+        @Override
+        protected void interpolate(double frac) {
+            ProgressBarSkin s = skin.get();
+            if (s == null) {
+                stop();
+            } else {
+                if (frac <= 0.5 || !flip) {
+                    s.bar.setScaleX(-1);
+                    s.bar.setTranslateX(startX + (flip ? 2 : 1) * frac * (endX - startX));
+                } else {
+                    s.bar.setScaleX(1);
+                    s.bar.setTranslateX(startX + 2 * (1 - frac) * (endX - startX));
+                }
+            }
+        }
     }
 }

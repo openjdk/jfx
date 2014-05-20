@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
+import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -40,12 +41,9 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.Pane;
@@ -58,7 +56,6 @@ import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
-import javafx.stage.Window;
 import javafx.util.Duration;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableObjectProperty;
@@ -175,8 +172,7 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
     private DeterminateIndicator determinateIndicator;
     private ProgressIndicator control;
 
-    protected Timeline indeterminateTimeline;
-    private boolean timelineNulled = false;
+    protected Animation indeterminateTransition;
 
 
 
@@ -192,9 +188,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
         this.control = control;
         this.control.indeterminateProperty().addListener(indeterminateListener);
         this.control.progressProperty().addListener(progressListener);
-        this.control.visibleProperty().addListener(visibilityListener);
-        this.control.parentProperty().addListener(visibilityListener);
-        this.control.sceneProperty().addListener(sceneListener);
 
         initialize();
     }
@@ -217,15 +210,15 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
             spinner = new IndeterminateSpinner(spinEnabled.get(), progressColor.get());
             getChildren().setAll(spinner);
             if (control.impl_isTreeVisible()) {
-                if (indeterminateTimeline != null) {
-                    indeterminateTimeline.play();
+                if (indeterminateTransition != null) {
+                    indeterminateTransition.play();
                 }
             }
         } else {
             // clean up after spinner
             if (spinner != null) {
-                if (indeterminateTimeline != null) {
-                    indeterminateTimeline.stop();
+                if (indeterminateTransition != null) {
+                    indeterminateTransition.stop();
                 }
                 spinner = null;
             }
@@ -239,10 +232,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
     @Override public void dispose() {
         super.dispose();
 
-        if (indeterminateTimeline != null) {
-            indeterminateTimeline.stop();
-            indeterminateTimeline.getKeyFrames().clear();
-            indeterminateTimeline = null;
+        if (indeterminateTransition != null) {
+            indeterminateTransition.stop();
+            indeterminateTransition = null;
         }
 
         if (spinner != null) {
@@ -267,84 +259,19 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
     }
 
     protected void pauseTimeline(boolean pause) {
-        if (indeterminateTimeline != null) {
+        if (getSkinnable().isIndeterminate()) {
+            if (indeterminateTransition == null) {
+                createIndeterminateTimeline();
+            }
             if (pause) {
-                indeterminateTimeline.pause();
+                indeterminateTransition.pause();
             } else {
-                indeterminateTimeline.play();
+                indeterminateTransition.play();
             }
         }
     }
 
-    protected boolean isVisibleInClip() {
-        final Bounds ourBounds = control.localToScene(control.getLayoutBounds());
-        Parent parent = control;
-        while (parent != null) {
-            final Node clip = parent.getClip();
-            if (clip != null) {
-                final Bounds clipBounds = parent.localToScene(clip.getLayoutBounds());
-                if (ourBounds.intersects(clipBounds)) {
-                    return true;
-                }
-            }
-            parent = parent.getParent();
-        }
-        return false;
-    }
 
-    protected boolean isInvisibleOrDisconnected() {
-        Scene s = getSkinnable().getScene();
-        if (s == null) {
-            return true;
-        }
-        Window w = s.getWindow();
-        if (w == null) {
-            return true;
-        }
-        if (w.impl_getPeer() == null) {
-            return true;
-        }
-        if (!getSkinnable().impl_isTreeVisible()) {
-            return true;
-        }
-
-        return false;
-    }
-
-    protected boolean stopIfInvisibleOrDisconnected() {
-        if (isInvisibleOrDisconnected()) {
-            if (indeterminateTimeline != null) {
-                indeterminateTimeline.stop();
-                indeterminateTimeline = null;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Stop the animation if the ProgressBar is removed
-     * from a Scene, or is invisible.
-     * Pause the animation if it's outside of a clipped
-     * region (e.g. not visible in a ScrollPane)
-     */
-    protected void optimiseAnimation() {
-        if (indeterminateTimeline != null) {
-            if (stopIfInvisibleOrDisconnected()) {
-                return;
-            }
-            if (!isVisibleInClip()) {
-                if (indeterminateTimeline.getDelay().compareTo(CLIPPED_DELAY) != 0) {
-                    indeterminateTimeline.setDelay(CLIPPED_DELAY);
-                }
-            }
-            else {
-                if (indeterminateTimeline.getDelay().compareTo(UNCLIPPED_DELAY) != 0) {
-                    indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
-                }
-            }
-        }
-    }
 
     /***************************************************************************
      *                                                                         *
@@ -357,46 +284,9 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
 
     private final InvalidationListener progressListener = valueModel -> updateProgress();
 
-    private final InvalidationListener visibilityListener = valueModel -> {
-        if (getSkinnable().isIndeterminate() && timelineNulled && indeterminateTimeline == null) {
-            timelineNulled = false;
-            createIndeterminateTimeline();
-        }
-
-        if (indeterminateTimeline != null) {
-            if (getSkinnable().impl_isTreeVisible() && getSkinnable().getScene() != null) {
-                indeterminateTimeline.play();
-            } else {
-                indeterminateTimeline.pause();
-                indeterminateTimeline = null;
-                timelineNulled = true;
-            }
-        }
-    };
-
-    private final InvalidationListener sceneListener = valueModel -> {
-        if (indeterminateTimeline != null) {
-            if (getSkinnable().getScene() == null) {
-                indeterminateTimeline.pause();
-                indeterminateTimeline = null;
-                timelineNulled = true;
-            }
-        }
-        else {
-            if (getSkinnable().getScene() != null && getSkinnable().isIndeterminate()) {
-                timelineNulled = false;
-                createIndeterminateTimeline();
-                if (getSkinnable().impl_isTreeVisible()) {
-                    indeterminateTimeline.play();
-                }
-                getSkinnable().requestLayout();
-            }
-        }
-    };
-
     protected final InvalidationListener treeVisibleListener = observable -> {
         final boolean isTreeVisible = getSkinnable().impl_isTreeVisible();
-        if (indeterminateTimeline != null) {
+        if (indeterminateTransition != null) {
             pauseTimeline(! isTreeVisible);
         } else if (isTreeVisible) {
             createIndeterminateTimeline();
@@ -673,18 +563,15 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
 
         private void rebuildTimeline() {
             if (spinEnabled) {
-                if (indeterminateTimeline == null) {
-                    indeterminateTimeline = new Timeline();
-                    indeterminateTimeline.setCycleCount(Timeline.INDEFINITE);
-                    indeterminateTimeline.setDelay(UNCLIPPED_DELAY);
+                if (indeterminateTransition == null) {
+                    indeterminateTransition = new Timeline();
+                    indeterminateTransition.setCycleCount(Timeline.INDEFINITE);
+                    indeterminateTransition.setDelay(UNCLIPPED_DELAY);
                 } else {
-                    indeterminateTimeline.stop();
-                    indeterminateTimeline.getKeyFrames().clear();
+                    indeterminateTransition.stop();
+                    ((Timeline)indeterminateTransition).getKeyFrames().clear();
                 }
                 final ObservableList<KeyFrame> keyFrames = FXCollections.<KeyFrame>observableArrayList();
-                keyFrames.add(new KeyFrame(Duration.millis(0), event -> {
-                    optimiseAnimation();
-                }));
 
                 keyFrames.add(new KeyFrame(Duration.millis(1), new KeyValue(pathsG.rotateProperty(), 360)));
                 keyFrames.add(new KeyFrame(Duration.millis(3900), new KeyValue(pathsG.rotateProperty(), 0)));
@@ -693,13 +580,13 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
                     keyFrames.add(new KeyFrame(Duration.millis(i), event -> shiftColors()));
                 }
 
-                indeterminateTimeline.getKeyFrames().setAll(keyFrames);
-                indeterminateTimeline.playFromStart();
+                ((Timeline)indeterminateTransition).getKeyFrames().setAll(keyFrames);
+                indeterminateTransition.playFromStart();
             } else {
-                if (indeterminateTimeline != null) {
-                    indeterminateTimeline.stop();
-                    indeterminateTimeline.getKeyFrames().clear();
-                    indeterminateTimeline = null;
+                if (indeterminateTransition != null) {
+                    indeterminateTransition.stop();
+                    ((Timeline)indeterminateTransition).getKeyFrames().clear();
+                    indeterminateTransition = null;
                 }
             }
         }
