@@ -68,7 +68,7 @@ public class HelloAccordion extends Application {
         Scene scene = new Scene(root, 500, 500);
         root.getChildren().add(accordion);
 
-        root.getChildren().add(new Button("This button doesn't change it's layout when Accordion is used"));
+        root.getChildren().add(new Button("This button changes it's layout when Accordion is used"));
 
         stage.setScene(scene);
         stage.show();
