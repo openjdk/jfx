@@ -451,38 +451,21 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                         boolean isNegative = bar.getStyleClass().contains("negative");
                         if (!isNegative) {
                             bottom = valueAxis.getDisplayPosition(currentPositiveValue);
-                            if (Double.isNaN(bottom) && currentPositiveValue < lowerBoundValue) {
-                                bottom = valueAxis.getDisplayPosition(lowerBoundValue);
-                            }
                             top = valueAxis.getDisplayPosition(currentPositiveValue + valNumber);
-                            if (Double.isNaN(top) && currentPositiveValue + valNumber > upperBoundValue) {
-                                top = valueAxis.getDisplayPosition(upperBoundValue);
-                            }
                             currentPositiveValue += valNumber;
                         } else {
                             bottom = valueAxis.getDisplayPosition(currentNegativeValue + valNumber);
-                            if (Double.isNaN(bottom) && currentNegativeValue + valNumber < lowerBoundValue) {
-                                bottom = valueAxis.getDisplayPosition(lowerBoundValue);
-                            }
                             top = valueAxis.getDisplayPosition(currentNegativeValue);
-                            if (Double.isNaN(top) && currentNegativeValue > upperBoundValue) {
-                                top = valueAxis.getDisplayPosition(upperBoundValue);
-                            }
                             currentNegativeValue += valNumber;
                         }
 
-                        if (!Double.isNaN(bottom) && !Double.isNaN(top)) {
-                            bar.setVisible(true);
-                            if (orientation == Orientation.VERTICAL) {
-                                bar.resizeRelocate(categoryPos + barOffset,
-                                        top, barWidth, bottom - top);
-                            } else {
-                                bar.resizeRelocate(bottom,
-                                        categoryPos + barOffset,
-                                        top - bottom, barWidth);
-                            }
+                        if (orientation == Orientation.VERTICAL) {
+                            bar.resizeRelocate(categoryPos + barOffset,
+                                    top, barWidth, bottom - top);
                         } else {
-                            bar.setVisible(false);
+                            bar.resizeRelocate(bottom,
+                                    categoryPos + barOffset,
+                                    top - bottom, barWidth);
                         }
                     }
                 }

@@ -496,10 +496,15 @@ public abstract class Axis<T> extends Region {
     public abstract double getZeroPosition();
 
     /**
-     * Get the display position along this axis for a given value
+     * Get the display position along this axis for a given value.
+     * If the value is not in the current range, the returned value will be an extrapolation of the display
+     * position.
+     *
+     * If the value is not valid for this Axis and the axis cannot display such value in any range,
+     * Double.NaN is returned
      *
      * @param value The data value to work out display position for
-     * @return display position or Double.NaN if zero is not in current range;
+     * @return display position or Double.NaN if value not valid
      */
     public abstract double getDisplayPosition(T value);
 
