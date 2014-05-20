@@ -281,33 +281,67 @@ public class TestApplication extends Application {
         //Zoom
         getStage().getScene().setOnZoom((e) -> {
             TestLog.log("Zoom, factor: " + e.getZoomFactor()
-                    + ", total factor: " + e.getTotalZoomFactor());
+                    + ", total factor: " + e.getTotalZoomFactor()
+                    + ", inertia value: " + e.isInertia());
         });
 
         getStage().getScene().setOnZoomStarted((e) -> {
             TestLog.log("Zoom started, factor: " + e.getZoomFactor()
-                    + ", total factor: " + e.getTotalZoomFactor());
+                    + ", total factor: " + e.getTotalZoomFactor()
+                    + ", inertia value: " + e.isInertia());
         });
 
         getStage().getScene().setOnZoomFinished((e) -> {
             TestLog.log("Zoom finished, factor: " + e.getZoomFactor()
-                    + ", total factor: " + e.getTotalZoomFactor());
+                    + ", total factor: " + e.getTotalZoomFactor()
+                    + ", inertia value: " + e.isInertia());
         });
 
         //Rotate
         getStage().getScene().setOnRotate((e) -> {
             TestLog.log("Rotation, angle: " + Math.round(e.getAngle())
-                    + ", total angle: " + Math.round(e.getTotalAngle()));
+                    + ", total angle: " + Math.round(e.getTotalAngle())
+                    + ", inertia value: " + e.isInertia());
         });
 
         getStage().getScene().setOnRotationStarted((e) -> {
             TestLog.log("Rotation started, angle: " + Math.round(e.getAngle())
-                    + ", total angle: " + Math.round(e.getTotalAngle()));
+                    + ", total angle: " + Math.round(e.getTotalAngle())
+                    + ", inertia value: " + e.isInertia());
         });
 
         getStage().getScene().setOnRotationFinished((e) -> {
             TestLog.log("Rotation finished, angle: " + Math.round(e.getAngle())
-                    + ", total angle: " + Math.round(e.getTotalAngle()));
+                    + ", total angle: " + Math.round(e.getTotalAngle())
+                    + ", inertia value: " + e.isInertia());
+        });
+
+        //Scroll
+        getStage().getScene().setOnScroll((e) -> {
+            TestLog.log("Scroll, DeltaX: " + Math.round(e.getDeltaX())
+                    + ", DeltaY: " + Math.round(e.getDeltaY())
+                    + ", totalDeltaX: " + Math.round(e.getTotalDeltaX())
+                    + ", totalDeltaY: " + Math.round(e.getTotalDeltaY())
+                    + ", touch points: " + e.getTouchCount()
+                    + ", inertia value: " + e.isInertia());
+        });
+
+        getStage().getScene().setOnScrollStarted((e) -> {
+            TestLog.log("Scroll started, DeltaX: " + Math.round(e.getDeltaX())
+                    + ", DeltaY: " + Math.round(e.getDeltaY())
+                    + ", totalDeltaX: " + Math.round(e.getTotalDeltaX())
+                    + ", totalDeltaY: " + Math.round(e.getTotalDeltaY())
+                    + ", touch points: " + e.getTouchCount()
+                    + ", inertia value: " + e.isInertia());
+        });
+
+        getStage().getScene().setOnScrollFinished((e) -> {
+            TestLog.log("Scroll finished, DeltaX: " + Math.round(e.getDeltaX())
+                    + ", DeltaY: " + Math.round(e.getDeltaY())
+                    + ", totalDeltaX: " + Math.round(e.getTotalDeltaX())
+                    + ", totalDeltaY: " + Math.round(e.getTotalDeltaY())
+                    + ", touch points: " + e.getTouchCount()
+                    + ", inertia value: " + e.isInertia());
         });
     }
 
