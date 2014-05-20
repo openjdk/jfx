@@ -121,7 +121,6 @@ class WinTextRangeProvider {
         /* Note: Currently Clone() natively does not call AddRef() on the returned object.
          * This mean JFX does not keep a reference to this object, consequently it does not
          * need to free it.
-         * TODO Test for leaks.
          */
         return clone.getNativeProvider();
     }
