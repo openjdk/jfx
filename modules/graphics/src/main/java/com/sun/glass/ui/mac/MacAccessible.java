@@ -814,10 +814,20 @@ final class MacAccessible extends PlatformAccessible {
 
     private Boolean inMenu;
     private boolean isInMenu() {
+        /* This flag will be wrong if the Node is ever re-parented */
         if (inMenu == null) {
             inMenu = getContainerNode(Role.CONTEXT_MENU) != null || getContainerNode(Role.MENU_BAR) != null;
         }
         return inMenu;
+    }
+
+    private Boolean inSlider;
+    private boolean isInSlider() {
+        /* This flag will be wrong if the Node is ever re-parented */
+        if (inSlider == null) {
+            inSlider = getContainerNode(Role.SLIDER) != null;
+        }
+        return inSlider;
     }
 
     private int getMenuItemCmdGlyph(KeyCode code) {
@@ -1737,12 +1747,18 @@ final class MacAccessible extends PlatformAccessible {
     }
 
     boolean accessibilityIsIgnored() {
+        if (isIgnored()) return true;
+        if (isInSlider()) {
+            /* Ignoring the children within the slider, otherwise VoiceOver
+             * reports 'multiple indicator slider' instead of the value.
+             */
+            return true;
+        }
         if (isInMenu()) {
             Role role = (Role)getAttribute(ROLE);
             return role != Role.CONTEXT_MENU && role != Role.MENU_ITEM && role != Role.MENU_BAR;
-        } else {
-            return isIgnored();
         }
+        return false;
     }
 
     long accessibilityHitTest(float x, float y) {
