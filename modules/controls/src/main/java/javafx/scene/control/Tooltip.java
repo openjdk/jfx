@@ -117,8 +117,10 @@ public class Tooltip extends PopupControl {
     // width of 9 and height of 5. This causes mouse events to not reach the control
     // underneath resulting in losing hover state on the control while the tooltip is showing.
     // Displaying the tooltip at an offset indicated below resolves this issue.
+    // RT-37107: The y-offset was upped to 7 to ensure no overlaps when the tooltip
+    // is shown near the right edge of the screen.
     private static int TOOLTIP_XOFFSET = 10;
-    private static int TOOLTIP_YOFFSET = 5;
+    private static int TOOLTIP_YOFFSET = 7;
 
     private static TooltipBehavior BEHAVIOR = new TooltipBehavior(
         new Duration(1000), new Duration(5000), new Duration(200), false);
@@ -766,6 +768,20 @@ public class Tooltip extends PopupControl {
                     }
 
                     activatedTooltip.show(owner, x+TOOLTIP_XOFFSET, y+TOOLTIP_YOFFSET);
+
+                    // RT-37107: Ensure the tooltip is displayed in a position
+                    // where it will not be under the mouse, even when the tooltip
+                    // is near the edge of the screen
+                    if ((y+TOOLTIP_YOFFSET) > activatedTooltip.getAnchorY()) {
+                        // the tooltip has been shifted vertically upwards,
+                        // most likely to be underneath the mouse cursor, so we
+                        // need to shift it further by hiding and reshowing
+                        // in another location
+                        activatedTooltip.hide();
+
+                        y -= activatedTooltip.getHeight();
+                        activatedTooltip.show(owner, x+TOOLTIP_XOFFSET, y);
+                    }
 
                     visibleTooltip = activatedTooltip;
                     hoveredNode = null;
