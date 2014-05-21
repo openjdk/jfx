@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,8 +36,8 @@ public final class SizeConverter extends StyleConverterImpl<ParsedValue<?, Size>
 
     // lazy, thread-safe instatiation
     private static class Holder {
-        static SizeConverter INSTANCE = new SizeConverter();
-        static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
+        static final SizeConverter INSTANCE = new SizeConverter();
+        static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
     public static StyleConverter<ParsedValue<?, Size>, Number> getInstance() {

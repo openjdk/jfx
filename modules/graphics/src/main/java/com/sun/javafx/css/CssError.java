@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,12 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.CssMetaData;
 import javafx.css.Styleable;
+import javafx.scene.Scene;
+
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-import java.net.URL;
-import javafx.css.CssMetaData;
-import javafx.scene.Node;
-import javafx.scene.Scene;
 
 /**
  * Encapsulate information about the source and nature of errors encountered

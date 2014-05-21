@@ -25,8 +25,24 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.css.parser.CSSParser;
 import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
+import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.SubScene;
+import javafx.scene.image.Image;
+import javafx.scene.text.Font;
+import javafx.stage.Window;
+import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
+
 import java.io.FileNotFoundException;
 import java.io.FilePermission;
 import java.io.IOException;
@@ -47,27 +63,18 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.security.ProtectionDomain;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.SubScene;
-import javafx.scene.text.Font;
-import javafx.stage.Window;
-import com.sun.javafx.css.parser.CSSParser;
-import java.util.Map.Entry;
-
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-import javafx.css.StyleOrigin;
-import javafx.scene.image.Image;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 
 /**
  * Contains the stylesheet state for a single scene. This includes both the
@@ -128,34 +135,6 @@ final public class StyleManager {
      */
     public static StyleManager getInstance() {
         return InstanceHolder.INSTANCE;
-    }
-
-    /**
-     *
-     * @param styleable
-     * @return
-     * @deprecated Use {@link javafx.css.Styleable#getCssMetaData()}
-     */
-    // TODO: is this used anywhere?
-    @Deprecated public static List<CssMetaData<? extends Styleable, ?>> getStyleables(final Styleable styleable) {
-
-        return styleable != null
-            ? styleable.getCssMetaData()
-            : Collections.<CssMetaData<? extends Styleable, ?>>emptyList();
-    }
-
-    /**
-     *
-     * @param node
-     * @return
-     * @deprecated Use {@link javafx.scene.Node#getCssMetaData()}
-     */
-    // TODO: is this used anywhere?
-    @Deprecated public static List<CssMetaData<? extends Styleable, ?>> getStyleables(final Node node) {
-
-        return node != null
-            ? node.getCssMetaData()
-            : Collections.<CssMetaData<? extends Styleable, ?>>emptyList();
     }
 
     private StyleManager() {
@@ -335,7 +314,7 @@ final public class StyleManager {
 
         void invalidateChecksum() {
             // if checksum is byte[0], then it is forever valid.
-            checksumInvalid = checksum.length > 0 ? true : false;
+            checksumInvalid = checksum.length > 0;
         }
         @Override
         public int hashCode() {
@@ -749,7 +728,7 @@ final public class StyleManager {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    Map<String,Image> imageCache = new HashMap<String,Image>();
+    final Map<String,Image> imageCache = new HashMap<String,Image>();
 
     public Image getCachedImage(String url) {
 
@@ -796,10 +775,12 @@ final public class StyleManager {
         return image;
     }
 
-    private void cleanUpImageCache(String fname) {
+    private void cleanUpImageCache(String imgFname) {
 
-        if (fname == null && imageCache.isEmpty()) return;
-        if (fname.trim().isEmpty()) return;
+        if (imgFname == null && imageCache.isEmpty()) return;
+
+        final String fname = imgFname.trim();
+        if (fname.isEmpty()) return;
 
         int len = fname.lastIndexOf('/');
         final String path = (len > 0) ? fname.substring(0,len) : fname;
@@ -1504,24 +1485,6 @@ final public class StyleManager {
         return list;
     }
 
-    // return true if this node or any of its parents has an inline style.
-    private static Node nodeWithInlineStyles(Node node) {
-
-        Node parent = node;
-
-        while (parent != null) {
-
-            final String inlineStyle = parent.getStyle();
-            if (inlineStyle != null && inlineStyle.isEmpty() == false) {
-                return parent;
-            }
-            parent = parent.getParent();
-
-        }
-
-        return null;
-    }
-
     // reuse key to avoid creation of numerous small objects
     private Key key = null;
 
@@ -1804,7 +1767,6 @@ final public class StyleManager {
         }
 
         private void addStyleMap(StyleMap smap) {
-            assert ((smap.getId() - baseStyleMapId) == getStyleMapList().size());
             getStyleMapList().add(smap);
         }
 
@@ -2072,43 +2034,6 @@ final public class StyleManager {
         }
 
     }
-
-    /**
-     * Get the map of property to style from the rules and declarations
-     * in the stylesheet. There is no need to do selector matching here since
-     * the stylesheet is from parsing Node.style.
-     */
-    public StyleMap createInlineStyleMap(Styleable styleable) {
-
-        Stylesheet inlineStylesheet =
-                CSSParser.getInstance().parseInlineStyle(styleable);
-        if (inlineStylesheet == null)  return StyleMap.EMPTY_MAP;
-
-        inlineStylesheet.setOrigin(StyleOrigin.INLINE);
-
-        List<Selector> pairs = new ArrayList<>(1);
-
-        int ordinal = 0;
-
-        final List<Rule> stylesheetRules = inlineStylesheet.getRules();
-
-        List<Selector> selectorList =  null;
-
-        for (int i = 0, imax = stylesheetRules.size(); i < imax; i++) {
-            
-            final Rule rule = stylesheetRules.get(i);
-            if (rule == null) continue;
-
-            List<Selector> selectors = rule.getUnobservedSelectorList();
-            if (selectorList == null || selectors.isEmpty()) continue;
-
-            selectorList.addAll(selectors);
-        }
-
-        // TODO: should have a cacheContainer for inline styles?
-        return new StyleMap(-1, selectorList);
-    }
-
 
     /**
      * The key used in the cacheMap of the StylesheetContainer

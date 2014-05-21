@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -549,7 +548,7 @@ abstract class BitSet<T> implements ObservableSet<T> {
         return bits;
     }
     
-    private static long[] EMPTY_SET = new long[0];
+    private static final long[] EMPTY_SET = new long[0];
 
     // the set
     private long[] bits;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,8 +43,8 @@ public final class InsetsConverter extends StyleConverterImpl<ParsedValue[], Ins
 
     // lazy, thread-safe instatiation
     private static class Holder {
-        static InsetsConverter INSTANCE = new InsetsConverter();
-        static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
+        static final InsetsConverter INSTANCE = new InsetsConverter();
+        static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
     public static StyleConverter<ParsedValue[], Insets> getInstance() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package com.sun.javafx.css.parser;
 
-import javafx.scene.text.Font;
-
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.ParsedValue;
+import javafx.scene.text.Font;
 
 /**
  * A type that combines two Size values.  The primary purpose of
@@ -40,7 +39,7 @@ public final class DeriveSizeConverter extends StyleConverterImpl<ParsedValue<Si
 
     // lazy, thread-safe instatiation
     private static class Holder {
-        static DeriveSizeConverter INSTANCE = new DeriveSizeConverter();
+        static final DeriveSizeConverter INSTANCE = new DeriveSizeConverter();
     }
 
     public static DeriveSizeConverter getInstance() {

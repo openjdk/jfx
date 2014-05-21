@@ -25,6 +25,48 @@
 
 package com.sun.javafx.css.parser;
 
+import com.sun.javafx.Utils;
+import com.sun.javafx.css.Combinator;
+import com.sun.javafx.css.CompoundSelector;
+import com.sun.javafx.css.CssError;
+import com.sun.javafx.css.Declaration;
+import com.sun.javafx.css.FontFace;
+import com.sun.javafx.css.ParsedValueImpl;
+import com.sun.javafx.css.Rule;
+import com.sun.javafx.css.Selector;
+import com.sun.javafx.css.SimpleSelector;
+import com.sun.javafx.css.Size;
+import com.sun.javafx.css.SizeUnits;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.Stylesheet;
+import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.EffectConverter;
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.FontConverter;
+import com.sun.javafx.css.converters.InsetsConverter;
+import com.sun.javafx.css.converters.PaintConverter;
+import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.css.converters.SizeConverter.SequenceConverter;
+import com.sun.javafx.css.converters.StringConverter;
+import com.sun.javafx.css.converters.URLConverter;
+import com.sun.javafx.scene.layout.region.BackgroundPositionConverter;
+import com.sun.javafx.scene.layout.region.BackgroundSizeConverter;
+import com.sun.javafx.scene.layout.region.BorderImageSliceConverter;
+import com.sun.javafx.scene.layout.region.BorderImageSlices;
+import com.sun.javafx.scene.layout.region.BorderImageWidthConverter;
+import com.sun.javafx.scene.layout.region.BorderImageWidthsSequenceConverter;
+import com.sun.javafx.scene.layout.region.BorderStrokeStyleSequenceConverter;
+import com.sun.javafx.scene.layout.region.BorderStyleConverter;
+import com.sun.javafx.scene.layout.region.LayeredBackgroundPositionConverter;
+import com.sun.javafx.scene.layout.region.LayeredBackgroundSizeConverter;
+import com.sun.javafx.scene.layout.region.LayeredBorderPaintConverter;
+import com.sun.javafx.scene.layout.region.LayeredBorderStyleConverter;
+import com.sun.javafx.scene.layout.region.Margins;
+import com.sun.javafx.scene.layout.region.RepeatStruct;
+import com.sun.javafx.scene.layout.region.RepeatStructConverter;
+import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
+import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
+import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.css.Styleable;
 import javafx.geometry.Insets;
@@ -47,50 +89,9 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import com.sun.javafx.Utils;
-import com.sun.javafx.css.Combinator;
-import com.sun.javafx.css.CompoundSelector;
-import com.sun.javafx.css.CssError;
-import com.sun.javafx.css.Declaration;
-import com.sun.javafx.css.FontFace;
-import javafx.css.ParsedValue;
-import com.sun.javafx.css.ParsedValueImpl;
-import com.sun.javafx.css.Rule;
-import com.sun.javafx.css.Selector;
-import com.sun.javafx.css.SimpleSelector;
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.css.Stylesheet;
-import com.sun.javafx.css.converters.BooleanConverter;
-import com.sun.javafx.css.converters.EffectConverter;
-import com.sun.javafx.css.converters.EnumConverter;
-import com.sun.javafx.css.converters.FontConverter;
-import com.sun.javafx.css.converters.InsetsConverter;
-import com.sun.javafx.css.converters.PaintConverter;
-import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.css.converters.SizeConverter.SequenceConverter;
-import com.sun.javafx.css.converters.StringConverter;
-import com.sun.javafx.css.converters.URLConverter;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
-import com.sun.javafx.scene.layout.region.BackgroundPositionConverter;
-import com.sun.javafx.scene.layout.region.BackgroundSizeConverter;
-import com.sun.javafx.scene.layout.region.BorderImageSliceConverter;
-import com.sun.javafx.scene.layout.region.BorderImageSlices;
-import com.sun.javafx.scene.layout.region.BorderImageWidthConverter;
-import com.sun.javafx.scene.layout.region.BorderImageWidthsSequenceConverter;
-import com.sun.javafx.scene.layout.region.BorderStrokeStyleSequenceConverter;
-import com.sun.javafx.scene.layout.region.BorderStyleConverter;
-import com.sun.javafx.scene.layout.region.LayeredBackgroundPositionConverter;
-import com.sun.javafx.scene.layout.region.LayeredBackgroundSizeConverter;
-import com.sun.javafx.scene.layout.region.LayeredBorderPaintConverter;
-import com.sun.javafx.scene.layout.region.LayeredBorderStyleConverter;
-import com.sun.javafx.scene.layout.region.Margins;
-import com.sun.javafx.scene.layout.region.RepeatStruct;
-import com.sun.javafx.scene.layout.region.RepeatStructConverter;
-import com.sun.javafx.scene.layout.region.SliceSequenceConverter;
-import com.sun.javafx.scene.layout.region.StrokeBorderPaintConverter;
+
 import java.io.BufferedReader;
 import java.io.CharArrayReader;
 import java.io.IOException;
@@ -101,7 +102,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Stack;
 
 final public class CSSParser {
 
@@ -1293,7 +1300,6 @@ final public class CSSParser {
             Size pos = positions[n];
             if (pos == null) {
                 if (withoutIndex == -1) withoutIndex = n;
-                continue;
             } else {
                 if (withoutIndex > -1) {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ import java.util.Set;
  * A FontFace is a @font-face definition from CSS file
  */
 final public class FontFace {
-    public static enum FontFaceSrcType {URL,LOCAL, REFERENCE};
+    public static enum FontFaceSrcType {URL,LOCAL, REFERENCE}
 
     private final Map<String,String> descriptors;
     private final List<FontFaceSrc> sources;

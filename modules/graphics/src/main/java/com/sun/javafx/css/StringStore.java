@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,8 +38,8 @@ import java.util.Map;
  *
  */
 public class StringStore {
-    private Map<String,Integer> stringMap = new HashMap<String,Integer>();
-    public List<String> strings = new ArrayList<String>();
+    private final Map<String,Integer> stringMap = new HashMap<String,Integer>();
+    public final List<String> strings = new ArrayList<String>();
 
     public int addString(String s) {
 
@@ -59,7 +59,7 @@ public class StringStore {
             os.writeShort(index);
         } else {
             os.writeShort(-1);
-        };
+        }
         for (int n=0; n<strings.size(); n++) {
             String s = strings.get(n);
             if (s == null) continue;
