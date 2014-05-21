@@ -25,6 +25,7 @@
 
 package com.oracle.tools.packager.windows;
 
+import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.IOUtils;
@@ -49,6 +50,24 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
     public WindowsBundlerParam(String name, String description, String id, Class<T> valueType, Function<Map<String, ? super Object>, T> defaultValueFunction, BiFunction<String, Map<String, ? super Object>, T> stringConverter) {
         super(name, description, id, valueType, defaultValueFunction, stringConverter);
     }
+
+    public static final BundlerParamInfo<String> INSTALLER_FILE_NAME = new StandardBundlerParam<> (
+            I18N.getString("param.installer-name.name"),
+            I18N.getString("param.installer-name.description"),
+            "win.installerName",
+            String.class,
+            params -> {
+                String nm = APP_NAME.fetchFrom(params);
+                if (nm == null) return null;
+
+                String version = VERSION.fetchFrom(params);
+                if (version == null) {
+                    return nm;
+                } else {
+                    return nm + "-" + version;
+                }
+            },
+            (s, p) -> s);
 
     public static final StandardBundlerParam<String> MENU_GROUP =
             new StandardBundlerParam<>(

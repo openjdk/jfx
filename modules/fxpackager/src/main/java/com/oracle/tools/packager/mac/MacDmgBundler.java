@@ -279,7 +279,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         if (!imagesRoot.exists()) imagesRoot.mkdirs();
 
         File protoDMG = new File(imagesRoot, APP_NAME.fetchFrom(p) +"-tmp.dmg");
-        File finalDMG = new File(outdir,  APP_NAME.fetchFrom(p) +".dmg");
+        File finalDMG = new File(outdir, INSTALLER_NAME.fetchFrom(p) +".dmg");
 
         File srcFolder = APP_IMAGE_BUILD_ROOT.fetchFrom(p); //new File(imageDir, p.name+".app");
         File predefinedImage = getPredefinedImage(p);
