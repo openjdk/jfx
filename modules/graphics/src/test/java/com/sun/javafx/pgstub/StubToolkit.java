@@ -100,7 +100,7 @@ public class StubToolkit extends Toolkit {
     static {
         try {
             // ugly hack to initialize "runLater" method in Platform.java
-            PlatformImpl.startup(new Runnable() { public void run() {}});
+            PlatformImpl.startup(() -> {});
         } catch (Exception ex) {}
 
         // allow tests to access PG scenegraph

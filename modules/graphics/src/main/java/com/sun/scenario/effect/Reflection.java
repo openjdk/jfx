@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,12 +32,13 @@ import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
   
 /**
  * An effect that renders a reflected version of the input below the
  * actual input content.
  */
-public class Reflection extends CoreEffect {
+public class Reflection extends CoreEffect<RenderState> {
 
     private float topOffset;
     private float topOpacity;
@@ -231,11 +232,6 @@ public class Reflection extends CoreEffect {
     }
 
     @Override
-    public boolean operatesInUserSpace() {
-        return true;
-    }
-
-    @Override
     public Point2D transform(Point2D p, Effect defaultInput) {
         return getDefaultedInput(0, defaultInput).transform(p, defaultInput);
     }
@@ -246,15 +242,17 @@ public class Reflection extends CoreEffect {
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
         // RT-27405
-        // TODO: Calculate which parts are needed based on the two
-        // ways that the input is rendered into this ouput rectangle.
-        // For now, just ask for the entire input.
-        return null;
+        // TODO: We could calculate which parts are needed based on the two
+        // ways that the input is rendered into this ouput rectangle. For now,
+        // we will just use the stock object that requests unclipped inputs.
+        return RenderState.UnclippedUserSpaceRenderState;
     }
 
     @Override
@@ -268,7 +266,7 @@ public class Reflection extends CoreEffect {
         Effect di = getDefaultedInput(0, defaultInput);
         DirtyRegionContainer drc = di.getDirtyRegions(defaultInput, regionPool);
 
-        BaseBounds contentBounds = di.getBounds();
+        BaseBounds contentBounds = di.getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput);
         float cbMaxY = contentBounds.getMaxY();
         float reflectedMaxYBase = (2 * cbMaxY) + getTopOffset();
         float reflecteCbMaxY = cbMaxY + getTopOffset() + (fraction * contentBounds.getHeight());

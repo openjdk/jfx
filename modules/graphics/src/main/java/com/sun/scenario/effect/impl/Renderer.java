@@ -86,13 +86,7 @@ public abstract class Renderer {
     private final ImagePool imagePool;
 
     protected static final boolean verbose = AccessController.doPrivileged(
-            new PrivilegedAction<Boolean>() {
-
-        public Boolean run() {
-            return Boolean.getBoolean("decora.verbose");
-        }
-
-    });
+            (PrivilegedAction<Boolean>) () -> Boolean.getBoolean("decora.verbose"));
 
     protected Renderer() {
         this.imagePool = new ImagePool();

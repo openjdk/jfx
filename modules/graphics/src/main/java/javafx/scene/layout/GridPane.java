@@ -411,11 +411,7 @@ public class GridPane extends Pane {
         return -1;
     }
 
-    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
-        public Insets call(Node n) {
-            return getMargin(n);
-        }
-    };
+    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
 
     /**
      * Sets the horizontal alignment for the child when contained by a gridpane.
@@ -732,12 +728,7 @@ public class GridPane extends Pane {
      */
     public GridPane() {
         super();
-        getChildren().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable o) {
-                requestLayout();
-            }
-        });
+        getChildren().addListener((Observable o) -> requestLayout());
     }
 
     /**
@@ -1005,7 +996,10 @@ public class GridPane extends Pane {
         final List<Node> managed = getManagedChildren();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
-            if (rowIndex == getNodeRowIndex(child)) {
+            final int nodeRowIndex = getNodeRowIndex(child); 
+            final int nodeRowEnd = getNodeRowEnd(child);
+            if (rowIndex >= nodeRowIndex && 
+                    (rowIndex <= nodeRowEnd || nodeRowEnd == REMAINING)) {
                 int index = getNodeColumnIndex(child);
                 int end = getNodeColumnEnd(child);
                 columnIndex = Math.max(columnIndex, (end != REMAINING? end : index) + 1);
@@ -1031,7 +1025,10 @@ public class GridPane extends Pane {
         final List<Node> managed = getManagedChildren();
         for (int i = 0, size = managed.size(); i < size; i++) {
             Node child = managed.get(i);
-            if (columnIndex == getNodeColumnIndex(child)) {
+            final int nodeColumnIndex = getNodeColumnIndex(child);
+            final int nodeColumnEnd = getNodeColumnEnd(child);
+            if (columnIndex >= nodeColumnIndex
+                    && (columnIndex <= nodeColumnEnd || nodeColumnEnd == REMAINING)) {
                 int index = getNodeRowIndex(child);
                 int end = getNodeRowEnd(child);
                 rowIndex = Math.max(rowIndex, (end != REMAINING? end : index) + 1);
@@ -1632,7 +1629,10 @@ public class GridPane extends Pane {
         // If metricsDirty is set true during a layout pass the next call to computeGridMetrics()
         // will clear all the cell bounds resulting in out of date info until the
         // next layout pass.
-        if (performingLayout || metricsDirty) {
+        if (performingLayout) {
+            return;
+        } else if (metricsDirty) {
+            super.requestLayout();
             return;
         }
         metricsDirty = true;
@@ -1740,34 +1740,26 @@ public class GridPane extends Pane {
                 if (baselineOffsets[rowIndex] == -1) {
                     baselineOffsets[rowIndex] = getAreaBaselineOffset(rowBaseline[rowIndex],
                             marginAccessor,
-                            new Function<Integer, Double>() {
-
-                                @Override
-                                public Double apply(Integer t) {
-                                    Node n = rowBaseline[rowIndex].get(t);
-                                    int c = getNodeColumnIndex(n);
-                                    int cs = getNodeColumnSpan(n);
-                                    if (cs == REMAINING) {
-                                        cs = widths.getLength() - c;
-                                    }
-                                    double w = widths.getSize(c);
-                                    for (int j = 2; j <= cs; j++) {
-                                        w += widths.getSize(c + j - 1) + snaphgap;
-                                    }
-                                    return w;
+                            t -> {
+                                Node n = rowBaseline[rowIndex].get(t);
+                                int c = getNodeColumnIndex(n);
+                                int cs = getNodeColumnSpan(n);
+                                if (cs == REMAINING) {
+                                    cs = widths.getLength() - c;
                                 }
+                                double w = widths.getSize(c);
+                                for (int j = 2; j <= cs; j++) {
+                                    w += widths.getSize(c + j - 1) + snaphgap;
+                                }
+                                return w;
                             },
                             areaH,
-                            new Function<Integer, Boolean>() {
-
-                                @Override
-                                public Boolean apply(Integer t) {
-                                    Boolean b = isFillHeight(child);
-                                    if (b != null) {
-                                        return b;
-                                    }
-                                    return shouldRowFillHeight(getNodeRowIndex(child));
+                            t -> {
+                                Boolean b = isFillHeight(child);
+                                if (b != null) {
+                                    return b;
                                 }
+                                return shouldRowFillHeight(getNodeRowIndex(child));
                             }, rowMinBaselineComplement[rowIndex]);
                 }
                 baselineOffset = baselineOffsets[rowIndex];
@@ -2615,15 +2607,24 @@ public class GridPane extends Pane {
                 }
             }
             if (totalFixedPercent > 0) {
-                double totalFixed = 0;
+                double totalNotFixed = 0;
+                // First, remove the sizes that are fixed to be 0
                 for (int i = 0; i < fixedPercent.length; ++i) {
-                    if (fixedPercent[i] != -1) {
-                        totalFixed += singleSizes[i];
+                    if (fixedPercent[i] == 0) {
+                        total -= singleSizes[i];
+                    }
+                }
+                for (int i = 0; i < fixedPercent.length; ++i) {
+                    if (fixedPercent[i] > 0) {
+                        // Grow the total so that every size at it's value corresponds at least to it's fixedPercent of the total
+                        // i.e. total * fixedPercent[i] >= singleSizes[i]
                         total = Math.max(total, singleSizes[i] * (100 / fixedPercent[i]));
+                    } else if (fixedPercent[i] < 0){
+                        totalNotFixed += singleSizes[i];
                     }
                 }
                 if (totalFixedPercent < 100) {
-                    total = Math.max(total, (total - totalFixed) * 100 / (100 - totalFixedPercent));
+                    total = Math.max(total, totalNotFixed * 100 / (100 - totalFixedPercent));
                 }
             }
             return total;

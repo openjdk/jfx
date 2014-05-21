@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -156,7 +156,7 @@ public class FontTypeTest {
         Scene scene  = new Scene(new Group());
         ((Group)scene.getRoot()).getChildren().add(txt);
 
-        txt.impl_processCSS(true);
+        txt.applyCss();
 
         Font f = txt.getFont();
         assertEquals("Regular", f.getStyle());
@@ -172,7 +172,7 @@ public class FontTypeTest {
         Scene scene  = new Scene(new Group());
         ((Group)scene.getRoot()).getChildren().add(txt);
 
-        txt.impl_processCSS(true);
+        txt.applyCss();
 
         Font f = txt.getFont();
         assertEquals("Bold", f.getStyle());
@@ -192,7 +192,7 @@ public class FontTypeTest {
         Scene scene  = new Scene(g);
         g.getChildren().add(txt);
 
-        g.impl_processCSS(true);
+        g.applyCss();
 
         Font f = txt.getFont();
         assertEquals("Regular", f.getStyle());
@@ -212,7 +212,7 @@ public class FontTypeTest {
         Scene scene  = new Scene(g);
         g.getChildren().add(txt);
 
-        g.impl_processCSS(true);
+        g.applyCss();
 
         Font f = txt.getFont();
         assertEquals("Bold", f.getStyle());
@@ -232,7 +232,7 @@ public class FontTypeTest {
         Scene scene  = new Scene(g);
         g.getChildren().add(txt);
 
-        g.impl_processCSS(true);
+        g.applyCss();
 
         Font f = txt.getFont();
         assertEquals("Amble", f.getFamily());
@@ -252,7 +252,7 @@ public class FontTypeTest {
         scene.getStylesheets().add(FontTypeTest.class.getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm());
         g.getChildren().add(txt);
 
-        g.impl_processCSS(true);
+        g.applyCss();
 
         Font f = txt.getFont();
         // should get size and amble from .root, 'italic' from #test-rt-32551, bold from inline.
@@ -272,7 +272,7 @@ public class FontTypeTest {
         scene.getStylesheets().add(FontTypeTest.class.getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm());
         g.getChildren().add(txt);
 
-        g.impl_processCSS(true);
+        g.applyCss();
 
         Font f = txt.getFont();
         // should get size and amble from .root, 'italic' from #test-rt-32551, bold from inline.

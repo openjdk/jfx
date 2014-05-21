@@ -26,12 +26,16 @@
 package javafx.scene.control;
 
 import com.sun.javafx.scene.control.skin.LabelSkin;
+import com.sun.javafx.scene.NodeHelper;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 /**
  * Label is a non-editable text control. A Label is useful for displaying
@@ -88,7 +92,7 @@ public class Label extends Labeled {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.        
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
     
     /***************************************************************************
@@ -97,12 +101,8 @@ public class Label extends Labeled {
      *                                                                         *
      **************************************************************************/
 
-    private ChangeListener<Boolean> mnemonicStateListener = new ChangeListener<Boolean>() {
-        @Override
-        public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-            Label.this.impl_showMnemonicsProperty().setValue(newValue);
-        }
-
+    private ChangeListener<Boolean> mnemonicStateListener = (observable, oldValue, newValue) -> {
+        Label.this.impl_showMnemonicsProperty().setValue(newValue);
     };
 
     /**
@@ -116,10 +116,12 @@ public class Label extends Labeled {
                 Node oldValue = null;
                 @Override protected void invalidated() {
                     if (oldValue != null) {
+                        NodeHelper.getNodeAccessor().setLabeledBy(oldValue, null);
                         oldValue.impl_showMnemonicsProperty().removeListener(mnemonicStateListener);
                     }
                     final Node node = get();
                     if (node != null) {
+                        NodeHelper.getNodeAccessor().setLabeledBy(node, Label.this);
                         node.impl_showMnemonicsProperty().addListener(mnemonicStateListener);
                         impl_setShowMnemonics(node.impl_isShowMnemonics());
                     } else {
@@ -172,5 +174,21 @@ public class Label extends Labeled {
     @Deprecated @Override
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
-    }    
+    }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+       
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TEXT;
+            case TITLE: //fall through so that mnemonic can be properly handled
+            default: return super.accGetAttribute(attribute, parameters); 
+        }
+    }
 }

@@ -45,6 +45,7 @@ public final class MouseEventFirer {
 
     private final Scene scene;
     private final Bounds targetBounds;
+    private StageLoader sl;
 
     public MouseEventFirer(EventTarget target) {
         this.target = target;
@@ -56,7 +57,7 @@ public final class MouseEventFirer {
             Window w = s == null ? null : s.getWindow();
 
             if (w == null || w.getScene() == null) {
-                new StageLoader(n);
+                sl = new StageLoader(n);
                 scene = n.getScene();
                 targetBounds = n.getLayoutBounds();
             } else {
@@ -65,10 +66,16 @@ public final class MouseEventFirer {
             }
         } else if (target instanceof Scene) {
             scene = (Scene)target;
-            new StageLoader(scene);
+            sl = new StageLoader(scene);
             targetBounds = new BoundingBox(0, 0, scene.getWidth(), scene.getHeight());
         } else {
             throw new RuntimeException("EventTarget of invalid type");
+        }
+    }
+
+    public void dispose() {
+        if (sl != null) {
+            sl.dispose();
         }
     }
 

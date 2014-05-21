@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,14 @@
 #endif
 #endif
 
+static jboolean checkAndClearException(JNIEnv *env) {
+    if (!(*env)->ExceptionCheck(env)) {
+        return JNI_FALSE;
+    }
+    (*env)->ExceptionClear(env);
+    return JNI_TRUE;
+}
+
 /***************** Begin verbatim copy from jni_util.c ***************/
 
 /**
@@ -67,9 +75,9 @@
 JNIEXPORT void JNICALL
 ThrowByName(JNIEnv *env, const char *name, const char *msg) {
     jclass cls = (*env)->FindClass(env, name);
-
-    if (cls != 0) /* Otherwise an exception has already been thrown */
+    if (!(*env)->ExceptionCheck(env) && cls != 0) {/* Otherwise an exception has already been thrown */
         (*env)->ThrowNew(env, cls, msg);
+    }
 }
 
 JNIEXPORT void * JNICALL
@@ -188,17 +196,11 @@ static int initStreamBuffer(JNIEnv *env, streamBufferPtr sb) {
     /* Initialize a new buffer */
     jbyteArray hInputBuffer = (*env)->NewByteArray(env, STREAMBUF_SIZE);
     if (hInputBuffer == NULL) {
-        ThrowByName(env,
-                "java/lang/OutOfMemoryError",
-                "Initializing Reader");
         return NOT_OK;
     }
     sb->bufferLength = (*env)->GetArrayLength(env, hInputBuffer);
     sb->hstreamBuffer = (*env)->NewGlobalRef(env, hInputBuffer);
     if (sb->hstreamBuffer == NULL) {
-        ThrowByName(env,
-                "java/lang/OutOfMemoryError",
-                "Initializing Reader");
         return NOT_OK;
     }
 
@@ -594,6 +596,7 @@ sun_jpeg_output_message(j_common_ptr cinfo) {
         (*env)->CallVoidMethod(env, theObject,
                 JPEGImageLoader_emitWarningID,
                 string);
+        checkAndClearException(env);
     }
 }
 
@@ -1210,28 +1213,51 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initJPEGMeth
             InputStreamClass,
             "read",
             "([BII)I");
+    if ((*env)->ExceptionCheck(env)) {
+        return;
+    }
+
     InputStream_skipID = (*env)->GetMethodID(env,
             InputStreamClass,
             "skip",
             "(J)J");
+    if ((*env)->ExceptionCheck(env)) {
+        return;
+    }
 
     // JPEGImageLoader IDs.
     JPEGImageLoader_setInputAttributesID = (*env)->GetMethodID(env,
             cls,
             "setInputAttributes",
             "(IIIII[B)V");
+    if ((*env)->ExceptionCheck(env)) {
+        return;
+    }
+
     JPEGImageLoader_setOutputAttributesID = (*env)->GetMethodID(env,
             cls,
             "setOutputAttributes",
             "(II)V");
+    if ((*env)->ExceptionCheck(env)) {
+        return;
+    }
+
     JPEGImageLoader_updateImageProgressID = (*env)->GetMethodID(env,
             cls,
             "updateImageProgress",
             "(I)V");
+    if ((*env)->ExceptionCheck(env)) {
+        return;
+    }
+
     JPEGImageLoader_emitWarningID = (*env)->GetMethodID(env,
             cls,
             "emitWarning",
             "(Ljava/lang/String;)V");
+    if ((*env)->ExceptionCheck(env)) {
+        return;
+    }
+
 }
 
 JNIEXPORT void JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_disposeNative
@@ -1340,6 +1366,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
     }
 
     imageio_set_stream(env, (j_common_ptr) cinfo, data, stream);
+    
+    if ((*env)->ExceptionCheck(env)) return 0;
 
     imageio_init_source((j_decompress_ptr) cinfo);
 
@@ -1471,6 +1499,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_initDecompr
                 cinfo->out_color_space,
                 cinfo->num_components,
                 profileData);
+        if ((*env)->ExceptionCheck(env)) {
+            return 0;
+        }
     }
 
     return ptr_to_jlong(data);
@@ -1574,7 +1605,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     if (scanline_ptr == NULL) {
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
-                "Writing JPEG Stream");
+                "Reading JPEG Stream");
         RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
         return JNI_FALSE;
     }
@@ -1605,6 +1636,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
             (*env)->CallVoidMethod(env, this,
                     JPEGImageLoader_updateImageProgressID,
                     cinfo->output_scanline);
+            if ((*env)->ExceptionCheck(env)) return JNI_FALSE;
             if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
               ThrowByName(env,
                           "java/io/IOException",
@@ -1628,6 +1660,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
         (*env)->CallVoidMethod(env, this,
                 JPEGImageLoader_updateImageProgressID,
                 cinfo->output_height);
+      if ((*env)->ExceptionCheck(env)) return JNI_FALSE;
       if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
           ThrowByName(env,
                 "java/io/IOException",
@@ -1661,7 +1694,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompres
     if (buf == NULL) {
         ThrowByName(env,
                 "java/lang/OutOfMemoryError",
-                "Writing JPEG Stream");
+                "Reading JPEG Stream");
         return NULL;
     }
 

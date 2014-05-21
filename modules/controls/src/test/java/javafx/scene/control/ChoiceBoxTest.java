@@ -446,11 +446,9 @@ public class ChoiceBoxTest {
         final String[] items = {"Apple", "Orange", "Banana"};
         StackPane pane = new StackPane();
         pane.getChildren().add(box);
-        Runnable runnable = new Runnable() {
-            public void run() {
-                box.setItems(FXCollections.observableArrayList(items));
-                box.getSelectionModel().setSelectedItem("Apple");
-            }
+        Runnable runnable = () -> {
+            box.setItems(FXCollections.observableArrayList(items));
+            box.getSelectionModel().setSelectedItem("Apple");
         };
         Platform.runLater(runnable); 
         startApp(pane);

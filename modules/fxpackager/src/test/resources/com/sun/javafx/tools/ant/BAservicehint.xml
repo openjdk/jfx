@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns:fx="javafx:com.sun.javafx.tools.ant" default="fx-deploy">
+    <target name="fx-deploy">
+        <taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
+                 uri="javafx:com.sun.javafx.tools.ant"
+                 classpath="../../../../../../../libs/ant-javafx.jar"/>
+        <fx:deploy nativeBundles="deb"
+                   outdir="../../../../../../../tmp/tests/ant"
+                   outfile="test"
+                   verbose="true">
+            <fx:resources id="appRes">
+                <fx:fileset dir="../../../../../../../tmp/tests/appResources"
+                            includes="mainApp.jar"/>
+            </fx:resources>
+
+            <fx:platform/>
+            <fx:preferences/>
+            <fx:application/>
+            <fx:info/>
+            <fx:bundleArgument arg="runAtStartup" value="true"/>
+            <fx:bundleArgument arg="classpath" value="jars/testFxAppWithUtil.jar:jars/Util.jar"/>
+            <fx:bundleArgument arg="serviceHint" value="true"/>
+            <fx:bundleArgument arg="fxPackaging" value="true"/>
+            <fx:bundleArgument arg="mainJar" value="jars/testFxAppWithUtil.jar"/>
+            <fx:bundleArgument arg="startOnInstall" value="true"/>
+        </fx:deploy>
+    </target>
+</project>

@@ -261,11 +261,7 @@ window.setMember("app", new JavaApplication());
  */
 final public class WebEngine {
     static {
-        Accessor.setPageAccessor(new Accessor.PageAccessor() {
-            @Override public WebPage getPage(WebEngine w) {
-                return w == null ? null : w.getPage();
-            }
-        });
+        Accessor.setPageAccessor(w -> w == null ? null : w.getPage());
 
         Invoker.setInvoker(new PrismInvoker());
         Renderer.setRenderer(new PrismRenderer());
@@ -677,11 +673,7 @@ final public class WebEngine {
     
     private final ObjectProperty<Callback<PopupFeatures, WebEngine>> createPopupHandler
             = new SimpleObjectProperty<Callback<PopupFeatures, WebEngine>>(this, "createPopupHandler",
-                new Callback<PopupFeatures, WebEngine>() {
-                    public WebEngine call(PopupFeatures p) {
-                        return WebEngine.this;
-                    }
-                });
+            p -> WebEngine.this);
     
     /**
      * Returns the JavaScript popup handler.
@@ -1145,15 +1137,13 @@ final public class WebEngine {
             };
 
         private static final TKPulseListener listener =
-            new TKPulseListener() {
-                public void pulse() {
+                () -> {
                     // Note, the timer event is executed right in the notifyTick(),
                     // that is during the pulse event. This makes the timer more
                     // repsonsive, though prolongs the pulse. So far it causes no
                     // problems but nevertheless it should be kept in mind.
                     Timer.getTimer().notifyTick();
-                }
-            };
+                };
 
         private static void start(){
             Toolkit.getToolkit().addSceneTkPulseListener(listener);
@@ -1528,11 +1518,9 @@ final public class WebEngine {
                 final Callback<String,Void> messageCallback =
                         webEngine.debugger.messageCallback;
                 if (messageCallback != null) {
-                    AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                        @Override public Void run() {
-                            messageCallback.call(message);
-                            return null;
-                        }
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        messageCallback.call(message);
+                        return null;
                     }, webEngine.page.getAccessControlContext());
                     result = true;
                 }

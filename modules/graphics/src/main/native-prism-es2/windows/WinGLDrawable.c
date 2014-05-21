@@ -124,5 +124,5 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_WinGLDrawable_nSwapBuffers
     if (dInfo == NULL) {
         return JNI_FALSE;
     }
-    return SwapBuffers(dInfo->hdc);
+    return SwapBuffers(dInfo->hdc) ? JNI_TRUE : JNI_FALSE;
 }

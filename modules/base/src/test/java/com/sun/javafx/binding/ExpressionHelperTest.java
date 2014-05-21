@@ -37,6 +37,13 @@ import javafx.beans.value.WeakChangeListenerMock;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.BitSet;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 public class ExpressionHelperTest {
 
     private static final Object UNDEFINED = new Object();
@@ -67,7 +74,7 @@ public class ExpressionHelperTest {
 
     @Test (expected = NullPointerException.class)
     public void testAddInvalidation_X_Null() {
-        ExpressionHelper.addListener(helper, observable, (InvalidationListener)null);
+        ExpressionHelper.addListener(helper, observable, (InvalidationListener) null);
     }
 
     @Test (expected = NullPointerException.class)
@@ -507,6 +514,133 @@ public class ExpressionHelperTest {
         ExpressionHelper.fireValueChangedEvent(helper);
         invalidationListener[0].check(observable, 1);
         changeListener[0].check(null, UNDEFINED, UNDEFINED, 0);
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromSingleInvalidation() {
+        helper = ExpressionHelper.addListener(helper, observable,(o) -> {throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromMultipleInvalidation() {
+        BitSet called = new BitSet();
+
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(0); throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(1); throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+
+        assertTrue(called.get(0));
+        assertTrue(called.get(1));
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromSingleChange() {
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromMultipleChange() {
+        BitSet called = new BitSet();
+
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(0); throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(1); throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+
+        assertTrue(called.get(0));
+        assertTrue(called.get(1));
+    }
+
+    @Test
+    public void testExceptionNotPropagatedFromMultipleChangeAndInvalidation() {
+        BitSet called = new BitSet();
+
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(0); throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {called.set(1); throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(2); throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {called.set(3); throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+
+        assertTrue(called.get(0));
+        assertTrue(called.get(1));
+        assertTrue(called.get(2));
+        assertTrue(called.get(3));
+    }
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInSingleInvalidation() {
+        AtomicBoolean called = new AtomicBoolean(false);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.set(true));
+
+        helper = ExpressionHelper.addListener(helper, observable,(o) -> {throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+
+        assertTrue(called.get());
+    }
+
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInMultipleInvalidation() {
+        AtomicInteger called = new AtomicInteger(0);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.incrementAndGet());
+
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+
+        assertEquals(2, called.get());
+    }
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInSingleChange() {
+        AtomicBoolean called = new AtomicBoolean(false);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.set(true));
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+
+        assertTrue(called.get());
+    }
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInMultipleChange() {
+        AtomicInteger called = new AtomicInteger(0);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.incrementAndGet());
+
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> {throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+
+        assertEquals(2, called.get());
+    }
+
+    @Test
+    public void testExceptionHandledByThreadUncaughtHandlerInMultipleChangeAndInvalidation() {
+        AtomicInteger called = new AtomicInteger(0);
+
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> called.incrementAndGet());
+
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> { throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (value, o1, o2) -> { throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> { throw new RuntimeException();});
+        helper = ExpressionHelper.addListener(helper, observable, (o) -> {throw new RuntimeException();});
+        observable.set(null);
+        helper.fireValueChangedEvent();
+
+        assertEquals(4, called.get());
     }
 
 }

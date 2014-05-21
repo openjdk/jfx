@@ -32,7 +32,10 @@ package com.sun.prism;
 public interface Mesh extends GraphicsResource {
     // This method will fail if and only if ALL faces are wrong.
     // A wrong face is one with zero area or with any index out of range
-    public boolean buildGeometry(float pos[], float uv[], int faces[], int smoothing[]);
+    public boolean buildGeometry(float pos[], int[] posFromAndLengthIndices,
+            float uv[],  int[] uvFromAndLengthIndices,
+            int faces[],  int[] facesFromAndLengthIndices,
+            int smoothing[], int[] smoothingFromAndLengthIndices);
 
     public int getCount();
 }

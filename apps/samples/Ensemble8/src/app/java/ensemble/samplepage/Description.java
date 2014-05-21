@@ -79,12 +79,10 @@ public class Description extends VBox {
         sourceBtn.getStyleClass().add("sample-page-box-title");
         sourceBtn.setGraphic(new ImageView(ORANGE_ARROW));
         sourceBtn.setContentDisplay(ContentDisplay.RIGHT);
-        sourceBtn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent ev) {
-                samplePage.pageBrowser.goToPage(samplePage.getUrl().replaceFirst("sample://", "sample-src://"));
-            }
+        sourceBtn.setOnAction((ActionEvent ev) -> {
+            samplePage.pageBrowser.goToPage(samplePage.getUrl().replaceFirst("sample://", "sample-src://"));
         });
-        if (!PlatformFeatures.EMBEDDED) getChildren().add(sourceBtn);
+        if (PlatformFeatures.LINK_TO_SOURCE) getChildren().add(sourceBtn);
         if (Platform.isSupported(ConditionalFeature.WEB)) {
             // Setup Columns
             GridPane gridPane = new GridPane();
@@ -128,11 +126,9 @@ public class Description extends VBox {
         }
 
         // listen for when sample changes
-        samplePage.registerSampleInfoUpdater(new Callback<SampleInfo, Void>() {
-            @Override public Void call(SampleInfo sampleInfo) {
-                update(sampleInfo);
-                return null;
-            }
+        samplePage.registerSampleInfoUpdater((SampleInfo sampleInfo) -> {
+            update(sampleInfo);
+            return null;
         });
     }
 
@@ -141,20 +137,16 @@ public class Description extends VBox {
             relatedDocumentsList.getChildren().clear();
             for (final URL docUrl : sampleInfo.getDocURLs()) {
                 Hyperlink link = new Hyperlink(docUrl.getName());
-                link.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent ev) {
-                        samplePage.pageBrowser.goToPage(docUrl.getURL());
-                    }
+                link.setOnAction((ActionEvent ev) -> {
+                    samplePage.pageBrowser.goToPage(docUrl.getURL());
                 });
                 link.setTooltip(new Tooltip(docUrl.getName()));
                 relatedDocumentsList.getChildren().add(link);
             }
             for (final String classpath : sampleInfo.apiClasspaths) {
                 Hyperlink link = new Hyperlink(classpath);
-                link.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent ev) {
-                        samplePage.pageBrowser.goToPage(samplePage.apiClassToUrl(classpath));
-                    }
+                link.setOnAction((ActionEvent ev) -> {
+                    samplePage.pageBrowser.goToPage(samplePage.apiClassToUrl(classpath));
                 });
                 relatedDocumentsList.getChildren().add(link);
             }
@@ -163,11 +155,8 @@ public class Description extends VBox {
         for (final SampleInfo.URL sampleURL : sampleInfo.getRelatedSampleURLs()) {
             if (Samples.ROOT.sampleForPath(sampleURL.getURL()) != null) { //Check if sample exists
                 Hyperlink sampleLink = new Hyperlink(sampleURL.getName());
-                sampleLink.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent t) {
-                        samplePage.pageBrowser.goToPage("sample://" + sampleURL.getURL());
-                    }
+                sampleLink.setOnAction((ActionEvent t) -> {
+                    samplePage.pageBrowser.goToPage("sample://" + sampleURL.getURL());
                 });
                 sampleLink.setPrefWidth(1000);
                 relatedSamples.getChildren().add(sampleLink);

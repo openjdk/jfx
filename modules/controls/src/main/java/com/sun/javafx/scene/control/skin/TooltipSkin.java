@@ -48,6 +48,7 @@ public class TooltipSkin implements Skin<Tooltip> {
         tipLabel.contentDisplayProperty().bind(t.contentDisplayProperty());
         tipLabel.fontProperty().bind(t.fontProperty());
         tipLabel.graphicProperty().bind(t.graphicProperty());
+        tipLabel.graphicTextGapProperty().bind(t.graphicTextGapProperty());
         tipLabel.textAlignmentProperty().bind(t.textAlignmentProperty());
         tipLabel.textOverrunProperty().bind(t.textOverrunProperty());
         tipLabel.textProperty().bind(t.textProperty());

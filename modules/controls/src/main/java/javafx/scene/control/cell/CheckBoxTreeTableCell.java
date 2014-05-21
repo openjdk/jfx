@@ -25,7 +25,6 @@
 
 package javafx.scene.control.cell;
 
-import javafx.css.CssMetaData;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -55,6 +54,16 @@ import javafx.util.StringConverter;
  * that the CheckBox in the cell will set/unset this property based on user 
  * interactions, and the CheckBox will reflect the state of the ObservableValue, 
  * if it changes externally).
+ *
+ * <p>Note that the CheckBoxTreeTableCell renders the CheckBox 'live', meaning that
+ * the CheckBox is always interactive and can be directly toggled by the user.
+ * This means that it is not necessary that the cell enter its
+ * {@link #editingProperty() editing state} (usually by the user double-clicking
+ * on the cell). A side-effect of this is that the usual editing callbacks
+ * (such as {@link javafx.scene.control.TreeTableColumn#onEditCommitProperty() on edit commit})
+ * will <strong>not</strong> be called. If you want to be notified of changes,
+ * it is recommended to directly observe the boolean properties that are
+ * manipulated by the CheckBox.</p>
  * 
  * @param <T> The type of the elements contained within the TreeTableColumn.
  * @since JavaFX 8.0
@@ -181,11 +190,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final Callback<Integer, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<T> converter) {
-        return new Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>() {
-            @Override public TreeTableCell<S,T> call(TreeTableColumn<S,T> list) {
-                return new CheckBoxTreeTableCell<S,T>(getSelectedProperty, converter);
-            }
-        };
+        return list -> new CheckBoxTreeTableCell<S,T>(getSelectedProperty, converter);
     }
     
     
@@ -334,6 +339,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      **************************************************************************/
     
     /** {@inheritDoc} */
+    @SuppressWarnings("unchecked")
     @Override public void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
         
@@ -341,7 +347,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
             setText(null);
             setGraphic(null);
         } else {
-            StringConverter c = getConverter();
+            StringConverter<T> c = getConverter();
             
             if (showLabel) {
                 setText(c.toString(item));
@@ -351,9 +357,9 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
             if (booleanProperty instanceof BooleanProperty) {
                 checkBox.selectedProperty().unbindBidirectional((BooleanProperty)booleanProperty);
             }
-            ObservableValue obsValue = getSelectedProperty();
+            ObservableValue<?> obsValue = getSelectedProperty();
             if (obsValue instanceof BooleanProperty) {
-                booleanProperty = obsValue;
+                booleanProperty = (ObservableValue<Boolean>) obsValue;
                 checkBox.selectedProperty().bindBidirectional((BooleanProperty)booleanProperty);
             }
             
@@ -378,7 +384,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
         this.checkBox.setAlignment(showLabel ? Pos.CENTER_LEFT : Pos.CENTER);
     }
     
-    private ObservableValue getSelectedProperty() {
+    private ObservableValue<?> getSelectedProperty() {
         return getSelectedStateCallback() != null ?
                 getSelectedStateCallback().call(getIndex()) :
                 getTableColumn().getCellObservableValue(getIndex());

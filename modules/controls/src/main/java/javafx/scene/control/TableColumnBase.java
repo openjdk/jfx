@@ -25,9 +25,12 @@
 
 package javafx.scene.control;
 
+import java.lang.ref.WeakReference;
 import java.text.Collator;
 import java.util.Comparator;
 
+import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -94,6 +97,7 @@ import javafx.collections.ObservableMap;
  * @see TablePositionBase
  * @since JavaFX 8.0
  */
+@IDProperty("id")
 public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     
     /***************************************************************************
@@ -114,18 +118,16 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * method is called, otherwise this method will defer to
      * {@link Collator#compare(java.lang.String, java.lang.String)}.
      */
-    public static final Comparator DEFAULT_COMPARATOR = new Comparator() {
-        @Override public int compare(Object obj1, Object obj2) {
-            if (obj1 == null && obj2 == null) return 0;
-            if (obj1 == null) return -1;
-            if (obj2 == null) return 1;
-            
-            if (obj1 instanceof Comparable && (obj1.getClass() == obj2.getClass() || obj1.getClass().isAssignableFrom(obj2.getClass()))) {
-                return ((Comparable)obj1).compareTo(obj2);
-            }
+    public static final Comparator DEFAULT_COMPARATOR = (obj1, obj2) -> {
+        if (obj1 == null && obj2 == null) return 0;
+        if (obj1 == null) return -1;
+        if (obj2 == null) return 1;
 
-            return Collator.getInstance().compare(obj1.toString(), obj2.toString());
+        if (obj1 instanceof Comparable && (obj1.getClass() == obj2.getClass() || obj1.getClass().isAssignableFrom(obj2.getClass()))) {
+            return ((Comparable)obj1).compareTo(obj2);
         }
+
+        return Collator.getInstance().compare(obj1.toString(), obj2.toString());
     };
     
     
@@ -258,7 +260,27 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     public final ContextMenu getContextMenu() { return contextMenu == null ? null : contextMenu.get(); }
     public final ObjectProperty<ContextMenu> contextMenuProperty() {
         if (contextMenu == null) {
-            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu");
+            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu") {
+                private WeakReference<ContextMenu> contextMenuRef;
+
+                @Override protected void invalidated() {
+                    ContextMenu oldMenu = contextMenuRef == null ? null : contextMenuRef.get();
+                    if (oldMenu != null) {
+                        ControlAcceleratorSupport.removeAcceleratorsFromScene(oldMenu.getItems(), TableColumnBase.this);
+                    }
+
+                    ContextMenu ctx = get();
+                    contextMenuRef = new WeakReference<>(ctx);
+
+                    if (ctx != null) {
+                        // if a context menu is set, we need to install any accelerators
+                        // belonging to its menu items ASAP into the scene that this
+                        // Control is in (if the control is not in a Scene, we will need
+                        // to wait until it is and then do it).
+                        ControlAcceleratorSupport.addAcceleratorsIntoScene(ctx.getItems(), TableColumnBase.this);
+                    }
+                }
+            };
         }
         return contextMenu;
     }
@@ -269,6 +291,8 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * The id of this TableColumnBase. This simple string identifier is useful 
      * for finding a specific TableColumnBase within a UI control that uses 
      * TableColumnBase instances. The default value is {@code null}.
+     *
+     * @defaultValue null
      */
     private StringProperty id;
     public final void setId(String value) { idProperty().set(value); }
@@ -291,10 +315,12 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * <p>
      * Parsing this style might not be supported on some limited
      * platforms. It is recommended to use a standalone CSS file instead.
+     *
+     * @defaultValue empty string
      */
     private StringProperty style;
     public final void setStyle(String value) { styleProperty().set(value); }
-    @Override public final String getStyle() { return style == null ? null : style.get(); }
+    @Override public final String getStyle() { return style == null ? "" : style.get(); }
     public final StringProperty styleProperty() {
         if (style == null) {
             style = new SimpleStringProperty(this, "style");
@@ -784,7 +810,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
             double _prefWidth = 0.0f;
             double _maxWidth = 0.0f;
 
-            for (TableColumnBase col : getColumns()) {
+            for (TableColumnBase<S, ?> col : getColumns()) {
                 col.setParentColumn(this);
 
                 _minWidth += col.getMinWidth();

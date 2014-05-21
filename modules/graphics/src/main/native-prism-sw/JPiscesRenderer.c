@@ -332,10 +332,9 @@ initializeObjectFieldIds(JNIEnv *env,
         classHandle = (*env)->GetObjectClass(env, objectHandle);
     } else if (className != 0) {
         classHandle = (*env)->FindClass(env, className);
+        if (checkAndClearException(env)) return JNI_FALSE;
     } else {
-        classHandle = NULL;
-        JNI_ThrowNew(env, "java/lang/NullPointerException",
-                "Specify object instance or class name.");
+        return JNI_FALSE;
     }
 
     if (initializeFieldIds(fieldIds, env, classHandle, fieldDesc)) {

@@ -44,13 +44,39 @@
 JNIEXPORT jlong JNICALL Java_com_sun_javafx_font_DFontDecoder_createCTFont
 (JNIEnv *env, jclass clazz, jstring fontName)
 {
+    if (fontName == NULL) return 0l;
     CFIndex numChars = (*env)->GetStringLength(env, fontName);
     const jchar *fontBuffer = (*env)->GetStringChars(env, fontName, NULL);
-    CFStringRef fontNameRef = CFStringCreateWithCharacters(kCFAllocatorDefault, 
-                                                           fontBuffer, 
+    if (fontBuffer == NULL) return 0l;
+    CFStringRef fontNameRef = CFStringCreateWithCharacters(kCFAllocatorDefault,
+                                                           fontBuffer,
                                                            numChars);
-    
-    CTFontRef fontRef = CTFontCreateWithName(fontNameRef, 0, NULL);
+    (*env)->ReleaseStringChars(env, fontName, fontBuffer);
+
+    CTFontDescriptorRef descriptor = NULL;
+    CTFontCollectionRef collection = CTFontCollectionCreateFromAvailableFonts(NULL);
+    CFArrayRef fonts = CTFontCollectionCreateMatchingFontDescriptors(collection);
+    CFRelease(collection);
+    CFIndex count = CFArrayGetCount(fonts);
+    CFIndex i = 0;
+    while (i < count && descriptor == NULL) {
+        CTFontDescriptorRef fd = (CTFontDescriptorRef)CFArrayGetValueAtIndex(fonts, i++);
+        if (fd) {
+            CFStringRef fdNameRef = CTFontDescriptorCopyAttribute(fd, kCTFontDisplayNameAttribute);
+            if (fdNameRef) {
+                if (CFStringCompare(fdNameRef, fontNameRef, 0) == kCFCompareEqualTo) {
+                    descriptor = fd;
+                }
+                CFRelease(fdNameRef);
+            }
+        }
+    }
+
+    CTFontRef fontRef = NULL;
+    if (descriptor) {
+        fontRef = CTFontCreateWithFontDescriptor(descriptor, 0, NULL);
+    }
+    CFRelease(fonts);
     CFRelease(fontNameRef);
     return (jlong)fontRef;
 }

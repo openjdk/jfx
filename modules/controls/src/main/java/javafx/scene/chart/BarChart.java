@@ -42,8 +42,6 @@ import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
@@ -67,8 +65,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- PRIVATE FIELDS -------------------------------------------
     
-    private Map<Series, Map<String, Data<X,Y>>> seriesCategoryMap = 
-                                new HashMap<Series, Map<String, Data<X,Y>>>();
+    private Map<Series<X,Y>, Map<String, Data<X,Y>>> seriesCategoryMap = new HashMap<>();
     private Legend legend = new Legend();
     private final Orientation orientation;
     private CategoryAxis categoryAxis;
@@ -210,7 +207,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             categoryAxis.getCategories().add(itemIndex, category);
         } else if (categoryMap.containsKey(category)){
             // RT-21162 : replacing the previous data, first remove the node from scenegraph.
-            Data data = categoryMap.get(category);
+            Data<X,Y> data = categoryMap.get(category);
             getPlotChildren().remove(data.getNode());
             removeDataItemFromDisplay(series, data);
             requestChartLayout();
@@ -230,11 +227,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         if (shouldAnimate()) {
             XYValueMap.clear();
             dataRemoveTimeline = createDataRemoveTimeline(item, bar, series);
-            dataRemoveTimeline.setOnFinished(new EventHandler<ActionEvent>() {
-                public void handle(ActionEvent event) {
-                    item.setSeries(null);
-                    removeDataItemFromDisplay(series, item);
-                }
+            dataRemoveTimeline.setOnFinished(event -> {
+                item.setSeries(null);
+                removeDataItemFromDisplay(series, item);
             });
             dataRemoveTimeline.play();
         } else {
@@ -298,10 +293,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         // remove all symbol nodes
         if (shouldAnimate()) {
             pt = new ParallelTransition();
-            pt.setOnFinished(new EventHandler<ActionEvent>() {
-                public void handle(ActionEvent event) {
-                    removeSeriesFromDisplay(series);
-                }
+            pt.setOnFinished(event -> {
+                removeSeriesFromDisplay(series);
             });
             
             boolean lastSeries = (getSeriesSize() > 1) ? false : true;
@@ -317,10 +310,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                     FadeTransition ft = new FadeTransition(Duration.millis(700),bar);
                     ft.setFromValue(1);
                     ft.setToValue(0);
-                    ft.setOnFinished(new EventHandler<ActionEvent>() {
-                         @Override public void handle(ActionEvent actionEvent) {
-                            processDataRemove(series, d);
-                         }
+                    ft.setOnFinished(actionEvent -> {
+                        processDataRemove(series, d);
+                        bar.setOpacity(1.0);
                     });
                     pt.getChildren().add(ft);
                 }
@@ -364,6 +356,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                         categoryPos = getYAxis().getDisplayPosition(item.getCurrentY());
                         valPos = getXAxis().getDisplayPosition(item.getCurrentX());
                     }
+                    if (Double.isNaN(categoryPos) || Double.isNaN(valPos)) {
+                        continue;
+                    }
                     final double bottom = Math.min(valPos,zeroPos);
                     final double top = Math.max(valPos,zeroPos);
                     bottomPos = bottom;
@@ -390,7 +385,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         legend.getItems().clear();
         if (getData() != null) {
             for (int seriesIndex=0; seriesIndex < getData().size(); seriesIndex++) {
-                Series series = getData().get(seriesIndex);
+                Series<X,Y> series = getData().get(seriesIndex);
                 LegendItem legenditem = new LegendItem(series.getName());
                 legenditem.getSymbol().getStyleClass().addAll("chart-bar","series"+seriesIndex,"bar-legend-symbol",
                         series.defaultColorStyleClass);
@@ -408,7 +403,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     
     // -------------- PRIVATE METHODS ------------------------------------------
     
-    private void updateMap(Series series, Data item) {
+    private void updateMap(Series<X,Y> series, Data<X,Y> item) {
         final String category = (orientation == Orientation.VERTICAL) ? (String)item.getXValue() :
                                      (String)item.getYValue();
         Map<String, Data<X,Y>> categoryMap = seriesCategoryMap.get(series);
@@ -468,12 +463,10 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             item.setYValue(getYAxis().toRealValue(bottomPos));
             t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO,
                                     new KeyValue(item.currentYProperty(), item.getCurrentY())),
-                                    new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
-                                    @Override public void handle(ActionEvent actionEvent) {
+                                    new KeyFrame(Duration.millis(700), actionEvent -> {
                                         processDataRemove(series, item);
                                         XYValueMap.clear();
-                                    }
-                                },
+                                    },
                                 new KeyValue(item.currentYProperty(), item.getYValue(),
                                 Interpolator.EASE_BOTH) ));
         } else {
@@ -481,19 +474,17 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
              XYValueMap.put(item, ((Number)item.getXValue()).doubleValue());
             item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
             t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO, new KeyValue(item.currentXProperty(), item.getCurrentX())),
-                new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            processDataRemove(series, item);
-                            XYValueMap.clear();
-                        }
-                    },
+                new KeyFrame(Duration.millis(700), actionEvent -> {
+                    processDataRemove(series, item);
+                    XYValueMap.clear();
+                },
                     new KeyValue(item.currentXProperty(), item.getXValue(),
                             Interpolator.EASE_BOTH) ));
         }
         return t;
     }
     
-    @Override void dataBeingRemovedIsAdded(Data item, Series series) {
+    @Override void dataBeingRemovedIsAdded(Data<X,Y> item, Series<X,Y> series) {
         if (dataRemoveTimeline != null) {
             dataRemoveTimeline.setOnFinished(null);
             dataRemoveTimeline.stop();
@@ -527,7 +518,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                     a.setOnFinished(null);
                 }
             }
-            for (Data item : series.getData()) {
+            for (Data<X,Y> item : series.getData()) {
                 processDataRemove(series, item);
                 if (!lastSeries) {
                     restoreDataValues(item);
@@ -543,18 +534,15 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
      
     private void updateDefaultColorIndex(final Series<X,Y> series) {
         int clearIndex = seriesColorMap.get(series);
-        colorBits.clear(clearIndex);
         for (Data<X,Y> d : series.getData()) {
             final Node bar = d.getNode();
             if (bar != null) {
                 bar.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
-                colorBits.clear(clearIndex);
             }
         }
-        seriesColorMap.remove(series);
     }
 
-    private Node createBar(Series series, int seriesIndex, final Data item, int itemIndex) {
+    private Node createBar(Series<X,Y> series, int seriesIndex, final Data<X,Y> item, int itemIndex) {
         Node bar = item.getNode();
         if (bar == null) {
             bar = new StackPane();

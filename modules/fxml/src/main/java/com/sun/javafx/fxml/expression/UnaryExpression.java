@@ -26,29 +26,31 @@
 package com.sun.javafx.fxml.expression;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Abstract base class for unary expressions.
  */
-public abstract class UnaryExpression extends Expression {
-    private Expression operand;
+public final class UnaryExpression<U, T> extends Expression<T> {
+    private final Expression<U> operand;
+    private final Function<U, T> evaluator;
 
-    public UnaryExpression(Expression operand) {
+    public UnaryExpression(Expression<U> operand, Function<U, T> evaluator) {
         if (operand == null) {
             throw new NullPointerException();
         }
 
         this.operand = operand;
+        this.evaluator = evaluator;
     }
-
-    public Expression getOperand() {
-        return operand;
-    }
-
-    public abstract String getOperator();
 
     @Override
-    public void update(Object namespace, Object value) {
+    public T evaluate(Object namespace) {
+        return evaluator.apply(operand.evaluate(namespace));
+    }
+
+    @Override
+    public void update(Object namespace, T value) {
         throw new UnsupportedOperationException();
     }
 
@@ -67,8 +69,4 @@ public abstract class UnaryExpression extends Expression {
         operand.getArguments(arguments);
     }
 
-    @Override
-    public String toString() {
-        return "(" + getOperator() + operand + ")";
-    }
 }

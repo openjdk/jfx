@@ -31,13 +31,14 @@ import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 import com.sun.scenario.effect.light.Light;
 
 /**
  * An effect that applies diffuse and specular lighting to an arbitrary
  * input using a positionable light source.
  */
-public class PhongLighting extends CoreEffect {
+public class PhongLighting extends CoreEffect<RenderState> {
 
     private float surfaceScale;
     private float diffuseConstant;
@@ -295,15 +296,18 @@ public class PhongLighting extends CoreEffect {
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
         // RT-27564
-        // TODO: Since only the content input is used for the output
-        // bounds we could attempt to factor the bounds of the content
-        // input in our answer here for the other inputs.
-        return outputClip;
+        // TODO: Since only the content input is used for the output bounds
+        // we could attempt to factor the bounds of the content input in our
+        // answer for the getInputClip() method of the RenderState, but for
+        // now we will just use the stock RenderSpaceRenderState object.
+        return RenderState.RenderSpaceRenderState;
     }
 
     @Override

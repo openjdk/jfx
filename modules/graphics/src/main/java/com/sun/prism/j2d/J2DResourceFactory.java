@@ -51,6 +51,11 @@ class J2DResourceFactory extends BaseResourceFactory
         this.screen = screen;
     }
 
+    J2DPrismGraphics createJ2DPrismGraphics(J2DPresentable target,
+                                            java.awt.Graphics2D g2d) {
+        return new J2DPrismGraphics(target, g2d);
+    }
+
     public TextureResourcePool getTextureResourcePool() {
         return J2DTexturePool.instance;
     }

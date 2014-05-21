@@ -25,17 +25,17 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.application.ConditionalFeature;
-import javafx.application.Platform;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Skin;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
+import javafx.stage.WindowEvent;
 import com.sun.javafx.scene.control.behavior.TwoLevelFocusPopupBehavior;
 
 /**
@@ -82,7 +82,13 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
         popupMenu.addEventHandler(Menu.ON_SHOWN, new EventHandler<Event>() {
             @Override public void handle(Event event) {
                 Node cmContent = popupMenu.getSkin().getNode();
-                if (cmContent != null) cmContent.requestFocus();
+                if (cmContent != null) {
+                    cmContent.requestFocus();
+                    if (cmContent instanceof ContextMenuContent) {
+                        Node accMenu = ((ContextMenuContent)cmContent).getItemsContainer();
+                        accMenu.accSendNotification(Attribute.VISIBLE);
+                    }
+                }
                 
                 root.addEventHandler(KeyEvent.KEY_PRESSED, keyListener);
             }
@@ -93,6 +99,19 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
                 if (cmContent != null) cmContent.requestFocus();
                 
                 root.removeEventHandler(KeyEvent.KEY_PRESSED, keyListener);
+            }
+        });
+
+        // For accessibility Menu.ON_HIDING does not work because isShowing is true
+        // during the event, Menu.ON_HIDDEN does not work because the Window (in glass)
+        // has already being disposed. The fix is to use WINDOW_HIDING (WINDOW_HIDDEN).
+        popupMenu.addEventFilter(WindowEvent.WINDOW_HIDING, new EventHandler<Event>() {
+            @Override public void handle(Event event) {
+                Node cmContent = popupMenu.getSkin().getNode();
+                if (cmContent instanceof ContextMenuContent) {
+                    Node accMenu = ((ContextMenuContent)cmContent).getItemsContainer();
+                    accMenu.accSendNotification(Attribute.VISIBLE);
+                }
             }
         });
 

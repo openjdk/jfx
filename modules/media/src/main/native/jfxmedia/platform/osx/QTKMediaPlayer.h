@@ -50,6 +50,7 @@
 
     uint64_t hostTimeBase; // Host time for media time 0.0, updated every time we get a time changed notification
     double hostTimeFreq;   // frequency of the host clock, for conversion to seconds
+    BOOL updateHostTimeBase;
 
     double currentTime;
 

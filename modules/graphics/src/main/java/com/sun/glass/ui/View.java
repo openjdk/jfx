@@ -28,12 +28,35 @@ import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
 
 import java.lang.ref.WeakReference;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Map;
+import javafx.scene.accessibility.Accessible;
 
 public abstract class View {
 
     public final static int GESTURE_NO_VALUE = Integer.MAX_VALUE;
     public final static double GESTURE_NO_DOUBLE_VALUE = Double.NaN;
+
+    final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+        boolean force = Boolean.getBoolean("javafx.accessible.force");
+        if (force) return true;
+
+        /* Only enable accessibility for Mac 10.9 and Windows 8 or greater.
+         * All other platforms must use the force flag.
+         */
+        try {
+            String platform = Platform.determinePlatform();
+            String version = System.getProperty("os.version").replaceFirst("(\\d+\\.\\d+).*", "$1");
+            float v = Float.parseFloat(version);
+            boolean allowedPlatform = (platform.equals(Platform.MAC) && v >= 10.9f) ||
+                                      (platform.equals(Platform.WINDOWS) && v >= 6.2f);
+
+            return allowedPlatform ? Boolean.getBoolean("javafx.accessible") : false;
+        } catch (Exception e) {
+            return false;
+        }
+    });
 
     public static class EventHandler {
         public void handleViewEvent(View view, long time, int type) {
@@ -335,6 +358,10 @@ public abstract class View {
                                             boolean isInertia, int touchCount,
                                             int dir, int x, int y, int xAbs,
                                             int yAbs) {
+        }
+
+        public Accessible getSceneAccessible() {
+            return null;
         }
     }
 
@@ -1057,5 +1084,26 @@ public abstract class View {
         handleSwipeGestureEvent(this, System.nanoTime(), type, modifiers,
                                 isDirect, isInertia, touchCount, dir, originx,
                                 originy, originxAbs, originyAbs);
+    }
+
+    /**
+     * Returns the accessible object for the view.
+     * This method is called by JNI code when the
+     * platform requested the accessible peer for the view.
+     * On Windows it happens on WM_GETOBJECT.
+     * On Mac it happens on NSView#accessibilityAttributeNames.
+     */
+    long getAccessible() {
+        Application.checkEventThread();
+        checkNotClosed();
+        if (accessible) {
+            Accessible acc = eventHandler.getSceneAccessible();
+            if (acc != null) {
+                PlatformAccessible pAcc = acc.impl_getDelegate();
+                pAcc.setView(this);
+                return pAcc.getNativeAccessible();
+            }
+        }
+        return 0L;
     }
 }

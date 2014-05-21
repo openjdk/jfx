@@ -82,15 +82,13 @@ public class Node_LocalToParentTransform_Test {
     @Test
     public void shouldBeNotifiedWhenNodeTransforms() {
         final Node n = new Rectangle(20, 20);
-        n.localToParentTransformProperty().addListener(new InvalidationListener() {
-            public void invalidated(Observable o) {
-                if (!notified) {
-                    notified = true;
-                    TransformHelper.assertMatrix(n.getLocalToParentTransform(),
-                        1, 0, 0, 10,
-                        0, 1, 0, 20,
-                        0, 0, 1,  0);
-                }
+        n.localToParentTransformProperty().addListener(o -> {
+            if (!notified) {
+                notified = true;
+                TransformHelper.assertMatrix(n.getLocalToParentTransform(),
+                    1, 0, 0, 10,
+                    0, 1, 0, 20,
+                    0, 0, 1,  0);
             }
         });
 

@@ -25,11 +25,9 @@
 package fx83dfeatures;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
@@ -68,38 +66,36 @@ public class RepeatTextureTest extends Application {
         root.getChildren().addAll(meshView);
 
         Scene scene = new Scene(root, D, D, true);
-        scene.setOnKeyTyped(new EventHandler<KeyEvent>() {
-            public void handle(KeyEvent e) {
-                switch (e.getCharacter()) {
-                    case "1":
-                        mesh.getTexCoords().setAll(new float[]{
-                            0, 0,
-                            1, 0,
-                            1, 1,
-                            0, 1,});
-                        break;
-                    case "2":
-                        mesh.getTexCoords().setAll(new float[]{
-                            0, 0,
-                            2, 0,
-                            2, 2,
-                            0, 2,});
-                        break;
-                    case "3":
-                        mesh.getTexCoords().setAll(new float[]{
-                            -1, -1,
-                            2, -1,
-                            2, 2,
-                            -1, 2,});
-                        break;
-                    case "4":
-                        mesh.getTexCoords().setAll(new float[]{
-                            -2, -2,
-                            2, -2,
-                            2, 2,
-                            -2, 2,});
-                        break;
-                }
+        scene.setOnKeyTyped(e -> {
+            switch (e.getCharacter()) {
+                case "1":
+                    mesh.getTexCoords().setAll(new float[]{
+                        0, 0,
+                        1, 0,
+                        1, 1,
+                        0, 1,});
+                    break;
+                case "2":
+                    mesh.getTexCoords().setAll(new float[]{
+                        0, 0,
+                        2, 0,
+                        2, 2,
+                        0, 2,});
+                    break;
+                case "3":
+                    mesh.getTexCoords().setAll(new float[]{
+                        -1, -1,
+                        2, -1,
+                        2, 2,
+                        -1, 2,});
+                    break;
+                case "4":
+                    mesh.getTexCoords().setAll(new float[]{
+                        -2, -2,
+                        2, -2,
+                        2, 2,
+                        -2, 2,});
+                    break;
             }
         });
 

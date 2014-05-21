@@ -7,7 +7,11 @@
       <sourceFolder url="file://$MODULE_DIR$/modules/controls/src/main/resources" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/controls/src/test/java" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/modules/controls/src/test/resources" isTestSource="true" />
-      <excludeFolder url="file://$MODULE_DIR$/modules/controls/build" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/controls/build/resources/main" type="java-resource" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/controls/build/classes" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/controls/build/dependency-cache" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/controls/build/libs" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/controls/build/reports" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="base" exported="" />

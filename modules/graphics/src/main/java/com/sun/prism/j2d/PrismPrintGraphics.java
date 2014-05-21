@@ -51,6 +51,12 @@ public final class PrismPrintGraphics
         }
 
         @Override
+        J2DPrismGraphics createJ2DPrismGraphics(J2DPresentable target,
+                                                java.awt.Graphics2D g2d) {
+            return new PrismPrintGraphics(target, g2d);
+        }
+
+        @Override
         public Texture getCachedTexture(Image image, WrapMode wrapMode) {
             /*
              * The super-class has a static cache which does not allow
@@ -151,5 +157,9 @@ public final class PrismPrintGraphics
 
     public PrismPrintGraphics(java.awt.Graphics2D g2d, int width, int height) {
         super(new PagePresentable(width, height), g2d);
+    }
+
+    PrismPrintGraphics(J2DPresentable target, java.awt.Graphics2D g2d) {
+        super(target, g2d);
     }
 }

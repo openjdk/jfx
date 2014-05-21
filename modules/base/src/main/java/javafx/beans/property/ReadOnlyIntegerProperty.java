@@ -95,13 +95,10 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
         return property instanceof ReadOnlyIntegerProperty ? (ReadOnlyIntegerProperty) property:
            new ReadOnlyIntegerPropertyBase() {
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 
@@ -142,13 +139,10 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
         return new ReadOnlyObjectPropertyBase<Integer>() {
 
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 

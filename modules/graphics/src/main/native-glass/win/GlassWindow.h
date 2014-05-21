@@ -28,7 +28,6 @@
 
 #include "BaseWnd.h"
 #include "ViewContainer.h"
-#include "AccessibleRoot.h"
 
 
 class GlassWindow : public BaseWnd, public ViewContainer {
@@ -100,8 +99,6 @@ public:
 
     bool IsChild() { return m_parent != NULL; }
 
-    void SetAccessibilityInitIsComplete(AccessibleRoot* pAcc);
-
     virtual BOOL EnterFullScreenMode(GlassView * view, BOOL animate, BOOL keepRatio);
     virtual void ExitFullScreenMode(BOOL animate);
 
@@ -171,15 +168,6 @@ private:
     LONG m_beforeFullScreenStyle, m_beforeFullScreenExStyle;
     HMENU m_beforeFullScreenMenu;
 
-    // Boolean indicating if initialization of accessibility has been been requested.
-    // It is set upon receipt of first WM_GETOBJECT.
-    // This is used to ensure the intialization only happens once per hwnd.
-    bool m_a11yInitRequested;
-    // Indicates if the intialization of accessibility has completed.
-    bool m_a11yTreeIsReady;
-    // The accessible for this top level window
-    IRawElementProviderSimple* m_pProvider;  // the accessible for this top level window
-
     bool IsInFullScreenMode() { return m_isInFullScreen; }
 
     void HandleDestroyEvent();
@@ -190,7 +178,6 @@ private:
     void HandleWindowPosChangedEvent();
     bool HandleCommand(WORD cmdID);
     void HandleFocusDisabledEvent();
-    void HandleAccessibilityInitEvent();
 };
 
 

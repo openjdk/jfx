@@ -105,6 +105,7 @@ public class Rotate extends Transform {
 
     /**
      * Creates a two-dimensional Rotate transform.
+     * The pivot point is set to (0,0)
      * @param angle the angle of rotation measured in degrees
      */
     public Rotate(double angle) {
@@ -113,6 +114,7 @@ public class Rotate extends Transform {
 
     /**
      * Creates a three-dimensional Rotate transform.
+     * The pivot point is set to (0,0,0)
      * @param angle the angle of rotation measured in degrees
      * @param axis the axis of rotation 
      */
@@ -198,6 +200,8 @@ public class Rotate extends Transform {
 
     /**
      * Defines the X coordinate of the rotation pivot point.
+     * 
+     * @defaultValue 0.0
      */
     private DoubleProperty pivotX;
 
@@ -235,6 +239,8 @@ public class Rotate extends Transform {
 
     /**
      * Defines the Y coordinate of the rotation pivot point.
+     * 
+     * @defaultValue 0.0
      */
     private DoubleProperty pivotY;
 
@@ -272,6 +278,8 @@ public class Rotate extends Transform {
 
     /**
      * Defines the Z coordinate of the rotation pivot point.
+     * 
+     * @defaultValue 0.0
      */
     private DoubleProperty pivotZ;
 

@@ -20,9 +20,9 @@ public class JavaScriptBridgeTest extends TestBase {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         final WebEngine web = getEngine();
         
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Object wino = web.executeScript("parent.parent");
-            assertTrue(wino instanceof netscape.javascript.JSObject);
+            assertTrue(wino instanceof JSObject);
             JSObject win = (JSObject) wino;
             JSObject doc2 = (JSObject) win.getMember("document");
             assertSame(doc, doc2);
@@ -95,11 +95,11 @@ public class JavaScriptBridgeTest extends TestBase {
             // RT-14241
             ((JSObject) web.executeScript("new Array(1, 2, 3);"))
                 .setSlot(0, 155);
-        }});
+        });
     }
 
     public @Test void testJSBridge2() throws InterruptedException {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             JSObject strO = (JSObject)
                     getEngine().executeScript("new String('test me')");
             String str = "I am new member, and I'm here";
@@ -109,16 +109,16 @@ public class JavaScriptBridgeTest extends TestBase {
             strO.removeMember("newmember");
             o = strO.getMember("newmember");
             assertEquals("undefined", o);
-        }});
+        });
     }
 
     public @Test void testJSBridge3() throws InterruptedException {
         //final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         final WebEngine web = getEngine();
 
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Object wino = web.executeScript("parent.parent");
-            assertTrue(wino instanceof netscape.javascript.JSObject);
+            assertTrue(wino instanceof JSObject);
             JSObject win = (JSObject) wino;
             java.util.Stack<Object> st = new java.util.Stack<Object>();
             bind("myStack", st);
@@ -131,13 +131,13 @@ public class JavaScriptBridgeTest extends TestBase {
             assertSame(st, web.executeScript("myStack2"));
             assertEquals("def", web.executeScript("myStack.get(1)").toString());
             assertEquals("[abc, def]", web.executeScript("myStack").toString());
-        }});
+        });
     }
 
     public @Test void testJSBridge4() throws InterruptedException {
         final WebEngine web = getEngine();
         
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             // Based on RT-19205 "JavaScript2Java Bridge: float and double
             // values can be lost when assigned to JS variables".
             float a = (float) 15.5;
@@ -168,7 +168,7 @@ public class JavaScriptBridgeTest extends TestBase {
             // object to a field of Java object produces garbage value"
             Carry carry = new Carry();
             bind("carry", carry);
-        
+
             Object o = web.executeScript("carry.o = window; carry.o == window");
             assertEquals(Boolean.TRUE, o);
             assertEquals("[object Window]", carry.o.toString());
@@ -181,14 +181,14 @@ public class JavaScriptBridgeTest extends TestBase {
             bind("carry", carry);
             web.executeScript("carry.c = c;");
             assertEquals('C', carry.c);
-        }});
+        });
     }
 
     @Test public void testJSBridge5() throws InterruptedException {
         final Document doc = getDocumentFor("src/test/resources/html/dom.html");
         final WebEngine web = getEngine();
 
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             JSObject doc2 = (JSObject) doc;
             try {
                 doc2.call("removeChild", new Object[] {doc2});
@@ -197,12 +197,12 @@ public class JavaScriptBridgeTest extends TestBase {
                 assertTrue(ex instanceof JSException);
                 assertTrue(ex.toString().indexOf("DOM Exception") > 0);
             }
-        }});
+        });
     }
 
     @Test public void testJSCall1() throws InterruptedException {
         final WebEngine web = getEngine();
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             assertEquals("123.7", web.executeScript("123.67.toFixed(1)"));
             try {
                 web.executeScript("123.67.toFixed(-1)");
@@ -211,13 +211,13 @@ public class JavaScriptBridgeTest extends TestBase {
                 String exp = "netscape.javascript.JSException: RangeError";
                 assertEquals(exp, ex.toString().substring(0, exp.length()));
             }
-         }});
+         });
     }
 
     @Test public void testNullMemberName() throws InterruptedException {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             JSObject parent = (JSObject) getEngine().executeScript("parent");
-            
+
             // test getMember(null)
             try {
                 parent.getMember(null);
@@ -225,7 +225,7 @@ public class JavaScriptBridgeTest extends TestBase {
             } catch (NullPointerException e) {
                 // expected
             }
-            
+
             // test setMember(null, obj)
             try {
                 parent.setMember(null, "");
@@ -233,7 +233,7 @@ public class JavaScriptBridgeTest extends TestBase {
             } catch (NullPointerException e) {
                 // expected
             }
-            
+
             // test removeMember(null)
             try {
                 parent.removeMember(null);
@@ -241,7 +241,7 @@ public class JavaScriptBridgeTest extends TestBase {
             } catch (NullPointerException e) {
                 // expected
             }
-            
+
             // test call(null)
             try {
                 parent.call(null);
@@ -249,7 +249,7 @@ public class JavaScriptBridgeTest extends TestBase {
             } catch (NullPointerException e) {
                 // expected
             }
-            
+
             // test eval(null)
             try {
                 parent.eval(null);
@@ -257,7 +257,7 @@ public class JavaScriptBridgeTest extends TestBase {
             } catch (NullPointerException e) {
                 // expected
             }
-        }});
+        });
     }
 
     public static class Carry {
@@ -279,7 +279,7 @@ public class JavaScriptBridgeTest extends TestBase {
     public @Test void testCallStatic() throws InterruptedException {
         final WebEngine web = getEngine();
         
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             // Test RT-19099
             java.io.File x = new java.io.File("foo.txt1");
             bind("x", x);
@@ -290,13 +290,13 @@ public class JavaScriptBridgeTest extends TestBase {
                 if (ex.toString().indexOf("static") < 0)
                     fail("caught unexpected exception: "+ex);
             }
-        }});
+        });
     }
 
     public @Test void testBridgeExplicitOverloading() throws InterruptedException {
         final WebEngine web = getEngine();
         
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             StringBuilder sb = new StringBuilder();
             bind("sb", sb);
             web.executeScript("sb['append(int)'](123)");
@@ -335,7 +335,7 @@ public class JavaScriptBridgeTest extends TestBase {
             assertSame(iarr, r);
             assertEquals("98/87/76/null",
                          iarr[0]+"/"+iarr[1]+"/"+iarr[2]+"/"+iarr[3]);
-        }});
+        });
     }
 
     private void executeShouldFail(WebEngine web, String expression,
@@ -355,7 +355,7 @@ public class JavaScriptBridgeTest extends TestBase {
     public @Test void testThrowJava() throws InterruptedException {
         final WebEngine web = getEngine();
 
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             MyExceptionHelper test = new MyExceptionHelper();
             bind("test", test);
             try {
@@ -367,7 +367,7 @@ public class JavaScriptBridgeTest extends TestBase {
                 assertTrue(e.getCause() != null);
                 assertTrue(e.getCause() instanceof MyException);
             }
-        }});
+        });
     }
 
     public static class MyException extends Throwable {
@@ -383,20 +383,20 @@ public class JavaScriptBridgeTest extends TestBase {
     public @Test void testBridgeArray1() throws InterruptedException {
         final WebEngine web = getEngine();
         
-        submit(new Runnable() { public void run() {
-            int []array = new int[3]; 
-            array[0] = 42; 
-            bind("test", array); 
+        submit(() -> {
+            int []array = new int[3];
+            array[0] = 42;
+            bind("test", array);
             assertEquals(Integer.valueOf(42), web.executeScript("test[0]"));
             assertEquals(Integer.valueOf(3), web.executeScript("test.length"));
             assertSame(array, web.executeScript("test"));
-         }});
+         });
     }
 
     public @Test void testBridgeBadOverloading() throws InterruptedException {
         final WebEngine web = getEngine();
         
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             StringBuilder sb = new StringBuilder();
             bind("sb", sb);
             executeShouldFail(web, "sb['append)int)'](123)");
@@ -409,6 +409,6 @@ public class JavaScriptBridgeTest extends TestBase {
             executeShouldFail(web, "sb['append(BadClass)'](123)");
             executeShouldFail(web, "sb['append(bad-type)'](123)");
             executeShouldFail(web, "sb['append(char[],,int)'](1, 2)");
-        }});
+        });
     }
 }

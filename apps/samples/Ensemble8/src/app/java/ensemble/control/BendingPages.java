@@ -187,120 +187,83 @@ public class BendingPages extends Region {
     public BendingPages() {
         getChildren().setAll(backPage.get(), frontPage.get(), frontPageBack, shadow);
         
-        backPage.addListener(new ChangeListener<Node>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Node> arg0, Node arg1, Node arg2) {
-                getChildren().set(0, arg2);
+        backPage.addListener((ObservableValue<? extends Node> arg0, Node arg1, Node arg2) -> {
+            getChildren().set(0, arg2);
+        });
+        
+        frontPage.addListener((ObservableValue<? extends Node> arg0, Node oldPage, Node newPage) -> {
+            if (bookBend != null) {
+                bookBend.detach();
+            }
+            getChildren().set(1, newPage);
+            bookBend = new BookBend(newPage, frontPageBack, shadow);
+            setTarget();
+        });
+        
+        addEventFilter(MouseEvent.MOUSE_MOVED, (MouseEvent me) -> {
+            if (withinGrip(me)) {
+                animState = FOLLOWING_MOVING_MOUSE;
+                setTarget(me);
+                update();
+            } else if (animState == FOLLOWING_MOVING_MOUSE) {
+                endFollowingMouse();
             }
         });
         
-        frontPage.addListener(new ChangeListener<Node>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Node> arg0, Node oldPage, Node newPage) {
-                if (bookBend != null) {
-                    bookBend.detach();
+        setOnMousePressed((MouseEvent me) -> {
+            if (withinGrip(me)) {
+                animState = FOLLOWING_DRAGGING_MOUSE;
+                me.consume();
+            } else if (withinPath(me)) {
+                animState = FOLLOWING_DRAGGING_MOUSE;
+                me.consume();
+            }
+        });
+        
+        setOnMouseDragged((MouseEvent me) -> {
+            if (animState == FOLLOWING_DRAGGING_MOUSE) {
+                setTarget(me);
+                deltaX = targetX - bookBend.getTargetX();
+                deltaY = targetY - bookBend.getTargetY();
+                update();
+                me.consume();
+            }
+        });
+        
+        setOnMouseExited((MouseEvent me) -> {
+            if (animState == FOLLOWING_MOVING_MOUSE) {
+                endFollowingMouse();
+                me.consume();
+            }
+        });
+        
+        setOnMouseReleased((MouseEvent me) -> {
+            if (animState == FOLLOWING_DRAGGING_MOUSE && !me.isStillSincePress()) {
+                endFollowingMouse();
+                me.consume();
+            }
+        });
+        
+        setOnMouseClicked((MouseEvent me) -> {
+            if (me.isStillSincePress() && (withinGrip(me) || withinPath(me))) {
+                if (state == OPENED) {
+                    state = CLOSED;
+                } else {
+                    state = OPENED;
                 }
-                getChildren().set(1, newPage);
-                bookBend = new BookBend(newPage, frontPageBack, shadow);
                 setTarget();
+                animateTo();
+                me.consume();
             }
         });
         
-        addEventFilter(MouseEvent.MOUSE_MOVED, new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent me) {
-                if (withinGrip(me)) {
-                    animState = FOLLOWING_MOVING_MOUSE;
-                    setTarget(me);
-                    update();
-                } else if (animState == FOLLOWING_MOVING_MOUSE) {
-                    endFollowingMouse();
-                }
-            }
-        });
-        
-        setOnMousePressed(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent me) {
-                if (withinGrip(me)) {
-                    animState = FOLLOWING_DRAGGING_MOUSE;
-                    me.consume();
-                } else if (withinPath(me)) {
-                    animState = FOLLOWING_DRAGGING_MOUSE;
-                    me.consume();
-                }
-            }
-
-        });
-        
-        setOnMouseDragged(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent me) {
-                if (animState == FOLLOWING_DRAGGING_MOUSE) {
-                    setTarget(me);
-                    deltaX = targetX - bookBend.getTargetX();
-                    deltaY = targetY - bookBend.getTargetY();
-                    update();
-                    me.consume();
-                }
-            }
-        });
-        
-        setOnMouseExited(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent me) {
-                if (animState == FOLLOWING_MOVING_MOUSE) {
-                    endFollowingMouse();
-                    me.consume();
-                }
-            }
-        });
-        
-        setOnMouseReleased(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent me) {
-                if (animState == FOLLOWING_DRAGGING_MOUSE && !me.isStillSincePress()) {
-                    endFollowingMouse();
-                    me.consume();
-                }
-            }
-        });
-        
-        setOnMouseClicked(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent me) {
-                if (me.isStillSincePress() && (withinGrip(me) || withinPath(me))) {
-                    if (state == OPENED) {
-                        state = CLOSED;
-                    } else {
-                        state = OPENED;
-                    }
-                    setTarget();
-                    animateTo();
-                    me.consume();
-                }
-            }
-        });
-        
-        layoutBoundsProperty().addListener(new ChangeListener<Bounds>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Bounds> arg0, Bounds arg1, Bounds arg2) {
-                if (state == State.CLOSED) {
-                    setTarget();
-                    bookBend.update(targetX, targetY);
-                } else if (state == State.OPENED) {
-                    setTarget();
-                    bookBend.update(targetX, targetY);
-                }
+        layoutBoundsProperty().addListener((ObservableValue<? extends Bounds> arg0, Bounds arg1, Bounds arg2) -> {
+            if (state == State.CLOSED) {
+                setTarget();
+                bookBend.update(targetX, targetY);
+            } else if (state == State.OPENED) {
+                setTarget();
+                bookBend.update(targetX, targetY);
             }
         });
     }
@@ -366,21 +329,13 @@ public class BendingPages extends Region {
             animation.stop();
         }
         DoubleProperty t = new SimpleDoubleProperty();
-        t.addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> arg0, Number arg1, Number t) {
-                bookBend.update(fx + (targetX - fx) * t.doubleValue(), fy + (targetY - fy) * t.doubleValue());
-            }
+        t.addListener((ObservableValue<? extends Number> arg0, Number arg1, Number t1) -> {
+            bookBend.update(fx + (targetX - fx) * t1.doubleValue(), fy + (targetY - fy) * t1.doubleValue());
         });
         animation = TimelineBuilder.create()
-                .keyFrames(new KeyFrame(Duration.millis(200), new EventHandler<ActionEvent>() {
-
-                        @Override
-                        public void handle(ActionEvent arg0) {
-                            animState = NO_ANIMATION;
-                        }
-                    },
+                .keyFrames(new KeyFrame(Duration.millis(200), (ActionEvent arg0) -> {
+                    animState = NO_ANIMATION;
+        },
                     new KeyValue(t, 1, Interpolator.EASE_OUT)))
                 .build();
         animation.play();

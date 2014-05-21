@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import com.sun.scenario.effect.Flood;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 public class PrFloodPeer extends EffectPeer {
 
@@ -45,13 +46,14 @@ public class PrFloodPeer extends EffectPeer {
 
     @Override
     public ImageData filter(Effect effect,
+                            RenderState rstate,
                             BaseTransform transform,
                             Rectangle outputClip,
                             ImageData... inputs)
     {
         FilterContext fctx = getFilterContext();
         Flood flood = (Flood)effect;
-        BaseBounds floodBounds = flood.getBounds();
+        BaseBounds floodBounds = flood.getFloodBounds();
         int fx = (int)floodBounds.getMinX();
         int fy = (int)floodBounds.getMinY();
         int fw = (int)floodBounds.getWidth();

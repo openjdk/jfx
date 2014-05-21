@@ -32,6 +32,7 @@ import com.sun.media.jfxmediaimpl.MediaUtils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.JarURLConnection;
@@ -41,6 +42,8 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
@@ -157,12 +160,21 @@ public class Locator {
     }
     
     private static long getContentLengthLong(URLConnection connection) {
+        Method method = AccessController.doPrivileged((PrivilegedAction<Method>) () -> {
+            try {
+                return connection.getClass().getMethod("getContentLengthLong");
+            } catch (NoSuchMethodException ex) {
+                return null;
+            }
+        });
+        
         try {
-            Method method = connection.getClass().getMethod("getContentLengthLong");
-            return (long) method.invoke(connection);
-        } catch (NoSuchMethodException e) {
-            return connection.getContentLength();
-        } catch (Exception ex) {
+            if (method != null) {
+                return (long) method.invoke(connection);
+            } else {
+                return connection.getContentLength();
+            }
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException ex) {
             return -1;
         }
     }

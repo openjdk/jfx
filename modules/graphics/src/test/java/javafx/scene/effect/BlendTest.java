@@ -320,27 +320,19 @@ public class BlendTest extends EffectsTestBase {
         effect.topInputProperty().bind(vTop);
 
         // try setting itself as top input
-        try {
-            vTop.set(effect);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, effect.getTopInput());
-            vTop.set(null);
-            effect.topInputProperty().bind(vTop);
-        }
+        vTop.set(effect);
+        assertEquals(null, effect.getTopInput());
+        vTop.set(null);
+        effect.topInputProperty().bind(vTop);
 
         // try setting itself as bottom input
         ObjectProperty vBottom = new SimpleObjectProperty();
         effect.bottomInputProperty().bind(vBottom);
 
-        try {
-            vBottom.set(effect);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, effect.getBottomInput());
-            vBottom.set(null);
-            effect.bottomInputProperty().bind(vBottom);
-        }
+        vBottom.set(effect);
+        assertEquals(null, effect.getBottomInput());
+        vBottom.set(null);
+        effect.bottomInputProperty().bind(vBottom);
 
         // test following cycle
         // Blend <- BoxBlur <- Blend
@@ -349,37 +341,25 @@ public class BlendTest extends EffectsTestBase {
         blur.inputProperty().bind(vBlur);
         vBottom.set(blur);
 
-        try {
-            vBlur.set(effect);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, blur.getInput());
-            vBlur.set(null);
-            blur.inputProperty().bind(vBlur);
-        }
+        vBlur.set(effect);
+        assertEquals(null, blur.getInput());
+        vBlur.set(null);
+        blur.inputProperty().bind(vBlur);
 
         // test following cycle
         // BoxBlur <- Blend <- BoxBlur
         vTop.set(null);
         vBottom.set(null);
         vBlur.set(effect);
-        try {
-            vBottom.set(blur);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, effect.getBottomInput());
-            vBottom.set(null);
-            effect.bottomInputProperty().bind(vBottom);
-        }
+        vBottom.set(blur);
+        assertEquals(null, effect.getBottomInput());
+        vBottom.set(null);
+        effect.bottomInputProperty().bind(vBottom);
 
-        try {
-            vTop.set(blur);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, effect.getTopInput());
-            vTop.set(null);
-            effect.topInputProperty().bind(vTop);
-        }
+        vTop.set(blur);
+        assertEquals(null, effect.getTopInput());
+        vTop.set(null);
+        effect.topInputProperty().bind(vTop);
 
         assertEquals(null, effect.getTopInput());
         assertEquals(null, effect.getBottomInput());

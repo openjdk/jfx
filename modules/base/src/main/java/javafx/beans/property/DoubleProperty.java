@@ -69,7 +69,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
     @Override
     public void setValue(Number v) {
         if (v == null) {
-            Logging.getLogger().info("Attempt to set double property to null, using default value instead.", new NullPointerException());
+            Logging.getLogger().fine("Attempt to set double property to null, using default value instead.", new NullPointerException());
             set(0.0);
         } else {
             set(v.doubleValue());

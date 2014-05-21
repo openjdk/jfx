@@ -34,21 +34,19 @@ public class HistoryTest extends TestBase {
         //
         // before history is populated
         //
-        submit(new Runnable() {
-            public void run() {
-                try {
-                    history.go(-1);
-                    fail("go: IndexOutOfBoundsException is not thrown");                    
-                } catch (IndexOutOfBoundsException ex) {}
-                try {
-                    history.go(1);
-                    fail("go: IndexOutOfBoundsException is not thrown");                    
-                } catch (IndexOutOfBoundsException ex) {}
+        submit(() -> {
+            try {
+                history.go(-1);
+                fail("go: IndexOutOfBoundsException is not thrown");
+            } catch (IndexOutOfBoundsException ex) {}
+            try {
+                history.go(1);
+                fail("go: IndexOutOfBoundsException is not thrown");
+            } catch (IndexOutOfBoundsException ex) {}
 
-                history.setMaxSize(99);
-                assertEquals("max size is wrong", history.getMaxSize(), 99);
-            }
-        });        
+            history.setMaxSize(99);
+            assertEquals("max size is wrong", history.getMaxSize(), 99);
+        });
         
         // [1*]
         checkLoad(new File("src/test/resources/html/h1.html"), 1, 0, "1");
@@ -105,11 +103,9 @@ public class HistoryTest extends TestBase {
             }
         });
 
-        submit(new Runnable() {
-            public void run() {
-                // [1, 2*, 3]
-                history.go(-1);
-            }
+        submit(() -> {
+            // [1, 2*, 3]
+            history.go(-1);
         });
         waitLoadFinished();
         check(new File("src/test/resources/html/h2.html"), 3, 1, "2");
@@ -121,89 +117,71 @@ public class HistoryTest extends TestBase {
         // more go() checks
         //        
         
-        submit(new Runnable() {
-            public void run() {
-                // [1, 2, 3*]
-                history.go(1);
-            }
+        submit(() -> {
+            // [1, 2, 3*]
+            history.go(1);
         });
         waitLoadFinished();
         check(new File("src/test/resources/html/h3.html"), 3, 2, "3");
         
-        submit(new Runnable() {
-            public void run() {
-                // [1*, 2, 3]
-                history.go(-2);
-            }
+        submit(() -> {
+            // [1*, 2, 3]
+            history.go(-2);
         });
         waitLoadFinished();
         check(new File("src/test/resources/html/h1.html"), 3, 0, "1");
         
-        submit(new Runnable() {
-            public void run() {
-                // [1*, 2, 3]
-                history.go(0); // no-op
-            }
+        submit(() -> {
+            // [1*, 2, 3]
+            history.go(0); // no-op
         });
         
-        submit(new Runnable() {
-            public void run() {
-                // [1*, 2, 3]
-                try {
-                    history.go(-1);
-                    fail("go: IndexOutOfBoundsException is not thrown");                    
-                } catch (IndexOutOfBoundsException ex) {}
-            }
+        submit(() -> {
+            // [1*, 2, 3]
+            try {
+                history.go(-1);
+                fail("go: IndexOutOfBoundsException is not thrown");
+            } catch (IndexOutOfBoundsException ex) {}
         });
         
-        submit(new Runnable() {
-            public void run() {
-                // [1, 2, 3*]
-                history.go(2);
-            }
+        submit(() -> {
+            // [1, 2, 3*]
+            history.go(2);
         });
         waitLoadFinished();
         check(new File("src/test/resources/html/h3.html"), 3, 2, "3");
         
-        submit(new Runnable() {
-            public void run() {
-                // [1, 2, 3*]
-                try {
-                    history.go(1);
-                    fail("go: IndexOutOfBoundsException is not thrown");
-                } catch (IndexOutOfBoundsException ex) {}
-            }
+        submit(() -> {
+            // [1, 2, 3*]
+            try {
+                history.go(1);
+                fail("go: IndexOutOfBoundsException is not thrown");
+            } catch (IndexOutOfBoundsException ex) {}
         });
         
         //
         // check the maxSize
         //
         
-        submit(new Runnable() {
-            public void run() {
-                // [1, 2, 3*]
-                history.setMaxSize(3);
-            }
+        submit(() -> {
+            // [1, 2, 3*]
+            history.setMaxSize(3);
         });
         // [2, 3, 1*]
         checkLoad(new File("src/test/resources/html/h1.html"), 3, 2, "1");
         
-        submit(new Runnable() {
-            public void run() {
-                // [2, 3*]
-                history.setMaxSize(2);
-                assertEquals("entries: size is wrong", 2, history.getEntries().size());
-                assertEquals("entries: title is wrong", "2", history.getEntries().get(0).getTitle());
-            }
+        submit(() -> {
+            // [2, 3*]
+            history.setMaxSize(2);
+            assertEquals("entries: size is wrong", 2, history.getEntries().size());
+            assertEquals("entries: title is wrong", "2", history.getEntries().get(0).getTitle());
         });
         
-        submit(new Runnable() {
-            public void run() {
-                // [2, 3*]
-                history.setMaxSize(3);
-                // [2*, 3]
-                history.go(-1);
-            }
+        submit(() -> {
+            // [2, 3*]
+            history.setMaxSize(3);
+            // [2*, 3]
+            history.go(-1);
         });
         waitLoadFinished();
         
@@ -212,11 +190,9 @@ public class HistoryTest extends TestBase {
         // [2, 1, 3*]
         checkLoad(new File("src/test/resources/html/h3.html"), 3, 2, "3");
         
-        submit(new Runnable() {
-            public void run() {
-                // [2*, 1, 3]
-                history.go(-2);
-            }
+        submit(() -> {
+            // [2*, 1, 3]
+            history.go(-2);
         });
         waitLoadFinished();
         
@@ -246,18 +222,16 @@ public class HistoryTest extends TestBase {
         // finally, check zero and invalid maxSize
         //
         
-        submit(new Runnable() {
-            public void run() {
-                // []
-                history.setMaxSize(0);
-                assertEquals("maxSizeProperty: wrong value", 0, history.getEntries().size());
-                
-                // []
-                try {
-                    history.maxSizeProperty().set(-1);
-                    fail("maxSizeProperty: IllegalArgumentException is not thrown");
-                } catch (IllegalArgumentException ex) {}
-            }
+        submit(() -> {
+            // []
+            history.setMaxSize(0);
+            assertEquals("maxSizeProperty: wrong value", 0, history.getEntries().size());
+
+            // []
+            try {
+                history.maxSizeProperty().set(-1);
+                fail("maxSizeProperty: IllegalArgumentException is not thrown");
+            } catch (IllegalArgumentException ex) {}
         });
     }
     

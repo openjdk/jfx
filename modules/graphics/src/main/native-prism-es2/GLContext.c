@@ -281,7 +281,7 @@ GLenum translateScaleFactor(jint scaleFactor) {
         case com_sun_prism_es2_GLContext_GL_SRC_ALPHA_SATURATE:
             return GL_SRC_ALPHA_SATURATE;
         default:
-            fprintf(stderr, "Error: Unknown scale factor. Returning GL_ZERO (default)");
+            fprintf(stderr, "Error: Unknown scale factor. Returning GL_ZERO (default)\n");
     }
     return GL_ZERO;
 }
@@ -374,6 +374,12 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nBlit
         return;
     }
 
+    // Temporarily disable scissor to avoid a problem with some GL drivers
+    // that honor the scissor test if enabled
+    if (ctxInfo->state.scissorEnabled) {
+        glDisable(GL_SCISSOR_TEST);
+    }
+
     if (dstFBO == 0) {
         dstFBO = ctxInfo->state.fbo;
     }
@@ -393,6 +399,11 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nBlit
 
     // Restore previous FBO
     ctxInfo->glBindFramebuffer(GL_FRAMEBUFFER, ctxInfo->state.fbo);
+
+    // Restore previous scissor
+    if (ctxInfo->state.scissorEnabled) {
+        glEnable(GL_SCISSOR_TEST);
+    }
 }
 
 GLuint attachRenderbuffer(ContextInfo *ctxInfo, GLuint rbID, GLenum attachment) {
@@ -524,11 +535,11 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateProgram
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jint vertID, jintArray fragIDArr,
         jint numAttrs, jobjectArray attrs, jintArray indexs) {
     GLuint shaderProgram;
-    int success, status, i;
+    GLint success;
+    int i;
     jstring attrName;
     jint *indexsPtr;
     char *attrNameString;
-    jboolean valid;
     jint *fragIDs;
     jsize length;
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
@@ -538,7 +549,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateProgram
             || (ctxInfo->glBindAttribLocation == NULL)
             || (ctxInfo->glLinkProgram == NULL)
             || (ctxInfo->glGetProgramiv == NULL)
-            || (ctxInfo->glValidateProgram == NULL)
+            || (ctxInfo->glGetProgramInfoLog == NULL)
             || (ctxInfo->glDetachShader == NULL)
             || (ctxInfo->glDeleteShader == NULL)
             || (ctxInfo->glDeleteProgram == NULL)) {
@@ -573,43 +584,15 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateProgram
 
     if (success == GL_FALSE) {
         GLint  length;
-        ctxInfo->glGetShaderiv(shaderProgram, GL_INFO_LOG_LENGTH , &length );
+
+        ctxInfo->glGetProgramiv(shaderProgram, GL_INFO_LOG_LENGTH, &length);
         if (length) {
-            char* msg  =  (char *) malloc((length * sizeof(char)) + 1);
-            ctxInfo->glGetShaderInfoLog ( shaderProgram , length , NULL , msg );
-            printf("Shader validation log: %s\n",msg);
+            char* msg  =  (char *) malloc(length * sizeof(char));
+            ctxInfo->glGetProgramInfoLog(shaderProgram, length, NULL, msg);
+            fprintf(stderr, "Program link log: %.*s\n", length, msg);
             free(msg);
         }
-    }
 
-    if (success == GL_FALSE) {
-        valid = JNI_FALSE;
-    } else {
-        ctxInfo->glValidateProgram(shaderProgram);
-        ctxInfo->glGetProgramiv(shaderProgram, GL_VALIDATE_STATUS, &status);
-        if (status == GL_FALSE) {
-            valid = JNI_FALSE;
-            fprintf(stderr, "Program validation failed");
-
-            if (success == GL_FALSE) {
-                GLint  length;
-                ctxInfo->glGetShaderiv(shaderProgram, GL_INFO_LOG_LENGTH , &length );
-                if (length) {
-                    char* msg  =  (char *) malloc((length * sizeof(char)) + 1);
-                    ctxInfo->glGetShaderInfoLog ( shaderProgram , length , NULL , msg );
-                    fprintf(stderr, "Shader validation log: %s\n", msg);
-                    fflush(stderr);
-                    free(msg);
-                }
-            }
-        } else {
-            valid = JNI_TRUE;
-        }
-    }
-#ifdef ANDROID_NDK
-    valid = JNI_TRUE;
-#endif
-    if (!valid) {
         ctxInfo->glDetachShader(shaderProgram, vertID);
         ctxInfo->glDeleteShader(vertID);
         for(i = 0; i < length; i++) {
@@ -644,6 +627,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCompileShader
             || (ctxInfo->glShaderSource == NULL)
             || (ctxInfo->glCompileShader == NULL)
             || (ctxInfo->glGetShaderiv == NULL)
+            || (ctxInfo->glGetShaderInfoLog == NULL)
             || (ctxInfo->glDeleteShader == NULL)) {
         return 0;
     }
@@ -664,16 +648,15 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCompileShader
 
     if (success == GL_FALSE) {
         GLint  length;
-        ctxInfo->glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH , &length );
+
+        ctxInfo->glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &length);
         if (length) {
-            char* msg  =  (char *) malloc((length * sizeof(char)) + 1);
-            ctxInfo->glGetShaderInfoLog ( shaderID , length , NULL , msg );
-            printf("Shader compile log: %s\n",msg);
+            char* msg = (char *) malloc(length * sizeof(char));
+            ctxInfo->glGetShaderInfoLog(shaderID, length, NULL, msg);
+            fprintf(stderr, "Shader compile log: %.*s\n", length, msg);
             free(msg);
         }
-    }
 
-    if (success == GL_FALSE) {
         ctxInfo->glDeleteShader(shaderID);
         return 0;
     }
@@ -1864,9 +1847,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
     }
 
     vertexBufferSize = (*env)->GetArrayLength(env, vbArray);
-    vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
-
     indexBufferSize = (*env)->GetArrayLength(env, ibArray);
+    vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
     indexBuffer = (GLushort *) ((*env)->GetPrimitiveArrayCritical(env, ibArray, NULL));
 
     uvbSize = (GLuint) vbSize;
@@ -1934,9 +1916,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nBuildNativeGeometry
     }
 
     vertexBufferSize = (*env)->GetArrayLength(env, vbArray);
-    vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
-
     indexBufferSize = (*env)->GetArrayLength(env, ibArray);
+    vertexBuffer = (GLfloat *) ((*env)->GetPrimitiveArrayCritical(env, vbArray, NULL));
     indexBuffer = (GLuint *) ((*env)->GetPrimitiveArrayCritical(env, ibArray, NULL));
 
     uvbSize = (GLuint) vbSize;

@@ -45,11 +45,7 @@ final class SWTCursor extends Cursor {
         Display display = Display.getDefault();
         ImageData data = SWTApplication.createImageData(pixels);
         cursor = new org.eclipse.swt.graphics.Cursor(display, data, x, y);
-        display.disposeExec(new Runnable() {
-            public void run () {
-                cursor.dispose();
-            }
-        });
+        display.disposeExec(() -> cursor.dispose());
         return 1L;
     }
 }

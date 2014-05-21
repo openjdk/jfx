@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -190,6 +190,8 @@ avcdecoder_init (AvcDecoder * decode,
     }
 
     gst_pad_use_fixed_caps (decode->srcpad);
+    
+    decode->mutex = g_mutex_new();
 }
 
 static void
@@ -198,6 +200,11 @@ avcdecoder_dispose(GObject* object)
     AvcDecoder* decode = AVCDECODER(object);
     
     avcdecoder_state_destroy (decode);
+    
+    if (NULL != decode->mutex) {
+        g_mutex_free(decode->mutex);
+        decode->mutex = NULL;
+    }
     
     G_OBJECT_CLASS(parent_class)->dispose(object);
 }
@@ -253,7 +260,7 @@ avcdecoder_decoder_output_callback (void* userData,
                                     CVImageBufferRef imageBuffer)
 {
     AvcDecoder *decode = AVCDECODER (userData);
-
+    
     if(decode->is_flushing)
     {
         return;
@@ -312,14 +319,15 @@ avcdecoder_decoder_output_callback (void* userData,
         return;
     }
 
+    GstBuffer* buf = NULL;
+    
     if (isGap)
     {
         // Push a flagged, empty buffer it there is a problem.
 
-        GstBuffer* buf = gst_buffer_new();
+        buf = gst_buffer_new();
         GST_BUFFER_TIMESTAMP(buf) = timestamp;
         GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_GAP);
-        g_queue_insert_sorted(decode->ordered_frames, buf, avcdecoder_buffer_compare, NULL);
     }
     else
     {
@@ -338,11 +346,9 @@ avcdecoder_decoder_output_callback (void* userData,
             gst_structure_set(caps_struct, "line_stride", G_TYPE_INT, (int)bytes_per_row, NULL);
             decode->is_stride_set = TRUE;
         }
-        gboolean is_buffer_enqueued = FALSE;
         if (kCVReturnSuccess == CVPixelBufferLockBaseAddress (imageBuffer, 0))
         {
             void* image_data = CVPixelBufferGetBaseAddress(imageBuffer);
-            GstBuffer* buf;
             if (GST_FLOW_OK == gst_pad_alloc_buffer_and_set_caps (srcpad, 0, bytes_per_row*height,
                                                                   GST_PAD_CAPS(srcpad),
                                                                   &buf))
@@ -351,9 +357,6 @@ avcdecoder_decoder_output_callback (void* userData,
 
                 memcpy (buffer_data, image_data, GST_BUFFER_SIZE (buf));
                 GST_BUFFER_TIMESTAMP(buf) = timestamp;
-
-                g_queue_insert_sorted(decode->ordered_frames, buf, avcdecoder_buffer_compare, NULL);
-                is_buffer_enqueued = TRUE;
             }
 
             CVPixelBufferUnlockBaseAddress (imageBuffer, 0); // ignore return value
@@ -361,15 +364,20 @@ avcdecoder_decoder_output_callback (void* userData,
 
         CVBufferRelease(imageBuffer);
 
-        if (!is_buffer_enqueued)
+        if (!buf)
         {
-            GstBuffer* buf = gst_buffer_new();
+            buf = gst_buffer_new();
             GST_BUFFER_TIMESTAMP(buf) = timestamp;
             GST_BUFFER_FLAG_SET(buf, GST_BUFFER_FLAG_GAP);
-            g_queue_insert_sorted(decode->ordered_frames, buf, avcdecoder_buffer_compare, NULL);
         }
     }
 
+    // the callback might be called from several threads
+    // need to synchronize ordered_frames queue access
+    g_mutex_lock(decode->mutex);
+
+    g_queue_insert_sorted(decode->ordered_frames, buf, avcdecoder_buffer_compare, NULL);
+    
     GstBuffer* frame;
     GstFlowReturn ret = GST_FLOW_OK;
     while(ret == GST_FLOW_OK && !decode->is_flushing && NULL != (frame = g_queue_peek_head(decode->ordered_frames)))
@@ -379,6 +387,9 @@ avcdecoder_decoder_output_callback (void* userData,
            ts <= decode->previous_timestamp + decode->timestamp_ceil || // frame is at next timestamp
            (0 == deltaFlag && ts < timestamp))                          // have newer I-frame
         {
+            decode->previous_timestamp = ts;
+            g_queue_pop_head(decode->ordered_frames);
+
             if(GST_BUFFER_FLAG_IS_SET(frame, GST_BUFFER_FLAG_GAP))
             {
                 // INLINE - gst_buffer_unref()
@@ -391,16 +402,20 @@ avcdecoder_decoder_output_callback (void* userData,
                     GST_BUFFER_FLAG_SET(frame, GST_BUFFER_FLAG_DISCONT);
                     decode->is_newsegment = FALSE;
                 }
+
+                // it's better not to call gst_pad_push under mutex to avoid deadlocks
+                g_mutex_unlock(decode->mutex);
                 ret = gst_pad_push(decode->srcpad, frame);
+                g_mutex_lock(decode->mutex);
             }
-            decode->previous_timestamp = ts;
-            g_queue_pop_head(decode->ordered_frames);
         }
         else
         {
             break;
         }
     }
+    
+    g_mutex_unlock(decode->mutex);
 }
 
 /*
@@ -453,6 +468,8 @@ avcdecoder_state_reset(AvcDecoder *decode)
 #endif
     }
 
+    g_mutex_lock(decode->mutex);
+
     // Unref all sorted buffers and clear the associated queue.
     if (NULL != decode->ordered_frames)
     {
@@ -462,6 +479,8 @@ avcdecoder_state_reset(AvcDecoder *decode)
 
     decode->is_newsegment = FALSE;
     decode->segment_start = 0;
+
+    g_mutex_unlock(decode->mutex);
 }
 
 /**

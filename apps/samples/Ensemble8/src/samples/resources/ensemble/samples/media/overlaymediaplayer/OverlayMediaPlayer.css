@@ -47,6 +47,26 @@
     -fx-content-display: graphic-only;
 }
 
+#top-bar .context-menu {
+    -fx-padding: 0;
+    -fx-background-radius: 30;
+}
+
+#top-bar .context-menu > * > .menu-item {
+    -fx-padding: 0;
+    -fx-background-radius: 30;
+    -fx-color: -fx-faint-focus-color;
+    -fx-background-color: -fx-body-color;
+}
+
+#top-bar .context-menu > * > .menu-item:hover {
+    -fx-color: -fx-focus-color;
+}
+
+#top-bar .context-menu > * > .menu-item > * > .label {
+    -fx-text-fill: -fx-text-background-color;
+}
+
 #media-slider .track {
     -fx-background-color: null;
     -fx-background-insets: 1 0 -1 0, 0, 1;

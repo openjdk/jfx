@@ -356,22 +356,16 @@ public class CheckBoxTest {
     }
     
     @Test public void fireSelectedCheckboxResultsIn_OnAction() {
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                assertTrue(btn.isSelected());
-            }
+        btn.setOnAction(arg0 -> {
+            assertTrue(btn.isSelected());
         });
         btn.setSelected(true); 
         assertTrue(btn.isSelected());
     }    
     
     @Test public void fireIndeterminateCheckboxResultsIn_OnAction() {
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                assertTrue(btn.isIndeterminate());
-            }
+        btn.setOnAction(arg0 -> {
+            assertTrue(btn.isIndeterminate());
         });
         btn.setIndeterminate(true);
         assertTrue(btn.isIndeterminate());
@@ -379,12 +373,9 @@ public class CheckBoxTest {
     
     private int count = 0;
     @Test public void fireSelectedCheckboxResultsIn_OnActionCalledOnce_RT21482() {        
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                if (count++ > 0) {
-                    assertFalse(true);
-                }
+        btn.setOnAction(arg0 -> {
+            if (count++ > 0) {
+                assertFalse(true);
             }
         });
         btn.fire();

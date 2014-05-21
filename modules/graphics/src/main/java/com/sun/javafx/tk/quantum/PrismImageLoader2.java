@@ -244,12 +244,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         public PrismImageLoader2 call() throws IOException {
             try {
                 return AccessController.doPrivileged(
-                        new PrivilegedExceptionAction<PrismImageLoader2>() {
-                            @Override
-                            public PrismImageLoader2 run() throws IOException {
-                                return AsyncImageLoader.super.call();
-                            }
-                        }, acc);
+                        (PrivilegedExceptionAction<PrismImageLoader2>) () -> AsyncImageLoader.super.call(), acc);
             } catch (final PrivilegedActionException e) {
                 final Throwable cause = e.getCause();
 
@@ -269,35 +264,24 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         private static ExecutorService createExecutor() {
             final ThreadGroup bgLoadingThreadGroup =
                     AccessController.doPrivileged(
-                        new PrivilegedAction<ThreadGroup>() {
-                            @Override
-                            public ThreadGroup run() {
-                                return new ThreadGroup(
-                                    QuantumToolkit.getFxUserThread()
-                                                  .getThreadGroup(),
-                                    "Background image loading thread pool");
-                            }
-                        });
+                            (PrivilegedAction<ThreadGroup>) () -> new ThreadGroup(
+                                QuantumToolkit.getFxUserThread()
+                                              .getThreadGroup(),
+                                "Background image loading thread pool")
+                    );
 
             final ThreadFactory bgLoadingThreadFactory =
-                    new ThreadFactory() {
-                        @Override
-                        public Thread newThread(final Runnable runnable) {
-                            return AccessController.doPrivileged(
-                                new PrivilegedAction<Thread>() {
-                                    @Override
-                                    public Thread run() {
-                                        final Thread newThread =
-                                                new Thread(bgLoadingThreadGroup,
-                                                           runnable);
-                                        newThread.setPriority(
-                                                      Thread.MIN_PRIORITY);
+                    runnable -> AccessController.doPrivileged(
+                            (PrivilegedAction<Thread>) () -> {
+                                final Thread newThread =
+                                        new Thread(bgLoadingThreadGroup,
+                                                   runnable);
+                                newThread.setPriority(
+                                              Thread.MIN_PRIORITY);
 
-                                        return newThread;
-                                    }
-                                });
-                        }
-                    };
+                                return newThread;
+                            }
+                    );
 
             final ExecutorService bgLoadingExecutor =
                     Executors.newCachedThreadPool(bgLoadingThreadFactory);

@@ -38,12 +38,14 @@ class X11GLFactory extends GLFactory {
     private static native long nGetVisualID(long nativeCtxInfo);
 
     // Entries must be in lowercase and null string is a wild card
-    // Limit es2 pipe qualification check to ATI/AMD (Radeon driver)
-    // and NVidia GPUs only
+    // Limit es2 pipe qualification check to supported drivers and GPUs
     private GLGPUInfo preQualificationFilter[] = {
-        new GLGPUInfo("advanced micro devices", "radeon"),
-        new GLGPUInfo("ati", "radeon"),
-        new GLGPUInfo("nvidia", null)
+        new GLGPUInfo("advanced micro devices", null),
+        new GLGPUInfo("ati", null),
+        new GLGPUInfo("intel open source technology center", null),
+        new GLGPUInfo("nvidia", null),
+        new GLGPUInfo("nouveau", null),
+        new GLGPUInfo("x.org", null)
     };
 
     private GLGPUInfo blackList[] = null;

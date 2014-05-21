@@ -155,6 +155,7 @@ class D3DContext extends BaseShaderContext {
         }
 
         if (hr == D3DERR_DEVICENOTRESET) {
+            boolean wasLost = isLost();
             setLost();
             // disposing the lcd buffer because the device is about to be lost
             disposeLCDBuffer();
@@ -165,10 +166,12 @@ class D3DContext extends BaseShaderContext {
             if (hr == D3D_OK) {
                 isLost = false;
                 initState();
+                // Notify caller that the device was reset
+                if (!wasLost) return false;
             }
         }
 
-        return hr == D3D_OK;
+        return !FAILED(hr);
     }
 
     /**
@@ -182,7 +185,7 @@ class D3DContext extends BaseShaderContext {
             validate(res);
         }
 
-        return res == D3D_OK;
+        return !FAILED(res);
     }
 
     /**

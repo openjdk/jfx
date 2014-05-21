@@ -117,13 +117,23 @@ static void fbImx6AdjustShift(){
     }
 }
 
-/* Writes an image into the cursor framebuffer with the given x and y shits. */
+/* Writes an image into the cursor framebuffer with the given x and y shifts. */
 static void fbImx6WriteCursor(int fd, jbyte *cursorImage, int bpp) {
     int i, j, k;
     char buffer[256];
     int cursorSize = cursor.width * cursor.height * bpp;
     int xShift = cursor.xShift;
     int yShift = cursor.yShift;
+
+    if (!cursor.isVisible) {
+        return;
+    }
+
+    if (lseek(cursor.fd, 0, SEEK_SET) == -1) {
+        GLASS_LOG_SEVERE("Cannot rewrite cursor image");
+        return;
+     }
+
     GLASS_LOG_FINEST("Cursor shift = (%i, %i) at (%i, %i)\n",
                      xShift, yShift, cursor.x, cursor.y);
     if (xShift == 0 && yShift == 0) {
@@ -323,6 +333,8 @@ static void fbImx6CursorInitialize(int screenWidth, int screenHeight, int screen
     if (ioctl(cursor.fd, MXCFB_SET_OVERLAY_POS, &cpos)) {
         GLASS_LOG_SEVERE("Error %s in setting overlay position", strerror(errno));
     }
+
+    fbImx6BlankCursor();
 }
 
 
@@ -389,16 +401,11 @@ static void fbImx6SetNativeCursor(jlong nativeCursorHandle) {
             }
         }
 
-        cursor.isVisible = 1;
         cursor.currentCursor = nativeCursorHandle;
 
         fbImx6AdjustShift();
-        if (lseek(cursor.fd, 0, SEEK_SET) == -1) {
-                GLASS_LOG_SEVERE("Cannot rewrite cursor image");
-        } else {
-            fbImx6WriteCursor(cursor.fd, cursorImage->buffer, use32bit ? 4 : 2);
-        }
-    }
+        fbImx6WriteCursor(cursor.fd, cursorImage->buffer, use32bit ? 4 : 2);
+    } 
 }
 
 
@@ -430,13 +437,9 @@ static void fbImx6CursorSetPosition(int x, int y) {
         y -= cursor.yShift;
         if (xShift != cursor.xShift || yShift != cursor.yShift) {
             GLASS_LOG_FINEST("Calling lseek to rewind cursor fd");
-            if (lseek(cursor.fd, 0, SEEK_SET) == -1) {
-                GLASS_LOG_SEVERE("Cannot rewrite cursor image");
-            } else {
-                Imx6CursorImage *fbCursorImage = (Imx6CursorImage *)
-                    jlong_to_ptr(cursor.currentCursor);
-                fbImx6WriteCursor(cursor.fd, fbCursorImage->buffer, use32bit ? 4 : 2);
-            }
+            Imx6CursorImage *fbCursorImage = (Imx6CursorImage *)
+                jlong_to_ptr(cursor.currentCursor);
+            fbImx6WriteCursor(cursor.fd, fbCursorImage->buffer, use32bit ? 4 : 2);
         }
 
         struct mxcfb_pos cpos = {x, y};
@@ -448,8 +451,10 @@ static void fbImx6CursorSetPosition(int x, int y) {
 
 
 void fbImx6CursorClose() {
-
     if (cursor.fd >= 0) {
+        if (cursor.isVisible) {
+            fbImx6BlankCursor();
+        }
         close(cursor.fd);
         cursor.fd = -1;
         cursor.isVisible = 0;
@@ -462,7 +467,10 @@ void fbImx6CursorClose() {
 static void fbImx6SetVisible(jboolean isVisible) {
     if (isVisible) {
         if (!cursor.isVisible && cursor.currentCursor != 0) {
-            fbImx6SetNativeCursor(cursor.currentCursor);
+            cursor.isVisible = 1;
+            Imx6CursorImage *fbCursorImage = (Imx6CursorImage *)
+                  jlong_to_ptr(cursor.currentCursor);
+            fbImx6WriteCursor(cursor.fd, fbCursorImage->buffer, use32bit ? 4 : 2);
         }
     } else {
         if (cursor.isVisible) {

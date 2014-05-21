@@ -363,7 +363,7 @@ public class Utils {
 
         if (width < eWidth || height < eHeight) {
             // The ellipsis doesn't fit.
-            return "";
+            return text; // RT-30868 - return text, not empty string.
         }
 
         helper.setText(text);
@@ -745,7 +745,7 @@ public class Utils {
     private static BreakIterator charIterator = null;
     public static int getHitInsertionIndex(HitInfo hit, String text) {
         int charIndex = hit.getCharIndex();
-        if (!hit.isLeading()) {
+        if (text != null && !hit.isLeading()) {
             if (charIterator == null) {
                 charIterator = BreakIterator.getCharacterInstance();
             }

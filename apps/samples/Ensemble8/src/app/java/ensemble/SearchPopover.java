@@ -72,39 +72,33 @@ public class SearchPopover extends Popover {
         getStyleClass().add("right-tooth");
         setPrefWidth(600);
         
-        searchBox.textProperty().addListener(new ChangeListener<String>() {
-            @Override public void changed(ObservableValue<? extends String> ov, String t, String t1) {
-                updateResults();
-            }
+        searchBox.textProperty().addListener((ObservableValue<? extends String> ov, String t, String t1) -> {
+            updateResults();
         });
         
-        searchBox.addEventFilter(KeyEvent.ANY, new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent t) {
-                if (t.getCode() == KeyCode.DOWN 
-                        || t.getCode() == KeyCode.UP
-                        || t.getCode() == KeyCode.PAGE_DOWN
-                        || (t.getCode() == KeyCode.HOME && (t.isControlDown() || t.isMetaDown()))
-                        || (t.getCode() == KeyCode.END && (t.isControlDown() || t.isMetaDown()))
-                        || t.getCode() == KeyCode.PAGE_UP) {
-                    searchResultPopoverList.fireEvent(t);
-                    t.consume();
-                } else if (t.getCode() == KeyCode.ENTER) {
-                    t.consume();
-                    if (t.getEventType() == KeyEvent.KEY_PRESSED) {
-                        SearchResult selectedItem = searchResultPopoverList.getSelectionModel().getSelectedItem();
-                        if (selectedItem != null) searchResultPopoverList.itemClicked(selectedItem);
-                    }
+        searchBox.addEventFilter(KeyEvent.ANY, (KeyEvent t) -> {
+            if (t.getCode() == KeyCode.DOWN
+                    || t.getCode() == KeyCode.UP
+                    || t.getCode() == KeyCode.PAGE_DOWN
+                    || (t.getCode() == KeyCode.HOME && (t.isControlDown() || t.isMetaDown()))
+                    || (t.getCode() == KeyCode.END && (t.isControlDown() || t.isMetaDown()))
+                    || t.getCode() == KeyCode.PAGE_UP) {
+                searchResultPopoverList.fireEvent(t);
+                t.consume();
+            } else if (t.getCode() == KeyCode.ENTER) {
+                t.consume();
+                if (t.getEventType() == KeyEvent.KEY_PRESSED) {
+                    SearchResult selectedItem = searchResultPopoverList.getSelectionModel().getSelectedItem();
+                    if (selectedItem != null) searchResultPopoverList.itemClicked(selectedItem);
                 }
             }
         });
         searchResultPopoverList = new SearchResultPopoverList(pageBrowser);
         // if list gets focus then send back to search box
-        searchResultPopoverList.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) {
-                if (hasFocus) {
-                    searchBox.requestFocus();
-                    searchBox.selectPositionCaret(searchBox.getText().length());
-                }
+        searchResultPopoverList.focusedProperty().addListener((ObservableValue<? extends Boolean> ov, Boolean t, Boolean hasFocus) -> {
+            if (hasFocus) {
+                searchBox.requestFocus();
+                searchBox.selectPositionCaret(searchBox.getText().length());
             }
         });
     }
@@ -154,16 +148,10 @@ public class SearchPopover extends Popover {
             searchErrorTooltip.show( searchBox.getScene().getWindow(),x, y);
             searchErrorTooltipHidder = new Timeline();
             searchErrorTooltipHidder.getKeyFrames().add( 
-                new KeyFrame(Duration.seconds(3), 
-                    new EventHandler<ActionEvent>() {
-                        
-                        @Override
-                        public void handle(ActionEvent t) {
-                            searchErrorTooltip.hide();
-                            searchErrorTooltip.setText(null);
-                        }
-                    }
-                )
+                new KeyFrame(Duration.seconds(3), (ActionEvent t) -> {
+                    searchErrorTooltip.hide();
+                    searchErrorTooltip.setText(null);
+            })
             );
             searchErrorTooltipHidder.play();
         } else {

@@ -25,13 +25,12 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 import javafx.scene.control.ToggleButton;
 
-import com.sun.javafx.scene.control.behavior.ButtonBehavior;
-
-public class ToggleButtonSkin extends LabeledSkinBase<ToggleButton, ButtonBehavior<ToggleButton>> {
+public class ToggleButtonSkin extends LabeledSkinBase<ToggleButton, ToggleButtonBehavior<ToggleButton>> {
 
     public ToggleButtonSkin(ToggleButton toggleButton) {
-        super(toggleButton, new ButtonBehavior<ToggleButton>(toggleButton));
+        super(toggleButton, new ToggleButtonBehavior<>(toggleButton));
     }
 }

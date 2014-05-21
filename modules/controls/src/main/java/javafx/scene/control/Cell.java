@@ -36,11 +36,10 @@ import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
-import com.sun.javafx.scene.control.accessible.AccessibleListItem;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 /**
@@ -352,7 +351,7 @@ public class Cell<T> extends Labeled {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
 
         /**
@@ -640,7 +639,6 @@ public class Cell<T> extends Labeled {
      * @expert
      */
     protected void updateItem(T item, boolean empty) {
-        if (isEditing()) cancelEdit();
         setItem(item);
         setEmpty(empty);
         if (empty && isSelected()) {
@@ -656,17 +654,6 @@ public class Cell<T> extends Labeled {
     public void updateSelected(boolean selected) {
         if (selected && isEmpty()) return;
         setSelected(selected);
-    }
-
-    private AccessibleListItem accListItem ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
-        if( accListItem == null)
-            accListItem = new AccessibleListItem(this);
-        return (AccessibleProvider)accListItem ;
     }
     
     

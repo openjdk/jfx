@@ -106,15 +106,12 @@ public abstract class ValidatorPane<C extends Control> extends Region {
     }
 
     public ValidatorPane() {
-        content.addListener(new ChangeListener<Control>() {
-            @Override
-            public void changed(ObservableValue<? extends Control> ov, Control oldValue, Control newValue) {
-                if (oldValue != null) {
-                    getChildren().remove(oldValue);
-                }
-                if (newValue != null) {
-                    getChildren().add(0, newValue);
-                }
+        content.addListener((ObservableValue<? extends Control> ov, Control oldValue, Control newValue) -> {
+            if (oldValue != null) {
+                getChildren().remove(oldValue);
+            }
+            if (newValue != null) {
+                getChildren().add(0, newValue);
             }
         });
     }

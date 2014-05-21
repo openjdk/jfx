@@ -146,7 +146,7 @@ public class SelectBinding {
             try {
                 return (Boolean)observable.getValue();
             } catch (NullPointerException ex) {
-                Logging.getLogger().info("Value of select binding is null, returning default value", ex);
+                Logging.getLogger().fine("Value of select binding is null, returning default value", ex);
             } catch (ClassCastException ex) {
                 Logging.getLogger().warning("Value of select-binding has wrong type, returning default value.", ex);
             }
@@ -197,7 +197,7 @@ public class SelectBinding {
             try {
                 return ((Number)observable.getValue()).doubleValue();
             } catch (NullPointerException ex) {
-                Logging.getLogger().info("Value of select binding is null, returning default value", ex);
+                Logging.getLogger().fine("Value of select binding is null, returning default value", ex);
             } catch (ClassCastException ex) {
                 Logging.getLogger().warning("Exception while evaluating select-binding", ex);
             }
@@ -248,7 +248,7 @@ public class SelectBinding {
             try {
                 return ((Number)observable.getValue()).floatValue();
             } catch (NullPointerException ex) {
-                Logging.getLogger().info("Value of select binding is null, returning default value", ex);
+                Logging.getLogger().fine("Value of select binding is null, returning default value", ex);
             } catch (ClassCastException ex) {
                 Logging.getLogger().warning("Exception while evaluating select-binding", ex);
             }
@@ -299,7 +299,7 @@ public class SelectBinding {
             try {
                 return ((Number)observable.getValue()).intValue();
             } catch (NullPointerException ex) {
-                Logging.getLogger().info("Value of select binding is null, returning default value", ex);
+                Logging.getLogger().fine("Value of select binding is null, returning default value", ex);
             } catch (ClassCastException ex) {
                 Logging.getLogger().warning("Exception while evaluating select-binding", ex);
             }
@@ -350,7 +350,7 @@ public class SelectBinding {
             try {
                 return ((Number)observable.getValue()).longValue();
             } catch (NullPointerException ex) {
-                Logging.getLogger().info("Value of select binding is null, returning default value", ex);
+                Logging.getLogger().fine("Value of select binding is null, returning default value", ex);
             } catch (ClassCastException ex) {
                 Logging.getLogger().warning("Exception while evaluating select-binding", ex);
             }
@@ -498,7 +498,7 @@ public class SelectBinding {
                         if (ex instanceof  IllegalStateException) {
                             logger.warning("Property '" + propertyNames[i] + "' does not exist in " + obj.getClass(), ex);
                         } else if (ex instanceof NullPointerException) {
-                            logger.info("Property '" + propertyNames[i] + "' in " + properties[i] + " is null", ex);
+                            logger.fine("Property '" + propertyNames[i] + "' in " + properties[i] + " is null", ex);
                         } else {
                             Logging.getLogger().warning("", ex);
                         }
@@ -512,7 +512,7 @@ public class SelectBinding {
             updateDependencies();
             final ObservableValue<?> result = properties[n-1];
             if (result == null) {
-                Logging.getLogger().info("Property '" + propertyNames[n-1] + "' in " + properties[n-1] + " is null", new NullPointerException());
+                Logging.getLogger().fine("Property '" + propertyNames[n-1] + "' in " + properties[n-1] + " is null", new NullPointerException());
             }
             return result;
         }

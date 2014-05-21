@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014 Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -61,7 +61,7 @@ class SourceTab extends Tab {
             case ".css":
             case ".fxml":
                 String source = Utils.loadFile(getClass().getResource(url));
-                if (EnsembleApp.IS_EMBEDDED || EnsembleApp.IS_IOS || !Platform.isSupported(ConditionalFeature.WEB)) {
+                if (EnsembleApp.IS_EMBEDDED || EnsembleApp.IS_IOS || EnsembleApp.IS_ANDROID || !Platform.isSupported(ConditionalFeature.WEB)) {
                     // TODO: Convert to TextFlow
                     //                    TextFlow textFlow = TextFlowBuilder.create()
                     //                            .build();

@@ -47,12 +47,10 @@ public class BackgroundExecutor {
 
     public static synchronized ExecutorService getExecutor() {
         if (instance == null) {
-            instance = Executors.newCachedThreadPool(new ThreadFactory() {
-                public Thread newThread(Runnable r) {
-                    Thread t = new Thread(r);
-                    t.setPriority(Thread.MIN_PRIORITY);
-                    return t;
-                }
+            instance = Executors.newCachedThreadPool(r -> {
+                Thread t = new Thread(r);
+                t.setPriority(Thread.MIN_PRIORITY);
+                return t;
             });
             ((ThreadPoolExecutor) instance).setKeepAliveTime(1, TimeUnit.SECONDS);
         }
@@ -64,13 +62,12 @@ public class BackgroundExecutor {
         if (timerInstance == null) {
             // @@@ Here's where we load the configuration and such
             timerInstance = new ScheduledThreadPoolExecutor(1,
-                    new ThreadFactory() {
-                        public Thread newThread(Runnable r) {
-                            Thread t = new Thread(r);
-                            t.setDaemon(true);
-                            return t;
-                        }
-                    });
+                    r -> {
+                        Thread t = new Thread(r);
+                        t.setDaemon(true);
+                        return t;
+                    }
+            );
         }
 
         return timerInstance;

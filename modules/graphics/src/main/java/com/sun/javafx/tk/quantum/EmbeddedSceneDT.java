@@ -58,19 +58,16 @@ final class EmbeddedSceneDT implements EmbeddedSceneDTInterface {
     {
         assert dnd.isHostThread();
 
-        return dnd.executeOnFXThread(new Callable<TransferMode>() {
-            @Override
-            public TransferMode call() {
-                assert dragSource == null;
-                assert assistant == null;
+        return dnd.executeOnFXThread(() -> {
+            assert dragSource == null;
+            assert assistant == null;
 
-                dragSource = ds;
-                assistant = new EmbeddedDTAssistant(dragSource);
+            dragSource = ds;
+            assistant = new EmbeddedDTAssistant(dragSource);
 
-                return dndHandler.handleDragEnter(x, y, xAbs, yAbs,
-                                                  recommendedDropAction,
-                                                  assistant);
-            }
+            return dndHandler.handleDragEnter(x, y, xAbs, yAbs,
+                                              recommendedDropAction,
+                                              assistant);
         });
     }
 
@@ -78,17 +75,14 @@ final class EmbeddedSceneDT implements EmbeddedSceneDTInterface {
     public void handleDragLeave() {
         assert dnd.isHostThread();
 
-        dnd.executeOnFXThread(new Callable<Void>() {
-            @Override
-            public Void call() {
-                assert assistant != null;
-                try {
-                    dndHandler.handleDragLeave(assistant);
-                } finally {
-                    close();
-                }
-                return null;
+        dnd.executeOnFXThread(() -> {
+            assert assistant != null;
+            try {
+                dndHandler.handleDragLeave(assistant);
+            } finally {
+                close();
             }
+            return null;
         });
     }
 
@@ -98,17 +92,14 @@ final class EmbeddedSceneDT implements EmbeddedSceneDTInterface {
                                        final TransferMode recommendedDropAction) {
         assert dnd.isHostThread();
 
-        return dnd.executeOnFXThread(new Callable<TransferMode>() {
-            @Override
-            public TransferMode call() {
-                assert assistant != null;
-                try {
-                    return dndHandler.handleDragDrop(x, y, xAbs, yAbs,
-                                                     recommendedDropAction,
-                                                     assistant);
-                } finally {
-                    close();
-                }
+        return dnd.executeOnFXThread(() -> {
+            assert assistant != null;
+            try {
+                return dndHandler.handleDragDrop(x, y, xAbs, yAbs,
+                                                 recommendedDropAction,
+                                                 assistant);
+            } finally {
+                close();
             }
         });
     }
@@ -119,14 +110,11 @@ final class EmbeddedSceneDT implements EmbeddedSceneDTInterface {
                                        final TransferMode recommendedDropAction) {
         assert dnd.isHostThread();
 
-        return dnd.executeOnFXThread(new Callable<TransferMode>() {
-            @Override
-            public TransferMode call() {
-                assert assistant != null;
-                return dndHandler.handleDragOver(x, y, xAbs, yAbs,
-                                                 recommendedDropAction,
-                                                 assistant);
-            }
+        return dnd.executeOnFXThread(() -> {
+            assert assistant != null;
+            return dndHandler.handleDragOver(x, y, xAbs, yAbs,
+                                             recommendedDropAction,
+                                             assistant);
         });
     }
 

@@ -88,41 +88,35 @@ public class Piece extends Parent{
             // start in inactive state
             setInactive();
             // add listeners to support dragging
-            setOnMousePressed(new EventHandler<MouseEvent>() {
-                public void handle(MouseEvent me) {
-                    toFront();
-                    startDragX = getTranslateX();
-                    startDragY = getTranslateY();
-                    dragAnchor = new Point2D(me.getSceneX(), me.getSceneY());
-                }
+            setOnMousePressed((MouseEvent me) -> {
+                toFront();
+                startDragX = getTranslateX();
+                startDragY = getTranslateY();
+                dragAnchor = new Point2D(me.getSceneX(), me.getSceneY());
             });
-            setOnMouseReleased(new EventHandler<MouseEvent>() {
-                public void handle(MouseEvent me) {
-                    if (getTranslateX() < (10) && getTranslateX() > (- 10) &&
+            setOnMouseReleased((MouseEvent me) -> {
+                if (getTranslateX() < (10) && getTranslateX() > (- 10) &&
                         getTranslateY() < (10) && getTranslateY() > (- 10)) {
-                        setTranslateX(0);
-                        setTranslateY(0);
-                        setInactive();
-                    }
+                    setTranslateX(0);
+                    setTranslateY(0);
+                    setInactive();
                 }
             });
-            setOnMouseDragged(new EventHandler<MouseEvent>() {
-                public void handle(MouseEvent me) {
-                    double newTranslateX = startDragX
-                                            + me.getSceneX() - dragAnchor.getX();
-                    double newTranslateY = startDragY
-                                            + me.getSceneY() - dragAnchor.getY();
-                    double minTranslateX = - 45f - correctX;
-                    double maxTranslateX = (deskWidth - Piece.SIZE + 50f ) - correctX;
-                    double minTranslateY = - 30f - correctY;
-                    double maxTranslateY = (deskHeight - Piece.SIZE + 70f ) - correctY;
-                    if ((newTranslateX> minTranslateX ) &&
-                            (newTranslateX< maxTranslateX) &&
-                            (newTranslateY> minTranslateY) &&
-                            (newTranslateY< maxTranslateY)) {
-                        setTranslateX(newTranslateX);
-                        setTranslateY(newTranslateY);
-                    }
+            setOnMouseDragged((MouseEvent me) -> {
+                double newTranslateX = startDragX
+                        + me.getSceneX() - dragAnchor.getX();
+                double newTranslateY = startDragY
+                        + me.getSceneY() - dragAnchor.getY();
+                double minTranslateX = - 45f - correctX;
+                double maxTranslateX = (deskWidth - Piece.SIZE + 50f ) - correctX;
+                double minTranslateY = - 30f - correctY;
+                double maxTranslateY = (deskHeight - Piece.SIZE + 70f ) - correctY;
+                if ((newTranslateX> minTranslateX ) &&
+                        (newTranslateX< maxTranslateX) &&
+                        (newTranslateY> minTranslateY) &&
+                        (newTranslateY< maxTranslateY)) {
+                    setTranslateX(newTranslateX);
+                    setTranslateY(newTranslateY);
                 }
             });
         }

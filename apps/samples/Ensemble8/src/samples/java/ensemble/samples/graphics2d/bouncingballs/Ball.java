@@ -59,13 +59,11 @@ public class Ball extends Circle {
         setCache(true);
         setFill(BALL_GRADIENT);
         createTimeline();
-        setOnMousePressed(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                if (timeline.getStatus() != Status.RUNNING) {
-                    timeline.play();
-                } else {
-                    timeline.pause();
-                }
+        setOnMousePressed((MouseEvent me) -> {
+            if (timeline.getStatus() != Status.RUNNING) {
+                timeline.play();
+            } else {
+                timeline.pause();
             }
         });
 

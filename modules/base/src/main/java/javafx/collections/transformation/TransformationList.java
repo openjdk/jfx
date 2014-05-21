@@ -102,12 +102,8 @@ public abstract class TransformationList<E, F> extends ObservableListBase<E> imp
 
     private ListChangeListener<F> getListener() {
         if (sourceListener == null) {
-            sourceListener = new ListChangeListener<F>() {
-
-                @Override
-                public void onChanged(Change<? extends F> c) {
-                    TransformationList.this.sourceChanged(c);
-                }
+            sourceListener = c -> {
+                TransformationList.this.sourceChanged(c);
             };
         }
         return sourceListener;

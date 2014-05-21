@@ -30,7 +30,7 @@ import java.util.List;
 /**
  * Expression representing a variable value.
  */
-public class VariableExpression extends Expression {
+public class VariableExpression extends Expression<Object> {
     private KeyPath keyPath;
 
     public VariableExpression(KeyPath keyPath) {

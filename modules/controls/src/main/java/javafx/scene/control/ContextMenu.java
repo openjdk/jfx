@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -179,6 +179,12 @@ public class ContextMenu extends PopupControl {
                     item.setParentPopup(null);
                 }
                 for (MenuItem item : c.getAddedSubList()) {
+                    if (item.getParentPopup() != null) {
+                        // we need to remove this item from its current parentPopup
+                        // as a MenuItem should not exist in multiple parentPopup
+                        // instances
+                        item.getParentPopup().getItems().remove(item);
+                    }
                     item.setParentPopup(ContextMenu.this);
                 }
             }
@@ -237,18 +243,9 @@ public class ContextMenu extends PopupControl {
     // TODO provide more detail
      public void show(Node anchor, Side side, double dx, double dy) {
         if (anchor == null) return;
-        Event.fireEvent(this, new Event(Menu.ON_SHOWING));
         if (getItems().size() == 0) return;
 
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
-        //RT-27546 : The problem here is before the first show the content of the popup
-        // is not initialized yet and hence the prefWidth & prefHeight remains 0
-        // This leads to incorrect translation of anchor to screen coordinates.
-        // A call to show initializes the content. Skin is null only the very first time.
-        if(getSkin() == null) {
-            hide();
-            super.show(anchor, dx, dy);
-        }
         // FIXME because Side is not yet in javafx.geometry, we have to convert
         // to the old HPos/VPos API here, as Utils can not refer to Side in the
         // charting API.
@@ -271,14 +268,13 @@ public class ContextMenu extends PopupControl {
      */
     public void show(Node anchor, double screenX, double screenY) {
         if (anchor == null) return;
-        Event.fireEvent(this, new Event(Menu.ON_SHOWING));
         if (getItems().size() == 0) return;
-
         getScene().setNodeOrientation(anchor.getEffectiveNodeOrientation());
         doShow(anchor, screenX, screenY);
     }
 
     private void doShow(Node anchor, double screenX, double screenY) {
+        Event.fireEvent(this, new Event(Menu.ON_SHOWING));
         if(isImpl_showRelativeToWindow()) {
             final Scene scene = (anchor == null) ? null : anchor.getScene();
             final Window win = (scene == null) ? null : scene.getWindow();

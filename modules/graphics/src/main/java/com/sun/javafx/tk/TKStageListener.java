@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,12 @@ public interface TKStageListener {
      * @param maximized True if the stage's peer is now maximized
      */
     public void changedMaximized(boolean maximized);
+    
+    /**
+     * The stages peer has changed it's "always on top" flag.
+     * @param alwaysOnTop 
+     */
+    public void changedAlwaysOnTop(boolean alwaysOnTop);
 
     /**
      * The stages peer has become resizable or nonresizable
@@ -104,9 +110,4 @@ public interface TKStageListener {
      * stage), or via a call to {@link TKStage#ungrabFocus}.
      */
     public void focusUngrab();
- 
-    /**
-     * Initialize accessibility
-     */
-    public void initAccessibleTKStageListener();
 }

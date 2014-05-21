@@ -1,36 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="JAVA_MODULE" version="4">
   <component name="EclipseModuleManager">
-    <libelement value="jar://$MODULE_DIR$/apps/experiments/3DViewer/build/libs/3DViewer.jar!/" />
+    <libelement value="jar://$MODULE_DIR$/apps/samples/3DViewer/build/libs/3DViewer.jar!/" />
     <src_description expected_position="0">
-      <src_folder value="file://$MODULE_DIR$/apps/experiments/3DViewer/src/main/java" expected_position="0" />
-      <src_folder value="file://$MODULE_DIR$/apps/experiments/3DViewer/src/test/java" expected_position="1" />
-      <src_folder value="file://$MODULE_DIR$/apps/experiments/3DViewer/src/main/resources" expected_position="2" />
-      <src_folder value="file://$MODULE_DIR$/apps/experiments/3DViewer/src/test/resources" expected_position="3" />
+      <src_folder value="file://$MODULE_DIR$/apps/samples/3DViewer/src/main/java" expected_position="0" />
+      <src_folder value="file://$MODULE_DIR$/apps/samples/3DViewer/src/test/java" expected_position="1" />
+      <src_folder value="file://$MODULE_DIR$/apps/samples/3DViewer/src/main/resources" expected_position="2" />
+      <src_folder value="file://$MODULE_DIR$/apps/samples/3DViewer/src/test/resources" expected_position="3" />
     </src_description>
   </component>
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$/apps/experiments/3DViewer">
-      <sourceFolder url="file://$MODULE_DIR$/apps/experiments/3DViewer/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/apps/experiments/3DViewer/src/main/resources" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/apps/experiments/3DViewer/src/test/java" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/apps/experiments/3DViewer/src/test/resources" isTestSource="true" />
-      <excludeFolder url="file://$MODULE_DIR$/apps/experiments/3DViewer/build" />
+    <content url="file://$MODULE_DIR$/apps/samples/3DViewer">
+      <sourceFolder url="file://$MODULE_DIR$/apps/samples/3DViewer/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/samples/3DViewer/src/main/resources" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/samples/3DViewer/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/samples/3DViewer/src/test/resources" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/samples/3DViewer/build" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/samples/3DViewer/nbproject" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module-library">
-      <library name="3DViewer.jar">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/apps/experiments/3DViewer/build/libs/3DViewer.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
     <orderEntry type="module" module-name="rt" />
     <orderEntry type="inheritedJdk" />
-    <orderEntry type="module" module-name="builders" />
   </component>
 </module>
 

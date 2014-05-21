@@ -2,10 +2,10 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$/apps/experiments/Modena">
-      <sourceFolder url="file://$MODULE_DIR$/apps/experiments/Modena/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/apps/experiments/Modena/src/main/resources" isTestSource="false" />
-      <excludeFolder url="file://$MODULE_DIR$/apps/experiments/Modena/build" />
+    <content url="file://$MODULE_DIR$/apps/samples/Modena">
+      <sourceFolder url="file://$MODULE_DIR$/apps/samples/Modena/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/apps/samples/Modena/src/main/resources" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/apps/samples/Modena/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="rt" />
