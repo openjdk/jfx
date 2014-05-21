@@ -34,11 +34,12 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -46,7 +47,6 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 
 /**
@@ -95,13 +95,9 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
         root = EditorUtils.loadFxml("AnchorPaneConstraintsEditor.fxml", this);
         this.selectedInstances = selectedInstances;
 
-        constraintListener = new ChangeListener<Object>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object prevValue, Object newValue) {
-                propertyChanged();
-                styleRegions();
-            }
+        constraintListener = (ov, prevValue, newValue) -> {
+            propertyChanged();
+            styleRegions();
         };
 
         initialize(topPropMeta, rightPropMeta, bottomPropMeta, leftPropMeta);
@@ -195,100 +191,87 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
             //
             // For SQE tests
             textField.setId(EditorUtils.toDisplayName(propMeta.getName().getName()) + " Value"); //NOI18N
-            EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    if (isHandlingError()) {
-                        // Event received because of focus lost due to error dialog
-                        return;
-                    }
-                    String valStr = textField.getText();
-                    if (valStr == null || valStr.isEmpty()) {
-                        if (toggleButton.isSelected()) {
-                            updateFromTextField = true;
-                            toggleButton.setSelected(false);
-                            updateFromTextField = false;
-                        }
-                        userUpdateValueProperty(null);
-                        return;
-                    }
-                    textField.selectAll();
-                    double valDouble;
-                    try {
-                        valDouble = Double.parseDouble(valStr);
-                    } catch (NumberFormatException e) {
-                        handleInvalidValue(valStr, textField);
-                        return;
-                    }
-                    if (!((DoublePropertyMetadata) getPropertyMeta()).isValidValue(valDouble)) {
-                        handleInvalidValue(valDouble, textField);
-                        return;
-                    }
-                    if (!toggleButton.isSelected()) {
+            EventHandler<ActionEvent> valueListener = event -> {
+                if (isHandlingError()) {
+                    // Event received because of focus lost due to error dialog
+                    return;
+                }
+                String valStr = textField.getText();
+                if (valStr == null || valStr.isEmpty()) {
+                    if (toggleButton.isSelected()) {
                         updateFromTextField = true;
-                        toggleButton.setSelected(true);
+                        toggleButton.setSelected(false);
                         updateFromTextField = false;
                     }
-                    userUpdateValueProperty(valDouble);
+                    userUpdateValueProperty(null);
+                    return;
                 }
+                textField.selectAll();
+                double valDouble;
+                try {
+                    valDouble = Double.parseDouble(valStr);
+                } catch (NumberFormatException e) {
+                    handleInvalidValue(valStr, textField);
+                    return;
+                }
+                if (!((DoublePropertyMetadata) getPropertyMeta()).isValidValue(valDouble)) {
+                    handleInvalidValue(valDouble, textField);
+                    return;
+                }
+                if (!toggleButton.isSelected()) {
+                    updateFromTextField = true;
+                    toggleButton.setSelected(true);
+                    updateFromTextField = false;
+                }
+                userUpdateValueProperty(valDouble);
             };
             setNumericEditorBehavior(this, textField, valueListener, false);
             // Override default promptText
             textField.setPromptText(""); //NOI18N
 
-            textField.setOnMouseClicked(new EventHandler<MouseEvent>() {
-
-                @Override
-                public void handle(MouseEvent t) {
-                    ConstraintEditor.this.toggleButton.setSelected(true);
-                }
-            });
+            textField.setOnMouseClicked(t -> ConstraintEditor.this.toggleButton.setSelected(true));
 
             //
             // Toggle button
             //
             assert propMeta instanceof DoublePropertyMetadata;
 
-            toggleButton.selectedProperty().addListener(new ChangeListener<Boolean>() {
-
-                @Override
-                public void changed(ObservableValue<? extends Boolean> ov, Boolean prevSel, Boolean newSel) {
+            toggleButton.selectedProperty().addListener((ChangeListener<Boolean>) (ov, prevSel, newSel) -> {
 //                System.out.println("toggleButton : selectedProperty changed!");
-                    if (isUpdateFromModel() || updateFromTextField) {
-                        // nothing to do
-                        return;
-                    }
+                if (isUpdateFromModel() || updateFromTextField) {
+                    // nothing to do
+                    return;
+                }
 
-                    // Update comes from toggleButton.
-                    if (newSel) {
-                        // Anchor selected : compute its value from the selected node
-                        double anchor = 0;
-                        String propName = ConstraintEditor.this.propMeta.getName().toString();
-                        switch (propName) {
-                            // For the moment, we don't support multi-selection with different anchors:
-                            // the first instance anchor only is used.
-                            case topAnchorPropName:
-                                anchor = EditorUtils.computeTopAnchor(getFirstInstance());
-                                break;
-                            case rightAnchorPropName:
-                                anchor = EditorUtils.computeRightAnchor(getFirstInstance());
-                                break;
-                            case bottomAnchorPropName:
-                                anchor = EditorUtils.computeBottomAnchor(getFirstInstance());
-                                break;
-                            case leftAnchorPropName:
-                                anchor = EditorUtils.computeLeftAnchor(getFirstInstance());
-                                break;
-                            default:
-                                assert false;
-                        }
-                        textField.setText(EditorUtils.valAsStr(anchor));
-                        userUpdateValueProperty(getValue());
-                    } else {
-                        // Anchor unselected
-                        textField.setText(null);
-                        userUpdateValueProperty(null);
+                // Update comes from toggleButton.
+                if (newSel) {
+                    // Anchor selected : compute its value from the selected node
+                    double anchor = 0;
+                    String propName = ConstraintEditor.this.propMeta.getName().toString();
+                    switch (propName) {
+                        // For the moment, we don't support multi-selection with different anchors:
+                        // the first instance anchor only is used.
+                        case topAnchorPropName:
+                            anchor = EditorUtils.computeTopAnchor(getFirstInstance());
+                            break;
+                        case rightAnchorPropName:
+                            anchor = EditorUtils.computeRightAnchor(getFirstInstance());
+                            break;
+                        case bottomAnchorPropName:
+                            anchor = EditorUtils.computeBottomAnchor(getFirstInstance());
+                            break;
+                        case leftAnchorPropName:
+                            anchor = EditorUtils.computeLeftAnchor(getFirstInstance());
+                            break;
+                        default:
+                            assert false;
                     }
+                    textField.setText(EditorUtils.valAsStr(anchor));
+                    userUpdateValueProperty(getValue());
+                } else {
+                    // Anchor unselected
+                    textField.setText(null);
+                    userUpdateValueProperty(null);
                 }
             });
         }
@@ -347,13 +330,7 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
 
         @Override
         public void requestFocus() {
-            EditorUtils.doNextFrame(new Runnable() {
-
-                @Override
-                public void run() {
-                    textField.requestFocus();
-                }
-            });
+            EditorUtils.doNextFrame(() -> textField.requestFocus());
         }
         
         private FXOMInstance getFirstInstance() {

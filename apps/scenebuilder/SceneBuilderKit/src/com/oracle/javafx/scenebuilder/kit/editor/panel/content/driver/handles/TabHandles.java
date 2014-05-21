@@ -32,7 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -74,12 +73,7 @@ public class TabHandles extends AbstractResilientHandles<Tab> {
         super(contentPanelController, fxomInstance, Tab.class);
         
         getSceneGraphObject().tabPaneProperty().addListener(
-                new ChangeListener<TabPane>() {
-                    @Override
-                    public void changed(ObservableValue<? extends TabPane> ov, TabPane v1, TabPane v2) {
-                        tabPaneDidChange();
-                    }
-                });
+                (ChangeListener<TabPane>) (ov, v1, v2) -> tabPaneDidChange());
         
         tabPaneDidChange();
     }

@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.util;
 
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
@@ -166,45 +165,27 @@ public abstract class AbstractPopupController {
      * Private
      */
     
-    private final EventHandler<WindowEvent> onHiddenHandler = new EventHandler<WindowEvent>() {
-        @Override
-        public void handle(WindowEvent e) {
-            assert anchor != null;
-
-            onHidden(e);
-
-            anchor.layoutBoundsProperty().removeListener(layoutBoundsListener);
-            anchor.localToSceneTransformProperty().removeListener(localToSceneTransformListener);
-            anchorWindow.xProperty().removeListener(xyListener);
-            
-            anchor = null;
-            anchorWindow = null;
-        }
-    };
-    
     private final ChangeListener<Bounds> layoutBoundsListener
-            = new ChangeListener<Bounds>() {
-                @Override
-                public void changed(ObservableValue<? extends Bounds> ov, Bounds t, Bounds t1) {
-                    anchorBoundsDidChange();
-                }
-            };
-    
-    
+    = (ov, t, t1) -> anchorBoundsDidChange();
+
+
     private final ChangeListener<Transform> localToSceneTransformListener
-            = new ChangeListener<Transform>() {
-                @Override
-                public void changed(ObservableValue<? extends Transform> ov, Transform t, Transform t1) {
-                    anchorTransformDidChange();
-                }
-            };
-    
-    
+    = (ov, t, t1) -> anchorTransformDidChange();
+
+
     private final ChangeListener<Number> xyListener
-            = new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                    anchorXYDidChange();
-                }
-            };
+    = (ov, t, t1) -> anchorXYDidChange();
+
+    private final EventHandler<WindowEvent> onHiddenHandler = e -> {
+        assert anchor != null;
+
+        onHidden(e);
+
+        anchor.layoutBoundsProperty().removeListener(layoutBoundsListener);
+        anchor.localToSceneTransformProperty().removeListener(localToSceneTransformListener);
+        anchorWindow.xProperty().removeListener(xyListener);
+        
+        anchor = null;
+        anchorWindow = null;
+    };
 }

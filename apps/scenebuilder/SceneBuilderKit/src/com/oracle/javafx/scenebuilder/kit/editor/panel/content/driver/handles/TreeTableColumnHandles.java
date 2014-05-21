@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 import java.util.List;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Cursor;
@@ -88,19 +87,9 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
         getRootNode().getChildren().add(grips); // Above handles
         
         getTreeTableColumn().treeTableViewProperty().addListener(
-                new ChangeListener<Object>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Object> ov, Object v1, Object v2) {
-                        treeTableViewOrVisibilityDidChange();
-                    }
-                });
+                (ChangeListener<Object>) (ov, v1, v2) -> treeTableViewOrVisibilityDidChange());
         getTreeTableColumn().visibleProperty().addListener(
-                new ChangeListener<Object>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Object> ov, Object v1, Object v2) {
-                        treeTableViewOrVisibilityDidChange();
-                    }
-                });
+                (ChangeListener<Object>) (ov, v1, v2) -> treeTableViewOrVisibilityDidChange());
         
         treeTableViewOrVisibilityDidChange();
     }

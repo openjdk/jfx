@@ -45,6 +45,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,12 +54,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -131,12 +132,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     /**
      * @treatAsPrivate
      */
-    protected final ListChangeListener<TreeItem<HierarchyItem>> treeItemSelectionListener = new ListChangeListener<TreeItem<HierarchyItem>>() {
-        @Override
-        public void onChanged(ListChangeListener.Change<? extends TreeItem<HierarchyItem>> change) {
-            treeItemSelectionDidChange();
-        }
-    };
+    protected final ListChangeListener<TreeItem<HierarchyItem>> treeItemSelectionListener = change -> treeItemSelectionDidChange();
 
     /**
      * Used to define the type of information displayed in the hierarchy.
@@ -946,62 +942,22 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         //----------------------------------------------------------------------
         // DRAG_DONE event received when drag gesture 
         // started from the hierarchy panel ends
-        getPanelControl().setOnDragDone(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragDone(event);
-            }
-        });
-        getPanelControl().setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragDropped(event);
-            }
-        });
-        getPanelControl().setOnDragEntered(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragEntered(event);
-            }
-        });
-        getPanelControl().setOnDragExited(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragExited(event);
-            }
-        });
-        getPanelControl().setOnDragOver(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragOver(event);
-            }
-        });
+        getPanelControl().setOnDragDone(event -> handleOnDragDone(event));
+        getPanelControl().setOnDragDropped(event -> handleOnDragDropped(event));
+        getPanelControl().setOnDragEntered(event -> handleOnDragEntered(event));
+        getPanelControl().setOnDragExited(event -> handleOnDragExited(event));
+        getPanelControl().setOnDragOver(event -> handleOnDragOver(event));
 
         // Key events
         //----------------------------------------------------------------------
-        getPanelControl().setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent event) {
-                handleOnKeyPressed(event);
-            }
-        });
+        getPanelControl().setOnKeyPressed(event -> handleOnKeyPressed(event));
 
         // Mouse events
         //----------------------------------------------------------------------
         // DRAG_DETECTED event received when drag gesture 
         // starts from the hierarchy panel
-        getPanelControl().setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                handleOnDragDetected(event);
-            }
-        });
-        getPanelControl().setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                handleOnMousePressed(event);
-            }
-        });
+        getPanelControl().setOnDragDetected(event -> handleOnDragDetected(event));
+        getPanelControl().setOnMousePressed(event -> handleOnMousePressed(event));
 
         // Setup the context menu
         final ContextMenuController contextMenuController

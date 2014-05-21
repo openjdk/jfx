@@ -249,11 +249,9 @@ public class DragController {
         
         mouseTimer.schedule(new TimerTask() {
             @Override public void run() {
-                Platform.runLater(new Runnable() {
-                    @Override public void run() {
-                        mouseTimer = null;
-                        mouseDidStopMoving();
-                    }
+                Platform.runLater(() -> {
+                    mouseTimer = null;
+                    mouseDidStopMoving();
                 });
             }
         }, MOUSE_TIMER_DELAY);

@@ -51,26 +51,23 @@ public class ControllerClassEditor extends AutoSuggestEditor {
         super(PROPERTY_NAME, DEFAULT_VALUE, suggestedClasses);
 
         // text field events handling
-        EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (isHandlingError()) {
-                    // Event received because of focus lost due to error dialog
+        EventHandler<ActionEvent> onActionListener = event -> {
+            if (isHandlingError()) {
+                // Event received because of focus lost due to error dialog
+                return;
+            }
+            
+            String value = textField.getText();
+            
+            if (value != null && !value.isEmpty()) {
+                if (!JavaLanguage.isClassName(value)) {
+                    handleInvalidValue(value);
                     return;
                 }
-                
-                String value = textField.getText();
-                
-                if (value != null && !value.isEmpty()) {
-                    if (!JavaLanguage.isClassName(value)) {
-                        handleInvalidValue(value);
-                        return;
-                    }
-                }
-                
-                userUpdateValueProperty((value == null || value.isEmpty()) ? null : value);
-                textField.selectAll();
             }
+            
+            userUpdateValueProperty((value == null || value.isEmpty()) ? null : value);
+            textField.selectAll();
         };
         setTextEditorBehavior(this, textField, onActionListener);
     }

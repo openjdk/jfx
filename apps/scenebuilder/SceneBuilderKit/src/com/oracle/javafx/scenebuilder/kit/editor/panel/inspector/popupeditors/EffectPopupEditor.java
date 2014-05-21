@@ -36,10 +36,11 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.Utils;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
+
 import java.util.List;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.control.MenuItem;
 import javafx.scene.effect.Effect;
@@ -53,34 +54,28 @@ public class EffectPopupEditor extends PopupEditor {
     private List<MenuItem> effectMenuItems;
     private final EditorController editorController;
 
-    private final ChangeListener<Number> effectRevisionChangeListener = new ChangeListener<Number>() {
-        @Override
-        public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
+    private final ChangeListener<Number> effectRevisionChangeListener = (ov, t, t1) -> {
+        final Effect rootEffect = effectPicker.getRootEffectProperty();
+        // Need to clone the root effect of the effect picker
+        // in order to commit with a new value
+        final Effect rootEffectClone = Utils.clone(rootEffect);
+        // If live update, do not commit the value
+        if (effectPicker.isLiveUpdate() == true) {
+            userUpdateTransientValueProperty(rootEffectClone);
+        } else {
+            commitValue(rootEffectClone);
+            updateMenuButton(rootEffectClone);
+        }
+    };
+
+    private final ChangeListener<Boolean> liveUpdateListener = (ov, oldValue, newValue) -> {
+        if (effectPicker.isLiveUpdate() == false) {
             final Effect rootEffect = effectPicker.getRootEffectProperty();
             // Need to clone the root effect of the effect picker
             // in order to commit with a new value
             final Effect rootEffectClone = Utils.clone(rootEffect);
-            // If live update, do not commit the value
-            if (effectPicker.isLiveUpdate() == true) {
-                userUpdateTransientValueProperty(rootEffectClone);
-            } else {
-                commitValue(rootEffectClone);
-                updateMenuButton(rootEffectClone);
-            }
-        }
-    };
-
-    private final ChangeListener<Boolean> liveUpdateListener = new ChangeListener<Boolean>() {
-        @Override
-        public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-            if (effectPicker.isLiveUpdate() == false) {
-                final Effect rootEffect = effectPicker.getRootEffectProperty();
-                // Need to clone the root effect of the effect picker
-                // in order to commit with a new value
-                final Effect rootEffectClone = Utils.clone(rootEffect);
-                commitValue(rootEffectClone);
-                updateMenuButton(rootEffectClone);
-            }
+            commitValue(rootEffectClone);
+            updateMenuButton(rootEffectClone);
         }
     };
 
@@ -107,18 +102,8 @@ public class EffectPopupEditor extends PopupEditor {
 
     @Override
     public void initializePopupContent() {
-        final EffectPicker.Delegate epd = new EffectPicker.Delegate() {
-            @Override
-            public void handleError(String warningKey, Object... arguments) {
-                editorController.getMessageLog().logWarningMessage(warningKey, arguments);
-            }
-        };
-        final PaintPicker.Delegate ppd = new PaintPicker.Delegate() {
-            @Override
-            public void handleError(String warningKey, Object... arguments) {
-                editorController.getMessageLog().logWarningMessage(warningKey, arguments);
-            }
-        };
+        final EffectPicker.Delegate epd = (warningKey, arguments) -> editorController.getMessageLog().logWarningMessage(warningKey, arguments);
+        final PaintPicker.Delegate ppd = (warningKey, arguments) -> editorController.getMessageLog().logWarningMessage(warningKey, arguments);
         effectPicker = new EffectPicker(epd, ppd);
         effectMenuItems = effectPicker.getMenuItems();
     }

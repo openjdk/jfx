@@ -33,8 +33,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -52,12 +52,7 @@ public abstract class AbstractCurveHandles<T extends Node> extends AbstractHandl
     }
 
     protected final ChangeListener<Number> coordinateListener
-        = new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number v1, Number v2) {
-                layoutDecoration();
-            }
-        };
+        = (ov, v1, v2) -> layoutDecoration();
     
     
     /*

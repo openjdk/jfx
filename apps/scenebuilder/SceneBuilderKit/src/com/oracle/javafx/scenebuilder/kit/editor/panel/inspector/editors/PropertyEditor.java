@@ -39,11 +39,13 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AlertDialog;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal.CssPropAuthorInfo;
+
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+
 import javafx.animation.FadeTransition;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -53,7 +55,6 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -72,7 +73,6 @@ import javafx.scene.control.TextInputControl;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.util.Duration;
@@ -146,23 +146,20 @@ public abstract class PropertyEditor extends Editor {
     private void initialize() {
         // Create a property link with a pretty name (e.g. layoutX ==> Layout X)
         propName = new Hyperlink();
-        propName.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                try {
-                    if (propMeta != null && selectedClasses != null) {
-                        if (selectedClasses.size() <= 1) {
-                            EditorUtils.openUrl(selectedClasses, propMeta);
-                        }
-                    } else {
-                        // Special case for non-properties (fx:id, ...)
-                        EditorPlatform.open(EditorPlatform.JAVADOC_HOME
-                                + "javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html"); //NOI18N
+        propName.setOnAction(event -> {
+            try {
+                if (propMeta != null && selectedClasses != null) {
+                    if (selectedClasses.size() <= 1) {
+                        EditorUtils.openUrl(selectedClasses, propMeta);
                     }
-                    // Selection of multiple different classes ==> no link
-                } catch (IOException ex) {
-                    System.err.println(ex.getMessage());
+                } else {
+                    // Special case for non-properties (fx:id, ...)
+                    EditorPlatform.open(EditorPlatform.JAVADOC_HOME
+                            + "javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html"); //NOI18N
                 }
+                // Selection of multiple different classes ==> no link
+            } catch (IOException ex) {
+                System.err.println(ex.getMessage());
             }
         });
         propName.getStyleClass().add("property-link"); //NOI18N
@@ -213,25 +210,19 @@ public abstract class PropertyEditor extends Editor {
             }
             EditorUtils.handleFading(fadeTransition, menu, disableProperty);
             EditorUtils.handleFading(fadeTransition, propNameNode, disableProperty);
-            menu.focusedProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                    if (newValue) {
-                        // focused
-                        EditorUtils.fadeTo(fadeTransition, 1);
-                    } else {
-                        // focus lost
-                        EditorUtils.fadeTo(fadeTransition, 0);
-                    }
+            menu.focusedProperty().addListener((ChangeListener<Boolean>) (observable, oldValue, newValue) -> {
+                if (newValue) {
+                    // focused
+                    EditorUtils.fadeTo(fadeTransition, 1);
+                } else {
+                    // focus lost
+                    EditorUtils.fadeTo(fadeTransition, 0);
                 }
             });
             menu.getItems().add(resetvalueMenuItem);
-            resetvalueMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent e) {
-                    setValue(defaultValue);
-                    userUpdateValueProperty(defaultValue);
-                }
+            resetvalueMenuItem.setOnAction(e -> {
+                setValue(defaultValue);
+                userUpdateValueProperty(defaultValue);
             });
         }
         return menu;
@@ -548,22 +539,19 @@ public abstract class PropertyEditor extends Editor {
             // menu
             if (showCssMenuItem == null) {
                 showCssMenuItem = new MenuItem(I18N.getString("inspector.css.showcss")); //NOI18N
-                showCssMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent e) {
-                        assert cssInfo != null;
-                        if (cssInfo.isInline()) {
-                            // Jump to the "style" property
-                            navigateRequestProperty.setValue("style"); //NOI18N
-                            navigateRequestProperty.setValue(null);
-                        } else {
-                            // Open the css file
-                            if (cssInfo.getMainUrl() != null) {
-                                try {
-                                    EditorPlatform.open(cssInfo.getMainUrl().toString());
-                                } catch (IOException ex) {
-                                    System.out.println(ex.getMessage() + ex);
-                                }
+                showCssMenuItem.setOnAction(e -> {
+                    assert cssInfo != null;
+                    if (cssInfo.isInline()) {
+                        // Jump to the "style" property
+                        navigateRequestProperty.setValue("style"); //NOI18N
+                        navigateRequestProperty.setValue(null);
+                    } else {
+                        // Open the css file
+                        if (cssInfo.getMainUrl() != null) {
+                            try {
+                                EditorPlatform.open(cssInfo.getMainUrl().toString());
+                            } catch (IOException ex) {
+                                System.out.println(ex.getMessage() + ex);
                             }
                         }
                     }
@@ -747,59 +735,52 @@ public abstract class PropertyEditor extends Editor {
     protected void setNumericEditorBehavior(PropertyEditor editor, Control control,
             EventHandler<ActionEvent> onActionListener, boolean stretchable) {
         setTextEditorBehavior(editor, control, onActionListener, stretchable);
-        control.setOnKeyPressed(new EventHandler<KeyEvent>() {
-
-            @Override
-            public void handle(KeyEvent event) {
-                if (event.getCode() != KeyCode.UP && event.getCode() != KeyCode.DOWN) {
-                    return;
-                }
-                if (!(control instanceof TextField)) {
-                    // Apply only for text field based controls
-                    return;
-                }
-                TextField textField = (TextField) control;
-                int incDecVal = 1;
-                boolean shiftDown = event.isShiftDown();
-                if (shiftDown) {
-                    incDecVal = 10;
-                }
-                String valStr = textField.getText();
-                Double val;
-                try {
-                    val = Double.parseDouble(valStr);
-                } catch (NumberFormatException ex) {
-                    // may happen if the text field is empty,
-                    // or contains a constant string: do nothing
-                    return;
-                }
-                assert val != null;
-                Double newVal = null;
-                if (event.getCode() == KeyCode.UP) {
-                    newVal = val + incDecVal;
-                } else if (event.getCode() == KeyCode.DOWN) {
-                    newVal = val - incDecVal;
-                }
-                textField.setText(EditorUtils.valAsStr(newVal));
-                getCommitListener().handle(null);
-                event.consume();
+        control.setOnKeyPressed(event -> {
+            if (event.getCode() != KeyCode.UP && event.getCode() != KeyCode.DOWN) {
+                return;
             }
+            if (!(control instanceof TextField)) {
+                // Apply only for text field based controls
+                return;
+            }
+            TextField textField = (TextField) control;
+            int incDecVal = 1;
+            boolean shiftDown = event.isShiftDown();
+            if (shiftDown) {
+                incDecVal = 10;
+            }
+            String valStr = textField.getText();
+            Double val;
+            try {
+                val = Double.parseDouble(valStr);
+            } catch (NumberFormatException ex) {
+                // may happen if the text field is empty,
+                // or contains a constant string: do nothing
+                return;
+            }
+            assert val != null;
+            Double newVal = null;
+            if (event.getCode() == KeyCode.UP) {
+                newVal = val + incDecVal;
+            } else if (event.getCode() == KeyCode.DOWN) {
+                newVal = val - incDecVal;
+            }
+            textField.setText(EditorUtils.valAsStr(newVal));
+            getCommitListener().handle(null);
+            event.consume();
         });
     }
 
     private void addFocusListener(TextInputControl tic, EventHandler<ActionEvent> onActionListener) {
-        tic.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                if (!newValue && tic.isEditable()) {
-                    // focus lost
+        tic.focusedProperty().addListener((ChangeListener<Boolean>) (observable, oldValue, newValue) -> {
+            if (!newValue && tic.isEditable()) {
+                // focus lost
 //                    System.out.println("editingProperty() set to false.");
-                    editingProperty().setValue(false);
-                } else if (newValue && tic.isEditable()) {
-                    // got focus
+                editingProperty().setValue(false);
+            } else if (newValue && tic.isEditable()) {
+                // got focus
 //                    System.out.println("editingProperty() set to true.");
-                    editingProperty().setValue(true);
-                }
+                editingProperty().setValue(true);
             }
         });
     }

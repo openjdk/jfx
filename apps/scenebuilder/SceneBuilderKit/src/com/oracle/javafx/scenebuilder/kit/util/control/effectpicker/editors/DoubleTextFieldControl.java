@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleF
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.Utils;
+
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -43,12 +44,13 @@ import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 
 public class DoubleTextFieldControl extends GridPane {
 
@@ -74,18 +76,14 @@ public class DoubleTextFieldControl extends GridPane {
         this.effectPickerController = effectPickerController;
         initialize(labelString, min, max, initVal, incDec);
 
-        editor_textfield.focusedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                // Commit the value on focus lost
-                if (newValue == false) {
-                    double inputValue = Double.parseDouble(editor_textfield.getText());
-                    // First update the model
-                    setValue(inputValue);
-                    // Then notify the controller a change occured
-                    effectPickerController.incrementRevision();
-                }
+        editor_textfield.focusedProperty().addListener((ChangeListener<Boolean>) (ov, oldValue, newValue) -> {
+            // Commit the value on focus lost
+            if (newValue == false) {
+                double inputValue = Double.parseDouble(editor_textfield.getText());
+                // First update the model
+                setValue(inputValue);
+                // Then notify the controller a change occured
+                effectPickerController.incrementRevision();
             }
         });
     }

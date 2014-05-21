@@ -123,12 +123,7 @@ public class PickModeController extends AbstractModeController {
     }
     
     private final EventHandler<MouseEvent> mousePressedOnGlassLayerListener
-            = new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    mousePressedOnGlassLayer(e);
-                }
-            };
+            = e -> mousePressedOnGlassLayer(e);
     
     
     private void mousePressedOnGlassLayer(MouseEvent e) {

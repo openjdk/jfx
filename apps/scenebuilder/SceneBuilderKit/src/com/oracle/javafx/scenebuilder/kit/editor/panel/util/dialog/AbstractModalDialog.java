@@ -292,12 +292,7 @@ public abstract class AbstractModalDialog extends AbstractFxmlWindowController {
         assert actionButton.getParent() == actionParent;
         assert imageView.getParent() == imageViewParent;
         
-        final EventHandler<ActionEvent> callUpdateButtonID = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                updateButtonID(e);
-            }
-        };
+        final EventHandler<ActionEvent> callUpdateButtonID = e -> updateButtonID(e);
         okButton.addEventHandler(ActionEvent.ACTION, callUpdateButtonID);
         cancelButton.addEventHandler(ActionEvent.ACTION, callUpdateButtonID);
         actionButton.addEventHandler(ActionEvent.ACTION, callUpdateButtonID);

@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.M
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.rotator.RotatorControl;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.slider.SliderControl;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Label;
@@ -45,13 +46,14 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.*;
 import javafx.scene.shape.Rectangle;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
@@ -251,42 +253,33 @@ public class GradientPicker extends VBox {
         // Select first default stop
         setSelectedStop(black);
         proportional_checkbox.setSelected(true);
-        proportional_checkbox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                final Mode mode = paintPicker.getMode();
-                final Paint value = getValue(mode);
-                // Update UI
-                preview_rect.setFill(value);
-                // Update model
-                paintPicker.setPaintProperty(value);
-            }
+        proportional_checkbox.selectedProperty().addListener((ChangeListener<Boolean>) (ov, oldValue, newValue) -> {
+            final Mode mode = paintPicker.getMode();
+            final Paint value = getValue(mode);
+            // Update UI
+            preview_rect.setFill(value);
+            // Update model
+            paintPicker.setPaintProperty(value);
         });
 
         cycleMethod_choicebox.setItems(FXCollections.observableArrayList(CycleMethod.values()));
         cycleMethod_choicebox.getSelectionModel().selectFirst();
-        cycleMethod_choicebox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<CycleMethod>() {
-            @Override
-            public void changed(ObservableValue<? extends CycleMethod> ov, CycleMethod oldValue, CycleMethod newValue) {
-                final Mode mode = paintPicker.getMode();
-                final Paint value = getValue(mode);
-                // Update UI
-                preview_rect.setFill(value);
-                // Update model
-                paintPicker.setPaintProperty(value);
-            }
+        cycleMethod_choicebox.getSelectionModel().selectedItemProperty().addListener((ChangeListener<CycleMethod>) (ov, oldValue, newValue) -> {
+            final Mode mode = paintPicker.getMode();
+            final Paint value = getValue(mode);
+            // Update UI
+            preview_rect.setFill(value);
+            // Update model
+            paintPicker.setPaintProperty(value);
         });
 
-        final ChangeListener<Number> onValueChange = new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
-                final Mode mode = paintPicker.getMode();
-                final Paint value = getValue(mode);
-                // Update UI
-                preview_rect.setFill(value);
-                // Update model
-                paintPicker.setPaintProperty(value);
-            }
+        final ChangeListener<Number> onValueChange = (ov, oldValue, newValue) -> {
+            final Mode mode = paintPicker.getMode();
+            final Paint value = getValue(mode);
+            // Update UI
+            preview_rect.setFill(value);
+            // Update model
+            paintPicker.setPaintProperty(value);
         };
         startX_slider.valueProperty().addListener(onValueChange);
         startY_slider.valueProperty().addListener(onValueChange);
@@ -303,12 +296,7 @@ public class GradientPicker extends VBox {
         radial_container.setVisible(false);
         radial_container.setManaged(false);
 
-        final ChangeListener<Boolean> liveUpdateListener = new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                paintPicker.setLiveUpdate(newValue);
-            }
-        };
+        final ChangeListener<Boolean> liveUpdateListener = (ov, oldValue, newValue) -> paintPicker.setLiveUpdate(newValue);
         startX_slider.pressedProperty().addListener(liveUpdateListener);
         startY_slider.pressedProperty().addListener(liveUpdateListener);
         endX_slider.pressedProperty().addListener(liveUpdateListener);

@@ -33,12 +33,11 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.util.List;
+
 import javafx.animation.FadeTransition;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -90,25 +89,19 @@ public abstract class PropertiesEditor extends Editor {
             EditorUtils.handleFading(fadeTransition, menu);
             EditorUtils.handleFading(fadeTransition, getValueEditor());
 
-            menu.focusedProperty().addListener(new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                    if (newValue) {
-                        // focused
-                        EditorUtils.fadeTo(fadeTransition, 1);
-                    } else {
-                        // focus lost
-                        EditorUtils.fadeTo(fadeTransition, 0);
-                    }
+            menu.focusedProperty().addListener((ChangeListener<Boolean>) (observable, oldValue, newValue) -> {
+                if (newValue) {
+                    // focused
+                    EditorUtils.fadeTo(fadeTransition, 1);
+                } else {
+                    // focus lost
+                    EditorUtils.fadeTo(fadeTransition, 0);
                 }
             });
             menu.getItems().add(resetvalueMenuItem);
-            resetvalueMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent e) {
-                    for (PropertyEditor propertyEditor : getPropertyEditors()) {
-                        propertyEditor.setValue(propertyEditor.getPropertyMeta().getDefaultValueObject());
-                    }
+            resetvalueMenuItem.setOnAction(e -> {
+                for (PropertyEditor propertyEditor : getPropertyEditors()) {
+                    propertyEditor.setValue(propertyEditor.getPropertyMeta().getDefaultValueObject());
                 }
             });
         }

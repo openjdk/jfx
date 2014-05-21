@@ -36,12 +36,12 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLogEntry;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+
 import java.net.URL;
+
 import javafx.animation.FadeTransition;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -154,22 +154,14 @@ public class MessageBarController extends AbstractFxmlPanelController {
         
         // Listens to the message log 
         getEditorController().getMessageLog().revisionProperty().addListener(
-                new ChangeListener<Number>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                        messageLogDidChange();
-                    }
-                });
+                (ChangeListener<Number>) (ov, t, t1) -> messageLogDidChange());
         getEditorController().getMessageLog().numOfWarningMessagesProperty().addListener(
-                new ChangeListener<Number>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                        String numberOfMessages = Integer.toString(t1.intValue());
-                        if (t1.intValue() > 9) {
-                            numberOfMessages = "*"; //NOI18N
-                        }
-                        messageButton.setText(numberOfMessages);
+                (ChangeListener<Number>) (ov, t, t1) -> {
+                    String numberOfMessages = Integer.toString(t1.intValue());
+                    if (t1.intValue() > 9) {
+                        numberOfMessages = "*"; //NOI18N
                     }
+                    messageButton.setText(numberOfMessages);
                 });
         
         statusLabelTooltip = statusLabel.getTooltip();
@@ -234,23 +226,19 @@ public class MessageBarController extends AbstractFxmlPanelController {
             showHost.setFromValue(1.0);
             showHost.setToValue(0.0);
             showHost.setDelay(Duration.seconds(3)); // DTL-5073
-            showHost.setOnFinished(new EventHandler<ActionEvent>() {
-
-                @Override
-                public void handle(ActionEvent t) {
-                    messageLabel.setVisible(false);
-                    messageLabel.setGraphic(null);
-                    messageLabel.setManaged(false);
-                    if (getEditorController().getMessageLog().getWarningEntryCount() == 0) {
-                        messageButton.setVisible(false);
-                        messageButton.setManaged(false);
-                    }
-                    resetStyle();
-                    getSelectionBarHost().setManaged(true);
-                    getSelectionBarHost().setVisible(true);
-                    messagePart.setOpacity(1.0);
-                    HBox.setHgrow(messagePart, Priority.NEVER);
+            showHost.setOnFinished(t -> {
+                messageLabel.setVisible(false);
+                messageLabel.setGraphic(null);
+                messageLabel.setManaged(false);
+                if (getEditorController().getMessageLog().getWarningEntryCount() == 0) {
+                    messageButton.setVisible(false);
+                    messageButton.setManaged(false);
                 }
+                resetStyle();
+                getSelectionBarHost().setManaged(true);
+                getSelectionBarHost().setVisible(true);
+                messagePart.setOpacity(1.0);
+                HBox.setHgrow(messagePart, Priority.NEVER);
             });
             showHost.play();
         } else if (getEditorController().getMessageLog().getEntryCount() == 0) {

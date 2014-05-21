@@ -51,12 +51,7 @@ public class GenericEditor extends PropertyEditor {
     public GenericEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
         textField = new TextField();
-        EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                userUpdateValueProperty(getValue());
-            }
-        };
+        EventHandler<ActionEvent> onActionListener = event -> userUpdateValueProperty(getValue());
         setTextEditorBehavior(this, textField, onActionListener);
         setDisable(true);
     }
@@ -99,12 +94,6 @@ public class GenericEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                textField.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> textField.requestFocus());
     }
 }

@@ -54,12 +54,7 @@ public class BooleanEditor extends PropertyEditor {
         super(propMeta, selectedClasses);
         checkBox = new CheckBox();
         checkBox.disableProperty().bind(disableProperty());
-        EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                userUpdateValueProperty(getValue());
-            }
-        };
+        EventHandler<ActionEvent> onActionListener = event -> userUpdateValueProperty(getValue());
         checkBox.setOnAction(onActionListener);
         setCommitListener(onActionListener);
         activeZone = new HBox();
@@ -101,12 +96,6 @@ public class BooleanEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                checkBox.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> checkBox.requestFocus());
     }
 }

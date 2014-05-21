@@ -44,15 +44,16 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.glossary.Glossary;
+
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
@@ -197,35 +198,21 @@ public class InfoPanelController extends AbstractFxmlPanelController {
         controllerAndCogHBox.getChildren().add(controllerClassEditor.getMenu());
 
         // Need to react each time value of fx controller is changed (direct user input)
-        controllerClassEditor.valueProperty().addListener(new ChangeListener<Object>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object t, Object t1) {
-                InfoPanelController.this.updateControllerAndControllerClassEditor((String)t1);
-            }
-        });
+        controllerClassEditor.valueProperty().addListener((ChangeListener<Object>) (ov, t, t1) -> InfoPanelController.this.updateControllerAndControllerClassEditor((String)t1));
 
         // We e.g. an Untitled document is saved we need to trigger a scan for
         // potential controller classes.
-        getEditorController().fxmlLocationProperty().addListener(new ChangeListener<URL>() {
-
-            @Override
-            public void changed(ObservableValue<? extends URL> ov, URL t, URL t1) {
-                if (t1 != null) {
-                    resetSuggestedControllerClasses(t1);
-                }
+        getEditorController().fxmlLocationProperty().addListener((ChangeListener<URL>) (ov, t, t1) -> {
+            if (t1 != null) {
+                resetSuggestedControllerClasses(t1);
             }
         });
         
         // DTL-6626
-        controllerClassEditor.getTextField().focusedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (!t1) {
-                    // Focus loss triggers an update. The text field can be empty.
-                    updateControllerAndControllerClassEditor(controllerClassEditor.getTextField().getText());
-                }
+        controllerClassEditor.getTextField().focusedProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> {
+            if (!t1) {
+                // Focus loss triggers an update. The text field can be empty.
+                updateControllerAndControllerClassEditor(controllerClassEditor.getTextField().getText());
             }
         });
 
@@ -391,12 +378,7 @@ public class InfoPanelController extends AbstractFxmlPanelController {
     }
     
     private final ListChangeListener<IndexEntry> tableViewSelectionListener
-        = new ListChangeListener<IndexEntry>() {
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends IndexEntry> change) {
-                tableSelectionDidChange();
-            }
-        };
+        = change -> tableSelectionDidChange();
     
     private void tableSelectionDidChange() {
         final TableView<IndexEntry> tableView = leftTableColumn.getTableView();
@@ -484,26 +466,16 @@ public class InfoPanelController extends AbstractFxmlPanelController {
         return false;
     }
     
-    private final ChangeListener<Boolean> checkBoxListener = new ChangeListener<Boolean>() {
-
-        @Override
-        public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-            toggleFxRoot();
-        }
-    };
+    private final ChangeListener<Boolean> checkBoxListener = (ov, t, t1) -> toggleFxRoot();
 
     private void resetSuggestedControllerClasses(URL location) {
         if (controllerClassEditor != null) {
             // The listener on fxmlLocationProperty is called before the file
             // denoted by the location is created on disk, hence the runLater.
-            Platform.runLater(new Runnable() {
-
-                @Override
-                public void run() {
-                    controllerClassEditor.setUpdateFromModel(true);
-                    controllerClassEditor.reset(getSuggestedControllerClasses(location));
-                    controllerClassEditor.setUpdateFromModel(false);
-                }
+            Platform.runLater(() -> {
+                controllerClassEditor.setUpdateFromModel(true);
+                controllerClassEditor.reset(getSuggestedControllerClasses(location));
+                controllerClassEditor.setUpdateFromModel(false);
             });
         }
     }

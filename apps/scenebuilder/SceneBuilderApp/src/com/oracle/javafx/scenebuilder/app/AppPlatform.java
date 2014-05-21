@@ -183,23 +183,13 @@ public class AppPlatform {
         @Override
         public void messageBoxDidGetMessage(MessageBoxMessage message) {
             assert Platform.isFxApplicationThread() == false;
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    eventHandler.handleOpenFilesAction(message);
-                }
-            });
+            Platform.runLater(() -> eventHandler.handleOpenFilesAction(message));
         }
 
         @Override
         public void messageBoxDidCatchException(Exception x) {
             assert Platform.isFxApplicationThread() == false;
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    eventHandler.handleMessageBoxFailure(x);
-                }
-            });
+            Platform.runLater(() -> eventHandler.handleMessageBoxFailure(x));
         }
         
     } 

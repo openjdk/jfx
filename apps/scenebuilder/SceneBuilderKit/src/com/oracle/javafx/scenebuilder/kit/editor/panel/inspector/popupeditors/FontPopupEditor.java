@@ -52,7 +52,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -141,46 +140,32 @@ public class FontPopupEditor extends PopupEditor {
         commitOnFocusLost(sizeEditor);
         sizeSp.getChildren().add(sizeEditor.getValueEditor());
 
-        familyEditor.valueProperty().addListener(new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
-                if (familyEditor.isUpdateFromModel()) {
-                    // nothing to do
-                    return;
-                }
-                commit();
-                setStyle();
+        familyEditor.valueProperty().addListener((ChangeListener<Object>) (ov, oldVal, newVal) -> {
+            if (familyEditor.isUpdateFromModel()) {
+                // nothing to do
+                return;
             }
+            commit();
+            setStyle();
         });
 
-        styleEditor.valueProperty().addListener(new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
-                if (styleEditor.isUpdateFromModel()) {
-                    // nothing to do
-                    return;
-                }
-                commit();
+        styleEditor.valueProperty().addListener((ChangeListener<Object>) (ov, oldVal, newVal) -> {
+            if (styleEditor.isUpdateFromModel()) {
+                // nothing to do
+                return;
             }
+            commit();
         });
 
-        sizeEditor.valueProperty().addListener(new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
-                if (sizeEditor.isUpdateFromModel()) {
-                    // nothing to do
-                    return;
-                }
-                commit();
+        sizeEditor.valueProperty().addListener((ChangeListener<Object>) (ov, oldVal, newVal) -> {
+            if (sizeEditor.isUpdateFromModel()) {
+                // nothing to do
+                return;
             }
+            commit();
         });
 
-        sizeEditor.transientValueProperty().addListener(new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldVal, Object newVal) {
-                transientValue(getFont());
-            }
-        });
+        sizeEditor.transientValueProperty().addListener((ChangeListener<Object>) (ov, oldVal, newVal) -> transientValue(getFont()));
     }
 
     @Override
@@ -225,22 +210,19 @@ public class FontPopupEditor extends PopupEditor {
         public FamilyEditor(String name, String defaultValue, List<String> families, EditorController editorController) {
             super(name, defaultValue, families);
             this.families = families;
-            EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    if (Objects.equals(family, getTextField().getText())) {
-                        // no change
-                        return;
-                    }
-                    family = getTextField().getText();
-                    if (family.isEmpty() || !FamilyEditor.this.families.contains(family)) {
-                        editorController.getMessageLog().logWarningMessage(
-                                "inspector.font.invalidfamily", family); //NOI18N
-                        return;
-                    }
-//                    System.out.println("Setting family from '" + valueProperty().get() + "' to '" + value + "'");
-                    valueProperty().setValue(family);
+            EventHandler<ActionEvent> onActionListener = event -> {
+                if (Objects.equals(family, getTextField().getText())) {
+                    // no change
+                    return;
                 }
+                family = getTextField().getText();
+                if (family.isEmpty() || !FamilyEditor.this.families.contains(family)) {
+                    editorController.getMessageLog().logWarningMessage(
+                            "inspector.font.invalidfamily", family); //NOI18N
+                    return;
+                }
+//                    System.out.println("Setting family from '" + valueProperty().get() + "' to '" + value + "'");
+                valueProperty().setValue(family);
             };
 
             setTextEditorBehavior(this, getTextField(), onActionListener);
@@ -265,21 +247,18 @@ public class FontPopupEditor extends PopupEditor {
         @SuppressWarnings("LeakingThisInConstructor")
         public StyleEditor(String name, String defaultValue, List<String> suggestedList, EditorController editorController) {
             super(name, defaultValue, suggestedList);
-            EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    if (Objects.equals(style, getTextField().getText())) {
-                        // no change
-                        return;
-                    }
-                    style = getTextField().getText();
-                    if (style.isEmpty() || !getSuggestedList().contains(style)) {
-                        editorController.getMessageLog().logWarningMessage(
-                                "inspector.font.invalidstyle", style); //NOI18N
-                        return;
-                    }
-                    valueProperty().setValue(style);
+            EventHandler<ActionEvent> onActionListener = event -> {
+                if (Objects.equals(style, getTextField().getText())) {
+                    // no change
+                    return;
                 }
+                style = getTextField().getText();
+                if (style.isEmpty() || !getSuggestedList().contains(style)) {
+                    editorController.getMessageLog().logWarningMessage(
+                            "inspector.font.invalidstyle", style); //NOI18N
+                    return;
+                }
+                valueProperty().setValue(style);
             };
 
             setTextEditorBehavior(this, getTextField(), onActionListener);
@@ -293,12 +272,9 @@ public class FontPopupEditor extends PopupEditor {
     }
 
     private static void commitOnFocusLost(AutoSuggestEditor autoSuggestEditor) {
-        autoSuggestEditor.getTextField().focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldVal, Boolean newVal) {
-                if (!newVal) {
-                    autoSuggestEditor.getCommitListener().handle(null);
-                }
+        autoSuggestEditor.getTextField().focusedProperty().addListener((ChangeListener<Boolean>) (ov, oldVal, newVal) -> {
+            if (!newVal) {
+                autoSuggestEditor.getCommitListener().handle(null);
             }
         });
     }
@@ -315,16 +291,13 @@ public class FontPopupEditor extends PopupEditor {
     private static volatile Map<String, String> pathologicalFonts = null;
 
     private static final Comparator<Font> fontComparator
-            = new Comparator<Font>() {
-                @Override
-                public int compare(Font t, Font t1) {
-                    int cmp = t.getName().compareTo(t1.getName());
-                    if (cmp != 0) {
-                        return cmp;
-                    }
-                    return t.toString().compareTo(t1.toString());
-                }
-            };
+            = (t, t1) -> {
+        int cmp = t.getName().compareTo(t1.getName());
+        if (cmp != 0) {
+            return cmp;
+        }
+        return t.toString().compareTo(t1.toString());
+    };
 
     public static Set<Font> getAllFonts() {
         Font f = Font.getDefault();

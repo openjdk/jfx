@@ -34,8 +34,10 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.treeview;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyItem;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
+
 import java.util.List;
 import java.util.Set;
+
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
@@ -49,7 +51,6 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeCell;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
-import javafx.util.Callback;
 
 /**
  * Hierarchy panel controller based on the TreeView control.
@@ -80,12 +81,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
         // Initialize and configure tree view
         treeView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         // Cell factory
-        treeView.setCellFactory(new Callback<TreeView<HierarchyItem>, TreeCell<HierarchyItem>>() {
-            @Override
-            public TreeCell<HierarchyItem> call(TreeView<HierarchyItem> p) {
-                return new HierarchyTreeCell<>(HierarchyTreeViewController.this);
-            }
-        });
+        treeView.setCellFactory(p -> new HierarchyTreeCell<>(HierarchyTreeViewController.this));
         // We do not use the platform editing feature because 
         // editing is started on selection + simple click instead of double click
         treeView.setEditable(false);

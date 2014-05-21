@@ -52,12 +52,7 @@ public class ErrorDialog extends AlertDialog {
         setCancelButtonTitle(I18N.getString("label.close"));
         setActionButtonTitle(I18N.getString("error.dialog.label.details"));
         setActionButtonVisible(true);
-        setActionRunnable(new Runnable() {
-            @Override
-            public void run() {
-                showDetailsDialog();
-            }
-        });
+        setActionRunnable(() -> showDetailsDialog());
         updateActionButtonVisibility(); // not visible by default
     }
     

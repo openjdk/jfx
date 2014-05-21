@@ -32,15 +32,14 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Side;
 import javafx.scene.Node;
@@ -137,18 +136,14 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
     }
 
     private void initialize() {
-        entryField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean prevVal, Boolean newVal) {
-                if (newVal) {
-                    // Getting focus: show the popup
-                    suggest = true;
-                    handleSuggestedPopup();
-                } else {
-                    // Loosing focus: hide the popup
-                    hidePopup();
-                }
+        entryField.focusedProperty().addListener((ChangeListener<Boolean>) (ov, prevVal, newVal) -> {
+            if (newVal) {
+                // Getting focus: show the popup
+                suggest = true;
+                handleSuggestedPopup();
+            } else {
+                // Loosing focus: hide the popup
+                hidePopup();
             }
         });
         // Align popup with (at least its list view) with property text field
@@ -193,13 +188,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                entryField.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> entryField.requestFocus());
     }
 
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, List<String> suggestedList) {
@@ -371,14 +360,10 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
             MenuItem menuItem = new MenuItem(suggestItem);
 //            MenuItem menuItem = new MenuItem();
             menuItem.setMnemonicParsing(false);
-            menuItem.setOnAction(new EventHandler<ActionEvent>() {
-
-                @Override
-                public void handle(ActionEvent t) {
-                    entryField.setText(suggestItem);
-                    if (AutoSuggestEditor.this.getCommitListener() != null) {
-                        AutoSuggestEditor.this.getCommitListener().handle(null);
-                    }
+            menuItem.setOnAction(t -> {
+                entryField.setText(suggestItem);
+                if (AutoSuggestEditor.this.getCommitListener() != null) {
+                    AutoSuggestEditor.this.getCommitListener().handle(null);
                 }
             });
             // Set the font on each item. Should be done from the FontEditor

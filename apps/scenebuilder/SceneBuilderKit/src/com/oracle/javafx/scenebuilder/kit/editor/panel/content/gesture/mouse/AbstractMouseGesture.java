@@ -33,7 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
-import javafx.event.EventHandler;
+
 import javafx.scene.Node;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyCode;
@@ -102,51 +102,32 @@ public abstract class AbstractMouseGesture extends AbstractGesture {
         assert glassLayer.getOnKeyPressed() == null;
         assert glassLayer.getOnKeyReleased() == null;
         
-        glassLayer.setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                lastMouseEvent = e;
-                mouseDidDrag = true;
-                mouseDragStarted();
-                glassLayer.setOnMouseDragged(new EventHandler<MouseEvent>() {
-                    @Override
-                    public void handle(MouseEvent e) {
-                        lastMouseEvent = e;
-                        mouseDragged();
-                    }
-                });
-            }
+        glassLayer.setOnDragDetected(e1 -> {
+            lastMouseEvent = e1;
+            mouseDidDrag = true;
+            mouseDragStarted();
+            glassLayer.setOnMouseDragged(e2 -> {
+                lastMouseEvent = e2;
+                mouseDragged();
+            });
         });
-        glassLayer.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                lastMouseEvent = e;
-                try {
-                    if (mouseDidDrag) {
-                        try {
-                            mouseDragEnded();
-                        } finally {
-                            glassLayer.setOnMouseDragged(null);
-                        }
+        glassLayer.setOnMouseReleased(e1 -> {
+            lastMouseEvent = e1;
+            try {
+                if (mouseDidDrag) {
+                    try {
+                        mouseDragEnded();
+                    } finally {
+                        glassLayer.setOnMouseDragged(null);
                     }
-                    mouseReleased();
-                } finally {
-                    performTermination();
                 }
+                mouseReleased();
+            } finally {
+                performTermination();
             }
         });
-        glassLayer.setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent e) {
-                handleKeyPressed(e);
-            }
-        });
-        glassLayer.setOnKeyReleased(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent e) {
-                handleKeyReleased(e);
-            }
-        });
+        glassLayer.setOnKeyPressed(e1 -> handleKeyPressed(e1));
+        glassLayer.setOnKeyReleased(e1 -> handleKeyReleased(e1));
         
         
         this.mousePressedEvent = (MouseEvent)e;

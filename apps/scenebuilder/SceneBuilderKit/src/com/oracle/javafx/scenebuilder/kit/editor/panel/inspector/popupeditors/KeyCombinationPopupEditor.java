@@ -48,7 +48,6 @@ import java.util.Objects;
 import java.util.Set;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -61,6 +60,7 @@ import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyCombination.Modifier;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
 import javafx.util.StringConverter;
@@ -120,14 +120,10 @@ public class KeyCombinationPopupEditor extends PopupEditor {
         mainKeySp.getChildren().add(mainKey.getNode());
 
         clearAllBt.setText(I18N.getString("inspector.keycombination.clear"));
-        clearAllBt.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent t) {
-                resetState();
-                buildUI();
-                commit(null);
-            }
+        clearAllBt.setOnAction(t -> {
+            resetState();
+            buildUI();
+            commit(null);
         });
 
         buildUI();
@@ -337,19 +333,15 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             modifierChoiceBox.getSelectionModel().select(modifier);
         }
 
-        modifierChoiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<KeyCombination.Modifier>() {
-            @Override
-            public void changed(ObservableValue<? extends KeyCombination.Modifier> observable,
-                    KeyCombination.Modifier oldValue, KeyCombination.Modifier newValue) {
-                if (!mainKey.isEmpty()) {
-                    KeyCombination kc = createKeyCombination();
-                    if (kc != null) {
-                        commit(kc);
-                    }
-                }
-                buildUI();
+        modifierChoiceBox.getSelectionModel().selectedItemProperty().addListener((ChangeListener<Modifier>) (observable, oldValue, newValue) -> {
+            if (!mainKey.isEmpty()) {
+        KeyCombination kc = createKeyCombination();
+        if (kc != null) {
+            commit(kc);
+        }
             }
-        });
+            buildUI();
+         });
         return modifierChoiceBox;
     }
 
@@ -423,20 +415,16 @@ public class KeyCombinationPopupEditor extends PopupEditor {
         public MainKey(List<String> suggestedKeys, EditorController editorController) {
             super("", null, suggestedKeys); //NOI18N
             this.editorController = editorController;
-            EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-
-                @Override
-                public void handle(ActionEvent t) {
-                    if (Objects.equals(mainKey, getTextField().getText())) {
-                        // no change
-                        return;
-                    }
-                    mainKey = getTextField().getText();
-                    if (!mainKey.isEmpty()) {
-                        KeyCombination kc = createKeyCombination();
-                        if (kc != null) {
-                            commit(kc);
-                        }
+            EventHandler<ActionEvent> onActionListener = t -> {
+                if (Objects.equals(mainKey, getTextField().getText())) {
+                    // no change
+                    return;
+                }
+                mainKey = getTextField().getText();
+                if (!mainKey.isEmpty()) {
+                    KeyCombination kc = createKeyCombination();
+                    if (kc != null) {
+                        commit(kc);
                     }
                 }
             };
@@ -477,13 +465,10 @@ public class KeyCombinationPopupEditor extends PopupEditor {
     }
 
     private static void commitOnFocusLost(AutoSuggestEditor autoSuggestEditor) {
-        autoSuggestEditor.getTextField().focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldVal, Boolean newVal) {
-                if (!newVal) {
-                    // Focus lost
-                    autoSuggestEditor.getCommitListener().handle(null);
-                }
+        autoSuggestEditor.getTextField().focusedProperty().addListener((ChangeListener<Boolean>) (ov, oldVal, newVal) -> {
+            if (!newVal) {
+                // Focus lost
+                autoSuggestEditor.getCommitListener().handle(null);
             }
         });
     }

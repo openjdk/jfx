@@ -33,13 +33,14 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+
 import java.net.URL;
 import java.util.List;
+
 import javafx.animation.FadeTransition;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Group;
@@ -87,12 +88,7 @@ class WorkspaceController {
         this.extensionRect = extensionRect;
         
         // Add scene listener to panelRoot.sceneProperty()
-        this.scrollPane.sceneProperty().addListener(new ChangeListener<Scene>() {
-            @Override
-            public void changed(ObservableValue<? extends Scene> ov, Scene t, Scene t1) {
-                sceneDidChange();
-            }
-        });
+        this.scrollPane.sceneProperty().addListener((ChangeListener<Scene>) (ov, t, t1) -> sceneDidChange());
         
         // Make scalingGroup invisible.
         // We'll turn it visible once content panel is displayed in a Scene
@@ -251,12 +247,10 @@ class WorkspaceController {
             // visual artifacts. After the two steps are done, we turn the 
             // visible by calling revealScalingGroup().
             
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    layoutContent(true /* applyCSS */);
-                    adjustWorkspace();
-                    revealScalingGroup();
-                }
+            Platform.runLater(() -> {
+                layoutContent(true /* applyCSS */);
+                adjustWorkspace();
+                revealScalingGroup();
             });
         } else {
             assert scalingGroup.isVisible();

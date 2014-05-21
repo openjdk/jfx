@@ -91,6 +91,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Acce
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.Utils;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -102,6 +103,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
@@ -272,12 +274,7 @@ public class EditorController {
      * Creates an empty editor controller (ie it has no associated fxom document).
      */
     public EditorController() {
-        jobManager.revisionProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                jobManagerRevisionDidChange();
-            }
-        });
+        jobManager.revisionProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> jobManagerRevisionDidChange());
     }
 
     /**
@@ -2403,12 +2400,7 @@ public class EditorController {
     }
     
     private final ChangeListener<ClassLoader> libraryClassLoaderListener
-            = new ChangeListener<ClassLoader>() {
-                @Override
-                public void changed(ObservableValue<? extends ClassLoader> ov, ClassLoader t, ClassLoader t1) {
-                    libraryClassLoaderDidChange();
-                }
-            };
+            = (ov, t, t1) -> libraryClassLoaderDidChange();
     
     private void libraryClassLoaderDidChange() {
         if (getFxomDocument() != null) {

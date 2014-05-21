@@ -42,12 +42,11 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
+
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -74,12 +73,7 @@ class DebugMenuController {
         final MenuItem libraryFolderMenuItem 
                 = new MenuItem();
         libraryFolderMenuItem.setText(applicationDataFolder);
-        libraryFolderMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                handleRevealPath(applicationDataFolder);
-            }
-        });
+        libraryFolderMenuItem.setOnAction(t -> handleRevealPath(applicationDataFolder));
         
         final Menu libraryFolderMenu = new Menu("Application Data Folder"); //NOI18N
         libraryFolderMenu.getItems().add(libraryFolderMenuItem);
@@ -90,15 +84,12 @@ class DebugMenuController {
         final MenuItem layoutMenuItem 
                 = new MenuItem();
         layoutMenuItem.setText("Check \"localToSceneTransform Properties\" in Content Panel"); //NOI18N
-        layoutMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                System.out.println("CHECK LOCAL TO SCENE TRANSFORM BEGINS"); //NOI18N
-                final ContentPanelController cpc 
-                        = DebugMenuController.this.documentWindowController.getContentPanelController();
-                checkLocalToSceneTransform(cpc.getPanelRoot());
-                System.out.println("CHECK LOCAL TO SCENE TRANSFORM ENDS"); //NOI18N
-            }
+        layoutMenuItem.setOnAction(t -> {
+            System.out.println("CHECK LOCAL TO SCENE TRANSFORM BEGINS"); //NOI18N
+            final ContentPanelController cpc 
+                    = DebugMenuController.this.documentWindowController.getContentPanelController();
+            checkLocalToSceneTransform(cpc.getPanelRoot());
+            System.out.println("CHECK LOCAL TO SCENE TRANSFORM ENDS"); //NOI18N
         });
                 
         /*
@@ -106,22 +97,12 @@ class DebugMenuController {
          */
         final MenuItem useDefaultThemeMenuItem = new MenuItem();
         useDefaultThemeMenuItem.setText("Use Default Theme"); //NOI18N
-        useDefaultThemeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DEFAULT_THEME, 
-                        DebugMenuController.this.documentWindowController);
-            }
-        });
+        useDefaultThemeMenuItem.setOnAction(t -> SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DEFAULT_THEME, 
+                DebugMenuController.this.documentWindowController));
         final MenuItem useDarkThemeMenuItem = new MenuItem();
         useDarkThemeMenuItem.setText("Use Dark Theme"); //NOI18N
-        useDarkThemeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DARK_THEME, 
-                        DebugMenuController.this.documentWindowController);
-            }
-        });
+        useDarkThemeMenuItem.setOnAction(t -> SceneBuilderApp.getSingleton().performControlAction(SceneBuilderApp.ApplicationControlAction.USE_DARK_THEME, 
+                DebugMenuController.this.documentWindowController));
         
         /*
          * Undo/redo stack
@@ -129,12 +110,9 @@ class DebugMenuController {
         final Menu undoRedoStack = new Menu();
         undoRedoStack.setText("Undo/Redo Stack"); //NOI18N
         undoRedoStack.getItems().add(makeMenuItem("Dummy", true)); //NOI18N
-        undoRedoStack.setOnMenuValidation(new EventHandler<Event>() {
-            @Override
-            public void handle(Event t) {
-                assert t.getTarget() instanceof Menu;
-                undoRedoStackMenuShowing((Menu) t.getTarget());
-            }
+        undoRedoStack.setOnMenuValidation(t -> {
+            assert t.getTarget() instanceof Menu;
+            undoRedoStackMenuShowing((Menu) t.getTarget());
         });
                 
         menu.getItems().add(libraryFolderMenu);

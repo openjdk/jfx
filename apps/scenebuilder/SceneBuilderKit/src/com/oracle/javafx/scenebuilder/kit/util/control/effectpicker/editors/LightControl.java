@@ -33,15 +33,16 @@ package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors;
 
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -146,35 +147,31 @@ public class LightControl extends VBox {
             lightChoiceBox.setValue(LightsEnum.SPOT);
         }
 
-        lightChoiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<LightsEnum>() {
-
-            @Override
-            public void changed(ObservableValue<? extends LightsEnum> ov, LightsEnum oldValue, LightsEnum newValue) {
-                final Light light;
-                switch (newValue) {
-                    case DISTANT:
-                        light = defaultDistant;
-                        break;
-                    case POINT:
-                        light = defaultPoint;
-                        break;
-                    case SPOT:
-                        light = defaultSpot;
-                        break;
-                    case NONE:
-                        light = null;
-                        break;
-                    default:
-                        light = null;
-                        assert false;
-                }
-                // First update the model with new light value
-                setValue(light);
-                // Then update the UI
-                updateLightPropertiesUI();
-                // Then notify the controller a change occured
-                effectPickerController.incrementRevision();
+        lightChoiceBox.getSelectionModel().selectedItemProperty().addListener((ChangeListener<LightsEnum>) (ov, oldValue, newValue) -> {
+            final Light light;
+            switch (newValue) {
+                case DISTANT:
+                    light = defaultDistant;
+                    break;
+                case POINT:
+                    light = defaultPoint;
+                    break;
+                case SPOT:
+                    light = defaultSpot;
+                    break;
+                case NONE:
+                    light = null;
+                    break;
+                default:
+                    light = null;
+                    assert false;
             }
+            // First update the model with new light value
+            setValue(light);
+            // Then update the UI
+            updateLightPropertiesUI();
+            // Then notify the controller a change occured
+            effectPickerController.incrementRevision();
         });
 
         updateLightPropertiesUI();
@@ -254,24 +251,14 @@ public class LightControl extends VBox {
     private PaintPicker getColorPicker() {
         if (colorPicker == null) {
             colorPicker = new PaintPicker(effectPickerController.getPaintPickerDelegate(), PaintPicker.Mode.COLOR);
-            colorPicker.paintProperty().addListener(new ChangeListener<Paint>() {
-
-                @Override
-                public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
-                    assert newValue instanceof Color;
-                    final Color color = (Color) newValue;
-                    getValue().setColor(color);
-                    // Then notify the controller a change occured
-                    effectPickerController.incrementRevision();
-                }
+            colorPicker.paintProperty().addListener((ChangeListener<Paint>) (ov, oldValue, newValue) -> {
+                assert newValue instanceof Color;
+                final Color color = (Color) newValue;
+                getValue().setColor(color);
+                // Then notify the controller a change occured
+                effectPickerController.incrementRevision();
             });
-            colorPicker.liveUpdateProperty().addListener(new ChangeListener<Boolean>() {
-
-                @Override
-                public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                    setLiveUpdate(newValue);
-                }
-            });
+            colorPicker.liveUpdateProperty().addListener((ChangeListener<Boolean>) (ov, oldValue, newValue) -> setLiveUpdate(newValue));
         }
         return colorPicker;
     }

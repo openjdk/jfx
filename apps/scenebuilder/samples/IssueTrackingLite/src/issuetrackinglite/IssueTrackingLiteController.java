@@ -36,20 +36,18 @@ import issuetrackinglite.model.Issue.IssueStatus;
 import issuetrackinglite.model.ObservableIssue;
 import issuetrackinglite.model.TrackingService;
 import issuetrackinglite.model.TrackingServiceStub;
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
-import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -233,61 +231,53 @@ public class IssueTrackingLiteController {
     
     // This listener will listen to changes in the displayedProjectNames list,
     // and update our list widget in consequence.
-    private final ListChangeListener<String> projectNamesListener = new ListChangeListener<String>() {
-
-        @Override
-        public void onChanged(Change<? extends String> c) {
-            if (projectsView == null) {
-                return;
-            }
-            while (c.next()) {
-                if (c.wasAdded() || c.wasReplaced()) {
-                    for (String p : c.getAddedSubList()) {
-                        projectsView.add(p);
-                    }
-                }
-                if (c.wasRemoved() || c.wasReplaced()) {
-                    for (String p : c.getRemoved()) {
-                        projectsView.remove(p);
-                    }
-                }
-            }
-            FXCollections.sort(projectsView);
+    private final ListChangeListener<String> projectNamesListener = c -> {
+        if (projectsView == null) {
+            return;
         }
+        while (c.next()) {
+            if (c.wasAdded() || c.wasReplaced()) {
+                for (String p1 : c.getAddedSubList()) {
+                    projectsView.add(p1);
+                }
+            }
+            if (c.wasRemoved() || c.wasReplaced()) {
+                for (String p2 : c.getRemoved()) {
+                    projectsView.remove(p2);
+                }
+            }
+        }
+        FXCollections.sort(projectsView);
     };
     
     // This listener will listen to changes in the displayedIssues list,
     // and update our table widget in consequence.
-    private final ListChangeListener<String> projectIssuesListener = new ListChangeListener<String>() {
-
-        @Override
-        public void onChanged(Change<? extends String> c) {
-            if (table == null) {
-                return;
-            }
-            while (c.next()) {
-                if (c.wasAdded() || c.wasReplaced()) {
-                    for (String p : c.getAddedSubList()) {
-                        table.getItems().add(model.getIssue(p));
-                    }
+    private final ListChangeListener<String> projectIssuesListener = c -> {
+        if (table == null) {
+            return;
+        }
+        while (c.next()) {
+            if (c.wasAdded() || c.wasReplaced()) {
+                for (String p1 : c.getAddedSubList()) {
+                    table.getItems().add(model.getIssue(p1));
                 }
-                if (c.wasRemoved() || c.wasReplaced()) {
-                    for (String p : c.getRemoved()) {
-                        ObservableIssue removed = null;
-                        // Issue already removed:
-                        // we can't use model.getIssue(issueId) to get it.
-                        // we need to loop over the table content instead.
-                        // Then we need to remove it - but outside of the for loop
-                        // to avoid ConcurrentModificationExceptions.
-                        for (ObservableIssue t : table.getItems()) {
-                            if (t.getId().equals(p)) {
-                                removed = t;
-                                break;
-                            }
+            }
+            if (c.wasRemoved() || c.wasReplaced()) {
+                for (String p2 : c.getRemoved()) {
+                    ObservableIssue removed = null;
+                    // Issue already removed:
+                    // we can't use model.getIssue(issueId) to get it.
+                    // we need to loop over the table content instead.
+                    // Then we need to remove it - but outside of the for loop
+                    // to avoid ConcurrentModificationExceptions.
+                    for (ObservableIssue t : table.getItems()) {
+                        if (t.getId().equals(p2)) {
+                            removed = t;
+                            break;
                         }
-                        if (removed != null) {
-                            table.getItems().remove(removed);
-                        }
+                    }
+                    if (removed != null) {
+                        table.getItems().remove(removed);
                     }
                 }
             }
@@ -311,15 +301,11 @@ public class IssueTrackingLiteController {
     // This listener listen to changes in the table widget selection and
     // update the DeleteIssue button state accordingly.
     private final ListChangeListener<ObservableIssue> tableSelectionChanged =
-            new ListChangeListener<ObservableIssue>() {
-
-                @Override
-                public void onChanged(Change<? extends ObservableIssue> c) {
-                    updateDeleteIssueButtonState();
-                    updateBugDetails();
-                    updateSaveIssueButtonState();
-                }
-            };
+            c -> {
+        updateDeleteIssueButtonState();
+        updateBugDetails();
+        updateSaveIssueButtonState();
+    };
 
     private static String nonNull(String s) {
         return s == null ? "" : s;
@@ -535,13 +521,9 @@ public class IssueTrackingLiteController {
      * Listen to changes in the list selection, and updates the table widget and
      * DeleteIssue and NewIssue buttons accordingly.
      */
-    private final ChangeListener<String> projectItemSelected = new ChangeListener<String>() {
-
-        @Override
-        public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-            projectUnselected(oldValue);
-            projectSelected(newValue);
-        }
+    private final ChangeListener<String> projectItemSelected = (observable, oldValue, newValue) -> {
+        projectUnselected(oldValue);
+        projectSelected(newValue);
     };
 
     // Called when a project is unselected.
@@ -584,14 +566,10 @@ public class IssueTrackingLiteController {
         }
 
         if (details != null) {
-            details.addEventFilter(EventType.ROOT, new EventHandler<Event>() {
-
-                @Override
-                public void handle(Event event) {
-                    if (event.getEventType() == MouseEvent.MOUSE_RELEASED
-                            || event.getEventType() == KeyEvent.KEY_RELEASED) {
-                        updateSaveIssueButtonState();
-                    }
+            details.addEventFilter(EventType.ROOT, event -> {
+                if (event.getEventType() == MouseEvent.MOUSE_RELEASED
+                        || event.getEventType() == KeyEvent.KEY_RELEASED) {
+                    updateSaveIssueButtonState();
                 }
             });
         }

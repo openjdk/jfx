@@ -35,13 +35,14 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleF
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.Utils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -161,36 +162,22 @@ public class SliderControl extends GridPane {
         editor_slider.setMax(max);
         editor_slider.setValue(initVal);
         setValue(initVal);
-        editor_slider.valueProperty().addListener(new ChangeListener<Number>() {
+        editor_slider.valueProperty().addListener((ChangeListener<Number>) (ov, oldVal, newVal) -> {
+            // First update the model
+            setValue(newVal);
+            // Then notify the controller a change occured
+            effectPickerController.incrementRevision();
+        });
+        editor_slider.pressedProperty().addListener((ChangeListener<Boolean>) (ov, oldValue, newValue) -> effectPickerController.setLiveUpdate(newValue));
 
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number oldVal, Number newVal) {
+        editor_textfield.focusedProperty().addListener((ChangeListener<Boolean>) (ov, oldValue, newValue) -> {
+            // Commit the value on focus lost
+            if (newValue == false) {
+                double inputValue = Double.parseDouble(editor_textfield.getText());
                 // First update the model
-                setValue(newVal);
+                setValue(inputValue);
                 // Then notify the controller a change occured
                 effectPickerController.incrementRevision();
-            }
-        });
-        editor_slider.pressedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                effectPickerController.setLiveUpdate(newValue);
-            }
-        });
-
-        editor_textfield.focusedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                // Commit the value on focus lost
-                if (newValue == false) {
-                    double inputValue = Double.parseDouble(editor_textfield.getText());
-                    // First update the model
-                    setValue(inputValue);
-                    // Then notify the controller a change occured
-                    effectPickerController.incrementRevision();
-                }
             }
         });
     }

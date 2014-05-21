@@ -33,13 +33,12 @@ package unlock;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
 import javafx.animation.SequentialTransition;
 import javafx.animation.Transition;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -187,12 +186,7 @@ public final class UnlockController {
         final FadeTransition fadeOut = new FadeTransition(duration, node);
         fadeOut.setFromValue(1);
         fadeOut.setToValue(0);
-        fadeOut.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                node.setVisible(false);
-            }
-        });
+        fadeOut.setOnFinished(arg0 -> node.setVisible(false));
         return fadeOut;
     }
 
@@ -205,22 +199,16 @@ public final class UnlockController {
 
         final FadeTransition fadeLockButton = fadeOut(Duration.valueOf("1s"), lock);
         final HeightTransition openLockTop = new HeightTransition(Duration.valueOf("2s"), unlocktop);
-        openLockTop.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                unlocktop.setVisible(false);
-                unlocktop.setHeight(openLockTop.height);
-            }
+        openLockTop.setOnFinished(arg0 -> {
+            unlocktop.setVisible(false);
+            unlocktop.setHeight(openLockTop.height);
         });
 
         final HeightAndLayoutYTransition openLockBottom = new HeightAndLayoutYTransition(Duration.valueOf("2s"), unlockbottom);
-        openLockBottom.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                unlockbottom.setVisible(false);
-                unlockbottom.setHeight(openLockBottom.height);
-                unlockbottom.setLayoutY(openLockBottom.layoutY);
-            }
+        openLockBottom.setOnFinished(arg0 -> {
+            unlockbottom.setVisible(false);
+            unlockbottom.setHeight(openLockBottom.height);
+            unlockbottom.setLayoutY(openLockBottom.layoutY);
         });
         final ParallelTransition openLock = new ParallelTransition(openLockTop, openLockBottom);
         final SequentialTransition unlock = new SequentialTransition(fadeLockButton, openLock);
@@ -289,12 +277,9 @@ public final class UnlockController {
 
         // Add event handler to the root - used to handle the space bar key at the
         // end of the application
-        root.addEventHandler(KeyEvent.KEY_TYPED, new EventHandler<Event>() {
-            @Override
-            public void handle(Event event) {
-                if (event instanceof KeyEvent) {
-                    keyboardKeyPressed((KeyEvent) event);
-                }
+        root.addEventHandler(KeyEvent.KEY_TYPED, event -> {
+            if (event instanceof KeyEvent) {
+                keyboardKeyPressed((KeyEvent) event);
             }
         });
     }
@@ -305,23 +290,17 @@ public final class UnlockController {
 
         final WidthTransition openOkLeft = 
                 new WidthTransition(Duration.valueOf("2s"), okleft);
-        openOkLeft.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                okleft.setVisible(false);
-                okleft.setWidth(openOkLeft.width);
-            }
+        openOkLeft.setOnFinished(arg0 -> {
+            okleft.setVisible(false);
+            okleft.setWidth(openOkLeft.width);
         });
         
         final WidthAndLayoutXTransition openOkRight = 
                 new WidthAndLayoutXTransition(openOkLeft.getDuration(), okright);
-        openOkRight.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                okright.setVisible(false);
-                okright.setWidth(openOkRight.width);
-                okright.setLayoutX(openOkRight.layoutX);
-            }
+        openOkRight.setOnFinished(arg0 -> {
+            okright.setVisible(false);
+            okright.setWidth(openOkRight.width);
+            okright.setLayoutX(openOkRight.layoutX);
         });
 
         final ParallelTransition openOk =
@@ -329,12 +308,9 @@ public final class UnlockController {
 
         final SequentialTransition okTrans =
                 new SequentialTransition(fadeOutPad, openOk);
-        okTrans.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent arg0) {
-                open = true;
-                root.requestFocus();
-            }
+        okTrans.setOnFinished(arg0 -> {
+            open = true;
+            root.requestFocus();
         });
         okTrans.play();
     }

@@ -39,6 +39,7 @@ import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
 import com.oracle.javafx.scenebuilder.kit.library.util.JarExplorer;
 import com.oracle.javafx.scenebuilder.kit.library.util.JarReport;
 import com.oracle.javafx.scenebuilder.kit.library.util.JarReportEntry;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -52,15 +53,13 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import javafx.beans.property.BooleanProperty;
 import java.util.stream.Stream;
+
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Task;
-import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
 import javafx.scene.Group;
@@ -191,14 +190,7 @@ public class ImportWindowController extends AbstractModalDialog {
     @Override
     protected void cancelButtonPressed(ActionEvent e) {
         if (exploringTask != null && exploringTask.isRunning()) {
-            exploringTask.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-
-                @Override
-                public void handle(WorkerStateEvent t) {
-//                    System.out.println("Exploration of jar files has been cancelled"); //NOI18N
-                    getStage().close();
-                }
-            });
+            exploringTask.setOnCancelled(t -> getStage().close());
             exploringTask.cancel(true);
         } else {
             getStage().close();
@@ -271,32 +263,24 @@ public class ImportWindowController extends AbstractModalDialog {
         defSizeChoice.getItems().addAll(I18N.getString("import.choice.builtin"),
                 "200 x 100", "200 x 200"); //NOI18N
         defSizeChoice.getSelectionModel().selectFirst();
-        defSizeChoice.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                assert t1 instanceof Integer;
-                updateSize((Integer)t1);
-            }
+        defSizeChoice.getSelectionModel().selectedIndexProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> {
+            assert t1 instanceof Integer;
+            updateSize((Integer)t1);
         });
 
         // Setup Select All / Unselect All toggle
         // Initially all items are Selected.
-        checkAllUncheckAllToggle.selectedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (t1) {
-                    for (ImportRow row : importList.getItems()) {
-                        row.setImportRequired(false);
-                    }
-                    checkAllUncheckAllToggle.setText(I18N.getString("import.toggle.checkall"));
-                } else {
-                    for (ImportRow row : importList.getItems()) {
-                        row.setImportRequired(true);
-                    }
-                    checkAllUncheckAllToggle.setText(I18N.getString("import.toggle.uncheckall"));
+        checkAllUncheckAllToggle.selectedProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> {
+            if (t1) {
+                for (ImportRow row1 : importList.getItems()) {
+                    row1.setImportRequired(false);
                 }
+                checkAllUncheckAllToggle.setText(I18N.getString("import.toggle.checkall"));
+            } else {
+                for (ImportRow row2 : importList.getItems()) {
+                    row2.setImportRequired(true);
+                }
+                checkAllUncheckAllToggle.setText(I18N.getString("import.toggle.uncheckall"));
             }
         });
                 
@@ -387,89 +371,73 @@ public class ImportWindowController extends AbstractModalDialog {
 
         // We typically enter this handler when dropping jar files such as
         // rt.jar from Java Runtime.
-        exploringTask.setOnFailed(new EventHandler<WorkerStateEvent>() {
-
-            @Override
-            public void handle(WorkerStateEvent t) {
-                // See in setOnSucceeded the explanation for the toFront below.
-                getStage().toFront();
-                updateNumOfItemsLabelAndSelectionToggleState();
-            }
+        exploringTask.setOnFailed(t -> {
+            // See in setOnSucceeded the explanation for the toFront below.
+            getStage().toFront();
+            updateNumOfItemsLabelAndSelectionToggleState();
         });
         
         // We construct the import list only if exploration of jar files does well.
         // If Cancel is called during the construction of the list then the import
         // window is closed but the construction itself will continue up to the
         // end. Do we want to make it interruptible ?
-        exploringTask.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-
-            @Override
-            public void handle(WorkerStateEvent t) {
-                assert Platform.isFxApplicationThread();
-                // This toFront() might not be necessary because import window is modal
-                // and is chained to the document window. Anyway experience showed
-                // we need it (FX 8 b106). This is suspicious, to be investigated ...
-                // But more tricky is why toFront() is called here. Mind that when toFront()
-                // is called while isShowing() returns false isn't effective: that's
-                // why toFront called at the end of controllerDidCreateStage() or
-                // controllerDidLoadContentFxml() wasn't an option. Below is the
-                // earliest place it has been proven effective, at least on my machine.
-                getStage().toFront();
+        exploringTask.setOnSucceeded(t -> {
+            assert Platform.isFxApplicationThread();
+            // This toFront() might not be necessary because import window is modal
+            // and is chained to the document window. Anyway experience showed
+            // we need it (FX 8 b106). This is suspicious, to be investigated ...
+            // But more tricky is why toFront() is called here. Mind that when toFront()
+            // is called while isShowing() returns false isn't effective: that's
+            // why toFront called at the end of controllerDidCreateStage() or
+            // controllerDidLoadContentFxml() wasn't an option. Below is the
+            // earliest place it has been proven effective, at least on my machine.
+            getStage().toFront();
+            
+            try {
+                // We get the set of items which are already excluded prior to the current import.
+                UserLibrary userLib = ((UserLibrary) libPanelController.getEditorController().getLibrary());
+                alreadyExcludedItems = userLib.getFilter();
                 
-                try {
-                    // We get the set of items which are already excluded prior to the current import.
-                    UserLibrary userLib = ((UserLibrary) libPanelController.getEditorController().getLibrary());
-                    alreadyExcludedItems = userLib.getFilter();
-                    
-                    List<JarReport> jarReportList = exploringTask.get(); // blocking call
-                    final Callback<ImportRow, ObservableValue<Boolean>> importRequired
-                            = new Callback<ImportRow, ObservableValue<Boolean>>() {
-                                @Override
-                                public BooleanProperty call(ImportRow row) {
-                                    return row.importRequired();
-                                }
-                            };
-                    importList.setCellFactory(CheckBoxListCell.forListView(importRequired));
+                List<JarReport> jarReportList = exploringTask.get(); // blocking call
+                final Callback<ImportRow, ObservableValue<Boolean>> importRequired
+                        = row -> row.importRequired();
+                importList.setCellFactory(CheckBoxListCell.forListView(importRequired));
 
-                    for (JarReport jarReport : jarReportList) {
-                        for (JarReportEntry e : jarReport.getEntries()) {
-                            if ((e.getStatus() == JarReportEntry.Status.OK) && e.isNode()) {
-                                boolean checked = true;
-                                // If the class we import is already listed as an excluded one
-                                // then it must appear unchecked in the list.
-                                if (alreadyExcludedItems.contains(e.getKlass().getCanonicalName())) {
-                                    checked = false;
-                                    alreadyExcludedItems.remove(e.getKlass().getCanonicalName());
-                                }
-                                final ImportRow importRow = new ImportRow(checked, e, null);
-                                importList.getItems().add(importRow);
-                                importRow.importRequired().addListener(new ChangeListener<Boolean>() {
-
-                                    @Override
-                                    public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
+                for (JarReport jarReport : jarReportList) {
+                    for (JarReportEntry e : jarReport.getEntries()) {
+                        if ((e.getStatus() == JarReportEntry.Status.OK) && e.isNode()) {
+                            boolean checked = true;
+                            // If the class we import is already listed as an excluded one
+                            // then it must appear unchecked in the list.
+                            if (alreadyExcludedItems.contains(e.getKlass().getCanonicalName())) {
+                                checked = false;
+                                alreadyExcludedItems.remove(e.getKlass().getCanonicalName());
+                            }
+                            final ImportRow importRow = new ImportRow(checked, e, null);
+                            importList.getItems().add(importRow);
+                            importRow.importRequired().addListener((ChangeListener<Boolean>) (ov, oldValue,
+                                    newValue) -> {
                                         final int numOfComponentToImport = getNumOfComponentToImport(importList);
                                         updateOKButtonTitle(numOfComponentToImport);
                                         updateSelectionToggleText(numOfComponentToImport);
-                                    }
-                                });
-                            }
+                                    });
                         }
                     }
-                    
-                    // Sort based on the simple class name.
-                    Collections.sort(importList.getItems(), new ImportRowComparator());
-
-                    final int numOfComponentToImport = getNumOfComponentToImport(importList);
-                    updateOKButtonTitle(numOfComponentToImport);
-                    updateSelectionToggleText(numOfComponentToImport);
-                    updateNumOfItemsLabelAndSelectionToggleState();
-                } catch (InterruptedException | ExecutionException | IOException ex) {
-                    getStage().close();
-                    showErrorDialog(ex);
                 }
+                
+                // Sort based on the simple class name.
+                Collections.sort(importList.getItems(), new ImportRowComparator());
 
-                unsetProcessing();
+                final int numOfComponentToImport = getNumOfComponentToImport(importList);
+                updateOKButtonTitle(numOfComponentToImport);
+                updateSelectionToggleText(numOfComponentToImport);
+                updateNumOfItemsLabelAndSelectionToggleState();
+            } catch (InterruptedException | ExecutionException | IOException ex) {
+                getStage().close();
+                showErrorDialog(ex);
             }
+
+            unsetProcessing();
         });
 
         th.start();
@@ -493,54 +461,50 @@ public class ImportWindowController extends AbstractModalDialog {
         processingLabel.setVisible(false);
         topSplitPane.setVisible(true);
 
-        importList.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<ImportRow>() {
-
-            @Override
-            public void changed(ObservableValue<? extends ImportRow> ov, ImportRow t, ImportRow t1) {
-                previewGroup.getChildren().clear();
-                final String fxmlText = JarExplorer.makeFxmlText(t1.getJarReportEntry().getKlass());
-                try {
-                    FXOMDocument fxomDoc = new FXOMDocument(fxmlText, null, importClassLoader, null);
-                    zeNode = (Node) fxomDoc.getSceneGraphRoot();
-                } catch (IOException ioe) {
-                    showErrorDialog(ioe);
-                }
-                
-                // In order to get valid bounds I need to put the node into a
-                // scene and ask for full layout.
-                try {
-                    final Group visualGroup = new Group(zeNode);
-                    final Scene hiddenScene = new Scene(visualGroup);
-                    Stage hiddenStage = new Stage();
-                    hiddenStage.setScene(hiddenScene);
-                    visualGroup.applyCss();
-                    visualGroup.layout();
-                    final Bounds zeBounds = zeNode.getLayoutBounds();
-                    builtinPrefWidth = zeBounds.getWidth();
-                    builtinPrefHeight = zeBounds.getHeight();
-                    // Detach the scene !
-                    hiddenScene.setRoot(new Group());
-                    hiddenStage.close();
-                } catch (Error e) {
-                    // Experience shows that with rogue jar files (a jar file
-                    // unlikely to contain FX controls) we can enter here.
-                    // Anything better to do than setting pref size to 0 ?
-                    builtinPrefWidth = 0;
-                    builtinPrefHeight = 0;
-                }
-                
-                if (builtinPrefWidth == 0 || builtinPrefHeight == 0) {
-                    ((Region) zeNode).setPrefSize(200, 200);
-                    setSizeLabel(PrefSize.TWO_HUNDRED_BY_TWO_HUNDRED);
-                    defSizeChoice.getSelectionModel().select(2);
-                } else {
-                    setSizeLabel(PrefSize.DEFAULT);
-                    defSizeChoice.getSelectionModel().selectFirst();
-                }
-                previewGroup.getChildren().add(zeNode);
-                defSizeChoice.setDisable(false);
-                classNameLabel.setText(t1.getJarReportEntry().getKlass().getName());
+        importList.getSelectionModel().selectedItemProperty().addListener((ChangeListener<ImportRow>) (ov, t, t1) -> {
+            previewGroup.getChildren().clear();
+            final String fxmlText = JarExplorer.makeFxmlText(t1.getJarReportEntry().getKlass());
+            try {
+                FXOMDocument fxomDoc = new FXOMDocument(fxmlText, null, importClassLoader, null);
+                zeNode = (Node) fxomDoc.getSceneGraphRoot();
+            } catch (IOException ioe) {
+                showErrorDialog(ioe);
             }
+            
+            // In order to get valid bounds I need to put the node into a
+            // scene and ask for full layout.
+            try {
+                final Group visualGroup = new Group(zeNode);
+                final Scene hiddenScene = new Scene(visualGroup);
+                Stage hiddenStage = new Stage();
+                hiddenStage.setScene(hiddenScene);
+                visualGroup.applyCss();
+                visualGroup.layout();
+                final Bounds zeBounds = zeNode.getLayoutBounds();
+                builtinPrefWidth = zeBounds.getWidth();
+                builtinPrefHeight = zeBounds.getHeight();
+                // Detach the scene !
+                hiddenScene.setRoot(new Group());
+                hiddenStage.close();
+            } catch (Error e) {
+                // Experience shows that with rogue jar files (a jar file
+                // unlikely to contain FX controls) we can enter here.
+                // Anything better to do than setting pref size to 0 ?
+                builtinPrefWidth = 0;
+                builtinPrefHeight = 0;
+            }
+            
+            if (builtinPrefWidth == 0 || builtinPrefHeight == 0) {
+                ((Region) zeNode).setPrefSize(200, 200);
+                setSizeLabel(PrefSize.TWO_HUNDRED_BY_TWO_HUNDRED);
+                defSizeChoice.getSelectionModel().select(2);
+            } else {
+                setSizeLabel(PrefSize.DEFAULT);
+                defSizeChoice.getSelectionModel().selectFirst();
+            }
+            previewGroup.getChildren().add(zeNode);
+            defSizeChoice.setDisable(false);
+            classNameLabel.setText(t1.getJarReportEntry().getKlass().getName());
         });
 
         // We avoid to get an empty Preview area at first.

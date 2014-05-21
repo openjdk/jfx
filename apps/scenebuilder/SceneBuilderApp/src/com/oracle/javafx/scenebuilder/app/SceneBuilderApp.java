@@ -50,6 +50,7 @@ import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPicker;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -65,10 +66,10 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -142,21 +143,13 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         /*
          * We spawn our two threads for handling background startup.
          */
-        final Runnable p0 = new Runnable() {
-            @Override
-            public void run() {
-                backgroundStartPhase0();
-            }
-        };
-        final Runnable p1 = new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    launchLatch.await();
-                    backgroundStartPhase2();
-                } catch(InterruptedException x) {
-                    // JavaFX thread has been interrupted. Simply exits.
-                }
+        final Runnable p0 = () -> backgroundStartPhase0();
+        final Runnable p1 = () -> {
+            try {
+                launchLatch.await();
+                backgroundStartPhase2();
+            } catch(InterruptedException x) {
+                // JavaFX thread has been interrupted. Simply exits.
             }
         };
         final Thread phase0 = new Thread(p0, "Phase 0"); //NOI18N
@@ -401,13 +394,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         // Creates the user library
         userLibrary = new UserLibrary(AppPlatform.getUserLibraryFolder());
         
-        userLibrary.explorationCountProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                userLibraryExplorationCountDidChange();
-            }
-        });
+        userLibrary.explorationCountProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> userLibraryExplorationCountDidChange());
         
         userLibrary.startWatching();
         
