@@ -1147,7 +1147,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         initViewport();
-        updateScrollBarsAndCells(recreatedOrRebuilt);
 
         // Get the index of the "current" cell
         int currentIndex = computeCurrentIndex();
@@ -1197,11 +1196,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             addTrailingCells(true);
         }
 
-        if (computeBarVisiblity()) {
-            updateScrollBarsAndCells(recreatedOrRebuilt);
-        } else {
-            fitCells();
-        }
+        computeBarVisiblity();
+        updateScrollBarsAndCells(recreatedOrRebuilt);
 
         lastWidth = getWidth();
         lastHeight = getHeight();
@@ -1455,7 +1451,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void initViewport() {
-
         // Initialize the viewportLength and viewportBreadth to match the
         // width/height of the flow
         final boolean isVertical = isVertical();
@@ -1471,8 +1466,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // will want to do some stuff TODO.
         breadthBar.setVirtual(false);
         lengthBar.setVirtual(true);
-
-        computeBarVisiblity();
     }
 
     @Override protected void setWidth(double value) {
