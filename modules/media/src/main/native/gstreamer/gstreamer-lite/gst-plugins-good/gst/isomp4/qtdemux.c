@@ -5893,6 +5893,9 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
     gint i, count;
     guint64 time, stime;
     guint8 *buffer;
+#ifdef GSTREAMER_LITE
+    guint32 buffer_length;
+#endif
 
     GST_DEBUG_OBJECT (qtdemux, "looking for edit list");
     if (!(elst = qtdemux_tree_get_child_by_type (edts, FOURCC_elst)))
@@ -5905,10 +5908,18 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
     /* we might allocate a bit too much, at least allocate 1 segment */
 #ifdef GSTREAMER_LITE
     n_segments = MAX (n_segments, 1);
-    if (n_segments < G_MAXSIZE / sizeof(QtDemuxSegment))
-        stream->segments = g_new (QtDemuxSegment, n_segments);
-    else
+      
+    if (n_segments < G_MAXSIZE / sizeof(QtDemuxSegment)) {
+        stream->segments = g_try_malloc (sizeof(QtDemuxSegment) * n_segments);
+          
+        if (stream->segments == NULL) {
+            return FALSE;
+        }
+        
+        buffer_length = QT_UINT32 (buffer);
+    } else {
         return FALSE;
+    }
 #else
     stream->segments = g_new (QtDemuxSegment, MAX (n_segments, 1));
 #endif // GSTREAMER_LITE
@@ -5923,6 +5934,62 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
       QtDemuxSegment *segment;
       guint32 rate_int;
 
+#ifdef GSTREAMER_LITE
+        guint32 idx;
+        
+        idx = 20 + i * 12;
+        
+        if (idx <= buffer_length - 4) {
+            media_time = QT_UINT32 (buffer + idx);
+            
+            /* -1 media time is an empty segment, just ignore it */
+            if (media_time == G_MAXUINT32) {
+                continue;
+            }
+        } else {
+            return FALSE;
+        }
+        
+        idx = 16 + i * 12;
+        
+        if (idx <= buffer_length - 4) {
+            duration = QT_UINT32 (buffer + idx);
+        } else {
+            return FALSE;
+        }
+        
+        segment = &stream->segments[count++];
+        
+        /* time and duration expressed in global timescale */
+        segment->time = stime;
+        /* add non scaled values so we don't cause roundoff errors */
+        time += duration;
+        stime = gst_util_uint64_scale (time, GST_SECOND, qtdemux->timescale);
+        segment->stop_time = stime;
+        segment->duration = stime - segment->time;
+        /* media_time expressed in stream timescale */
+        segment->media_start =
+        gst_util_uint64_scale (media_time, GST_SECOND, stream->timescale);
+        segment->media_stop = segment->media_start + segment->duration;
+        
+        idx = 24 + i * 12;
+        
+        if (idx <= buffer_length - 4) {
+            rate_int = GST_READ_UINT32_BE (buffer + idx);
+            
+            if (rate_int <= 1) {
+                /* 0 is not allowed, some programs write 1 instead of the floating point
+                 * value */
+                GST_WARNING_OBJECT (qtdemux, "found suspicious rate %" G_GUINT32_FORMAT,
+                                    rate_int);
+                segment->rate = 1;
+            } else {
+                segment->rate = rate_int / 65536.0;
+            }
+        } else {
+            return FALSE;
+        }
+#else
       media_time = QT_UINT32 (buffer + 20 + i * 12);
 
       /* -1 media time is an empty segment, just ignore it */
@@ -5955,7 +6022,8 @@ qtdemux_parse_segments (GstQTDemux * qtdemux, QtDemuxStream * stream,
       } else {
         segment->rate = rate_int / 65536.0;
       }
-
+#endif
+        
       GST_DEBUG_OBJECT (qtdemux, "created segment %d time %" GST_TIME_FORMAT
           ", duration %" GST_TIME_FORMAT ", media_time %" GST_TIME_FORMAT
           ", rate %g, (%d)", i, GST_TIME_ARGS (segment->time),
