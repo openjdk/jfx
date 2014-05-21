@@ -25,24 +25,17 @@
 
 package com.sun.javafx.webkit.prism;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.tk.RenderJob;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.webkit.Invoker;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 public final class PrismInvoker extends Invoker {
 
-    private final AtomicBoolean isToolkitRunning = new AtomicBoolean(true);
-
     public PrismInvoker() {
-        Toolkit.getToolkit().addShutdownHook(new Runnable() {
-            public void run() {
-                isToolkitRunning.set(false);
-            }
-        });
     }
 
     /*
@@ -73,14 +66,12 @@ public final class PrismInvoker extends Invoker {
         if (isEventThread()) {
             r.run();
         } else {
-            Toolkit.getToolkit().defer(r);
+            PlatformImpl.runLater(r);
         }
     }
 
     @Override public void postOnEventThread(final Runnable r) {
-        if (isToolkitRunning.get()) {
-            Toolkit.getToolkit().defer(r);
-        }
+        PlatformImpl.runLater(r);
     }
 
     static void invokeOnRenderThread(final Runnable r) {

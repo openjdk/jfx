@@ -656,10 +656,14 @@ public final class QuantumToolkit extends Toolkit {
         return new PrismImageLoader2.AsyncImageLoader(listener, url, width, height, preserveRatio, smooth);
     }
 
+    // Note that this method should only be called by PlatformImpl.runLater
+    // It should not be called directly by other FX code since the underlying
+    // glass invokeLater method is not thread-safe with respect to toolkit
+    // shutdown. Calling Platform.runLater *is* thread-safe even when the
+    // toolkit is shutting down.
     @Override public void defer(Runnable runnable) {
-        if (!toolkitRunning.get()) {
-            throw new IllegalStateException("Attempt to call defer when toolkit not running");
-        }
+        if (!toolkitRunning.get()) return;
+
         Application.invokeLater(runnable);
     }
 
