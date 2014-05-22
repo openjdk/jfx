@@ -307,7 +307,7 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TITLE);
         if (text == null) return null;
         int length = text.length();
-        if (length == 0) return null;
+
         /* Narrator will not focus an empty text control if the bounds are NULL */
         if (length == 0) return new double[0];
         int endOffset = end;
