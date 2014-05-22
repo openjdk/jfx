@@ -768,6 +768,9 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         computeScrollNodeSize(contentWidth, contentHeight);
         computeScrollBarSize();
 
+        contentWidth = w;
+        contentHeight = h;
+
         for (int i = 0; i < 2; ++i) {
             vsbvis = determineVerticalSBVisible();
             hsbvis = determineHorizontalSBVisible();
