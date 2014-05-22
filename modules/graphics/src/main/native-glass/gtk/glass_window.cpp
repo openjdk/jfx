@@ -832,21 +832,19 @@ void WindowContextTop::process_net_wm_property() {
     
     gint length;
 
-    GdkAtom* atoms = NULL;
+    glong* atoms = NULL;
 
     if (gdk_property_get(gdk_window, atom_net_wm_state, atom_atom,
             0, G_MAXLONG, FALSE, NULL, NULL, &length, (guchar**) &atoms)) {
 
-        gint i = 0;
         bool is_hidden = false;
         bool is_above = false;
-        while (i < length) {
-            if (atom_net_wm_state_hidden == atoms[i]) {
+        for (gint i = 0; i < length / sizeof(glong); i++) {
+            if (atom_net_wm_state_hidden == (GdkAtom)atoms[i]) {
                 is_hidden = true;
-            } else if (atom_net_wm_state_above == atoms[i]) {
+            } else if (atom_net_wm_state_above == (GdkAtom)atoms[i]) {
                 is_above = true;
             }
-            i++;
         }
 
         g_free(atoms);
