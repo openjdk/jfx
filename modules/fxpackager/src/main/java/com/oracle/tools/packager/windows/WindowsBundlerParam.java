@@ -26,10 +26,12 @@
 package com.oracle.tools.packager.windows;
 
 import com.oracle.tools.packager.BundlerParamInfo;
+import com.oracle.tools.packager.JreUtils;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.RelativeFileSet;
+import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -41,6 +43,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.oracle.tools.packager.JreUtils.extractJreAsRelativeFileSet;
 
 
 public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
@@ -102,12 +106,58 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
                     params -> {extractFlagsFromRuntime(params); return "64".equals(params.get(".runtime.bit-arch"));},
                     (s, p) -> Boolean.valueOf(s)
             );
-       
+
+    //Subsetting of JRE is restricted.
+    //JRE README defines what is allowed to strip:
+    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
+    public static final BundlerParamInfo<JreUtils.Rule[]> WIN_JRE_RULES = new StandardBundlerParam<>(
+            "",
+            "",
+            ".win.runtime.rules",
+            JreUtils.Rule[].class,
+            params -> new JreUtils.Rule[]{
+                    JreUtils.Rule.prefixNeg("\\bin\\new_plugin"),
+                    JreUtils.Rule.prefixNeg("\\lib\\deploy"),
+                    JreUtils.Rule.suffixNeg(".pdb"),
+                    JreUtils.Rule.suffixNeg(".map"),
+                    JreUtils.Rule.suffixNeg("axbridge.dll"),
+                    JreUtils.Rule.suffixNeg("eula.dll"),
+                    JreUtils.Rule.substrNeg("javacpl"),
+                    JreUtils.Rule.suffixNeg("wsdetect.dll"),
+                    JreUtils.Rule.substrNeg("eployjava1.dll"), //NP and IE versions
+                    JreUtils.Rule.substrNeg("bin\\jp2"),
+                    JreUtils.Rule.substrNeg("bin\\jpi"),
+                    //Rule.suffixNeg("lib\\ext"), //need some of jars there for https to work
+                    JreUtils.Rule.suffixNeg("ssv.dll"),
+                    JreUtils.Rule.substrNeg("npjpi"),
+                    JreUtils.Rule.substrNeg("npoji"),
+                    JreUtils.Rule.suffixNeg(".exe"),
+                    //keep core deploy files as JavaFX APIs use them
+                    //Rule.suffixNeg("deploy.dll"),
+                    JreUtils.Rule.suffixNeg("deploy.jar"),
+                    //Rule.suffixNeg("javaws.jar"),
+                    //Rule.suffixNeg("plugin.jar"),
+                    JreUtils.Rule.suffix(".jar")
+            },
+            (s, p) -> null
+    );
+
+    public static final BundlerParamInfo<RelativeFileSet> WIN_RUNTIME = new StandardBundlerParam<>(
+            I18N.getString("param.runtime.name"),
+            I18N.getString("param.runtime.description"),
+            BundleParams.PARAM_RUNTIME,
+            RelativeFileSet.class,
+            params -> extractJreAsRelativeFileSet(System.getProperty("java.home"),
+                    WIN_JRE_RULES.fetchFrom(params)),
+            (s, p) -> extractJreAsRelativeFileSet(s,
+                    WIN_JRE_RULES.fetchFrom(p))
+    );
+
     public static void extractFlagsFromRuntime(Map<String, ? super Object> params) {
         if (params.containsKey(".runtime.autodetect")) return;
         
         params.put(".runtime.autodetect", "attempted");
-        RelativeFileSet runtime = RUNTIME.fetchFrom(params);
+        RelativeFileSet runtime = WIN_RUNTIME.fetchFrom(params);
         String commandline;
         if (runtime == null) {
             //its ok, request to use system JRE

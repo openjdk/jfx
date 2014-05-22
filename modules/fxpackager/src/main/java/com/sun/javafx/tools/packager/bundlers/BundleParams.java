@@ -26,6 +26,9 @@
 package com.sun.javafx.tools.packager.bundlers;
 
 import com.oracle.tools.packager.*;
+import com.oracle.tools.packager.linux.LinuxAppBundler;
+import com.oracle.tools.packager.mac.MacAppBundler;
+import com.oracle.tools.packager.windows.WindowsBundlerParam;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 
 import java.io.File;
@@ -231,7 +234,20 @@ public class BundleParams {
     }
     
     public com.oracle.tools.packager.RelativeFileSet getRuntime() {
-        return fetchParam(RUNTIME);
+        return getRuntime(params);
+    }
+
+    public static com.oracle.tools.packager.RelativeFileSet getRuntime(Map<String, ? super Object> params) {
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.startsWith("linux")) {
+            return LinuxAppBundler.LINUX_RUNTIME.fetchFrom(params);
+        } else if (os.contains("os x")) {
+            return MacAppBundler.MAC_RUNTIME.fetchFrom(params);
+        } else if (os.startsWith("win")) {
+            return WindowsBundlerParam.WIN_RUNTIME.fetchFrom(params);
+        } else {
+            return null;
+        }
     }
 
     public boolean isShortcutHint() {

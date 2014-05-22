@@ -57,8 +57,7 @@ public abstract class AbstractBundler implements Bundler {
     protected Class baseResourceLoader = null;
     
     //helper method to test if required files are present in the runtime
-    public void testRuntime(Map<String, ? super Object> p, String[] file) throws ConfigException {
-        RelativeFileSet runtime = StandardBundlerParam.RUNTIME.fetchFrom(p);
+    public void testRuntime(RelativeFileSet runtime, String[] file) throws ConfigException {
         if (runtime == null) {
             return; //null runtime is ok (request to use system)
         }
