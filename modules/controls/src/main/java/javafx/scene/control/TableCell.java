@@ -276,6 +276,9 @@ public class TableCell<S,T> extends IndexedCell<T> {
     // --- TableRow
     /**
      * The TableRow that this TableCell currently finds itself placed within.
+     * The TableRow may be null early in the TableCell lifecycle, in the period
+     * between the TableCell being instantiated and being set into an owner
+     * TableRow.
      */
     private ReadOnlyObjectWrapper<TableRow> tableRow = new ReadOnlyObjectWrapper<TableRow>(this, "tableRow");
     private void setTableRow(TableRow value) { tableRow.set(value); }
