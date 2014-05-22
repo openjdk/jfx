@@ -96,6 +96,14 @@ class WinTextRangeProvider {
         this.end = end;
     }
 
+    int getStart() {
+        return start;
+    }
+
+    int getEnd() {
+        return end;
+    }
+
     @Override public String toString() {
         return "Range(start: "+start+", end: "+end+", id: " + id + ")";
     }
@@ -300,6 +308,8 @@ class WinTextRangeProvider {
         if (text == null) return null;
         int length = text.length();
         if (length == 0) return null;
+        /* Narrator will not focus an empty text control if the bounds are NULL */
+        if (length == 0) return new double[0];
         int endOffset = end;
         if (endOffset > 0 && endOffset > start && text.charAt(endOffset - 1) == '\n') {
             endOffset--;
