@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,9 @@
 
 package netscape.javascript;
 
+import java.applet.Applet;
 
-// FIXME: need URL on java.sun.com for new LiveConnect spec
+// FIXME: need URL on oracle.com for new LiveConnect spec
 
 /**
  * <P> Allows Java code to manipulate JavaScript objects. </P>
@@ -41,10 +42,11 @@ package netscape.javascript;
  * <P> Any data returned from the JavaScript engine to Java is
  * converted to Java data types. Certain data passed to the JavaScript
  * engine is converted to JavaScript data types. See the section on <A
- * HREF="http://jdk6.java.net/plugin2/liveconnect/index.html#JAVA_JS_CONVERSIONS">
- * Data Type Conversions</A> in the <A
- * HREF="http://jdk6.java.net/plugin2/liveconnect">LiveConnect Specification</A>
- * for details on how values are converted. </P>
+ * HREF="https://jdk6.dev.java.net/plugin2/liveconnect/#JAVA_JS_CONVERSIONS">Data
+ * Type Conversions</A> in the <A
+ * HREF="https://jdk6.dev.java.net/plugin2/liveconnect/">new
+ * LiveConnect Specification</A> for details on how values are
+ * converted. </P>
  *
  */
 public abstract class JSObject {
@@ -62,7 +64,7 @@ public abstract class JSObject {
      * </p>
      *
      * @param methodName The name of the JavaScript method to be invoked.
-     * @param args An array of Java object to be passed as arguments to the method.
+     * @param args the Java objects passed as arguments to the method.
      * @return Result of the method.
      */
     public abstract Object call(String methodName, Object... args) throws JSException;
@@ -126,15 +128,18 @@ public abstract class JSObject {
      */
     public abstract void setSlot(int index, Object value) throws JSException;
 
-    /* *
+    /**
      * <p> Returns a JSObject for the window containing the given applet.
      * </p>
      *
      * @param applet The applet.
      * @return JSObject for the window containing the given applet.
-     * /
+     */
     public static JSObject getWindow(Applet applet) throws JSException {
 
+        throw new JSException("Unexpected error: This method should not be used unless loaded from plugin.jar");
+
+/*
         try
         {
             if (applet != null)
@@ -170,12 +175,16 @@ public abstract class JSObject {
                 // new code for CustomProgress to get the JSObject w/o applet
                 AppContext ac = ToolkitStore.get().getAppContext();
                 if (ac != null) {
-                    Object context = ac.get(sun.plugin2.applet.Plugin2Manager.APPCONTEXT_PLUGIN2HOST_KEY);
-                    if (context != null && (context instanceof JSContext)) {
-                        JSContext jsc = (JSContext) context;
-                        JSObject ret = jsc.getOneWayJSObject();
-                        if (ret != null) {
-                           return ret;
+                    Plugin2Context context = (Plugin2Context)
+                            ac.get(sun.plugin2.applet.Plugin2Manager.APPCONTEXT_PLUGIN2CTX_KEY);
+                    if (context != null) {
+                        Applet2Host host = context.getHost();
+                        if (host != null && host instanceof JSContext) {
+                            JSContext jsc = (JSContext) host;
+                            JSObject ret = jsc.getOneWayJSObject();
+                            if (ret != null) {
+                               return ret;
+                            }
                         }
                     }
                 }
@@ -187,6 +196,6 @@ public abstract class JSObject {
         }
 
         throw new JSException();
+*/
     }
-    */
 }
