@@ -750,6 +750,18 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         public void setFakeFocus(boolean b) {
             setFocused(b);
         }
+
+        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            switch (attribute) {
+                case FOCUS_ITEM: 
+                    /* Internally comboBox reassign its focus the text field.
+                     * For the accessibility perspective it is more meaningful
+                     * if the focus stays with the comboBox control.
+                     */
+                    return getParent();
+                default: return super.accGetAttribute(attribute, parameters);
+            }
+        }
     }
 
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
