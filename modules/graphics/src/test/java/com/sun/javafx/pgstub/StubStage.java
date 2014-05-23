@@ -396,6 +396,11 @@ public class StubStage implements TKStage {
             // TODO: Add code later
         }
 
+        @Override
+        public void changedScreen(Object from, Object to) {
+            // TODO: Add code later
+        }
+
     }
 
     public void setRTL(boolean b) {

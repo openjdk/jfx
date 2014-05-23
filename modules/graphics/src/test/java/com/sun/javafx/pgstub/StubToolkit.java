@@ -518,6 +518,11 @@ public class StubToolkit extends Toolkit {
         public float getDPI(Object obj) {
             return ((ScreenConfiguration) obj).getDPI();
         }
+
+        @Override
+        public float getScale(Object obj) {
+            return ((ScreenConfiguration) obj).getScale();
+        }
     };
 
     @Override
@@ -823,6 +828,7 @@ public class StubToolkit extends Toolkit {
         private final int visualWidth;
         private final int visualHeight;
         private final float dpi;
+        private final float scale;
 
         public ScreenConfiguration(final int minX, final int minY,
                                    final int width, final int height,
@@ -840,6 +846,7 @@ public class StubToolkit extends Toolkit {
             this.visualWidth = visualWidth;
             this.visualHeight = visualHeight;
             this.dpi = dpi;
+            this.scale = 1;  // TODO: add a constructor that takes scale
         }
 
         public int getMinX() {
@@ -876,6 +883,10 @@ public class StubToolkit extends Toolkit {
 
         public float getDPI() {
             return dpi;
+        }
+
+        public float getScale() {
+            return scale;
         }
     }
 
