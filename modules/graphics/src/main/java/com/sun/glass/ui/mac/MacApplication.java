@@ -44,13 +44,16 @@ import javafx.scene.accessibility.Accessible;
 
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
-    private native static void _initIDs();
+    private native static void _initIDs(boolean disableSyncRendering);
     static {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Application.loadNativeLibrary();
             return null;
         });
-        _initIDs();
+        boolean disableSyncRendering = AccessController
+                .doPrivileged((PrivilegedAction<Boolean>) () ->
+                        Boolean.getBoolean("glass.disableSyncRendering"));
+        _initIDs(disableSyncRendering);
     }
 
     native static int _getMacKey(int code);

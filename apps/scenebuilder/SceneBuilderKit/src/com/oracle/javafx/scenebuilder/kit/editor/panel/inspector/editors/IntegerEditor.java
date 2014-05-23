@@ -61,34 +61,31 @@ public class IntegerEditor extends AutoSuggestEditor {
         this.min = minVal;
         this.max = maxVal;
 
-        EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (isHandlingError()) {
-                    // Event received because of focus lost due to error dialog
-                    return;
-                }
-                Object value = getValue();
-                if ((value != null) && ((IntegerPropertyMetadata) getPropertyMeta()).isValidValue((Integer) value)) {
-                    String constantStr = getConstant(value);
-                    if (constantStr != null) {
-                        getTextField().setText(constantStr);
-                    } else {
-                        assert value instanceof Integer;
-                        int val = (Integer) value;
-                        if (val < min) {
-                            val = min;
-                        } else if (val > max) {
-                            val = max;
-                        }
-                        value = val;
-                        getTextField().setText(value.toString());
-                    }
-                    userUpdateValueProperty(value);
-                    getTextField().selectAll();
+        EventHandler<ActionEvent> onActionListener = event -> {
+            if (isHandlingError()) {
+                // Event received because of focus lost due to error dialog
+                return;
+            }
+            Object value = getValue();
+            if ((value != null) && ((IntegerPropertyMetadata) getPropertyMeta()).isValidValue((Integer) value)) {
+                String constantStr = getConstant(value);
+                if (constantStr != null) {
+                    getTextField().setText(constantStr);
                 } else {
-                    handleInvalidValue(getTextField().getText());
+                    assert value instanceof Integer;
+                    int val = (Integer) value;
+                    if (val < min) {
+                        val = min;
+                    } else if (val > max) {
+                        val = max;
+                    }
+                    value = val;
+                    getTextField().setText(value.toString());
                 }
+                userUpdateValueProperty(value);
+                getTextField().selectAll();
+            } else {
+                handleInvalidValue(getTextField().getText());
             }
         };
 
@@ -135,13 +132,7 @@ public class IntegerEditor extends AutoSuggestEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                getTextField().requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> getTextField().requestFocus());
     }
 
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,

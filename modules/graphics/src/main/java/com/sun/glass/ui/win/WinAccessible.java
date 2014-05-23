@@ -367,8 +367,19 @@ final class WinAccessible extends PlatformAccessible {
             }
             case SELECTION_START:
             case SELECTION_END:
-                UiaRaiseAutomationEvent(peer, UIA_Text_TextSelectionChangedEventId);
-                selectionRangeValid = false;
+                if (selectionRange != null) {
+                    Integer start = (Integer)getAttribute(SELECTION_START);
+                    boolean newStart = start != null && start != selectionRange.getStart();
+                    Integer end = (Integer)getAttribute(SELECTION_END);
+                    boolean newEnd = end != null && end != selectionRange.getEnd();
+                    /* Sending unnecessary selection changed events causes Narrator
+                     * not to focus an empty text control when clicking.
+                     */
+                    if (newStart || newEnd) {
+                        selectionRangeValid = false;
+                        UiaRaiseAutomationEvent(peer, UIA_Text_TextSelectionChangedEventId);
+                    }
+                }
                 break;
             case TITLE:
                 String value = (String)getAttribute(TITLE);
@@ -383,9 +394,11 @@ final class WinAccessible extends PlatformAccessible {
                     UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ValueValuePropertyId, vo, vn);
                 }
 
-                UiaRaiseAutomationEvent(peer, UIA_Text_TextChangedEventId);
-                documentRangeValid = false;
-                selectionRangeValid = false;
+                if (selectionRange != null || documentRange != null) {
+                    UiaRaiseAutomationEvent(peer, UIA_Text_TextChangedEventId);
+                    documentRangeValid = false;
+                    selectionRangeValid = false;
+                }
                 break;
             case EXPANDED: {
                 Boolean expanded = (Boolean)getAttribute(EXPANDED);

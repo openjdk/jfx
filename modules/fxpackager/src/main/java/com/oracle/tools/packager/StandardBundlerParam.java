@@ -57,16 +57,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         this.stringConverter = stringConverter;
     }
 
-    public static final StandardBundlerParam<RelativeFileSet> RUNTIME =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.runtime.name"),
-                    I18N.getString("param.runtime.description"),
-                    BundleParams.PARAM_RUNTIME,
-                    RelativeFileSet.class,
-                    params -> null,
-                    (s, p) -> null
-            );
-
     public static final StandardBundlerParam<RelativeFileSet> APP_RESOURCES =
             new StandardBundlerParam<>(
                     I18N.getString("param.app-resources.name"),

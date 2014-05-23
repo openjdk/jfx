@@ -267,6 +267,10 @@ public abstract class PopupWindow extends Window {
     /**
      * Specifies whether Popups should auto hide. If a popup loses focus and
      * autoHide is true, then the popup will be hidden automatically.
+     * <p>
+     * The only exception is when owner Node is specified using {@link #show(javafx.scene.Node, double, double)}.
+     * Focusing owner Node will not hide the PopupWindow.
+     * </p>
      * @defaultValue false
      */
     private BooleanProperty autoHide =
@@ -354,6 +358,10 @@ public abstract class PopupWindow extends Window {
      * The popup is associated with the specified owner node. The {@code Window}
      * which contains the owner node at the time of the call becomes an owner
      * window of the displayed popup.
+     * </p>
+     * <p>
+     * Note that when {@link #autoHideProperty()} is set to true, mouse press on the owner Node
+     * will not hide the PopupWindow.
      * </p>
      *
      * @param ownerNode The owner Node of the popup. It must not be null

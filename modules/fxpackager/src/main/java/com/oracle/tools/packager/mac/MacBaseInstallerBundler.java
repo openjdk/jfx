@@ -153,7 +153,23 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             },
             null);
 
+    public static final BundlerParamInfo<String> INSTALLER_NAME = new StandardBundlerParam<> (
+            I18N.getString("param.installer-name.name"),
+            I18N.getString("param.installer-name.description"),
+            "mac.installerName",
+            String.class,
+            params -> {
+                String nm = APP_NAME.fetchFrom(params);
+                if (nm == null) return null;
 
+                String version = VERSION.fetchFrom(params);
+                if (version == null) {
+                    return nm;
+                } else {
+                    return nm + "-" + version;
+                }
+            },
+            (s, p) -> s);
 
     public static File getPredefinedImage(Map<String, ? super Object> p) {
         File applicationImage = null;

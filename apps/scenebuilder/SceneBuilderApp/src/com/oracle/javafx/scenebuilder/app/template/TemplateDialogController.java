@@ -37,6 +37,7 @@ import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlActi
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AbstractModalDialog;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,8 +48,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.FileAttribute;
 import java.text.MessageFormat;
+
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -96,24 +97,18 @@ public class TemplateDialogController extends AbstractModalDialog {
     @Override
     protected void controllerDidLoadContentFxml() {
 
-        nameTextField.textProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                // Update details section
-                updateDetails();
-                // Update OK button
-                updateOkButtonState();
+        nameTextField.textProperty().addListener((InvalidationListener) observable -> {
+            // Update details section
+            updateDetails();
+            // Update OK button
+            updateOkButtonState();
 
-            }
         });
-        locationTextField.textProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                // Update details section
-                updateDetails();
-                // Update OK button
-                updateOkButtonState();
-            }
+        locationTextField.textProperty().addListener((InvalidationListener) observable -> {
+            // Update details section
+            updateDetails();
+            // Update OK button
+            updateOkButtonState();
         });
 
         // Update name text field

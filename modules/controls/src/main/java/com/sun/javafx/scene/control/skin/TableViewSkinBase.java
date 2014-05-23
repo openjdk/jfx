@@ -27,6 +27,7 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
@@ -874,8 +875,19 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         
         final Control control = getSkinnable();
 
+        // RT-37060 - if we are trying to scroll to a column that has not
+        // yet even been rendered, we must wait until the layout pass has
+        // happened and then do the scroll. The laziest way to do this is to
+        // queue up the task to run later, at which point we will have hopefully
+        // fully run the column through layout and css.
+        TableColumnHeader header = tableHeaderRow.getColumnHeaderFor(col);
+        if (header == null || header.getWidth() <= 0) {
+            Platform.runLater(() -> scrollHorizontally(col));
+            return;
+        }
+
         // work out where this column header is, and it's width (start -> end)
-        double start = 0;//scrollX;
+        double start = 0;
         for (TC c : getVisibleLeafColumns()) {
             if (c.equals(col)) break;
             start += c.getWidth();

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2014, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox fx:id="root_vbox" prefHeight="600.0" prefWidth="800.0" stylesheets="@airportapp.css" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="airportapp.Controller">
+<children><HBox alignment="CENTER_LEFT" spacing="5.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<children><Label text="Zoom" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
+<Button mnemonicParsing="false" onAction="#zoomOut" text="-" /><Slider fx:id="zoom_slider" blockIncrement="0.1" max="1.5" min="0.5" value="1.0" />
+<Button mnemonicParsing="false" onAction="#zoomIn" text="+" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Label text="Visuals" />
+<ToggleButton fx:id="contrast_togglebutton" mnemonicParsing="false" onAction="#stylingContrast" text="High Contrast" toggleGroup="$visual_buttons">
+<styleClass>
+<String fx:value="toggle-button" />
+</styleClass>
+</ToggleButton><ToggleButton fx:id="size_togglebutton" mnemonicParsing="false" onAction="#stylingSizing" text="Large UI" />
+</children>
+<VBox.margin>
+<Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+</VBox.margin>
+</HBox><SplitPane dividerPositions="0.29797979797979796" focusTraversable="true" VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<items><ListView fx:id="map_listview" onMouseClicked="#listClicked" SplitPane.resizableWithParent="false" /><ScrollPane fx:id="map_scrollpane" pannable="true" xmlns:fx="http://javafx.com/fxml">
+<content>
+<Pane xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<children>
+<ImageView xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<image>
+<Image url="@map.jpg" />
+</image>
+</ImageView><MenuButton fx:id="map_pin" layoutX="88.0" layoutY="100.0" mnemonicParsing="false" prefHeight="60.0" prefWidth="48.0" xmlns:fx="http://javafx.com/fxml">
+  <items>
+    <MenuItem fx:id="pin_info" mnemonicParsing="false" text="Action 1" />
+  </items>
+<styleClass>
+<String fx:value="menu-button" />
+<String fx:value="map-pin" />
+</styleClass>
+</MenuButton>
+</children>
+</Pane>
+</content></ScrollPane>
+</items>
+</SplitPane>
+</children>
+</VBox>

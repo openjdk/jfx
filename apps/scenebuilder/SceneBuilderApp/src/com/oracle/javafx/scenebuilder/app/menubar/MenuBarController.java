@@ -52,6 +52,7 @@ import com.oracle.javafx.scenebuilder.kit.library.LibraryItemNameComparator;
 import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPicker;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -63,8 +64,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -604,12 +605,7 @@ public class MenuBarController {
         newComplexAppI18nMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.NEW_COMPLEX_APPLICATION_I18N));
         openMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.OPEN_FILE));
         openMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.O, modifier));
-        openRecentMenu.setOnShowing(new EventHandler<Event>() {
-            @Override
-            public void handle(Event t) {
-                updateOpenRecentMenuItems();
-            }
-        });
+        openRecentMenu.setOnShowing(t -> updateOpenRecentMenuItems());
         saveMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SAVE_FILE));
         saveMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.S, modifier));
         saveAsMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SAVE_AS_FILE));
@@ -943,15 +939,11 @@ public class MenuBarController {
         addSceneStyleSheetMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.ADD_SCENE_STYLE_SHEET));
         updateOpenAndRemoveSceneStyleSheetMenus();
         if (documentWindowController != null) {
-            this.documentWindowController.getEditorController().sceneStyleSheetProperty().addListener(new ChangeListener<ObservableList<File>>() {
-
-                @Override
-                public void changed(ObservableValue<? extends ObservableList<File>> ov, ObservableList<File> t, ObservableList<File> t1) {
-                    if (t1 != null) {
-                        updateOpenAndRemoveSceneStyleSheetMenus();
-                        setupMenuItemHandlers(removeSceneStyleSheetMenu);
-                        setupMenuItemHandlers(openSceneStyleSheetMenu);
-                    }
+            this.documentWindowController.getEditorController().sceneStyleSheetProperty().addListener((ChangeListener<ObservableList<File>>) (ov, t, t1) -> {
+                if (t1 != null) {
+                    updateOpenAndRemoveSceneStyleSheetMenus();
+                    setupMenuItemHandlers(removeSceneStyleSheetMenu);
+                    setupMenuItemHandlers(openSceneStyleSheetMenu);
                 }
             });
         }
@@ -1040,13 +1032,10 @@ public class MenuBarController {
     }
 
     private final EventHandler<Event> onMenuValidationEventHandler
-            = new EventHandler<Event>() {
-                @Override
-                public void handle(Event t) {
-                    assert t.getSource() instanceof Menu;
-                    handleOnMenuValidation((Menu) t.getSource());
-                }
-            };
+            = t -> {
+        assert t.getSource() instanceof Menu;
+        handleOnMenuValidation((Menu) t.getSource());
+    };
 
     private void handleOnMenuValidation(Menu menu) {
         for (MenuItem i : menu.getItems()) {
@@ -1093,13 +1082,10 @@ public class MenuBarController {
     }
 
     private final EventHandler<ActionEvent> onActionEventHandler
-            = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent t) {
-                    assert t.getSource() instanceof MenuItem;
-                    handleOnActionMenu((MenuItem) t.getSource());
-                }
-            };
+            = t -> {
+        assert t.getSource() instanceof MenuItem;
+        handleOnActionMenu((MenuItem) t.getSource());
+    };
 
     private void handleOnActionMenu(MenuItem i) {
         assert i.getUserData() instanceof MenuItemController;
@@ -1172,13 +1158,9 @@ public class MenuBarController {
                         assert recentItemsNames.get(name) == 1;
                         mi = new MenuItem(name);
                     }
-                    mi.setOnAction(new EventHandler<ActionEvent>() {
-
-                        @Override
-                        public void handle(ActionEvent t) {
-                            final File file = new File(recentItem);
-                            SceneBuilderApp.getSingleton().performOpenRecent(documentWindowController, file);
-                        }
+                    mi.setOnAction(t -> {
+                        final File file = new File(recentItem);
+                        SceneBuilderApp.getSingleton().performOpenRecent(documentWindowController, file);
                     });
                     menuItems.add(mi);
                 }
@@ -1231,13 +1213,10 @@ public class MenuBarController {
      * Private (insert menu)
      */
     private final EventHandler<Event> onCustomPartOfInsertMenuValidationHandler
-            = new EventHandler<Event>() {
-                @Override
-                public void handle(Event t) {
-                    assert t.getSource() == insertMenu;
-                    updateCustomPartOfInsertMenu();
-                }
-            };
+            = t -> {
+        assert t.getSource() == insertMenu;
+        updateCustomPartOfInsertMenu();
+    };
     
     private void updateCustomPartOfInsertMenu() {
         assert insertMenu != null;
@@ -1309,12 +1288,7 @@ public class MenuBarController {
     private Menu makeMenuForLibrarySection(String section) {
         final Menu result = new Menu();
         result.setText(section);
-        result.setOnShowing(new EventHandler<Event>() {
-            @Override
-            public void handle(Event t) {
-                updateInsertMenuState(result);
-            }
-        });
+        result.setOnShowing(t -> updateInsertMenuState(result));
         return result;
     }
 
@@ -1323,12 +1297,7 @@ public class MenuBarController {
 
         result.setText(li.getName());
         result.setUserData(li);
-        result.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                handleInsertMenuAction(li);
-            }
-        });
+        result.setOnAction(t -> handleInsertMenuAction(li));
         return result;
     }
 
@@ -1382,13 +1351,10 @@ public class MenuBarController {
      * Private (window menu)
      */
     private final EventHandler<Event> onWindowMenuValidationHandler
-            = new EventHandler<Event>() {
-                @Override
-                public void handle(Event t) {
-                    assert t.getSource() == windowMenu;
-                    handleOnWindowMenuValidation();
-                }
-            };
+            = t -> {
+        assert t.getSource() == windowMenu;
+        handleOnWindowMenuValidation();
+    };
 
     private void handleOnWindowMenuValidation() {
         windowMenu.getItems().clear();

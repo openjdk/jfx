@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 package com.sun.javafx.css;
 
 import javafx.css.StyleOrigin;
-import javafx.scene.text.Font;
 
 public final class CalculatedValue {
 
@@ -82,7 +81,7 @@ public final class CalculatedValue {
             return false;
         }
 
-        if (this.value != null ? other.value == null : !this.value.equals(other.value)) {
+        if (this.value == null ? other.value != null : !this.value.equals(other.value)) {
             return false;
         }
 

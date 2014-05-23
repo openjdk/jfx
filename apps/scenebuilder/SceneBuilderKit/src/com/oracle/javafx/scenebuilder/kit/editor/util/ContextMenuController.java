@@ -40,8 +40,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -108,41 +108,27 @@ public class ContextMenuController {
     private MenuItem decreaseColumnSpan;
 
     private final EventHandler<Event> onShowingMenuEventHandler
-            = new EventHandler<Event>() {
-                @Override
-                public void handle(Event t) {
-                    assert t.getSource() instanceof Menu;
-                    final Menu menu = (Menu) t.getSource();
-                    handleOnShowing(menu.getItems());
-                }
-            };
+            = t -> {
+        assert t.getSource() instanceof Menu;
+        final Menu menu = (Menu) t.getSource();
+        handleOnShowing(menu.getItems());
+    };
 
     private final EventHandler<WindowEvent> onShowingContextMenuEventHandler
-            = new EventHandler<WindowEvent>() {
-                @Override
-                public void handle(WindowEvent t) {
-                    assert t.getSource() instanceof ContextMenu;
-                    final ContextMenu contextMenu = (ContextMenu) t.getSource();
-                    handleOnShowing(contextMenu.getItems());
-                }
-            };
+            = t -> {
+        assert t.getSource() instanceof ContextMenu;
+        final ContextMenu contextMenu = (ContextMenu) t.getSource();
+        handleOnShowing(contextMenu.getItems());
+    };
 
     private final EventHandler<ActionEvent> onActionEventHandler
-            = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent t) {
-                    assert t.getSource() instanceof MenuItem;
-                    handleOnActionMenu((MenuItem) t.getSource());
-                }
-            };
+            = t -> {
+        assert t.getSource() instanceof MenuItem;
+        handleOnActionMenu((MenuItem) t.getSource());
+    };
 
     private final ChangeListener<Number> jobManagerRevisionListener
-            = new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    jobManagerRevisionDidChange();
-                }
-            };
+            = (observable, oldValue, newValue) -> jobManagerRevisionDidChange();
 
     public ContextMenuController(final EditorController editorController) {
         this.editorController = editorController;

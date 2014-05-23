@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.beans.IDProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.collections.ListChangeListener.Change;
@@ -117,6 +118,7 @@ root.getChildren().add(textField);
  * @see Menu
  * @since JavaFX 2.0
  */
+@IDProperty("id")
 public class ContextMenu extends PopupControl {
 
     /***************************************************************************

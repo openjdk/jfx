@@ -245,12 +245,9 @@ public class UserLibrary extends Library {
             previousJarReports.setAll(jarReports);
             jarReports.setAll(newJarReports);
         } else {
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    previousJarReports.setAll(jarReports);
-                    jarReports.setAll(newJarReports);
-                }
+            Platform.runLater(() -> {
+                previousJarReports.setAll(jarReports);
+                jarReports.setAll(newJarReports);
             });
         }
     }
@@ -259,12 +256,7 @@ public class UserLibrary extends Library {
         if (Platform.isFxApplicationThread()) {
             itemsProperty.setAll(items);
         } else {
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    itemsProperty.setAll(items);
-                }
-            });
+            Platform.runLater(() -> itemsProperty.setAll(items));
         }
     }
     
@@ -272,12 +264,7 @@ public class UserLibrary extends Library {
         if (Platform.isFxApplicationThread()) {
             itemsProperty.addAll(items);
         } else {
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    itemsProperty.addAll(items);
-                }
-            });
+            Platform.runLater(() -> itemsProperty.addAll(items));
         }
     }
     
@@ -285,12 +272,7 @@ public class UserLibrary extends Library {
         if (Platform.isFxApplicationThread()) {
             changeClassLoader(newClassLoader);
         } else {
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    changeClassLoader(newClassLoader);
-                }
-            });
+            Platform.runLater(() -> changeClassLoader(newClassLoader));
         }
     }
     
@@ -298,12 +280,7 @@ public class UserLibrary extends Library {
         if (Platform.isFxApplicationThread()) {
             explorationCountProperty.set(count);
         } else {
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    explorationCountProperty.set(count);
-                }
-            });
+            Platform.runLater(() -> explorationCountProperty.set(count));
         }
     }
     
@@ -311,12 +288,7 @@ public class UserLibrary extends Library {
         if (Platform.isFxApplicationThread()) {
             explorationDateProperty.set(date);
         } else {
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    explorationDateProperty.set(date);
-                }
-            });
+            Platform.runLater(() -> explorationDateProperty.set(date));
         }
     }
     

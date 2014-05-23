@@ -62,15 +62,12 @@ public class TrackingServiceStub implements TrackingService {
 
     // The projectNames list is kept in sync with the project's map by observing
     // the projectsMap and modifying the projectNames list in consequence.
-    final MapChangeListener<String, ObservableList<String>> projectsMapChangeListener = new MapChangeListener<String, ObservableList<String>>() {
-        @Override
-        public void onChanged(Change<? extends String, ? extends ObservableList<String>> change) {
-            if (change.wasAdded()) projectNames.add(change.getKey());
-            if (change.wasRemoved()) projectNames.remove(change.getKey());
-        }
+    final ObservableList<String> projectNames;
+    final MapChangeListener<String, ObservableList<String>> projectsMapChangeListener = change -> {
+        if (change.wasAdded()) projectNames.add(change.getKey());
+        if (change.wasRemoved()) projectNames.remove(change.getKey());
     };
     
-    final ObservableList<String> projectNames;
     {
         projectNames = FXCollections.<String>observableArrayList();
         projectNames.addAll(projectsMap.keySet());
@@ -183,17 +180,14 @@ public class TrackingServiceStub implements TrackingService {
     // the new id will be automatically added to the corresponding list in
     // the projectsMap.
     //
-    final MapChangeListener<String, IssueStub> issuesMapChangeListener = new MapChangeListener<String, IssueStub>() {
-        @Override
-        public void onChanged(Change<? extends String, ? extends IssueStub> change) {
-            if (change.wasAdded()) {
-                final IssueStub val = change.getValueAdded();
-                projectsMap.get(val.getProjectName()).add(val.getId());
-            }
-            if (change.wasRemoved()) {
-                final IssueStub val = change.getValueRemoved();
-                projectsMap.get(val.getProjectName()).remove(val.getId());
-            }
+    final MapChangeListener<String, IssueStub> issuesMapChangeListener = change -> {
+        if (change.wasAdded()) {
+            final IssueStub val1 = change.getValueAdded();
+            projectsMap.get(val1.getProjectName()).add(val1.getId());
+        }
+        if (change.wasRemoved()) {
+            final IssueStub val2 = change.getValueRemoved();
+            projectsMap.get(val2.getProjectName()).remove(val2.getId());
         }
     };
     

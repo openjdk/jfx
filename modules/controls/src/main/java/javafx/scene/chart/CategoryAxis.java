@@ -455,10 +455,12 @@ public final class CategoryAxis extends Axis<String> {
     }
 
     /**
-     * Get the display position along this axis for a given value
+     * Get the display position along this axis for a given value.
+     *
+     * If the value is not equal to any of the categories, Double.NaN is returned
      *
      * @param value The data value to work out display position for
-     * @return display position or Double.NaN if zero is not in current range;
+     * @return display position or Double.NaN if value not one of the categories
      */
     @Override public double getDisplayPosition(String value) {
         // find index of value

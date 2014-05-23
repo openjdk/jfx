@@ -226,9 +226,9 @@ public class MacAppBundler extends AbstractBundler {
     );
 
     public static final BundlerParamInfo<RelativeFileSet> MAC_RUNTIME = new StandardBundlerParam<>(
-            RUNTIME.getName(),
-            RUNTIME.getDescription(),
-            RUNTIME.getID(),
+            I18N.getString("param.runtime.name"),
+            I18N.getString("param.runtime.description"),
+            BundleParams.PARAM_RUNTIME,
             RelativeFileSet.class,
             params -> extractMacRuntime(System.getProperty("java.home"), params),
             MacAppBundler::extractMacRuntime
@@ -328,7 +328,7 @@ public class MacAppBundler extends AbstractBundler {
 
         //validate required inputs
         if (USE_FX_PACKAGING.fetchFrom(p)) {
-            testRuntime(p, new String[] {"Contents/Home/jre/lib/ext/jfxrt.jar", "Contents/Home/jre/lib/jfxrt.jar"});
+            testRuntime(MAC_RUNTIME.fetchFrom(p), new String[] {"Contents/Home/jre/lib/ext/jfxrt.jar", "Contents/Home/jre/lib/jfxrt.jar"});
         }
 
         return true;

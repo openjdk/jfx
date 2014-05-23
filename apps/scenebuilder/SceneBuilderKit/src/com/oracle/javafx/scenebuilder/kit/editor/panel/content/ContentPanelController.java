@@ -71,6 +71,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
@@ -78,8 +79,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -167,48 +168,18 @@ public class ContentPanelController extends AbstractFxmlPanelController
         this.editModeController = new EditModeController(this);
         this.pickModeController = new PickModeController(this);
         
-        editorController.getDragController().dragSourceProperty().addListener(new 
-                ChangeListener<AbstractDragSource>() {
-                    @Override
-                    public void changed(ObservableValue<? extends AbstractDragSource> ov, AbstractDragSource t, AbstractDragSource t1) {
-                        dragSourceDidChange();
-                    }
-                }
+        editorController.getDragController().dragSourceProperty().addListener((ChangeListener<AbstractDragSource>) (ov, t, t1) -> dragSourceDidChange()
         );
         
-        editorController.getDragController().dropTargetProperty().addListener(new 
-                ChangeListener<AbstractDropTarget>() {
-                    @Override
-                    public void changed(ObservableValue<? extends AbstractDropTarget> ov, AbstractDropTarget t, AbstractDropTarget t1) {
-                        dropTargetDidChange();
-                    }
-                }
+        editorController.getDragController().dropTargetProperty().addListener((ChangeListener<AbstractDropTarget>) (ov, t, t1) -> dropTargetDidChange()
         );
         
-        editorController.themeProperty().addListener(new 
-                ChangeListener<Theme>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Theme> ov, Theme t, Theme t1) {
-                        themeDidChange();
-                    }
-                }
+        editorController.themeProperty().addListener((ChangeListener<Theme>) (ov, t, t1) -> themeDidChange()
         );
         
-        editorController.sceneStyleSheetProperty().addListener(new 
-                ListChangeListener<File>() {
-                    @Override
-                    public void onChanged(ListChangeListener.Change<? extends File> change) {
-                        sceneStyleSheetsDidChange();
-                    }
-                }
+        editorController.sceneStyleSheetProperty().addListener((ListChangeListener<File>) change -> sceneStyleSheetsDidChange()
         );
-        editorController.pickModeEnabledProperty().addListener(new 
-                ChangeListener<Boolean>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                        pickModeDidChange();
-                    }
-                }
+        editorController.pickModeEnabledProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> pickModeDidChange()
         );
     }
 
@@ -962,12 +933,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
     }
     
     private final EventHandler<Event> eventTracingFilter
-            = new EventHandler<Event>() {
-        @Override
-        public void handle(Event e) {
-            traceEvent(e);
-        }
-    };
+            = e -> traceEvent(e);
     
     
     private void dragSourceDidChange() {

@@ -88,39 +88,30 @@ class LibraryListCell extends ListCell<LibraryListItem> {
         HBox.setHgrow(sectionLabel, Priority.ALWAYS);
         sectionLabel.setMaxWidth(Double.MAX_VALUE);
         
-        final EventHandler<MouseEvent> mouseEventHandler = new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(final MouseEvent e) {
-                handleMouseEvent(e);
-            }
-        };
+        final EventHandler<MouseEvent> mouseEventHandler = e -> handleMouseEvent(e);
         // Mouse events
         this.addEventHandler(MouseEvent.ANY, mouseEventHandler);
         
-        setOnDragDetected(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent t) {
+        setOnDragDetected(t -> {
 //                System.out.println("LibraryListCell - setOnDragDetected.handle");
-                final LibraryListItem listItem = LibraryListCell.this.getItem();
-                final FXOMDocument fxomDocument = editorController.getFxomDocument();
-                
-                if ((listItem != null) && (fxomDocument != null)) {
-                    final LibraryItem item = LibraryListCell.this.getItem().getLibItem();
-                    if (item != null) {
-                        final ListView<LibraryListItem> list = LibraryListCell.this.getListView();
-                        final Dragboard db = list.startDragAndDrop(TransferMode.COPY);
+            final LibraryListItem listItem = LibraryListCell.this.getItem();
+            final FXOMDocument fxomDocument = editorController.getFxomDocument();
+            
+            if ((listItem != null) && (fxomDocument != null)) {
+                final LibraryItem item = LibraryListCell.this.getItem().getLibItem();
+                if (item != null) {
+                    final ListView<LibraryListItem> list = LibraryListCell.this.getListView();
+                    final Dragboard db = list.startDragAndDrop(TransferMode.COPY);
 
-                        final Window ownerWindow = getScene().getWindow();
-                        final LibraryDragSource dragSource 
-                                = new LibraryDragSource(item, fxomDocument, ownerWindow);
-                        assert editorController.getDragController().getDragSource() == null;
-                        assert dragSource.isAcceptable();
-                        editorController.getDragController().begin(dragSource);
+                    final Window ownerWindow = getScene().getWindow();
+                    final LibraryDragSource dragSource 
+                            = new LibraryDragSource(item, fxomDocument, ownerWindow);
+                    assert editorController.getDragController().getDragSource() == null;
+                    assert dragSource.isAcceptable();
+                    editorController.getDragController().begin(dragSource);
 
-                        db.setContent(dragSource.makeClipboardContent());
-                        db.setDragView(dragSource.makeDragView());
-                    }
+                    db.setContent(dragSource.makeClipboardContent());
+                    db.setDragView(dragSource.makeDragView());
                 }
             }
         });

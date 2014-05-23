@@ -96,6 +96,14 @@ class WinTextRangeProvider {
         this.end = end;
     }
 
+    int getStart() {
+        return start;
+    }
+
+    int getEnd() {
+        return end;
+    }
+
     @Override public String toString() {
         return "Range(start: "+start+", end: "+end+", id: " + id + ")";
     }
@@ -121,7 +129,6 @@ class WinTextRangeProvider {
         /* Note: Currently Clone() natively does not call AddRef() on the returned object.
          * This mean JFX does not keep a reference to this object, consequently it does not
          * need to free it.
-         * TODO Test for leaks.
          */
         return clone.getNativeProvider();
     }
@@ -300,7 +307,9 @@ class WinTextRangeProvider {
         String text = (String)getAttribute(TITLE);
         if (text == null) return null;
         int length = text.length();
-        if (length == 0) return null;
+
+        /* Narrator will not focus an empty text control if the bounds are NULL */
+        if (length == 0) return new double[0];
         int endOffset = end;
         if (endOffset > 0 && endOffset > start && text.charAt(endOffset - 1) == '\n') {
             endOffset--;

@@ -102,32 +102,55 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
         }
     }
 
+
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double h = 0;
-        for (Node child: getChildren()) {
-            h += snapSize(child.minHeight(width));
+
+        if (expandedPane != null) {
+            h += expandedPane.minHeight(width);
         }
-        return h;
+
+        if (previousPane != null && !previousPane.equals(expandedPane)) {
+            h += previousPane.minHeight(width);
+        }
+
+        for (Node child: getChildren()) {
+            TitledPane pane = (TitledPane)child;
+            if (!pane.equals(expandedPane) && !pane.equals(previousPane)) {
+                final Skin<?> skin = ((TitledPane)child).getSkin();
+                if (skin instanceof TitledPaneSkin) {
+                    TitledPaneSkin childSkin = (TitledPaneSkin) skin;
+                    h += childSkin.getTitleRegionSize(width);
+                } else {
+                    h += pane.minHeight(width);
+                }
+            }
+        }
+
+        return h + topInset + bottomInset;
     }
 
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         double h = 0;
 
         if (expandedPane != null) {
-            h += expandedPane.prefHeight(-1);
+            h += expandedPane.prefHeight(width);
         }
 
         if (previousPane != null && !previousPane.equals(expandedPane)) {
-            h += previousPane.prefHeight(-1);
+            h += previousPane.prefHeight(width);
         }
 
         for (Node child: getChildren()) {
             TitledPane pane = (TitledPane)child;
             if (!pane.equals(expandedPane) && !pane.equals(previousPane)) {
-                // The min height is the height of the TitledPane's title bar.
-                // We use the sum of all the TitledPane's title bars
-                // to compute the pref height of the accordion.
-                h += snapSize(pane.minHeight(width));
+                final Skin<?> skin = ((TitledPane)child).getSkin();
+                if (skin instanceof TitledPaneSkin) {
+                    TitledPaneSkin childSkin = (TitledPaneSkin) skin;
+                    h += childSkin.getTitleRegionSize(width);
+                } else {
+                    h += pane.prefHeight(width);
+                }
             }
         }
 
@@ -144,8 +167,8 @@ public class AccordionSkin extends BehaviorSkinBase<Accordion, AccordionBehavior
         double collapsedPanesHeight = 0;
         for (TitledPane tp : getSkinnable().getPanes()) {
             if (!tp.equals(expandedPane)) {
-                // min height is the TitledPane's title bar height.
-                collapsedPanesHeight += snapSize(tp.minHeight(-1));
+                TitledPaneSkin childSkin = (TitledPaneSkin) ((TitledPane)tp).getSkin();
+                collapsedPanesHeight += snapSize(childSkin.getTitleRegionSize(w));
             }
         }
         final double maxTitledPaneHeight = h - collapsedPanesHeight;

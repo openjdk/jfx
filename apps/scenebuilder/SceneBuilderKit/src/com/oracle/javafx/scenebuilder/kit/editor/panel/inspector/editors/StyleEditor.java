@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.Set;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -252,38 +251,31 @@ public class StyleEditor extends InlineListEditor {
             propertySp.getChildren().add(super.getRoot());
 
             propertyTf = super.getTextField();
-            EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+            EventHandler<ActionEvent> onActionListener = event -> {
 //                    System.out.println("StyleItem : onActionListener");
-                    if (getValue().equals(currentValue)) {
-                        // no change
-                        return;
-                    }
-                    if (!propertyTf.getText().isEmpty() && !valueTf.getText().isEmpty()) {
-//                        System.out.println("StyleEditorItem : COMMIT");
-                        editor.commit(StyleItem.this);
-                        if (event != null && event.getSource() instanceof TextField) {
-                            ((TextField) event.getSource()).selectAll();
-                        }
-                    }
-                    if (propertyTf.getText().isEmpty() && valueTf.getText().isEmpty()) {
-                        remove(null);
-                    }
-
-                    updateButtons();
-                    currentValue = getValue();
+                if (getValue().equals(currentValue)) {
+                    // no change
+                    return;
                 }
+                if (!propertyTf.getText().isEmpty() && !valueTf.getText().isEmpty()) {
+//                        System.out.println("StyleEditorItem : COMMIT");
+                    editor.commit(StyleItem.this);
+                    if (event != null && event.getSource() instanceof TextField) {
+                        ((TextField) event.getSource()).selectAll();
+                    }
+                }
+                if (propertyTf.getText().isEmpty() && valueTf.getText().isEmpty()) {
+                    remove(null);
+                }
+
+                updateButtons();
+                currentValue = getValue();
             };
 
-            ChangeListener<String> textPropertyChange = new ChangeListener<String>() {
-
-                @Override
-                public void changed(ObservableValue<? extends String> ov, String prevText, String newText) {
-                    if (prevText.isEmpty() || newText.isEmpty()) {
-                        // Text changed FROM empty value, or TO empty value: buttons status change
-                        updateButtons();
-                    }
+            ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
+                if (prevText.isEmpty() || newText.isEmpty()) {
+                    // Text changed FROM empty value, or TO empty value: buttons status change
+                    updateButtons();
                 }
             };
 
@@ -295,16 +287,13 @@ public class StyleEditor extends InlineListEditor {
             // but implement a specific one.
             setTextEditorBehavior(propertyTf, onActionListener, false);
             setTextEditorBehavior(valueTf, onActionListener, false);
-            ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                    if (!newValue) {
-                        // focus lost: commit
-                        editor.editing(false, onActionListener);
-                    } else {
-                        // got focus
-                        editor.editing(true, onActionListener);
-                    }
+            ChangeListener<Boolean> focusListener = (observable, oldValue, newValue) -> {
+                if (!newValue) {
+                    // focus lost: commit
+                    editor.editing(false, onActionListener);
+                } else {
+                    // got focus
+                    editor.editing(true, onActionListener);
                 }
             };
             propertyTf.focusedProperty().addListener(focusListener);
@@ -315,17 +304,13 @@ public class StyleEditor extends InlineListEditor {
             moveUpMi.setText(I18N.getString("inspector.list.moveup"));
             moveDownMi.setText(I18N.getString("inspector.list.movedown"));
 
-            errorListener = new ListChangeListener<CssError>() {
-
-                @Override
-                public void onChanged(ListChangeListener.Change<? extends CssError> change) {
-                    while (change.next()) {
-                        if (change.wasAdded()) {
-                            for (CssError error : change.getAddedSubList()) {
-                                if (error instanceof CssError.InlineStyleParsingError) {
-                                    parsingError = true;
-                                    break;
-                                }
+            errorListener = change -> {
+                while (change.next()) {
+                    if (change.wasAdded()) {
+                        for (CssError error : change.getAddedSubList()) {
+                            if (error instanceof CssError.InlineStyleParsingError) {
+                                parsingError = true;
+                                break;
                             }
                         }
                     }

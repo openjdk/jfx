@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 
 /**
- * Converter converts {@code ParsedValue<F,T>} from type F to type T. the
+ * Converter converts {@code ParsedValue&tl;F,T&gt;} from type F to type T. the
  * {@link CssMetaData} API requires a {@code StyleConverter} which is used
  * when computing a value for the {@see StyleableProperty}. There are
  * a number of predefined converters which are accessible by the static 
@@ -101,7 +101,7 @@ public class StyleConverter<F, T> {
     public static <E extends Enum<E>> StyleConverter<String, ? extends Enum<?>> getEnumConverter(Class<E> enumClass) {        
         // TODO: reuse EnumConverter instances
         EnumConverter<E> converter;
-        converter = new EnumConverter<E>(enumClass);
+        converter = new EnumConverter<>(enumClass);
         return converter;
     }    
 

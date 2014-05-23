@@ -101,6 +101,8 @@ class GlassSystemMenu implements TKSystemMenu {
              * Leave the Apple menu in place
              */
             for (int index = existingSize - 1; index >= 1; index--) {
+                Menu menu = existingMenus.get(index);
+                clearMenu(menu);
                 glassSystemMenuBar.remove(index);
             }
             
@@ -108,6 +110,20 @@ class GlassSystemMenu implements TKSystemMenu {
                 addMenu(null, menu);
             }
         }
+    }
+
+    // Clear the menu to prevent a memory leak, as outlined in RT-34779
+    private void clearMenu(Menu menu) {
+        for (int i = menu.getItems().size() - 1; i >= 0; i--) {
+            Object o = menu.getItems().get(i);
+
+            if (o instanceof MenuItem) {
+                ((MenuItem)o).setCallback(null);
+            } else if (o instanceof Menu) {
+                clearMenu((Menu) o);
+            }
+        }
+        menu.setEventHandler(null);
     }
 
     private void addMenu(final Menu parent, final MenuBase mb) {

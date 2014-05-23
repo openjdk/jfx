@@ -315,20 +315,41 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         return listView;
     }
     
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        reconfigurePopup();
+        return 50;
+    }
+
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double superPrefWidth = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
         double listViewWidth = listView.prefWidth(height);
         double pw = Math.max(superPrefWidth, listViewWidth);
-        
+
         reconfigurePopup();
-        
+
         return pw;
     }
-    
-    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return 50;
+
+    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        reconfigurePopup();
+        return super.computeMaxWidth(height, topInset, rightInset, bottomInset, leftInset);
     }
-    
+
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        reconfigurePopup();
+        return super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        reconfigurePopup();
+        return super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        reconfigurePopup();
+        return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
+
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
         if (listViewSelectionDirty) {
@@ -728,6 +749,18 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
 
         public void setFakeFocus(boolean b) {
             setFocused(b);
+        }
+
+        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            switch (attribute) {
+                case FOCUS_ITEM: 
+                    /* Internally comboBox reassign its focus the text field.
+                     * For the accessibility perspective it is more meaningful
+                     * if the focus stays with the comboBox control.
+                     */
+                    return getParent();
+                default: return super.accGetAttribute(attribute, parameters);
+            }
         }
     }
 

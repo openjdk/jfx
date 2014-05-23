@@ -503,6 +503,7 @@ public class TableColumnHeader extends Region {
         // set up mouse events
         setOnMousePressed(mousePressedHandler);
         setOnMouseDragged(mouseDraggedHandler);
+        setOnDragDetected(event -> event.consume());
         setOnContextMenuRequested(contextMenuRequestedHandler);
         setOnMouseReleased(mouseReleasedHandler);
 

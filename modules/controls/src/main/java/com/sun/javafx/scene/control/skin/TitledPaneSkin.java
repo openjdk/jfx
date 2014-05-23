@@ -235,7 +235,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return snapSize(titleRegion.prefHeight(width));
+        double headerHeight = snapSize(titleRegion.prefHeight(width));
+        double contentHeight = contentContainer.minHeight(width) * getTransition();
+        return headerHeight + snapSize(contentHeight) + topInset + bottomInset;
     }
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -252,6 +254,10 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
     @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Double.MAX_VALUE;
+    }
+
+    double getTitleRegionSize(double width) {
+        return snapSize(titleRegion.prefHeight(width)) + snappedTopInset() + snappedBottomInset();
     }
 
     private double prefHeightFromAccordion = 0;

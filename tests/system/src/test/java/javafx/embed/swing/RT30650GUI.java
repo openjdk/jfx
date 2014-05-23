@@ -55,8 +55,9 @@ public class RT30650GUI extends Application {
     
     private final static int SIZE = 400;
     
-    private static int pulseCount = 100;
-    private static boolean passed;
+    // 100 pulses is not enough for the interop case, so we wait for 400 instead
+    private static int pulseCount = 400;
+    private static volatile boolean passed;
         
     public static boolean test() {
         launch(new String[]{});
@@ -93,26 +94,30 @@ public class RT30650GUI extends Application {
                 panel.setBackground(Color.RED);
                 swingNode.setContent(panel);
                 
-                pulseListener = new TKPulseListener() {
-                    @Override
-                    public void pulse() {
-                        if (--pulseCount == 0) {
-                            SwingUtilities.invokeLater(new Runnable() {
-                                @Override
-                                public void run() {
-                                    passed = testColor(stage);
-                                    Platform.runLater(new Runnable() {
+                Platform.runLater(new Runnable() {
+                    @Override public void run() {
+                        pulseListener = new TKPulseListener() {
+                            @Override
+                            public void pulse() {
+                                if (--pulseCount == 0) {
+                                    SwingUtilities.invokeLater(new Runnable() {
                                         @Override
                                         public void run() {
-                                            stage.close();
+                                            passed = testColor(stage);
+                                            Platform.runLater(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    stage.close();
+                                                }
+                                            });
                                         }
                                     });
                                 }
-                            });
-                        }
+                            }
+                        };
+                        com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(pulseListener);
                     }
-                };
-                com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(pulseListener);
+                });
             }
         });        
     }

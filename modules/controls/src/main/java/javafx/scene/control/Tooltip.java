@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 
+import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.css.StyleManager;
 
 import javafx.css.SimpleStyleableBooleanProperty;
@@ -53,7 +54,6 @@ import javafx.css.CssMetaData;
 import javafx.css.FontCssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
@@ -109,16 +109,19 @@ import javafx.util.Duration;
  * </pre>
  * @since JavaFX 2.0
  */
+@IDProperty("id")
 public class Tooltip extends PopupControl {
-//    private static TooltipBehavior BEHAVIOR = new TooltipBehavior(
-//        new Duration(1000), new Duration(5000), new Duration(600), true);
     private static String TOOLTIP_PROP_KEY = "javafx.scene.control.Tooltip";
-    // RT-31134 : the tooltip style includes a shadow around the tooltip with a 
+
+    // RT-31134 : the tooltip style includes a shadow around the tooltip with a
     // width of 9 and height of 5. This causes mouse events to not reach the control
-    // undernath resulting in losing hover state on the control while the tooltip is showing.
+    // underneath resulting in losing hover state on the control while the tooltip is showing.
     // Displaying the tooltip at an offset indicated below resolves this issue.
+    // RT-37107: The y-offset was upped to 7 to ensure no overlaps when the tooltip
+    // is shown near the right edge of the screen.
     private static int TOOLTIP_XOFFSET = 10;
-    private static int TOOLTIP_YOFFSET = 5;
+    private static int TOOLTIP_YOFFSET = 7;
+
     private static TooltipBehavior BEHAVIOR = new TooltipBehavior(
         new Duration(1000), new Duration(5000), new Duration(200), false);
 
@@ -257,14 +260,10 @@ public class Tooltip extends PopupControl {
         return fontProperty().getValue();
     }
     private final ObjectProperty<Font> font = new StyleableObjectProperty<Font>(Font.getDefault()) {
-
         private boolean fontSetByCss = false;
 
-        @Override
-        public void applyStyle(StyleOrigin newOrigin, Font value) {
-            //
+        @Override public void applyStyle(StyleOrigin newOrigin, Font value) {
             // RT-20727 - if CSS is setting the font, then make sure invalidate doesn't call impl_reapplyCSS
-            //
             try {
                 // super.applyStyle calls set which might throw if value is bound.
                 // Have to make sure fontSetByCss is reset.
@@ -277,18 +276,14 @@ public class Tooltip extends PopupControl {
             }
         }
 
-        @Override
-        public void set(Font value) {
-
+        @Override public void set(Font value) {
             final Font oldValue = get();
             if (value != null ? !value.equals(oldValue) : oldValue != null) {
                 super.set(value);
             }
-
         }
 
-        @Override
-        protected void invalidated() {
+        @Override protected void invalidated() {
             // RT-20727 - if font is changed by calling setFont, then
             // css might need to be reapplied since font size affects
             // calculated values for styles with relative values
@@ -297,18 +292,15 @@ public class Tooltip extends PopupControl {
             }
         }
 
-        @Override
-        public CssMetaData<Tooltip.CSSBridge,Font> getCssMetaData() {
+        @Override public CssMetaData<Tooltip.CSSBridge,Font> getCssMetaData() {
             return FONT;
         }
 
-        @Override
-        public Object getBean() {
+        @Override public Object getBean() {
             return Tooltip.this;
         }
 
-        @Override
-        public String getName() {
+        @Override public String getName() {
             return "font";
         }
     };
@@ -331,21 +323,17 @@ public class Tooltip extends PopupControl {
         return graphicProperty().getValue();
     }
     private final ObjectProperty<Node> graphic = new StyleableObjectProperty<Node>() {
-
         // The graphic is styleable by css, but it is the
         // imageUrlProperty that handles the style value.
-        @Override
-        public CssMetaData getCssMetaData() {
+        @Override public CssMetaData getCssMetaData() {
             return GRAPHIC;
         }
 
-        @Override
-        public Object getBean() {
+        @Override public Object getBean() {
             return Tooltip.this;
         }
 
-        @Override
-        public String getName() {
+        @Override public String getName() {
             return "graphic";
         }
 
@@ -354,8 +342,6 @@ public class Tooltip extends PopupControl {
     private StyleableStringProperty imageUrlProperty() {
         if (imageUrl == null) {
             imageUrl = new StyleableStringProperty() {
-
-                //
                 // If imageUrlProperty is invalidated, this is the origin of the style that
                 // triggered the invalidation. This is used in the invaildated() method where the
                 // value of super.getStyleOrigin() is not valid until after the call to set(v) returns,
@@ -367,11 +353,9 @@ public class Tooltip extends PopupControl {
                 //     prop.set(someUrl);
                 //
                 // TODO: Note that prop != labeled, which violates the contract between StyleableProperty and CssMetaData.
-                //
                 StyleOrigin origin = StyleOrigin.USER;
 
-                @Override
-                public void applyStyle(StyleOrigin origin, String v) {
+                @Override public void applyStyle(StyleOrigin origin, String v) {
 
                     this.origin = origin;
 
@@ -382,8 +366,7 @@ public class Tooltip extends PopupControl {
                     this.origin = StyleOrigin.USER;
                 }
 
-                @Override
-                protected void invalidated() {
+                @Override protected void invalidated() {
 
                     // need to call super.get() here since get() is overridden to return the graphicProperty's value
                     final String url = super.get();
@@ -406,29 +389,21 @@ public class Tooltip extends PopupControl {
                         final Image img = StyleManager.getInstance().getCachedImage(url);
 
                         if (img != null) {
-                            //
                             // Note that it is tempting to try to re-use existing ImageView simply by setting
                             // the image on the current ImageView, if there is one. This would effectively change
                             // the image, but not the ImageView which means that no graphicProperty listeners would
                             // be notified. This is probably not what we want.
-                            //
 
-                            //
                             // Have to call applyStyle on graphicProperty so that the graphicProperty's
                             // origin matches the imageUrlProperty's origin.
-                            //
                             ((StyleableProperty<Node>)(WritableValue<Node>)graphicProperty()).applyStyle(origin, new ImageView(img));
                         }
                     }
                 }
 
-                @Override
-                public String get() {
-
-                    //
+                @Override public String get() {
                     // The value of the imageUrlProperty is that of the graphicProperty.
                     // Return the value in a way that doesn't expand the graphicProperty.
-                    //
                     final Node graphic = getGraphic();
                     if (graphic instanceof ImageView) {
                         final Image image = ((ImageView)graphic).getImage();
@@ -439,35 +414,28 @@ public class Tooltip extends PopupControl {
                     return null;
                 }
 
-                @Override
-                public StyleOrigin getStyleOrigin() {
-
-                    //
+                @Override public StyleOrigin getStyleOrigin() {
                     // The origin of the imageUrlProperty is that of the graphicProperty.
                     // Return the origin in a way that doesn't expand the graphicProperty.
-                    //
                     return graphic != null ? ((StyleableProperty<Node>)(WritableValue<Node>)graphic).getStyleOrigin() : null;
                 }
 
-                @Override
-                public Object getBean() {
+                @Override public Object getBean() {
                     return Tooltip.this;
                 }
 
-                @Override
-                public String getName() {
+                @Override public String getName() {
                     return "imageUrl";
                 }
 
-                @Override
-                public CssMetaData<Tooltip.CSSBridge,String> getCssMetaData() {
+                @Override public CssMetaData<Tooltip.CSSBridge,String> getCssMetaData() {
                     return GRAPHIC;
                 }
-
             };
         }
         return imageUrl;
     }
+
     private StyleableStringProperty imageUrl = null;
 
     /**
@@ -511,6 +479,8 @@ public class Tooltip extends PopupControl {
     public final boolean isActivated() { return activated.get(); }
     public final ReadOnlyBooleanProperty activatedProperty() { return activated.getReadOnlyProperty(); }
 
+
+
     /***************************************************************************
      *                                                                         *
      * Methods                                                                 *
@@ -521,6 +491,8 @@ public class Tooltip extends PopupControl {
     @Override protected Skin<?> createDefaultSkin() {
         return new TooltipSkin(this);
     }
+
+
 
     /***************************************************************************
      *                                                                         *
@@ -672,11 +644,18 @@ public class Tooltip extends PopupControl {
         return BEHAVIOR.hoveredNode;
     }
 
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Support classes                                                         *
+     *                                                                         *
+     **************************************************************************/
+
     private final class CSSBridge extends PopupControl.CSSBridge {
         private Tooltip tooltip = Tooltip.this;
 
-        @Override
-        public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
                 case ROLE: return Role.TOOLTIP;
                 default: return super.accGetAttribute(attribute, parameters);
@@ -684,8 +663,8 @@ public class Tooltip extends PopupControl {
         }
     }
 
-    private static class TooltipBehavior {
 
+    private static class TooltipBehavior {
         /*
          * There are two key concepts with Tooltip: activated and visible. A Tooltip
          * is activated as soon as a mouse move occurs over the target node. When it
@@ -755,51 +734,65 @@ public class Tooltip extends PopupControl {
             this.hideOnExit = hideOnExit;
 
             activationTimer.getKeyFrames().add(new KeyFrame(openDelay));
-            activationTimer.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    // Show the currently activated tooltip and start the
-                    // HIDE_TIMER.
-                    assert activatedTooltip != null;
-                    final Window owner = getWindow(hoveredNode);
-                    final boolean treeVisible = isWindowHierarchyVisible(hoveredNode);
+            activationTimer.setOnFinished(event -> {
+                // Show the currently activated tooltip and start the
+                // HIDE_TIMER.
+                assert activatedTooltip != null;
+                final Window owner = getWindow(hoveredNode);
+                final boolean treeVisible = isWindowHierarchyVisible(hoveredNode);
 
-                    // If the ACTIVATED tooltip is part of a visible window
-                    // hierarchy, we can go ahead and show the tooltip and
-                    // start the HIDE_TIMER.
-                    //
-                    // If the owner is null or invisible, then it either means a
-                    // bug in our code, the node was removed from a scene or
-                    // window or made invisible, or the node is not part of a
-                    // visible window hierarchy. In that case, we don't show the
-                    // tooltip, and we don't start the HIDE_TIMER. We simply let
-                    // ACTIVATED_TIMER expire, and wait until the next mouse
-                    // the movement to start it again.
-                    if (owner != null && owner.isShowing() && treeVisible) {
-                        double x = lastMouseX;
-                        double y = lastMouseY;
+                // If the ACTIVATED tooltip is part of a visible window
+                // hierarchy, we can go ahead and show the tooltip and
+                // start the HIDE_TIMER.
+                //
+                // If the owner is null or invisible, then it either means a
+                // bug in our code, the node was removed from a scene or
+                // window or made invisible, or the node is not part of a
+                // visible window hierarchy. In that case, we don't show the
+                // tooltip, and we don't start the HIDE_TIMER. We simply let
+                // ACTIVATED_TIMER expire, and wait until the next mouse
+                // the movement to start it again.
+                if (owner != null && owner.isShowing() && treeVisible) {
+                    double x = lastMouseX;
+                    double y = lastMouseY;
 
-                        // The tooltip always inherits the nodeOrientation of
-                        // the Node that it is attached to (see RT-26147). It
-                        // is possible to override this for the Tooltip content
-                        // (but not the popup placement) by setting the
-                        // nodeOrientation on tooltip.getScene().getRoot().
-                        NodeOrientation nodeOrientation = hoveredNode.getEffectiveNodeOrientation();
-                        activatedTooltip.getScene().setNodeOrientation(nodeOrientation);
-                        if (nodeOrientation == NodeOrientation.RIGHT_TO_LEFT) {
-                            x -= activatedTooltip.getWidth();
-                        }
-                        activatedTooltip.show(owner, x+TOOLTIP_XOFFSET, y+TOOLTIP_YOFFSET);
-                        visibleTooltip = activatedTooltip;
-                        hoveredNode = null;
-                        hideTimer.playFromStart();
+                    // The tooltip always inherits the nodeOrientation of
+                    // the Node that it is attached to (see RT-26147). It
+                    // is possible to override this for the Tooltip content
+                    // (but not the popup placement) by setting the
+                    // nodeOrientation on tooltip.getScene().getRoot().
+                    NodeOrientation nodeOrientation = hoveredNode.getEffectiveNodeOrientation();
+                    activatedTooltip.getScene().setNodeOrientation(nodeOrientation);
+                    if (nodeOrientation == NodeOrientation.RIGHT_TO_LEFT) {
+                        x -= activatedTooltip.getWidth();
                     }
 
-                    // Once the activation timer has expired, the tooltip is no
-                    // longer in the activated state, it is only in the visible
-                    // state, so we go ahead and set activated to false
-                    activatedTooltip.setActivated(false);
-                    activatedTooltip = null;
+                    activatedTooltip.show(owner, x+TOOLTIP_XOFFSET, y+TOOLTIP_YOFFSET);
+
+                    // RT-37107: Ensure the tooltip is displayed in a position
+                    // where it will not be under the mouse, even when the tooltip
+                    // is near the edge of the screen
+                    if ((y+TOOLTIP_YOFFSET) > activatedTooltip.getAnchorY()) {
+                        // the tooltip has been shifted vertically upwards,
+                        // most likely to be underneath the mouse cursor, so we
+                        // need to shift it further by hiding and reshowing
+                        // in another location
+                        activatedTooltip.hide();
+
+                        y -= activatedTooltip.getHeight();
+                        activatedTooltip.show(owner, x+TOOLTIP_XOFFSET, y);
+                    }
+
+                    visibleTooltip = activatedTooltip;
+                    hoveredNode = null;
+                    hideTimer.playFromStart();
                 }
+
+                // Once the activation timer has expired, the tooltip is no
+                // longer in the activated state, it is only in the visible
+                // state, so we go ahead and set activated to false
+                activatedTooltip.setActivated(false);
+                activatedTooltip = null;
             });
 
             hideTimer.getKeyFrames().add(new KeyFrame(visibleDuration));
@@ -830,57 +823,55 @@ public class Tooltip extends PopupControl {
          * (if ACTIVATION_TIMER is running), or skip the ACTIVATION_TIMER and just
          * show the tooltip (if the LEFT_TIMER is running).
          */
-        private EventHandler<MouseEvent> MOVE_HANDLER = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                //Screen coordinates need to be actual for dynamic tooltip.
-                //See Tooltip.setText
+        private EventHandler<MouseEvent> MOVE_HANDLER = (MouseEvent event) -> {
+            //Screen coordinates need to be actual for dynamic tooltip.
+            //See Tooltip.setText
 
-                lastMouseX = event.getScreenX();
-                lastMouseY = event.getScreenY();
+            lastMouseX = event.getScreenX();
+            lastMouseY = event.getScreenY();
 
-                // If the HIDE_TIMER is running, then we don't want this event
-                // handler to do anything, or change any state at all.
-                if (hideTimer.getStatus() == Timeline.Status.RUNNING) {
-                    return;
-                }
+            // If the HIDE_TIMER is running, then we don't want this event
+            // handler to do anything, or change any state at all.
+            if (hideTimer.getStatus() == Timeline.Status.RUNNING) {
+                return;
+            }
 
-                // Note that the "install" step will both register this handler
-                // with the target node and also associate the tooltip with the
-                // target node, by stashing it in the client properties of the node.
-                hoveredNode = (Node) event.getSource();
-                Tooltip t = (Tooltip) hoveredNode.getProperties().get(TOOLTIP_PROP_KEY);
-                if (t != null) {
-                    // In theory we should never get here with an invisible or
-                    // non-existant window hierarchy, but might in some cases where
-                    // people are feeding fake mouse events into the hierarchy. So
-                    // we'll guard against that case.
-                    final Window owner = getWindow(hoveredNode);
-                    final boolean treeVisible = isWindowHierarchyVisible(hoveredNode);
-                    if (owner != null && treeVisible) {
-                        // Now we know that the currently HOVERED node has a tooltip
-                        // and that it is part of a visible window Hierarchy.
-                        // If LEFT_TIMER is running, then we make this tooltip
-                        // visible immediately, stop the LEFT_TIMER, and start the
-                        // HIDE_TIMER.
-                        if (leftTimer.getStatus() == Timeline.Status.RUNNING) {
-                            if (visibleTooltip != null) visibleTooltip.hide();
-                            visibleTooltip = t;
-                            t.show(owner, event.getScreenX()+TOOLTIP_XOFFSET, 
-                                    event.getScreenY()+TOOLTIP_YOFFSET);
-                            leftTimer.stop();
-                            hideTimer.playFromStart();
-                        } else {
-                            // Start / restart the timer and make sure the tooltip
-                            // is marked as activated.
-                            t.setActivated(true);
-                            activatedTooltip = t;
-                            activationTimer.stop();
-                            activationTimer.playFromStart();
-                        }
+            // Note that the "install" step will both register this handler
+            // with the target node and also associate the tooltip with the
+            // target node, by stashing it in the client properties of the node.
+            hoveredNode = (Node) event.getSource();
+            Tooltip t = (Tooltip) hoveredNode.getProperties().get(TOOLTIP_PROP_KEY);
+            if (t != null) {
+                // In theory we should never get here with an invisible or
+                // non-existant window hierarchy, but might in some cases where
+                // people are feeding fake mouse events into the hierarchy. So
+                // we'll guard against that case.
+                final Window owner = getWindow(hoveredNode);
+                final boolean treeVisible = isWindowHierarchyVisible(hoveredNode);
+                if (owner != null && treeVisible) {
+                    // Now we know that the currently HOVERED node has a tooltip
+                    // and that it is part of a visible window Hierarchy.
+                    // If LEFT_TIMER is running, then we make this tooltip
+                    // visible immediately, stop the LEFT_TIMER, and start the
+                    // HIDE_TIMER.
+                    if (leftTimer.getStatus() == Timeline.Status.RUNNING) {
+                        if (visibleTooltip != null) visibleTooltip.hide();
+                        visibleTooltip = t;
+                        t.show(owner, event.getScreenX()+TOOLTIP_XOFFSET,
+                                event.getScreenY()+TOOLTIP_YOFFSET);
+                        leftTimer.stop();
+                        hideTimer.playFromStart();
+                    } else {
+                        // Start / restart the timer and make sure the tooltip
+                        // is marked as activated.
+                        t.setActivated(true);
+                        activatedTooltip = t;
+                        activationTimer.stop();
+                        activationTimer.playFromStart();
                     }
-                } else {
-                    // TODO should deregister, no point being here anymore!
                 }
+            } else {
+                // TODO should deregister, no point being here anymore!
             }
         };
 
@@ -889,22 +880,20 @@ public class Tooltip extends PopupControl {
          * this will simply stop it. If the HIDE_TIMER is running then this will
          * stop the HIDE_TIMER, hide the tooltip, and start the LEFT_TIMER.
          */
-        private EventHandler<MouseEvent> LEAVING_HANDLER = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                // detect bogus mouse exit events, if it didn't really move then ignore it
-                if (activationTimer.getStatus() == Timeline.Status.RUNNING) {
-                    activationTimer.stop();
-                } else if (hideTimer.getStatus() == Timeline.Status.RUNNING) {
-                    assert visibleTooltip != null;
-                    hideTimer.stop();
-                    if (hideOnExit) visibleTooltip.hide();
-                    leftTimer.playFromStart();
-                }
-
-                hoveredNode = null;
-                activatedTooltip = null;
-                if (hideOnExit) visibleTooltip = null;
+        private EventHandler<MouseEvent> LEAVING_HANDLER = (MouseEvent event) -> {
+            // detect bogus mouse exit events, if it didn't really move then ignore it
+            if (activationTimer.getStatus() == Timeline.Status.RUNNING) {
+                activationTimer.stop();
+            } else if (hideTimer.getStatus() == Timeline.Status.RUNNING) {
+                assert visibleTooltip != null;
+                hideTimer.stop();
+                if (hideOnExit) visibleTooltip.hide();
+                leftTimer.playFromStart();
             }
+
+            hoveredNode = null;
+            activatedTooltip = null;
+            if (hideOnExit) visibleTooltip = null;
         };
 
         /**
@@ -912,16 +901,14 @@ public class Tooltip extends PopupControl {
          * occur, then the tooltip is hidden (if it is visible), it is deactivated,
          * and any and all timers are stopped.
          */
-        private EventHandler<MouseEvent> KILL_HANDLER = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                activationTimer.stop();
-                hideTimer.stop();
-                leftTimer.stop();
-                if (visibleTooltip != null) visibleTooltip.hide();
-                hoveredNode = null;
-                activatedTooltip = null;
-                visibleTooltip = null;
-            }
+        private EventHandler<MouseEvent> KILL_HANDLER = (MouseEvent event) -> {
+            activationTimer.stop();
+            hideTimer.stop();
+            leftTimer.stop();
+            if (visibleTooltip != null) visibleTooltip.hide();
+            hoveredNode = null;
+            activatedTooltip = null;
+            visibleTooltip = null;
         };
 
         private void install(Node node, Tooltip t) {
@@ -974,6 +961,5 @@ public class Tooltip extends PopupControl {
             }
             return treeVisible;
         }
-
     }
 }

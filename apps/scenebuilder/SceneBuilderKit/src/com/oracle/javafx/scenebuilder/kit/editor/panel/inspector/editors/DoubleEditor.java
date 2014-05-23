@@ -56,20 +56,17 @@ public class DoubleEditor extends AutoSuggestEditor {
         super(propMeta, selectedClasses, new ArrayList<>(constants.keySet()), AutoSuggestEditor.Type.DOUBLE);
         this.constants = constants;
 
-        EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (isHandlingError()) {
-                    // Event received because of focus lost due to error dialog
-                    return;
-                }
-                Object value = getValue();
-                if ((value != null) && ((DoublePropertyMetadata) getPropertyMeta()).isValidValue((Double) value)) {
-                    userUpdateValueProperty(value);
-                    getTextField().selectAll();
-                } else {
-                    handleInvalidValue(getTextField().getText());
-                }
+        EventHandler<ActionEvent> onActionListener = event -> {
+            if (isHandlingError()) {
+                // Event received because of focus lost due to error dialog
+                return;
+            }
+            Object value = getValue();
+            if ((value != null) && ((DoublePropertyMetadata) getPropertyMeta()).isValidValue((Double) value)) {
+                userUpdateValueProperty(value);
+                getTextField().selectAll();
+            } else {
+                handleInvalidValue(getTextField().getText());
             }
         };
 
@@ -114,13 +111,7 @@ public class DoubleEditor extends AutoSuggestEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                getTextField().requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> getTextField().requestFocus());
     }
 
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,

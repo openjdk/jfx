@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,11 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.geometry.NodeOrientation;
+import javafx.scene.Node;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -33,12 +38,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import javafx.css.PseudoClass;
-import javafx.css.Styleable;
-import javafx.geometry.NodeOrientation;
-import static javafx.geometry.NodeOrientation.*;
-import javafx.scene.Node;
-import javafx.scene.Scene;
+
+import static javafx.geometry.NodeOrientation.INHERIT;
+import static javafx.geometry.NodeOrientation.LEFT_TO_RIGHT;
+import static javafx.geometry.NodeOrientation.RIGHT_TO_LEFT;
 
 /**
  * A simple selector which behaves according to the CSS standard.

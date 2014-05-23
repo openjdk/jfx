@@ -56,6 +56,10 @@ public abstract class TestTouchDevice extends TestDevice {
         return points.length;
     }
 
+    public int getPressedPoints() {
+        return pressedPoints;
+    }
+
     protected int getID(int p) {
         if (ids.containsKey(p)) {
             return ids.get(p);

@@ -35,11 +35,12 @@ import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.M
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPickerStop;
+
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.ScrollPane;
@@ -150,61 +151,49 @@ public class ColorPicker extends VBox {
         // Investigate why height + width listeners do not work
         // Indeed, the picker_handle_stackpane bounds may still be null at this point
         // UPDATE BELOW TO BE CALLED ONCE ONLY AT DISPLAY TIME
-        picker_region.boundsInParentProperty().addListener(new ChangeListener<Bounds>() {
-            @Override
-            public void changed(ObservableValue<? extends Bounds> ov, Bounds oldb, Bounds newb) {
-                picker_scrollpane.setHvalue(0.5);
-                picker_scrollpane.setVvalue(0.5);
-                // Init time only
-                final Paint paint = paintPickerController.getPaintProperty();
-                if (paint instanceof Color) {
-                    updateUI((Color) paint);
-                } else if (paint instanceof LinearGradient
-                        || paint instanceof RadialGradient) {
-                    final GradientPicker gradientPicker = paintPickerController.getGradientPicker();
-                    final GradientPickerStop gradientPickerStop = gradientPicker.getSelectedStop();
-                    // Update the color preview with the color of the selected stop
-                    if (gradientPickerStop != null) {
-                        updateUI(gradientPickerStop.getColor());
-                    }
+        picker_region.boundsInParentProperty().addListener((ChangeListener<Bounds>) (ov, oldb, newb) -> {
+            picker_scrollpane.setHvalue(0.5);
+            picker_scrollpane.setVvalue(0.5);
+            // Init time only
+            final Paint paint = paintPickerController.getPaintProperty();
+            if (paint instanceof Color) {
+                updateUI((Color) paint);
+            } else if (paint instanceof LinearGradient
+                    || paint instanceof RadialGradient) {
+                final GradientPicker gradientPicker = paintPickerController.getGradientPicker();
+                final GradientPickerStop gradientPickerStop = gradientPicker.getSelectedStop();
+                // Update the color preview with the color of the selected stop
+                if (gradientPickerStop != null) {
+                    updateUI(gradientPickerStop.getColor());
                 }
             }
         });
 
-        final ChangeListener<Boolean> onHSBFocusedChange = new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                if (newValue == false) {
-                    // Update UI
-                    final Color color = updateUI_OnHSBChange();
-                    // Update model
-                    setPaintProperty(color);
-                }
+        final ChangeListener<Boolean> onHSBFocusedChange = (ov, oldValue, newValue) -> {
+            if (newValue == false) {
+                // Update UI
+                final Color color = updateUI_OnHSBChange();
+                // Update model
+                setPaintProperty(color);
             }
         };
-        final ChangeListener<Boolean> onRGBFocusedChange = new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                if (newValue == false) {
-                    // Update UI
-                    final Color color = updateUI_OnRGBChange();
-                    // Update model
-                    setPaintProperty(color);
-                }
+        final ChangeListener<Boolean> onRGBFocusedChange = (ov, oldValue, newValue) -> {
+            if (newValue == false) {
+                // Update UI
+                final Color color = updateUI_OnRGBChange();
+                // Update model
+                setPaintProperty(color);
             }
         };
-        final ChangeListener<Boolean> onHexaFocusedChange = new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                if (newValue == false) {
-                    try {
-                        // Update UI
-                        final Color color = updateUI_OnHexaChange();
-                        // Update model
-                        setPaintProperty(color);
-                    } catch (IllegalArgumentException iae) {
-                        handleHexaException();
-                    }
+        final ChangeListener<Boolean> onHexaFocusedChange = (ov, oldValue, newValue) -> {
+            if (newValue == false) {
+                try {
+                    // Update UI
+                    final Color color = updateUI_OnHexaChange();
+                    // Update model
+                    setPaintProperty(color);
+                } catch (IllegalArgumentException iae) {
+                    handleHexaException();
                 }
             }
         };
@@ -220,47 +209,36 @@ public class ColorPicker extends VBox {
         hexa_textfield.focusedProperty().addListener(onHexaFocusedChange);
 
         // Slider ON VALUE CHANGE event handler
-        hue_slider.valueProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
-                if (updating == true) {
-                    return;
-                }
-                double hue = newValue.doubleValue();
-                // retrieve HSB TextFields values
-                double saturation = Double.valueOf(saturation_textfield.getText()) / 100.0;
-                double brightness = Double.valueOf(brightness_textfield.getText()) / 100.0;
-                double alpha = Double.valueOf(alpha_textfield.getText());
-                // Update UI
-                final Color color = updateUI(hue, saturation, brightness, alpha);
-                // Update model
-                setPaintProperty(color);
+        hue_slider.valueProperty().addListener((ChangeListener<Number>) (ov, oldValue, newValue) -> {
+            if (updating == true) {
+                return;
             }
+            double hue = newValue.doubleValue();
+            // retrieve HSB TextFields values
+            double saturation = Double.valueOf(saturation_textfield.getText()) / 100.0;
+            double brightness = Double.valueOf(brightness_textfield.getText()) / 100.0;
+            double alpha = Double.valueOf(alpha_textfield.getText());
+            // Update UI
+            final Color color = updateUI(hue, saturation, brightness, alpha);
+            // Update model
+            setPaintProperty(color);
         });
-        alpha_slider.valueProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
-                if (updating == true) {
-                    return;
-                }
-                double alpha = newValue.doubleValue();
-                // retrieve HSB TextFields values
-                double hue = Double.valueOf(hue_textfield.getText());
-                double saturation = Double.valueOf(saturation_textfield.getText()) / 100.0;
-                double brightness = Double.valueOf(brightness_textfield.getText()) / 100.0;
-                // Update UI
-                final Color color = updateUI(hue, saturation, brightness, alpha);
-                // Update model
-                setPaintProperty(color);
+        alpha_slider.valueProperty().addListener((ChangeListener<Number>) (ov, oldValue, newValue) -> {
+            if (updating == true) {
+                return;
             }
+            double alpha = newValue.doubleValue();
+            // retrieve HSB TextFields values
+            double hue = Double.valueOf(hue_textfield.getText());
+            double saturation = Double.valueOf(saturation_textfield.getText()) / 100.0;
+            double brightness = Double.valueOf(brightness_textfield.getText()) / 100.0;
+            // Update UI
+            final Color color = updateUI(hue, saturation, brightness, alpha);
+            // Update model
+            setPaintProperty(color);
         });
 
-        final ChangeListener<Boolean> liveUpdateListener = new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                paintPickerController.setLiveUpdate(newValue);
-            }
-        };
+        final ChangeListener<Boolean> liveUpdateListener = (ov, oldValue, newValue) -> paintPickerController.setLiveUpdate(newValue);
         picker_region.pressedProperty().addListener(liveUpdateListener);
         hue_slider.pressedProperty().addListener(liveUpdateListener);
         alpha_slider.pressedProperty().addListener(liveUpdateListener);

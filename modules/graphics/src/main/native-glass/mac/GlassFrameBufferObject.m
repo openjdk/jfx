@@ -25,6 +25,7 @@
 
 #import "GlassFrameBufferObject.h"
 #import "GlassMacros.h"
+#import "GlassApplication.h"
 
 #import <OpenGL/glu.h>
 
@@ -260,7 +261,9 @@
             fprintf(stderr, "ERROR: unexpected fbo is bound! Expected %d, but found %d\n", self->_fbo, framebufferCurrent);
         }
 #endif
-        
+        if (![GlassApplication syncRenderingDisabled]) {         
+            glFinish();
+        }
         GLuint framebufferToRevertTo = self->_fboToRestore;
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebufferToRevertTo);
         LOG("               restored to FBO: %d", framebufferToRevertTo);

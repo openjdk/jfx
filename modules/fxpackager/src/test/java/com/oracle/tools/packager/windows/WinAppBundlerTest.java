@@ -52,7 +52,7 @@ import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.windows.WinAppBundler.ICON_ICO;
-import static com.oracle.tools.packager.windows.WinAppBundler.WIN_RUNTIME;
+import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 import static org.junit.Assert.*;
 
 public class WinAppBundlerTest {

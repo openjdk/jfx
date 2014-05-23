@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,10 @@
 
 package com.sun.javafx.css;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import javafx.css.PseudoClass;
 import javafx.css.StyleOrigin;
+
+import java.util.Set;
 
 
 /** A marriage of pseudo-classes (potentially empty) to property and value */
@@ -42,7 +41,7 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
     }
     
     /** State variables, like &quot;hover&quot; or &quot;pressed&quot; */
-    private Set<PseudoClass> pseudoClasses;
+    private final Set<PseudoClass> pseudoClasses;
 
     /* specificity of the selector that matched */
     private final int specificity;
@@ -56,10 +55,7 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
      */
     private final boolean skinProp;
 
-    // internal to Style
-    static private Set<String> strSet = new HashSet<String>();
-
-    public CascadingStyle(final Style style, Set<PseudoClass> pseudoClasses, 
+    public CascadingStyle(final Style style, Set<PseudoClass> pseudoClasses,
             final int specificity, final int ordinal) {
         this.style = style;
         this.pseudoClasses = pseudoClasses;
@@ -158,7 +154,7 @@ public class CascadingStyle implements Comparable<CascadingStyle> {
         final Declaration otherDecl = other.style.getDeclaration();
         final boolean otherImportant = otherDecl != null ? otherDecl.isImportant() : false;
         final Rule otherRule = otherDecl != null ? otherDecl.getRule() : null;
-        final StyleOrigin otherSource = rule != null ? otherRule.getOrigin() : null;
+        final StyleOrigin otherSource = otherRule != null ? otherRule.getOrigin() : null;
 
         int c = 0;
 

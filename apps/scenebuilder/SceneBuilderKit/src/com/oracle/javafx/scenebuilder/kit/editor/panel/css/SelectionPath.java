@@ -33,10 +33,10 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.css;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
@@ -47,7 +47,6 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
-import javafx.stage.WindowEvent;
 
 /**
  * CSS panel selection path handling.
@@ -102,14 +101,11 @@ public class SelectionPath extends HBox {
             label.setMaxHeight(Double.MAX_VALUE);
             builder.append(item.getName());
             final List<Item> myPath = new ArrayList<>(iterationPath);
-            final EventHandler<ActionEvent> eh = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    setSelectionPath(new Path(myPath));
-                    select(item.getItem());
-                    // Set the focus to the css panel
-                    requestFocus();
-                }
+            final EventHandler<ActionEvent> eh = event -> {
+                setSelectionPath(new Path(myPath));
+                select(item.getItem());
+                // Set the focus to the css panel
+                requestFocus();
             };
             label.setOnAction(eh);
 
@@ -203,59 +199,47 @@ public class SelectionPath extends HBox {
                 CheckMenuItem mi = new ChildMenuItem(c);
                 final List<Item> childPath = new ArrayList<>(childrenPath);
                 childPath.add(c);
-                mi.setOnAction(new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent event) {
-                        setSelectionPath(new Path(childPath));
-                        selected.set(c);
-                    }
+                mi.setOnAction(event -> {
+                    setSelectionPath(new Path(childPath));
+                    selected.set(c);
                 });
                 menu.getItems().add(mi);
             }
-            menu.setOnShowing(new EventHandler<WindowEvent>() {
-                @Override
-                public void handle(WindowEvent event) {
-                    for (MenuItem m : menu.getItems()) {
-                        assert m instanceof ChildMenuItem;
-                        ChildMenuItem cm = (ChildMenuItem) m;
-                        cm.setSelected(cm.item == selectedChild);
+            menu.setOnShowing(event -> {
+                for (MenuItem m : menu.getItems()) {
+                    assert m instanceof ChildMenuItem;
+                    ChildMenuItem cm = (ChildMenuItem) m;
+                    cm.setSelected(cm.item == selectedChild);
+                }
+                positionMenu(menu);
+            });
+
+            menu.heightProperty().addListener((ChangeListener<Number>) (observable, oldValue, newValue) -> {
+                if (newValue.doubleValue() <= 0) {
+                    return;
+                }
+                double singleHeight = newValue.doubleValue() / menu.getItems().size();
+                int index = 0;
+                boolean found = false;
+                for (MenuItem m : menu.getItems()) {
+                    assert m instanceof ChildMenuItem;
+                    ChildMenuItem cm = (ChildMenuItem) m;
+                    index += 1;
+                    if (cm.isSelected()) {
+                        found = true;
+                        break;
                     }
+                }
+                if (found) {
+                    yOffset = singleHeight * (index - 1);
                     positionMenu(menu);
                 }
             });
 
-            menu.heightProperty().addListener(new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    if (newValue.doubleValue() <= 0) {
-                        return;
-                    }
-                    double singleHeight = newValue.doubleValue() / menu.getItems().size();
-                    int index = 0;
-                    boolean found = false;
-                    for (MenuItem m : menu.getItems()) {
-                        assert m instanceof ChildMenuItem;
-                        ChildMenuItem cm = (ChildMenuItem) m;
-                        index += 1;
-                        if (cm.isSelected()) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (found) {
-                        yOffset = singleHeight * (index - 1);
-                        positionMenu(menu);
-                    }
-                }
-            });
-
-            pathButton.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent event) {
-                    // Show popup. We can't compute the delta now...
-                    if (!menu.isShowing()) {
-                        menu.show(ChildButton.this, Side.RIGHT, 0, 0);
-                    }
+            pathButton.setOnMouseClicked(event -> {
+                // Show popup. We can't compute the delta now...
+                if (!menu.isShowing()) {
+                    menu.show(ChildButton.this, Side.RIGHT, 0, 0);
                 }
             });
         }

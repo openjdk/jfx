@@ -43,10 +43,10 @@ import java.net.URL;
 import java.text.MessageFormat;
 import java.util.*;
 
-import static com.oracle.tools.packager.JreUtils.*;
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.BIT_ARCH_64;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.BIT_ARCH_64_RUNTIME;
+import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 
 public class WinAppBundler extends AbstractBundler {
 
@@ -64,52 +64,6 @@ public class WinAppBundler extends AbstractBundler {
                 return imagesRoot;
             },
             (s, p) -> null);
-
-    //Subsetting of JRE is restricted.
-    //JRE README defines what is allowed to strip:
-    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
-    public static final BundlerParamInfo<Rule[]> WIN_JRE_RULES = new StandardBundlerParam<>(
-            "",
-            "",
-            ".win.runtime.rules",
-            Rule[].class,
-            params -> new Rule[]{
-                Rule.prefixNeg("\\bin\\new_plugin"),
-                Rule.prefixNeg("\\lib\\deploy"),
-                Rule.suffixNeg(".pdb"),
-                Rule.suffixNeg(".map"),
-                Rule.suffixNeg("axbridge.dll"),
-                Rule.suffixNeg("eula.dll"),
-                Rule.substrNeg("javacpl"),
-                Rule.suffixNeg("wsdetect.dll"),
-                Rule.substrNeg("eployjava1.dll"), //NP and IE versions
-                Rule.substrNeg("bin\\jp2"),
-                Rule.substrNeg("bin\\jpi"),
-                //Rule.suffixNeg("lib\\ext"), //need some of jars there for https to work
-                Rule.suffixNeg("ssv.dll"),
-                Rule.substrNeg("npjpi"),
-                Rule.substrNeg("npoji"),
-                Rule.suffixNeg(".exe"),
-                //keep core deploy files as JavaFX APIs use them
-                //Rule.suffixNeg("deploy.dll"),
-                Rule.suffixNeg("deploy.jar"),
-                //Rule.suffixNeg("javaws.jar"),
-                //Rule.suffixNeg("plugin.jar"),
-                Rule.suffix(".jar")
-            },
-            (s, p) -> null
-    );
-
-    public static final BundlerParamInfo<RelativeFileSet> WIN_RUNTIME = new StandardBundlerParam<>(
-            RUNTIME.getName(),
-            RUNTIME.getDescription(),
-            RUNTIME.getID(),
-            RelativeFileSet.class,
-            params -> extractJreAsRelativeFileSet(System.getProperty("java.home"),
-                    WIN_JRE_RULES.fetchFrom(params)),
-            (s, p) -> extractJreAsRelativeFileSet(s,
-                    WIN_JRE_RULES.fetchFrom(p))
-    );
 
     private final static String EXECUTABLE_NAME = "WinLauncher.exe";
 
@@ -205,7 +159,7 @@ public class WinAppBundler extends AbstractBundler {
 
         //validate required inputs
         if (USE_FX_PACKAGING.fetchFrom(p)) {
-            testRuntime(p, new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
+            testRuntime(WIN_RUNTIME.fetchFrom(p), new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
         }
 
         //validate runtime bit-architectire

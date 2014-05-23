@@ -357,7 +357,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             }
 
             // build final package
-            File finalPKG = new File(outdir, APP_NAME.fetchFrom(params)+".pkg");
+            File finalPKG = new File(outdir, INSTALLER_NAME.fetchFrom(params)+".pkg");
             outdir.mkdirs();
 
             List<String> commandLine = new ArrayList<>();

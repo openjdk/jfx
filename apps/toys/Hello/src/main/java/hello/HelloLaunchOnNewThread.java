@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,13 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
 public class HelloLaunchOnNewThread extends Application {
+
+    static long startTime;
+
     public HelloLaunchOnNewThread() {
+        long endTime = System.nanoTime();
+        long elapsedMsec = (endTime - startTime + 500000) / 1000000;
+        System.err.println("DONE: elapsed time = " + elapsedMsec + " msec");
         System.err.println("Constructor: currentThread="
                 + Thread.currentThread().getName());
     }
@@ -63,10 +69,11 @@ public class HelloLaunchOnNewThread extends Application {
         root.getChildren().add(rect);
         stage.setScene(scene);
         stage.show();
+        System.err.println("You should now see the 'HelloWorld' rectangle in the window");
     }
 
     @Override public void stop() {
-        System.err.println("cancel: currentThread="
+        System.err.println("stop: currentThread="
                 + Thread.currentThread().getName());
     }
 
@@ -74,6 +81,8 @@ public class HelloLaunchOnNewThread extends Application {
      * @param args the command line arguments
      */
     public static void main(final String[] args) {
+        System.err.println("main: currentThread="
+                + Thread.currentThread().getName());
         new Thread(() -> {
             // Sleep for a very short time to ensure main thread exits,
             // since that will provoke RT-9824
@@ -84,14 +93,11 @@ public class HelloLaunchOnNewThread extends Application {
                     + Thread.currentThread().getName());
             System.err.print("LAUNCHING...");
             System.err.flush();
-            long startTime = System.nanoTime();
+            startTime = System.nanoTime();
             Application.launch(HelloLaunchOnNewThread.class, args);
-            long endTime = System.nanoTime();
-            long elapsedMsec = (endTime - startTime + 500000) / 1000000;
-            System.err.println("DONE: elapsed time = " + elapsedMsec + " msec");
-            System.err.println("You should now see the 'HelloWorld' rectangle in the window");
+            System.err.println("Application.launch returns");
         }).start();
         System.err.println("Main thread exiting: currentThread="
-                    + Thread.currentThread().getName());
+                + Thread.currentThread().getName());
     }
 }

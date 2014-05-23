@@ -71,6 +71,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.library.Library;
 import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
 import com.sun.javafx.scene.control.behavior.KeyBinding;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -88,10 +89,9 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -235,71 +235,67 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     private static List<String> videoExtensions;
     private static List<String> mediaExtensions;
 
-    private final EventHandler<KeyEvent> mainKeyEventFilter = new EventHandler<KeyEvent>() {
-
-        @Override
-        public void handle(KeyEvent event) {
-            //------------------------------------------------------------------
-            // TEXT INPUT CONTROL
-            //------------------------------------------------------------------
-            // Common editing actions handled natively and defined as application accelerators
-            // 
-            // The platform support is not mature/stable enough to rely on.
-            // Indeed, the behavior may differ :
-            // - when using system menu bar vs not using it
-            // - when using accelerators vs using menu items
-            // - depending on the focused control (TextField vs ComboBox)
-            // 
-            // On SB side, we decide for now to consume events that may be handled natively
-            // so ALL actions are defined in our ApplicationMenu class.
-            //
-            // This may be revisit when platform implementation will be more reliable.
-            //
-            final Node focusOwner = getScene().getFocusOwner();
-            final KeyCombination accelerator = getAccelerator(event);
-            if (isTextInputControlEditing(focusOwner) == true 
-                    && accelerator != null) {
-                for (KeyBinding binding : SBTextInputControlBindings.getBindings()) {
-                    // The event is handled natively
-                    if (binding.getSpecificity(null, event) > 0) {
-                        // 
-                        // When using system menu bar, the event is handled natively 
-                        // before the application receives it : we just consume the event 
-                        // so the editing action is not performed a second time by the app.
-                        if (menuBarController.getMenuBar().isUseSystemMenuBar()) {
-                            event.consume();
-                        }
-                        break;
+    private final EventHandler<KeyEvent> mainKeyEventFilter = event -> {
+        //------------------------------------------------------------------
+        // TEXT INPUT CONTROL
+        //------------------------------------------------------------------
+        // Common editing actions handled natively and defined as application accelerators
+        // 
+        // The platform support is not mature/stable enough to rely on.
+        // Indeed, the behavior may differ :
+        // - when using system menu bar vs not using it
+        // - when using accelerators vs using menu items
+        // - depending on the focused control (TextField vs ComboBox)
+        // 
+        // On SB side, we decide for now to consume events that may be handled natively
+        // so ALL actions are defined in our ApplicationMenu class.
+        //
+        // This may be revisit when platform implementation will be more reliable.
+        //
+        final Node focusOwner = getScene().getFocusOwner();
+        final KeyCombination accelerator = getAccelerator(event);
+        if (isTextInputControlEditing(focusOwner) == true 
+                && accelerator != null) {
+            for (KeyBinding binding : SBTextInputControlBindings.getBindings()) {
+                // The event is handled natively
+                if (binding.getSpecificity(null, event) > 0) {
+                    // 
+                    // When using system menu bar, the event is handled natively 
+                    // before the application receives it : we just consume the event 
+                    // so the editing action is not performed a second time by the app.
+                    if (menuBarController.getMenuBar().isUseSystemMenuBar()) {
+                        event.consume();
                     }
+                    break;
                 }
             }
+        }
 
-            //------------------------------------------------------------------
-            // Hierarchy TreeView + select all
-            //------------------------------------------------------------------
-            // Select all is handled natively by TreeView (= hierarchy panel control).
-            boolean modifierDown = (EditorPlatform.IS_MAC ? event.isMetaDown() : event.isControlDown());
-            boolean isSelectAll = KeyCode.A.equals(event.getCode()) && modifierDown;
-            if (getHierarchyPanelController().getPanelControl().isFocused() && isSelectAll) {
-                // Consume the event so the control action is not performed natively.
-                event.consume();
-                // When using system menu bar, the control action is performed by the app.
-                if (menuBarController.getMenuBar().isUseSystemMenuBar() == false) {
-                    if (canPerformControlAction(DocumentControlAction.SELECT_ALL)) {
-                        performControlAction(DocumentControlAction.SELECT_ALL);
-                    }
+        //------------------------------------------------------------------
+        // Hierarchy TreeView + select all
+        //------------------------------------------------------------------
+        // Select all is handled natively by TreeView (= hierarchy panel control).
+        boolean modifierDown = (EditorPlatform.IS_MAC ? event.isMetaDown() : event.isControlDown());
+        boolean isSelectAll = KeyCode.A.equals(event.getCode()) && modifierDown;
+        if (getHierarchyPanelController().getPanelControl().isFocused() && isSelectAll) {
+            // Consume the event so the control action is not performed natively.
+            event.consume();
+            // When using system menu bar, the control action is performed by the app.
+            if (menuBarController.getMenuBar().isUseSystemMenuBar() == false) {
+                if (canPerformControlAction(DocumentControlAction.SELECT_ALL)) {
+                    performControlAction(DocumentControlAction.SELECT_ALL);
                 }
             }
+        }
 
-            // MenuItems define a single accelerator.
-            // BACK_SPACE key must be handled same way as DELETE key.
-            boolean isBackspace = KeyCode.BACK_SPACE.equals(event.getCode());
-            if (isTextInputControlEditing(focusOwner) == false && isBackspace) {
-                if (canPerformEditAction(DocumentEditAction.DELETE)) {
-                    performEditAction(DocumentEditAction.DELETE);
-                }
-                event.consume();
+        // MenuItems define a single accelerator.
+        // BACK_SPACE key must be handled same way as DELETE key.
+        boolean isBackspace = KeyCode.BACK_SPACE.equals(event.getCode());
+        if (isTextInputControlEditing(focusOwner) == false && isBackspace) {
+            if (canPerformEditAction(DocumentEditAction.DELETE)) {
+                performEditAction(DocumentEditAction.DELETE);
             }
+            event.consume();
         }
     };
     
@@ -980,21 +976,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         messageBarController.getSelectionBarHost().getChildren().add(
                 selectionBarController.getPanelRoot());
         
-        inspectorSearchController.textProperty().addListener(new ChangeListener<String>() {
-
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
-                inspectorPanelController.setSearchPattern(newStr);
-            }
-        });
+        inspectorSearchController.textProperty().addListener((ChangeListener<String>) (ov, oldStr, newStr) -> inspectorPanelController.setSearchPattern(newStr));
         
-        librarySearchController.textProperty().addListener(new ChangeListener<String>() {
-
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
-                libraryPanelController.setSearchPattern(newStr);
-            }
-        });
+        librarySearchController.textProperty().addListener((ChangeListener<String>) (ov, oldStr, newStr) -> libraryPanelController.setSearchPattern(newStr));
         
         bottomSplitController = new SplitController(mainSplitPane, SplitController.Target.LAST);
         leftSplitController = new SplitController(leftRightSplitPane, SplitController.Target.FIRST);
@@ -1002,24 +986,15 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         librarySplitController = new SplitController(libraryDocumentSplitPane, SplitController.Target.FIRST);
         documentSplitController = new SplitController(libraryDocumentSplitPane, SplitController.Target.LAST);
         
-        messageBarHost.heightProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable o) {
-                final double h = messageBarHost.getHeight();
-                contentPanelHost.setPadding(new Insets(h, 0.0, 0.0, 0.0));
-            }
+        messageBarHost.heightProperty().addListener((InvalidationListener) o -> {
+            final double h = messageBarHost.getHeight();
+            contentPanelHost.setPadding(new Insets(h, 0.0, 0.0, 0.0));
         });
         
         documentAccordion.setExpandedPane(documentAccordion.getPanes().get(0));
         
         // Monitor the status of the document to set status icon accordingly in message bar
-        getEditorController().getJobManager().revisionProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                messageBarController.setDocumentDirty(isDocumentDirty());
-            }
-        });
+        getEditorController().getJobManager().revisionProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> messageBarController.setDocumentDirty(isDocumentDirty()));
         
         // Setup title of the Library Reveal menu item according the underlying o/s.
         final String revealMenuKey;
@@ -1035,30 +1010,26 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         
         // We need to tune the content of the library menu according if there's
         // or not a selection likely to be dropped onto Library panel.
-        libraryMenuButton.showingProperty().addListener(new ChangeListener<Boolean>() {
+        libraryMenuButton.showingProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> {
+            if (t1) {
+                AbstractSelectionGroup asg = getEditorController().getSelection().getGroup();
+                libraryImportSelection.setDisable(true);
 
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (t1) {
-                    AbstractSelectionGroup asg = getEditorController().getSelection().getGroup();
-                    libraryImportSelection.setDisable(true);
-
-                    if (asg instanceof ObjectSelectionGroup) {
-                        if (((ObjectSelectionGroup)asg).getItems().size() >= 1) {
-                            libraryImportSelection.setDisable(false);
-                        }
+                if (asg instanceof ObjectSelectionGroup) {
+                    if (((ObjectSelectionGroup)asg).getItems().size() >= 1) {
+                        libraryImportSelection.setDisable(false);
                     }
-                    
-                    // DTL-6439. The custom library menu shall be enabled only
-                    // in the case there is a user library directory on disk.
-                    Library lib = getEditorController().getLibrary();
-                    if (lib instanceof UserLibrary) {
-                        File userLibDir = new File(((UserLibrary)lib).getPath());
-                        if (userLibDir.canRead()) {
-                            customLibraryMenu.setDisable(false);
-                        } else {
-                            customLibraryMenu.setDisable(true);
-                        }
+                }
+                
+                // DTL-6439. The custom library menu shall be enabled only
+                // in the case there is a user library directory on disk.
+                Library lib = getEditorController().getLibrary();
+                if (lib instanceof UserLibrary) {
+                    File userLibDir = new File(((UserLibrary)lib).getPath());
+                    if (userLibDir.canRead()) {
+                        customLibraryMenu.setDisable(false);
+                    } else {
+                        customLibraryMenu.setDisable(true);
                     }
                 }
             }
@@ -1763,13 +1734,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     }
     
     private void addCssPanelSearchListener() {
-        cssPanelSearchController.textProperty().addListener(new ChangeListener<String>() {
-
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
-                cssPanelController.setSearchPattern(newStr);
-            }
-        });
+        cssPanelSearchController.textProperty().addListener((ChangeListener<String>) (ov, oldStr, newStr) -> cssPanelController.setSearchPattern(newStr));
     }
     
     private void performGoToSection(SectionId sectionId) {

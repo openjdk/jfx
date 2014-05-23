@@ -54,7 +54,7 @@ static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
-
+static BOOL disableSyncRendering = NO;
 
 jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
@@ -709,6 +709,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
 }
 
++ (BOOL)syncRenderingDisabled {
+    return disableSyncRendering;
+}
+
 @end
 
 #pragma mark --- JNI
@@ -719,10 +723,12 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
-(JNIEnv *env, jclass jClass)
+(JNIEnv *env, jclass jClass, jboolean jDisableSyncRendering)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1initIDs");
 
+    disableSyncRendering = jDisableSyncRendering ? YES : NO;
+   
     jApplicationClass = (*env)->NewGlobalRef(env, jClass);
 
     javaIDs.Application.createPixels = (*env)->GetStaticMethodID(

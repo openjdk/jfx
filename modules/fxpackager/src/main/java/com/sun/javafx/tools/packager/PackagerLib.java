@@ -92,8 +92,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import sun.misc.BASE64Encoder;
 
-import static com.oracle.tools.packager.StandardBundlerParam.*;
-
 public class PackagerLib {
     public static final String JAVAFX_VERSION = "8.0";
 
@@ -489,8 +487,8 @@ public class PackagerLib {
     private void generateNativeBundles(File outdir, Map<String, ? super Object> params, String bundleType, String bundleFormat) throws PackagerException {
         outdir = new File(outdir, "bundles");
 
-        if (params.containsKey(RUNTIME.getID())) {
-            RelativeFileSet runtime = RUNTIME.fetchFrom(params);
+        if (params.containsKey(BundleParams.PARAM_RUNTIME)) {
+            RelativeFileSet runtime = BundleParams.getRuntime(params);
             if (runtime == null) {
                 com.oracle.tools.packager.Log.info(bundle.getString("MSG_NoJREPackaged"));
             } else {

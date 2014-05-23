@@ -36,10 +36,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLogEntry;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -122,12 +121,7 @@ public class MessagePanelController extends AbstractFxmlPanelController {
                 
         // Listens to the message log 
         getEditorController().getMessageLog().revisionProperty().addListener(
-                new ChangeListener<Number>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                        messageLogDidChange();
-                    }
-                });
+                (ChangeListener<Number>) (ov, t, t1) -> messageLogDidChange());
         
         updateScrollPaneWidth();
         messageLogDidChange();
@@ -147,13 +141,7 @@ public class MessagePanelController extends AbstractFxmlPanelController {
         for (MessageLogEntry mle : getEditorController().getMessageLog().getEntries()) {
             if (mle.getType() == MessageLogEntry.Type.WARNING) {
                 Button dismissButton = new Button("x"); //NOI18N
-                dismissButton.addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-
-                    @Override
-                    public void handle(MouseEvent t) {
-                        getEditorController().getMessageLog().clearEntry(mle);
-                    }
-                });
+                dismissButton.addEventHandler(MouseEvent.MOUSE_RELEASED, t -> getEditorController().getMessageLog().clearEntry(mle));
                 StackPane paneForButton = new StackPane();
                 paneForButton.getChildren().add(dismissButton);
                 paneForButton.setAlignment(Pos.CENTER_RIGHT);

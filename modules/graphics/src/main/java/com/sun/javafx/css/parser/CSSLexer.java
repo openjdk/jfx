@@ -593,7 +593,7 @@ final class CSSLexer {
 
     private class UnitsState extends LexerState {
 
-        private Recognizer units[][] = {
+        private final Recognizer[][] units = {
         
             // TODO: all units from http://www.w3.org/TR/css3-values/
             // If units are added, getType and unitsMask must be updated!
@@ -800,7 +800,7 @@ final class CSSLexer {
                     // If none of the reachable states accepts the char,
                     // then see if there is a token.
 
-                    final int type = currentState.getType();
+                    final int type = currentState != null ? currentState.getType() : Token.INVALID;
 
                     //
                     // If the token is INVALID and

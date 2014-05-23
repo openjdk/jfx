@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,15 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import javafx.css.PseudoClass;
-
-import javafx.css.Styleable;
-import javafx.scene.Node;
 
 /**
  * Used by CSSRule to determine whether or not the selector applies to a
@@ -44,7 +43,7 @@ import javafx.scene.Node;
 abstract public class Selector {
 
     private static class UniversalSelector {
-        private static Selector INSTANCE =
+        private static final Selector INSTANCE =
             new SimpleSelector("*", null, null, null);
     }
 

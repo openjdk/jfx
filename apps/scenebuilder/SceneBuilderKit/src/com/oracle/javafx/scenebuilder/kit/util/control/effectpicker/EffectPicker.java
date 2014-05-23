@@ -32,16 +32,16 @@
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker;
 
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.control.MenuItem;
@@ -140,13 +140,10 @@ public class EffectPicker extends Pane {
         final List<MenuItem> menuItems = new ArrayList<>();
         for (final Class<? extends Effect> clazz : getEffectClasses()) {
             final MenuItem mi = new MenuItem(clazz.getSimpleName());
-            mi.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent t) {
-                    final Effect effect = Utils.newInstance(clazz);
-                    setRootEffectProperty(effect);
-                    controller.incrementRevision();
-                }
+            mi.setOnAction(t -> {
+                final Effect effect = Utils.newInstance(clazz);
+                setRootEffectProperty(effect);
+                controller.incrementRevision();
             });
             menuItems.add(mi);
         }

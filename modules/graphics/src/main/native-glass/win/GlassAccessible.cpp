@@ -458,6 +458,11 @@ IFACEMETHODIMP GlassAccessible::GetFocus(IRawElementProviderFragment **pRetVal)
 IFACEMETHODIMP GlassAccessible::AdviseEventAdded(EVENTID eventId, SAFEARRAY *propertyIDs)
 {
     JNIEnv* env = GetEnv();
+    /* For some reason, probably a bug, Windows call AdviseEventRemoved() on a different thread when
+     * Narrator is shutting down. The fix is to ignored any method on IRawElementProviderAdviseEvents
+     * if env is NULL.
+     */
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_AdviseEventAdded, eventId, (jlong)propertyIDs);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -467,6 +472,11 @@ IFACEMETHODIMP GlassAccessible::AdviseEventAdded(EVENTID eventId, SAFEARRAY *pro
 IFACEMETHODIMP GlassAccessible::AdviseEventRemoved(EVENTID eventId, SAFEARRAY *propertyIDs)
 {
     JNIEnv* env = GetEnv();
+    /* For some reason, probably a bug, Windows call AdviseEventRemoved() on a different thread when
+     * Narrator is shutting down. The fix is to ignored any method on IRawElementProviderAdviseEvents
+     * if env is NULL.
+     */
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_AdviseEventRemoved, eventId, (jlong)propertyIDs);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;

@@ -35,9 +35,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractPopupController;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
@@ -166,37 +165,34 @@ public class InlineEditController {
         // Handle key events
         // 1) Commit then stop inline editing when pressing Ctl/Meta + ENTER key
         // 2) Stop inline editing without commit when pressing ESCAPE key
-        editor.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent event) {
-                switch (event.getCode()) {
-                    // COMMIT the new value on ENTER key pressed
-                    case ENTER:
-                        // Commit inline editing on ENTER key :
-                        // - if editor is a TextField
-                        // - if META/CTL is down (both TextField and TextArea)
-                        if ((editor instanceof TextField) || isModifierDown(event)) {
-                            requestCommitAndClose(requestCommit, editor.getText());
-                            // Consume the event so it is not received by the underlyting panel controller
-                            event.consume();
-                        }
-                        break;
-                    // COMMIT the new value on TAB key pressed
-                    case TAB:
-                        // Commit inline editing on TAB key
+        editor.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            switch (event.getCode()) {
+                // COMMIT the new value on ENTER key pressed
+                case ENTER:
+                    // Commit inline editing on ENTER key :
+                    // - if editor is a TextField
+                    // - if META/CTL is down (both TextField and TextArea)
+                    if ((editor instanceof TextField) || isModifierDown(event)) {
                         requestCommitAndClose(requestCommit, editor.getText());
                         // Consume the event so it is not received by the underlyting panel controller
                         event.consume();
-                        break;
-                    // STOP inline editing session without COMMIT on ESCAPE key pressed
-                    case ESCAPE:
-                        requestRevertAndClose(requestRevert);
-                        // Consume the event so it is not received by the underlyting panel controller
-                        event.consume();
-                        break;
-                    default:
-                        break;
-                }
+                    }
+                    break;
+                // COMMIT the new value on TAB key pressed
+                case TAB:
+                    // Commit inline editing on TAB key
+                    requestCommitAndClose(requestCommit, editor.getText());
+                    // Consume the event so it is not received by the underlyting panel controller
+                    event.consume();
+                    break;
+                // STOP inline editing session without COMMIT on ESCAPE key pressed
+                case ESCAPE:
+                    requestRevertAndClose(requestRevert);
+                    // Consume the event so it is not received by the underlyting panel controller
+                    event.consume();
+                    break;
+                default:
+                    break;
             }
         });
 
@@ -322,16 +318,12 @@ public class InlineEditController {
             this.requestCommit = requestCommit;
             this.initialValue = editor.getText();
 
-            this.editor.focusedProperty().addListener(new ChangeListener<Boolean>() {
-
-                @Override
-                public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                    // The inline editing popup auto hide when loosing focus :
-                    // need to commit inline editing on focus change
-                    if (getEditorController().isTextEditingSessionOnGoing() // Editing session has not been ended by ENTER key
-                            && newValue == false) {
-                        requestCommitAndClose(requestCommit, editor.getText());
-                    }
+            this.editor.focusedProperty().addListener((ChangeListener<Boolean>) (ov, oldValue, newValue) -> {
+                // The inline editing popup auto hide when loosing focus :
+                // need to commit inline editing on focus change
+                if (getEditorController().isTextEditingSessionOnGoing() // Editing session has not been ended by ENTER key
+                        && newValue == false) {
+                    requestCommitAndClose(requestCommit, editor.getText());
                 }
             });
         }

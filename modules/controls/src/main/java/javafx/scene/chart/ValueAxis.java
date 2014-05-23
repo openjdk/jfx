@@ -441,13 +441,14 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     }
 
     /**
-     * Get the display position along this axis for a given value
+     * Get the display position along this axis for a given value.
+     * If the value is not in the current range, the returned value will be an extrapolation of the display
+     * position.
      *
      * @param value The data value to work out display position for
-     * @return display position or Double.NaN if zero is not in current range;
+     * @return display position
      */
     @Override public double getDisplayPosition(T value) {
-        if (value.doubleValue() < getLowerBound() || value.doubleValue() > getUpperBound()) return Double.NaN;
         return Math.round(offset + ((value.doubleValue() - currentLowerBound.get()) * getScale()));
     }
 

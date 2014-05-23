@@ -35,6 +35,7 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
+import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -121,9 +122,9 @@ public class LinuxAppBundler extends AbstractBundler {
     );
 
     public static final BundlerParamInfo<RelativeFileSet> LINUX_RUNTIME = new StandardBundlerParam<>(
-            RUNTIME.getName(),
-            RUNTIME.getDescription(),
-            RUNTIME.getID(),
+            I18N.getString("param.runtime.name"),
+            I18N.getString("param.runtime.description"),
+            BundleParams.PARAM_RUNTIME,
             RelativeFileSet.class,
             params -> JreUtils.extractJreAsRelativeFileSet(System.getProperty("java.home"),
                     LINUX_JRE_RULES.fetchFrom(params)),
@@ -169,9 +170,9 @@ public class LinuxAppBundler extends AbstractBundler {
 
         //validate required inputs
         if (USE_FX_PACKAGING.fetchFrom(p)) {
-            testRuntime(p, new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
+            testRuntime(LINUX_RUNTIME.fetchFrom(p), new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
         }
-        testRuntime(p, new String[] { "lib/rt.jar" });
+        testRuntime(LINUX_RUNTIME.fetchFrom(p), new String[] { "lib/rt.jar" });
 
         return true;
     }

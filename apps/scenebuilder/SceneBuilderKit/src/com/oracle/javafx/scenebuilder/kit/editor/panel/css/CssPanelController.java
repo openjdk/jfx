@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.css;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.css.CssContentMaker.BeanPropertyState;
@@ -56,6 +57,7 @@ import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.css.Rule;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Array;
@@ -64,6 +66,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.util.*;
+
 import javafx.animation.FadeTransition;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -87,7 +90,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -96,7 +98,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.web.WebView;
-import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 import javafx.util.Duration;
 
@@ -238,27 +239,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
         root.getChildren().remove(textPane);
         root.getChildren().remove(table);
 
-        pick.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent t) {
-                editorController.setPickModeEnabled(true);
-            }
-        });
-        edit.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent t) {
-                editorController.setPickModeEnabled(false);
-            }
-        });
-        editorController.pickModeEnabledProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldVal, Boolean newVal) {
-                setPickMode(newVal);
-            }
-        });
+        pick.setOnAction(t -> editorController.setPickModeEnabled(true));
+        edit.setOnAction(t -> editorController.setPickModeEnabled(false));
+        editorController.pickModeEnabledProperty().addListener((ChangeListener<Boolean>) (ov, oldVal, newVal) -> setPickMode(newVal));
         // Initialize the pick mode from the editorController value
         setPickMode(editorController.isPickModeEnabled());
 
@@ -289,52 +272,34 @@ public class CssPanelController extends AbstractFxmlPanelController {
         defaultColumn.setCellValueFactory(valueFactory);
         defaultColumn.setCellFactory(new DefaultCellFactory());
 
-        editorController.themeProperty().addListener(new ChangeListener<EditorPlatform.Theme>() {
+        editorController.themeProperty().addListener((ChangeListener<Theme>) (ov, t, t1) -> refresh());
 
-            @Override
-            public void changed(ObservableValue<? extends EditorPlatform.Theme> ov, EditorPlatform.Theme t, EditorPlatform.Theme t1) {
+        cssStateProperty.addListener((ChangeListener<NodeCssState>) (arg0, oldValue, newValue) -> fillPropertiesTable());
+
+        ChangeListener<Item> selectionListener = (arg0, oldvalue, newValue) -> {
+            if (newValue != null && newValue.getItem() != null) {
+                Node selectedSubNode = CssUtils.getNode(newValue.getItem());
+                selectedObject = selectedSubNode;
                 refresh();
-            }
-        });
-
-        cssStateProperty.addListener(new ChangeListener<NodeCssState>() {
-            @Override
-            public void changed(ObservableValue<? extends NodeCssState> arg0, NodeCssState oldValue, NodeCssState newValue) {
-                fillPropertiesTable();
-            }
-        });
-
-        ChangeListener<Item> selectionListener = new ChangeListener<Item>() {
-            @Override
-            public void changed(ObservableValue<? extends Item> arg0, Item oldvalue, Item newValue) {
-                if (newValue != null && newValue.getItem() != null) {
-                    Node selectedSubNode = CssUtils.getNode(newValue.getItem());
-                    selectedObject = selectedSubNode;
-                    refresh();
-                    // Switch to pick mode
-                    editorController.setPickModeEnabled(true);
+                // Switch to pick mode
+                editorController.setPickModeEnabled(true);
 //                    // Select the sub node
-                    selection = editorController.getSelection();
-                    selection.select(getFXOMInstance(selection), selectedSubNode);
-                }
+                selection = editorController.getSelection();
+                selection.select(getFXOMInstance(selection), selectedSubNode);
             }
         };
         selectionPath.selected().addListener(selectionListener);
 
         // Listen the drag property changes
-        getEditorController().getDragController().dragSourceProperty().addListener(new ChangeListener<AbstractDragSource>() {
-
-            @Override
-            public void changed(ObservableValue<? extends AbstractDragSource> ov, AbstractDragSource oldVal, AbstractDragSource newVal) {
-                if (newVal != null) {
+        getEditorController().getDragController().dragSourceProperty().addListener((ChangeListener<AbstractDragSource>) (ov, oldVal, newVal) -> {
+            if (newVal != null) {
 //                    System.out.println("Drag started !");
-                    dragOnGoing = true;
-                } else {
+                dragOnGoing = true;
+            } else {
 //                    System.out.println("Drag finished.");
-                    dragOnGoing = false;
-                    updateSelectedObject();
-                    refresh();
-                }
+                dragOnGoing = false;
+                updateSelectedObject();
+                refresh();
             }
         });
 
@@ -981,20 +946,14 @@ public class CssPanelController extends AbstractFxmlPanelController {
                 AnchorPane.setLeftAnchor(vbox, 4.0);
                 AnchorPane.setRightAnchor(vbox, 4.0);
                 AnchorPane.setBottomAnchor(vbox, 4.0);
-                setOnMouseEntered(new EventHandler<MouseEvent>() {
-                    @Override
-                    public void handle(MouseEvent arg0) {
-                        if ((navigationMenuButton != null) && !navigationMenuButton.isShowing()) {
-                            fadeMenuButtonTo(1);
-                        }
+                setOnMouseEntered(arg0 -> {
+                    if ((navigationMenuButton != null) && !navigationMenuButton.isShowing()) {
+                        fadeMenuButtonTo(1);
                     }
                 });
-                setOnMouseExited(new EventHandler<MouseEvent>() {
-                    @Override
-                    public void handle(MouseEvent arg0) {
-                        if ((navigationMenuButton != null) && !navigationMenuButton.isShowing()) {
-                            fadeMenuButtonTo(0);
-                        }
+                setOnMouseExited(arg0 -> {
+                    if ((navigationMenuButton != null) && !navigationMenuButton.isShowing()) {
+                        fadeMenuButtonTo(0);
                     }
                 });
             }
@@ -1154,12 +1113,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
                     if ((origin == StyleOrigin.USER) || (origin == StyleOrigin.INLINE)) {
                         // Inspector or Inline columns
                         navigationMenuButton.getItems().add(revealInInspectorMenuItem);
-                        revealInInspectorMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-                            @Override
-                            public void handle(ActionEvent event) {
-                                navigate(item, getPropertyState(item), style, origin);
-                            }
-                        });
+                        revealInInspectorMenuItem.setOnAction(event -> navigate(item, getPropertyState(item), style, origin));
                         if (CssPanelController.this.applicationDelegate == null) {
                             // disable the menu item in this case
                             revealInInspectorMenuItem.setDisable(true);
@@ -1171,18 +1125,8 @@ public class CssPanelController extends AbstractFxmlPanelController {
                         revealInFileBrowserMenuItem.setText(EditorPlatform.IS_MAC
                                 ? MessageFormat.format(I18N.getString("csspanel.reveal.finder"), nav)
                                 : MessageFormat.format(I18N.getString("csspanel.reveal.explorer"), nav));
-                        revealInFileBrowserMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-                            @Override
-                            public void handle(ActionEvent event) {
-                                navigate(item, getPropertyState(item), style, origin);
-                            }
-                        });
-                        openStylesheetMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-                            @Override
-                            public void handle(ActionEvent event) {
-                                open(item, getPropertyState(item), style, origin);
-                            }
-                        });
+                        revealInFileBrowserMenuItem.setOnAction(event -> navigate(item, getPropertyState(item), style, origin));
+                        openStylesheetMenuItem.setOnAction(event -> open(item, getPropertyState(item), style, origin));
                     }
                 }
                 currentValue.setNavigation(navigationLabel, navigationMenuButton);
@@ -1809,19 +1753,11 @@ public class CssPanelController extends AbstractFxmlPanelController {
         private static void attachContextMenu(final TreeView<Node> tv) {
             ContextMenu ctxMenu = new ContextMenu();
             final MenuItem cssContentAction = new MenuItem(I18N.getString("csspanel.copy"));
-            ctxMenu.setOnShowing(new EventHandler<WindowEvent>() {
-                @Override
-                public void handle(WindowEvent arg0) {
-                }
+            ctxMenu.setOnShowing(arg0 -> {
             });
             tv.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
-            cssContentAction.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent arg0) {
-                    copy(tv);
-                }
-            });
+            cssContentAction.setOnAction(arg0 -> copy(tv));
 
             ctxMenu.getItems().add(cssContentAction);
             tv.setContextMenu(ctxMenu);

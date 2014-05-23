@@ -502,4 +502,22 @@ public class ToggleGroupTest {
         assertFalse(b2.isSelected());
         assertFalse(b3.isSelected());
     }
+
+    @Test public void testSelectingTwiceIsNop() {
+        b1.setToggleGroup(g1);
+        b2.setToggleGroup(g1);
+
+        assertFalse(b1.isSelected());
+        assertFalse(b2.isSelected());
+
+        g1.selectToggle(b1);
+        assertTrue(b1.isSelected());
+        assertFalse(b2.isSelected());
+        assertEquals(g1.getSelectedToggle(), b1);
+
+        g1.selectToggle(b1);
+        assertTrue(b1.isSelected());
+        assertFalse(b2.isSelected());
+        assertEquals(g1.getSelectedToggle(), b1);
+    }
 }

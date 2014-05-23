@@ -80,21 +80,18 @@ public class HierarchyTaskScheduler {
             public void run() {
                 // JavaFX data should only be accessed on the JavaFX thread. 
                 // => we must wrap the code into a Runnable object and call the Platform.runLater
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        final TreeItem<HierarchyItem> graphicTreeItem
-                                = panelController.makeTreeItemGraphic(owner, null);
-                        // Add Graphic at first position
-                        treeItem.getChildren().add(0, graphicTreeItem);
-                        treeItem.setExpanded(true);
-                        final Cell<?> cell = panelController.getCell(treeItem);
-                        assert cell != null;
-                        final Border border = panelController.getBorder(
-                                BorderSide.TOP_RIGHT_BOTTOM_LEFT);
-                        cell.setBorder(border);
-                        isAddEmptyGraphicTaskScheduled = false;
-                    }
+                Platform.runLater(() -> {
+                    final TreeItem<HierarchyItem> graphicTreeItem
+                            = panelController.makeTreeItemGraphic(owner, null);
+                    // Add Graphic at first position
+                    treeItem.getChildren().add(0, graphicTreeItem);
+                    treeItem.setExpanded(true);
+                    final Cell<?> cell = panelController.getCell(treeItem);
+                    assert cell != null;
+                    final Border border = panelController.getBorder(
+                            BorderSide.TOP_RIGHT_BOTTOM_LEFT);
+                    cell.setBorder(border);
+                    isAddEmptyGraphicTaskScheduled = false;
                 });
             }
         };
@@ -140,12 +137,7 @@ public class HierarchyTaskScheduler {
         public void run() {
             // JavaFX data should only be accessed on the JavaFX thread. 
             // => we must wrap the code into a Runnable object and call the Platform.runLater
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    treeItem.setExpanded(true);
-                }
-            });
+            Platform.runLater(() -> treeItem.setExpanded(true));
         }
     }
 }

@@ -214,15 +214,12 @@ public class SelectionBarController extends AbstractFxmlPanelController {
         return result.toString();
     }
 
-    private final EventHandler<ActionEvent> hyperlinkHandler = new EventHandler<ActionEvent>() {
-        @Override
-        public void handle(ActionEvent t) {
-            assert t.getSource() instanceof Hyperlink;
-            final Hyperlink hyperlink = (Hyperlink) t.getSource();
-            assert hyperlink.getUserData() instanceof FXOMObject;
-            handleSelect((FXOMObject) hyperlink.getUserData());
-            hyperlink.setVisited(false);
-        }
+    private final EventHandler<ActionEvent> hyperlinkHandler = t -> {
+        assert t.getSource() instanceof Hyperlink;
+        final Hyperlink hyperlink = (Hyperlink) t.getSource();
+        assert hyperlink.getUserData() instanceof FXOMObject;
+        handleSelect((FXOMObject) hyperlink.getUserData());
+        hyperlink.setVisited(false);
     };
 
     private void handleSelect(FXOMObject fxomObject) {

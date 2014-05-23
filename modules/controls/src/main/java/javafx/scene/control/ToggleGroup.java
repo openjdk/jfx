@@ -120,6 +120,9 @@ public class ToggleGroup {
                 throw new java.lang.RuntimeException("A bound value cannot be set.");
             }
             final Toggle old = get();
+            if (old == newSelectedToggle) {
+                return;
+            }
             if (setSelected(newSelectedToggle, true) ||
                     (newSelectedToggle != null && newSelectedToggle.getToggleGroup() == ToggleGroup.this) ||
                     (newSelectedToggle == null)) {

@@ -36,14 +36,15 @@ import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.util.FileWatcher;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 
 /**
@@ -66,13 +67,8 @@ public class DocumentWatchingController implements FileWatcher.Delegate {
         this.sceneStyleSheetMenuController = documentWindowController.getSceneStyleSheetMenuController();
         
         this.editorController.sceneStyleSheetProperty().addListener(
-                new ChangeListener<ObservableList<File>>() {
-                    @Override
-                    public void changed(ObservableValue<? extends ObservableList<File>> ov, 
-                            ObservableList<File> t, ObservableList<File> t1) {
-                        update();
-                    }
-                });
+                (ChangeListener<ObservableList<File>>) (ov, t,
+                        t1) -> update());
     }
     
     public void start() {

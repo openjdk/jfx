@@ -113,8 +113,6 @@ public abstract class GlyphLayout {
          * bidi scripts are consider complex. That said, using directional 
          * control (RLO) is possible to force RTL direction on non-complex
          * scripts. Thus, odd level must be threat as complex.
-         * Note: This code expects the FLAGS_HAS_COMPLEX flag to be set
-         * in  breakRuns() when the directional control is analyzed.
          */
         if (complex || (level & 1) != 0) {
             return addTextRun(layout, chars, start, length, font, span, level);
@@ -176,7 +174,7 @@ public abstract class GlyphLayout {
             bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
             bidiEnd = bidi.getRunLimit(bidiIndex);
             if ((bidiLevel & 1) != 0) {
-                flags |= FLAGS_HAS_BIDI;
+                flags |= FLAGS_HAS_BIDI | FLAGS_HAS_COMPLEX;
             }
         }
 
@@ -263,7 +261,7 @@ public abstract class GlyphLayout {
                 bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
                 bidiEnd = bidi.getRunLimit(bidiIndex);
                 if ((bidiLevel & 1) != 0) {
-                    flags |= FLAGS_HAS_BIDI;
+                    flags |= FLAGS_HAS_BIDI | FLAGS_HAS_COMPLEX;
                 }
             }
             if (scriptChanged) {

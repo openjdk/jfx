@@ -525,76 +525,31 @@ implements AbstractGesture.Observer {
      */
 
     private final EventHandler<MouseEvent> mouseEnteredGlassLayerListener
-            = new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    mouseEnteredGlassLayer(e);
-                }
-            };
+            = e -> mouseEnteredGlassLayer(e);
     
     private final EventHandler<MouseEvent> mouseExitedGlassLayerListener
-            = new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    mouseExitedGlassLayer(e);
-                }
-            };
+            = e -> mouseExitedGlassLayer(e);
     
     private final EventHandler<MouseEvent> mouseMovedOnGlassLayerListener
-            = new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    mouseMovedOnGlassLayer(e);
-                }
-            };
+            = e -> mouseMovedOnGlassLayer(e);
     
     private final EventHandler<MouseEvent> mousePressedOnGlassLayerListener
-            = new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    mousePressedOnGlassLayer(e);
-                }
-            };
+            = e -> mousePressedOnGlassLayer(e);
     
     private final EventHandler<KeyEvent> keyPressedOnGlassLayerListener
-            = new EventHandler<KeyEvent>() {
-                @Override
-                public void handle(KeyEvent e) {
-                    keyPressedOnGlassLayer(e);
-                }
-            };
+            = e -> keyPressedOnGlassLayer(e);
     
     private final EventHandler<ZoomEvent> zoomStartedOnGlassLayer
-            = new EventHandler<ZoomEvent>() {
-                @Override
-                public void handle(ZoomEvent e) {
-                    zoomStartedOnGlassLayer(e);
-                }
-            };
+            = e -> zoomStartedOnGlassLayer(e);
     
     private final EventHandler<DragEvent> dragEnteredGlassLayerListener
-            = new EventHandler<DragEvent>() {
-                @Override
-                public void handle(DragEvent e) {
-                    dragEnteredGlassLayer(e);
-                }
-            };
+            = e -> dragEnteredGlassLayer(e);
 
     private final EventHandler<MouseEvent> mousePressedOnHandleLayerListener
-            = new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    mousePressedOnHandleLayer(e);
-                }
-            };
+            = e -> mousePressedOnHandleLayer(e);
 
     private final EventHandler<MouseEvent> mousePressedOnPringLayerListener
-            = new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    mousePressedOnPringLayer(e);
-                }
-            };
+            = e -> mousePressedOnPringLayer(e);
 
     private void startListeningToInputEvents() {
         final Node glassLayer = contentPanelController.getGlassLayer();
@@ -813,20 +768,12 @@ implements AbstractGesture.Observer {
             inlineEditor.getStyleClass().add("theme-presets"); //NOI18N
             inlineEditor.getStyleClass().add(InlineEditController.INLINE_EDITOR);
             final Callback<String, Boolean> requestCommit
-                    = new Callback<String, Boolean>() {
-                        @Override
-                        public Boolean call(String value) {
-                            return inlineEditingDidRequestCommit(value);
-                        }
-                    };
+                    = value -> inlineEditingDidRequestCommit(value);
             final Callback<Void, Boolean> requestRevert
-                    = new Callback<Void, Boolean>() {
-                        @Override
-                        public Boolean call(Void value) {
-                            inlineEditingDidRequestRevert();
-                            return true;
-                        }
-                    };
+                    = value -> {
+                inlineEditingDidRequestRevert();
+                return true;
+            };
             inlineEditController.startEditingSession(inlineEditor,
                     inlineEditingBounds, requestCommit, requestRevert);
         } else {

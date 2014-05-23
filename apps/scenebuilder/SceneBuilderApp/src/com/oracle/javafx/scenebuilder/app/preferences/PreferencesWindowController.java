@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.app.preferences;
 
 import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ToolTheme;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
+
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ALIGNMENT_GUIDES_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BACKGROUND_IMAGE;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.CSS_TABLE_COLUMNS_ORDERING_REVERSED;
@@ -44,8 +45,10 @@ import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesControll
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS_SIZE;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.TOOL_THEME;
+
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.BackgroundImage;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.CSSAnalyzerColumnsOrder;
+
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_ALIGNMENT_GUIDES_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_BACKGROUND_IMAGE;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_HIERARCHY_DISPLAY_OPTION;
@@ -56,17 +59,19 @@ import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGl
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_ROOT_CONTAINER_WIDTH;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_TOOL_THEME;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.recentItemsSizes;
+
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleField;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.library.LibraryPanelController.DISPLAY_MODE;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlWindowController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
+
 import java.util.Arrays;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.CustomMenuItem;
@@ -132,32 +137,24 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
 
         // Root container size
         rootContainerHeight.setText(String.valueOf(recordGlobal.getRootContainerHeight()));
-        rootContainerHeight.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent t) {
-                final String value = rootContainerHeight.getText();
-                recordGlobal.setRootContainerHeight(Double.valueOf(value));
-                rootContainerHeight.selectAll();
-                // Update preferences
-                recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_HEIGHT);
-                // Update UI
-                recordGlobal.refreshRootContainerHeight();
-            }
+        rootContainerHeight.setOnAction(t -> {
+            final String value = rootContainerHeight.getText();
+            recordGlobal.setRootContainerHeight(Double.valueOf(value));
+            rootContainerHeight.selectAll();
+            // Update preferences
+            recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_HEIGHT);
+            // Update UI
+            recordGlobal.refreshRootContainerHeight();
         });
         rootContainerWidth.setText(String.valueOf(recordGlobal.getRootContainerWidth()));
-        rootContainerWidth.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent t) {
-                final String value = rootContainerWidth.getText();
-                recordGlobal.setRootContainerWidth(Double.valueOf(value));
-                rootContainerWidth.selectAll();
-                // Update preferences
-                recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_WIDTH);
-                // Update UI
-                recordGlobal.refreshRootContainerWidth();
-            }
+        rootContainerWidth.setOnAction(t -> {
+            final String value = rootContainerWidth.getText();
+            recordGlobal.setRootContainerWidth(Double.valueOf(value));
+            rootContainerWidth.selectAll();
+            // Update preferences
+            recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_WIDTH);
+            // Update UI
+            recordGlobal.refreshRootContainerWidth();
         });
 
         // Background image

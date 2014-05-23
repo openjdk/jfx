@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,16 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import javafx.css.ParsedValue;
-import javafx.css.StyleConverter;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
 
 /**
  * Implementation details behind a {@link ParsedValueImpl}. 
@@ -547,7 +548,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
 
         } else if (value instanceof URL) {
             os.writeByte(URL);
-            final int index = stringStore.addString(((URL)value).toString());
+            final int index = stringStore.addString(value.toString());
             os.writeShort(index);
 
         } else if (value == null) {
@@ -666,7 +667,7 @@ public class ParsedValueImpl<V, T> extends ParsedValue<V,T> {
             SizeUnits units = SizeUnits.PX;
             String unitStr = strings[is.readShort()];
             try {
-                units = (SizeUnits)Enum.valueOf(SizeUnits.class, unitStr);
+                units = Enum.valueOf(SizeUnits.class, unitStr);
             } catch (IllegalArgumentException iae) {
                 System.err.println(iae.toString());
             } catch (NullPointerException npe) {

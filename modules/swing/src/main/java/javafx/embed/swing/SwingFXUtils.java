@@ -269,12 +269,12 @@ public class SwingFXUtils {
     }
 
     //Called with reflection from PlatformImpl to avoid dependency
-    public static void installFwEventQueue() {
+    private static void installFwEventQueue() {
         AWTAccessor.getEventQueueAccessor().setFwDispatcher(getEventQueue(), new FXDispatcher());
     }
 
     //Called with reflection from PlatformImpl to avoid dependency
-    public static void removeFwEventQueue() {
+    private static void removeFwEventQueue() {
         AWTAccessor.getEventQueueAccessor().setFwDispatcher(getEventQueue(), null);
     }
 }

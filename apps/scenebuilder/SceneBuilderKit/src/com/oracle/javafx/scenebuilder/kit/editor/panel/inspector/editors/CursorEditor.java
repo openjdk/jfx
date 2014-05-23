@@ -34,10 +34,11 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.CursorPropertyMetadata;
+
 import java.util.Map;
 import java.util.Set;
+
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Cursor;
 import javafx.scene.ImageCursor;
@@ -91,12 +92,9 @@ public class CursorEditor extends PropertyEditor {
             menuItem.setGraphic(cursorLabel);
             // add predefined cursors before "inherited" menu item
             cursorMb.getItems().add(index++, menuItem);
-            menuItem.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent e) {
-                    selectCursor(cursorStr);
-                    userUpdateValueProperty(getValue());
-                }
+            menuItem.setOnAction(e -> {
+                selectCursor(cursorStr);
+                userUpdateValueProperty(getValue());
             });
         }
 
@@ -188,12 +186,6 @@ public class CursorEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                cursorMb.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> cursorMb.requestFocus());
     }
 }

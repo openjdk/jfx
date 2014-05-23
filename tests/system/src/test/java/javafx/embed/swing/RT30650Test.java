@@ -25,9 +25,7 @@
 
 package javafx.embed.swing;
 
-import com.sun.javafx.PlatformUtil;
 import junit.framework.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 
 /**
@@ -37,9 +35,6 @@ public class RT30650Test {
     
     @Test(timeout=10000)
     public void test() {
-        // Skip test on Windows until RT-36285 is fixed
-        Assume.assumeTrue(!PlatformUtil.isWindows());
-
         Assert.assertTrue(RT30650GUI.test());
         
         System.out.println("Passed.");

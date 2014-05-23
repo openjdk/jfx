@@ -53,12 +53,9 @@ public class StringEditor extends PropertyEditor {
     public StringEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
 
-        valueListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                userUpdateValueProperty(getValue());
-                textField.selectAll();
-            }
+        valueListener = event -> {
+            userUpdateValueProperty(getValue());
+            textField.selectAll();
         };
         setTextEditorBehavior(this, textField, valueListener);
         
@@ -105,12 +102,6 @@ public class StringEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                textField.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> textField.requestFocus());
     }
 }

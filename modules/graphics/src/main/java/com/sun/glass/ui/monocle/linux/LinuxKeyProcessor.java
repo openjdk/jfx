@@ -78,7 +78,7 @@ public class LinuxKeyProcessor implements LinuxInputProcessor {
         } else if (linuxKeyCode >= Input.KEY_F13 && linuxKeyCode <= Input.KEY_F24) {
             return linuxKeyCode - Input.KEY_F13 + KeyEvent.VK_F13;
         } else switch (linuxKeyCode) {
-            case Input.KEY_1: return KeyEvent.VK_1;
+            case Input.KEY_0: return KeyEvent.VK_0;
             case Input.KEY_A: return KeyEvent.VK_A;
             case Input.KEY_B: return KeyEvent.VK_B;
             case Input.KEY_C: return KeyEvent.VK_C;

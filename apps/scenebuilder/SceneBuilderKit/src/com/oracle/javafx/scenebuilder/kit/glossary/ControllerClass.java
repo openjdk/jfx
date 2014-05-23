@@ -190,20 +190,16 @@ class ControllerClass {
     private static File[] filterJavaFiles(File directory) {
         // final int[] count = {0};
         final List<File> fileList = new ArrayList<>();
-        FilenameFilter ff = new FilenameFilter() {
-
-            @Override
-            public boolean accept(File dir, String name) {
-                // count[0] = count[0] + 1;
-                if (name.endsWith(".java")) { //NOI18N
-                    final File file = new File(dir, name);
-                    if (file.canRead() && !file.isDirectory()) {
-                        fileList.add(file);
-                        return true;
-                    }
+        FilenameFilter ff = (dir, name) -> {
+            // count[0] = count[0] + 1;
+            if (name.endsWith(".java")) { //NOI18N
+                final File file = new File(dir, name);
+                if (file.canRead() && !file.isDirectory()) {
+                    fileList.add(file);
+                    return true;
                 }
-                return false;
             }
+            return false;
         };
         if (directory != null) {
             directory.list(ff);

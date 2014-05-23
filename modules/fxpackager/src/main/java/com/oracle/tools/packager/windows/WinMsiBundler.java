@@ -783,8 +783,7 @@ public class WinMsiBundler  extends AbstractBundler {
     private File buildMSI(Map<String, ? super Object> params, File outdir) throws IOException {
         File tmpDir = new File(BUILD_ROOT.fetchFrom(params), "tmp");
         File candleOut = new File(tmpDir, APP_NAME.fetchFrom(params) +".wixobj");
-        File msiOut = new File(outdir, APP_NAME.fetchFrom(params)
-                + "-" + VERSION.fetchFrom(params) + ".msi");
+        File msiOut = new File(outdir, INSTALLER_FILE_NAME.fetchFrom(params) + ".msi");
 
         Log.verbose(MessageFormat.format(I18N.getString("message.preparing-msi-config"), msiOut.getAbsolutePath()));
 

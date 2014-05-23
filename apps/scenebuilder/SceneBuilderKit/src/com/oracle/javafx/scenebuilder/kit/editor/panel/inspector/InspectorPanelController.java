@@ -110,6 +110,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.ValuePropertyMetadataCla
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ValuePropertyMetadataNameComparator;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
@@ -127,9 +128,9 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.Stack;
 import java.util.TreeMap;
+
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.HPos;
@@ -154,7 +155,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.util.Callback;
 
 /**
  *
@@ -465,13 +465,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     @Override
     protected void cssRevisionDidChange() {
 //        System.out.println("CSS changed.");
-        Platform.runLater(new Runnable() {
-
-            @Override
-            public void run() {
-                if (!dragOnGoing) {
-                    updateInspector();
-                }
+        Platform.runLater(() -> {
+            if (!dragOnGoing) {
+                updateInspector();
             }
         });
     }
@@ -518,52 +514,27 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         assert accordion != null;
         assert inspectorRoot != null;
 
-        propertiesTitledPane.expandedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean wasExpanded, Boolean expanded) {
-                handleTitledPane(wasExpanded, expanded, SectionId.PROPERTIES);
-            }
-        });
-        layoutTitledPane.expandedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean wasExpanded, Boolean expanded) {
-                handleTitledPane(wasExpanded, expanded, SectionId.LAYOUT);
-            }
-        });
-        codeTitledPane.expandedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean wasExpanded, Boolean expanded) {
-                handleTitledPane(wasExpanded, expanded, SectionId.CODE);
-            }
-        });
+        propertiesTitledPane.expandedProperty().addListener((ChangeListener<Boolean>) (ov, wasExpanded, expanded) -> handleTitledPane(wasExpanded, expanded, SectionId.PROPERTIES));
+        layoutTitledPane.expandedProperty().addListener((ChangeListener<Boolean>) (ov, wasExpanded, expanded) -> handleTitledPane(wasExpanded, expanded, SectionId.LAYOUT));
+        codeTitledPane.expandedProperty().addListener((ChangeListener<Boolean>) (ov, wasExpanded, expanded) -> handleTitledPane(wasExpanded, expanded, SectionId.CODE));
 
         // Clean the potential nodes added for design purpose in fxml
         clearSections();
 
         // Listen the drag property changes
-        getEditorController().getDragController().dragSourceProperty().addListener(new ChangeListener<AbstractDragSource>() {
-
-            @Override
-            public void changed(ObservableValue<? extends AbstractDragSource> ov, AbstractDragSource oldVal, AbstractDragSource newVal) {
-                if (newVal != null) {
+        getEditorController().getDragController().dragSourceProperty().addListener((ChangeListener<AbstractDragSource>) (ov, oldVal, newVal) -> {
+            if (newVal != null) {
 //                    System.out.println("Drag started !");
-                    dragOnGoing = true;
-                } else {
+                dragOnGoing = true;
+            } else {
 //                    System.out.println("Drag finished.");
-                    dragOnGoing = false;
-                    updateInspector();
-                }
+                dragOnGoing = false;
+                updateInspector();
             }
         });
         
         // Listen the Scene stylesheets changes
-        getEditorController().sceneStyleSheetProperty().addListener(new ChangeListener<ObservableList<File>>() {
-
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<File>> ov, ObservableList<File> t, ObservableList<File> t1) {
-                    updateInspector();
-            }
-        });
+        getEditorController().sceneStyleSheetProperty().addListener((ChangeListener<ObservableList<File>>) (ov, t, t1) -> updateInspector());
         
         accordion.getStyleClass().add("INSPECTOR_THEME"); //NOI18N
         selectionState = new SelectionState(editorController);
@@ -1097,32 +1068,26 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
     private void handleValueChange(PropertyEditor propertyEditor) {
         // Handle the value change
-        propertyEditor.addValueListener(new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldValue, Object newValue) {
+        propertyEditor.addValueListener((ov, oldValue, newValue) -> {
 //                System.out.println("Value change : " + newValue);
-                if (!propertyEditor.isUpdateFromModel()) {
-                    lastPropertyEditorValueChanged = propertyEditor;
-                    updateValueInModel(propertyEditor, oldValue, newValue);
-                }
-                if (propertyEditor.isRuledByCss()) {
-                    editorController.getMessageLog().logWarningMessage(
-                            "inspector.css.overridden", propertyEditor.getPropertyNameText());
-                }
+            if (!propertyEditor.isUpdateFromModel()) {
+                lastPropertyEditorValueChanged = propertyEditor;
+                updateValueInModel(propertyEditor, oldValue, newValue);
+            }
+            if (propertyEditor.isRuledByCss()) {
+                editorController.getMessageLog().logWarningMessage(
+                        "inspector.css.overridden", propertyEditor.getPropertyNameText());
             }
         });
     }
 
     private void handleTransientValueChange(PropertyEditor propertyEditor) {
         // Handle the transient value change (no job here, only the scene graph is updated)
-        propertyEditor.addTransientValueListener(new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldValue, Object newValue) {
+        propertyEditor.addTransientValueListener((ov, oldValue, newValue) -> {
 //                System.out.println("Transient value change : " + newValue);
-                lastPropertyEditorValueChanged = propertyEditor;
-                for (FXOMInstance fxomInstance : getSelectedInstances()) {
-                    propertyEditor.getPropertyMeta().setValueInSceneGraphObject(fxomInstance, newValue);
-                }
+            lastPropertyEditorValueChanged = propertyEditor;
+            for (FXOMInstance fxomInstance : getSelectedInstances()) {
+                propertyEditor.getPropertyMeta().setValueInSceneGraphObject(fxomInstance, newValue);
             }
         });
     }
@@ -1145,39 +1110,32 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
     private void handleEditingChange(PropertyEditor propertyEditor) {
         // Handle the editing change
-        propertyEditor.addEditingListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                if (newValue) {
-                    // Editing session starting
+        propertyEditor.addEditingListener((ov, oldValue, newValue) -> {
+            if (newValue) {
+                // Editing session starting
 //                    System.out.println("textEditingSessionDidBegin() called.");
-                    editorController.textEditingSessionDidBegin(new Callback<Void, Boolean>() {
-
-                        @Override
-                        public Boolean call(Void p) {
-                            // requestSessionEnd
-                            if (propertyEditor.getCommitListener() != null) {
-                                propertyEditor.getCommitListener().handle(null);
-                            }
-                            boolean hasError = propertyEditor.isInvalidValue();
-                            if (!hasError) {
+                editorController.textEditingSessionDidBegin(p -> {
+                    // requestSessionEnd
+                    if (propertyEditor.getCommitListener() != null) {
+                        propertyEditor.getCommitListener().handle(null);
+                    }
+                    boolean hasError = propertyEditor.isInvalidValue();
+                    if (!hasError) {
 //                                System.out.println("textEditingSessionDidEnd() called (from callback).");
-                                if (editorController.isTextEditingSessionOnGoing()) {
-                                    editorController.textEditingSessionDidEnd();
-                                }
-                            }
+                        if (editorController.isTextEditingSessionOnGoing()) {
+                            editorController.textEditingSessionDidEnd();
+                        }
+                    }
 //                            System.out.println("textEditingSessionDidBegin callback returns : " + !hasError);
-                            return !hasError;
-                        }
-                    });
-                } else {
-                    // Editing session completed
-                    if (editorController.isTextEditingSessionOnGoing()) {
+                    return !hasError;
+                });
+            } else {
+                // Editing session completed
+                if (editorController.isTextEditingSessionOnGoing()) {
 //                        System.out.println("textEditingSessionDidEnd() called.");
-                        editorController.textEditingSessionDidEnd();
-                        if (propertyEditor.getCommitListener() != null) {
-                            propertyEditor.getCommitListener().handle(null);
-                        }
+                    editorController.textEditingSessionDidEnd();
+                    if (propertyEditor.getCommitListener() != null) {
+                        propertyEditor.getCommitListener().handle(null);
                     }
                 }
             }
@@ -1187,13 +1145,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
     private void handleNavigateRequest(PropertyEditor propertyEditor) {
         // Handle a navigate request from an editor
-        propertyEditor.addNavigateListener(new ChangeListener<String>() {
-
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
-                if (newStr != null) {
-                    setFocusToEditor(new PropertyName(newStr));
-                }
+        propertyEditor.addNavigateListener((ov, oldStr, newStr) -> {
+            if (newStr != null) {
+                setFocusToEditor(new PropertyName(newStr));
             }
         });
     }

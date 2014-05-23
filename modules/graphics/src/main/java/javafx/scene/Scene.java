@@ -400,7 +400,9 @@ public class Scene implements EventTarget {
 
                         @Override
                         public void setTransientFocusContainer(Scene scene, Node node) {
-                            scene.transientFocusContainer = node;
+                            if (scene != null) {
+                                scene.transientFocusContainer = node;
+                            }
                         }
                     });
         }

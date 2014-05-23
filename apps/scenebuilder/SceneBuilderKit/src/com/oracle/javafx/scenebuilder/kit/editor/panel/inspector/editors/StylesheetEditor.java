@@ -51,7 +51,6 @@ import java.util.List;
 import java.util.Set;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -101,24 +100,9 @@ public class StylesheetEditor extends InlineListEditor {
         // Set the initial value to empty list (instead of null)
         valueProperty().setValue(FXCollections.observableArrayList());
 
-        documentRelativeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchType(Type.DOCUMENT_RELATIVE_PATH);
-            }
-        });
-        classPathRelativeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchType(Type.CLASSLOADER_RELATIVE_PATH);
-            }
-        });
-        absoluteMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchType(Type.PLAIN_STRING);
-            }
-        });
+        documentRelativeMenuItem.setOnAction(e -> switchType(Type.DOCUMENT_RELATIVE_PATH));
+        classPathRelativeMenuItem.setOnAction(e -> switchType(Type.CLASSLOADER_RELATIVE_PATH));
+        absoluteMenuItem.setOnAction(e -> switchType(Type.PLAIN_STRING));
         getMenu().getItems().addAll(documentRelativeMenuItem, classPathRelativeMenuItem, absoluteMenuItem);
     }
 
@@ -435,37 +419,30 @@ public class StylesheetEditor extends InlineListEditor {
         // Method to please FindBugs
         private void initialize(String url) {
             setValue(url);
-            EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+            EventHandler<ActionEvent> onActionListener = event -> {
 //                    System.out.println("StylesheetItem : onActionListener");
-                    if (getValue().equals(currentValue)) {
-                        // no change
-                        return;
-                    }
-                    if (stylesheetTf.getText().isEmpty()) {
-                        remove(null);
-                    }
-//                        System.out.println("StyleEditorItem : COMMIT");
-                    editor.commit(StylesheetItem.this);
-                    if (event != null && event.getSource() instanceof TextField) {
-                        ((TextField) event.getSource()).selectAll();
-                    }
-                    updateButtons();
-                    updateOpenRevealMenuItems();
-                    currentValue = getValue();
+                if (getValue().equals(currentValue)) {
+                    // no change
+                    return;
                 }
+                if (stylesheetTf.getText().isEmpty()) {
+                    remove(null);
+                }
+//                        System.out.println("StyleEditorItem : COMMIT");
+                editor.commit(StylesheetItem.this);
+                if (event != null && event.getSource() instanceof TextField) {
+                    ((TextField) event.getSource()).selectAll();
+                }
+                updateButtons();
+                updateOpenRevealMenuItems();
+                currentValue = getValue();
             };
 
-            ChangeListener<String> textPropertyChange = new ChangeListener<String>() {
-
-                @Override
-                public void changed(ObservableValue<? extends String> ov, String prevText, String newText) {
-                    if (prevText.isEmpty() || newText.isEmpty()) {
-                        // Text changed FROM empty value, or TO empty value: buttons status change
-                        updateButtons();
-                        updateOpenRevealMenuItems();
-                    }
+            ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
+                if (prevText.isEmpty() || newText.isEmpty()) {
+                    // Text changed FROM empty value, or TO empty value: buttons status change
+                    updateButtons();
+                    updateOpenRevealMenuItems();
                 }
             };
             stylesheetTf.textProperty().addListener(textPropertyChange);
@@ -523,13 +500,7 @@ public class StylesheetEditor extends InlineListEditor {
         }
 
         protected void requestFocus() {
-            EditorUtils.doNextFrame(new Runnable() {
-
-                @Override
-                public void run() {
-                    stylesheetTf.requestFocus();
-                }
-            });
+            EditorUtils.doNextFrame(() -> stylesheetTf.requestFocus());
         }
 
         @Override

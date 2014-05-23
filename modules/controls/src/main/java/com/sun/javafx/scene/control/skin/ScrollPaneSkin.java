@@ -746,8 +746,11 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
         final ScrollPane control = getSkinnable();
-        final Insets insets = control.getInsets();
         final Insets padding = control.getPadding();
+        final double rightPadding = snapSize(padding.getRight());
+        final double leftPadding = snapSize(padding.getLeft());
+        final double topPadding = snapSize(padding.getTop());
+        final double bottomPadding = snapSize(padding.getBottom());
 
         vsb.setMin(control.getVmin());
         vsb.setMax(control.getVmax());
@@ -756,32 +759,33 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         hsb.setMin(control.getHmin());
         hsb.setMax(control.getHmax());
 
-        contentWidth = w;
-        contentHeight = h;
-
         /*
         ** we want the scrollbars to go right to the border
         */
-        double hsbWidth = contentWidth + padding.getLeft() + padding.getRight();
-        double vsbHeight = contentHeight + padding.getTop() + padding.getBottom();
+        double hsbWidth = 0;
+        double vsbHeight = 0;
 
         computeScrollNodeSize(contentWidth, contentHeight);
         computeScrollBarSize();
-        vsbvis = determineVerticalSBVisible();
-        hsbvis = determineHorizontalSBVisible();
 
-        if (vsbvis) {
-            hsbWidth -= vsbWidth;
-            if (!IS_TOUCH_SUPPORTED) {
-                contentWidth -= vsbWidth;
+        contentWidth = w;
+        contentHeight = h;
+
+        for (int i = 0; i < 2; ++i) {
+            vsbvis = determineVerticalSBVisible();
+            hsbvis = determineHorizontalSBVisible();
+
+            if (vsbvis && !IS_TOUCH_SUPPORTED) {
+                contentWidth = w - vsbWidth;
             }
-        }
-        if (hsbvis) {
-            vsbHeight -= hsbHeight;
-            if (!IS_TOUCH_SUPPORTED) {
-                contentHeight -= hsbHeight;
+            hsbWidth = w + leftPadding + rightPadding - (vsbvis ? vsbWidth : 0);
+            if (hsbvis && !IS_TOUCH_SUPPORTED) {
+                contentHeight = h - hsbHeight;
             }
+            vsbHeight = h + topPadding + bottomPadding - (hsbvis ? hsbHeight : 0);
         }
+
+
         if (scrollNode != null && scrollNode.isResizable()) {
             // maybe adjust size now that scrollbars may take up space
             if (vsbvis && hsbvis) {
@@ -810,8 +814,8 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         }
 
         // figure out the content area that is to be filled
-        double cx = insets.getLeft()-padding.getLeft();
-        double cy = insets.getTop()-padding.getTop();
+        double cx = snappedLeftInset() - leftPadding;
+        double cy = snappedTopInset() - topPadding;
 
         vsb.setVisible(vsbvis);
         if (vsbvis) {
@@ -822,19 +826,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             **  The Padding should go between the content and the edge,
             **  otherwise changes in padding move the ScrollBar, and could
             **  in extreme cases size the ScrollBar to become unusable.
-            **  The -1, +1 plus one bit : 
+            **  The -1, +1 plus one bit :
             **   If padding in => 1 then we allow one pixel to appear as the
             **   outside border of the Scrollbar, and the rest on the inside.
             **   If padding is < 1 then we just stick to the edge.
             */
-            if (padding.getRight() < 1) {
-                vsb.resizeRelocate(snapPosition(control.getWidth() - (vsbWidth + (insets.getRight()-padding.getRight()))), 
-                                   snapPosition(cy), snapSize(vsbWidth), snapSize(vsbHeight));
-            }
-            else {
-                vsb.resizeRelocate(snapPosition(control.getWidth() - ((vsbWidth+1) + (insets.getRight()-padding.getRight()))), 
-                                   snapPosition(cy), snapSize(vsbWidth)+1, snapSize(vsbHeight));
-            }
+            vsb.resizeRelocate(snappedLeftInset() + w - vsbWidth + (rightPadding < 1 ? 0 : rightPadding - 1) ,
+                    cy, vsbWidth, vsbHeight);
         }
         updateVerticalSB();
 
@@ -852,14 +850,8 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             **   outside border of the Scrollbar, and the rest on the inside.
             **   If padding is < 1 then we just stick to the edge.
             */
-            if (padding.getBottom() < 1) {
-                hsb.resizeRelocate(snapPosition(cx), snapPosition(control.getHeight() - (hsbHeight + (insets.getBottom()-padding.getBottom()))), 
-                                                     snapSize(hsbWidth), snapSize(hsbHeight));
-            }
-            else {
-                hsb.resizeRelocate(snapPosition(cx), snapPosition(control.getHeight() - ((hsbHeight+1) + (insets.getBottom()-padding.getBottom()))), 
-                                                     snapSize(hsbWidth), snapSize(hsbHeight)+1);
-            }
+            hsb.resizeRelocate(cx, snappedTopInset() + h - hsbHeight + (bottomPadding < 1 ? 0 : bottomPadding - 1),
+                    hsbWidth, hsbHeight);
         }
         updateHorizontalSB();
 
@@ -870,13 +862,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             corner.setVisible(true);
             double cornerWidth = vsbWidth;
             double cornerHeight = hsbHeight;
-
-            if (padding.getRight() >= 1) {
-                cornerWidth++;
-            }
-            if (padding.getBottom() >= 1) {
-                cornerHeight++;
-            }
             corner.resizeRelocate(snapPosition(vsb.getLayoutX()), snapPosition(hsb.getLayoutY()), snapSize(cornerWidth), snapSize(cornerHeight));
         } else {
             corner.setVisible(false);

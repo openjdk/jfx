@@ -420,7 +420,7 @@ final class CssStyleHelper {
         // Any properties that have been set by this style helper are tracked
         // here so the property can be reset without expanding properties that
         // were not set by css.
-        private Map<CssMetaData, CalculatedValue> cssSetProperties;
+        private final Map<CssMetaData, CalculatedValue> cssSetProperties;
 
         private boolean forceSlowpath = false;
     }
@@ -527,9 +527,9 @@ final class CssStyleHelper {
         int count = 0;
         parent = node;
         while (parent != null) {
-            final CssStyleHelper helper = (parent instanceof Node) ? ((Node)parent).styleHelper : null;
+            final CssStyleHelper helper = (parent instanceof Node) ? parent.styleHelper : null;
             if (helper != null) {
-                final Set<PseudoClass> pseudoClassState = ((Node)parent).pseudoClassStates;
+                final Set<PseudoClass> pseudoClassState = parent.pseudoClassStates;
                 retainedStates[count] = new PseudoClassState();
                 retainedStates[count].addAll(pseudoClassState);
                 // retainAll method takes the intersection of pseudoClassState and helper.triggerStates
@@ -912,7 +912,7 @@ final class CssStyleHelper {
                                 originatingStyleable, cachedFont);
                     if (constituent != SKIP) {
                         if (subs == null) {
-                            subs = new HashMap<CssMetaData,Object>();
+                            subs = new HashMap<>();
                         }
                         subs.put(subkey, constituent.getValue());
 
@@ -1074,7 +1074,7 @@ final class CssStyleHelper {
 
 
     // helps with self-documenting the code
-    static final Set<PseudoClass> NULL_PSEUDO_CLASS_STATE = null;
+    private static final Set<PseudoClass> NULL_PSEUDO_CLASS_STATE = null;
 
     /**
      * Find the property among the styles that pertain to the Node
@@ -1352,8 +1352,8 @@ final class CssStyleHelper {
             ParsedValueImpl resolved = null;
             try {
 
-                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<StyleOrigin>(style.getOrigin());
-                resolved = resolveLookups(styleable, cssValue, styleMap, states, whence, new HashSet<ParsedValue>());
+                ObjectProperty<StyleOrigin> whence = new SimpleObjectProperty<>(style.getOrigin());
+                resolved = resolveLookups(styleable, cssValue, styleMap, states, whence, new HashSet<>());
 
                 final String property = cssMetaData.getProperty();
 
@@ -1528,8 +1528,6 @@ final class CssStyleHelper {
             }
 
             if (cachedFont == null)  {
-
-                Set<PseudoClass> pseudoClassState = parent.getPseudoClassStates();
                 StyleMap smap = parentHelper.getStyleMap(parent);
                 cachedFont = parentHelper.lookupFont(parent, "-fx-font", smap, null);
             }
@@ -1766,7 +1764,7 @@ final class CssStyleHelper {
 
                     origin = cv.getOrigin();
                 }
-                size = ((Double) cv.getValue()).doubleValue();
+                size = (Double) cv.getValue();
 
                 if (cvFont != null) {
                     boolean isRelative = cvFont.isRelative() || cv.isRelative();
@@ -2004,7 +2002,7 @@ final class CssStyleHelper {
 
     private List<Style> getMatchingStyles(final Styleable node, final CssMetaData styleableProperty, boolean matchState) {
 
-        final List<CascadingStyle> styleList = new ArrayList<CascadingStyle>();
+        final List<CascadingStyle> styleList = new ArrayList<>();
 
         getMatchingStyles(node, styleableProperty, styleList, matchState);
 
@@ -2018,7 +2016,7 @@ final class CssStyleHelper {
 
         Collections.sort(styleList);
 
-        final List<Style> matchingStyles = new ArrayList<Style>(styleList.size());
+        final List<Style> matchingStyles = new ArrayList<>(styleList.size());
         for (int n=0,nMax=styleList.size(); n<nMax; n++) {
             final Style style = styleList.get(n).getStyle();
             if (!matchingStyles.contains(style)) matchingStyles.add(style);

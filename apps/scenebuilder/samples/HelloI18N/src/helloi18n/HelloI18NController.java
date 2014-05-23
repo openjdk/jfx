@@ -33,8 +33,7 @@ package helloi18n;
 
 import java.net.URL;
 import java.util.ResourceBundle;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 
@@ -58,12 +57,7 @@ public class HelloI18NController {
         assert button != null : "fx:id=\"button\" was not injected: check your FXML file 'HelloI18N.fxml'.";
         
         if (button != null) {
-            button.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    System.out.println(resources.getString("button.printed.message"));
-                }
-            });
+            button.setOnAction(event -> System.out.println(resources.getString("button.printed.message")));
         }
     }
 }

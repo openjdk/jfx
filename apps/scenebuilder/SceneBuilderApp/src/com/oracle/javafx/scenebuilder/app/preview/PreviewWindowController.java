@@ -36,10 +36,12 @@ import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.Size;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractWindowController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -49,9 +51,9 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Timer;
 import java.util.TimerTask;
+
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.geometry.Rectangle2D;
@@ -105,22 +107,18 @@ public final class PreviewWindowController extends AbstractWindowController {
         super(owner);
         this.editorController = editorController;
         this.editorController.fxomDocumentProperty().addListener(
-                new ChangeListener<FXOMDocument>() {
-                    @Override
-                    public void changed(ObservableValue<? extends FXOMDocument> ov,
-                            FXOMDocument od, FXOMDocument nd) {
-                        assert editorController.getFxomDocument() == nd;
-                        if (od != null) {
-                            od.sceneGraphRevisionProperty().removeListener(fxomDocumentRevisionListener);
-                            od.cssRevisionProperty().removeListener(cssRevisionListener);
-                        }
-                        if (nd != null) {
-                            nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
-                            nd.cssRevisionProperty().addListener(cssRevisionListener);
-                            requestUpdate(DELAYED);
-                        }
-                    }
-                });
+                (ChangeListener<FXOMDocument>) (ov, od, nd) -> {
+                  assert editorController.getFxomDocument() == nd;
+                  if (od != null) {
+                od.sceneGraphRevisionProperty().removeListener(fxomDocumentRevisionListener);
+                od.cssRevisionProperty().removeListener(cssRevisionListener);
+                  }
+                  if (nd != null) {
+                nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
+                nd.cssRevisionProperty().addListener(cssRevisionListener);
+                requestUpdate(DELAYED);
+                  }
+               });
         
         if (editorController.getFxomDocument() != null) {
             editorController.getFxomDocument().sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
@@ -128,44 +126,23 @@ public final class PreviewWindowController extends AbstractWindowController {
         }
         
         this.editorControllerTheme = editorController.getTheme();
-        this.editorController.themeProperty().addListener(new ChangeListener<EditorPlatform.Theme>() {
-
-            @Override
-            public void changed(ObservableValue<? extends EditorPlatform.Theme> ov,
-                    EditorPlatform.Theme t, EditorPlatform.Theme t1) {
-                if (t1 != null) {
-                    editorControllerTheme = t1;
-                    requestUpdate(DELAYED);
-                }
+        this.editorController.themeProperty().addListener((ChangeListener<Theme>) (ov, t, t1) -> {
+            if (t1 != null) {
+        editorControllerTheme = t1;
+        requestUpdate(DELAYED);
             }
-        });
+         });
         
         this.sceneStyleSheet = editorController.getSceneStyleSheets();
-        this.editorController.sceneStyleSheetProperty().addListener(new ChangeListener<ObservableList<File>>() {
-
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<File>> ov, ObservableList<File> t, ObservableList<File> t1) {
-                if (t1 != null) {
-                    sceneStyleSheet = t1;
-                    requestUpdate(DELAYED);
-                }
+        this.editorController.sceneStyleSheetProperty().addListener((ChangeListener<ObservableList<File>>) (ov, t, t1) -> {
+            if (t1 != null) {
+                sceneStyleSheet = t1;
+                requestUpdate(DELAYED);
             }
         });
         
-        this.editorController.resourcesProperty().addListener(new ChangeListener<ResourceBundle>() {
-
-            @Override
-            public void changed(ObservableValue<? extends ResourceBundle> ov, ResourceBundle t, ResourceBundle t1) {
-                requestUpdate(DELAYED);
-            }
-        });
-        this.editorController.sampleDataEnabledProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                requestUpdate(DELAYED);
-            }
-        });
+        this.editorController.resourcesProperty().addListener((ChangeListener<ResourceBundle>) (ov, t, t1) -> requestUpdate(DELAYED));
+        this.editorController.sampleDataEnabledProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> requestUpdate(DELAYED));
     }
     
     /*
@@ -225,22 +202,10 @@ public final class PreviewWindowController extends AbstractWindowController {
      */
 
     private final ChangeListener<Number> fxomDocumentRevisionListener
-            = new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-//                    System.out.println("fxomDocumentRevisionListener called");
-                    requestUpdate(DELAYED);
-                }
-            };
+            = (observable, oldValue, newValue) -> requestUpdate(DELAYED);
 
     private final ChangeListener<Number> cssRevisionListener
-            = new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-//                    System.out.println("cssRevisionListener called");
-                    Deprecation.reapplyCSS(getScene());
-                }
-            };
+            = (observable, oldValue, newValue) -> Deprecation.reapplyCSS(getScene());
 
     /**
      * We use the provided delay before refreshing the content of the preview.
@@ -259,82 +224,79 @@ public final class PreviewWindowController extends AbstractWindowController {
             public void run() {
                 // JavaFX data should only be accessed on the JavaFX thread. 
                 // => we must wrap the code into a Runnable object and call the Platform.runLater
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        final FXOMDocument fxomDocument = editorController.getFxomDocument();
-                        if (fxomDocument != null) {
-                            // We clone the FXOMDocument
-                            FXOMDocument clone;
+                Platform.runLater(() -> {
+                    final FXOMDocument fxomDocument = editorController.getFxomDocument();
+                    if (fxomDocument != null) {
+                        // We clone the FXOMDocument
+                        FXOMDocument clone;
+                        
+                        try {
+                            clone = new FXOMDocument(fxomDocument.getFxmlText(),
+                                    fxomDocument.getLocation(),
+                                    fxomDocument.getClassLoader(),
+                                    fxomDocument.getResources());
+                            clone.setSampleDataEnabled(fxomDocument.isSampleDataEnabled());
+                        } catch (IOException ex) {
+                            throw new RuntimeException("Bug in PreviewWindowController::requestUpdate", ex); //NOI18N
+                        }
+
+                        Object sceneGraphRoot = clone.getSceneGraphRoot();
+                        final List<String> themeStyleSheetStrings = new ArrayList<>();
+                        for (URL themeURL : EditorPlatform.getThemeStylesheetURLs(editorControllerTheme)) {
+                            themeStyleSheetStrings.add(themeURL.toString());
+                        }
+
+                        if (sceneGraphRoot instanceof Parent) {
+                            ((Parent) sceneGraphRoot).setId(NID_PREVIEW_ROOT);
+                            assert ((Parent) sceneGraphRoot).getScene() == null;
+
+                            setRoot((Parent) updateAutoResizeTransform((Parent) sceneGraphRoot));
+
+                            // Compute the proper styling
+                            List<String> newStyleSheets1 = new ArrayList<>();
+                            computeStyleSheets(newStyleSheets1, sceneGraphRoot, themeStyleSheetStrings);
+
+                            // Clean all styling
+                            ((Parent) sceneGraphRoot).getStylesheets().removeAll();
+
+                            // Apply the new styling as a whole
+                           ((Parent) sceneGraphRoot).getStylesheets().addAll(newStyleSheets1);
+                        } else if (sceneGraphRoot instanceof Node) {
+                            StackPane sp1 = new StackPane();
+                            sp1.setId(NID_PREVIEW_ROOT);
                             
-                            try {
-                                clone = new FXOMDocument(fxomDocument.getFxmlText(),
-                                        fxomDocument.getLocation(),
-                                        fxomDocument.getClassLoader(),
-                                        fxomDocument.getResources());
-                                clone.setSampleDataEnabled(fxomDocument.isSampleDataEnabled());
-                            } catch (IOException ex) {
-                                throw new RuntimeException("Bug in PreviewWindowController::requestUpdate", ex); //NOI18N
-                            }
+                            // Compute the proper styling
+                            List<String> newStyleSheets2 = new ArrayList<>();
+                            computeStyleSheets(newStyleSheets2, sceneGraphRoot, themeStyleSheetStrings);
 
-                            Object sceneGraphRoot = clone.getSceneGraphRoot();
-                            final List<String> themeStyleSheetStrings = new ArrayList<>();
-                            for (URL themeURL : EditorPlatform.getThemeStylesheetURLs(editorControllerTheme)) {
-                                themeStyleSheetStrings.add(themeURL.toString());
-                            }
-
-                            if (sceneGraphRoot instanceof Parent) {
-                                ((Parent) sceneGraphRoot).setId(NID_PREVIEW_ROOT);
-                                assert ((Parent) sceneGraphRoot).getScene() == null;
-
-                                setRoot((Parent) updateAutoResizeTransform((Parent) sceneGraphRoot));
-
-                                // Compute the proper styling
-                                List<String> newStyleSheets = new ArrayList<>();
-                                computeStyleSheets(newStyleSheets, sceneGraphRoot, themeStyleSheetStrings);
-
-                                // Clean all styling
-                                ((Parent) sceneGraphRoot).getStylesheets().removeAll();
-
-                                // Apply the new styling as a whole
-                               ((Parent) sceneGraphRoot).getStylesheets().addAll(newStyleSheets);
-                            } else if (sceneGraphRoot instanceof Node) {
-                                StackPane sp = new StackPane();
-                                sp.setId(NID_PREVIEW_ROOT);
-                                
-                                // Compute the proper styling
-                                List<String> newStyleSheets = new ArrayList<>();
-                                computeStyleSheets(newStyleSheets, sceneGraphRoot, themeStyleSheetStrings);
-
-                                // Apply the new styling as a whole
-                                sp.getStylesheets().addAll(newStyleSheets);
-                                
-                                // With some 3D assets such as TuxRotation the
-                                // rendering is wrong unless applyCSS is called.
-                                ((Node) sceneGraphRoot).applyCss();
-                                sp.getChildren().add(updateAutoResizeTransform((Node) sceneGraphRoot));
-                                setRoot(sp);
-                            } else {
-                                setCameraType(CameraType.PARALLEL);
-                                sizeChangedFromMenu = false;
-                                StackPane sp = new StackPane(new Label(I18N.getString("preview.not.node")));
-                                sp.setId(NID_PREVIEW_ROOT);
-                                sp.setPrefSize(WIDTH_WHEN_EMPTY, HEIGHT_WHEN_EMPTY);
-                                setRoot(sp);
-                            }
+                            // Apply the new styling as a whole
+                            sp1.getStylesheets().addAll(newStyleSheets2);
+                            
+                            // With some 3D assets such as TuxRotation the
+                            // rendering is wrong unless applyCSS is called.
+                            ((Node) sceneGraphRoot).applyCss();
+                            sp1.getChildren().add(updateAutoResizeTransform((Node) sceneGraphRoot));
+                            setRoot(sp1);
                         } else {
                             setCameraType(CameraType.PARALLEL);
                             sizeChangedFromMenu = false;
-                            StackPane sp = new StackPane(new Label(I18N.getString("preview.no.document")));
-                            sp.setId(NID_PREVIEW_ROOT);
-                            sp.setPrefSize(WIDTH_WHEN_EMPTY, HEIGHT_WHEN_EMPTY);
-                            setRoot(sp);
+                            StackPane sp2 = new StackPane(new Label(I18N.getString("preview.not.node")));
+                            sp2.setId(NID_PREVIEW_ROOT);
+                            sp2.setPrefSize(WIDTH_WHEN_EMPTY, HEIGHT_WHEN_EMPTY);
+                            setRoot(sp2);
                         }
-
-                        getScene().setRoot(getRoot());
-                        updateWindowSize();
-                        updateWindowTitle();
+                    } else {
+                        setCameraType(CameraType.PARALLEL);
+                        sizeChangedFromMenu = false;
+                        StackPane sp3 = new StackPane(new Label(I18N.getString("preview.no.document")));
+                        sp3.setId(NID_PREVIEW_ROOT);
+                        sp3.setPrefSize(WIDTH_WHEN_EMPTY, HEIGHT_WHEN_EMPTY);
+                        setRoot(sp3);
                     }
+
+                    getScene().setRoot(getRoot());
+                    updateWindowSize();
+                    updateWindowTitle();
                 });
             }
         };

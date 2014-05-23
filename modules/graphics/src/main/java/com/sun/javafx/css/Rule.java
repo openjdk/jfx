@@ -26,24 +26,20 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
+import javafx.css.StyleOrigin;
+import javafx.scene.Node;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-import javafx.css.PseudoClass;
-import javafx.css.StyleOrigin;
-
-import javafx.scene.Node;
-import sun.util.logging.PlatformLogger;
 
 /*
  * A selector is a collection of selectors and declarations.

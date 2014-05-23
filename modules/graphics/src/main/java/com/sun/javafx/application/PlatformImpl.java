@@ -228,7 +228,11 @@ public class PlatformImpl {
         //Use reflection in case we are running compact profile
         try {
             Class swingFXUtilsClass = Class.forName("javafx.embed.swing.SwingFXUtils");
-            Method installFwEventQueue = swingFXUtilsClass.getMethod(methodName);
+            Method installFwEventQueue = swingFXUtilsClass.getDeclaredMethod(methodName);
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                installFwEventQueue.setAccessible(true);
+                return null;
+            });
 
             waitForStart();
             installFwEventQueue.invoke(null);

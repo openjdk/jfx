@@ -117,10 +117,11 @@ public class KeyInput {
 
     private char[] getKeyChars(KeyState state, int key) {
         char c = '\000';
-        boolean shifted = state.isShiftPressed() ^ capsLock;
+        boolean shifted = state.isShiftPressed();
         // TODO: implement configurable keyboard mappings.
         // The following is only for US keyboards
         if (key >= KeyEvent.VK_A && key <= KeyEvent.VK_Z) {
+            shifted ^= capsLock;
             if (shifted) {
                 c = (char) (key - KeyEvent.VK_A + 'A');
             } else {

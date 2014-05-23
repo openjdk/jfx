@@ -41,6 +41,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     protected PopupControl popup;
     public static final String COMBO_BOX_STYLE_CLASS = "combo-box-popup";
 
+    private boolean popupNeedsReconfiguring = true;
+
     public ComboBoxPopupControl(ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior<T> behavior) {
         super(comboBox, behavior);
     }
@@ -92,6 +94,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         getPopupContent().autosize();
         Point2D p = getPrefPopupPosition();
+
+        popupNeedsReconfiguring = true;
         reconfigurePopup();
         
         final ComboBoxBase<T> comboBoxBase = getSkinnable();
@@ -133,6 +137,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         
         // Fix for RT-21207
         InvalidationListener layoutPosListener = o -> {
+            popupNeedsReconfiguring = true;
             reconfigurePopup();
         };
         getSkinnable().layoutXProperty().addListener(layoutPosListener);
@@ -157,6 +162,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         final boolean isShowing = popup.isShowing();
         if (! isShowing) return;
+
+        if (! popupNeedsReconfiguring) return;
+        popupNeedsReconfiguring = false;
 
         final Point2D p = getPrefPopupPosition();
 

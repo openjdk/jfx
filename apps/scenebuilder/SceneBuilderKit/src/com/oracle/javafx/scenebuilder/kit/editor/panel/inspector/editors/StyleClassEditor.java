@@ -50,7 +50,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -90,13 +89,7 @@ public class StyleClassEditor extends InlineListEditor {
         addItem(getNewStyleClassItem());
 
         // On Theme change, update the themeClasses
-        editorController.themeProperty().addListener(new ChangeListener<Theme>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Theme> ov, Theme t, Theme t1) {
-                themeClasses = CssInternal.getThemeStyleClasses(StyleClassEditor.this.editorController.getTheme());
-            }
-        });
+        editorController.themeProperty().addListener((ChangeListener<Theme>) (ov, t, t1) -> themeClasses = CssInternal.getThemeStyleClasses(StyleClassEditor.this.editorController.getTheme()));
     }
 
     private StyleClassItem getNewStyleClassItem() {
@@ -245,51 +238,41 @@ public class StyleClassEditor extends InlineListEditor {
             styleClassSp.getChildren().add(super.getRoot());
 
             styleClassTf = super.getTextField();
-            EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+            EventHandler<ActionEvent> onActionListener = event -> {
 //                    System.out.println("StyleClassItem : onActionListener");
-                    if (getValue().equals(currentValue)) {
-                        // no change
-                        return;
-                    }
-                    if (styleClassTf.getText().isEmpty()) {
-                        remove(null);
-                    }
-//                        System.out.println("StyleEditorItem : COMMIT");
-                    editor.commit(StyleClassItem.this);
-                    if ((event != null) && event.getSource() instanceof TextField) {
-                        ((TextField) event.getSource()).selectAll();
-                    }
-                    updateButtons();
-                    currentValue = getValue();
+                if (getValue().equals(currentValue)) {
+                    // no change
+                    return;
                 }
+                if (styleClassTf.getText().isEmpty()) {
+                    remove(null);
+                }
+//                        System.out.println("StyleEditorItem : COMMIT");
+                editor.commit(StyleClassItem.this);
+                if ((event != null) && event.getSource() instanceof TextField) {
+                    ((TextField) event.getSource()).selectAll();
+                }
+                updateButtons();
+                currentValue = getValue();
             };
 
-            ChangeListener<String> textPropertyChange = new ChangeListener<String>() {
-
-                @Override
-                public void changed(ObservableValue<? extends String> ov, String prevText, String newText) {
-                    if (prevText.isEmpty() || newText.isEmpty()) {
-                        // Text changed FROM empty value, or TO empty value: buttons status change
-                        updateButtons();
-                    }
+            ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
+                if (prevText.isEmpty() || newText.isEmpty()) {
+                    // Text changed FROM empty value, or TO empty value: buttons status change
+                    updateButtons();
                 }
             };
             styleClassTf.textProperty().addListener(textPropertyChange);
             updateButtons();
 
             setTextEditorBehavior(styleClassTf, onActionListener, false);
-            ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                    if (!newValue) {
-                        // focus lost: commit
-                        editor.editing(false, onActionListener);
-                    } else {
-                        // got focus
-                        editor.editing(true, onActionListener);
-                    }
+            ChangeListener<Boolean> focusListener = (observable, oldValue, newValue) -> {
+                if (!newValue) {
+                    // focus lost: commit
+                    editor.editing(false, onActionListener);
+                } else {
+                    // got focus
+                    editor.editing(true, onActionListener);
                 }
             };
             styleClassTf.focusedProperty().addListener(focusListener);
@@ -308,13 +291,9 @@ public class StyleClassEditor extends InlineListEditor {
                 // css classes menu items
                 MenuItem menuItem = new MenuItem(className);
                 menuItem.setMnemonicParsing(false);
-                menuItem.setOnAction(new EventHandler<ActionEvent>() {
-
-                    @Override
-                    public void handle(ActionEvent t) {
-                        styleClassTf.setText(className);
-                        StyleClassItem.this.getCommitListener().handle(null);
-                    }
+                menuItem.setOnAction(t -> {
+                    styleClassTf.setText(className);
+                    StyleClassItem.this.getCommitListener().handle(null);
                 });
                 actionMb.getItems().add(menuItem);
             }

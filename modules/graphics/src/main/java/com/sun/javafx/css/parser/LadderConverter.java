@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,17 @@
 
 package com.sun.javafx.css.parser;
 
+import com.sun.javafx.css.StyleConverterImpl;
+import javafx.css.ParsedValue;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
-
-import com.sun.javafx.css.StyleConverterImpl;
-import javafx.css.ParsedValue;
 
 public final class LadderConverter extends StyleConverterImpl<ParsedValue[], Color> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
-        static LadderConverter INSTANCE = new LadderConverter();
+        static final LadderConverter INSTANCE = new LadderConverter();
     }
 
     public static LadderConverter getInstance() {

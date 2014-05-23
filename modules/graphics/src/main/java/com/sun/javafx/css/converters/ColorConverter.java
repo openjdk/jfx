@@ -34,7 +34,7 @@ import javafx.scene.text.Font;
 public final class ColorConverter extends StyleConverterImpl<String, Color> {
 
     private static class Holder {
-        static ColorConverter COLOR_INSTANCE = new ColorConverter();
+        static final ColorConverter COLOR_INSTANCE = new ColorConverter();
     }
 
     // lazy, thread-safe instatiation
