@@ -48,8 +48,7 @@ if (IS_LINUX) {
     compilerPrefix="arm-linux-"
     jniPlatform="darwin"
 } else {
-    println "ERROR: Cannot build on this platform"
-    return;
+    fail("armv7hf Cannot build on this platform")
 }
 
 if (rootProject.hasProperty("ARMV7HF_COMPILER")) {
@@ -64,9 +63,9 @@ if (rootProject.hasProperty("ARMV7HF_COMPILER_PREFIX")) {
 // Declare whether this particular target file applies to the current system
 ARMV7HF.canBuild = (IS_LINUX || IS_MAC) && compilerHome.exists() && sdk.exists()
 if (!ARMV7HF.canBuild) {
-    if (!compilerHome.exists()) println "ERROR: Mising compiler $compilerHome"
-    if (!sdk.exists()) println "ERROR: Mising sdk $sdk"
-    return;
+    if (!compilerHome.exists()) println "ERROR: Missing compiler $compilerHome"
+    if (!sdk.exists()) println "ERROR: Missing sdk $sdk"
+    fail("armv7hf missing required tools")
 }
 
 // Lambda for naming the generated libs

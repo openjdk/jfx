@@ -47,16 +47,15 @@ if (IS_LINUX) {
 } else if (IS_MAC) {
     jniPlatform="darwin"
 } else {
-    println "ERROR: Cannot build on this platform"
-    return;
+    fail( "armv5sf Cannot build on this platform")
 }
 
 // Declare whether this particular target file applies to the current system
 ARMV5SF.canBuild = (IS_LINUX || IS_MAC) && compilerHome.exists() && sdk.exists()
 if (!ARMV5SF.canBuild) {
-    if (!compilerHome.exists()) println "ERROR: Mising compiler $compilerHome"
-    if (!sdk.exists()) println "ERROR: Mising sdk $sdk"
-    return;
+    if (!compilerHome.exists()) println "armv5sf Missing compiler $compilerHome"
+    if (!sdk.exists()) println "armv5sf Missing sdk $sdk"
+    fail("armv5sF missing required tools")
 }
 
 // Lambda for naming the generated libs
