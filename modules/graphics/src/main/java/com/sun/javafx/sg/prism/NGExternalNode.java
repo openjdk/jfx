@@ -59,17 +59,18 @@ public class NGExternalNode extends NGNode {
         int y = rd.bdata.srcbounds.y;
         int w = rd.bdata.srcbounds.width;
         int h = rd.bdata.srcbounds.height;
-
+        
         if (dsttexture != null) {
             
             dsttexture.lock();
             
             if (dsttexture.isSurfaceLost() ||
-               (dsttexture.getContentWidth() != rd.bdata.dstwidth) ||
-               (dsttexture.getContentHeight() != rd.bdata.dstheight))
+               (dsttexture.getContentWidth() != w) ||
+               (dsttexture.getContentHeight() != h))
             {
                 dsttexture.unlock();
                 dsttexture.dispose();
+                rd = rd.copyAddDirtyRect(0, 0, w, h);
                 dsttexture = createTexture(g, rd);
             }
         } else {
@@ -84,7 +85,7 @@ public class NGExternalNode extends NGNode {
                 try {
                     dsttexture.update(rd.bdata.srcbuffer,
                                       PixelFormat.INT_ARGB_PRE,
-                                      x + rd.dirtyRect.x, y + rd.dirtyRect.y, // dst
+                                      rd.dirtyRect.x, rd.dirtyRect.y, // dst
                                       x + rd.dirtyRect.x, y + rd.dirtyRect.y,  // src
                                       rd.dirtyRect.width, rd.dirtyRect.height, // src
                                       rd.bdata.linestride * 4,
@@ -96,9 +97,10 @@ public class NGExternalNode extends NGNode {
                     g.clear();
                 }
             }
+            
             g.drawTexture(dsttexture,
-                          x, y, x + w, y + h, // dst
-                          x, y, x + w, y + h); // src
+                          0, 0, rd.bdata.usrwidth, rd.bdata.usrheight, // dst
+                          0, 0, w, h); // src
         } finally {        
             dsttexture.unlock();
         }
@@ -107,13 +109,12 @@ public class NGExternalNode extends NGNode {
     private Texture createTexture(Graphics g, RenderData rd) {
         ResourceFactory factory = g.getResourceFactory();
         if (!factory.isDeviceReady()) {
-            System.err.println("NGExternalNode: graphics device is not ready");
             return null;
-        }                
+        }               
         Texture txt = factory.createTexture(PixelFormat.INT_ARGB_PRE,
                                             Texture.Usage.DYNAMIC,
                                             Texture.WrapMode.CLAMP_NOT_NEEDED,
-                                            rd.bdata.dstwidth, rd.bdata.dstheight);            
+                                            rd.bdata.srcbounds.width, rd.bdata.srcbounds.height);
         if (txt != null) {
             txt.contentsUseful();
         } else {
@@ -130,28 +131,42 @@ public class NGExternalNode extends NGNode {
         // the source pixel buffer
         final Buffer srcbuffer;
 
-        // line stride of the source buffer
+        // source buffer line stride
         final int linestride;
 
-        // source image bounds
+        // source image physical bounds
         final Rectangle srcbounds;
         
-        // source image buffer size
-        final int dstwidth;
-        final int dstheight;
+        // source image user space (logical) size
+        final int usrwidth;
+        final int usrheight;
+        
+        // source image scale factor
+        final int scale;
         
         BufferData(Buffer srcbuffer, int linestride,
-                   int x, int y, int width, int height)
+                   int x, int y, int width, int height,
+                   int scale)
         {
-            this.srcbuffer = srcbuffer;            
+            this.srcbuffer = srcbuffer;
+            this.scale = scale;
             this.linestride = linestride;
-            this.srcbounds = new Rectangle(x, y, width, height);
-            this.dstwidth = linestride;
-            this.dstheight = srcbuffer.capacity() / linestride;            
+            this.srcbounds = scale(new Rectangle(x, y, width, height));
+            this.usrwidth = width;
+            this.usrheight = height;
         }
         
+        Rectangle scale(Rectangle r) {
+            r.x *= this.scale;
+            r.y *= this.scale;
+            r.width *= this.scale;
+            r.height *= this.scale;
+            return r;
+        }        
+        
         BufferData copyWithBounds(int x, int y, int width, int height) {            
-            return new BufferData(this.srcbuffer, this.linestride, x, y, width, height);
+            return new BufferData(this.srcbuffer, this.linestride,
+                                  x, y, width, height, this.scale);
         }
     }
     
@@ -164,33 +179,41 @@ public class NGExternalNode extends NGNode {
                    int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight,
                    boolean clearTarget)
         {
+            this(bdata, dirtyX, dirtyY, dirtyWidth, dirtyHeight, clearTarget, true);
+        }
+        
+        RenderData(BufferData bdata,
+                   int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight,
+                   boolean clearTarget, boolean applyScale)
+        {
             this.bdata = bdata;
-            this.dirtyRect = new Rectangle(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+            Rectangle r = new Rectangle(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+            this.dirtyRect = applyScale ? bdata.scale(r) : r;
+            this.dirtyRect.intersectWith(bdata.srcbounds);
             this.clearTarget = clearTarget;
         }
 
         RenderData copyAddDirtyRect(int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight) {
             
-            Rectangle r = new Rectangle(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+            Rectangle r = bdata.scale(new Rectangle(dirtyX, dirtyY, dirtyWidth, dirtyHeight));
             r.add(this.dirtyRect);
-            return new RenderData(this.bdata,
-                                  r.x, r.y, r.width, r.height,
-                                  this.clearTarget);
+            return new RenderData(this.bdata, r.x, r.y, r.width, r.height,
+                                  this.clearTarget, false);
         }
-    }
+    }    
     
     public void setImageBuffer(Buffer buffer,
                                int x, int y, int width, int height,
-                               int linestride)
+                               int linestride,
+                               int scale)
     {
-        bufferData = new BufferData(buffer, linestride, x, y, width, height);
+        bufferData = new BufferData(buffer, linestride, x, y, width, height, scale);
         renderData.set(new RenderData(bufferData, x, y, width, height, true));
     }
 
     public void setImageBounds(final int x, final int y, final int width, final int height) {
         
-        final boolean shrinked = width < bufferData.srcbounds.width ||
-                                 height < bufferData.srcbounds.height;
+        final boolean shrinked = width < bufferData.usrwidth || height < bufferData.usrheight;
         
         bufferData = bufferData.copyWithBounds(x, y, width, height);
         renderData.updateAndGet(prev -> {

@@ -256,6 +256,10 @@ public final class Screen {
         // Get the new screens
         initScreens();
 
+        if (eventHandler != null) {
+            eventHandler.handleSettingsChanged();
+        }
+
         // Update the screen for each window to match the new instance.
         // Note that if a window has moved to another screen, the window
         // will be notified separately of that from native code and the
@@ -276,10 +280,6 @@ public final class Screen {
             for (Screen screen : oldScreens) {
                 screen.dispose();
             }
-        }
-
-        if (eventHandler != null) {
-            eventHandler.handleSettingsChanged();
         }
     }
 

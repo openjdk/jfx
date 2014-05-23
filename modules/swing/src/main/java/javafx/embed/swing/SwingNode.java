@@ -39,6 +39,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+import javafx.stage.Screen;
 import javafx.stage.Window;
 import javax.swing.JComponent;
 import java.awt.AWTEvent;
@@ -50,6 +51,8 @@ import java.awt.event.InputEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowFocusListener;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -66,7 +69,10 @@ import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGExternalNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
+import com.sun.javafx.stage.ScreenHelper;
+import com.sun.javafx.stage.WindowHelper;
 import sun.awt.UngrabEvent;
+import sun.awt.LightweightFrame;
 import sun.swing.JLightweightFrame;
 import sun.swing.LightweightContent;
 
@@ -133,6 +139,8 @@ public class SwingNode extends Node {
     private boolean skipBackwardUnrgabNotification;
     private boolean grabbed; // lwframe initiated grab
     
+    private volatile int scale = 1;
+
     /**
      * Constructs a new instance of {@code SwingNode}.
      */
@@ -186,6 +194,46 @@ public class SwingNode extends Node {
         return content;
     }
 
+    private static final class OptionalMethod<T> {
+        private final Method method;
+
+        public OptionalMethod(Class<T> cls, String name, Class<?>... args) {
+            Method m;
+            try {
+                m = cls.getMethod(name, args);
+            } catch (NoSuchMethodException ignored) {
+                // This means we're running with older JDK, simply skip the call
+                m = null;
+            } catch (Throwable ex) {
+                throw new RuntimeException("Error when calling " + cls.getName() + ".getMethod('" + name + "').", ex);
+            }
+            method = m;
+        }
+
+        public boolean isSupported() {
+            return method != null;
+        }
+
+        public Object invoke(T object, Object... args) {
+            if (method != null) {
+                try {
+                    return method.invoke(object, args);
+                } catch (Throwable ex) {
+                    throw new RuntimeException("Error when calling " + object.getClass().getName() + "." + method.getName() + "().", ex);
+                }
+            } else {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Calls JLightweightFrame.notifyDisplayChanged.
+     * Must be called on EDT only.
+     */
+    private static final OptionalMethod<JLightweightFrame> jlfNotifyDisplayChanged =
+        new OptionalMethod<>(JLightweightFrame.class, "notifyDisplayChanged", Integer.TYPE);
+    
     /*
      * Called on EDT
      */
@@ -212,6 +260,7 @@ public class SwingNode extends Node {
                 }
             });
 
+            jlfNotifyDisplayChanged.invoke(lwFrame, Math.round(scale));
             lwFrame.setContent(new SwingNodeContent(content));
             lwFrame.setSize((int)width, (int)height);
             lwFrame.setVisible(true);
@@ -234,10 +283,11 @@ public class SwingNode extends Node {
     void setImageBuffer(final int[] data,
                         final int x, final int y,
                         final int w, final int h,
-                        final int linestride)
+                        final int linestride,
+                        final int scale)
     {
         Runnable r = () -> {
-            peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h, linestride);
+            peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h, linestride, scale);
         };
         if (peer != null) {
             SwingFXUtils.runOnFxThread(r);
@@ -377,6 +427,11 @@ public class SwingNode extends Node {
         locateLwFrame();
     };
 
+    private final ChangeListener<Screen> screenListener = (observable, oldValue, newValue) -> {
+        SwingNode.this.scale = Math.round(ScreenHelper.getScreenAccessor().getScale(newValue));
+        setLwFrameScale(SwingNode.this.scale);
+    };
+
     private final EventHandler<FocusUngrabEvent> ungrabHandler = event -> {
         if (!skipBackwardUnrgabNotification) {
             AccessController.doPrivileged(new PostEventAction(new UngrabEvent(lwFrame)));
@@ -413,7 +468,7 @@ public class SwingNode extends Node {
         if (window != null) {
             addWindowListeners(window);
         }
-        scene.windowProperty().addListener(sceneWindowListener);
+        scene.windowProperty().addListener(sceneWindowListener);                
     }
 
     private void addWindowListeners(final Window window) {
@@ -421,6 +476,11 @@ public class SwingNode extends Node {
         window.yProperty().addListener(locationListener);
         window.addEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
         window.showingProperty().addListener(windowVisibleListener);
+        WindowHelper.getWindowAccessor().screenProperty(window).addListener(screenListener);
+        
+        this.scale = Math.round(ScreenHelper.getScreenAccessor().getScale(
+                    WindowHelper.getWindowAccessor().screenProperty(window).get()));
+        setLwFrameScale(this.scale);
     }
 
     private void removeWindowListeners(final Window window) {
@@ -428,6 +488,7 @@ public class SwingNode extends Node {
         window.yProperty().removeListener(locationListener);
         window.removeEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
         window.showingProperty().removeListener(windowVisibleListener);
+        WindowHelper.getWindowAccessor().screenProperty(window).removeListener(screenListener);
     }
 
     @Override
@@ -478,6 +539,14 @@ public class SwingNode extends Node {
         }
     }
 
+    /**
+     * Calls JLightweightFrame.setHostBounds.
+     * Must be called on EDT only.
+     */
+    private static final OptionalMethod<JLightweightFrame> jlfSetHostBounds =
+        new OptionalMethod<>(JLightweightFrame.class, "setHostBounds",
+                Integer.TYPE, Integer.TYPE, Integer.TYPE, Integer.TYPE);
+
     private void locateLwFrame() {
         if (getScene() == null
                 || lwFrame == null
@@ -489,13 +558,17 @@ public class SwingNode extends Node {
         final Point2D loc = localToScene(0, 0);
         final int windowX = (int)getScene().getWindow().getX();
         final int windowY = (int)getScene().getWindow().getY();
+        final int windowW = (int)getScene().getWindow().getWidth();
+        final int windowH = (int)getScene().getWindow().getHeight();
         final int sceneX = (int)getScene().getX();
         final int sceneY = (int)getScene().getY();
 
         SwingFXUtils.runOnEDT(() -> {
             if (lwFrame != null) {
                 lwFrame.setLocation(windowX + sceneX + (int) loc.getX(),
-                        windowY + sceneY + (int) loc.getY());
+                    windowY + sceneY + (int) loc.getY());
+                jlfSetHostBounds.invoke(lwFrame, windowX, windowY,
+                    windowW, windowH);
             }
         });
     }
@@ -533,6 +606,20 @@ public class SwingNode extends Node {
             }
         });
     }
+    
+    private void setLwFrameScale(final int scale) {
+        if (lwFrame == null) {
+            return;
+        }
+        SwingFXUtils.runOnEDT(new Runnable() {
+            @Override
+            public void run() {
+                if (lwFrame != null) {
+                    jlfNotifyDisplayChanged.invoke(lwFrame, scale);
+                }
+            }
+        });        
+    }
 
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
@@ -563,9 +650,14 @@ public class SwingNode extends Node {
         public void paintUnlock() {
             paintLock.unlock();
         }
-        @Override
+
+        // Note: we skip @Override annotation and implement both pre-hiDPI and post-hiDPI versions
+        // of the method for compatibility.
         public void imageBufferReset(int[] data, int x, int y, int width, int height, int linestride) {
-            SwingNode.this.setImageBuffer(data, x, y, width, height, linestride);
+            imageBufferReset(data, x, y, width, height, linestride, 1);
+        }
+        public void imageBufferReset(int[] data, int x, int y, int width, int height, int linestride, int scale) {
+            SwingNode.this.setImageBuffer(data, x, y, width, height, linestride, scale);
         }
         @Override
         public void imageReshaped(int x, int y, int width, int height) {

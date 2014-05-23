@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,19 +23,30 @@
  * questions.
  */
 
-package com.sun.javafx.tk;
+package com.sun.javafx.stage;
 
-/*
+import javafx.stage.Screen;
+
+/**
+ * Utility class used for accessing certain implementation-specific
+ * runtime functionality.
  */
-public interface ScreenConfigurationAccessor {
-    public int getMinX(Object obj);
-    public int getMinY(Object obj);
-    public int getWidth(Object obj);
-    public int getHeight(Object obj);
-    public int getVisualMinX(Object obj);
-    public int getVisualMinY(Object obj);
-    public int getVisualHeight(Object obj);
-    public int getVisualWidth(Object obj);
-    public float getDPI(Object obj);
-    public float getScale(Object obj);
+public final class ScreenHelper {
+
+    private static ScreenAccessor screenAccessor;
+
+    public static interface ScreenAccessor {
+        public float getScale(Screen screen);
+    }
+
+    public static void setScreenAccessor(ScreenAccessor a) {
+        if (screenAccessor != null) {
+            throw new IllegalStateException();
+        }
+        screenAccessor = a;
+    }
+
+    public static ScreenAccessor getScreenAccessor() {
+        return screenAccessor;
+    }
 }

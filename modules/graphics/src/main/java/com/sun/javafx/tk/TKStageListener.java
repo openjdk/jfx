@@ -90,6 +90,14 @@ public interface TKStageListener {
     public void changedFullscreen(boolean fs);
 
     /**
+     * The stage's peer has moved to another screen.
+     *
+     * @param from An object that identifies the old screen (may be null)
+     * @param to An object that identifies the new screen
+     */
+    public void changedScreen(Object from, Object to);
+
+    /**
      * Called if the window is closing do to something that has happened on the peer. For
      * example the user clicking the close button or choosing quit from the application menu
      * on a mac or right click close on the task bar on windows.

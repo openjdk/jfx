@@ -145,5 +145,11 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 ViewPainter.renderLock.unlock();
             }
         }
+
+        AccessControlContext acc = stage.getAccessControlContext();
+        AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
+            stage.stageListener.changedScreen(oldScreen, newScreen);
+            return (Void)null;
+        } , acc);
     }
 }

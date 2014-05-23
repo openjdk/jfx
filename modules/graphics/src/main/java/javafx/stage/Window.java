@@ -100,6 +100,18 @@ public class Window implements EventTarget {
                     }
 
                     @Override
+                    public void notifyScreenChanged(Window window,
+                                                  Object from,
+                                                  Object to) {
+                        window.notifyScreenChanged(from, to);
+                    }
+
+                    @Override
+                    public ReadOnlyObjectProperty<Screen> screenProperty(Window window) {
+                        return window.screenProperty();
+                    }
+
+                    @Override
                     public AccessControlContext getAccessControlContext(Window window) {
                         return window.acc;
                     }
@@ -1093,6 +1105,13 @@ public class Window implements EventTarget {
         } while (window != null);
 
         return Screen.getPrimary();
+    }
+
+    private final ReadOnlyObjectWrapper<Screen> screen = new ReadOnlyObjectWrapper<>(Screen.getPrimary());
+    private ReadOnlyObjectProperty<Screen> screenProperty() { return screen.getReadOnlyProperty(); }
+
+    private void notifyScreenChanged(Object from, Object to) {
+        screen.set(getWindowScreen());
     }
 
     /**

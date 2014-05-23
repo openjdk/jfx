@@ -79,6 +79,10 @@ public class WindowPeerListener implements TKStageListener {
         // Overridden in subclasses
     }
 
+    public void changedScreen(Object from, Object to) {
+        WindowHelper.getWindowAccessor().notifyScreenChanged(window, from, to);
+    }
+
     @Override
     public void closing() {
         Event.fireEvent(window, 

@@ -590,6 +590,9 @@ public final class QuantumToolkit extends Toolkit {
             @Override public float getDPI(Object obj) {
                 return ((Screen)obj).getResolutionX();
             }
+            @Override public float getScale(Object obj) {
+                return ((Screen)obj).getScale();
+            }
         };
 
     @Override public ScreenConfigurationAccessor
