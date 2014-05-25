@@ -26,7 +26,6 @@
 package com.sun.glass.ui.monocle.input;
 
 import com.sun.glass.events.TouchEvent;
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.GestureSupport;
 import com.sun.glass.ui.TouchInputSupport;
 import com.sun.glass.ui.View;
@@ -34,6 +33,7 @@ import com.sun.glass.ui.Window;
 import com.sun.glass.ui.monocle.MonocleSettings;
 import com.sun.glass.ui.monocle.MonocleTrace;
 import com.sun.glass.ui.monocle.MonocleWindow;
+import com.sun.glass.ui.monocle.RunnableProcessor;
 import com.sun.glass.ui.monocle.input.filters.TouchPipeline;
 
 import java.security.AccessController;
@@ -118,11 +118,11 @@ public class TouchInput {
         if (!newState.equalsSorted(state)) {
             // Post touch events
             if (view != oldView) {
-                dispatchAllPoints(state, TouchEvent.TOUCH_RELEASED);
-                dispatchAllPoints(newState,
-                                  TouchEvent.TOUCH_PRESSED);
+                postTouchEvent(state, TouchEvent.TOUCH_RELEASED);
+                postTouchEvent(newState,
+                               TouchEvent.TOUCH_PRESSED);
             } else if (view != null) {
-                dispatchPoints(window, view, newState);
+                postTouchEvent(window, view, newState);
             }
             // Post mouse events
             MouseInputSynthesizer.getInstance().setState(newState);
@@ -131,10 +131,41 @@ public class TouchInput {
     }
 
     private void dispatchPoint(Window window, View view, int state,
-                               TouchState.Point p) {
-        touches.notifyNextTouchEvent(view, state, p.id,
-                                     p.x, p.y,
-                                     p.x - window.getX(), p.y - window.getY());
+                               int id, int x, int y) {
+        touches.notifyNextTouchEvent(view, state, id,
+                                     x, y,
+                                     x - window.getX(), y - window.getY());
+    }
+
+    private void postPoints(Window window, View view,
+                            int[] states, int[] ids, int[] xs, int[] ys) {
+        RunnableProcessor.runLater(() -> {
+            touches.notifyBeginTouchEvent(view, 0, true, states.length);
+            for (int i = 0; i < states.length; i++) {
+                dispatchPoint(window, view, states[i], ids[i],
+                              xs[i], ys[i]);
+            }
+            touches.notifyEndTouchEvent(view);
+        });
+    }
+
+    private void postPoint(Window window, View view,
+                            int state, TouchState.Point p) {
+        int id = p.id;
+        int x = p.x;
+        int y = p.y;
+        RunnableProcessor.runLater(() -> {
+            touches.notifyBeginTouchEvent(view, 0, true, 1);
+            dispatchPoint(window, view, state, id, x, y);
+            touches.notifyEndTouchEvent(view);
+        });
+    }
+
+    private void postNoPoints(View view) {
+        RunnableProcessor.runLater(() -> {
+            touches.notifyBeginTouchEvent(view, 0, true, 0);
+            touches.notifyEndTouchEvent(view);
+        });
     }
 
     /** Sends the same event type for all points in the given state
@@ -142,24 +173,32 @@ public class TouchInput {
      * @param state The state for which to process all points
      * @param eventType The type of TouchEvent to send (e.g. TouchEvent.PRESSED)
      */
-    private void dispatchAllPoints(TouchState state, int eventType) {
-
+    private void postTouchEvent(TouchState state, int eventType) {
         Window window = state.getWindow(false, null);
         View view = window == null ? null : window.getView();
         if (view != null) {
-            touches.notifyBeginTouchEvent(view, 0, true, state.getPointCount());
-            for (int i = 0; i < state.getPointCount(); i++) {
-                TouchState.Point oldPoint = state.getPoint(i);
-                try {
-                    dispatchPoint(window, view, eventType, oldPoint);
-                } catch (RuntimeException e) {
-                    Application.reportException(e);
+            switch (state.getPointCount()) {
+                case 0:
+                    postNoPoints(view);
+                    break;
+                case 1:
+                    postPoint(window, view, eventType, state.getPoint(0));
+                    break;
+                default: {
+                    int count = state.getPointCount();
+                    int[] states = new int[count];
+                    int[] ids = new int[count];
+                    int[] xs = new int[count];
+                    int[] ys = new int[count];
+                    for (int i = 0; i < count; i++) {
+                        states[i] = eventType;
+                        TouchState.Point p = state.getPoint(i);
+                        ids[i] = p.id;
+                        xs[i] = p.x;
+                        ys[i] = p.y;
+                    }
+                    postPoints(window, view, states, ids, xs, ys);
                 }
-            }
-            try {
-                touches.notifyEndTouchEvent(view);
-            } catch (RuntimeException e) {
-                Application.reportException(e);
             }
         }
     }
@@ -171,38 +210,78 @@ public class TouchInput {
      * @param view The current View
      * @param newState The updated touch points
      */
-    private void dispatchPoints(MonocleWindow window,
+    private void postTouchEvent(MonocleWindow window,
                                 View view,
                                 TouchState newState) {
-        touches.notifyBeginTouchEvent(view, 0, true, countEvents(newState));
-        for (int i = 0; i < state.getPointCount(); i++) {
-            TouchState.Point oldPoint = state.getPoint(i);
-            TouchState.Point newPoint = newState.getPointForID(oldPoint.id);
-            if (newPoint != null) {
-                if (newPoint.x == oldPoint.x && newPoint.y == oldPoint.y) {
-                    dispatchPoint(window, view, TouchEvent.TOUCH_STILL,
-                                  newPoint);
+        int count = countEvents(newState);
+        switch (count) {
+            case 0:
+                postNoPoints(view);
+                break;
+            case 1:
+                if (state.getPointCount() == 1) {
+                    // There is one point and it already existed
+                    TouchState.Point oldPoint = state.getPoint(0);
+                    TouchState.Point newPoint = newState.getPointForID(
+                            oldPoint.id);
+                    if (newPoint != null) {
+                        if (newPoint.x == oldPoint.x
+                                && newPoint.y == oldPoint.y) {
+                            postPoint(window, view, TouchEvent.TOUCH_STILL, newPoint);
+                        } else {
+                            postPoint(window, view, TouchEvent.TOUCH_MOVED, newPoint);
+                        }
+                    } else {
+                        postPoint(window, view, TouchEvent.TOUCH_RELEASED, oldPoint);
+                    }
                 } else {
-                    dispatchPoint(window, view, TouchEvent.TOUCH_MOVED,
-                                  newPoint);
+                    // There is one point and it is newly pressed
+                    postPoint(window, view, TouchEvent.TOUCH_PRESSED, newState.getPoint(0));
                 }
-            } else {
-                dispatchPoint(window, view, TouchEvent.TOUCH_RELEASED, oldPoint);
+                break;
+            default: {
+                int[] states = new int[count];
+                int[] ids = new int[count];
+                int[] xs = new int[count];
+                int[] ys = new int[count];
+                for (int i = 0; i < state.getPointCount(); i++) {
+                    TouchState.Point oldPoint = state.getPoint(i);
+                    TouchState.Point newPoint = newState.getPointForID(
+                            oldPoint.id);
+                    if (newPoint != null) {
+                        ids[i] = newPoint.id;
+                        xs[i] = newPoint.x;
+                        ys[i] = newPoint.y;
+                        if (newPoint.x == oldPoint.x
+                                && newPoint.y == oldPoint.y) {
+                            states[i] = TouchEvent.TOUCH_STILL;
+                        } else {
+                            states[i] = TouchEvent.TOUCH_MOVED;
+                        }
+                    } else {
+                        states[i] = TouchEvent.TOUCH_RELEASED;
+                        ids[i] = oldPoint.id;
+                        xs[i] = oldPoint.x;
+                        ys[i] = oldPoint.y;
+                    }
+                }
+                // Once we have dealt with updates to old points, all that are left
+                // are new points.
+                for (int i = 0, j = state.getPointCount();
+                        i < newState.getPointCount(); i++) {
+                    TouchState.Point newPoint = newState.getPoint(i);
+                    TouchState.Point oldPoint = state.getPointForID(
+                            newPoint.id);
+                    if (oldPoint == null) {
+                        states[j] = TouchEvent.TOUCH_PRESSED;
+                        ids[j] = newPoint.id;
+                        xs[j] = newPoint.x;
+                        ys[j] = newPoint.y;
+                        j++;
+                    }
+                }
+                postPoints(window, view, states, ids, xs, ys);
             }
-        }
-        // Once we have dealt with updates to old points, all that are left
-        // are new points.
-        for (int i = 0; i < newState.getPointCount(); i++) {
-            TouchState.Point newPoint = newState.getPoint(i);
-            TouchState.Point oldPoint = state.getPointForID(newPoint.id);
-            if (oldPoint == null) {
-                dispatchPoint(window, view, TouchEvent.TOUCH_PRESSED, newPoint);
-            }
-        }
-        try {
-            touches.notifyEndTouchEvent(view);
-        } catch (RuntimeException e) {
-            Application.reportException(e);
         }
     }
 

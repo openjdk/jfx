@@ -106,7 +106,7 @@ public class TouchLagTest {
         ui.processLine("EV_ABS ABS_MT_POSITION_Y 300");
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
-        TestLog.waitForLogContaining("TouchPoint: PRESSED", 3000);
+        TestLog.waitForLogContaining("TouchPoint: PRESSED", 3000l);
         // pre-process move event data into a byte array. That way we don't
         // have to count the time it takes to convert string event descriptions
         // into a byte stream.
@@ -159,8 +159,7 @@ public class TouchLagTest {
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
         // Make sure events could be delivered in the required time
-        TestLog.waitForLog("Touch moved: 400, 410",
-                           (long) (3000l * TestApplication.getTimeScale()) - t);
+        TestLog.waitForLog("Touch moved: 400, 410", 3000l - t);
     }
 
     /** Make sure we can process 1000 multitouch move events per second. We are
@@ -250,7 +249,6 @@ public class TouchLagTest {
         ui.processLine("EV_SYN SYN_MT_REPORT 0");
         ui.processLine("EV_SYN SYN_REPORT 0");
         // Make sure events could be delivered in the required time
-        TestLog.waitForLog("Touch released: 400, 410",
-                           (long) (3000l * TestApplication.getTimeScale()) - t);
+        TestLog.waitForLog("Touch released: 400, 410", 3000l - t);
     }
 }

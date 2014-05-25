@@ -62,20 +62,22 @@ public class TouchEventLookaheadTest extends ParameterizedTestBase {
         final int y1 = (int) Math.round(height * 0.1);
         final int x2 = (int) Math.round(width * 0.9);
         final int y2 = (int) Math.round(height * 0.9);
+        final int x3 = (int) Math.round(width * 0.5);
+        final int y3 = (int) Math.round(height * 0.5);
         // Push events while on the event thread, making sure that events
         // will be buffered up and enabling filtering to take place
         TestRunnable.invokeAndWait(() -> {
             int p = device.addPoint(x1, y1);
             device.sync();
-            for (int x = x1; x <= x2; x += (x2 - x1) / 11) {
+            for (int x = x1; x <= x2; x += (x2 - x1) / 100) {
                 device.setPoint(p, x, y1);
                 device.sync();
             }
-            for (int y = y1; y <= y2; y += (y2 - y1) / 11) {
+            for (int y = y1; y <= y2; y += (y2 - y1) / 100) {
                 device.setPoint(p, x2, y);
                 device.sync();
             }
-            device.setPoint(p, x2, y2);
+            device.setPoint(p, x3, y3);
             device.sync();
             device.removePoint(p);
             device.sync();
@@ -84,11 +86,11 @@ public class TouchEventLookaheadTest extends ParameterizedTestBase {
         TestLog.waitForLog("Mouse pressed: " + x1 + ", " + y1, 3000);
         TestLog.waitForLog("Touch pressed: " + x1 + ", " + y1, 3000);
         // Check that the final point reported is correct
-        TestLog.waitForLog("Mouse released: " + x2 + ", " + y2, 3000);
-        TestLog.waitForLog("Touch released: " + x2 + ", " + y2, 3000);
+        TestLog.waitForLog("Mouse released: " + x3 + ", " + y3, 3000);
+        TestLog.waitForLog("Touch released: " + x3 + ", " + y3, 3000);
         // Check that moves in between were filtered
-        TestLog.waitForLog("Mouse dragged: " + x2 + ", " + y2, 3000);
-        TestLog.waitForLog("Touch moved: " + x2 + ", " + y2, 3000);
+        TestLog.waitForLog("Mouse dragged: " + x3 + ", " + y3, 3000);
+        TestLog.waitForLog("Touch moved: " + x3 + ", " + y3, 3000);
         Assert.assertTrue(TestLog.countLogContaining("Mouse dragged") <= 3);
         Assert.assertTrue(TestLog.countLogContaining("Touch moved") <= 3);
     }

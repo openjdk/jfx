@@ -108,12 +108,12 @@ public class UInput {
         String[] args = line.split(" ");
         offset = writeTime(data, offset);
         offset = writeCode(data, offset, args[0]);
-        if (args.length >= 1) {
+        if (args.length > 1) {
             offset = writeCode(data, offset, args[1]);
         } else {
             offset = writeCode(data, offset, "0");
         }
-        if (args.length >= 2) {
+        if (args.length > 2) {
             offset = writeValue(data, offset, args[2]);
         } else {
             offset = writeValue(data, offset, 0);

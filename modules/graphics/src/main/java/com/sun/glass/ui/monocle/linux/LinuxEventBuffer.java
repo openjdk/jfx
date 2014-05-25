@@ -42,7 +42,7 @@ public class LinuxEventBuffer {
      * EVENT_BUFFER_SIZE controls the maximum number of event lines that can be
      * processed per device in one pulse. This value must be greater than the
      * number of lines in the largest event including the terminating EV_SYN
-     * SYN_REPORT. However it sould not be too large or a flood of events will
+     * SYN_REPORT. However it should not be too large or a flood of events will
      * prevent rendering from happening until the buffer is full.
      */
     private static final int EVENT_BUFFER_SIZE = 1000;
@@ -76,6 +76,12 @@ public class LinuxEventBuffer {
             // Block if bb is full. This should be the
             // only time this thread waits for anything
             // except for more event lines.
+            if (MonocleSettings.settings.traceEventsVerbose) {
+                MonocleTrace.traceEvent(
+                        "Event buffer %s is full, waiting for some space to become available",
+                        bb);
+                // wait for half the space to be available, to avoid excessive context switching?
+            }
             wait();
         }
         if (isSync) {
@@ -83,9 +89,9 @@ public class LinuxEventBuffer {
         }
         bb.put(event);
         if (MonocleSettings.settings.traceEventsVerbose) {
-            MonocleTrace.traceEvent("Read %s",
-                                    getEventDescription(bb.position()
-                                                                - EVENT_STRUCT_SIZE));
+            int index = bb.position() - EVENT_STRUCT_SIZE;
+            MonocleTrace.traceEvent("Read %s [index=%d]",
+                                    getEventDescription(index), index);
         }
         return isSync;
     }
@@ -94,7 +100,7 @@ public class LinuxEventBuffer {
         currentPosition = 0;
         mark = 0;
         if (MonocleSettings.settings.traceEventsVerbose) {
-            MonocleTrace.traceEvent("Processing %s", getEventDescription());
+            MonocleTrace.traceEvent("Processing %s [index=%d]", getEventDescription(), currentPosition);
         }
     }
 
@@ -104,6 +110,9 @@ public class LinuxEventBuffer {
         bb.position(currentPosition);
         bb.limit(newLimit);
         bb.compact();
+        if (MonocleSettings.settings.traceEventsVerbose) {
+            MonocleTrace.traceEvent("Compacted event buffer %s", bb);
+        }
         // If put() is waiting for space in the buffer, wake it up
         notifyAll();
     }
@@ -166,7 +175,8 @@ public class LinuxEventBuffer {
         }
         currentPosition += EVENT_STRUCT_SIZE;
         if (MonocleSettings.settings.traceEventsVerbose && hasNextEvent()) {
-            MonocleTrace.traceEvent("Processing %s", getEventDescription());
+            MonocleTrace.traceEvent("Processing %s [index=%d]",
+                                    getEventDescription(), currentPosition);
         }
     }
 

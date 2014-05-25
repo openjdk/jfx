@@ -27,13 +27,19 @@ package com.sun.glass.ui.monocle.input;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Clipboard;
+import com.sun.glass.ui.View;
+import com.sun.glass.ui.monocle.MonocleApplication;
 import com.sun.glass.ui.monocle.MonocleSettings;
 import com.sun.glass.ui.monocle.MonocleTrace;
 import com.sun.glass.ui.monocle.MonocleView;
 import com.sun.glass.ui.monocle.MonocleWindow;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.glass.ui.monocle.NativeScreen;
+import com.sun.glass.ui.monocle.RunnableProcessor;
 import com.sun.glass.ui.monocle.util.IntSet;
+
+import java.util.BitSet;
 
 /**
  * Processes mouse input events based on changes to mouse state. Not
@@ -44,6 +50,19 @@ public class MouseInput {
 
     private MouseState state = new MouseState();
     private IntSet buttons = new IntSet();
+
+    /** Are we currently processing drag and drop? */
+    private boolean dragInProgress = false;
+    /** What button started the drag operation? */
+    private int dragButton = MouseEvent.BUTTON_NONE;
+    /** On what View is the drag operation currently over? */
+    private MonocleView dragView = null;
+    /** What drag actions have been performed? */
+    private BitSet dragActions = new BitSet();
+    private static final int DRAG_ENTER = 1;
+    private static final int DRAG_LEAVE = 2;
+    private static final int DRAG_OVER = 3;
+    private static final int DRAG_DROP = 4;
 
     public static MouseInput getInstance() {
         return instance;
@@ -59,10 +78,8 @@ public class MouseInput {
         }
         // Restrict new state coordinates to screen bounds
         NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
-        int x = Math.min(newState.getX(), screen.getWidth() - 1);
-        int y = Math.min(newState.getY(), screen.getHeight() - 1);
-        x = Math.max(x, 0);
-        y = Math.max(y, 0);
+        int x = Math.max(0, Math.min(newState.getX(), screen.getWidth() - 1));
+        int y = Math.max(0, Math.min(newState.getY(), screen.getHeight() - 1));
         newState.setX(x);
         newState.setY(y);
         // Get the cached window for the old state and compute the window for
@@ -84,9 +101,9 @@ public class MouseInput {
                 int oldRelX = oldX - oldWindow.getX();
                 int oldRelY = oldY - oldWindow.getY();
                 try {
-                    oldView.notifyMouse(MouseEvent.EXIT, button,
-                                        oldRelX, oldRelY, oldX, oldY,
-                                        modifiers, isPopupTrigger, synthesized);
+                    postMouseEvent(oldView, MouseEvent.EXIT, button,
+                                   oldRelX, oldRelY, oldX, oldY,
+                                   modifiers, isPopupTrigger, synthesized);
                 } catch (RuntimeException e) {
                     Application.reportException(e);
                 }
@@ -108,13 +125,9 @@ public class MouseInput {
             int modifiers = state.getModifiers(); // TODO: include key modifiers
             int button = state.getButton();
             boolean isPopupTrigger = false; // TODO
-            try {
-                view.notifyMouse(MouseEvent.ENTER, button,
-                                 relX, relY, x, y,
-                                 modifiers, isPopupTrigger, synthesized);
-            } catch (RuntimeException e) {
-                Application.reportException(e);
-            }
+            postMouseEvent(view, MouseEvent.ENTER, button,
+                           relX, relY, x, y,
+                           modifiers, isPopupTrigger, synthesized);
         }
         // send motion events
         if (oldWindow != window | newAbsoluteLocation) {
@@ -123,13 +136,9 @@ public class MouseInput {
             int modifiers = state.getModifiers(); // TODO: include key modifiers
             int button = state.getButton();
             boolean isPopupTrigger = false; // TODO
-            try {
-                view.notifyMouse(eventType, button,
-                             relX, relY, x, y,
-                             modifiers, isPopupTrigger, synthesized);
-            } catch (RuntimeException e) {
-                Application.reportException(e);
-            }
+            postMouseEvent(view, eventType, button,
+                           relX, relY, x, y,
+                           modifiers, isPopupTrigger, synthesized);
         }
         // send press events
         newState.getButtonsPressed().difference(buttons, state.getButtonsPressed());
@@ -141,14 +150,10 @@ public class MouseInput {
                 pressState.pressButton(button);
                 // send press event
                 boolean isPopupTrigger = false; // TODO
-                try {
-                    view.notifyMouse(MouseEvent.DOWN, button,
-                                     relX, relY, x, y,
-                                     pressState.getModifiers(), isPopupTrigger,
-                                     synthesized);
-                } catch (RuntimeException e) {
-                    Application.reportException(e);
-                }
+                postMouseEvent(view, MouseEvent.DOWN, button,
+                               relX, relY, x, y,
+                               pressState.getModifiers(), isPopupTrigger,
+                               synthesized);
             }
         }
         buttons.clear();
@@ -163,14 +168,10 @@ public class MouseInput {
                 releaseState.releaseButton(button);
                 // send release event
                 boolean isPopupTrigger = false; // TODO
-                try {
-                    view.notifyMouse(MouseEvent.UP, button,
-                                     relX, relY, x, y,
-                                     releaseState.getModifiers(), isPopupTrigger,
-                                     synthesized);
-                } catch (RuntimeException e) {
-                    Application.reportException(e);
-                }
+                postMouseEvent(view, MouseEvent.UP, button,
+                               relX, relY, x, y,
+                               releaseState.getModifiers(), isPopupTrigger,
+                               synthesized);
             }
         }
         buttons.clear();
@@ -183,15 +184,116 @@ public class MouseInput {
                 default: dY = 0.0; break;
             }
             if (dY != 0.0) {
-                try {
+                int modifiers = newState.getModifiers();
+                RunnableProcessor.runLater(() -> {
                     view.notifyScroll(relX, relY, x, y, 0.0, dY,
-                                      newState.getModifiers(), 1, 0, 0, 0, 1.0, 1.0);
-                } catch (RuntimeException e) {
-                    Application.reportException(e);
-                }
+                                      modifiers, 1, 0, 0, 0, 1.0, 1.0);
+
+                });
             }
         }
         newState.copyTo(state);
+    }
+
+    private void postMouseEvent(MonocleView view, int eventType, int button,
+                                int relX, int relY, int x, int y,
+                                int modifiers, boolean isPopupTrigger, boolean synthesized) {
+        RunnableProcessor.runLater(() -> {
+            notifyMouse(view, eventType, button,
+                        relX, relY, x, y,
+                        modifiers, isPopupTrigger, synthesized);
+        });
+    }
+
+    private void notifyMouse(MonocleView view, int eventType, int button,
+                             int relX, int relY, int x, int y,
+                             int modifiers, boolean isPopupTrigger, boolean synthesized) {
+        switch (eventType) {
+            case MouseEvent.DOWN: {
+                if (dragButton == MouseEvent.BUTTON_NONE) {
+                    dragButton = button;
+                }
+                break;
+            }
+            case MouseEvent.UP: {
+                if (dragButton == button) {
+                    dragButton = MouseEvent.BUTTON_NONE;
+                    if (dragInProgress) {
+                        try {
+                            view.notifyDragDrop(relX, relY, x, y,
+                                                Clipboard.ACTION_COPY_OR_MOVE);
+                        } catch (RuntimeException e) {
+                            Application.reportException(e);
+                        }
+                        try {
+                            view.notifyDragEnd(Clipboard.ACTION_COPY_OR_MOVE);
+                        } catch (RuntimeException e) {
+                            Application.reportException(e);
+                        }
+                        ((MonocleApplication) Application.GetApplication()).leaveDndEventLoop();
+                        dragActions.clear();
+                        dragView = null;
+                        dragInProgress = false;
+                    }
+                }
+                break;
+            }
+            case MouseEvent.DRAG: {
+                if (dragButton != MouseEvent.BUTTON_NONE) {
+                    if (dragInProgress) {
+                        if (dragView == view && dragActions.isEmpty()) {
+                            // first drag notification
+                            try {
+                                view.notifyDragEnter(relX, relY, x, y,
+                                                     Clipboard.ACTION_COPY_OR_MOVE);
+                            } catch (RuntimeException e) {
+                                Application.reportException(e);
+                            }
+                            dragActions.set(DRAG_ENTER);
+                        } else if (dragView == view && dragActions.get(DRAG_ENTER)) {
+                            try {
+                                view.notifyDragOver(relX, relY, x, y,
+                                                    Clipboard.ACTION_COPY_OR_MOVE);
+                            } catch (RuntimeException e) {
+                                Application.reportException(e);
+                            }
+                            dragActions.set(DRAG_OVER);
+                        } else if (dragView != view) {
+                            if (dragView != null) {
+                                try {
+                                    dragView.notifyDragLeave();
+                                } catch (RuntimeException e) {
+                                    Application.reportException(e);
+                                }
+                            }
+                            try {
+                                view.notifyDragEnter(relX, relY, x, y,
+                                                     Clipboard.ACTION_COPY_OR_MOVE);
+                            } catch (RuntimeException e) {
+                                Application.reportException(e);
+                            }
+                            dragActions.clear();
+                            dragActions.set(DRAG_ENTER);
+                            dragView = view;
+                        }
+                        return; // consume event
+                    } else {
+                        if (dragView == null) {
+                            dragView = view;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        view.notifyMouse(eventType, button,
+                         relX, relY, x, y,
+                         modifiers, isPopupTrigger,
+                         synthesized);
+    }
+
+    public void notifyDragStart() {
+        dragInProgress = true;
     }
 
 }

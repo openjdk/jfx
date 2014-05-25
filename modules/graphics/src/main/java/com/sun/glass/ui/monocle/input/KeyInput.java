@@ -29,6 +29,7 @@ import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.monocle.MonocleView;
 import com.sun.glass.ui.monocle.MonocleWindow;
+import com.sun.glass.ui.monocle.RunnableProcessor;
 import com.sun.glass.ui.monocle.util.IntSet;
 
 import java.security.AccessController;
@@ -101,17 +102,14 @@ public class KeyInput {
             return;
         }
         char[] chars = getKeyChars(ks, key);
-        try {
-           view.notifyKey(type, key, chars, ks.getModifiers());
-        } catch (RuntimeException e) {
-            Application.reportException(e);
-        }
+        int modifiers = ks.getModifiers();
+        RunnableProcessor.runLater(() -> {
+            view.notifyKey(type, key, chars, modifiers);
+        });
         if (type == KeyEvent.PRESS && chars.length > 0) {
-            try {
-                view.notifyKey(KeyEvent.TYPED, key, chars, ks.getModifiers());
-            } catch (RuntimeException e) {
-                Application.reportException(e);
-            }
+            RunnableProcessor.runLater(() -> {
+                view.notifyKey(KeyEvent.TYPED, key, chars, modifiers);
+            });
         }
     }
 

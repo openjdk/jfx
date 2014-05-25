@@ -29,16 +29,19 @@ import com.sun.glass.events.MouseEvent;
 
 public class MouseInputSynthesizer {
 
-    private static MouseInputSynthesizer instance = new MouseInputSynthesizer();
+    private static final MouseInputSynthesizer instance = new MouseInputSynthesizer();
 
-    private MouseState mouseState = new MouseState();
+    private final MouseState mouseState = new MouseState();
+
+    private MouseInputSynthesizer() {
+        MouseInput.getInstance().getState(mouseState);
+    }
 
     public static MouseInputSynthesizer getInstance() {
         return instance;
     }
 
     public void setState(TouchState touchState) {
-        MouseInput.getInstance().getState(mouseState);
         if (touchState.getPointCount() == 0) {
             mouseState.releaseButton(MouseEvent.BUTTON_LEFT);
         } else {

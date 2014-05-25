@@ -125,4 +125,10 @@ public class RunnableProcessor implements Runnable {
         }
     }
 
+    public static void runLater(Runnable r) {
+        NativePlatformFactory.getNativePlatform()
+                .getRunnableProcessor()
+                .invokeLater(r);
+    }
+
 }

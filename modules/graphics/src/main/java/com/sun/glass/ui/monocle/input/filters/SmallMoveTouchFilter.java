@@ -38,6 +38,10 @@ public final class SmallMoveTouchFilter implements TouchFilter {
     private final int radius = TouchInput.getInstance()
             .getTouchRadius();
 
+    public SmallMoveTouchFilter() {
+        TouchInput.getInstance().getState(oldState);
+    }
+
     @Override
     public int getPriority() {
         return PRIORITY_POST_ID;
@@ -45,7 +49,6 @@ public final class SmallMoveTouchFilter implements TouchFilter {
 
     @Override
     public boolean filter(TouchState state) {
-        TouchInput.getInstance().getState(oldState);
         for (int i = 0; i < oldState.getPointCount(); i++) {
             TouchState.Point oldPoint = oldState.getPoint(i);
             TouchState.Point newPoint = state.getPointForID(oldPoint.id);
@@ -60,6 +63,7 @@ public final class SmallMoveTouchFilter implements TouchFilter {
                 }
             }
         }
+        state.copyTo(oldState);
         return false;
     }
 

@@ -38,6 +38,10 @@ public final class AssignPointIDTouchFilter implements TouchFilter {
     private IntSet ids = new IntSet();
     private int nextID = 1;
 
+    public AssignPointIDTouchFilter() {
+        TouchInput.getInstance().getState(oldState);
+    }
+
     /** Acquire a touch point ID */
     private int acquireID() {
         ids.addInt(nextID);
@@ -62,7 +66,6 @@ public final class AssignPointIDTouchFilter implements TouchFilter {
      * assign IDs themselves. */
     @Override
     public boolean filter(TouchState state) {
-        TouchInput.getInstance().getState(oldState);
         if (oldState.getPointCount() == 0) {
             for (int i = 0; i < state.getPointCount(); i++) {
                 state.getPoint(i).id = acquireID();
@@ -157,6 +160,7 @@ public final class AssignPointIDTouchFilter implements TouchFilter {
                 releaseID(id);
             }
         }
+        state.copyTo(oldState);
         return false;
     }
 

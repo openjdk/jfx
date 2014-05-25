@@ -83,7 +83,9 @@ public class RapidTapTest extends ParameterizedTestBase {
         final AnimationTimer a = new AnimationTimer() {
             @Override
             public void handle(long now) {
-                long end = now + 50000000; // 50 ms
+                // Spin for 50ms adjusted for time scale
+                double spinTime = Math.round(50000000.0 * TestApplication.getTimeScale());
+                long end = now + Math.round(spinTime);
                 latch.countDown();
                 while (System.nanoTime() < end) { } // spin
             }

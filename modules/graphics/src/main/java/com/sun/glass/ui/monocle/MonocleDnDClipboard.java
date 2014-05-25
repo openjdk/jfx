@@ -25,8 +25,10 @@
 
 package com.sun.glass.ui.monocle;
 
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.SystemClipboard;
+import com.sun.glass.ui.monocle.input.MouseInput;
 
 import java.util.HashMap;
 
@@ -36,44 +38,40 @@ final class MonocleDnDClipboard extends SystemClipboard {
         super(Clipboard.DND);
     }
 
-    /**
-     * Should be called when drag operation completed by the 'system'
-     *
-     * @param action mask of actions from Clipboard
-     */
-    public void actionPerformed(int action) {
-        super.actionPerformed(action);
-    }
-
-    protected  boolean isOwner() {
+    @Override
+    protected boolean isOwner() {
         return true;
     }
+
     /**
      * Here the magic happens.
      * When this method is called all input events should be grabbed and
      * appropriate drag notifications should be sent instead of regular input
      * events
      */
+    @Override
     protected  void pushToSystem(HashMap<String, Object> cacheData, int supportedActions) {
-        // TODO: implement drag and nested loops in MonocleApplication
-        // MonocleApplication app = (MonocleApplication)Application.GetApplication();
-        // app.notifyDragStart();
-        // app.enterDnDEventLoop();
-        // The loop is exited in LensApplication.LensDragEvent.dispatch()
+        MouseInput.getInstance().notifyDragStart();
+        ((MonocleApplication) Application.GetApplication()).enterDnDEventLoop();
         actionPerformed(Clipboard.ACTION_COPY_OR_MOVE);
     }
 
+    @Override
     protected void pushTargetActionToSystem(int actionDone) {
     }
 
-    protected  Object popFromSystem(String mimeType) {
+    @Override
+    protected Object popFromSystem(String mimeType) {
         return null;
     }
-    protected  int supportedSourceActionsFromSystem() {
+
+    @Override
+    protected int supportedSourceActionsFromSystem() {
         return Clipboard.ACTION_COPY_OR_MOVE;
     }
 
-    protected  String[] mimesFromSystem() {
+    @Override
+    protected String[] mimesFromSystem() {
         return new String[0];
     }
 

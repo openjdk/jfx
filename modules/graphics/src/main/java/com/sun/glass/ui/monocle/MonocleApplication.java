@@ -47,7 +47,7 @@ import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-final class MonocleApplication extends Application {
+public final class MonocleApplication extends Application {
 
     private final NativePlatform platform =
             NativePlatformFactory.getNativePlatform();
@@ -362,6 +362,14 @@ final class MonocleApplication extends Application {
         setEventThread(null);
         platform.shutdown();
         super.finishTerminating();
+    }
+
+    public void enterDnDEventLoop() {
+        _enterNestedEventLoop();
+    }
+
+    public void leaveDndEventLoop() {
+        _leaveNestedEventLoop(null);
     }
 
 }

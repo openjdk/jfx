@@ -148,23 +148,28 @@ public final class MonocleView extends View {
 
     //DnD
     @Override
-    protected int notifyDragEnter(int x, int y, int absx, int absy, int recommendedDropAction) {
+    public int notifyDragEnter(int x, int y, int absx, int absy, int recommendedDropAction) {
         return super.notifyDragEnter(x, y, absx, absy, recommendedDropAction);
     }
 
     @Override
-    protected void notifyDragLeave() {
+    public void notifyDragLeave() {
         super.notifyDragLeave();
     }
 
     @Override
-    protected int notifyDragDrop(int x, int y, int absx, int absy, int recommendedDropAction) {
+    public int notifyDragDrop(int x, int y, int absx, int absy, int recommendedDropAction) {
         return super.notifyDragDrop(x, y, absx, absy, recommendedDropAction);
     }
 
     @Override
-    protected int notifyDragOver(int x, int y, int absx, int absy, int recommendedDropAction) {
+    public int notifyDragOver(int x, int y, int absx, int absy, int recommendedDropAction) {
         return super.notifyDragOver(x, y, absx, absy, recommendedDropAction);
+    }
+
+    @Override
+    public void notifyDragEnd(int performedAction) {
+        super.notifyDragEnd(performedAction);
     }
 
     //Menu event - i.e context menu hint (usually mouse right click) 

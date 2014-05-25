@@ -185,6 +185,7 @@ public class TestLog {
                             System.out.println(logLine);
                         }
                     }
+                    System.out.println(message);
                     throw new AssertionFailedError(message);
                 }
             }
