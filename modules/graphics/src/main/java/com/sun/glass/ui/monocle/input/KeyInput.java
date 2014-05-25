@@ -27,6 +27,8 @@ package com.sun.glass.ui.monocle.input;
 
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.Application;
+import com.sun.glass.ui.monocle.MonocleSettings;
+import com.sun.glass.ui.monocle.MonocleTrace;
 import com.sun.glass.ui.monocle.MonocleView;
 import com.sun.glass.ui.monocle.MonocleWindow;
 import com.sun.glass.ui.monocle.RunnableProcessor;
@@ -58,6 +60,9 @@ public class KeyInput {
     }
 
     public void setState(KeyState newState) {
+        if (MonocleSettings.settings.traceEvents) {
+            MonocleTrace.traceEvent("Set %s", newState);
+        }
         newState.getWindow(true);
         // send release events
         state.getKeysPressed().difference(keys, newState.getKeysPressed());

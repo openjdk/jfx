@@ -67,6 +67,7 @@ public class USKeyboardTest {
         if (shiftPressed) {
             ui.processLine("EV_KEY KEY_LEFTSHIFT 0");
             ui.processLine("EV_SYN");
+            TestLog.waitForLog("Key released: SHIFT");
         }
         TestLog.waitForLog("Key typed: %0$c", new Object[] { c });
     }
@@ -131,6 +132,8 @@ public class USKeyboardTest {
 
         ui.processLine("EV_KEY KEY_CAPSLOCK 1");
         ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_CAPSLOCK 0");
+        ui.processLine("EV_SYN");
 
         checkShift("KEY_A", 'A', 'a');
         checkShift("KEY_1", '1', '!');
@@ -144,8 +147,11 @@ public class USKeyboardTest {
         checkShift("KEY_9", '9', '(');
         checkShift("KEY_0", '0', ')');
 
+        ui.processLine("EV_KEY KEY_CAPSLOCK 1");
+        ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_CAPSLOCK 0");
         ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key released: CAPS");
     }
 
 }
