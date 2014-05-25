@@ -27,9 +27,13 @@ package com.sun.glass.ui.monocle.input;
 
 import com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.shape.Rectangle;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
@@ -230,6 +234,28 @@ public class SingleTouchTest extends ParameterizedTestBase {
                             .filter(s -> s.startsWith("Touch point count"))
                             .filter(s -> !s.startsWith("Touch point count: 1")).count());
     }
-
-
+	
+    /**
+     * Touch down, change scene, release finger.
+     */
+    @Ignore("RT-36008")
+    @Test
+    public void testChangeSceneDuringTap() throws Exception {
+        final int x1 = (int) Math.round(width * 0.3);
+        final int y1 = (int) Math.round(height * 0.3);
+        int p1 = device.addPoint(x1, y1);
+        device.sync();
+        TestLog.waitForLog("Touch pressed: %d, %d", x1, y1);
+        TestRunnable.invokeAndWait(() ->
+        {
+            Rectangle r = new Rectangle(0, 0, width, height);
+            Group g = new Group();
+            g.getChildren().add(r);
+            Scene scene = new Scene(g);
+            TestApplication.getStage().setScene(scene);
+        });
+        device.removePoint(p1);
+        device.sync();
+        Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: " + x1 +", " + y1));
+    }
 }
