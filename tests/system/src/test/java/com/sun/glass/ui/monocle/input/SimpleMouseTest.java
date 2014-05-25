@@ -280,10 +280,10 @@ public class SimpleMouseTest {
     }
 
     @Test
-    @Ignore("RT-37016")
     public void testGrab2() throws Exception {
         TestApplication.showInMiddleOfScreen();
         TestApplication.addMouseListeners();
+        Assume.assumeTrue(TestApplication.isMonocle());
         Rectangle2D r = TestApplication.getScreenBounds();
         final int width = (int) r.getWidth();
         final int height = (int) r.getHeight();
@@ -312,7 +312,6 @@ public class SimpleMouseTest {
         ui.processLine("EV_KEY BTN_LEFT 0");
         ui.processLine("EV_SYN");
         TestLog.waitForLog("Mouse released: %d, %d", x3, y3);
-        TestLog.waitForLog("Mouse clicked: %d, %d", x3, y3);
     }
 
 }
