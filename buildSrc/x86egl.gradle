@@ -79,8 +79,13 @@ X86EGL.includeSWT = false
 X86EGL.includeGTK = true
 
 // Libraries end up in the sdk/rt/lib/[i386|amd46] directory depending on machine arch
-X86EGL.arch = OS_ARCH
-X86EGL.libDest = "lib/${OS_ARCH}"
+if (rootProject.hasProperty("X86EGL_ARCH")) {
+    X86EGL.arch = X86EGL_ARCH
+    X86EGL.libDest = "lib/${X86EGL_ARCH}"
+} else {
+    X86EGL.arch = OS_ARCH
+    X86EGL.libDest = "lib/${OS_ARCH}"
+}
 
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
