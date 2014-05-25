@@ -71,38 +71,16 @@ X86EGL.compileDesignTime = false;
 X86EGL.compileWebnodeNative = false;
 X86EGL.compileMediaNative = false;
 
+X86EGL.includeLens = true
+X86EGL.includeNull3d = true
+X86EGL.includeEGL = true
+X86EGL.includeSwing = false
+X86EGL.includeSWT = false
+X86EGL.includeGTK = true
+
 // Libraries end up in the sdk/rt/lib/[i386|amd46] directory depending on machine arch
 X86EGL.arch = OS_ARCH
 X86EGL.libDest = "lib/${OS_ARCH}"
-
-// TODO this is garbage. Each target file should define what it includes,
-// not what it excludes.
-X86EGL.jfxrtJarExcludes = [
-    "**/*.hlsl",
-    "com/sun/glass/ui/win",
-    "com/sun/prism/d3d",
-    "com/sun/prism/es2/gl/win",
-    //"com/sun/prism/null3d",
-    "com/sun/scenario/effect/impl/hw/d3d",
-    
-    "com/sun/glass/events/mac",
-    "com/sun/glass/ui/mac",
-    "com/sun/prism/es2/gl/mac",
-    
-    "com/sun/glass/ui/android",
-    
-    "com/sun/glass/ui/ios",
-    
-    "com/sun/glass/ui/swt", // SWT glass
-    
-    "javafx/embed/swing", // Swing Interop
-    
-    "javafx/embed/swt", // SWT Interop
-
-    "com/sun/prism/es2/MacGL*",
-    "com/sun/prism/es2/IOSGL*",
-    "com/sun/prism/es2/WinGL*",
-]
 
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
