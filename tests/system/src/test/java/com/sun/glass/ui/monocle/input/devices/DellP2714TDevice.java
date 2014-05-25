@@ -26,17 +26,16 @@
 package com.sun.glass.ui.monocle.input.devices;
 
 import com.sun.glass.ui.monocle.input.TestApplication;
-import com.sun.glass.ui.monocle.input.TestLog;
 import com.sun.glass.ui.monocle.input.UInput;
 import org.junit.Assume;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * TouchRevolutionFusionDevice sends ABS_MT_POSITION_X and ABS_MT_POSITION_Y
+ * Dell P2714 touch screen monitor.
+ *
+ * DellP2714TDevice sends ABS_MT_POSITION_X and ABS_MT_POSITION_Y
  * events per each touch-point.
  * ABS_X & ABS_Y events are being sent only once per touch-event
  * and are equal to ABS_MT_POSITION_X and ABS_MT_POSITION_Y of first touch-point.
@@ -56,14 +55,13 @@ public class DellP2714TDevice extends TestTouchDevice {
     private boolean absXUpdated = false;
     private boolean absYUpdated = false;
 
-    private Set<Integer> modifiedPoints = new HashSet<>();
-
     public DellP2714TDevice() {
         super(10);
     }
 
     @Override
     public void create() {
+        Assume.assumeTrue(TestApplication.isMonocle());
         ui = new UInput();
         ui.processLine("OPEN");
         ui.processLine("EVBIT EV_SYN");

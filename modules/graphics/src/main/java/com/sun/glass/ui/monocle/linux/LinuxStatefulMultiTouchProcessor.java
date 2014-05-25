@@ -65,8 +65,9 @@ public class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
                             if (currentID != ID_UNASSIGNED
                                     && (x != COORD_UNDEFINED || y != COORD_UNDEFINED)) {
                                 updatePoint(x, y);
+                                x = y = COORD_UNDEFINED;
                             }
-                            // We expect ABS_MT_SLOT and  // ABS_MT_TRACKING_ID
+                            // We expect ABS_MT_SLOT and ABS_MT_TRACKING_ID
                             // to precede the coordinates they describe
                             currentSlot = value;
                             currentID = slotToIDMap.getOrDefault(currentSlot,
@@ -85,11 +86,15 @@ public class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
                             break;
                         case Input.ABS_X:
                         case Input.ABS_MT_POSITION_X:
-                            x = value;
+                            if (x == COORD_UNDEFINED) {
+                                x = value;
+                            }
                             break;
                         case Input.ABS_Y:
                         case Input.ABS_MT_POSITION_Y:
-                            y = value;
+                            if (y == COORD_UNDEFINED) {
+                                y = value;
+                            }
                             break;
                     }
                     break;

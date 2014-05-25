@@ -59,7 +59,8 @@ public class TestTouchDevices {
                 new TouchRevolutionFusionDevice(),
                 new NTrigDevice(),
                 new SamsungLMS700KF07004Device(),
-                new TabletDevice()
+                new TabletDevice(),
+                new DellP2714TDevice(),
         }));
         return devices;
     }
