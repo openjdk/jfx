@@ -471,21 +471,41 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         return topInset + textNode.getBaselineOffset();
     }
 
+    /**
+     * Updates the textTranslateX value for the Text node position. This is
+     * done for general layout, but care is taken to avoid resetting the
+     * position when there's a need to scroll the text due to caret movement,
+     * or when editing text that overflows on either side.
+     */
     private void updateTextPos() {
+        double oldX = textTranslateX.get();
+        double newX;
+        double textNodeWidth = textNode.getLayoutBounds().getWidth();
+
         switch (getHAlignment()) {
           case CENTER:
             double midPoint = textRight.get() / 2;
             if (usePromptText.get()) {
-                promptNode.setLayoutX(midPoint - promptNode.getLayoutBounds().getWidth() / 2);
-                textTranslateX.set(promptNode.getLayoutX());
+                // If a prompt is shown (which implies that the text is
+                // empty), then we align the Text node so that the caret will
+                // appear at the left of the centered prompt.
+                newX = midPoint - promptNode.getLayoutBounds().getWidth() / 2;
+                promptNode.setLayoutX(newX);
             } else {
-                textTranslateX.set(midPoint - textNode.getLayoutBounds().getWidth() / 2);
+                newX = midPoint - textNodeWidth / 2;
+            }
+            // Update if there is space on the right
+            if (newX + textNodeWidth <= textRight.get()) {
+                textTranslateX.set(newX);
             }
             break;
 
           case RIGHT:
-            textTranslateX.set(textRight.get() - textNode.getLayoutBounds().getWidth() -
-                               caretWidth / 2);
+            newX = textRight.get() - textNodeWidth - caretWidth / 2;
+            // Update if there is space on the right
+            if (newX > oldX || newX > 0) {
+                textTranslateX.set(newX);
+            }
             if (usePromptText.get()) {
                 promptNode.setLayoutX(textRight.get() - promptNode.getLayoutBounds().getWidth() -
                                       caretWidth / 2);
@@ -494,9 +514,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
           case LEFT:
           default:
-            textTranslateX.set(caretWidth / 2);
+            newX = caretWidth / 2;
+            // Update if there is space on either side.
+            if (newX < oldX || newX + textNodeWidth <= textRight.get()) {
+                textTranslateX.set(newX);
+            }
             if (usePromptText.get()) {
-                promptNode.layoutXProperty().set(caretWidth / 2);
+                promptNode.layoutXProperty().set(newX);
             }
         }
     }
@@ -579,10 +603,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         final Bounds caretBounds = caretPath.getLayoutBounds();
 
         switch (getHAlignment()) {
-          case CENTER:
-            updateTextPos();
-            break;
-
           case RIGHT:
             if (textBounds.getMaxX() > clipBounds.getMaxX()) {
                 double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
@@ -600,6 +620,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             break;
 
           case LEFT:
+          case CENTER:
           default:
             if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2 &&
                 textBounds.getMaxX() <= clipBounds.getMaxX()) {
