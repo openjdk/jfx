@@ -67,6 +67,8 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
+
 public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehavior>  {
 
     private static final Duration DURATION = new Duration(125.0);
@@ -736,7 +738,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
                     switch (attribute) {
                         case ROLE: return Role.BUTTON;
-                        case TITLE: return "Select previous page";
+                        case TITLE: return getString("Accessibility.title.Pagination.PreviousButton");
                         default: return super.accGetAttribute(attribute, parameters);
                     }
                 }
@@ -765,7 +767,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
                     switch (attribute) {
                         case ROLE: return Role.BUTTON;
-                        case TITLE: return "Select next page";
+                        case TITLE: return getString("Accessibility.title.Pagination.NextButton");
                         default: return super.accGetAttribute(attribute, parameters);
                     }
                 }
