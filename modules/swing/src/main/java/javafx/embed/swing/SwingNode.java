@@ -71,6 +71,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
 import com.sun.javafx.stage.ScreenHelper;
 import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.PlatformUtil;
 import sun.awt.UngrabEvent;
 import sun.awt.LightweightFrame;
 import sun.swing.JLightweightFrame;
@@ -670,6 +671,10 @@ public class SwingNode extends Node {
         @Override
         public void focusGrabbed() {
             SwingFXUtils.runOnFxThread(() -> {
+                // On X11 grab is limited to a single XDisplay connection,
+                // so we can't delegate it to another GUI toolkit.
+                if (PlatformUtil.isLinux()) return;
+
                 if (getScene() != null &&
                         getScene().getWindow() != null &&
                         getScene().getWindow().impl_getPeer() != null) {
@@ -717,6 +722,10 @@ public class SwingNode extends Node {
     }
 
     private void ungrabFocus(boolean postUngrabEvent) {
+        // On X11 grab is limited to a single XDisplay connection,
+        // so we can't delegate it to another GUI toolkit.
+        if (PlatformUtil.isLinux()) return;
+
         if (grabbed &&
             getScene() != null &&
             getScene().getWindow() != null &&
