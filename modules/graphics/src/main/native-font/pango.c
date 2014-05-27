@@ -240,6 +240,12 @@ JNIEXPORT jlong JNICALL OS_NATIVE(pango_1itemize)
     return (jlong)pango_itemize((PangoContext *)arg0, (const char *)arg1, arg2, arg3, (PangoAttrList *)arg4, (PangoAttrIterator *)arg5);
 }
 
+JNIEXPORT void JNICALL OS_NATIVE(pango_1context_1set_1base_1dir)
+    (JNIEnv *env, jclass that, jlong arg0, jint arg1)
+{
+    pango_context_set_base_dir((PangoContext *)arg0, (PangoDirection)arg1);
+}
+
 JNIEXPORT jlong JNICALL OS_NATIVE(pango_1font_1describe)
     (JNIEnv *env, jclass that, jlong arg0)
 {

@@ -54,7 +54,9 @@ class OSPango {
     static final int PANGO_STYLE_OBLIQUE = 0x1;
     static final int PANGO_WEIGHT_BOLD = 0x2bc;
     static final int PANGO_WEIGHT_NORMAL = 0x190;
+    static final int PANGO_DIRECTION_RTL = 1;
 
+    static final native void pango_context_set_base_dir(long context, int direction);
     static final native long pango_ft2_font_map_new();
     static final native long pango_font_map_create_context(long fontmap);
     static final native long pango_font_describe(long font);

@@ -93,6 +93,10 @@ class PangoGlyphLayout extends GlyphLayout {
         if (check(context, "Failed allocating PangoContext.", fontmap, 0, 0, 0)) {
             return;
         }
+        boolean rtl = (run.getLevel() & 1) != 0;
+        if (rtl) {
+            OSPango.pango_context_set_base_dir(context, OSPango.PANGO_DIRECTION_RTL);
+        }
         float size = font.getSize();
         int style = fr.isItalic() ? OSPango.PANGO_STYLE_ITALIC : OSPango.PANGO_STYLE_NORMAL;
         int weight = fr.isBold() ? OSPango.PANGO_WEIGHT_BOLD : OSPango.PANGO_WEIGHT_NORMAL;
@@ -144,7 +148,6 @@ class PangoGlyphLayout extends GlyphLayout {
             }
             OSPango.g_list_free(runs);
 
-            boolean rtl = (run.getLevel() & 1) != 0;
             int glyphCount = 0;
             for (PangoGlyphString g : pangoGlyphs) {
                 if (g != null) {
