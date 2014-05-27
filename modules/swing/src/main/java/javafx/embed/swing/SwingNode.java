@@ -755,6 +755,10 @@ public class SwingNode extends Node {
             if (swingID < 0) {
                 return;
             }
+
+            // Prevent ancestors of the SwingNode from stealing the focus
+            event.consume();
+
             final EventType<?> type = event.getEventType();
             if (type == MouseEvent.MOUSE_PRESSED) {
                 mouseClickedAllowed.add(event.getButton());
