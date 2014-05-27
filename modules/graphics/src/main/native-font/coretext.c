@@ -525,6 +525,12 @@ JNIEXPORT jlong JNICALL OS_NATIVE(kCTFontAttributeName)
     return (jlong)kCTFontAttributeName;
 }
 
+JNIEXPORT jlong JNICALL OS_NATIVE(kCTParagraphStyleAttributeName)
+    (JNIEnv *env, jclass that)
+{
+    return (jlong)kCTParagraphStyleAttributeName;
+}
+
 JNIEXPORT jlong JNICALL OS_NATIVE(CFAttributedStringCreate)
     (JNIEnv *env, jclass that, jlong arg0, jlong arg1, jlong arg2)
 {
@@ -825,6 +831,16 @@ JNIEXPORT jobject JNICALL OS_NATIVE(CGPathGetPathBoundingBox)
 {
     CGRect result = CGPathGetPathBoundingBox((CGPathRef)arg0);
     return newCGRect(env, &result);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(CTParagraphStyleCreate)
+    (JNIEnv *env, jclass that, jint arg0)
+{
+    CTWritingDirection dir = (CTWritingDirection)arg0;
+    CTParagraphStyleSetting settings[] = {
+        {kCTParagraphStyleSpecifierBaseWritingDirection, sizeof(dir), &dir}
+    };
+    return (jlong)CTParagraphStyleCreate(settings, sizeof(settings) / sizeof(settings[0]));
 }
 
 /***********************************************/
