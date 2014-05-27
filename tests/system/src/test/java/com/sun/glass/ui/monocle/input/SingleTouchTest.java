@@ -238,7 +238,7 @@ public class SingleTouchTest extends ParameterizedTestBase {
     /**
      * Touch down, change scene, release finger.
      */
-    @Ignore("RT-36008")
+    @Ignore("RT-37283")
     @Test
     public void testChangeSceneDuringTap() throws Exception {
         final int x1 = (int) Math.round(width * 0.3);
