@@ -270,9 +270,9 @@ project(":graphics") {
         }
 
 
-        addNative(project, "activity", ["dalvik"])
+        addNative(project, "activity")
         if (compileNativeText) {
-            addNative(project, "fontNativeFreetype", ["dalvik"])
+            addNative(project, "fontNativeFreetype")
         }
         tasks["javahDalvikGlass"].dependsOn(compileDalvikLibs)
         tasks["javahDalvikActivity"].dependsOn(compileDalvikLibs)
@@ -368,21 +368,9 @@ DALVIK.jfxrtJarExcludes = [
     "com/sun/glass/ui/accessible/win",    
     "com/sun/prism/j2d",
     "com/sun/prism/sw",
-    "com/sun/prism/d3d",
-    "com/sun/prism/es2/gl/win",
-    "com/sun/prism/null3d",
-    "com/sun/scenario/effect/impl/hw/d3d",
-    "com/sun/glass/events/mac",
-    "com/sun/glass/ui/mac",
     "com/sun/glass/ui/accessible/mac",
-    "com/sun/prism/es2/gl/mac",
-    "com/sun/glass/ui/gtk",
     "com/sun/glass/ui/ios",
-    "com/sun/prism/es2/gl/eglx11",
-    "com/sun/prism/es2/gl/x11",
     "com/sun/glass/ui/swt", // SWT glass
-    "javafx/embed/swing", // Swing Interop
-    "javafx/embed/swt", // SWT Interop
     "com/oracle/dalvik",
     "javafx/scene/media", //exclude all media for now
     "com/sun/media",
