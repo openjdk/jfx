@@ -487,6 +487,7 @@ DALVIK.glass.javahSource = files("modules/graphics/build/classes/dalvik",
  "modules/graphics/build/classes/main")
 DALVIK.glass.javahClasspath = files("modules/graphics/build/classes/main",
  "modules/graphics/build/classes/dalvik",
+ "modules/base/build/classes/main",
  "$sdk/platforms/$sdk_target/android.jar")
 DALVIK.glass.javahInclude = [
     "javafxports/android/**",
