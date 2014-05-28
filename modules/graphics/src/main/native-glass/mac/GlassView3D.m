@@ -453,6 +453,8 @@
 - (BOOL)performKeyEquivalent:(NSEvent *)theEvent
 {
     KEYLOG("performKeyEquivalent");
+    [GlassApplication registerKeyEvent:theEvent];
+
     // Crash if the FS window is released while performing a key equivalent
     // Local copy of the id keeps the retain/release calls balanced.
     id fsWindow = [self->_delegate->fullscreenWindow retain];
