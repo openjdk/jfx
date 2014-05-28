@@ -58,7 +58,7 @@ public class AcceleratedScreen {
         }
 
         if (!EGL.eglBindAPI(EGL.EGL_OPENGL_ES_API)) {
-            throw new GLException(EGL.eglGetError(), "Error binding OPENGL api");
+            throw new GLException(EGL.eglGetError(), "Error binding OPENGL API");
         }
 
         long eglConfigs[] = {0};
