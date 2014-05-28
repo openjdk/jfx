@@ -52,20 +52,36 @@ public class AcceleratedScreen {
         if (eglDisplay == EGL.EGL_NO_DISPLAY) {
             throw new GLException(EGL.eglGetError(), "Could not get EGL display");
         }
-        EGL.eglInitialize(eglDisplay, major, minor);
-        EGL.eglBindAPI(EGL.EGL_OPENGL_ES_BIT);
+
+        if (!EGL.eglInitialize(eglDisplay, major, minor)) {
+            throw new GLException(EGL.eglGetError(), "Error initializing EGL");
+        }
+
+        if (!EGL.eglBindAPI(EGL.EGL_OPENGL_ES_API)) {
+            throw new GLException(EGL.eglGetError(), "Error binding OPENGL api");
+        }
 
         long eglConfigs[] = {0};
         int configCount[] = {0};
 
-        EGL.eglChooseConfig(eglDisplay, attributes, eglConfigs, 1, configCount);
+        if (!EGL.eglChooseConfig(eglDisplay, attributes, eglConfigs,
+                                 1, configCount)) {
+            throw new GLException(EGL.eglGetError(), "Error choosing EGL config");
+        }
+
         eglSurface =
                 EGL.eglCreateWindowSurface(eglDisplay, eglConfigs[0],
                         platformGetNativeWindow(), null);
+        if (eglSurface == EGL.EGL_NO_SURFACE) {
+            throw new GLException(EGL.eglGetError(), "Could not get EGL surface");
+        }
 
         int emptyAttrArray [] = {};
         eglContext = EGL.eglCreateContext(eglDisplay, eglConfigs[0],
                 0, emptyAttrArray);
+        if (eglContext == EGL.EGL_NO_CONTEXT) {
+            throw new GLException(EGL.eglGetError(), "Could not get EGL context");
+        }
     }
 
     public void enableRendering(boolean flag) {
