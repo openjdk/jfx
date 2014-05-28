@@ -403,6 +403,7 @@ public enum Attribute {
     /**
      * The text of the Tooltip associated with a given node, although for now this
      * is only supported on Control subclasses.
+     * Type: String
      */
     TOOLTIP("Tooltip", String.class),
 
@@ -411,13 +412,16 @@ public enum Attribute {
      * index, relative to the tree item that this is called on. If this is called
      * on a container (e.g. TreeView or TreeTableView), it will be called on the
      * root tree item.
+     * Parameter: Integer
+     * Type: Node
      */
     TREE_ITEM_AT_INDEX("TreeItemAtIndex", Node.class),
 
     /**
-     * Returns the number of tree items that are expanded descendents of the current
+     * Returns the number of tree items that are expanded descendants of the current
      * tree item. If requested on a container (e.g. TreeView or TreeTableView),
      * this will return the count from the root tree item.
+     * Type: Node
      */
     TREE_ITEM_COUNT("TreeItemCount", Integer.class),
 
@@ -425,6 +429,7 @@ public enum Attribute {
      * Returns the parent of a Role.TREE_ITEM (as another Role.TREE_ITEM, or if
      * there is no parent (e.g. it is the root node)), then return the parent
      * node whatever it is (most probably Role.TREE_VIEW or Role.TREE_TABLE_VIEW)
+     * Type: Node
      */
     TREE_ITEM_PARENT("TreeItemParent", Node.class),
 
