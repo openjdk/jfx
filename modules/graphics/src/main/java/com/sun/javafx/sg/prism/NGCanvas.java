@@ -1276,49 +1276,50 @@ public class NGCanvas extends NGNode {
                     case BASE_MIDDLE: yAlign = layoutHeight / 2; break;
                     case BASE_BOTTOM: yAlign = layoutHeight; break;
                 }
-                if (bounds != null) {
-                    TEMP_TX.setTransform(transform);
-                    if (maxWidth > 0.0 && layoutWidth > maxWidth) {
-                        float sx = maxWidth / layoutWidth;
-                        TEMP_TX.translate(x - xAlign * sx, y - yAlign);
-                        TEMP_TX.scale(sx, 1);
+                float scaleX = 1;
+                float layoutX = 0;
+                float layoutY = y - yAlign;
+                if (maxWidth > 0.0 && layoutWidth > maxWidth) {
+                    float sx = maxWidth / layoutWidth;
+                    if (rtl) {
+                        layoutX = -((x + maxWidth) / sx - xAlign);
+                        scaleX = -sx;
                     } else {
-                        TEMP_TX.translate(x - xAlign, y - yAlign);
+                        layoutX = x / sx - xAlign;
+                        scaleX = sx;
                     }
-                    textLayout.getBounds(null, bounds);
-                    TEMP_TX.transform(bounds, bounds);
-                    if (token == STROKE_TEXT) {
-                        int flag = PrismTextLayout.TYPE_TEXT;
-                        Shape textShape = textLayout.getShape(flag, null);
-                        RectBounds shapeBounds = new RectBounds();
-                        strokebounds(getStroke(), textShape, shapeBounds, TEMP_TX);
-                        bounds.unionWith(shapeBounds);
+                } else {
+                    if (rtl) {
+                        layoutX = -(x - xAlign + layoutWidth);
+                        scaleX = -1;
+                    } else {
+                        layoutX = x - xAlign;
                     }
                 }
+                if (bounds != null) {
+                    computeTextLayoutBounds(bounds, transform, scaleX, layoutX, layoutY, token);
+                }
                 if (gr != null) {
-                    if (maxWidth > 0.0 && layoutWidth > maxWidth) {
-                        float sx = maxWidth / layoutWidth;
-                        if (rtl) {
-                            x += maxWidth;
-                            gr.translate(x - xAlign * sx, y - yAlign);
-                            gr.scale(-sx, 1);
-                        } else {
-                            gr.translate(x - xAlign * sx, y - yAlign);
-                            gr.scale(sx, 1);
-                        }
-                        ngtext.setLayoutLocation(0, 0);
-                    } else {
-                        if (rtl) {
-                            x = -(x + layoutWidth);
-                            xAlign = -xAlign;
-                            gr.scale(-1, 1);
-                        }
-                        ngtext.setLayoutLocation(xAlign - x, yAlign - y);
+                    if (scaleX != 1) {
+                        gr.scale(scaleX, 1);
                     }
+                    ngtext.setLayoutLocation(-layoutX, -layoutY);
                     if (token == FILL_TEXT) {
                         ngtext.setMode(NGShape.Mode.FILL);
                         ngtext.setFillPaint(fillPaint);
+                        if (fillPaint.isProportional()) {
+                            RectBounds textBounds = new RectBounds();
+                            computeTextLayoutBounds(textBounds, BaseTransform.IDENTITY_TRANSFORM,
+                                                    1, layoutX, layoutY, token);
+                            ngtext.setContentBounds(textBounds);
+                        }
                     } else {
+                        if (strokePaint.isProportional()) {
+                            RectBounds textBounds = new RectBounds();
+                            computeTextLayoutBounds(textBounds, BaseTransform.IDENTITY_TRANSFORM,
+                                                    1, layoutX, layoutY, token);
+                            ngtext.setContentBounds(textBounds);
+                        }
                         ngtext.setMode(NGShape.Mode.STROKE);
                         ngtext.setDrawStroke(getStroke());
                         ngtext.setDrawPaint(strokePaint);
@@ -1346,6 +1347,24 @@ public class NGCanvas extends NGNode {
             if (transformBounds) {
                 txBounds(bounds, transform);
             }
+        }
+    }
+
+    void computeTextLayoutBounds(RectBounds bounds, BaseTransform transform,
+                                 float scaleX, float layoutX, float layoutY,
+                                 int token)
+    {
+        textLayout.getBounds(null, bounds);
+        TEMP_TX.setTransform(transform);
+        TEMP_TX.scale(scaleX, 1);
+        TEMP_TX.translate(layoutX, layoutY);
+        TEMP_TX.transform(bounds, bounds);
+        if (token == STROKE_TEXT) {
+            int flag = PrismTextLayout.TYPE_TEXT;
+            Shape textShape = textLayout.getShape(flag, null);
+            RectBounds shapeBounds = new RectBounds();
+            strokebounds(getStroke(), textShape, shapeBounds, TEMP_TX);
+            bounds.unionWith(shapeBounds);
         }
     }
 
