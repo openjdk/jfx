@@ -34,6 +34,7 @@ import javafx.application.Platform;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 class MonocleUInput extends NativeUInput {
@@ -91,7 +92,20 @@ class MonocleUInput extends NativeUInput {
         pipe = null;
         if (device != null) {
             final LinuxInputDevice d = device;
-            Platform.runLater(() -> registry.removeDevice(d));
+            if (Platform.isFxApplicationThread()) {
+                registry.removeDevice(d);
+            } else {
+                CountDownLatch latch = new CountDownLatch(1);
+                Platform.runLater(() -> {
+                    registry.removeDevice(d);
+                    latch.countDown();
+                });
+                try {
+                    latch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
             device = null;
         }
     }
@@ -102,6 +116,8 @@ class MonocleUInput extends NativeUInput {
 
     @Override
     public void dispose() {
+        destroyDevice();
+        closeConnection();
     }
 
     @Override

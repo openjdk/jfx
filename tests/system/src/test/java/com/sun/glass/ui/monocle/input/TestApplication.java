@@ -408,6 +408,7 @@ public class TestApplication extends Application {
             ui.processLine("CLOSE");
             ui.dispose();
         }
+        frameWait(1);
     }
 
     public static int getTapRadius() {
