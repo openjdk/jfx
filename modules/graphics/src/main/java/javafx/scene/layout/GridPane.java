@@ -1205,39 +1205,59 @@ public class GridPane extends Pane {
 
     @Override protected double computeMinWidth(double height) {
         computeGridMetrics();
-        final double[] heights = height == -1 ? null : computeHeightsToFit(height).asArray();
+        performingLayout = true;
+        try {
+            final double[] heights = height == -1 ? null : computeHeightsToFit(height).asArray();
 
-        return snapSpace(getInsets().getLeft()) +
-               computeMinWidths(heights).computeTotalWithMultiSize() +
-               snapSpace(getInsets().getRight());
+            return snapSpace(getInsets().getLeft()) +
+                    computeMinWidths(heights).computeTotalWithMultiSize() +
+                    snapSpace(getInsets().getRight());
+        } finally {
+            performingLayout = false;
+        }
 
     }
 
     @Override protected double computeMinHeight(double width) {
         computeGridMetrics();
-        final double[] widths = width == -1 ? null : computeWidthsToFit(width).asArray();
+        performingLayout = true;
+        try {
+            final double[] widths = width == -1 ? null : computeWidthsToFit(width).asArray();
 
-        return snapSpace(getInsets().getTop()) +
-               computeMinHeights(widths).computeTotalWithMultiSize() +
-               snapSpace(getInsets().getBottom());
+            return snapSpace(getInsets().getTop()) +
+                    computeMinHeights(widths).computeTotalWithMultiSize() +
+                    snapSpace(getInsets().getBottom());
+        } finally {
+            performingLayout = false;
+        }
     }
 
     @Override protected double computePrefWidth(double height) {
         computeGridMetrics();
-        final double[] heights = height == -1 ? null : computeHeightsToFit(height).asArray();
+        performingLayout = true;
+        try {
+            final double[] heights = height == -1 ? null : computeHeightsToFit(height).asArray();
 
-        return snapSpace(getInsets().getLeft()) +
-               computePrefWidths(heights).computeTotalWithMultiSize() +
-               snapSpace(getInsets().getRight());
+            return snapSpace(getInsets().getLeft()) +
+                    computePrefWidths(heights).computeTotalWithMultiSize() +
+                    snapSpace(getInsets().getRight());
+        } finally {
+            performingLayout = false;
+        }
     }
 
     @Override protected double computePrefHeight(double width) {
         computeGridMetrics();
-        final double[] widths = width == -1 ? null : computeWidthsToFit(width).asArray();
+        performingLayout = true;
+        try {
+            final double[] widths = width == -1 ? null : computeWidthsToFit(width).asArray();
 
-        return snapSpace(getInsets().getTop()) +
-               computePrefHeights(widths).computeTotalWithMultiSize() +
-               snapSpace(getInsets().getBottom());
+            return snapSpace(getInsets().getTop()) +
+                    computePrefHeights(widths).computeTotalWithMultiSize() +
+                    snapSpace(getInsets().getBottom());
+        } finally {
+            performingLayout = false;
+        }
     }
 
     private VPos getRowValignment(int rowIndex) {
@@ -1647,135 +1667,139 @@ public class GridPane extends Pane {
 
     @Override protected void layoutChildren() {
         performingLayout = true;
-        final double snaphgap = snapSpace(getHgap());
-        final double snapvgap = snapSpace(getVgap());
-        final double top = snapSpace(getInsets().getTop());
-        final double bottom = snapSpace(getInsets().getBottom());
-        final double left = snapSpace(getInsets().getLeft());
-        final double right = snapSpace(getInsets().getRight());
+        try {
+            final double snaphgap = snapSpace(getHgap());
+            final double snapvgap = snapSpace(getVgap());
+            final double top = snapSpace(getInsets().getTop());
+            final double bottom = snapSpace(getInsets().getBottom());
+            final double left = snapSpace(getInsets().getLeft());
+            final double right = snapSpace(getInsets().getRight());
 
-        final double width = getWidth();
-        final double height = getHeight();
-        final double contentHeight = height - top - bottom;
-        final double contentWidth = width - left - right;
-        double columnTotal;
-        double rowTotal;
-        computeGridMetrics();
+            final double width = getWidth();
+            final double height = getHeight();
+            final double contentHeight = height - top - bottom;
+            final double contentWidth = width - left - right;
+            double columnTotal;
+            double rowTotal;
+            computeGridMetrics();
 
-        Orientation contentBias = getContentBias();
-        CompositeSize heights;
-        final CompositeSize widths;
-        if (contentBias == null) {
-            heights = (CompositeSize) computePrefHeights(null).clone();
-            widths = (CompositeSize) computePrefWidths(null).clone();
-            rowTotal = adjustRowHeights(heights, height);
-            columnTotal = adjustColumnWidths(widths, width);
-        } else if (contentBias == Orientation.HORIZONTAL) {
-            widths = (CompositeSize) computePrefWidths(null).clone();
-            columnTotal = adjustColumnWidths(widths, width);
-            heights = computePrefHeights(widths.asArray());
-            rowTotal = adjustRowHeights(heights, height);
-        } else {
-            heights = (CompositeSize) computePrefHeights(null).clone();
-            rowTotal = adjustRowHeights(heights, height);
-            widths = computePrefWidths(heights.asArray());
-            columnTotal = adjustColumnWidths(widths, width);
-        }
-
-        final double x = left + computeXOffset(contentWidth, columnTotal, getAlignmentInternal().getHpos());
-        final double y = top + computeYOffset(contentHeight, rowTotal, getAlignmentInternal().getVpos());
-        final List<Node> managed = getManagedChildren();
-
-        double[] baselineOffsets = createDoubleArray(numRows, -1);
-
-        for (int i = 0, size = managed.size(); i < size; i++) {
-            final Node child = managed.get(i);
-            final int rowIndex = getNodeRowIndex(child);
-            int columnIndex = getNodeColumnIndex(child);
-            int colspan = getNodeColumnSpan(child);
-            if (colspan == REMAINING) {
-                colspan = widths.getLength() - columnIndex;
-            }
-            int rowspan = getNodeRowSpan(child);
-            if (rowspan == REMAINING) {
-                rowspan = heights.getLength() - rowIndex;
-            }
-            double areaX = x;
-            for (int j = 0; j < columnIndex; j++) {
-                areaX += widths.getSize(j) + snaphgap;
-            }
-            double areaY = y;
-            for (int j = 0; j < rowIndex; j++) {
-                areaY += heights.getSize(j) + snapvgap;
-            }
-            double areaW = widths.getSize(columnIndex);
-            for (int j = 2; j <= colspan; j++) {
-                areaW += widths.getSize(columnIndex+j-1) + snaphgap;
-            }
-            double areaH = heights.getSize(rowIndex);
-            for (int j = 2; j <= rowspan; j++) {
-                areaH += heights.getSize(rowIndex+j-1) + snapvgap;
+            Orientation contentBias = getContentBias();
+            CompositeSize heights;
+            final CompositeSize widths;
+            if (contentBias == null) {
+                heights = (CompositeSize) computePrefHeights(null).clone();
+                widths = (CompositeSize) computePrefWidths(null).clone();
+                rowTotal = adjustRowHeights(heights, height);
+                columnTotal = adjustColumnWidths(widths, width);
+            } else if (contentBias == Orientation.HORIZONTAL) {
+                widths = (CompositeSize) computePrefWidths(null).clone();
+                columnTotal = adjustColumnWidths(widths, width);
+                heights = computePrefHeights(widths.asArray());
+                rowTotal = adjustRowHeights(heights, height);
+            } else {
+                heights = (CompositeSize) computePrefHeights(null).clone();
+                rowTotal = adjustRowHeights(heights, height);
+                widths = computePrefWidths(heights.asArray());
+                columnTotal = adjustColumnWidths(widths, width);
             }
 
-            HPos halign = getHalignment(child);
-            VPos valign = getValignment(child);
-            Boolean fillWidth = isFillWidth(child);
-            Boolean fillHeight = isFillHeight(child);
+            final double x = left + computeXOffset(contentWidth, columnTotal, getAlignmentInternal().getHpos());
+            final double y = top + computeYOffset(contentHeight, rowTotal, getAlignmentInternal().getVpos());
+            final List<Node> managed = getManagedChildren();
 
-            if (halign == null) {
-                halign = getColumnHalignment(columnIndex);
-            }
-            if (valign == null) {
-                valign = getRowValignment(rowIndex);
-            }
-            if (fillWidth == null) {
-                fillWidth = shouldColumnFillWidth(columnIndex);
-            }
-            if (fillHeight == null) {
-                fillHeight = shouldRowFillHeight(rowIndex);
-            }
+            double[] baselineOffsets = createDoubleArray(numRows, -1);
 
-            double baselineOffset = 0;
-            if (valign == VPos.BASELINE) {
-                if (baselineOffsets[rowIndex] == -1) {
-                    baselineOffsets[rowIndex] = getAreaBaselineOffset(rowBaseline[rowIndex],
-                            marginAccessor,
-                            t -> {
-                                Node n = rowBaseline[rowIndex].get(t);
-                                int c = getNodeColumnIndex(n);
-                                int cs = getNodeColumnSpan(n);
-                                if (cs == REMAINING) {
-                                    cs = widths.getLength() - c;
-                                }
-                                double w = widths.getSize(c);
-                                for (int j = 2; j <= cs; j++) {
-                                    w += widths.getSize(c + j - 1) + snaphgap;
-                                }
-                                return w;
-                            },
-                            areaH,
-                            t -> {
-                                Boolean b = isFillHeight(child);
-                                if (b != null) {
-                                    return b;
-                                }
-                                return shouldRowFillHeight(getNodeRowIndex(child));
-                            }, rowMinBaselineComplement[rowIndex]);
+            for (int i = 0, size = managed.size(); i < size; i++) {
+                final Node child = managed.get(i);
+                final int rowIndex = getNodeRowIndex(child);
+                int columnIndex = getNodeColumnIndex(child);
+                int colspan = getNodeColumnSpan(child);
+                if (colspan == REMAINING) {
+                    colspan = widths.getLength() - columnIndex;
                 }
-                baselineOffset = baselineOffsets[rowIndex];
-            }
+                int rowspan = getNodeRowSpan(child);
+                if (rowspan == REMAINING) {
+                    rowspan = heights.getLength() - rowIndex;
+                }
+                double areaX = x;
+                for (int j = 0; j < columnIndex; j++) {
+                    areaX += widths.getSize(j) + snaphgap;
+                }
+                double areaY = y;
+                for (int j = 0; j < rowIndex; j++) {
+                    areaY += heights.getSize(j) + snapvgap;
+                }
+                double areaW = widths.getSize(columnIndex);
+                for (int j = 2; j <= colspan; j++) {
+                    areaW += widths.getSize(columnIndex + j - 1) + snaphgap;
+                }
+                double areaH = heights.getSize(rowIndex);
+                for (int j = 2; j <= rowspan; j++) {
+                    areaH += heights.getSize(rowIndex + j - 1) + snapvgap;
+                }
 
-            Insets margin = getMargin(child);
-            layoutInArea(child, areaX, areaY, areaW, areaH,
-                    baselineOffset,
-                    margin,
-                    fillWidth, fillHeight,
-                    halign, valign);
+                HPos halign = getHalignment(child);
+                VPos valign = getValignment(child);
+                Boolean fillWidth = isFillWidth(child);
+                Boolean fillHeight = isFillHeight(child);
+
+                if (halign == null) {
+                    halign = getColumnHalignment(columnIndex);
+                }
+                if (valign == null) {
+                    valign = getRowValignment(rowIndex);
+                }
+                if (fillWidth == null) {
+                    fillWidth = shouldColumnFillWidth(columnIndex);
+                }
+                if (fillHeight == null) {
+                    fillHeight = shouldRowFillHeight(rowIndex);
+                }
+
+                double baselineOffset = 0;
+                if (valign == VPos.BASELINE) {
+                    if (baselineOffsets[rowIndex] == -1) {
+                        baselineOffsets[rowIndex] = getAreaBaselineOffset(rowBaseline[rowIndex],
+                                marginAccessor,
+                                t -> {
+                                    Node n = rowBaseline[rowIndex].get(t);
+                                    int c = getNodeColumnIndex(n);
+                                    int cs = getNodeColumnSpan(n);
+                                    if (cs == REMAINING) {
+                                        cs = widths.getLength() - c;
+                                    }
+                                    double w = widths.getSize(c);
+                                    for (int j = 2; j <= cs; j++) {
+                                        w += widths.getSize(c + j - 1) + snaphgap;
+                                    }
+                                    return w;
+                                },
+                                areaH,
+                                t -> {
+                                    Boolean b = isFillHeight(child);
+                                    if (b != null) {
+                                        return b;
+                                    }
+                                    return shouldRowFillHeight(getNodeRowIndex(child));
+                                }, rowMinBaselineComplement[rowIndex]
+                        );
+                    }
+                    baselineOffset = baselineOffsets[rowIndex];
+                }
+
+                Insets margin = getMargin(child);
+                layoutInArea(child, areaX, areaY, areaW, areaH,
+                        baselineOffset,
+                        margin,
+                        fillWidth, fillHeight,
+                        halign, valign);
+            }
+            layoutGridLines(widths, heights, x, y, rowTotal, columnTotal);
+            currentHeights = heights;
+            currentWidths = widths;
+        } finally {
+            performingLayout = false;
         }
-        layoutGridLines(widths, heights, x, y, rowTotal, columnTotal);
-        currentHeights = heights;
-        currentWidths = widths;
-        performingLayout = false;
     }
 
     private double adjustRowHeights(final CompositeSize heights, double height) {
