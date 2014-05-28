@@ -565,9 +565,7 @@ public class MacAppBundler extends AbstractBundler {
                 //TODO parameters should provide set of values for IDEs
                 MAC_CATEGORY.validatedFetchFrom(params));
 
-        //TODO NOT THE WAY TODO THIS but good enough for first pass
-        data.put("DEPLOY_MAIN_JAR_NAME", new BundleParams(params).getMainApplicationJar());
-//        data.put("DEPLOY_MAIN_JAR_NAME", MAIN_JAR.fetchFrom(params).toString());
+        data.put("DEPLOY_MAIN_JAR_NAME", MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
 
         data.put("DEPLOY_PREFERENCES_ID", PREFERENCES_ID.fetchFrom(params).toLowerCase());
 
