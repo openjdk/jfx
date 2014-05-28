@@ -489,6 +489,16 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             case FOCUS_ITEM: {
                 FocusModel<?> fm = getSkinnable().getFocusModel();
                 int focusedIndex = fm.getFocusedIndex();
+                if (focusedIndex == -1) {
+                    if (placeholderRegion != null && placeholderRegion.isVisible()) {
+                        return placeholderRegion.getChildren().get(0);
+                    }
+                    if (getItemCount() > 0) {
+                        focusedIndex = 0;
+                    } else {
+                        return null;
+                    }
+                }
                 return flow.getPrivateCell(focusedIndex);
             }
             case ROW_AT_INDEX: {

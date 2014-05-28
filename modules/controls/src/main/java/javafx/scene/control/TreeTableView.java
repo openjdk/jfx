@@ -1892,7 +1892,13 @@ public class TreeTableView<S> extends Control {
                 }
                 return FXCollections.observableArrayList(selection);
             }
-            case FOCUS_ITEM:
+            case FOCUS_ITEM: {
+                Node row = (Node)super.accGetAttribute(attribute, parameters);
+                if (row == null) return null;
+                Node cell = (Node)row.accGetAttribute(attribute, parameters);
+                /* cell equals to null means the row is a placeholder node */
+                return cell != null ?  cell : row;
+            }
             case CELL_AT_ROW_COLUMN: {
                 TreeTableRow<S> row = (TreeTableRow<S>)super.accGetAttribute(attribute, parameters);
                 return row != null ? row.accGetAttribute(attribute, parameters) : null;

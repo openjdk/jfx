@@ -480,6 +480,13 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             case FOCUS_ITEM: {
                 FocusModel<?> fm = getSkinnable().getFocusModel();
                 int focusedIndex = fm.getFocusedIndex();
+                if (focusedIndex == -1) {
+                    if (getItemCount() > 0) {
+                        focusedIndex = 0;
+                    } else {
+                        return null;
+                    }
+                }
                 return flow.getPrivateCell(focusedIndex);
             }
             case ROW_AT_INDEX: {
