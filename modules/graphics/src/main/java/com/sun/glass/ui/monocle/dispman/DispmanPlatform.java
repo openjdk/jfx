@@ -24,6 +24,7 @@ package com.sun.glass.ui.monocle.dispman;/*
  */
 
 import com.sun.glass.ui.monocle.AcceleratedScreen;
+import com.sun.glass.ui.monocle.GLException;
 import com.sun.glass.ui.monocle.NativeCursor;
 import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.linux.LinuxPlatform;
@@ -40,7 +41,8 @@ public class DispmanPlatform extends LinuxPlatform {
         return new DispmanScreen();
     }
 
-    @Override    public synchronized AcceleratedScreen getAcceleratedScreen(int[] attributes) {
+    @Override public synchronized AcceleratedScreen getAcceleratedScreen(int[] attributes)
+            throws GLException{
         if (accScreen == null) {
             accScreen = new DispmanAcceleratedScreen(attributes);
         }

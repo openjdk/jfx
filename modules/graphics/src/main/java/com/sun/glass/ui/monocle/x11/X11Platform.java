@@ -24,6 +24,7 @@ package com.sun.glass.ui.monocle.x11;/*
  */
 
 import com.sun.glass.ui.monocle.AcceleratedScreen;
+import com.sun.glass.ui.monocle.GLException;
 import com.sun.glass.ui.monocle.NativeCursor;
 import com.sun.glass.ui.monocle.NativePlatform;
 import com.sun.glass.ui.monocle.NativeScreen;
@@ -67,7 +68,7 @@ public class X11Platform extends NativePlatform {
 
     @Override
     public synchronized AcceleratedScreen getAcceleratedScreen(
-            int[] attributes) {
+            int[] attributes) throws GLException {
         if (accScreen == null) {
             accScreen = new X11AcceleratedScreen(attributes);
         }

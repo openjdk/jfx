@@ -80,7 +80,8 @@ public abstract class NativePlatform {
         return screen;
     }
 
-    public synchronized AcceleratedScreen getAcceleratedScreen(int[] attributes) {
+    public synchronized AcceleratedScreen getAcceleratedScreen(int[] attributes)
+            throws GLException {
         if (accScreen == null) {
             accScreen = new AcceleratedScreen(attributes);
         }

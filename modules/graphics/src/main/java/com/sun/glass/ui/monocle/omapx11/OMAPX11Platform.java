@@ -24,6 +24,7 @@ package com.sun.glass.ui.monocle.omapx11;/*
  */
 
 import com.sun.glass.ui.monocle.AcceleratedScreen;
+import com.sun.glass.ui.monocle.GLException;
 import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.omap.OMAPPlatform;
 import com.sun.glass.ui.monocle.x11.X11AcceleratedScreen;
@@ -38,7 +39,7 @@ public class OMAPX11Platform extends OMAPPlatform {
 
     @Override
     public synchronized AcceleratedScreen getAcceleratedScreen(
-            int[] attributes) {
+            int[] attributes) throws GLException {
         if (accScreen == null) {
             accScreen = new X11AcceleratedScreen(attributes);
         }

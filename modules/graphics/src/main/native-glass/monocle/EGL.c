@@ -30,7 +30,6 @@
 
 #include <stdlib.h>
 
-
 void setEGLAttrs(jint *attrs, int *eglAttrs) {
     int index = 0;
 
@@ -194,6 +193,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglSwapBuffers
     } else {
         return JNI_FALSE;
     }
+}
+
+JNIEXPORT jint  JNICALL Java_com_sun_glass_ui_monocle_EGL_eglGetError
+    (JNIEnv *UNUSED(env), jclass UNUSED(clazz)) {
+    return (jint)eglGetError();
 }
 
 

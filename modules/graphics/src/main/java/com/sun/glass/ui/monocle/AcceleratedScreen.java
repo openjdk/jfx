@@ -43,12 +43,15 @@ public class AcceleratedScreen {
         return 0L;
     }
 
-    public AcceleratedScreen(int[] attributes) {
+    public AcceleratedScreen(int[] attributes) throws GLException {
         initPlatformLibraries();
 
         int major[] = {0}, minor[]={0};
         eglDisplay =
                 EGL.eglGetDisplay(platformGetNativeDisplay());
+        if (eglDisplay == EGL.EGL_NO_DISPLAY) {
+            throw new GLException(EGL.eglGetError(), "Could not get EGL display");
+        }
         EGL.eglInitialize(eglDisplay, major, minor);
         EGL.eglBindAPI(EGL.EGL_OPENGL_ES_BIT);
 

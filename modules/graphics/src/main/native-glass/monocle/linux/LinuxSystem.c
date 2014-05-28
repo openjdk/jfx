@@ -299,3 +299,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_munmap
   (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong addr, jlong length) {
     return (jint) munmap(asPtr(addr), (size_t) length);
 }
+
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_linux_LinuxSystem_memcpy
+  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jlong destAddr, jlong srcAddr,
+   jlong length) {
+    return asJLong(memcpy(asPtr(destAddr), asPtr(srcAddr), (size_t)(length)));
+}
