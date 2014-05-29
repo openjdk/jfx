@@ -52,7 +52,6 @@ private:
     jobject          m_ConnectionHolder;
 
     JavaVM           *m_jvm;
-    static bool      m_areJMethodIDsInitialized;
     static jfieldID  m_BufferFID;
     static jmethodID m_NeedBufferMID;
     static jmethodID m_ReadNextBlockMID;
