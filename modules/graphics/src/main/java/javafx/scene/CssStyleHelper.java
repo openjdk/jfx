@@ -129,6 +129,7 @@ final class CssStyleHelper {
                 node.styleHelper.cacheContainer.fontSizeCache.clear();
             }
             node.styleHelper.cacheContainer.forceSlowpath = true;
+            updateParentTriggerStates(node, depth, triggerStates);
             return node.styleHelper;
 
         }
@@ -168,9 +169,23 @@ final class CssStyleHelper {
         final CssStyleHelper helper = new CssStyleHelper();
         helper.triggerStates.addAll(triggerStates[0]);
 
+        updateParentTriggerStates(node, depth, triggerStates);
+
+        helper.cacheContainer = new CacheContainer(node, styleMap, depth);
+
+        // If this node had a style helper, then reset properties to their initial value
+        // since the style map might now be different
+        if (node.styleHelper != null) {
+            node.styleHelper.resetToInitialValues(node);
+        }
+
+        return helper;
+    }
+
+    private static void updateParentTriggerStates(Styleable styleable, int depth, PseudoClassState[] triggerStates) {
         // make sure parent's transition states include the pseudo-classes
         // found when matching selectors
-        parent = node.getStyleableParent();
+        Styleable parent = styleable.getStyleableParent();
         for(int n=1; n<depth; n++) {
 
             // TODO: this means that a style like .menu-item:hover won't work. Need to separate CssStyleHelper tree from scene-graph tree
@@ -197,17 +212,7 @@ final class CssStyleHelper {
             parent=parent.getStyleableParent();
         }
 
-        helper.cacheContainer = new CacheContainer(node, styleMap, depth);
-
-        // If this node had a style helper, then reset properties to their initial value
-        // since the style map might now be different
-        if (node.styleHelper != null) {
-            node.styleHelper.resetToInitialValues(node);
-        }
-
-        return helper;
     }
-
     //
     // return true if the fontStyleableProperty's origin is USER
     //
