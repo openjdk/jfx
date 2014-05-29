@@ -1509,6 +1509,19 @@ public class NGRegion extends NGGroup {
         BasicStroke bs;
         if (sb == BorderStrokeStyle.NONE) {
             throw new AssertionError("Should never have been asked to draw a border with NONE");
+        } else if (strokeWidth <= 0) {
+            // The stroke essentially disappears in this case, but some of the
+            // dashing calculations below can produce degenerate dash arrays
+            // that are problematic when the strokeWidth is 0.
+
+            // Ideally the calling code would not even be trying to perform a
+            // stroke under these conditions, but there are so many unchecked
+            // calls to createStroke() in the code that pass the result directly
+            // to a Graphics and then use it, that we need to return something
+            // valid, even if it represents a NOP.
+
+            bs = new BasicStroke((float) strokeWidth, cap, join,
+                    (float) sb.getMiterLimit());
         } else if (sb.getDashArray().size() > 0) {
             List<Double> dashArray = sb.getDashArray();
             double[] array;
