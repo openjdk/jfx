@@ -91,6 +91,8 @@ import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
+
 public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private static enum TabAnimation {
         NONE,
@@ -1131,7 +1133,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
                     switch (attribute) {
                         case ROLE: return Role.BUTTON;
-                        case TITLE: return "Close";
+                        case TITLE: return getString("Accessibility.title.TabPane.CloseButton");
                         default: return super.accGetAttribute(attribute, parameters);
                     }
                 }

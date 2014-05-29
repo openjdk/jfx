@@ -32,6 +32,7 @@ import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
+import javafx.geometry.Orientation;
 import org.w3c.dom.html.HTMLDocument;
 import org.w3c.dom.html.HTMLElement;
 
@@ -492,7 +493,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         copyButton = addButton(toolbar1, resources.getString("copyIcon"), resources.getString("copy"), COPY_COMMAND, "html-editor-copy");
         pasteButton = addButton(toolbar1, resources.getString("pasteIcon"), resources.getString("paste"), PASTE_COMMAND, "html-editor-paste");
 
-        toolbar1.getItems().add(new Separator());
+        toolbar1.getItems().add(new Separator(Orientation.VERTICAL));
 
 //        undoButton = addButton(toolbar1, "undoIcon", resources.getString("undo"), UNDO_COMMAND);
 //        redoButton = addButton(toolbar1, "redoIcon", resources.getString("redo"), REDO_COMMAND);//
@@ -508,14 +509,14 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
          alignJustifyButton = addToggleButton(toolbar1, alignmentToggleGroup,
             resources.getString("alignJustifyIcon"), resources.getString("alignJustify"), ALIGN_JUSTIFY_COMMAND, "html-editor-align-justify");
 
-        toolbar1.getItems().add(new Separator());
+        toolbar1.getItems().add(new Separator(Orientation.VERTICAL));
 
         outdentButton = addButton(toolbar1, resources.getString("outdentIcon"), resources.getString("outdent"), OUTDENT_COMMAND, "html-editor-outdent");
         if (outdentButton.getGraphic() != null) outdentButton.getGraphic().setNodeOrientation(NodeOrientation.INHERIT);
         indentButton = addButton(toolbar1, resources.getString("indentIcon"), resources.getString("indent"), INDENT_COMMAND, "html-editor-indent");
         if (indentButton.getGraphic() != null) indentButton.getGraphic().setNodeOrientation(NodeOrientation.INHERIT);
 
-        toolbar1.getItems().add(new Separator());
+        toolbar1.getItems().add(new Separator(Orientation.VERTICAL));
 
          ToggleGroup listStyleToggleGroup = new ToggleGroup();
          bulletsButton = addToggleButton(toolbar1, listStyleToggleGroup,
@@ -524,7 +525,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
          numbersButton = addToggleButton(toolbar1, listStyleToggleGroup,
             resources.getString("numbersIcon"), resources.getString("numbers"), NUMBERS_COMMAND, "html-editor-numbers");
 
-        toolbar1.getItems().add(new Separator());
+        toolbar1.getItems().add(new Separator(Orientation.VERTICAL));
 
         //toolbar1.getItems().add(new Separator());
 
@@ -677,7 +678,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
             }
         });
 
-        toolbar2.getItems().add(new Separator());
+        toolbar2.getItems().add(new Separator(Orientation.VERTICAL));
 
         boldButton = addToggleButton(toolbar2, null,
             resources.getString("boldIcon"), resources.getString("bold"), BOLD_COMMAND, "html-editor-bold");
@@ -696,7 +697,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         strikethroughButton = addToggleButton(toolbar2, null,
             resources.getString("strikethroughIcon"), resources.getString("strikethrough"), STRIKETHROUGH_COMMAND, "html-editor-strike");
 
-        toolbar2.getItems().add(new Separator());
+        toolbar2.getItems().add(new Separator(Orientation.VERTICAL));
 
         insertHorizontalRuleButton = addButton(toolbar2, resources.getString("insertHorizontalRuleIcon"),
             resources.getString("insertHorizontalRule"), INSERT_HORIZONTAL_RULE_COMMAND, "html-editor-hr");

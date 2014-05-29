@@ -767,16 +767,16 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case FOCUS_ITEM: {
-              if (comboBox.isShowing()) {
-                  /* On Mac, for some reason, changing the selection on the list is not 
-                   * reported by VoiceOver the first time it shows.
-                   * Note that this fix returns a child of the PopupWindow back to the main
-                   * Stage, which doesn't seem to cause problems.
-                   */
-                  return listView.accGetAttribute(attribute, parameters);
-              }
-              return null;
-          }
+                if (comboBox.isShowing()) {
+                    /* On Mac, for some reason, changing the selection on the list is not
+                     * reported by VoiceOver the first time it shows.
+                     * Note that this fix returns a child of the PopupWindow back to the main
+                     * Stage, which doesn't seem to cause problems.
+                     */
+                    return listView.accGetAttribute(attribute, parameters);
+                }
+                return null;
+            }
             case TITLE: {
                 String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();
                 if (title == null || title.isEmpty()) {

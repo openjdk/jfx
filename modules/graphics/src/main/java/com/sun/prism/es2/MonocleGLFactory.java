@@ -25,6 +25,7 @@
 
 package com.sun.prism.es2;
 
+import com.sun.glass.ui.monocle.GLException;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.prism.es2.GLPixelFormat.Attributes;
 import java.util.HashMap;
@@ -103,20 +104,27 @@ class MonocleGLFactory extends GLFactory {
         attrArr[GLPixelFormat.Attributes.DOUBLEBUFFER] = attrs.isDoubleBuffer() ? 1 : 0;
         attrArr[GLPixelFormat.Attributes.ONSCREEN] = attrs.isOnScreen() ? 1 : 0;
 
-        accScreen = NativePlatformFactory.getNativePlatform().getAcceleratedScreen(attrArr);
+        try {
+            accScreen = NativePlatformFactory.getNativePlatform().getAcceleratedScreen(
 
-        accScreen.enableRendering(true);
+                    attrArr);
 
-        nativeCtxInfo = nPopulateNativeCtxInfo(accScreen.getGLHandle());
+            accScreen.enableRendering(true);
 
-        accScreen.enableRendering(false);
+            nativeCtxInfo = nPopulateNativeCtxInfo(accScreen.getGLHandle());
 
-        if (nativeCtxInfo == 0) {
-            // current pipe doesn't support this pixelFormat request
+            accScreen.enableRendering(false);
+
+            if (nativeCtxInfo == 0) {
+                // current pipe doesn't support this pixelFormat request
+                return false;
+            } else {
+                gl2 = nGetIsGL2(nativeCtxInfo);
+                return true;
+            }
+        } catch (GLException e) {
+            e.printStackTrace();
             return false;
-        } else {
-            gl2 = nGetIsGL2(nativeCtxInfo);
-            return true;
         }
     }
 

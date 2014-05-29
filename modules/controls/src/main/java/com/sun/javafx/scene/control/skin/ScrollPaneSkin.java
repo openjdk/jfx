@@ -37,6 +37,7 @@ import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.EventDispatcher;
+import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
@@ -261,6 +262,13 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         vsb = new ScrollBar();
         vsb.setOrientation(Orientation.VERTICAL);
+
+        EventHandler<MouseEvent> barHandler = ev -> {
+            getSkinnable().requestFocus();
+        };
+
+        hsb.addEventFilter(MouseEvent.MOUSE_PRESSED, barHandler);
+        vsb.addEventFilter(MouseEvent.MOUSE_PRESSED, barHandler);
 
         corner = new StackPane();
         corner.getStyleClass().setAll("corner");

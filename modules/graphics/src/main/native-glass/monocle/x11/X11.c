@@ -25,6 +25,7 @@
 
 #include "com_sun_glass_ui_monocle_x11_X.h"
 #include <X11/Xlib.h>
+#include <X11/Xlibint.h>
 #include "Monocle.h"
 
 JNIEXPORT jlong JNICALL
@@ -275,4 +276,10 @@ JNIEXPORT void JNICALL
  (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong eventL, jint index, jlong element) {
     XClientMessageEvent *event = (XClientMessageEvent *) asPtr(eventL);
     event->data.l[index] = (long) element;
+}
+
+JNIEXPORT jint JNICALL
+ Java_com_sun_glass_ui_monocle_x11_X_00024XDisplay_sizeof
+ (JNIEnv *UNUSED(env), jclass UNUSED(clazz)) {
+    return (jint) sizeof(struct _XDisplay);
 }

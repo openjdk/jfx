@@ -1103,7 +1103,7 @@ is being used to size a border should also be in pixels.
 }
 .scroll-pane.edge-to-edge > .scroll-bar,
 .tab-pane > * > .scroll-pane > .scroll-bar,
-.titled-pane > * > * > .scroll-pane > .scroll-bar {
+.titled-pane > .content > .scroll-pane > .scroll-bar {
     -fx-background-insets: 0;
     -fx-padding: 0;
 }
@@ -1111,8 +1111,8 @@ is being used to size a border should also be in pixels.
 .scroll-pane.edge-to-edge > .scroll-bar > .decrement-button,
 .tab-pane > * > .scroll-pane > .scroll-bar > .increment-button, 
 .tab-pane > * > .scroll-pane > .scroll-bar > .decrement-button,
-.titled-pane > * > * > .scroll-pane > .scroll-bar > .increment-button,
-.titled-pane > * > * > .scroll-pane > .scroll-bar > .decrement-button {
+.titled-pane > .content > .scroll-pane > .scroll-bar > .increment-button,
+.titled-pane > .content > .scroll-pane > .scroll-bar > .decrement-button {
     -fx-padding: 0.25em; /* 3px */
 }
 
@@ -2938,27 +2938,28 @@ is being used to size a border should also be in pixels.
 .split-pane > * > .accordion > .first-titled-pane:collapsed > .title  {
     -fx-background-insets: 0,0 0 0 0, 1 1 1 1;
 }
-.titled-pane > * > * > .split-pane,
-.titled-pane > * > * > .text-area,
-.titled-pane > * > * > .html-editor,
-.titled-pane > * > * > .list-view,
-.titled-pane > * > * > .tree-view,
-.titled-pane > * > * > .table-view,
-.titled-pane > * > * > .tree-table-view,
-.titled-pane > * > * > .scroll-pane {
+.titled-pane > .content > .split-pane,
+.titled-pane > .content > .text-area,
+.titled-pane > .content > .html-editor,
+.titled-pane > .content > .list-view,
+.titled-pane > .content > .tree-view,
+.titled-pane > .content > .table-view,
+.titled-pane > .content > .tree-table-view,
+.titled-pane > .content > .scroll-pane {
     -fx-background-color: null;
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
 }
-.titled-pane > * > * > AnchorPane,
-.titled-pane > * > * > BorderPane,
-.titled-pane > * > * > FlowPane,
-.titled-pane > * > * > GridPane,
-.titled-pane > * > * > HBox,
-.titled-pane > * > * > Pane,
-.titled-pane > * > * > StackPane,
-.titled-pane > * > * > TilePane,
-.titled-pane > * > * > VBox {
+
+.titled-pane > .content > AnchorPane,
+.titled-pane > .content > BorderPane,
+.titled-pane > .content > FlowPane,
+.titled-pane > .content > GridPane,
+.titled-pane > .content > HBox,
+.titled-pane > .content > Pane,
+.titled-pane > .content > StackPane,
+.titled-pane > .content > TilePane,
+.titled-pane > .content > VBox {
     -fx-padding: 0.8em;
 }
 

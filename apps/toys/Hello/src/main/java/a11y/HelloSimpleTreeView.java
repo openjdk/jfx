@@ -25,10 +25,12 @@
 package a11y;
 
 
+import a11y.HelloSimpleTableView.Item;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.VBox;
@@ -55,7 +57,15 @@ public class HelloSimpleTreeView extends Application {
         Label label = new Label("JFX TreeView");
         label.setLabelFor(treeView);
         Button button = new Button("okay");
-        VBox group = new VBox(label, treeView, button);
+        ToggleButton button2 = new ToggleButton("empty");
+        button2.setOnAction(t-> {
+            if (treeView.getRoot()!=null) {
+                treeView.setRoot(null);
+            } else {
+                treeView.setRoot(root);
+            }
+        });
+        VBox group = new VBox(label, treeView, button, button2);
         stage.setScene(new Scene(group, 800, 600));
         stage.show();
     }

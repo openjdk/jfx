@@ -82,7 +82,17 @@ public class HelloSimpleTableView extends Application {
         ToggleButton button2 = new ToggleButton("multi selection");
         tableView.getSelectionModel().selectionModeProperty().bind(new When(button2.selectedProperty()).then(SelectionMode.MULTIPLE).otherwise(SelectionMode.SINGLE));
         ToggleButton button3 = new ToggleButton("parented");
-        VBox group = new VBox(new HBox(button1, button2, button3), tableView);
+        ToggleButton button4 = new ToggleButton("empty");
+        button4.setOnAction(t-> {
+            if (list.size() == 0) {
+                for (int i=0; i<128; i++) {
+                    list.add(new Item("Item " + i));
+                }
+            } else {
+                list.setAll();
+            }
+        });
+        VBox group = new VBox(new HBox(button1, button2, button3, button4), tableView);
         button3.setOnAction(e -> {
             if (group.getChildren().contains(tableView)) {
                 group.getChildren().remove(tableView);

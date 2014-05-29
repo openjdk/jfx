@@ -64,11 +64,10 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     /**
      * Creates a new SortedList wrapped around the source list.
-     * The source list will be sorted using the comparator provided. If null is provided, a natural
-     * ordering of the elements is used if possible. Otherwise, the SortedList tries to sort the elements
-     * by their toString().
+     * The source list will be sorted using the comparator provided. If null is provided, the list
+     * stays unordered and is equal to the source list.
      * @param source a list to wrap
-     * @param comparator a comparator to use or null for the unordered List
+     * @param comparator a comparator to use or null for unordered List
      */
     @SuppressWarnings("unchecked")
     public SortedList(@NamedArg("source") ObservableList<? extends E> source, @NamedArg("comparator") Comparator<? super E> comparator) {

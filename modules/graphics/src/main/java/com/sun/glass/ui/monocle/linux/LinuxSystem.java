@@ -159,11 +159,16 @@ public class LinuxSystem {
     // mman.h
     public static final long PROT_READ = 0x1l;
     public static final long PROT_WRITE = 0x2l;
+    public static final long MAP_PRIVATE = 0x02l;
+    public static final long MAP_ANONYMOUS = 0x20l;
     public static final long MAP_SHARED = 0x1l;
     public static final long MAP_FAILED = 0xffffffffl;
     public native long mmap(long addr, long length, long prot, long flags,
                             long fd, long offset);
     public native int munmap(long addr, long length);
+
+    // string.h
+    public native long memcpy(long destAddr, long srcAddr, long length);
 
     public String getErrorMessage() {
         return strerror(errno());

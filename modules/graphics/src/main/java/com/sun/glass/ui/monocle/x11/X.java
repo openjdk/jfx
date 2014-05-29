@@ -113,6 +113,13 @@ public class X {
         static native void setDataLong(long p, int index, long element);
     }
 
+    static class XDisplay extends C.Structure {
+        XDisplay(long p) {
+            super(p);
+        }
+        public native int sizeof();
+    }
+
     static native long XOpenDisplay(String displayName);
     static native long DefaultScreenOfDisplay(long display);
     static native long RootWindowOfScreen(long screen);

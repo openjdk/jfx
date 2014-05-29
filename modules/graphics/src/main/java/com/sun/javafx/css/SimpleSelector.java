@@ -369,11 +369,18 @@ final public class SimpleSelector extends Selector {
             os.writeShort(stringStore.addString(sc.getStyleClassName()));
         }
         os.writeShort(stringStore.addString(id));
-        os.writeShort(pseudoClassState.size());
+        int pclassSize = pseudoClassState.size()
+                + (nodeOrientation == RIGHT_TO_LEFT || nodeOrientation == LEFT_TO_RIGHT ? 1 : 0);
+        os.writeShort(pclassSize);
         Iterator<PseudoClass> iter2 = pseudoClassState.iterator();
         while(iter2.hasNext()) {
             final PseudoClass pc = iter2.next();
             os.writeShort(stringStore.addString(pc.getPseudoClassName()));
+        }
+        if (nodeOrientation == RIGHT_TO_LEFT) {
+            os.writeShort(stringStore.addString("dir(rtl)"));
+        } else if (nodeOrientation == LEFT_TO_RIGHT) {
+            os.writeShort(stringStore.addString("dir(ltr)"));
         }
     }
 

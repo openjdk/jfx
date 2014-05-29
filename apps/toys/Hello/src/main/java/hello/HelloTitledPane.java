@@ -31,8 +31,11 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TitledPane;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
@@ -95,9 +98,22 @@ public class HelloTitledPane extends Application {
         bf.setPrefSize(75, 50);
         uncollapsible.setContent(bf);
 
+        // -- Content is a ScrollPane
+        Image image = new Image("hello/duke.jpg", 200f, 200f, true, true, false);
+        ImageView imageView = new ImageView();
+        imageView.setImage(image);
+
+        ScrollPane scrollPane = new ScrollPane(imageView);
+        scrollPane.setPannable(true);
+
+        TitledPane scrollableImage = new TitledPane();
+        scrollableImage.setPrefHeight(100);
+        scrollableImage.setText("ScrollPane content");
+        scrollableImage.setContent(scrollPane);
+
         VBox hbox = new VBox(10);
         hbox.setPadding(new Insets(20, 0, 0, 20));
-        hbox.getChildren().setAll(normal, gridTitlePane, normalText, unanimated, uncollapsible);
+        hbox.getChildren().setAll(normal, gridTitlePane, normalText, unanimated, uncollapsible, scrollableImage);
 
         Scene scene = new Scene(hbox);
         scene.setFill(Color.GHOSTWHITE);

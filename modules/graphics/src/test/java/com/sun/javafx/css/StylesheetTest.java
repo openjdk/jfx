@@ -37,7 +37,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
@@ -46,6 +48,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import javafx.css.StyleableProperty;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -594,4 +597,36 @@ public class StylesheetTest {
            fail(e.toString());
        }
    }
+
+    @Test
+    public void testRT_37301() {
+        try {
+            File source = File.createTempFile("RT_37301_", "css");
+            FileWriter writer = new FileWriter(source);
+            writer.write("A:dir(rtl) {} B:dir(ltr) {} C {}");
+            writer.flush();
+            writer.close();
+            File target = File.createTempFile("RT_37301_", "bss");
+            Stylesheet.convertToBinary(source, target);
+            Stylesheet stylesheet = Stylesheet.loadBinary(target.toURL());
+            int good = 0;
+            for (Rule rule : stylesheet.getRules()) {
+                for (Selector sel : rule.getSelectors()) {
+                    SimpleSelector simpleSelector = (SimpleSelector)sel;
+                    if ("A".equals(simpleSelector.getName())) {
+                        assertEquals(NodeOrientation.RIGHT_TO_LEFT, simpleSelector.getNodeOrientation());
+                    } else if ("B".equals(simpleSelector.getName())) {
+                        assertEquals(NodeOrientation.LEFT_TO_RIGHT, simpleSelector.getNodeOrientation());
+                    } else if ("C".equals(simpleSelector.getName())) {
+                        assertEquals(NodeOrientation.INHERIT, simpleSelector.getNodeOrientation());
+                    } else {
+                        fail(simpleSelector.toString());
+                    }
+                }
+            }
+        } catch (IOException e) {
+            fail(e.toString());
+        }
+    }
+
 }

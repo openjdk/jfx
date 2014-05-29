@@ -26,7 +26,7 @@
 package com.sun.glass.ui.monocle.mx6;
 
 import com.sun.glass.ui.monocle.AcceleratedScreen;
-import com.sun.glass.ui.monocle.linux.LinuxSystem;
+import com.sun.glass.ui.monocle.GLException;
 
 public class MX6AcceleratedScreen extends AcceleratedScreen {
 
@@ -38,7 +38,7 @@ public class MX6AcceleratedScreen extends AcceleratedScreen {
 
     private native long _platformGetNativeDisplay(long methodHandle);
 
-    public MX6AcceleratedScreen(int[] attributes) {
+    public MX6AcceleratedScreen(int[] attributes) throws GLException {
         super(attributes);
     }
 

@@ -26,12 +26,11 @@
 package com.sun.glass.ui.monocle.dispman;
 
 import com.sun.glass.ui.monocle.AcceleratedScreen;
-import com.sun.glass.ui.monocle.EGL;
-import com.sun.glass.ui.monocle.linux.LinuxSystem;
+import com.sun.glass.ui.monocle.GLException;
 
 public class DispmanAcceleratedScreen extends AcceleratedScreen {
 
-    public DispmanAcceleratedScreen(int[] attributes) {
+    public DispmanAcceleratedScreen(int[] attributes) throws GLException {
         super(attributes);
     }
 

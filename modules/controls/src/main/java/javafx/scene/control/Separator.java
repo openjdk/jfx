@@ -80,15 +80,7 @@ public class Separator extends Control {
      * respective CENTER values.
      */
     public Separator() {
-        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
-        // override. Initializing focusTraversable by calling applyStyle with null
-        // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
-        
-        // initialize pseudo-class state
-        pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
+        this(Orientation.HORIZONTAL);
     }
 
     /**
@@ -99,8 +91,21 @@ public class Separator extends Control {
      *      vertical or horizontal.
      */
     public Separator(Orientation orientation) {
-        this();
-        setOrientation(orientation);
+
+        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+
+        // focusTraversable is styleable through css. Calling setFocusTraversable
+        // makes it look to css like the user set the value and css will not
+        // override. Initializing focusTraversable by calling applyStyle with null
+        // StyleOrigin ensures that css will be able to override the value.
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+
+        // initialize pseudo-class state
+        pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, orientation != Orientation.VERTICAL);
+        pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE, orientation == Orientation.VERTICAL);
+
+        ((StyleableProperty<Orientation>)(WritableValue<Orientation>)orientationProperty())
+                .applyStyle(null, orientation != null ? orientation : Orientation.HORIZONTAL);
     }
 
     /***************************************************************************

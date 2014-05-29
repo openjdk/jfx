@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,6 +72,8 @@ import com.sun.javafx.scene.control.behavior.ToolBarBehavior;
 import com.sun.javafx.scene.traversal.Direction;
 
 import javafx.css.Styleable;
+
+import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 
 public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
 
@@ -693,7 +695,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
         @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
                 case ROLE: return Role.BUTTON;
-                case TITLE: return "Overflow button";
+                case TITLE: return getString("Accessibility.title.ToolBar.OverflowButton");
                 default: return super.accGetAttribute(attribute, parameters);
             }
         }

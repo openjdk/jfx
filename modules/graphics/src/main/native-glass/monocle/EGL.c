@@ -30,7 +30,6 @@
 
 #include <stdlib.h>
 
-
 void setEGLAttrs(jint *attrs, int *eglAttrs) {
     int index = 0;
 
@@ -82,12 +81,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglInitialize
      jintArray minorArray){
 
     EGLint major, minor;
-    if (!eglInitialize(asPtr(eglDisplay), &major, &minor)) {
+    if (eglInitialize(asPtr(eglDisplay), &major, &minor)) {
          (*env)->SetIntArrayRegion(env, majorArray, 0, 1, &major);
          (*env)->SetIntArrayRegion(env, minorArray, 0, 1, &minor);
-        return JNI_FALSE;
-    } else {
         return JNI_TRUE;
+    } else {
+        return JNI_FALSE;
     }
 }
 
@@ -115,7 +114,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglChooseConfig
     (*env)->ReleaseIntArrayElements(env, attribs, attrArray, JNI_ABORT);
     EGLConfig *configArray = malloc(sizeof(EGLConfig) * configSize);
     jlong *longConfigArray = malloc(sizeof(long) * configSize);
-    EGLint numConfigPtr=5;
+    EGLint numConfigPtr=0;
     jboolean retval;
 
     if (!eglChooseConfig(asPtr(eglDisplay), eglAttrs, configArray, configSize,
@@ -123,16 +122,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglChooseConfig
         retval = JNI_FALSE;
     } else {
         retval = JNI_TRUE;
+        (*env)->SetIntArrayRegion(env, numConfigs, 0, 1, &numConfigPtr);
+        for (i = 0; i < numConfigPtr; i++) {
+            longConfigArray[i] = asJLong(configArray[i]);
+        }
+
+        (*env)->SetLongArrayRegion(env, configs, 0, configSize, longConfigArray);
     }
-
-
-    (*env)->SetIntArrayRegion(env, numConfigs, 0, 1, &numConfigPtr);
-    for (i = 0; i < numConfigPtr; i++) {
-        longConfigArray[i] = asJLong(configArray[i]);
-        //printf("i is %d\n", i);
-    }
-
-    (*env)->SetLongArrayRegion(env, configs, 0, configSize, longConfigArray);
     free(configArray);
     free(longConfigArray);
     return retval;
@@ -166,13 +162,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_EGL_eglCreateContext
     EGLint contextAttrs[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
     EGLContext context = eglCreateContext(asPtr(eglDisplay), asPtr(config),
                                           NULL, contextAttrs);
-
-    if (context == EGL_NO_CONTEXT) {
-        fprintf(stderr, "eglCreateContext() failed - %d\n", eglGetError());
-        return 0;
-    } else {
-        return asJLong(context);
-    }
+    return asJLong(context);
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglMakeCurrent
@@ -194,6 +184,11 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_monocle_EGL_eglSwapBuffers
     } else {
         return JNI_FALSE;
     }
+}
+
+JNIEXPORT jint  JNICALL Java_com_sun_glass_ui_monocle_EGL_eglGetError
+    (JNIEnv *UNUSED(env), jclass UNUSED(clazz)) {
+    return (jint)eglGetError();
 }
 
 

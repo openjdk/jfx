@@ -66,6 +66,7 @@ import com.sun.javafx.embed.EmbeddedStageInterface;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.PlatformUtil;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import sun.awt.CausedFocusEvent;
@@ -886,6 +887,10 @@ public class JFXPanel extends JComponent {
 
         @Override
         public boolean grabFocus() {
+            // On X11 grab is limited to a single XDisplay connection,
+            // so we can't delegate it to another GUI toolkit.
+            if (PlatformUtil.isLinux()) return true;
+
             SwingUtilities.invokeLater(() -> {
                 Window window = SwingUtilities.getWindowAncestor(JFXPanel.this);
                 if (window != null) {
@@ -900,6 +905,10 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void ungrabFocus() {
+            // On X11 grab is limited to a single XDisplay connection,
+            // so we can't delegate it to another GUI toolkit.
+            if (PlatformUtil.isLinux()) return;
+
             SwingUtilities.invokeLater(() -> {
                 Window window = SwingUtilities.getWindowAncestor(JFXPanel.this);
                 if (window != null) {

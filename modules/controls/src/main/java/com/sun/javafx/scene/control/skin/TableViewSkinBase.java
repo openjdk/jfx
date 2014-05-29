@@ -955,6 +955,16 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             case FOCUS_ITEM: {
                 TableFocusModel<S,?> fm = getFocusModel();
                 int focusedIndex = fm.getFocusedIndex();
+                if (focusedIndex == -1) {
+                    if (placeholderRegion != null && placeholderRegion.isVisible()) {
+                        return placeholderRegion.getChildren().get(0);
+                    }
+                    if (getItemCount() > 0) {
+                        focusedIndex = 0;
+                    } else {
+                        return null;
+                    }
+                }
                 return flow.getPrivateCell(focusedIndex);
             }
             case CELL_AT_ROW_COLUMN: {
