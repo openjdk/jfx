@@ -8896,6 +8896,7 @@ public abstract class Node implements EventTarget, Styleable {
      *    stage.show();
      * }
      * </code></pre>
+     * @since JavaFX 8.0
      */
     public final void applyCss() {
 
