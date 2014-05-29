@@ -84,11 +84,7 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
      */
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final StringConverter<T> converter) {
-        return new Callback<TableColumn<S,T>, TableCell<S,T>>() {
-            @Override public TableCell<S,T> call(TableColumn<S,T> list) {
-                return new TextFieldTableCell<S,T>(converter);
-            }
-        };
+        return list -> new TextFieldTableCell<S,T>(converter);
     }
     
     

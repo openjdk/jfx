@@ -174,11 +174,7 @@ public class FlowPane extends Pane {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
 
-    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
-        public Insets call(Node n) {
-            return getMargin(n);
-        }
-    };
+    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
 
     /**
      * Removes all flowpane constraints from the child node.
@@ -711,12 +707,7 @@ public class FlowPane extends Pane {
             }
             run.height = computeMaxPrefAreaHeight(rownodes, marginAccessor, getRowValignment());
             run.baselineOffset = getRowValignment() == VPos.BASELINE?
-                    getAreaBaselineOffset(rownodes, marginAccessor, new Function<Integer, Double>() {
-
-                public Double apply(final Integer i) {
-                    return run.rects.get(i).width;
-                }
-            }, run.height, true) : 0;
+                    getAreaBaselineOffset(rownodes, marginAccessor, i -> run.rects.get(i).width, run.height, true) : 0;
 
         } else {
             // vertical

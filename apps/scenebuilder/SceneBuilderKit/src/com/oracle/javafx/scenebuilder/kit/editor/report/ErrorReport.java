@@ -31,27 +31,25 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.report;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMAssetIndex;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNode;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
-import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
-import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.ResourceBundle;
 
 /**
  *
@@ -60,15 +58,16 @@ import java.util.ResourceBundle;
 public class ErrorReport {
     
     private final Map<FXOMNode, List<ErrorReportEntry>> entries = new HashMap<>();
+    private final Map<Path, CSSParsingReport> cssParsingReports = new HashMap<>();
     private FXOMDocument fxomDocument;
     private boolean dirty = true;
     
     public void setFxomDocument(FXOMDocument fxomDocument) {
         this.fxomDocument = fxomDocument;
-        requestUpdate();
+        forget();
     }
     
-    public void requestUpdate() {
+    public void forget() {
         this.entries.clear();
         this.dirty = true;
     }
@@ -111,6 +110,14 @@ public class ErrorReport {
         return Collections.unmodifiableMap(entries);
     }
     
+    public void cssFileDidChange(Path cssPath) {
+        if (cssParsingReports.containsKey(cssPath)) {
+            cssParsingReports.remove(cssPath);
+            forget();
+        }
+    }
+    
+    
     /*
      * Private
      */
@@ -120,228 +127,67 @@ public class ErrorReport {
         if (dirty) {
             assert entries.isEmpty();
             if (fxomDocument != null) {
-                buildReport(fxomDocument.getFxomRoot());
+                verifyAssets();
+                verifyUnresolvedObjects();
+                verifyBindingExpressions();
             }
             dirty = false;
         }
     }
     
-    private void buildReport(FXOMNode fxomNode) {
-        
-        final List<ErrorReportEntry> nodeEntries = new ArrayList<>();
-        
-        if (fxomNode instanceof FXOMCollection) {
-            final FXOMCollection fxomCollection = (FXOMCollection) fxomNode;
-            for (FXOMObject item : fxomCollection.getItems()) {
-                buildReport(item);
-            }
-            verifySceneGraphObject(fxomCollection);
-        } else if (fxomNode instanceof FXOMInstance) {
-            final FXOMInstance fxomInstance = (FXOMInstance) fxomNode;
-            for (FXOMProperty fxomProperty : fxomInstance.getProperties().values()) {
-                buildReport(fxomProperty);
-            }
-            verifySceneGraphObject(fxomInstance);
-        } else if (fxomNode instanceof FXOMIntrinsic) {
-            verifyFxomIntrinsic((FXOMIntrinsic) fxomNode);
-            
-        } else if (fxomNode instanceof FXOMPropertyC) {
-            final FXOMPropertyC fxomPropertyC = (FXOMPropertyC) fxomNode;
-            for (FXOMObject value : fxomPropertyC.getValues()) {
-                buildReport(value);
-            }
-        } else if (fxomNode instanceof FXOMPropertyT) {
-            verifyFxomPropertyT((FXOMPropertyT) fxomNode);
-        }
-        
-        if (nodeEntries.isEmpty() == false) {
-            entries.put(fxomNode, nodeEntries);
-        }
-    }
     
-    
-    private void verifySceneGraphObject(FXOMObject fxomObject) {
-        if (fxomObject.getSceneGraphObject() == null) {
-            final ErrorReportEntry newEntry 
-                    = new ErrorReportEntry(fxomObject, ErrorReportEntry.Type.UNRESOLVED_CLASS);
-            addEntry(fxomObject, newEntry);
-        }
-    }
-    
-    private void verifyFxomIntrinsic(FXOMIntrinsic fxomIntrinsic) {
-        assert fxomIntrinsic != null;
-        assert fxomIntrinsic.getParentObject() != null;
-        
-        if (fxomIntrinsic.getType() == FXOMIntrinsic.Type.FX_INCLUDE) {
-            final String equivalentValue = "@" + fxomIntrinsic.getSource(); //NOI18N
-            final PrefixedValue source = new PrefixedValue(equivalentValue);
-            assert source.isInvalid() == false;
-            
-            if (source.isDocumentRelativePath()) {
-                final URL location;
-                final boolean ok;
-                
-                if (fxomDocument.getLocation() != null) {
-                    location = source.resolveDocumentRelativePath(fxomDocument.getLocation());
-                } else {
-                    location = null;
-                }
-
-                if (location == null) {
-                    ok = false;
-                } else {
-                    boolean canRead = false;
-                    try {
-                        final File file = URLUtils.getFile(location);
-                        if (file != null) {
-                            canRead = file.canRead();
-                        } else {
-                            canRead = false;
-                        }
-                    } catch (URISyntaxException ex) {
-                        canRead = false;
+    private void verifyAssets() {
+        final FXOMAssetIndex assetIndex = new FXOMAssetIndex(fxomDocument);
+        for (Map.Entry<Path, FXOMNode> e : assetIndex.getFileAssets().entrySet()) {
+            final Path assetPath = e.getKey();
+            if (assetPath.toFile().canRead() == false) {
+                final ErrorReportEntry newEntry 
+                        = new ErrorReportEntry(e.getValue(), ErrorReportEntry.Type.UNRESOLVED_LOCATION);
+                addEntry(e.getValue(), newEntry);
+            } else {
+                final String assetPathName = assetPath.toString();
+                if (assetPathName.toLowerCase(Locale.ROOT).endsWith(".css")) { //NOI18N
+                    // assetPath is a CSS file : check its parsing report
+                    final CSSParsingReport r = getCSSParsingReport(assetPath);
+                    assert r != null;
+                    if (r.isEmpty() == false) {
+                        final ErrorReportEntry newEntry 
+                                = new ErrorReportEntry(e.getValue(), ErrorReportEntry.Type.INVALID_CSS_CONTENT, r);
+                        addEntry(e.getValue(), newEntry);
                     }
-                    ok = canRead;
                 }
-                if (ok == false) {
-                    final ErrorReportEntry newEntry 
-                            = new ErrorReportEntry(fxomIntrinsic, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
-                    addEntry(fxomIntrinsic, newEntry);
-                }
-                
-            } else if (source.isClassLoaderRelativePath()) {
-                final ClassLoader classLoader;
-                final boolean ok;
-
-                if (fxomDocument.getClassLoader() != null) {
-                    classLoader = fxomDocument.getClassLoader();
-                } else {
-                    classLoader = ClassLoader.getSystemClassLoader();
-                }
-
-                if (classLoader == null) {
-                    ok = false;
-                } else {
-                    final URL location = source.resolveClassLoaderRelativePath(classLoader);
-                    ok = (location != null);
-                }
-                if (ok == false) {
-                    final ErrorReportEntry newEntry 
-                            = new ErrorReportEntry(fxomIntrinsic, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
-                    addEntry(fxomIntrinsic, newEntry);
-                }
-                
-            } else if (source.isPlainString()) {
-                
-                boolean ok;
-                try {
-                    final File file = URLUtils.getFile(source.getSuffix());
-                    if (file != null) {
-                        ok = file.canRead();
-                    } else {
-                        ok = false;
-                    }
-                } catch(URISyntaxException x) {
-                    ok = false;
-                }
-                if (ok == false) {
-                    final ErrorReportEntry newEntry 
-                            = new ErrorReportEntry(fxomIntrinsic, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
-                    addEntry(fxomIntrinsic, newEntry);
-                }
-            } else {
-                final ErrorReportEntry newEntry 
-                        = new ErrorReportEntry(fxomIntrinsic, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
-                addEntry(fxomIntrinsic, newEntry);
             }
         }
     }
     
-    private void verifyFxomPropertyT(FXOMPropertyT fxomProperty) {
-        
-        assert fxomProperty != null;
-        assert fxomProperty.getParentInstance() != null : "fxomProperty="+fxomProperty.getName(); //NOI18N
-        
-        final PrefixedValue value = new PrefixedValue(fxomProperty.getValue());
-        assert value.isInvalid() == false;
-        
-        if (value.isDocumentRelativePath()) {
-            final URL location;
-            final boolean ok;
-            
-            if (fxomDocument.getLocation() != null) {
-                location = value.resolveDocumentRelativePath(fxomDocument.getLocation());
+    private void verifyUnresolvedObjects() {
+        for (FXOMObject fxomObject : FXOMNodes.serializeObjects(fxomDocument.getFxomRoot())) {
+            final Object sceneGraphObject;
+            if (fxomObject instanceof FXOMIntrinsic) {
+                final FXOMIntrinsic fxomIntrinsic = (FXOMIntrinsic) fxomObject;
+                sceneGraphObject = fxomIntrinsic.getSourceSceneGraphObject();
             } else {
-                location = null;
+                sceneGraphObject = fxomObject.getSceneGraphObject();
             }
-            
-            if (location == null) {
-                ok = false;
-            } else {
-                boolean canRead;
-                try {
-                    final File file = URLUtils.getFile(location);
-                    if (file != null) {
-                        canRead = file.canRead();
-                    } else {
-                        canRead = false;
-                    }
-                } catch (URISyntaxException ex) {
-                    canRead = false;
-                }
-                ok = canRead;
-            }
-            if (ok == false) {
+            if (sceneGraphObject == null) {
                 final ErrorReportEntry newEntry 
-                        = new ErrorReportEntry(fxomProperty, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
-                addEntry(fxomProperty, newEntry);
-            }
-        } else if (value.isClassLoaderRelativePath()) {
-            final ClassLoader classLoader;
-            final boolean ok;
-            
-            if (fxomDocument.getClassLoader() != null) {
-                classLoader = fxomDocument.getClassLoader();
-            } else {
-                classLoader = ClassLoader.getSystemClassLoader();
-            }
-            
-            if (classLoader == null) {
-                ok = false;
-            } else {
-                final URL location = value.resolveClassLoaderRelativePath(classLoader);
-                ok = (location != null);
-            }
-            if (ok == false) {
-                final ErrorReportEntry newEntry 
-                        = new ErrorReportEntry(fxomProperty, ErrorReportEntry.Type.UNRESOLVED_LOCATION);
-                addEntry(fxomProperty, newEntry);
-            }
-        } else if (value.isResourceKey()) {
-            final ResourceBundle resources;
-            final boolean ok;
-            
-            if (fxomDocument.getResources() != null) {
-                resources = fxomDocument.getResources();
-            } else {
-                resources = null;
-            }
-            
-            if (resources == null) {
-                ok = true; // No need to pollute the user
-            } else {
-                final String resolvedString = value.resolveResourceKey(resources);
-                ok = (resolvedString != null);
-            }
-            
-            if (ok == false) {
-                final ErrorReportEntry newEntry 
-                        = new ErrorReportEntry(fxomProperty, ErrorReportEntry.Type.UNRESOLVED_RESOURCE);
-                addEntry(fxomProperty, newEntry);
+                        = new ErrorReportEntry(fxomObject, ErrorReportEntry.Type.UNRESOLVED_CLASS);
+                addEntry(fxomObject, newEntry);
             }
         }
     }
-        
+    
+    private void verifyBindingExpressions() {
+        for (FXOMPropertyT p : fxomDocument.getFxomRoot().collectPropertiesT()) {
+            final PrefixedValue pv = new PrefixedValue(p.getValue());
+            if (pv.isBindingExpression()) {
+                final ErrorReportEntry newEntry 
+                        = new ErrorReportEntry(p, ErrorReportEntry.Type.UNSUPPORTED_EXPRESSION);
+                addEntry(p, newEntry);
+            }
+        }
+    }
+    
     private void addEntry(FXOMNode fxomNode, ErrorReportEntry newEntry) {
         List<ErrorReportEntry> nodeEntries = entries.get(fxomNode);
         if (nodeEntries == null) {
@@ -351,6 +197,14 @@ public class ErrorReport {
         nodeEntries.add(newEntry);
     }
     
+    private CSSParsingReport getCSSParsingReport(Path assetPath) {
+        CSSParsingReport result = cssParsingReports.get(assetPath);
+        if (result == null) {
+            result = new CSSParsingReport(assetPath);
+            cssParsingReports.put(assetPath, result);
+        }
+        return result;
+    }
     
     private void collectEntries(FXOMNode fxomNode, List<ErrorReportEntry> collected) {
         assert fxomNode != null;

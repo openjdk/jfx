@@ -574,15 +574,12 @@ public class SceneTest {
         handler1Called = false;
         handler2Called = true;
 
-        r1.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> arg0, Boolean arg1, Boolean focused) {
-                assertFalse(focused); // r1 is being defocused
-                assertTrue(r2.isFocused()); // r2 is already focused
-                handler1Called = true;
+        r1.focusedProperty().addListener((arg0, arg1, focused) -> {
+            assertFalse(focused); // r1 is being defocused
+            assertTrue(r2.isFocused()); // r2 is already focused
+            handler1Called = true;
 
-                root.getChildren().remove(r2); // be evil: remove r2
-            }
+            root.getChildren().remove(r2); // be evil: remove r2
         });
 
         r2.focusedProperty().addListener(new ChangeListener<Boolean>() {
@@ -770,10 +767,8 @@ public class SceneTest {
         final Rectangle rect = new Rectangle();
         root.getChildren().add(rect);
 
-        root.sceneProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                root.getChildren().remove(rect);
-            }
+        root.sceneProperty().addListener(o -> {
+            root.getChildren().remove(rect);
         });
 
         Scene scene = new Scene(root, 600, 450);

@@ -74,6 +74,10 @@ public class InsertAsAccessoryJob extends Job {
         this.accessory = accessory;
     }
 
+    FXOMObject getNewObject() {
+        return newObject;
+    }
+    
     /*
      * Job
      */
@@ -121,6 +125,12 @@ public class InsertAsAccessoryJob extends Job {
             subJob.addSubJob(addPropertyJob);
         }
 
+        final Job pruneJob = new PrunePropertiesJob(newObject, targetObject, 
+                getEditorController());
+        if (pruneJob.isExecutable()) {
+            subJob.prependSubJob(pruneJob);
+        }
+            
         /*
          * Executes the subjob.
          */

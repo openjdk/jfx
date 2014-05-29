@@ -71,6 +71,10 @@ HRESULT  GlassDropTarget::UpdateDnDClipboardData(
     static jmethodID midGetInstance = env->GetStaticMethodID(jcWinDnDClipboard, "getInstance",
         "()Lcom/sun/glass/ui/win/WinDnDClipboard;");
     ASSERT(midGetInstance)
+    HRESULT result = checkJavaException(env);
+    if (result != S_OK) {
+        return result;
+    }
     JLObject jDnDClipboard(env, env->CallStaticObjectMethod(jcWinDnDClipboard, midGetInstance));
     ASSERT(jDnDClipboard)
 
@@ -215,10 +219,18 @@ HRESULT GlassDropTarget::SetSourceSupportedActions(/*in*/jint actions)
     static jmethodID midGetInstance = env->GetStaticMethodID(jcWinDnDClipboard, "getInstance",
         "()Lcom/sun/glass/ui/win/WinDnDClipboard;");
     ASSERT(midGetInstance)
+    HRESULT result = checkJavaException(env);
+    if (result != S_OK) {
+        return result;
+    }
 
     static jmethodID midSetSourceSupportedActions = env->GetMethodID(jcWinDnDClipboard, "setSourceSupportedActions",
         "(I)V");
     ASSERT(midSetSourceSupportedActions)
+    result = checkJavaException(env);
+    if (result != S_OK) {
+        return result;
+    }
 
     JLObject jDnDClipboard(env, env->CallStaticObjectMethod(jcWinDnDClipboard, midGetInstance));
     ASSERT(jDnDClipboard)
@@ -243,10 +255,18 @@ HRESULT  GlassDropSource::SetDragButton(jint button)
     static jmethodID midGetInstance = env->GetStaticMethodID(jcWinDnDClipboard, "getInstance",
         "()Lcom/sun/glass/ui/win/WinDnDClipboard;");
     ASSERT(midGetInstance)
+    HRESULT result = checkJavaException(env);
+    if (result != S_OK) {
+        return result;
+    }
 
     static jmethodID midSetDragButton = env->GetMethodID(jcWinDnDClipboard, "setDragButton",
         "(I)V");
     ASSERT(midSetDragButton)
+    result = checkJavaException(env);
+    if (result != S_OK) {
+        return result;
+    }
 
     JLObject jDnDClipboard(env, env->CallStaticObjectMethod(jcWinDnDClipboard, midGetInstance));
     ASSERT(jDnDClipboard)
@@ -268,6 +288,10 @@ GlassDropSource::GlassDropSource(jobject jDnDClipboard)
         midGetDragButton = env->GetMethodID(jcWinDnDClipboard, "getDragButton",
             "()I");
         ASSERT(midGetDragButton)
+        HRESULT result = checkJavaException(env);
+        if (result != S_OK) {
+            return;
+        }
     }
 
     jint jbutton = env->CallIntMethod(jDnDClipboard, midGetDragButton);

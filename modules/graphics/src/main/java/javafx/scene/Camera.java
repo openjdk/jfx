@@ -107,12 +107,7 @@ public abstract class Camera extends Node {
     private Affine3D localToSceneTx = new Affine3D();
 
     protected Camera() {
-        InvalidationListener dirtyTransformListener = new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                impl_markDirty(DirtyBits.NODE_CAMERA_TRANSFORM);
-            }
-        };
+        InvalidationListener dirtyTransformListener = observable -> impl_markDirty(DirtyBits.NODE_CAMERA_TRANSFORM);
 
         this.localToSceneTransformProperty().addListener(dirtyTransformListener);
         // if camera is removed from scene it needs to stop using its transforms

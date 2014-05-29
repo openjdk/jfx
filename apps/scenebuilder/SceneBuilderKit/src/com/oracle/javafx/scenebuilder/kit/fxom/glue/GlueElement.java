@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.fxom.glue;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -248,27 +247,6 @@ public class GlueElement extends GlueNode {
         }
         
         assert Objects.equals(getContentText(), text);
-    }
-    
-    
-    public GlueElement lookup(String attrName, String attrValue) {
-        GlueElement result;
-        
-        assert attrName != null;
-        assert attrValue != null;
-        
-        final String v = attributes.get(attrName);
-        if ((v != null) && v.equals(attrValue)) {
-            result = this;
-        } else {
-            result = null;
-            final Iterator<GlueElement> it = children.iterator();
-            while ((result == null) && it.hasNext()) {
-                result = it.next().lookup(attrName, attrValue);
-            }
-        }
-        
-        return result;
     }
     
     

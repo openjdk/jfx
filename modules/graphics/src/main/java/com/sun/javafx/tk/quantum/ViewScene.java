@@ -116,18 +116,15 @@ class ViewScene extends GlassScene {
     @Override
     public void setCursor(final Object cursor) {
         super.setCursor(cursor);
-        Application.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                final CursorFrame cursorFrame = (CursorFrame) cursor;
-                final Cursor platformCursor =
-                        CursorUtils.getPlatformCursor(cursorFrame);
-                
-                if (platformView != null) {
-                    Window window = platformView.getWindow();
-                    if (window != null) {
-                        window.setCursor(platformCursor);
-                    }
+        Application.invokeLater(() -> {
+            final CursorFrame cursorFrame = (CursorFrame) cursor;
+            final Cursor platformCursor =
+                    CursorUtils.getPlatformCursor(cursorFrame);
+
+            if (platformView != null) {
+                Window window = platformView.getWindow();
+                if (window != null) {
+                    window.setCursor(platformCursor);
                 }
             }
         });

@@ -33,12 +33,7 @@ import java.security.PrivilegedAction;
 class EGLFBGLDrawable extends GLDrawable {
 
     private static final boolean transparentFramebuffer =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return Boolean.getBoolean("com.sun.javafx.transparentFramebuffer");
-                }
-            });
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.transparentFramebuffer"));
 
     private static native long nCreateDrawable(long nativeWindow, long nativeCtxInfo);
     private static native long nGetDummyDrawable(long nativeCtxInfo);

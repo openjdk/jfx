@@ -5,9 +5,11 @@
     <content url="file://$MODULE_DIR$/modules/base">
       <sourceFolder url="file://$MODULE_DIR$/modules/base/build/generated-src/version-info" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/base/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/base/src/main/java8" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/base/src/main/resources" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/base/src/test/java" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/modules/base/src/test/resources" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/base/src/main/java-jfr" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/modules/base/build/classes" />
       <excludeFolder url="file://$MODULE_DIR$/modules/base/build/dependency-cache" />
       <excludeFolder url="file://$MODULE_DIR$/modules/base/build/libs" />

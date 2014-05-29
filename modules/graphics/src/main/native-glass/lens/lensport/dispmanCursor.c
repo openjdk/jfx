@@ -499,7 +499,8 @@ static char * platformName = "dispman";
 extern int load_bcm_symbols();
 
 jboolean select_dispman_cursor(LensNativePort *lensPort) {
-    if (!load_bcm_symbols()) {
+    if (load_bcm_symbols() != 0) {
+        //this indicates an error on loading bcm libraries, thus we cannot use the dispman cursor impl
         return JNI_FALSE;
     }
 

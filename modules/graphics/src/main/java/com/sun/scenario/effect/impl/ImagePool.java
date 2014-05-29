@@ -48,17 +48,15 @@ public class ImagePool {
     static long pixelsAccessed;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
-                if (System.getProperty("decora.showstats") != null) {
-                    Runtime.getRuntime().addShutdownHook(new Thread() {
-                        @Override public void run() {
-                            printStats();
-                        }
-                    });
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction) () -> {
+            if (System.getProperty("decora.showstats") != null) {
+                Runtime.getRuntime().addShutdownHook(new Thread() {
+                    @Override public void run() {
+                        printStats();
+                    }
+                });
             }
+            return null;
         });
     }
 

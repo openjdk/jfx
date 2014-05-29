@@ -114,9 +114,16 @@ public class PopupControlTest {
         assertEquals("Hello Goodbye", popup.getStyleClass().toString());
     }
 
+    @org.junit.Ignore("getStyle should not return null per Node#setStyle")
     @Test public void styleSetNullGetNull() {
         popup.setStyle(null);
         assertNull(popup.getStyle());
+    }
+
+    // See Node#setStyle
+    @Test public void styleSetNullGetEmptyString() {
+        popup.setStyle(null);
+        assertTrue("".equals(popup.getStyle()));
     }
 
     @Test public void styleSettable() {
@@ -140,7 +147,7 @@ public class PopupControlTest {
     }
 
     @Test public void getSkinPropertyBean() {
-        assertEquals(popup.bridge, popup.skinProperty().getBean());
+        assertEquals(popup, popup.skinProperty().getBean());
     }
 
     @Test public void getSkinPropertyName() {

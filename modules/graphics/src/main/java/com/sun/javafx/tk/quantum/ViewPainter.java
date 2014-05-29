@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.logging.PulseLogger;
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
@@ -84,6 +84,7 @@ abstract class ViewPainter implements Runnable {
 
     protected Presentable presentable;
     protected ResourceFactory factory;
+    protected boolean freshBackBuffer;
 
     private int width;
     private int height;
@@ -164,7 +165,10 @@ abstract class ViewPainter implements Runnable {
     protected void paintImpl(final Graphics backBufferGraphics) {
         // We should not be painting anything with a width / height
         // that is <= 0, so we might as well bail right off.
-        if (width <= 0 || height <= 0) return;
+        if (width <= 0 || height <= 0 || backBufferGraphics == null) {
+            root.renderForcedContent(backBufferGraphics);
+            return;
+        }
 
         // This "g" variable might represent the back buffer graphics, or it
         // might be reassigned to the sceneBuffer graphics.
@@ -174,6 +178,7 @@ abstract class ViewPainter implements Runnable {
         // Initialize renderEverything based on various conditions that will cause us to render
         // the entire scene every time.
         boolean renderEverything = overlayRoot != null ||
+                freshBackBuffer ||
                 sceneState.getScene().isEntireSceneDirty() ||
                 sceneState.getScene().getDepthBuffer() ||
                 !PrismSettings.dirtyOptsEnabled;
@@ -226,7 +231,9 @@ abstract class ViewPainter implements Runnable {
         // If we're rendering with dirty regions, then we'll call the root node to accumulate
         // the dirty regions and then again to do the pre culling.
         if (!renderEverything) {
-            long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newPhase("Dirty Opts Computed");
+            }
             clip.setBounds(0, 0, width, height);
             dirtyRegionTemp.makeEmpty();
             dirtyRegionContainer.reset();
@@ -239,9 +246,6 @@ abstract class ViewPainter implements Runnable {
             dirtyRegionContainer.roundOut();
             if (status == DirtyRegionContainer.DTR_OK) {
                 root.doPreCulling(dirtyRegionContainer, tx, projTx);
-            }
-            if (PULSE_LOGGING_ENABLED) {
-                PULSE_LOGGER.renderMessage(start, System.currentTimeMillis(), "Dirty Opts Computed");
             }
         }
 
@@ -256,23 +260,22 @@ abstract class ViewPainter implements Runnable {
             g.setHasPreCullingBits(true);
 
             // Find the render roots. There is a different render root for each dirty region
-            long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+            if (PULSE_LOGGING_ENABLED) {
+                PulseLogger.newPhase("Render Roots Discovered");
+            }
             for (int i = 0; i < dirtyRegionSize; ++i) {
                 NodePath path = getRootPath(i);
                 path.clear();
                 root.getRenderRoot(getRootPath(i), dirtyRegionContainer.getDirtyRegion(i), i, tx, projTx);
             }
-            if (PULSE_LOGGING_ENABLED) {
-                PULSE_LOGGER.renderMessage(start, System.currentTimeMillis(), "Render Roots Discovered");
-            }
 
             // For debug purposes, write out to the pulse logger the number and size of the dirty
             // regions that are being used to render this pulse.
             if (PULSE_LOGGING_ENABLED) {
-                PULSE_LOGGER.renderMessage(dirtyRegionSize + " different dirty regions to render");
+                PulseLogger.addMessage(dirtyRegionSize + " different dirty regions to render");
                 for (int i=0; i<dirtyRegionSize; i++) {
-                    PULSE_LOGGER.renderMessage("Dirty Region " + i + ": " + dirtyRegionContainer.getDirtyRegion(i));
-                    PULSE_LOGGER.renderMessage("Render Root Path " + i + ": " + getRootPath(i));
+                    PulseLogger.addMessage("Dirty Region " + i + ": " + dirtyRegionContainer.getDirtyRegion(i));
+                    PulseLogger.addMessage("Render Root Path " + i + ": " + getRootPath(i));
                 }
             }
 
@@ -292,7 +295,7 @@ abstract class ViewPainter implements Runnable {
                     }
                 }
                 root.printDirtyOpts(s, roots);
-                PULSE_LOGGER.renderMessage(s.toString());
+                PulseLogger.addMessage(s.toString());
             }
 
             // Paint each dirty region
@@ -323,6 +326,7 @@ abstract class ViewPainter implements Runnable {
             g.setClipRect(null);
             this.doPaint(g, null);
         }
+        root.renderForcedContent(g);
 
         // If we have an overlay then we need to render it too.
         if (overlayRoot != null) {
@@ -446,31 +450,27 @@ abstract class ViewPainter implements Runnable {
             // If the path is not empty, the first node must be the root node
             assert(renderRootPath.getCurrentNode() == root);
         }
-        long start = PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
-        try {
-            GlassScene scene = sceneState.getScene();
-            scene.clearEntireSceneDirty();
-            g.setLights(scene.getLights());
-            g.setDepthBuffer(scene.getDepthBuffer());
-            Color clearColor = sceneState.getClearColor();
-            if (clearColor != null) {
-                g.clear(clearColor);
-            }
-            Paint curPaint = sceneState.getCurrentPaint();
-            if (curPaint != null) {
-                if (curPaint.getType() != com.sun.prism.paint.Paint.Type.COLOR) {
-                    g.getRenderTarget().setOpaque(curPaint.isOpaque());
-                }
-                g.setPaint(curPaint);
-                g.fillQuad(0, 0, width, height);
-            }
-            g.setCamera(sceneState.getCamera());
-            g.setRenderRoot(renderRootPath);
-            root.render(g);
-        } finally {
-            if (PULSE_LOGGING_ENABLED) {
-                PULSE_LOGGER.renderMessage(start, System.currentTimeMillis(), "Painted");
-            }
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.newPhase("Painting");
         }
+        GlassScene scene = sceneState.getScene();
+        scene.clearEntireSceneDirty();
+        g.setLights(scene.getLights());
+        g.setDepthBuffer(scene.getDepthBuffer());
+        Color clearColor = sceneState.getClearColor();
+        if (clearColor != null) {
+            g.clear(clearColor);
+        }
+        Paint curPaint = sceneState.getCurrentPaint();
+        if (curPaint != null) {
+            if (curPaint.getType() != com.sun.prism.paint.Paint.Type.COLOR) {
+                g.getRenderTarget().setOpaque(curPaint.isOpaque());
+            }
+            g.setPaint(curPaint);
+            g.fillQuad(0, 0, width, height);
+        }
+        g.setCamera(sceneState.getCamera());
+        g.setRenderRoot(renderRootPath);
+        root.render(g);
     }
 }

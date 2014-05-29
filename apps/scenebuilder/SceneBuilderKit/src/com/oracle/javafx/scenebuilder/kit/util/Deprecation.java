@@ -56,7 +56,9 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.TableColumn;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeView;
 import javafx.scene.image.Image;
 import javafx.scene.layout.GridPane;
 
@@ -72,7 +74,6 @@ public class Deprecation {
     public static Group createGroupWithNullParentStylesheets() {
         return new Group() {
             @Override
-            @SuppressWarnings("unchecked")
             public List<String> impl_getAllParentStylesheets() {
                 return null;
             }
@@ -105,9 +106,9 @@ public class Deprecation {
             } else if (styleable instanceof PopupControl) {
                 return ((PopupControl) styleable).impl_styleableGetNode();
             } else if (styleable instanceof TableColumn) {
-                return ((TableColumn) styleable).impl_styleableGetNode();
+                return ((TableColumn<?,?>) styleable).impl_styleableGetNode();
             } else if (styleable instanceof TreeTableColumn) {
-                return ((TreeTableColumn) styleable).impl_styleableGetNode();
+                return ((TreeTableColumn<?,?>) styleable).impl_styleableGetNode();
             }
         } catch (Exception ex) {
             // May happen, e.g if TableColumn as root
@@ -282,5 +283,11 @@ public class Deprecation {
     // RT-21230 : Promote JavaFXBuilderFactory(ClassLoader classLoader, boolean alwaysUseBuilders) constructor to public API
     public static JavaFXBuilderFactory newJavaFXBuilderFactory(ClassLoader classLoader) {
         return new JavaFXBuilderFactory(classLoader, false /* alwaysUseBuilders */);
+    }
+    
+    // Deprecated as of FX 8 u20, and replaced by new method getTreeItemLevel:
+    // using it would break ability to compile over JDK 8 GA, not an option for now.
+    public static int getNodeLevel(TreeItem<?> item) {
+        return TreeView.getNodeLevel(item);
     }
 }

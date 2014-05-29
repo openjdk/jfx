@@ -45,6 +45,7 @@ import javafx.stage.Stage;
 import javafx.util.Pair;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -251,16 +252,12 @@ public class DragAndDropTest {
         Node n = oneNode();
         MouseEventGenerator gen = new MouseEventGenerator();
         
-        EventHandler<MouseEvent> thirdEventFailsHysteresis = 
-                new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent event) {
-                counter++;
-                assertTrue((counter != 3 && !event.isDragDetect()) ||
-                        (counter == 3 && event.isDragDetect()));
-            }
-        };
+        EventHandler<MouseEvent> thirdEventFailsHysteresis =
+                event -> {
+                    counter++;
+                    assertTrue((counter != 3 && !event.isDragDetect()) ||
+                            (counter == 3 && event.isDragDetect()));
+                };
 
         n.addEventHandler(MouseEvent.MOUSE_PRESSED, thirdEventFailsHysteresis);
         n.addEventHandler(MouseEvent.MOUSE_DRAGGED, thirdEventFailsHysteresis);
@@ -375,10 +372,8 @@ public class DragAndDropTest {
         final MouseEventGenerator gen = new MouseEventGenerator();
         
         n.setOnMousePressed(doDetect);
-        n.setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                n.startDragAndDrop(TransferMode.COPY);
-            }
+        n.setOnDragDetected(event -> {
+            n.startDragAndDrop(TransferMode.COPY);
         });
 
         n.getScene().impl_processMouseEvent(
@@ -417,11 +412,9 @@ public class DragAndDropTest {
         dragSource = n.getParent();
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
-        n.setOnDragOver(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                assertSame(dragSource, event.getGestureSource());
-                counter++;
-            }
+        n.setOnDragOver(event -> {
+            assertSame(dragSource, event.getGestureSource());
+            counter++;
         });
 
         n.getScene().impl_processMouseEvent(
@@ -439,11 +432,9 @@ public class DragAndDropTest {
         dragSource = n.getParent();
         n.setOnMousePressed(doDetect);
         n.getParent().setOnDragDetected(stringSource(TransferMode.ANY));
-        n.setOnDragOver(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                assertSame(dragSource, event.getGestureSource());
-                counter++;
-            }
+        n.setOnDragOver(event -> {
+            assertSame(dragSource, event.getGestureSource());
+            counter++;
         });
 
         n.getScene().impl_processMouseEvent(
@@ -461,22 +452,18 @@ public class DragAndDropTest {
         dragSource = n;
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
-        n.setOnDragOver(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                event.acceptTransferModes(TransferMode.ANY);
-                if (counter == 0) {
-                    assertNull(event.getGestureTarget());
-                } else {
-                    assertSame(n, event.getGestureTarget());
-                }
-                counter++;
-            }
-        });
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
+        n.setOnDragOver(event -> {
+            event.acceptTransferModes(TransferMode.ANY);
+            if (counter == 0) {
+                assertNull(event.getGestureTarget());
+            } else {
                 assertSame(n, event.getGestureTarget());
-                counter++;
             }
+            counter++;
+        });
+        n.setOnDragDropped(event -> {
+            assertSame(n, event.getGestureTarget());
+            counter++;
         });
 
         n.getScene().impl_processMouseEvent(
@@ -496,23 +483,19 @@ public class DragAndDropTest {
         dragSource = n;
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
-        n.setOnDragOver(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                event.acceptTransferModes(TransferMode.ANY);
-                if (counter == 0) {
-                    assertNull(event.getGestureTarget());
-                } else {
-                    assertSame(n.getParent(), event.getGestureTarget());
-                }
-                counter++;
+        n.setOnDragOver(event -> {
+            event.acceptTransferModes(TransferMode.ANY);
+            if (counter == 0) {
+                assertNull(event.getGestureTarget());
+            } else {
+                assertSame(n.getParent(), event.getGestureTarget());
             }
+            counter++;
         });
         n.getParent().setOnDragOver(acceptAny);
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                assertSame(n.getParent(), event.getGestureTarget());
-                counter++;
-            }
+        n.setOnDragDropped(event -> {
+            assertSame(n.getParent(), event.getGestureTarget());
+            counter++;
         });
 
         n.getScene().impl_processMouseEvent(
@@ -530,19 +513,15 @@ public class DragAndDropTest {
         final MouseEventGenerator gen = new MouseEventGenerator();
         
         n.setOnMousePressed(doDetect);
-        n.getScene().setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                Dragboard db = n.getScene().startDragAndDrop(TransferMode.ANY);
-                ClipboardContent cc = new ClipboardContent();
-                cc.putString("Hello");
-                db.setContent(cc);
-            }
+        n.getScene().setOnDragDetected(event -> {
+            Dragboard db = n.getScene().startDragAndDrop(TransferMode.ANY);
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString("Hello");
+            db.setContent(cc);
         });
-        n.setOnDragOver(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                assertSame(n.getScene(), event.getGestureSource());
-                counter++;
-            }
+        n.setOnDragOver(event -> {
+            assertSame(n.getScene(), event.getGestureSource());
+            counter++;
         });
 
         n.getScene().impl_processMouseEvent(
@@ -560,22 +539,18 @@ public class DragAndDropTest {
         dragSource = n;
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
-        n.getScene().setOnDragOver(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                event.acceptTransferModes(TransferMode.ANY);
-                if (counter == 0) {
-                    assertNull(event.getGestureTarget());
-                } else {
-                    assertSame(n.getScene(), event.getGestureTarget());
-                }
-                counter++;
-            }
-        });
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
+        n.getScene().setOnDragOver(event -> {
+            event.acceptTransferModes(TransferMode.ANY);
+            if (counter == 0) {
+                assertNull(event.getGestureTarget());
+            } else {
                 assertSame(n.getScene(), event.getGestureTarget());
-                counter++;
             }
+            counter++;
+        });
+        n.setOnDragDropped(event -> {
+            assertSame(n.getScene(), event.getGestureTarget());
+            counter++;
         });
 
         n.getScene().impl_processMouseEvent(
@@ -727,12 +702,10 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptCopy);
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-                assertSame(TransferMode.COPY, event.getTransferMode());
-                assertSame(TransferMode.COPY, event.getAcceptedTransferMode());
-            }
+        n.setOnDragDropped(event -> {
+            counter++;
+            assertSame(TransferMode.COPY, event.getTransferMode());
+            assertSame(TransferMode.COPY, event.getAcceptedTransferMode());
         });
 
         /* start drag */
@@ -755,15 +728,13 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptCopy);
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                assertSame(TransferMode.COPY, event.getTransferMode());
-                assertSame(TransferMode.COPY, event.getAcceptedTransferMode());
-                event.acceptTransferModes(TransferMode.MOVE);
-                event.setDropCompleted(true);
-                assertSame(TransferMode.COPY, event.getTransferMode());
-                assertSame(TransferMode.MOVE, event.getAcceptedTransferMode());
-            }
+        n.setOnDragDropped(event -> {
+            assertSame(TransferMode.COPY, event.getTransferMode());
+            assertSame(TransferMode.COPY, event.getAcceptedTransferMode());
+            event.acceptTransferModes(TransferMode.MOVE);
+            event.setDropCompleted(true);
+            assertSame(TransferMode.COPY, event.getTransferMode());
+            assertSame(TransferMode.MOVE, event.getAcceptedTransferMode());
         });
 
         /* start drag */
@@ -784,15 +755,13 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.COPY_OR_MOVE));
         n.setOnDragOver(acceptCopy);
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                try {
-                    event.acceptTransferModes(TransferMode.LINK);
-                    fail("Exception was not thrown");
-                } catch (IllegalStateException e) {
-                    /* expceted */
-                    counter++;
-                }
+        n.setOnDragDropped(event -> {
+            try {
+                event.acceptTransferModes(TransferMode.LINK);
+                fail("Exception was not thrown");
+            } catch (IllegalStateException e) {
+                /* expceted */
+                counter++;
             }
         });
 
@@ -823,11 +792,9 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptCopyOrMove);
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                event.acceptTransferModes(TransferMode.ANY);
-                event.setDropCompleted(true);
-            }
+        n.setOnDragDropped(event -> {
+            event.acceptTransferModes(TransferMode.ANY);
+            event.setDropCompleted(true);
         });
 
         /* start drag */
@@ -859,10 +826,8 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptCopy);
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                event.setDropCompleted(true);
-            }
+        n.setOnDragDropped(event -> {
+            event.setDropCompleted(true);
         });
 
         /* start drag */
@@ -883,10 +848,8 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptCopy);
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                event.setDropCompleted(false);
-            }
+        n.setOnDragDropped(event -> {
+            event.setDropCompleted(false);
         });
 
         /* start drag */
@@ -926,15 +889,11 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptCopyOrMove);
-        n.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                event.setDropCompleted(false);
-            }
+        n.setOnDragDropped(event -> {
+            event.setDropCompleted(false);
         });
-        n.getParent().setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                event.setDropCompleted(true);
-            }
+        n.getParent().setOnDragDropped(event -> {
+            event.setDropCompleted(true);
         });
 
         /* start drag */
@@ -958,17 +917,13 @@ public class DragAndDropTest {
         src.setOnMousePressed(doDetect);
         src.setOnDragDetected(stringSource(TransferMode.ANY));
         trgt.setOnDragOver(acceptCopyOrMove);
-        trgt.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                event.setDropCompleted(true);
-            }
+        trgt.setOnDragDropped(event -> {
+            event.setDropCompleted(true);
         });
-        src.getParent().setOnDragDone(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                assertEquals(TransferMode.MOVE, event.getTransferMode());
-                assertEquals(TransferMode.MOVE, event.getAcceptedTransferMode());
-                counter++;
-            }
+        src.getParent().setOnDragDone(event -> {
+            Assert.assertEquals(TransferMode.MOVE, event.getTransferMode());
+            Assert.assertEquals(TransferMode.MOVE, event.getAcceptedTransferMode());
+            counter++;
         });
 
         /* start drag */
@@ -996,10 +951,8 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptAny);
-        n.setOnDragEntered(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        n.setOnDragEntered(event -> {
+            counter++;
         });
 
         /* start drag */
@@ -1021,10 +974,8 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptAny);
-        n.getParent().setOnDragEntered(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        n.getParent().setOnDragEntered(event -> {
+            counter++;
         });
 
         /* start drag */
@@ -1047,15 +998,11 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptAny);
-        subScene.setOnDragEntered(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        subScene.setOnDragEntered(event -> {
+            counter++;
         });
-        subScene.getParent().setOnDragEntered(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        subScene.getParent().setOnDragEntered(event -> {
+            counter++;
         });
 
         /* start drag */
@@ -1078,12 +1025,11 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptAny);
-        n.getParent().addEventHandler(DragEvent.DRAG_ENTERED_TARGET, 
-                new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
-        });
+        n.getParent().addEventHandler(DragEvent.DRAG_ENTERED_TARGET,
+                event -> {
+                    counter++;
+                }
+        );
 
         /* start drag */
         n.getScene().impl_processMouseEvent(
@@ -1104,10 +1050,8 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptAny);
-        n.setOnDragExited(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        n.setOnDragExited(event -> {
+            counter++;
         });
 
         /* start drag */
@@ -1133,15 +1077,11 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptAny);
-        subScene.setOnDragExited(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        subScene.setOnDragExited(event -> {
+            counter++;
         });
-        subScene.getParent().setOnDragExited(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        subScene.getParent().setOnDragExited(event -> {
+            counter++;
         });
 
         /* start drag */
@@ -1167,10 +1107,8 @@ public class DragAndDropTest {
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(acceptAny);
-        n.setOnDragEntered(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        n.setOnDragEntered(event -> {
+            counter++;
         });
 
         /* start drag */
@@ -1200,10 +1138,8 @@ public class DragAndDropTest {
         src.setOnMousePressed(doDetect);
         src.setOnDragDetected(stringSource(TransferMode.ANY));
         src.setOnDragOver(acceptAny);
-        trgt.setOnDragEntered(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        trgt.setOnDragEntered(event -> {
+            counter++;
         });
 
         /* start drag */
@@ -1230,10 +1166,8 @@ public class DragAndDropTest {
         src.setOnMousePressed(doDetect);
         src.setOnDragDetected(stringSource(TransferMode.ANY));
         src.setOnDragOver(acceptAny);
-        trgt.setOnDragExited(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        trgt.setOnDragExited(event -> {
+            counter++;
         });
 
         /* start drag */
@@ -1263,10 +1197,8 @@ public class DragAndDropTest {
         src.setOnMousePressed(doDetect);
         src.setOnDragDetected(stringSource(TransferMode.ANY));
         src.setOnDragOver(acceptAny);
-        trgt.getParent().setOnDragExited(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
+        trgt.getParent().setOnDragExited(event -> {
+            counter++;
         });
 
         /* start drag */
@@ -1297,11 +1229,10 @@ public class DragAndDropTest {
         src.setOnDragDetected(stringSource(TransferMode.ANY));
         src.setOnDragOver(acceptAny);
         trgt.getParent().addEventHandler(DragEvent.DRAG_EXITED_TARGET,
-                new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-            }
-        });
+                event -> {
+                    counter++;
+                }
+        );
 
         /* start drag */
         src.getScene().impl_processMouseEvent(
@@ -1329,13 +1260,11 @@ public class DragAndDropTest {
         final Image img = new Image("file:testImg_" + 100 + "x" + 100 + ".png");
         
         n.setOnMousePressed(doDetect);
-        n.setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                Dragboard db = n.startDragAndDrop(TransferMode.COPY);
-                db.setDragView(img);
-                db.setDragViewOffsetX(20);
-                db.setDragViewOffsetX(15);
-            }
+        n.setOnDragDetected(event -> {
+            Dragboard db = n.startDragAndDrop(TransferMode.COPY);
+            db.setDragView(img);
+            db.setDragViewOffsetX(20);
+            db.setDragViewOffsetX(15);
         });
 
         n.getScene().impl_processMouseEvent(
@@ -1356,16 +1285,14 @@ public class DragAndDropTest {
         
         dragSource = n;
         n.setOnMousePressed(doDetect);
-        n.setOnDragDetected( new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
-                ClipboardContent cc = new ClipboardContent();
-                cc.putString("Hello");
-                db.setContent(cc);
-                db.setDragView(img);
-                db.setDragViewOffsetX(20);
-                db.setDragViewOffsetX(15);
-            }
+        n.setOnDragDetected(event -> {
+            Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString("Hello");
+            db.setContent(cc);
+            db.setDragView(img);
+            db.setDragViewOffsetX(20);
+            db.setDragViewOffsetX(15);
         });
 
         n.getScene().impl_processMouseEvent(
@@ -1384,37 +1311,33 @@ public class DragAndDropTest {
         
         dragSource = n;
         n.setOnMousePressed(doDetect);
-        n.setOnDragDetected( new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
-                ClipboardContent cc = new ClipboardContent();
-                cc.putString("Hello");
-                db.setContent(cc);
-                db.setDragView(img);
-                db.setDragViewOffsetX(20);
-                db.setDragViewOffsetY(15);
-            }
+        n.setOnDragDetected(event -> {
+            Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString("Hello");
+            db.setContent(cc);
+            db.setDragView(img);
+            db.setDragViewOffsetX(20);
+            db.setDragViewOffsetY(15);
         });
 
-        parent.setOnDragDetected( new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
-                ClipboardContent cc = new ClipboardContent();
-                cc.putString("HelloParent");
-                db.setContent(cc);
+        parent.setOnDragDetected(event -> {
+            Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString("HelloParent");
+            db.setContent(cc);
 
-                assertEquals(img, db.getDragView());
-                assertEquals(20, db.getDragViewOffsetX(), 1e-10);
-                assertEquals(15, db.getDragViewOffsetY(), 1e-10);
- 
-                db.setDragView(imgParent);
-                db.setDragViewOffsetX(40);
-                db.setDragViewOffsetY(55);
-                
-                assertEquals(imgParent, db.getDragView());
-                assertEquals(40, db.getDragViewOffsetX(), 1e-10);
-                assertEquals(55, db.getDragViewOffsetY(), 1e-10);
-            }
+            assertEquals(img, db.getDragView());
+            assertEquals(20, db.getDragViewOffsetX(), 1e-10);
+            assertEquals(15, db.getDragViewOffsetY(), 1e-10);
+
+            db.setDragView(imgParent);
+            db.setDragViewOffsetX(40);
+            db.setDragViewOffsetY(55);
+
+            assertEquals(imgParent, db.getDragView());
+            assertEquals(40, db.getDragViewOffsetX(), 1e-10);
+            assertEquals(55, db.getDragViewOffsetY(), 1e-10);
         });
 
         n.getScene().impl_processMouseEvent(
@@ -1431,35 +1354,31 @@ public class DragAndDropTest {
         
         dragSource = n;
         n.setOnMousePressed(doDetect);
-        n.setOnDragDetected( new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
-                ClipboardContent cc = new ClipboardContent();
-                cc.putString("Hello");
-                db.setContent(cc);
-                db.setDragView(img, 20, 15);
-            }
+        n.setOnDragDetected(event -> {
+            Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString("Hello");
+            db.setContent(cc);
+            db.setDragView(img, 20, 15);
         });
 
-        parent.setOnDragDetected( new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
-                ClipboardContent cc = new ClipboardContent();
-                cc.putString("HelloParent");
-                db.setContent(cc);
+        parent.setOnDragDetected(event -> {
+            Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString("HelloParent");
+            db.setContent(cc);
 
-                assertEquals(img, db.getDragView());
-                assertEquals(20, db.getDragViewOffsetX(), 1e-10);
-                assertEquals(15, db.getDragViewOffsetY(), 1e-10);
- 
-                db.setDragView(imgParent);
-                db.setDragViewOffsetX(40);
-                db.setDragViewOffsetY(55);
-                
-                assertEquals(imgParent, db.getDragView());
-                assertEquals(40, db.getDragViewOffsetX(), 1e-10);
-                assertEquals(55, db.getDragViewOffsetY(), 1e-10);
-            }
+            assertEquals(img, db.getDragView());
+            assertEquals(20, db.getDragViewOffsetX(), 1e-10);
+            assertEquals(15, db.getDragViewOffsetY(), 1e-10);
+
+            db.setDragView(imgParent);
+            db.setDragViewOffsetX(40);
+            db.setDragViewOffsetY(55);
+
+            assertEquals(imgParent, db.getDragView());
+            assertEquals(40, db.getDragViewOffsetX(), 1e-10);
+            assertEquals(55, db.getDragViewOffsetY(), 1e-10);
         });
 
         n.getScene().impl_processMouseEvent(
@@ -1474,21 +1393,19 @@ public class DragAndDropTest {
         
         dragSource = n;
         n.setOnMousePressed(doDetect);
-        n.setOnDragDetected( new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);                
+        n.setOnDragDetected(event -> {
+            Dragboard db = dragSource.startDragAndDrop(TransferMode.ANY);
 
-                assertNull(db.getDragView());
-                assertEquals(0, db.getDragViewOffsetX(), 1e-10);
-                assertEquals(0, db.getDragViewOffsetY(), 1e-10);
+            assertNull(db.getDragView());
+            assertEquals(0, db.getDragViewOffsetX(), 1e-10);
+            assertEquals(0, db.getDragViewOffsetY(), 1e-10);
 
-                ClipboardContent cc = new ClipboardContent();
-                cc.putString("Hello");
-                db.setContent(cc);
-                db.setDragView(img);
-                db.setDragViewOffsetX(20);
-                db.setDragViewOffsetX(15);
-            }
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString("Hello");
+            db.setContent(cc);
+            db.setDragView(img);
+            db.setDragViewOffsetX(20);
+            db.setDragViewOffsetX(15);
         });
 
         n.getScene().impl_processMouseEvent(
@@ -1516,22 +1433,18 @@ public class DragAndDropTest {
         counter = 0;
         n.setOnMousePressed(doDetect);
         n.setOnDragDetected(stringSource(TransferMode.ANY));
-        n.setOnDragOver(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-                assertEquals(52, event.getX(), 0.00001);
-                assertEquals(52, event.getY(), 0.00001);
-                assertEquals(0, event.getZ(), 0.00001);
-            }
+        n.setOnDragOver(event -> {
+            counter++;
+            Assert.assertEquals(52, event.getX(), 0.00001);
+            Assert.assertEquals(52, event.getY(), 0.00001);
+            Assert.assertEquals(0, event.getZ(), 0.00001);
         });
 
-        n.getScene().setOnDragOver(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                counter++;
-                assertEquals(52, event.getX(), 0.00001);
-                assertEquals(52, event.getY(), 0.00001);
-                assertEquals(50, event.getZ(), 0.00001);
-            }
+        n.getScene().setOnDragOver(event -> {
+            counter++;
+            Assert.assertEquals(52, event.getX(), 0.00001);
+            Assert.assertEquals(52, event.getY(), 0.00001);
+            Assert.assertEquals(50, event.getZ(), 0.00001);
         });
 
         n.getScene().impl_processMouseEvent(
@@ -1553,43 +1466,37 @@ public class DragAndDropTest {
         dragSource = n1;
         n1.setOnMousePressed(doDetect);
         n1.setOnDragDetected(stringSource(TransferMode.ANY));
-        n1.setOnDragOver(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                PickResult pickRes = event.getPickResult();
-                assertNotNull(pickRes);
-                assertSame(n1, pickRes.getIntersectedNode());
-                assertEquals(52, pickRes.getIntersectedPoint().getX(), 0.00001);
-                assertEquals(52, pickRes.getIntersectedPoint().getY(), 0.00001);
-                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
-                counter++;
-            }
+        n1.setOnDragOver(event -> {
+            PickResult pickRes = event.getPickResult();
+            assertNotNull(pickRes);
+            assertSame(n1, pickRes.getIntersectedNode());
+            assertEquals(52, pickRes.getIntersectedPoint().getX(), 0.00001);
+            assertEquals(52, pickRes.getIntersectedPoint().getY(), 0.00001);
+            assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+            counter++;
         });
-        EventHandler<DragEvent> switchNodeHandler = new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                PickResult pickRes = event.getPickResult();
-                assertNotNull(pickRes);
-                assertSame(n2, pickRes.getIntersectedNode());
-                assertEquals(252, pickRes.getIntersectedPoint().getX(), 0.00001);
-                assertEquals(52, pickRes.getIntersectedPoint().getY(), 0.00001);
-                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
-                event.acceptTransferModes(TransferMode.COPY);
-                counter++;
-            }
+        EventHandler<DragEvent> switchNodeHandler = event -> {
+            PickResult pickRes = event.getPickResult();
+            assertNotNull(pickRes);
+            assertSame(n2, pickRes.getIntersectedNode());
+            assertEquals(252, pickRes.getIntersectedPoint().getX(), 0.00001);
+            assertEquals(52, pickRes.getIntersectedPoint().getY(), 0.00001);
+            assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+            event.acceptTransferModes(TransferMode.COPY);
+            counter++;
         };
         n1.setOnDragExited(switchNodeHandler);
         n2.setOnDragEntered(switchNodeHandler);
         n2.setOnDragOver(switchNodeHandler);
         n2.setOnDragDropped(switchNodeHandler);
-        n1.setOnDragDone(new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                PickResult pickRes = event.getPickResult();
-                assertNotNull(pickRes);
-                assertNull(pickRes.getIntersectedNode());
-                assertEquals(0, pickRes.getIntersectedPoint().getX(), 0.00001);
-                assertEquals(0, pickRes.getIntersectedPoint().getY(), 0.00001);
-                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
-                counter++;
-            }
+        n1.setOnDragDone(event -> {
+            PickResult pickRes = event.getPickResult();
+            assertNotNull(pickRes);
+            assertNull(pickRes.getIntersectedNode());
+            assertEquals(0, pickRes.getIntersectedPoint().getX(), 0.00001);
+            assertEquals(0, pickRes.getIntersectedPoint().getY(), 0.00001);
+            assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
+            counter++;
         });
 
         n1.getScene().impl_processMouseEvent(
@@ -1609,19 +1516,11 @@ public class DragAndDropTest {
     
     // Event handlers
     
-    private final EventHandler<MouseEvent> dontDetect = 
-            new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            event.setDragDetect(false);
-        }
-    };
+    private final EventHandler<MouseEvent> dontDetect =
+            event -> event.setDragDetect(false);
 
-    private final EventHandler<MouseEvent> doDetect = 
-            new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent event) {
-            event.setDragDetect(true);
-        }
-    };
+    private final EventHandler<MouseEvent> doDetect =
+            event -> event.setDragDetect(true);
     
     private final EventHandler<MouseEvent> detector = 
             new EventHandler<MouseEvent>() {
@@ -1631,36 +1530,22 @@ public class DragAndDropTest {
     };
     
     private EventHandler<MouseEvent> stringSource(final TransferMode... tms) { 
-        return new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                Dragboard db = dragSource.startDragAndDrop(tms);
-                ClipboardContent cc = new ClipboardContent();
-                cc.putString("Hello");
-                db.setContent(cc);
-            }
+        return event -> {
+            Dragboard db = dragSource.startDragAndDrop(tms);
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString("Hello");
+            db.setContent(cc);
         };
     }
     
-    private final EventHandler<DragEvent> acceptAny = 
-            new EventHandler<DragEvent>() {
-        @Override public void handle(DragEvent event) {
-            event.acceptTransferModes(TransferMode.ANY);
-        }
-    };
+    private final EventHandler<DragEvent> acceptAny =
+            event -> event.acceptTransferModes(TransferMode.ANY);
 
-    private final EventHandler<DragEvent> acceptCopyOrMove = 
-            new EventHandler<DragEvent>() {
-        @Override public void handle(DragEvent event) {
-            event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
-        }
-    };
+    private final EventHandler<DragEvent> acceptCopyOrMove =
+            event -> event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
     
-    private final EventHandler<DragEvent> acceptCopy = 
-            new EventHandler<DragEvent>() {
-        @Override public void handle(DragEvent event) {
-            event.acceptTransferModes(TransferMode.COPY);
-        }
-    };
+    private final EventHandler<DragEvent> acceptCopy =
+            event -> event.acceptTransferModes(TransferMode.COPY);
     
     // Scenes
 

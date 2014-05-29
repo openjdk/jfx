@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configurationDescriptor version="89">
+<configurationDescriptor version="94">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
@@ -140,16 +140,8 @@
           <itemPath>../../modules/graphics/src/main/native-glass/lens/LensWindow.c</itemPath>
         </logicalFolder>
         <logicalFolder name="mac" displayName="mac" projectFiles="true">
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleBaseProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleBaseProvider.m</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleRoot.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleRoot.m</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionItemProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionItemProvider.m</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionProvider.m</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleToggleProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessibleToggleProvider.m</itemPath>
+          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessible.h</itemPath>
+          <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassAccessible.m</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassApplication.h</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassApplication.m</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/mac/GlassCursor.m</itemPath>
@@ -218,24 +210,6 @@
           <itemPath>../../modules/graphics/src/main/native-glass/mac/common.h</itemPath>
         </logicalFolder>
         <logicalFolder name="win" displayName="win" projectFiles="true">
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleBasePatternProvider.cpp</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleBasePatternProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleBaseProvider.cpp</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleBaseProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleGridItemProvider.cpp</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleGridItemProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleGridProvider.cpp</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleGridProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleRangeValueProvider.cpp</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleRangeValueProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleRoot.cpp</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleRoot.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleSelectionItemProvider.cpp</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleSelectionItemProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleSelectionProvider.cpp</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleSelectionProvider.h</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleToggleProvider.cpp</itemPath>
-          <itemPath>../../modules/graphics/src/main/native-glass/win/AccessibleToggleProvider.h</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/win/BaseWnd.cpp</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/win/BaseWnd.h</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/win/CommonDialogs.cpp</itemPath>
@@ -245,6 +219,8 @@
           <itemPath>../../modules/graphics/src/main/native-glass/win/CommonDialogs_Standard.h</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/win/FullScreenWindow.cpp</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/win/FullScreenWindow.h</itemPath>
+          <itemPath>../../modules/graphics/src/main/native-glass/win/GlassAccessible.cpp</itemPath>
+          <itemPath>../../modules/graphics/src/main/native-glass/win/GlassAccessible.h</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/win/GlassApplication.cpp</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/win/GlassApplication.h</itemPath>
           <itemPath>../../modules/graphics/src/main/native-glass/win/GlassClipboard.cpp</itemPath>
@@ -304,7 +280,6 @@
   <confs>
     <conf name="Debug" type="2">
       <toolsSet>
-        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
         <compilerSet>default</compilerSet>
         <dependencyChecking>true</dependencyChecking>
         <rebuildPropChanged>false</rebuildPropChanged>
@@ -781,52 +756,12 @@
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleBaseProvider.h"
+      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessible.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleBaseProvider.m"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleRoot.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleRoot.m"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionItemProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionItemProvider.m"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionProvider.m"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleToggleProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleToggleProvider.m"
+      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessible.m"
             ex="false"
             tool="0"
             flavor2="0">
@@ -1161,96 +1096,6 @@
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleBasePatternProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleBasePatternProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleBaseProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleBaseProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleGridItemProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleGridItemProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleGridProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleGridProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleRangeValueProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleRangeValueProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleRoot.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleRoot.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleSelectionItemProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleSelectionItemProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleSelectionProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleSelectionProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleToggleProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleToggleProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
       <item path="../../modules/graphics/src/main/native-glass/win/BaseWnd.cpp"
             ex="false"
             tool="1"
@@ -1292,6 +1137,16 @@
             flavor2="0">
       </item>
       <item path="../../modules/graphics/src/main/native-glass/win/FullScreenWindow.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../modules/graphics/src/main/native-glass/win/GlassAccessible.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../modules/graphics/src/main/native-glass/win/GlassAccessible.h"
             ex="false"
             tool="3"
             flavor2="0">
@@ -1484,7 +1339,6 @@
     </conf>
     <conf name="Release" type="2">
       <toolsSet>
-        <remote-sources-mode>LOCAL_SOURCES</remote-sources-mode>
         <compilerSet>default</compilerSet>
         <dependencyChecking>true</dependencyChecking>
         <rebuildPropChanged>false</rebuildPropChanged>
@@ -1973,52 +1827,12 @@
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleBaseProvider.h"
+      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessible.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleBaseProvider.m"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleRoot.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleRoot.m"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionItemProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionItemProvider.m"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleSelectionProvider.m"
-            ex="false"
-            tool="0"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleToggleProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessibleToggleProvider.m"
+      <item path="../../modules/graphics/src/main/native-glass/mac/GlassAccessible.m"
             ex="false"
             tool="0"
             flavor2="0">
@@ -2353,96 +2167,6 @@
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleBasePatternProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleBasePatternProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleBaseProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleBaseProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleGridItemProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleGridItemProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleGridProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleGridProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleRangeValueProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleRangeValueProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleRoot.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleRoot.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleSelectionItemProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleSelectionItemProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleSelectionProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleSelectionProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleToggleProvider.cpp"
-            ex="false"
-            tool="1"
-            flavor2="0">
-      </item>
-      <item path="../../modules/graphics/src/main/native-glass/win/AccessibleToggleProvider.h"
-            ex="false"
-            tool="3"
-            flavor2="0">
-      </item>
       <item path="../../modules/graphics/src/main/native-glass/win/BaseWnd.cpp"
             ex="false"
             tool="1"
@@ -2484,6 +2208,16 @@
             flavor2="0">
       </item>
       <item path="../../modules/graphics/src/main/native-glass/win/FullScreenWindow.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../modules/graphics/src/main/native-glass/win/GlassAccessible.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../modules/graphics/src/main/native-glass/win/GlassAccessible.h"
             ex="false"
             tool="3"
             flavor2="0">

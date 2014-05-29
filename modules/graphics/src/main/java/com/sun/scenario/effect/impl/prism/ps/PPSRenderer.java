@@ -56,6 +56,7 @@ import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.hw.ShaderSource;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
+import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrImage;
 import com.sun.scenario.effect.impl.prism.PrRenderer;
 import com.sun.scenario.effect.impl.prism.PrTexture;
@@ -64,7 +65,7 @@ import static com.sun.scenario.effect.impl.Renderer.RendererState.*;
 
 public class PPSRenderer extends PrRenderer {
 
-    private final Screen screen;
+    private final ResourceFactory rf;
     private final ShaderSource shaderSource;
     private RendererState state;
     private boolean needsSWDispMap;
@@ -82,13 +83,11 @@ public class PPSRenderer extends PrRenderer {
     };
 
     private PPSRenderer(Screen screen, ShaderSource shaderSource) {
-        this.screen = screen;
         this.shaderSource = shaderSource;
         synchronized (this) {
             state = OK;
         }
-        ResourceFactory rf =
-            GraphicsPipeline.getPipeline().getResourceFactory(screen);
+        rf = GraphicsPipeline.getPipeline().getResourceFactory(screen);
         rf.addFactoryListener(listener);
         needsSWDispMap = !rf.isFormatSupported(PixelFormat.FLOAT_XYZW);
     }
@@ -134,8 +133,7 @@ public class PPSRenderer extends PrRenderer {
         synchronized (this) {
             state = DISPOSED;
         }
-        GraphicsPipeline.getPipeline().
-            getResourceFactory(screen).removeFactoryListener(listener);
+        rf.removeFactoryListener(listener);
     }
 
     /**
@@ -151,17 +149,17 @@ public class PPSRenderer extends PrRenderer {
 
     @Override
     public int getCompatibleWidth(int w) {
-        return PPSDrawable.getCompatibleWidth(screen, w);
+        return PPSDrawable.getCompatibleWidth(rf, w);
     }
 
     @Override
     public int getCompatibleHeight(int h) {
-        return PPSDrawable.getCompatibleHeight(screen, h);
+        return PPSDrawable.getCompatibleHeight(rf, h);
     }
 
     @Override
     public final PPSDrawable createCompatibleImage(int w, int h) {
-        return PPSDrawable.create(screen, w, h);
+        return PPSDrawable.create(rf, w, h);
     }
 
     @Override
@@ -176,8 +174,7 @@ public class PPSRenderer extends PrRenderer {
 
     @Override
     public LockableResource createFloatTexture(int w, int h) {
-        Texture prismTex = GraphicsPipeline.getPipeline().
-            getResourceFactory(screen).createFloatTexture(w, h);
+        Texture prismTex = rf.createFloatTexture(w, h);
         return new PrTexture(prismTex);
     }
 
@@ -198,8 +195,7 @@ public class PPSRenderer extends PrRenderer {
     {
         InputStream pscode = shaderSource.loadSource(name);
         int maxTexCoordIndex = samplers.keySet().size()-1;
-        ShaderFactory factory = (ShaderFactory)
-            GraphicsPipeline.getPipeline().getResourceFactory(screen);
+        ShaderFactory factory = (ShaderFactory)rf;
         return factory.createShader(pscode, samplers, params,
                                     maxTexCoordIndex,
                                     isPixcoordUsed, false);
@@ -271,7 +267,8 @@ public class PPSRenderer extends PrRenderer {
             // create an intrinsic peer (one that's handled by Prism)
             return createIntrinsicPeer(fctx, name);
         } else if (needsSWDispMap && name.equals("DisplacementMap")) {
-            return new PPStoPSWDisplacementMapPeer(fctx, this, name);
+            PrFilterContext swctx = ((PrFilterContext) fctx).getSoftwareInstance();
+            return new PPStoPSWDisplacementMapPeer(swctx, this, name);
         } else {
             // try creating a platform-specific peer
             return createPlatformPeer(fctx, name, unrollCount);

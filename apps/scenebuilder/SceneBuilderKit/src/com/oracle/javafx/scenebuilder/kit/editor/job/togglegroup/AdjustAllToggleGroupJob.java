@@ -36,7 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIndex;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMFxIdIndex;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
@@ -75,7 +75,7 @@ public class AdjustAllToggleGroupJob extends CompositeJob {
          * #1
          */
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final FXOMIndex fxomIndex = new FXOMIndex(fxomDocument);
+        final FXOMFxIdIndex fxomIndex = new FXOMFxIdIndex(fxomDocument);
         for (FXOMInstance toggleGroupInstance : fxomIndex.collectToggleGroups()) {
             final String toggleGroupId = toggleGroupInstance.getFxId();
             if (toggleGroupId != null) {
@@ -87,17 +87,19 @@ public class AdjustAllToggleGroupJob extends CompositeJob {
          * #2
          */
         final PropertyName toggleGroupName = new PropertyName("toggleGroup"); //NOI18N
-        for (FXOMProperty p : fxomDocument.getFxomRoot().collectProperties(toggleGroupName)) {
-            if (p instanceof FXOMPropertyT) {
-                final FXOMPropertyT pt = (FXOMPropertyT) p;
-                final PrefixedValue pv = new PrefixedValue(pt.getValue());
-                if (pv.isExpression()) {
-                    /*
-                     * p is an FXOMPropertyT like this:
-                     * 
-                     * <.... toggleGroup="$id" .... />              //NOI18N
-                     */
-                    toggleGroupIds.add(pv.getSuffix());
+        if (fxomDocument.getFxomRoot() != null) {
+            for (FXOMProperty p : fxomDocument.getFxomRoot().collectProperties(toggleGroupName)) {
+                if (p instanceof FXOMPropertyT) {
+                    final FXOMPropertyT pt = (FXOMPropertyT) p;
+                    final PrefixedValue pv = new PrefixedValue(pt.getValue());
+                    if (pv.isExpression()) {
+                        /*
+                         * p is an FXOMPropertyT like this:
+                         * 
+                         * <.... toggleGroup="$id" .... />              //NOI18N
+                         */
+                        toggleGroupIds.add(pv.getSuffix());
+                    }
                 }
             }
         }

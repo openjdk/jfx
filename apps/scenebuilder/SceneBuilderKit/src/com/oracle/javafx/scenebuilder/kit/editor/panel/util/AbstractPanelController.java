@@ -303,11 +303,13 @@ public abstract class AbstractPanelController {
     }
     
     
-    /*
-     * Private
+    /**
+     * Replaces oldStylesheet by the tool style sheet assigned to the editor
+     * controller. This methods {@link EditorController#getToolStylesheet}.
+     * 
+     * @param oldStylesheet null or the style sheet to be replaced
      */
-    
-    private void toolStylesheetDidChange(String oldStylesheet) {
+    protected void toolStylesheetDidChange(String oldStylesheet) {
         /*
          * Tool style sheet has changed in editor controller.
          * If the panel has been loaded, then we replace the old sheet

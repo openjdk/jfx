@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue.Type;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -48,6 +49,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -148,12 +150,13 @@ public class StylesheetEditor extends InlineListEditor {
     @SuppressWarnings("unchecked")
     @Override
     public void setValue(Object value) {
+        setValueGeneric(value);
         if (value == null) {
             reset();
             return;
         }
         assert value instanceof List;
-        if (((List) value).isEmpty()) {
+        if (((List<?>) value).isEmpty()) {
             reset();
             return;
         }
@@ -275,10 +278,6 @@ public class StylesheetEditor extends InlineListEditor {
         } catch (MalformedURLException ex) {
             throw new RuntimeException("Invalid URL", ex); //NOI18N
         }
-        if (alreadyUsed(url.toExternalForm())) {
-            System.err.println(I18N.getString("inspector.stylesheet.alreadyexist", url)); // should go to message panel
-            return;
-        }
 
         switchToItemList();
         // Add editor item
@@ -290,6 +289,10 @@ public class StylesheetEditor extends InlineListEditor {
         } else {
             urlStr = url.toExternalForm();
             switchType(Type.PLAIN_STRING);
+        }
+        if (alreadyUsed(url.toExternalForm())) {
+            System.err.println(I18N.getString("inspector.stylesheet.alreadyexist", url)); // should go to message panel
+            return;
         }
         addItem(new StylesheetItem(this, urlStr));
 
@@ -591,11 +594,7 @@ public class StylesheetEditor extends InlineListEditor {
             String suffix = new PrefixedValue(getValue()).getSuffix();
             String fileName = null;
             if (!suffix.isEmpty()) {
-                String[] urlParts = suffix.split("\\/");
-                fileName = urlParts[urlParts.length - 1];
-                // On windows, we may have "\" separators.
-                urlParts = fileName.split("\\\\");
-                fileName = urlParts[urlParts.length - 1];
+                fileName = EditorUtils.getSimpleFileName(suffix);
             }
             if (fileName != null) {
                 openMi.setVisible(true);
@@ -624,10 +623,12 @@ public class StylesheetEditor extends InlineListEditor {
             }
         }
 
+        @SuppressWarnings("unused")
         protected void disablePlusButton(boolean disable) {
             plusBt.setDisable(disable);
         }
 
+        @SuppressWarnings("unused")
         protected void disableRemove(boolean disable) {
             removeMi.setDisable(disable);
         }

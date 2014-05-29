@@ -495,20 +495,14 @@ public class AffineTest {
     public void testRepeatedAtomicChangeNotifications() {
         final Affine a = new Affine();
 
-        a.mxxProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                a.getMxx();
-                listenerCounter++;
-            }
+        a.mxxProperty().addListener(observable -> {
+            a.getMxx();
+            listenerCounter++;
         });
 
-        a.tyProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                a.getTy();
-                listenerCounter++;
-            }
+        a.tyProperty().addListener(observable -> {
+            a.getTy();
+            listenerCounter++;
         });
 
         listenerCounter = 0;
@@ -537,12 +531,9 @@ public class AffineTest {
     public void atomicChangeBackAndForthShouldNotNotify() {
         final Affine a = new Affine();
 
-        a.txProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                a.getTx();
-                listenerCounter++;
-            }
+        a.txProperty().addListener(observable -> {
+            a.getTx();
+            listenerCounter++;
         });
 
         listenerCounter = 0;
@@ -555,14 +546,9 @@ public class AffineTest {
     public void recursiveAtomicChangeShouldBeFine() {
         final Affine a = new Affine();
 
-        a.tyProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                a.setToTransform( 3,  4,  5,  6,
-                                  7,  8, 10,  9,
-                                 11, 12, 13, 14);
-            }
-        });
+        a.tyProperty().addListener(observable -> a.setToTransform( 3,  4,  5,  6,
+                          7,  8, 10,  9,
+                         11, 12, 13, 14));
 
         listenerCounter = 0;
         a.setToTransform( 2,  3,  4,  5,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,13 +68,16 @@ public class Util {
         } catch (InterruptedException ex) {}
     }
 
-    private static Future submit(final Runnable r) {
+    private static Future submit(final Runnable r, final CountDownLatch delayLatch) {
         final Throwable[] testError = new Throwable[1];
         final CountDownLatch latch = new CountDownLatch(1);
 
         Platform.runLater(new Runnable() {
             @Override public void run() {
                 try {
+                    if (delayLatch != null) {
+                        delayLatch.await();
+                    }
                     r.run();
                 } catch (Throwable th) {
                     testError[0] = th;
@@ -116,10 +119,18 @@ public class Util {
     }
 
     public static void runAndWait(Runnable... runnables) {
+        runAndWait(false, runnables);
+    }
+
+    public static void runAndWait(boolean delay, Runnable... runnables) {
         List<Future> futures = new ArrayList(runnables.length);
         int i = 0;
+        CountDownLatch delayLatch = delay ? new CountDownLatch(1) : null;
         for (Runnable r : runnables) {
-            futures.add(submit(r));
+            futures.add(submit(r, delayLatch));
+        }
+        if (delayLatch != null) {
+            delayLatch.countDown();
         }
 
         int count = TIMEOUT / 100;
@@ -127,9 +138,12 @@ public class Util {
             Iterator<Future> it = futures.iterator();
             while (it.hasNext()) {
                 Future future = it.next();
-                if (future.await(100, TimeUnit.MILLISECONDS)) {
+                if (future.await(0, TimeUnit.MILLISECONDS)) {
                     it.remove();
                 }
+            }
+            if (!futures.isEmpty()) {
+                Util.sleep(100);
             }
         }
 

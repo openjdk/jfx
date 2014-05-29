@@ -59,7 +59,12 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_EGLFBGLFactory_nInitialize
     EGLint numconfigs = 0;
     EGLint configId = 0;
 
-    EGLDisplay egldisplay = eglGetDisplay(getNativeDisplayType());
+    EGLNativeDisplayType disptype = getNativeDisplayType();
+    if (disptype == (EGLNativeDisplayType)0xBAD) {
+        fprintf(stderr, "nInitialize: Failed in getNativeDisplayType\n");
+        return 0;
+    }
+    EGLDisplay egldisplay = eglGetDisplay(disptype);
     if (EGL_NO_DISPLAY == egldisplay) {
         fprintf(stderr, "eglGetDisplay returned EGL_NO_DISPLAY");
         // cleanup
@@ -113,7 +118,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_EGLFBGLFactory_nInitialize
         return 0; // cleanup
     }
     /* Information required by GLass at startup */
-    ctxInfo->display = getNativeDisplayType();
+    ctxInfo->display = disptype;
     ctxInfo->gl2 = JNI_FALSE;
     eglDestroyContext(ctxInfo->egldisplay, ctxInfo->context);
     return ptr_to_jlong(ctxInfo);

@@ -90,47 +90,34 @@ public class ObservableListApp extends Application {
         //create button for adding random integer to random position in observable list
         Button buttonAddNumber = new Button("Replace random integer");
         buttonAddNumber.setPrefSize(190, 45);
-        buttonAddNumber.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                int randomIndex = (int) (Math.round(Math.random() * (list.size() - 1)));
-                int randomNumber = (int) (Math.round(Math.random() * 10));
-                list.set(randomIndex, randomNumber);
-                //actualise content of the text to see the result
-                textList.setText(list.toString());
-            }
+        buttonAddNumber.setOnAction((ActionEvent t) -> {
+            int randomIndex = (int) (Math.round(Math.random() * (list.size() - 1)));
+            int randomNumber = (int) (Math.round(Math.random() * 10));
+            list.set(randomIndex, randomNumber);
+            //actualise content of the text to see the result
+            textList.setText(list.toString());
         });
 
         //create button for adding listener
         Button buttonAdd = new Button("Add list listener");
         buttonAdd.setPrefSize(190, 45);
-        final ListChangeListener<Integer> listener = new ListChangeListener<Integer>() {
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends Integer> c) {
-                while (c.next()) {
-                    textMessage.setText("replacement on index " + c.getFrom());
-                }
+        final ListChangeListener<Integer> listener = (ListChangeListener.Change<? extends Integer> c) -> {
+            while (c.next()) {
+                textMessage.setText("replacement on index " + c.getFrom());
             }
         };
 
-        buttonAdd.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                list.addListener(listener);
-                textMessage.setText("listener added");
-            }
+        buttonAdd.setOnAction((ActionEvent t) -> {
+            list.addListener(listener);
+            textMessage.setText("listener added");
         });
 
         //create a button for removing the listener
         Button buttonRemove = new Button("Remove list listener");
         buttonRemove.setPrefSize(190, 45);
-        buttonRemove.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                //remove the listener
-                list.removeListener(listener);
-                textMessage.setText("listener removed");
-            }
+        buttonRemove.setOnAction((ActionEvent t) -> {
+            list.removeListener(listener);
+            textMessage.setText("listener removed");
         });
 
         VBox vBoxTop = new VBox(10);

@@ -67,6 +67,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -97,8 +99,19 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     }
     
     public enum ToolTheme {
-        DEFAULT,
-        DARK
+
+        DEFAULT {
+                    @Override
+                    public String toString() {
+                        return I18N.getString("prefs.tool.theme.default");
+                    }
+                },
+        DARK {
+                    @Override
+                    public String toString() {
+                        return I18N.getString("prefs.tool.theme.dark");
+                    }
+                }
     }
 
     private static SceneBuilderApp singleton;
@@ -113,7 +126,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     private UserLibrary userLibrary;
     private File nextInitialDirectory;
     private ToolTheme toolTheme = ToolTheme.DEFAULT;
-
+    
 
     /*
      * Public
@@ -387,15 +400,17 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
         // Creates the user library
         userLibrary = new UserLibrary(AppPlatform.getUserLibraryFolder());
-        // runLater below is here to fix DTL-6378
-        Platform.runLater(new Runnable() {
+        
+        userLibrary.explorationCountProperty().addListener(new ChangeListener<Number>() {
 
             @Override
-            public void run() {
-                userLibrary.startWatching();
+            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
+                userLibraryExplorationCountDidChange();
             }
         });
-
+        
+        userLibrary.startWatching();
+        
         if (files.isEmpty()) {
             // Creates an empty document
             final DocumentWindowController newWindow = makeNewWindow();
@@ -466,8 +481,8 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     }
 
     /**
-     * Normally ignored in correcphase0ly deployed JavaFX applicaphase0ion.
-     * Buphase0 on Mac OS, phase0his mephase0hod seems phase0o be called by phase0he javafx launcher.
+     * Normally ignored in correctly deployed JavaFX application.
+     * But on Mac OS, this method seems to be called by the javafx launcher.
      */
     public static void main(String[] args) {
         launch(args);
@@ -608,6 +623,17 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     }
 
     private void performExit() {
+        
+        // Check if an editing session is on going
+        for (DocumentWindowController dwc : windowList) {
+            if (dwc.getEditorController().isTextEditingSessionOnGoing()) {
+                // Check if we can commit the editing session
+                if (dwc.getEditorController().canGetFxmlText() == false) {
+                    // Commit failed
+                    return;
+                }
+            }
+        }
 
         // Collects the documents with pending changes
         final List<DocumentWindowController> pendingDocs = new ArrayList<>();
@@ -778,6 +804,36 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         }
         EffectPicker.getEffectClasses();
     }
-
     
+    private void userLibraryExplorationCountDidChange() {
+        // At that point we dunno if some JAR files are involved
+        // or not (exploration is about FXML files too).
+        switch(userLibrary.getJarReports().size()) {
+            case 0:
+                if (userLibrary.getPreviousJarReports().size() > 0) {
+                    logInfoMessage("log.user.jar.exploration.0");
+                }
+                break;
+            case 1:
+                final Path jarPath = userLibrary.getJarReports().get(0).getJar();
+                logInfoMessage("log.user.jar.exploration.1", jarPath.getFileName());
+                break;
+            default:
+                final int jarCount = userLibrary.getJarReports().size();
+                logInfoMessage("log.user.jar.exploration.n", jarCount);
+                break;
+        }
+    }
+    
+    private void logInfoMessage(String key) {
+        for (DocumentWindowController dwc : windowList) {
+            dwc.getEditorController().getMessageLog().logInfoMessage(key, I18N.getBundle());
+        }
+    }
+    
+    private void logInfoMessage(String key, Object arg) {
+        for (DocumentWindowController dwc : windowList) {
+            dwc.getEditorController().getMessageLog().logInfoMessage(key, I18N.getBundle(), arg);
+        }
+    }
 }

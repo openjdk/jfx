@@ -195,10 +195,6 @@ public class GridPaneDriver extends AbstractNodeDriver {
                 targetCellY = 0.0;
             }
             
-            final Bounds targetCellBounds 
-                    = Deprecation.getGridPaneCellBounds(gridPane, targetColumnIndex, targetRowIndex);
-            final BoundsUtils.EdgeInfo edgeInfo
-                    = BoundsUtils.distanceToEdges(targetCellBounds, targetCellX, targetCellY, gridPane);
             
             /*
              *            hgap          targetCellBounds.width
@@ -226,6 +222,10 @@ public class GridPaneDriver extends AbstractNodeDriver {
             
             final ColumnArea targetColumnArea;
             if (targetColumnIndex < columnCount) {
+                final Bounds targetCellBounds 
+                        = Deprecation.getGridPaneCellBounds(gridPane, targetColumnIndex, 0);
+                final BoundsUtils.EdgeInfo edgeInfo
+                        = BoundsUtils.distanceToEdges(targetCellBounds, targetCellX, targetCellY, gridPane);
                 if (targetCellX < targetCellBounds.getMinX()) {
                     targetColumnArea= ColumnArea.LEFT; // (A)
                 } else if (edgeInfo == null) {
@@ -242,7 +242,7 @@ public class GridPaneDriver extends AbstractNodeDriver {
                     }
                 }
             } else {
-                targetColumnArea = ColumnArea.CENTER;
+                targetColumnArea = ColumnArea.LEFT;
             }
             
             /*
@@ -271,6 +271,10 @@ public class GridPaneDriver extends AbstractNodeDriver {
             
             final RowArea targetRowArea;
             if (targetRowIndex < rowCount) {
+                final Bounds targetCellBounds 
+                        = Deprecation.getGridPaneCellBounds(gridPane, 0, targetRowIndex);
+                final BoundsUtils.EdgeInfo edgeInfo
+                        = BoundsUtils.distanceToEdges(targetCellBounds, targetCellX, targetCellY, gridPane);
                 if (targetCellY < targetCellBounds.getMinY()) {
                     targetRowArea = RowArea.TOP; // (A)
                 } else if (edgeInfo == null) {
@@ -287,7 +291,7 @@ public class GridPaneDriver extends AbstractNodeDriver {
                     }
                 }
             } else {
-                targetRowArea = RowArea.CENTER;
+                targetRowArea = RowArea.TOP;
             }
             
             result = new GridPaneDropTarget(fxomInstance, 

@@ -401,14 +401,20 @@ public class ContentPanelController extends AbstractFxmlPanelController
      * @return null or the topmost FXOMObject located at (sceneX, sceneY)
      */
     public FXOMObject pick(double sceneX, double sceneY, Set<FXOMObject> excludes) {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
         final FXOMObject result;
-        if ((fxomDocument == null) 
-                || (fxomDocument.getFxomRoot() == null)
-                || excludes.contains(fxomDocument.getFxomRoot())) {
-            result = null;
+        
+        if (isContentDisplayable()) {
+            final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+            assert fxomDocument != null;
+            if ((fxomDocument.getFxomRoot() == null) 
+                    || excludes.contains(fxomDocument.getFxomRoot())) {
+                result = null;
+            } else {
+                assert fxomDocument.getFxomRoot().getSceneGraphObject() instanceof Node;
+                result = pick(fxomDocument.getFxomRoot(), sceneX, sceneY, excludes);
+            }
         } else {
-            result = pick(fxomDocument.getFxomRoot(), sceneX, sceneY, excludes);
+            result = null;
         }
         
         return result;
@@ -433,42 +439,36 @@ public class ContentPanelController extends AbstractFxmlPanelController
         
         final FXOMObject result;
         
+        assert isContentDisplayable();
         assert startObject != null;
-        assert startObject.getFxomDocument() == getEditorController().getFxomDocument();
+        assert startObject.getSceneGraphObject() instanceof Node;
         assert excludes != null;
         assert excludes.contains(startObject) == false;
         
-        if (startObject.getSceneGraphObject() instanceof Node) {
-            picker.getExcludes().clear();
-            for (FXOMObject exclude : excludes) {
-                if (exclude.getSceneGraphObject() instanceof Node) {
-                    picker.getExcludes().add((Node) exclude.getSceneGraphObject());
-                }
+        picker.getExcludes().clear();
+        for (FXOMObject exclude : excludes) {
+            if (exclude.getSceneGraphObject() instanceof Node) {
+                picker.getExcludes().add((Node) exclude.getSceneGraphObject());
             }
+        }
 
-            final Node startNode = (Node) startObject.getSceneGraphObject();
-            final List<Node> hitNodes = picker.pick(startNode, sceneX, sceneY);
-            if (hitNodes == null) {
-                result = null;
-            } else {
-                assert hitNodes.isEmpty() == false;
-                
-                FXOMObject hitObject = null;
-                Node hitNode = null;
-                final Iterator<Node> it = hitNodes.iterator();
-                while ((hitObject == null) && it.hasNext()) {
-                    hitNode = it.next();
-                    hitObject = searchWithNode(hitNode, sceneX, sceneY);
-                    if (excludes.contains(hitObject)) {
-                        hitObject = null;
-                        hitNode = null;
-                    }
-                }
-                result = hitObject;
-            }
-            
-        } else {
+        final Node startNode = (Node) startObject.getSceneGraphObject();
+        final List<Node> hitNodes = picker.pick(startNode, sceneX, sceneY);
+        if (hitNodes == null) {
             result = null;
+        } else {
+            assert hitNodes.isEmpty() == false;
+
+            FXOMObject hitObject = null;
+            final Iterator<Node> it = hitNodes.iterator();
+            while ((hitObject == null) && it.hasNext()) {
+                final Node hitNode = it.next();
+                hitObject = searchWithNode(hitNode, sceneX, sceneY);
+                if (excludes.contains(hitObject)) {
+                    hitObject = null;
+                }
+            }
+            result = hitObject;
         }
         
         return result;
@@ -652,8 +652,8 @@ public class ContentPanelController extends AbstractFxmlPanelController
      * @treatAsPrivate
      * Returns true if this content panel is able to display the content ie
      * 1) fxomDocument != null
-     * 2) fxomDocument.getFxomRoot() != null
-     * 3) fxomDocument.getFxomRoot().isNode()
+     * 2) (fxomDocument.getFxomRoot() == null) or fxomDocument.getFxomRoot().isNode()
+     * 3) workspaceController.getLayoutException() == null
      * 
      * @return true if this content panel is able to display the content
      */
@@ -661,10 +661,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
         final boolean result;
         
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        if ((fxomDocument == null) || (fxomDocument.getFxomRoot() == null)) {
+        if (fxomDocument == null) {
             result = false;
+        } else if (fxomDocument.getFxomRoot() == null) {
+            result = true;
         } else {
-            result = fxomDocument.getFxomRoot().isNode();
+            result = fxomDocument.getFxomRoot().isNode()
+                    && workspaceController.getLayoutException() == null;
         }
         
         return result;
@@ -690,7 +693,16 @@ public class ContentPanelController extends AbstractFxmlPanelController
             fxomDocument.beginHoldingSceneGraph(this);
         }
         
+        final Exception currentLayoutException
+                = workspaceController.getLayoutException();
         workspaceController.setFxomDocument(fxomDocument);
+        final Exception newLayoutException
+                = workspaceController.getLayoutException();
+        if ((newLayoutException != null) && (newLayoutException != currentLayoutException)) {
+            getEditorController().getMessageLog().logWarningMessage(
+                    "log.warning.layout.failed", newLayoutException.getMessage());
+        }
+        
         if (isOutlinesVisible()) {
             updateOutlines();
         }

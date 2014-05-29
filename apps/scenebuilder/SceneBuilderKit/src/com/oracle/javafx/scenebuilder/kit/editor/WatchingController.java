@@ -32,23 +32,12 @@
 
 package com.oracle.javafx.scenebuilder.kit.editor;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMAssetIndex;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.FileWatcher;
-import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
-import java.io.File;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Locale;
 import javafx.application.Platform;
 
@@ -112,108 +101,25 @@ class WatchingController implements FileWatcher.Delegate {
      * Private
      */
     
-    private static final PropertyName valueName = new PropertyName("value"); //NOI18N
-    
     private void updateFileWatcher() {
         
-        final List<Path> targetPaths = new ArrayList<>();
-        
         final FXOMDocument fxomDocument = editorController.getFxomDocument();
-        if ((fxomDocument != null) && (fxomDocument.getFxomRoot() != null)) {
-            final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
-            
-            for (FXOMPropertyT p : fxomRoot.collectPropertiesT()) {
-                final Path path = extractPath(p);
-                if (path != null) {
-                    targetPaths.add(path);
-                }
-            }
-            
-            for (FXOMObject fxomObject : fxomRoot.collectObjectWithSceneGraphObjectClass(URL.class)) {
-                if (fxomObject instanceof FXOMInstance) {
-                    final FXOMInstance urlInstance = (FXOMInstance) fxomObject;
-                    final FXOMProperty valueProperty = urlInstance.getProperties().get(valueName);
-                    if (valueProperty instanceof FXOMPropertyT) {
-                        FXOMPropertyT valuePropertyT = (FXOMPropertyT) valueProperty;
-                        final Path path = extractPath(valuePropertyT);
-                        if (path != null) {
-                            targetPaths.add(path);
-                        }
-                    } else {
-                        assert false : "valueProperty.getName()=" + valueProperty.getName();
-                    }
-                }
-            }
-        }
-        
-        fileWatcher.setTargets(targetPaths);
-    }
-    
-    
-    private Path extractPath(FXOMPropertyT p) {
-        Path result;
-        
-        final PrefixedValue pv = new PrefixedValue(p.getValue());
-        if (pv.isPlainString()) {
-            try {
-                final File file = URLUtils.getFile(pv.getSuffix());
-                if (file == null) { // Not a file URL
-                    result = null;
-                } else {
-                    result = file.toPath();
-                }
-            } catch(URISyntaxException x) {
-                result = null;
-            }
-        } else if (pv.isDocumentRelativePath()) {
-            final URL documentLocation = p.getFxomDocument().getLocation();
-            if (documentLocation == null) {
-                result = null;
-            } else {
-                final URL url = pv.resolveDocumentRelativePath(documentLocation);
-                if (url == null) {
-                    result = null;
-                } else {
-                    try {
-                        result = Paths.get(url.toURI());
-                    } catch(FileSystemNotFoundException|URISyntaxException x) {
-                        result = null;
-                    }
-                }
-            }
-        } else if (pv.isClassLoaderRelativePath()) {
-            final ClassLoader classLoader = p.getFxomDocument().getClassLoader();
-            if (classLoader == null) {
-                result = null;
-            } else {
-                final URL url = pv.resolveClassLoaderRelativePath(classLoader);
-                if (url == null) {
-                    result = null;
-                } else {
-                    try {
-                        final File file = URLUtils.getFile(url);
-                        if (file == null) { // Not a file URL
-                            result = null;
-                        } else {
-                            result = file.toPath();
-                        }
-                    } catch(URISyntaxException x) {
-                        result = null;
-                    }
-                }
-                
-            }
+        final Collection<Path> targets;
+        if (fxomDocument == null) {
+            targets = Collections.emptyList();
         } else {
-            result = null;
+            final FXOMAssetIndex assetIndex = new FXOMAssetIndex(fxomDocument);
+            targets = assetIndex.getFileAssets().keySet();
         }
-        
-        return result;
+        fileWatcher.setTargets(targets);
     }
     
     private void updateEditorController(String messageKey, Path target) {
         final String targetFileName = target.getFileName().toString();
         editorController.getMessageLog().logInfoMessage(messageKey, targetFileName);
+        editorController.getErrorReport().forget();
         if (targetFileName.toLowerCase(Locale.ROOT).endsWith(".css")) { //NOI18N
+            editorController.getErrorReport().cssFileDidChange(target);
             editorController.getFxomDocument().reapplyCSS(target);
         } else {
             editorController.getFxomDocument().refreshSceneGraph();

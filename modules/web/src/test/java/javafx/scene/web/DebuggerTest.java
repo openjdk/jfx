@@ -16,15 +16,13 @@ public class DebuggerTest extends TestBase {
 
     @Test
     public void testSimpleMessageExchange() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
 
             final List<String> callbackMessages = new ArrayList<String>();
-            debugger.setMessageCallback(new Callback<String,Void>() {
-                public Void call(String message) {
-                    callbackMessages.add(message);
-                    return null;
-                }
+            debugger.setMessageCallback(message -> {
+                callbackMessages.add(message);
+                return null;
             });
             debugger.setEnabled(true);
             debugger.sendMessage(q(
@@ -32,12 +30,12 @@ public class DebuggerTest extends TestBase {
             assertEquals(
                     Arrays.asList(q("{'result':{'result':true},'id':16}")),
                     callbackMessages);
-        }});
+        });
     }
 
     @Test
     public void testEnabledProperty() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
 
             assertEquals(false, debugger.isEnabled());
@@ -55,12 +53,12 @@ public class DebuggerTest extends TestBase {
             debugger.setEnabled(false);
             debugger.setEnabled(false);
             assertEquals(false, debugger.isEnabled());
-        }});
+        });
     }
 
     @Test
     public void testMessageCallbackProperty() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
             Callback<String,Void> callback = new Callback<String,Void>() {
                 public Void call(String message) {
@@ -75,30 +73,30 @@ public class DebuggerTest extends TestBase {
 
             debugger.setMessageCallback(null);
             assertEquals(null, debugger.getMessageCallback());
-        }});
+        });
     }
 
     @Test
     public void testSendMessageIllegalStateException() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
             try {
                 debugger.sendMessage("foo");
                 fail("IllegalStateException expected but not thrown");
             } catch (IllegalStateException expected) {}
-        }});
+        });
     }
 
     @Test
     public void testSendMessageNullPointerException() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
             debugger.setEnabled(true);
             try {
                 debugger.sendMessage(null);
                 fail("NullPointerException expected but not thrown");
             } catch (NullPointerException expected) {}
-        }});
+        });
     }
 
     @Test

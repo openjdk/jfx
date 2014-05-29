@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.library.user;
 
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.library.BuiltinLibrary;
 import com.oracle.javafx.scenebuilder.kit.library.LibraryItem;
@@ -59,6 +60,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  *
@@ -122,6 +124,8 @@ class LibraryFolderWatcher implements Runnable {
             } catch(IOException x) {
                 Thread.sleep(2000 /* ms */);
                 retry = true;
+            } finally {
+                library.updateExplorationCount(library.getExplorationCount()+1);
             }
         }
         while (retry);
@@ -186,6 +190,8 @@ class LibraryFolderWatcher implements Runnable {
                             final Set<Path> jars = new HashSet<>();
                             jars.addAll(getAllFiles(FILE_TYPE.JAR));
                             exploreAndUpdateLibrary(jars);
+                            
+                            library.updateExplorationCount(library.getExplorationCount()+1);
                         }
                     } while (wk.reset());
                 } catch(IOException x) {
@@ -244,7 +250,6 @@ class LibraryFolderWatcher implements Runnable {
         }
 
         library.addItems(newItems);
-        library.updateExplorationCount(library.getExplorationCount()+1);
         library.updateExplorationDate(new Date());
     }
     
@@ -288,6 +293,7 @@ class LibraryFolderWatcher implements Runnable {
         // 2)
         final List<JarReport> jarReports = new ArrayList<>();
         for (Path currentJar : jars) {
+            Logger.getLogger(this.getClass().getSimpleName()).info(I18N.getString("log.info.explore.jar", currentJar));
             final JarExplorer explorer = new JarExplorer(currentJar);
             jarReports.add(explorer.explore(classLoader));
         }
@@ -302,7 +308,6 @@ class LibraryFolderWatcher implements Runnable {
         library.updateClassLoader(classLoader);
         library.addItems(newItems);
         library.updateJarReports(new ArrayList<>(jarReports));
-        library.updateExplorationCount(library.getExplorationCount()+1);
         library.updateExplorationDate(new Date());
     }
     

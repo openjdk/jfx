@@ -25,7 +25,7 @@
 
 package com.sun.javafx.tools.ant;
 
-import com.sun.javafx.tools.packager.Log;
+import com.oracle.tools.packager.Log;
 import org.apache.tools.ant.Project;
 
 public class AntLog extends Log.Logger {

@@ -39,6 +39,7 @@ import javafx.event.EventHandler;
 import javafx.geometry.Point3D;
 import javafx.stage.Stage;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 public class ContextMenuEventTest {
@@ -160,16 +161,14 @@ public class ContextMenuEventTest {
         stage.show();
         rect.requestFocus();
 
-        rect.setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
-            @Override public void handle(ContextMenuEvent event) {
-                assertEquals(1.0, event.getX(), 0.0001);
-                assertEquals(101, event.getSceneX(), 0.0001);
-                assertEquals(201, event.getScreenX(), 0.0001);
-                assertEquals(2.0, event.getY(), 0.0001);
-                assertEquals(102, event.getSceneY(), 0.0001);
-                assertEquals(202, event.getScreenY(), 0.0001);
-                assertFalse(event.isKeyboardTrigger());
-            }
+        rect.setOnContextMenuRequested(event -> {
+            Assert.assertEquals(1.0, event.getX(), 0.0001);
+            Assert.assertEquals(101, event.getSceneX(), 0.0001);
+            Assert.assertEquals(201, event.getScreenX(), 0.0001);
+            Assert.assertEquals(2.0, event.getY(), 0.0001);
+            Assert.assertEquals(102, event.getSceneY(), 0.0001);
+            Assert.assertEquals(202, event.getScreenY(), 0.0001);
+            assertFalse(event.isKeyboardTrigger());
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
@@ -187,16 +186,14 @@ public class ContextMenuEventTest {
         stage.show();
         rect.requestFocus();
 
-        rect.setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
-            @Override public void handle(ContextMenuEvent event) {
-                assertEquals(25.0, event.getX(), 0.0001);
-                assertEquals(125, event.getSceneX(), 0.0001);
-                assertEquals(225, event.getScreenX(), 0.0001);
-                assertEquals(50.0, event.getY(), 0.0001);
-                assertEquals(150, event.getSceneY(), 0.0001);
-                assertEquals(250, event.getScreenY(), 0.0001);
-                assertTrue(event.isKeyboardTrigger());
-            }
+        rect.setOnContextMenuRequested(event -> {
+            Assert.assertEquals(25.0, event.getX(), 0.0001);
+            Assert.assertEquals(125, event.getSceneX(), 0.0001);
+            Assert.assertEquals(225, event.getScreenX(), 0.0001);
+            Assert.assertEquals(50.0, event.getY(), 0.0001);
+            Assert.assertEquals(150, event.getSceneY(), 0.0001);
+            Assert.assertEquals(250, event.getScreenY(), 0.0001);
+            assertTrue(event.isKeyboardTrigger());
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
@@ -216,30 +213,26 @@ public class ContextMenuEventTest {
         stage.show();
         rect.requestFocus();
 
-        rect.setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
-            @Override public void handle(ContextMenuEvent event) {
-                assertEquals(1.0, event.getX(), 0.0001);
-                assertEquals(101, event.getSceneX(), 0.0001);
-                assertEquals(201, event.getScreenX(), 0.0001);
-                assertEquals(2.0, event.getY(), 0.0001);
-                assertEquals(102, event.getSceneY(), 0.0001);
-                assertEquals(202, event.getScreenY(), 0.0001);
-                assertEquals(0, event.getZ(), 0.0001);
-                assertFalse(event.isKeyboardTrigger());
-            }
+        rect.setOnContextMenuRequested(event -> {
+            Assert.assertEquals(1.0, event.getX(), 0.0001);
+            Assert.assertEquals(101, event.getSceneX(), 0.0001);
+            Assert.assertEquals(201, event.getScreenX(), 0.0001);
+            Assert.assertEquals(2.0, event.getY(), 0.0001);
+            Assert.assertEquals(102, event.getSceneY(), 0.0001);
+            Assert.assertEquals(202, event.getScreenY(), 0.0001);
+            Assert.assertEquals(0, event.getZ(), 0.0001);
+            assertFalse(event.isKeyboardTrigger());
         });
 
-        scene.setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
-            @Override public void handle(ContextMenuEvent event) {
-                assertEquals(101.0, event.getX(), 0.0001);
-                assertEquals(101, event.getSceneX(), 0.0001);
-                assertEquals(201, event.getScreenX(), 0.0001);
-                assertEquals(102.0, event.getY(), 0.0001);
-                assertEquals(102, event.getSceneY(), 0.0001);
-                assertEquals(202, event.getScreenY(), 0.0001);
-                assertEquals(50, event.getZ(), 0.0001);
-                assertFalse(event.isKeyboardTrigger());
-            }
+        scene.setOnContextMenuRequested(event -> {
+            Assert.assertEquals(101.0, event.getX(), 0.0001);
+            Assert.assertEquals(101, event.getSceneX(), 0.0001);
+            Assert.assertEquals(201, event.getScreenX(), 0.0001);
+            Assert.assertEquals(102.0, event.getY(), 0.0001);
+            Assert.assertEquals(102, event.getSceneY(), 0.0001);
+            Assert.assertEquals(202, event.getScreenY(), 0.0001);
+            Assert.assertEquals(50, event.getZ(), 0.0001);
+            assertFalse(event.isKeyboardTrigger());
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().menuEvent(
@@ -257,15 +250,13 @@ public class ContextMenuEventTest {
         stage.show();
         rect.requestFocus();
 
-        rect.setOnContextMenuRequested(new EventHandler<ContextMenuEvent>() {
-            @Override public void handle(ContextMenuEvent event) {
-                PickResult pickRes = event.getPickResult();
-                assertNotNull(pickRes);
-                assertSame(rect, pickRes.getIntersectedNode());
-                assertEquals(25, pickRes.getIntersectedPoint().getX(), 0.00001);
-                assertEquals(50, pickRes.getIntersectedPoint().getY(), 0.00001);
-                assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
-            }
+        rect.setOnContextMenuRequested(event -> {
+            PickResult pickRes = event.getPickResult();
+            assertNotNull(pickRes);
+            assertSame(rect, pickRes.getIntersectedNode());
+            assertEquals(25, pickRes.getIntersectedPoint().getX(), 0.00001);
+            assertEquals(50, pickRes.getIntersectedPoint().getY(), 0.00001);
+            assertEquals(0, pickRes.getIntersectedPoint().getZ(), 0.00001);
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().menuEvent(

@@ -33,39 +33,34 @@ package com.sun.scenario.effect.impl.sw.sse;
 import com.sun.scenario.effect.Effect;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
-import com.sun.scenario.effect.BoxBlur;
 import com.sun.scenario.effect.impl.HeapImage;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.BoxRenderState;
 
-public class SSEBoxBlurPeer extends SSEEffectPeer {
+public class SSEBoxBlurPeer extends SSEEffectPeer<BoxRenderState> {
 
     public SSEBoxBlurPeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);
     }
 
     @Override
-    protected final BoxBlur getEffect() {
-        return (BoxBlur)super.getEffect();
-    }
-
-    @Override
     public ImageData filter(Effect effect,
+                            BoxRenderState brstate,
                             BaseTransform transform,
                             Rectangle outputClip,
                             ImageData... inputs)
     {
-        setEffect(effect);
-
+        setRenderState(brstate);
         // NOTE: for now, all input images must be TYPE_INT_ARGB_PRE
 
         boolean horizontal = (getPass() == 0);
 
         // Calculate the amount the image grows on each iteration (size-1)
-        int hinc = horizontal ? getEffect().getHorizontalSize() - 1 : 0;
-        int vinc = horizontal ? 0 : getEffect().getVerticalSize() - 1;
-        int iterations = getEffect().getPasses();
+        int hinc = horizontal ? brstate.getBoxPixelSize(0) - 1 : 0;
+        int vinc = horizontal ? 0 : brstate.getBoxPixelSize(1) - 1;
+        int iterations = brstate.getBlurPasses();
         if (iterations < 1 || (hinc < 1 && vinc < 1)) {
             inputs[0].addref();
             return inputs[0];
@@ -75,7 +70,7 @@ public class SSEBoxBlurPeer extends SSEEffectPeer {
         int growx = (hinc * iterations + 1) & (~0x1);
         int growy = (vinc * iterations + 1) & (~0x1);
 
-        // Assert: ((FilterEffect) effect).operatesInUserSpace()...
+        // Assert: rstate.getEffectTransformSpace() == UserSpace
         // NOTE: We could still have a transformed ImageData for other reasons...
         HeapImage src = (HeapImage)inputs[0].getUntransformedImage();
         Rectangle srcr = inputs[0].getUntransformedBounds();

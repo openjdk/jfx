@@ -35,12 +35,18 @@ import com.oracle.javafx.scenebuilder.app.AppPlatform;
 import com.oracle.javafx.scenebuilder.app.DocumentWindowController;
 import com.oracle.javafx.scenebuilder.app.SceneBuilderApp;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
+import com.oracle.javafx.scenebuilder.kit.editor.JobManager;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -116,6 +122,20 @@ class DebugMenuController {
                         DebugMenuController.this.documentWindowController);
             }
         });
+        
+        /*
+         * Undo/redo stack
+         */
+        final Menu undoRedoStack = new Menu();
+        undoRedoStack.setText("Undo/Redo Stack"); //NOI18N
+        undoRedoStack.getItems().add(makeMenuItem("Dummy", true)); //NOI18N
+        undoRedoStack.setOnMenuValidation(new EventHandler<Event>() {
+            @Override
+            public void handle(Event t) {
+                assert t.getTarget() instanceof Menu;
+                undoRedoStackMenuShowing((Menu) t.getTarget());
+            }
+        });
                 
         menu.getItems().add(libraryFolderMenu);
         menu.getItems().add(new SeparatorMenuItem());
@@ -124,6 +144,7 @@ class DebugMenuController {
         menu.getItems().add(useDefaultThemeMenuItem);
         menu.getItems().add(useDarkThemeMenuItem);
         menu.getItems().add(new SeparatorMenuItem());
+        menu.getItems().add(undoRedoStack);
     }
     
     public Menu getMenu() {
@@ -164,6 +185,79 @@ class DebugMenuController {
             for (Node child : parent.getChildrenUnmodifiable()) {
                 checkLocalToSceneTransform(child);
             }
+        }
+    }
+    
+    /*
+     * Private (undo/redo stack)
+     */
+    
+    private void undoRedoStackMenuShowing(Menu menu) {
+        final JobManager jobManager
+                = documentWindowController.getEditorController().getJobManager();
+        
+        final List<Job> redoStack = jobManager.getRedoStack();
+        final List<Job> undoStack = jobManager.getUndoStack();
+        
+        final List<MenuItem> menuItems = menu.getItems();
+        
+        menuItems.clear();
+        if (redoStack.isEmpty()) {
+            menuItems.add(makeMenuItem("Redo Stack Empty", true)); //NOI18N
+        } else {
+            for (Job job : redoStack) {
+                menuItems.add(0, makeJobMenuItem(job));
+            }
+        }
+        
+        menuItems.add(new SeparatorMenuItem());
+        
+        if (undoStack.isEmpty()) {
+            menuItems.add(makeMenuItem("Undo Stack Empty", true)); //NOI18N
+        } else {
+            for (Job job : undoStack) {
+                menuItems.add(makeJobMenuItem(job));
+            }
+        }
+    }
+    
+    
+    private MenuItem makeMenuItem(String text, boolean disable) {
+        final MenuItem result = new MenuItem();
+        result.setText(text);
+        result.setDisable(disable);
+        return result;
+    }
+    
+    
+    private MenuItem makeJobMenuItem(Job job) {
+        final MenuItem result;
+        
+        if (job instanceof CompositeJob) {
+            final CompositeJob compositeJob = (CompositeJob)job;
+            final Menu newMenu = new Menu(compositeJob.getClass().getSimpleName());
+            addJobMenuItems(compositeJob.getSubJobs(), newMenu);
+            result = newMenu;
+        } else if (job instanceof BatchJob) {
+            final BatchJob batchJob = (BatchJob)job;
+            final Menu newMenu = new Menu(batchJob.getClass().getSimpleName());
+            addJobMenuItems(batchJob.getSubJobs(), newMenu);
+            result = newMenu;
+        } else {
+            result = new MenuItem(job.getClass().getSimpleName());
+        }
+        
+        return result;
+    }
+    
+    private void addJobMenuItems(List<Job> jobs, Menu targetMenu) {
+        targetMenu.getItems().clear();
+        for (Job job : jobs) {
+            targetMenu.getItems().add(makeJobMenuItem(job));
+        }
+        
+        if (targetMenu.getItems().isEmpty()) {
+            targetMenu.getItems().add(makeMenuItem("Empty", true)); //NOI18N
         }
     }
 }

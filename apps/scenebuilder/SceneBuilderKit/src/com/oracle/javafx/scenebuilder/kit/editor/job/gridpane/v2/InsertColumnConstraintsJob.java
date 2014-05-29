@@ -39,6 +39,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.ColumnConstraintsListPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.scene.layout.ColumnConstraints;
@@ -91,7 +92,8 @@ public class InsertColumnConstraintsJob extends Job {
 
     @Override
     public void undo() {
-        final List<ColumnConstraints> constraintsList = columnContraintsMeta.getValue(gridPaneObject);
+        final List<ColumnConstraints> constraintsList 
+                = new ArrayList<>(columnContraintsMeta.getValue(gridPaneObject));
         assert columnIndex < constraintsList.size();
         for (int i = 0; i < insertCount; i++) {
             constraintsList.remove(columnIndex);
@@ -101,7 +103,8 @@ public class InsertColumnConstraintsJob extends Job {
 
     @Override
     public void redo() {
-        final List<ColumnConstraints> constraintsList = columnContraintsMeta.getValue(gridPaneObject);
+        final List<ColumnConstraints> constraintsList 
+                = new ArrayList<>(columnContraintsMeta.getValue(gridPaneObject));
         final ColumnConstraints template;
         if (columnIndex >= 1) {
             template = constraintsList.get(columnIndex-1);

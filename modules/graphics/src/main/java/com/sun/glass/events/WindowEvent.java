@@ -45,8 +45,6 @@ public class WindowEvent {
     final static public int FOCUS_DISABLED        = 545;
     final static public int FOCUS_UNGRAB          = 546;
     
-    final static public int INIT_ACCESSIBILITY    = 551;
-
     public static String getEventName(final int eventType) {
         switch(eventType) {
             case WindowEvent.RESIZE:
@@ -75,8 +73,6 @@ public class WindowEvent {
                 return "FOCUS_DISABLED";   
             case WindowEvent.FOCUS_UNGRAB:
                 return "FOCUS_UNGRAB";   
-            case WindowEvent.INIT_ACCESSIBILITY:
-                return "INIT_ACCESSIBILITY";
             default:
                 return "UNKNOWN";
         }

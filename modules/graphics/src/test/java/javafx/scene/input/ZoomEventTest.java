@@ -34,6 +34,7 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -188,10 +189,8 @@ public class ZoomEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         zoomed = false;
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            zoomed = true;
         });
         
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
@@ -214,12 +213,10 @@ public class ZoomEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         zoomed = false;
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertEquals(1.2, event.getZoomFactor(), 0.0001);
-                assertEquals(2.4, event.getTotalZoomFactor(), 0.0001);
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            Assert.assertEquals(1.2, event.getZoomFactor(), 0.0001);
+            Assert.assertEquals(2.4, event.getTotalZoomFactor(), 0.0001);
+            zoomed = true;
         });
         
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
@@ -236,14 +233,12 @@ public class ZoomEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         zoomed = false;
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertTrue(event.isShiftDown());
-                assertFalse(event.isControlDown());
-                assertTrue(event.isAltDown());
-                assertFalse(event.isMetaDown());
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            assertTrue(event.isShiftDown());
+            assertFalse(event.isControlDown());
+            assertTrue(event.isAltDown());
+            assertFalse(event.isMetaDown());
+            zoomed = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM, 2, 3,
@@ -251,14 +246,12 @@ public class ZoomEventTest {
         assertTrue(zoomed);
 
         zoomed = false;
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertFalse(event.isShiftDown());
-                assertTrue(event.isControlDown());
-                assertFalse(event.isAltDown());
-                assertTrue(event.isMetaDown());
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            assertFalse(event.isShiftDown());
+            assertTrue(event.isControlDown());
+            assertFalse(event.isAltDown());
+            assertTrue(event.isMetaDown());
+            zoomed = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM, 2, 3,
@@ -273,11 +266,9 @@ public class ZoomEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         zoomed = false;
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertTrue(event.isDirect());
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            assertTrue(event.isDirect());
+            zoomed = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM, 2, 3,
@@ -285,11 +276,9 @@ public class ZoomEventTest {
         assertTrue(zoomed);
 
         zoomed = false;
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertFalse(event.isDirect());
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            assertFalse(event.isDirect());
+            zoomed = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM, 2, 3,
@@ -304,11 +293,9 @@ public class ZoomEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         zoomed = false;
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertTrue(event.isInertia());
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            assertTrue(event.isInertia());
+            zoomed = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM, 2, 3,
@@ -316,11 +303,9 @@ public class ZoomEventTest {
         assertTrue(zoomed);
 
         zoomed = false;
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertFalse(event.isInertia());
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            assertFalse(event.isInertia());
+            zoomed = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM, 2, 3,
@@ -335,10 +320,8 @@ public class ZoomEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         zoomed = false;
-        rect.setOnZoomStarted(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                zoomed = true;
-            }
+        rect.setOnZoomStarted(event -> {
+            zoomed = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM_STARTED, 2, 3,
@@ -346,10 +329,8 @@ public class ZoomEventTest {
         assertTrue(zoomed);
 
         zoomed = false;
-        rect.setOnZoomFinished(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                zoomed = true;
-            }
+        rect.setOnZoomFinished(event -> {
+            zoomed = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM_FINISHED, 2, 3,
@@ -363,10 +344,8 @@ public class ZoomEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        rect.addEventHandler(ZoomEvent.ANY, new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                zoomed = true;
-            }
+        rect.addEventHandler(ZoomEvent.ANY, event -> {
+            zoomed = true;
         });
 
         zoomed = false;
@@ -396,15 +375,11 @@ public class ZoomEventTest {
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
 
-        rect1.addEventHandler(ZoomEvent.ANY, new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                zoomed = true;
-            }
+        rect1.addEventHandler(ZoomEvent.ANY, event -> {
+            zoomed = true;
         });
-        rect2.addEventHandler(ZoomEvent.ANY, new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                zoomed2 = true;
-            }
+        rect2.addEventHandler(ZoomEvent.ANY, event -> {
+            zoomed2 = true;
         });
 
         zoomed = false;
@@ -441,22 +416,18 @@ public class ZoomEventTest {
 
         zoomed = false;
         zoomed2 = false;
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertEquals(150, event.getX(), 0.00001);
-                assertEquals(150, event.getY(), 0.00001);
-                assertEquals(0, event.getZ(), 0.00001);
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            Assert.assertEquals(150, event.getX(), 0.00001);
+            Assert.assertEquals(150, event.getY(), 0.00001);
+            Assert.assertEquals(0, event.getZ(), 0.00001);
+            zoomed = true;
         });
 
-        scene.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertEquals(150, event.getX(), 0.00001);
-                assertEquals(150, event.getY(), 0.00001);
-                assertEquals(50, event.getZ(), 0.00001);
-                zoomed2 = true;
-            }
+        scene.setOnZoom(event -> {
+            Assert.assertEquals(150, event.getX(), 0.00001);
+            Assert.assertEquals(150, event.getY(), 0.00001);
+            Assert.assertEquals(50, event.getZ(), 0.00001);
+            zoomed2 = true;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
@@ -475,17 +446,13 @@ public class ZoomEventTest {
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
 
-        rect1.addEventHandler(ZoomEvent.ANY, new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                zoomed = true;
-                pickRes = event.getPickResult();
-            }
+        rect1.addEventHandler(ZoomEvent.ANY, event -> {
+            zoomed = true;
+            pickRes = event.getPickResult();
         });
-        rect2.addEventHandler(ZoomEvent.ANY, new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                zoomed2 = true;
-                pickRes = event.getPickResult();
-            }
+        rect2.addEventHandler(ZoomEvent.ANY, event -> {
+            zoomed2 = true;
+            pickRes = event.getPickResult();
         });
 
         zoomed = false;
@@ -538,22 +505,18 @@ public class ZoomEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
-        rect1.addEventHandler(ZoomEvent.ANY, new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                zoomed = true;
-            }
+        rect1.addEventHandler(ZoomEvent.ANY, event -> {
+            zoomed = true;
         });
 
         MouseEventGenerator generator = new MouseEventGenerator();
 
         zoomed = false;
         zoomed2 = false;
-        rect2.setOnZoomStarted(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertEquals(250.0, event.getSceneX(), 0.0001);
-                assertEquals(250.0, event.getSceneY(), 0.0001);
-                zoomed2 = true;
-            }
+        rect2.setOnZoomStarted(event -> {
+            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            zoomed2 = true;
         });
         scene.impl_processMouseEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
@@ -566,12 +529,10 @@ public class ZoomEventTest {
 
         zoomed = false;
         zoomed2 = false;
-        rect2.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                zoomed2 = true;
-            }
+        rect2.setOnZoom(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            zoomed2 = true;
         });
         scene.impl_processMouseEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 150, 150));
@@ -584,12 +545,10 @@ public class ZoomEventTest {
 
         zoomed = false;
         zoomed2 = false;
-        rect2.setOnZoomFinished(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                zoomed2 = true;
-            }
+        rect2.setOnZoomFinished(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            zoomed2 = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().zoomEvent(
                 ZoomEvent.ZOOM_FINISHED, 2, 3,
@@ -604,12 +563,10 @@ public class ZoomEventTest {
         Scene scene = createScene();
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        rect.setOnZoomFinished(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertEquals(250.0, event.getSceneX(), 0.0001);
-                assertEquals(250.0, event.getSceneY(), 0.0001);
-                zoomed = true;
-            }
+        rect.setOnZoomFinished(event -> {
+            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            zoomed = true;
         });
 
         zoomed = false;
@@ -639,12 +596,10 @@ public class ZoomEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        rect.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override public void handle(ZoomEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                zoomed = true;
-            }
+        rect.setOnZoom(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            zoomed = true;
         });
 
         zoomed = false;

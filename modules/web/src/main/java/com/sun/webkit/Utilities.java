@@ -69,12 +69,7 @@ public abstract class Utilities {
                                                AccessControlContext acc)
     throws Throwable {
         try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-                @Override
-                public Object run() throws Exception {
-                    return MethodUtil.invoke(method, instance, args);
-                }
-            }, acc);
+            return AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> MethodUtil.invoke(method, instance, args), acc);
         } catch (PrivilegedActionException ex) {
             Throwable cause = ex.getCause();
             if (cause == null)

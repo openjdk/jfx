@@ -16,18 +16,16 @@ import java.util.List;
 
 final class WCRadialGradient extends WCGradient<RadialGradient> {
 
-    static final Comparator<Stop> COMPARATOR = new Comparator<Stop>() {
-        public int compare(Stop s1, Stop s2) {
-            float o1 = s1.getOffset();
-            float o2 = s2.getOffset();
-            if (o1 < o2) {
-                return -1;
-            }
-            if (o1 > o2) {
-                return 1;
-            }
-            return 0;
+    static final Comparator<Stop> COMPARATOR = (s1, s2) -> {
+        float o1 = s1.getOffset();
+        float o2 = s2.getOffset();
+        if (o1 < o2) {
+            return -1;
         }
+        if (o1 > o2) {
+            return 1;
+        }
+        return 0;
     };
 
     private final boolean reverse;

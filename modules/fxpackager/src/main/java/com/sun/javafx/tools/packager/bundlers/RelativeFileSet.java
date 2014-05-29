@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,57 +25,14 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
-import com.sun.javafx.tools.packager.Log;
+import com.oracle.tools.packager.Log;
+
 import java.io.File;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class RelativeFileSet {
-    private File basedir;
-    Set<String> files = new HashSet<String>();
-
+public class RelativeFileSet extends com.oracle.tools.packager.RelativeFileSet {
     public RelativeFileSet(File base, Set<File> files) {
-        basedir = base;
-        String baseAbsolute = basedir.getAbsolutePath();
-        for (File f: files) {
-            String absolute = f.getAbsolutePath();
-            if (!absolute.startsWith(baseAbsolute)) {
-                throw new RuntimeException("File " + f.getAbsolutePath() +
-                        " does not belong to "+baseAbsolute);
-            }
-            if (!absolute.equals(baseAbsolute)) { //possible in javafxpackager case
-               this.files.add(absolute.substring(baseAbsolute.length()+1));
-            }
-        }
+        super(base, files);
     }
-
-    public boolean contains(String[] requiredFiles) {
-        boolean result = true;
-
-        for(String fname: requiredFiles) {
-            if (!files.contains(fname)) {
-                Log.debug("  Runtime does not contain [" + fname + "]");
-                result = false;
-            }
-        }
-
-        return result;
-    }
-
-    public File getBaseDirectory() {
-        return basedir;
-    }
-
-    public Set<String> getIncludedFiles() {
-        return files;
-    }
-
-    public void dump() {
-        Log.verbose("\n=========\nBasedir: " + basedir + "\n");
-        for (String fname : files) {
-            Log.verbose("  " + fname);
-        }
-        Log.verbose("\n========");
-    }
-
 }

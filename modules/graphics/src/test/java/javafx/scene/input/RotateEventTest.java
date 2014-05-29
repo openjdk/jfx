@@ -34,6 +34,7 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -188,10 +189,8 @@ public class RotateEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         rotated = false;
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            rotated = true;
         });
         
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
@@ -214,12 +213,10 @@ public class RotateEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         rotated = false;
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertEquals(90, event.getAngle(), 0.0001);
-                assertEquals(-180, event.getTotalAngle(), 0.0001);
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            Assert.assertEquals(90, event.getAngle(), 0.0001);
+            Assert.assertEquals(-180, event.getTotalAngle(), 0.0001);
+            rotated = true;
         });
         
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
@@ -236,14 +233,12 @@ public class RotateEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         rotated = false;
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertTrue(event.isShiftDown());
-                assertFalse(event.isControlDown());
-                assertTrue(event.isAltDown());
-                assertFalse(event.isMetaDown());
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            assertTrue(event.isShiftDown());
+            assertFalse(event.isControlDown());
+            assertTrue(event.isAltDown());
+            assertFalse(event.isMetaDown());
+            rotated = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
@@ -251,14 +246,12 @@ public class RotateEventTest {
         assertTrue(rotated);
 
         rotated = false;
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertFalse(event.isShiftDown());
-                assertTrue(event.isControlDown());
-                assertFalse(event.isAltDown());
-                assertTrue(event.isMetaDown());
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            assertFalse(event.isShiftDown());
+            assertTrue(event.isControlDown());
+            assertFalse(event.isAltDown());
+            assertTrue(event.isMetaDown());
+            rotated = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
@@ -273,11 +266,9 @@ public class RotateEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         rotated = false;
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertTrue(event.isDirect());
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            assertTrue(event.isDirect());
+            rotated = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
@@ -285,11 +276,9 @@ public class RotateEventTest {
         assertTrue(rotated);
 
         rotated = false;
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertFalse(event.isDirect());
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            assertFalse(event.isDirect());
+            rotated = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
@@ -304,11 +293,9 @@ public class RotateEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         rotated = false;
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertTrue(event.isInertia());
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            assertTrue(event.isInertia());
+            rotated = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
@@ -316,11 +303,9 @@ public class RotateEventTest {
         assertTrue(rotated);
 
         rotated = false;
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertFalse(event.isInertia());
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            assertFalse(event.isInertia());
+            rotated = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATE, 2, 3,
@@ -335,10 +320,8 @@ public class RotateEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         rotated = false;
-        rect.setOnRotationStarted(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                rotated = true;
-            }
+        rect.setOnRotationStarted(event -> {
+            rotated = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATION_STARTED, 2, 3,
@@ -346,10 +329,8 @@ public class RotateEventTest {
         assertTrue(rotated);
 
         rotated = false;
-        rect.setOnRotationFinished(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                rotated = true;
-            }
+        rect.setOnRotationFinished(event -> {
+            rotated = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATION_FINISHED, 2, 3,
@@ -363,10 +344,8 @@ public class RotateEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        rect.addEventHandler(RotateEvent.ANY, new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                rotated = true;
-            }
+        rect.addEventHandler(RotateEvent.ANY, event -> {
+            rotated = true;
         });
 
         rotated = false;
@@ -396,15 +375,11 @@ public class RotateEventTest {
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
 
-        rect1.addEventHandler(RotateEvent.ANY, new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                rotated = true;
-            }
+        rect1.addEventHandler(RotateEvent.ANY, event -> {
+            rotated = true;
         });
-        rect2.addEventHandler(RotateEvent.ANY, new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                rotated2 = true;
-            }
+        rect2.addEventHandler(RotateEvent.ANY, event -> {
+            rotated2 = true;
         });
 
         rotated = false;
@@ -441,22 +416,18 @@ public class RotateEventTest {
 
         rotated = false;
         rotated2 = false;
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertEquals(150, event.getX(), 0.00001);
-                assertEquals(150, event.getY(), 0.00001);
-                assertEquals(0, event.getZ(), 0.00001);
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            Assert.assertEquals(150, event.getX(), 0.00001);
+            Assert.assertEquals(150, event.getY(), 0.00001);
+            Assert.assertEquals(0, event.getZ(), 0.00001);
+            rotated = true;
         });
 
-        scene.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertEquals(150, event.getX(), 0.00001);
-                assertEquals(150, event.getY(), 0.00001);
-                assertEquals(50, event.getZ(), 0.00001);
-                rotated2 = true;
-            }
+        scene.setOnRotate(event -> {
+            Assert.assertEquals(150, event.getX(), 0.00001);
+            Assert.assertEquals(150, event.getY(), 0.00001);
+            Assert.assertEquals(50, event.getZ(), 0.00001);
+            rotated2 = true;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
@@ -475,17 +446,13 @@ public class RotateEventTest {
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
 
-        rect1.addEventHandler(RotateEvent.ANY, new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                pickRes = event.getPickResult();
-                rotated = true;
-            }
+        rect1.addEventHandler(RotateEvent.ANY, event -> {
+            pickRes = event.getPickResult();
+            rotated = true;
         });
-        rect2.addEventHandler(RotateEvent.ANY, new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                pickRes = event.getPickResult();
-                rotated2 = true;
-            }
+        rect2.addEventHandler(RotateEvent.ANY, event -> {
+            pickRes = event.getPickResult();
+            rotated2 = true;
         });
 
         rotated = false;
@@ -538,22 +505,18 @@ public class RotateEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
-        rect1.addEventHandler(RotateEvent.ANY, new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                rotated = true;
-            }
+        rect1.addEventHandler(RotateEvent.ANY, event -> {
+            rotated = true;
         });
 
         MouseEventGenerator generator = new MouseEventGenerator();
 
         rotated = false;
         rotated2 = false;
-        rect2.setOnRotationStarted(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertEquals(250.0, event.getSceneX(), 0.0001);
-                assertEquals(250.0, event.getSceneY(), 0.0001);
-                rotated2 = true;
-            }
+        rect2.setOnRotationStarted(event -> {
+            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            rotated2 = true;
         });
         scene.impl_processMouseEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
@@ -566,12 +529,10 @@ public class RotateEventTest {
 
         rotated = false;
         rotated2 = false;
-        rect2.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                rotated2 = true;
-            }
+        rect2.setOnRotate(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            rotated2 = true;
         });
         scene.impl_processMouseEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 150, 150));
@@ -584,12 +545,10 @@ public class RotateEventTest {
 
         rotated = false;
         rotated2 = false;
-        rect2.setOnRotationFinished(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                rotated2 = true;
-            }
+        rect2.setOnRotationFinished(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            rotated2 = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().rotateEvent(
                 RotateEvent.ROTATION_FINISHED, 2, 3,
@@ -604,12 +563,10 @@ public class RotateEventTest {
         Scene scene = createScene();
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        rect.setOnRotationFinished(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertEquals(250.0, event.getSceneX(), 0.0001);
-                assertEquals(250.0, event.getSceneY(), 0.0001);
-                rotated = true;
-            }
+        rect.setOnRotationFinished(event -> {
+            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            rotated = true;
         });
 
         rotated = false;
@@ -638,12 +595,10 @@ public class RotateEventTest {
         Scene scene = createScene();
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        rect.setOnRotate(new EventHandler<RotateEvent>() {
-            @Override public void handle(RotateEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                rotated = true;
-            }
+        rect.setOnRotate(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            rotated = true;
         });
 
         rotated = false;

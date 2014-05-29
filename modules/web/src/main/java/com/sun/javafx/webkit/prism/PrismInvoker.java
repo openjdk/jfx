@@ -16,10 +16,8 @@ public final class PrismInvoker extends Invoker {
     private final AtomicBoolean isToolkitRunning = new AtomicBoolean(true);
 
     public PrismInvoker() {
-        Toolkit.getToolkit().addShutdownHook(new Runnable() {
-            public void run() {
-                isToolkitRunning.set(false);
-            }
+        Toolkit.getToolkit().addShutdownHook(() -> {
+            isToolkitRunning.set(false);
         });
     }
 

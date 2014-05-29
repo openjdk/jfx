@@ -25,10 +25,11 @@
 
 package javafx.scene.image;
 
+import javafx.scene.paint.Color;
+
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import javafx.scene.paint.Color;
 
 /**
  * This interface defines methods for writing the pixel data of a
@@ -64,10 +65,12 @@ public interface PixelWriter {
     /**
      * Stores pixel data for a {@link Color} into the specified coordinates
      * of the surface.
-     * 
+     *
      * @param x the X coordinate of the pixel color to write
      * @param y the Y coordinate of the pixel color to write
-     * @param c the Color to write
+     * @param c the Color to write or null
+     *
+     * @throws java.lang.NullPointerException if {@code color} is {@code null}
      */
     public void setColor(int x, int y, Color c);
 
@@ -86,7 +89,7 @@ public interface PixelWriter {
      * Pixel data for adjacent rows will be read offset from each other
      * by the number of buffer data elements defined by
      * {@code scanlineStride}.
-     * 
+     *
      * @param x the X coordinate of the rectangular region to write
      * @param y the Y coordinate of the rectangular region to write
      * @param w the width of the rectangular region to write
@@ -98,6 +101,8 @@ public interface PixelWriter {
      * @param scanlineStride the distance between the pixel data for the
      *        start of one row of data in the buffer to the start of the
      *        next row of data.
+     *
+     * @throws java.lang.NullPointerException if @{code pixelformat} or {@code buffer} is {@code null}
      */
     public <T extends Buffer>
         void setPixels(int x, int y, int w, int h,
@@ -120,7 +125,7 @@ public interface PixelWriter {
      * Pixel data for adjacent rows will be read offset from each other
      * by the number of byte array elements defined by
      * {@code scanlineStride}.
-     * 
+     *
      * @param x the X coordinate of the rectangular region to write
      * @param y the Y coordinate of the rectangular region to write
      * @param w the width of the rectangular region to write
@@ -133,6 +138,8 @@ public interface PixelWriter {
      * @param scanlineStride the distance between the pixel data for the
      *        start of one row of data in the buffer to the start of the
      *        next row of data
+     *
+     * @throws java.lang.NullPointerException if @{code pixelformat} or {@code buffer} is {@code null}
      */
     public void setPixels(int x, int y, int w, int h,
                           PixelFormat<ByteBuffer> pixelformat,
@@ -154,7 +161,7 @@ public interface PixelWriter {
      * Pixel data for adjacent rows will be read offset from each other
      * by the number of int array elements defined by
      * {@code scanlineStride}.
-     * 
+     *
      * @param x the X coordinate of the rectangular region to write
      * @param y the Y coordinate of the rectangular region to write
      * @param w the width of the rectangular region to write
@@ -167,6 +174,8 @@ public interface PixelWriter {
      * @param scanlineStride the distance between the pixel data for the
      *        start of one row of data in the buffer to the start of the
      *        next row of data
+     *
+     * @throws java.lang.NullPointerException if @{code pixelformat} or {@code buffer} is {@code null}
      */
     public void setPixels(int x, int y, int w, int h,
                           PixelFormat<IntBuffer> pixelformat,
@@ -188,7 +197,8 @@ public interface PixelWriter {
      *         }
      *     }
      * </pre>
-     * 
+     *
+     *
      * @param dstx the X coordinate of the rectangular region to write
      * @param dsty the Y coordinate of the rectangular region to write
      * @param w the width of the rectangular region to write
@@ -197,6 +207,8 @@ public interface PixelWriter {
      *        to write
      * @param srcx the X coordinate of the data to read from {@code reader}
      * @param srcy the Y coordinate of the data to read from {@code reader}
+     *
+     * @throws java.lang.NullPointerException if @{code reader} is {@code null}
      */
     public void setPixels(int dstx, int dsty, int w, int h,
                           PixelReader reader, int srcx, int srcy);

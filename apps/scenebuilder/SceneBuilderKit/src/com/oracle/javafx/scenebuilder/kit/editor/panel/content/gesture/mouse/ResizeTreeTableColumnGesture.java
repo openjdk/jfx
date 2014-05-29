@@ -84,7 +84,7 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
         assert resizer == null;
         assert columnInstance.getSceneGraphObject() instanceof TreeTableColumn;
         
-        resizer = new TreeTableColumnResizer((TreeTableColumn)columnInstance.getSceneGraphObject());
+        resizer = new TreeTableColumnResizer((TreeTableColumn<?,?>)columnInstance.getSceneGraphObject());
         
         // Now same as mouseDragged
         mouseDragged();

@@ -26,12 +26,17 @@
 package javafx.scene.control;
 
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.scene.control.skin.ProgressIndicatorSkin;
+
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 
 /**
@@ -91,7 +96,7 @@ public class ProgressIndicator extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         
@@ -232,6 +237,24 @@ public class ProgressIndicator extends Control {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
     }
-    
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.PROGRESS_INDICATOR;
+            case VALUE: return getProgress();
+            case MAX_VALUE: return 1.0;
+            case MIN_VALUE: return 0.0;
+            case INDETERMINATE: return isIndeterminate();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 
 }

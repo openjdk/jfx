@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsAccessoryJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EnumerationPropertyMetadata;
@@ -116,8 +117,8 @@ public class AccessoryDropTarget extends AbstractDropTarget {
                 targetContainer, accessory, editorController);
         result.addSubJob(j);
         
-        if (targetContainer.getSceneGraphObject() instanceof BorderPane) {
-            assert draggedObject instanceof FXOMInstance;
+        if ((targetContainer.getSceneGraphObject() instanceof BorderPane) 
+                && (draggedObject instanceof FXOMInstance)) {
             
             // We add a job which sets BorderPane.alignment=CENTER on draggedObject
             final FXOMInstance draggedInstance
@@ -132,6 +133,8 @@ public class AccessoryDropTarget extends AbstractDropTarget {
                             Pos.CENTER.toString(), editorController);
             result.addSubJob(alignmentJob);
         }
+        
+        result.addSubJob(new AdjustAllToggleGroupJob(editorController));
         
         assert result.isExecutable();
         

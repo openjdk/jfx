@@ -67,10 +67,7 @@ public class TabTest {
         tab = new Tab();
         tabWithStr = new Tab("text");
         dummyTabPane = new TabPane();
-        eh = new EventHandler<Event>(){
-            @Override
-            public void handle(Event event) { }
-        };    
+        eh = event -> { };
     }
     
    

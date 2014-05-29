@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueInstruction;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -89,10 +90,32 @@ class FXOMSaver {
     private void updateImportInstructions(FXOMDocument fxomDocument) {
         assert fxomDocument.getFxomRoot() != null;
         
-        // Removes all import processing instructions.
-        // Before doing that, we preserve the position of the first import.
+        // Collects all packages already declared by import processing instructions
         final GlueDocument glue = fxomDocument.getGlue();
         final List<GlueInstruction> imports = glue.collectInstructions("import");
+        final Set<String> existingPackageNames = new HashSet<>();
+        for (GlueInstruction i : imports) {
+            final String data = i.getData();
+            if (data.endsWith(".*")) {
+                final String packageName = data.substring(0, data.length()-2);
+                existingPackageNames.add(packageName);
+            }
+        }
+        
+        // Collects all the classes declared in the fxom document,
+        // constructs the set of packages to be imported.
+        final Set<String> newPackageNames = new TreeSet<>(); // Sorted
+        for (Class<?> declaredClass 
+                : fxomDocument.getFxomRoot().collectDeclaredClasses()) {
+            newPackageNames.add(declaredClass.getPackage().getName());
+        }
+        newPackageNames.add("java.lang");
+        
+        // Removes package names already declared
+        newPackageNames.removeAll(existingPackageNames);
+        
+        // Chooses where to insert the new import processing intructions.
+        // If there are some, we insert the new ones afterward.
         final int firstImportIndex;
         if (imports.isEmpty()) {
             firstImportIndex = 0;
@@ -100,22 +123,11 @@ class FXOMSaver {
             final GlueInstruction firstImport = imports.get(0);
             firstImportIndex = glue.getHeader().indexOf(firstImport);
         }
-        for (GlueInstruction i : imports) {
-            glue.getHeader().remove(i);
-        }
         
-        // Collects all the classes declared in the fxom document,
-        // constructs the set of packages to be imported and makes
-        // a glue instruction for each.
-        final Set<String> packageNames = new TreeSet<>(); // Sorted
-        for (Class<?> declaredClass 
-                : fxomDocument.getFxomRoot().collectDeclaredClasses()) {
-            packageNames.add(declaredClass.getPackage().getName());
-        }
-        packageNames.add("java.lang");
-        
+        // Creates a glue instruction for each package to be declared.
+        // We insert after the last import instruction.
         int i = firstImportIndex;
-        for (String packageName : packageNames) {
+        for (String packageName : newPackageNames) {
             final GlueInstruction instruction
                     = new GlueInstruction(glue, "import", packageName+".*");
             glue.getHeader().add(i, instruction);

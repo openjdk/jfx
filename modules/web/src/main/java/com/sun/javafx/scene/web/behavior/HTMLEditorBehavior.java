@@ -65,7 +65,7 @@ public class HTMLEditorBehavior extends BehaviorBase<HTMLEditor> {
             HTMLEditorSkin editorSkin = (HTMLEditorSkin)editor.getSkin();
             editorSkin.keyboardShortcuts(name);
         } else if ("F12".equals(name)) {
-            getControl().getImpl_traversalEngine().getTopLeftFocusableNode();
+            getControl().getImpl_traversalEngine().selectFirst().requestFocus();
         } else {
             super.callAction(name);
         }

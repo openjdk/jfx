@@ -31,7 +31,9 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
+import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -171,11 +173,9 @@ public class TableViewMouseInputTest {
         final TableFocusModel fm = tableView.getFocusModel();
         fm.focus(-1);
 
-        fm.focusedIndexProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                rt30394_count++;
-                assertEquals(0, fm.getFocusedIndex());
-            }
+        fm.focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt30394_count++;
+            assertEquals(0, fm.getFocusedIndex());
         });
 
         // test pre-conditions
@@ -354,7 +354,7 @@ public class TableViewMouseInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        new StageLoader(tableView);
+        StageLoader sl = new StageLoader(tableView);
 
         final MultipleSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -372,10 +372,11 @@ public class TableViewMouseInputTest {
         assertEquals(0, sm.getSelectedIndex());
         assertEquals(0, fm.getFocusedIndex());
         assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
     }
 
     private int rt_30626_count = 0;
-    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_30626() {
         final int items = 8;
         tableView.getItems().clear();
@@ -388,11 +389,9 @@ public class TableViewMouseInputTest {
         sm.setCellSelectionEnabled(false);
         sm.clearAndSelect(0);
 
-        tableView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    rt_30626_count++;
-                }
+        tableView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                rt_30626_count++;
             }
         });
 
@@ -404,7 +403,6 @@ public class TableViewMouseInputTest {
         assertEquals(1, rt_30626_count);
     }
 
-    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_33897_rowSelection() {
         final int items = 8;
         tableView.getItems().clear();
@@ -441,5 +439,75 @@ public class TableViewMouseInputTest {
         TablePosition pos = sm.getSelectedCells().get(0);
         assertEquals(1, pos.getRow());
         assertNotNull(pos.getTableColumn());
+    }
+
+    @Test public void test_rt_34649() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        final FocusModel fm = tableView.getFocusModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        assertFalse(sm.isSelected(4));
+        assertFalse(fm.isFocused(4));
+        VirtualFlowTestUtils.clickOnRow(tableView, 4, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 4, KeyModifier.getShortcutKey());
+        assertFalse(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+    }
+
+    @Test public void test_rt_35338() {
+        tableView.getItems().setAll("Row 0");
+        tableView.getColumns().setAll(col0);
+
+        col0.setWidth(20);
+        tableView.setMinWidth(1000);
+        tableView.setMinWidth(1000);
+
+        TableRow row = (TableRow) VirtualFlowTestUtils.getCell(tableView, 4);
+        assertNotNull(row);
+        assertNull(row.getItem());
+        assertEquals(4, row.getIndex());
+
+        MouseEventFirer mouse = new MouseEventFirer(row);
+        mouse.fireMousePressAndRelease(1, 100, 10);
+        mouse.dispose();
+    }
+
+    @Test public void test_rt_37069() {
+        final int items = 8;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+        tableView.setFocusTraversable(false);
+
+        Button btn = new Button("Button");
+        VBox vbox = new VBox(btn, tableView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        btn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        Scene scene = sl.getStage().getScene();
+
+        assertTrue(btn.isFocused());
+        assertFalse(tableView.isFocused());
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(tableView);
+        MouseEventFirer mouse = new MouseEventFirer(vbar);
+        mouse.fireMousePressAndRelease();
+
+        assertTrue(btn.isFocused());
+        assertFalse(tableView.isFocused());
+
+        sl.dispose();
     }
 }

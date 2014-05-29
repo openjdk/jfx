@@ -76,7 +76,7 @@ public class TreeTableViewDriver extends AbstractNodeDriver {
         assert fxomObject.getSceneGraphObject() instanceof TreeTableView;
         
         final TreeTableViewDesignInfoX di = new TreeTableViewDesignInfoX();
-        final TreeTableView<?> tv = (TreeTableView) fxomObject.getSceneGraphObject();
+        final TreeTableView<?> tv = (TreeTableView<?>) fxomObject.getSceneGraphObject();
         final TreeTableColumn<?,?> tc = di.lookupColumn(tv, sceneX, sceneY);
         final FXOMObject result;
         

@@ -61,7 +61,7 @@ public class ColumnConstraintsListPropertyMetadata extends ListValuePropertyMeta
     
     public void pack(FXOMInstance fxomInstance) {
         final ColumnConstraints def = new ColumnConstraints();
-        final List<ColumnConstraints> v = getValue(fxomInstance);
+        final List<ColumnConstraints> v = new ArrayList<>(getValue(fxomInstance));
         if (v.isEmpty() == false) {
             ColumnConstraints last = v.get(v.size()-1);
             while ((last != null) && ColumnConstraintsPropertyMetadata.equals(last, def)) {
@@ -77,7 +77,7 @@ public class ColumnConstraintsListPropertyMetadata extends ListValuePropertyMeta
     }
     
     public void unpack(FXOMInstance fxomInstance, int columnCount) {
-        final List<ColumnConstraints> value = getValue(fxomInstance);
+        final List<ColumnConstraints> value = new ArrayList<>(getValue(fxomInstance));
         if (value.size() < columnCount) {
             final List<ColumnConstraints> newValue = new ArrayList<>();
             newValue.addAll(value);

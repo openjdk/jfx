@@ -146,6 +146,7 @@
         
         audioSyncDelay = 0;
         requestedRate = 1.0;
+        updateHostTimeBase = NO;
         currentTime = 0.0;
         suppressDurationEvents = NO;
         mute = NO;
@@ -637,6 +638,9 @@
 - (void) setPlayerState:(int)newState
 {
     if (newState != previousPlayerState) {
+        if (newState == kPlayerState_PLAYING) {
+            updateHostTimeBase = YES;
+        }
         // For now just send up to client
         eventHandler->SendPlayerStateEvent(newState, 0.0);
         previousPlayerState = newState;
@@ -921,8 +925,16 @@ static void append_log(NSMutableString *s, NSString *fmt, ...) {
     // TODO: send off to a work queue for processing on a separate thread to avoid deadlock issues during shutdown
     
     if (movie && movieReady && eventHandler) {
+        if (updateHostTimeBase) {
+            double now = currentTime;
+            uint64_t hostTime = CVGetCurrentHostTime();
+            hostTimeFreq = CVGetHostClockFrequency();
+            uint64_t nowDelta = (uint64_t)(now * hostTimeFreq); // current time in host frequency units
+            hostTimeBase = hostTime - nowDelta; // Host time at movie time zero
+            updateHostTimeBase = NO;
+        }
         double frameTime = (double)(hostTime - hostTimeBase) / hostTimeFreq;
-        
+
         CVVideoFrame *frame = NULL;
         try {
             frame = new CVVideoFrame(buf, frameTime, hostTime, 0);

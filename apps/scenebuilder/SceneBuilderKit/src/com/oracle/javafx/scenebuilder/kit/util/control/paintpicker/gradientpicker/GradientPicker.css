@@ -31,7 +31,7 @@
  */
 .small-label {
     -fx-font-size: 0.750em;
-    -fx-text-fill: grey;
+    -fx-text-fill: -sb-content-text-dimmed;
     -fx-padding: 0;
 }
 
@@ -44,5 +44,7 @@
 }
 
 .track-background {
-    -fx-background-color: #E4E4E4;
+    -fx-background-color: derive(-sb-content-background, -3%), -sb-content-background;
+    -fx-background-insets: 0, 1;
 }
+

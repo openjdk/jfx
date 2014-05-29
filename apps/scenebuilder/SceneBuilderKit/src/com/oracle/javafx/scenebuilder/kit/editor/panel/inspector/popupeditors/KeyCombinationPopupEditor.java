@@ -31,10 +31,12 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.AutoSuggestEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,7 +44,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -81,6 +85,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
     private KeyCombination.ModifierValue shift;
     private KeyCombination.ModifierValue shortcut;
     private MainKey mainKey;
+    private EditorController editorController;
     private final KeyCombination.Modifier[] keyCombinationModifiers = {
         KeyCombination.ALT_ANY, KeyCombination.ALT_DOWN,
         KeyCombination.CONTROL_ANY, KeyCombination.CONTROL_DOWN,
@@ -89,8 +94,10 @@ public class KeyCombinationPopupEditor extends PopupEditor {
         KeyCombination.SHORTCUT_ANY, KeyCombination.SHORTCUT_DOWN};
 
     @SuppressWarnings("LeakingThisInConstructor")
-    public KeyCombinationPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public KeyCombinationPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
+            EditorController editorController) {
         super(propMeta, selectedClasses);
+        this.editorController = editorController;
     }
 
     //
@@ -109,7 +116,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             keyCodesStr.add(keyCode.getName());
         }
 
-        mainKey = new MainKey(keyCodesStr);
+        mainKey = new MainKey(keyCodesStr, editorController);
         mainKeySp.getChildren().add(mainKey.getNode());
 
         clearAllBt.setText(I18N.getString("inspector.keycombination.clear"));
@@ -161,6 +168,11 @@ public class KeyCombinationPopupEditor extends PopupEditor {
     @Override
     public Node getPopupContentNode() {
         return gridPane;
+    }
+
+    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
+        super.reset(propMeta, selectedClasses);
+        this.editorController = editorController;
     }
 
     private void resetState() {
@@ -405,13 +417,22 @@ public class KeyCombinationPopupEditor extends PopupEditor {
     @SuppressWarnings("LeakingThisInConstructor")
     private class MainKey extends AutoSuggestEditor {
 
-        public MainKey(List<String> suggestedKeys) {
+        private final EditorController editorController;
+        String mainKey = null;
+
+        public MainKey(List<String> suggestedKeys, EditorController editorController) {
             super("", null, suggestedKeys); //NOI18N
-            ChangeListener<String> textPropertyChange = new ChangeListener<String>() {
+            this.editorController = editorController;
+            EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
 
                 @Override
-                public void changed(ObservableValue<? extends String> ov, String prevText, String newText) {
-                    if (!newText.isEmpty()) {
+                public void handle(ActionEvent t) {
+                    if (Objects.equals(mainKey, getTextField().getText())) {
+                        // no change
+                        return;
+                    }
+                    mainKey = getTextField().getText();
+                    if (!mainKey.isEmpty()) {
                         KeyCombination kc = createKeyCombination();
                         if (kc != null) {
                             commit(kc);
@@ -419,7 +440,9 @@ public class KeyCombinationPopupEditor extends PopupEditor {
                     }
                 }
             };
-            getTextField().textProperty().addListener(textPropertyChange);
+
+            setTextEditorBehavior(this, getTextField(), onActionListener);
+            commitOnFocusLost(this);
         }
 
         public Node getNode() {
@@ -435,16 +458,15 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             if (valStr.isEmpty()) {
                 return null;
             }
-            if (valStr.length() == 1) {
-                // single character : put it in uppercase for convenience (lowercase char are not supported)
-                valStr = valStr.toUpperCase(Locale.ROOT);
-            }
+            // Put the string in uppercase for convenience (all kycode are uppercase)
+            valStr = valStr.toUpperCase(Locale.ROOT);
 
             KeyCode keyCode = null;
             try {
                 keyCode = KeyCode.valueOf(valStr);
             } catch (Exception ex) {
-                System.out.println("Cannot find key code for " + valStr + "\n" + ex); //NOI18N
+                editorController.getMessageLog().logWarningMessage(
+                        "inspector.keycombination.invalidkeycode", valStr); //NOI18N
             }
             return keyCode;
         }
@@ -452,6 +474,18 @@ public class KeyCombinationPopupEditor extends PopupEditor {
         public boolean isEmpty() {
             return getKeyCode() == null;
         }
+    }
+
+    private static void commitOnFocusLost(AutoSuggestEditor autoSuggestEditor) {
+        autoSuggestEditor.getTextField().focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldVal, Boolean newVal) {
+                if (!newVal) {
+                    // Focus lost
+                    autoSuggestEditor.getCommitListener().handle(null);
+                }
+            }
+        });
     }
 
     private static class ModifierRow {
@@ -468,6 +502,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             return label;
         }
 
+        @SuppressWarnings("unused")
         public void setLabel(Label label) {
             this.label = label;
         }
@@ -476,6 +511,7 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             return choiceBox;
         }
 
+        @SuppressWarnings("unused")
         public void setChoiceBox(ChoiceBox<KeyCombination.Modifier> choiceBox) {
             this.choiceBox = choiceBox;
         }

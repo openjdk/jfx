@@ -79,6 +79,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * @return A {@link Callback} that will return a TreeTableCell that is able to 
      *      work on the type of element contained within the TreeTableColumn.
      */
+    @SafeVarargs
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(final T... items) {
         return forTreeTableColumn(null, items);
     }
@@ -103,6 +104,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * @return A {@link Callback} that will return a TreeTableCell that is able to 
      *      work on the type of element contained within the TreeTableColumn.
      */
+    @SafeVarargs
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final StringConverter<T> converter, 
             final T... items) {
@@ -155,11 +157,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     public static <S,T> Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>> forTreeTableColumn(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>() {
-            @Override public TreeTableCell<S,T> call(TreeTableColumn<S,T> list) {
-                return new ChoiceBoxTreeTableCell<S,T>(converter, items);
-            }
-        };
+        return list -> new ChoiceBoxTreeTableCell<S,T>(converter, items);
     }
     
     
@@ -196,6 +194,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * @param items The items to show in the ChoiceBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ChoiceBoxTreeTableCell(T... items) {
         this(FXCollections.observableArrayList(items));
     }
@@ -212,6 +211,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * @param items The items to show in the ChoiceBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ChoiceBoxTreeTableCell(StringConverter<T> converter, T... items) {
         this(converter, FXCollections.observableArrayList(items));
     }

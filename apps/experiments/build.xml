@@ -6,16 +6,12 @@
           these apps have dependencies on Swing which is not part of the 
           JFX_CORE, so we should not try to build them
           -->
-        <ant dir="Modena" target="jar" inheritAll="true"/>
     </target>
 
     <target name="jar" depends="swingJar">
-        <ant dir="3DViewer" target="jar" inheritAll="true"/>
     </target>
 
     <target name="clean">
-        <ant dir="3DViewer" target="clean" inheritAll="true"/>
-        <ant dir="Modena" target="clean" inheritAll="true"/>
     </target>
 
 </project>

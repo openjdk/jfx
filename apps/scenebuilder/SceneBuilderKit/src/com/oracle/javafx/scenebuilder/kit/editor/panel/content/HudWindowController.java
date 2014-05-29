@@ -204,7 +204,6 @@ public class HudWindowController extends AbstractFxmlPopupController {
         final LineEquation leq = new LineEquation(sp0, sp1);
         
         
-        final double gap = 30.0;
         final Point2D k = leq.pointAtOffset(-30.0);
         
         final double ox, oy; // Point O on the diagram above

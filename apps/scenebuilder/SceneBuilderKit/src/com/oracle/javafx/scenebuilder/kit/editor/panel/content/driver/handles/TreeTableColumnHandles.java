@@ -31,16 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDesignInfoX;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DiscardGesture;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.ResizeTreeTableColumnGesture;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.List;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
@@ -53,6 +45,15 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.transform.Transform;
+
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDesignInfoX;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.ResizeTreeTableColumnGesture;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 
 /**
  *

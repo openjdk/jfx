@@ -28,69 +28,15 @@ import com.sun.glass.ui.Menu;
 import com.sun.glass.ui.MenuBar;
 import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.PlatformFactory;
-import com.sun.glass.ui.Window;
-import com.sun.glass.ui.accessible.AccessibleBaseProvider;
-import com.sun.glass.ui.accessible.AccessibleRoot;
-import com.sun.glass.ui.accessible.win.WinAccessibleBaseProvider;
-import com.sun.glass.ui.accessible.win.WinAccessibleGridItemProvider;
-import com.sun.glass.ui.accessible.win.WinAccessibleGridProvider;
-import com.sun.glass.ui.accessible.win.WinAccessibleRangeValueProvider;
-import com.sun.glass.ui.accessible.win.WinAccessibleRoot;
-import com.sun.glass.ui.accessible.win.WinAccessibleSelectionItemProvider;
-import com.sun.glass.ui.accessible.win.WinAccessibleSelectionProvider;
-import com.sun.glass.ui.accessible.win.WinAccessibleToggleProvider;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.accessible.providers.GridItemProvider;
-import com.sun.javafx.accessible.providers.GridProvider;
-import com.sun.javafx.accessible.providers.RangeValueProvider;
-import com.sun.javafx.accessible.providers.SelectionItemProvider;
-import com.sun.javafx.accessible.providers.SelectionProvider;
-import com.sun.javafx.accessible.providers.ToggleProvider;
 
 public final class WinPlatformFactory extends PlatformFactory {
 
     @Override public WinApplication createApplication() {
         return new WinApplication();
-    }
-    
-    @Override public AccessibleRoot createAccessibleRoot(Object node, Window window) {
-        return new WinAccessibleRoot(node, window);
-    }
-    
-    @Override public AccessibleBaseProvider createAccessibleProvider(Object node) {
-        WinAccessibleBaseProvider element = null;
-        if (node instanceof AccessibleProvider) {
-            element = new WinAccessibleBaseProvider(node);
-        }
-        if (node instanceof GridItemProvider) { 
-            element.addPatternProviders(
-                new WinAccessibleGridItemProvider(node, element));
-        }
-        if (node instanceof GridProvider) {
-            element.addPatternProviders(
-                new WinAccessibleGridProvider(node, element));
-        }
-        if (node instanceof ToggleProvider) {
-            element.addPatternProviders(
-                new WinAccessibleToggleProvider(node, element));
-        }
-        if (node instanceof SelectionProvider) {
-            element.addPatternProviders(
-                new WinAccessibleSelectionProvider(node, element));
-        }
-        if (node instanceof SelectionItemProvider) {
-            element.addPatternProviders(
-                new WinAccessibleSelectionItemProvider(node, element));
-        }
-        if (node instanceof RangeValueProvider) {
-            element.addPatternProviders(
-                new WinAccessibleRangeValueProvider(node, element));
-        }
-        return element;
     }
 
     @Override public MenuBarDelegate createMenuBarDelegate(MenuBar menubar) {

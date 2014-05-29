@@ -262,13 +262,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void runningPropertyNotificationInScheduledState() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.runningProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> o,
-                                Boolean oldValue, Boolean newValue) {
-                passed.set(newValue);
-            }
-        });
+        service.runningProperty().addListener((o, oldValue, newValue) -> passed.set(newValue));
         service.start();
         assertTrue(passed.get());
     }
@@ -360,13 +354,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void runningPropertyNotificationInRunningState() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.runningProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> o,
-                                Boolean oldValue, Boolean newValue) {
-                passed.set(newValue);
-            }
-        });
+        service.runningProperty().addListener((o, oldValue, newValue) -> passed.set(newValue));
         service.start();
         executor.executeScheduled();
         assertTrue(passed.get());
@@ -389,13 +377,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void workDonePropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.workDoneProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> o,
-                                Number oldValue, Number newValue) {
-                passed.set(newValue.doubleValue() == 10);
-            }
-        });
+        service.workDoneProperty().addListener((o, oldValue, newValue) -> passed.set(newValue.doubleValue() == 10));
         service.start();
         executor.executeScheduled();
         task.progress(10, 20);
@@ -419,13 +401,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void totalWorkPropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
-        service.totalWorkProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> o,
-                                Number oldValue, Number newValue) {
-                passed.set(newValue.doubleValue() == 20);
-            }
-        });
+        service.totalWorkProperty().addListener((o, oldValue, newValue) -> passed.set(newValue.doubleValue() == 20));
         service.start();
         executor.executeScheduled();
         task.progress(10, 20);
@@ -450,13 +426,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void progressPropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.start();
-        task.progressProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> o,
-                                Number oldValue, Number newValue) {
-                passed.set(newValue.doubleValue() == .5);
-            }
-        });
+        task.progressProperty().addListener((o, oldValue, newValue) -> passed.set(newValue.doubleValue() == .5));
         executor.executeScheduled();
         task.progress(10, 20);
         assertTrue(passed.get());
@@ -480,13 +450,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void messagePropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.start();
-        task.messageProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> o,
-                                String oldValue, String newValue) {
-                passed.set("Running".equals(service.getMessage()));
-            }
-        });
+        task.messageProperty().addListener((o, oldValue, newValue) -> passed.set("Running".equals(service.getMessage())));
         executor.executeScheduled();
         task.message("Running");
         assertTrue(passed.get());
@@ -510,13 +474,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void titlePropertyNotification() {
         final AtomicBoolean passed = new AtomicBoolean(false);
         service.start();
-        task.titleProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> o,
-                                String oldValue, String newValue) {
-                passed.set("Title".equals(service.getTitle()));
-            }
-        });
+        task.titleProperty().addListener((o, oldValue, newValue) -> passed.set("Title".equals(service.getTitle())));
         executor.executeScheduled();
         task.title("Title");
         assertTrue(passed.get());
@@ -806,16 +764,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         task.complete();
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        service.setOnReady(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, workerStateEvent -> filterCalled.set(true));
+        service.setOnReady(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         // Transition to Ready state
         service.reset();
@@ -828,12 +778,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         task.complete();
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_READY, workerStateEvent -> handlerCalled.set(true));
 
         // Transition to Ready state
         service.reset();
@@ -847,19 +792,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         task.complete();
-        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_READY, handler);
         service.removeEventHandler(WorkerStateEvent.WORKER_STATE_READY, handler);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_READY, workerStateEvent -> sanity.set(true));
 
         service.reset();
         assertTrue(sanity.get());
@@ -872,19 +808,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         task.complete();
-        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_READY, filter);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, workerStateEvent -> sanity.set(true));
 
         service.reset();
         assertTrue(sanity.get());
@@ -896,15 +823,11 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         service.start();
         executor.executeScheduled();
         task.complete();
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                service.cancel();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_READY, workerStateEvent -> {
+            service.cancel();
         });
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                cancelNotificationCount.incrementAndGet();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, event -> {
+            cancelNotificationCount.incrementAndGet();
         });
 
         service.reset();
@@ -934,17 +857,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void onScheduledFilterCalledBefore_onScheduled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        service.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> filterCalled.set(true));
+        service.setOnScheduled(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         // Transition to Scheduled state
         service.start();
@@ -955,12 +869,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void scheduledCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.setOnScheduled(workerStateEvent -> handlerCalled.set(true));
 
         // Transition to Scheduled state
         service.start();
@@ -971,11 +880,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void scheduledCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-                workerStateEvent.consume();
-            }
+        service.setOnScheduled(workerStateEvent -> {
+            handlerCalled.set(true);
+            workerStateEvent.consume();
         });
 
         // Transition to Scheduled state
@@ -987,12 +894,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void onScheduledHandlerCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> handlerCalled.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1003,18 +905,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onScheduledHandlerNotCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, handler);
         service.removeEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, handler);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1025,19 +919,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onScheduledFilterNotCalled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, filter);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1047,15 +932,11 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void cancelCalledFromOnScheduled() {
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                service.cancel();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> {
+            service.cancel();
         });
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                cancelNotificationCount.incrementAndGet();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, event -> {
+            cancelNotificationCount.incrementAndGet();
         });
 
         service.start();
@@ -1086,17 +967,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void onRunningFilterCalledBefore_onRunning() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        service.setOnRunning(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, workerStateEvent -> filterCalled.set(true));
+        service.setOnRunning(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         // Transition to Running state
         service.start();
@@ -1107,11 +979,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void runningCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnRunning(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.setOnRunning(workerStateEvent -> handlerCalled.set(true));
 
         // Transition to Running state
         service.start();
@@ -1122,12 +990,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void runningCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnRunning(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-                workerStateEvent.consume();
-            }
+        service.setOnRunning(workerStateEvent -> {
+            handlerCalled.set(true);
+            workerStateEvent.consume();
         });
 
         // Transition to Running state
@@ -1139,12 +1004,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void onRunningHandlerCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, workerStateEvent -> handlerCalled.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1155,18 +1015,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onRunningHandlerNotCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, handler);
         service.removeEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, handler);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_RUNNING, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1177,19 +1029,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onRunningFilterNotCalled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, filter);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1199,15 +1042,11 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void cancelCalledFromOnRunning() {
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                service.cancel();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, workerStateEvent -> {
+            service.cancel();
         });
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                cancelNotificationCount.incrementAndGet();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, event -> {
+            cancelNotificationCount.incrementAndGet();
         });
 
         service.start();
@@ -1238,16 +1077,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void onSucceededFilterCalledBefore_onSucceeded() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        service.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> filterCalled.set(true));
+        service.setOnSucceeded(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         // Transition to Succeeded state
         service.start();
@@ -1259,11 +1090,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void succeededCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.setOnSucceeded(workerStateEvent -> handlerCalled.set(true));
 
         // Transition to Succeeded state
         service.start();
@@ -1275,11 +1102,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void succeededCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-                workerStateEvent.consume();
-            }
+        service.setOnSucceeded(workerStateEvent -> {
+            handlerCalled.set(true);
+            workerStateEvent.consume();
         });
 
         // Transition to Succeeded state
@@ -1292,12 +1117,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void onSucceededHandlerCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> handlerCalled.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1309,19 +1129,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onSucceededHandlerNotCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, handler);
         service.removeEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, handler);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1333,19 +1144,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onSucceededFilterNotCalled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, filter);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1354,15 +1156,11 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void cancelCalledFromOnSucceeded() {
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                service.cancel();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> {
+            service.cancel();
         });
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                cancelNotificationCount.incrementAndGet();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, event -> {
+            cancelNotificationCount.incrementAndGet();
         });
 
         service.start();
@@ -1394,16 +1192,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void onCancelledFilterCalledBefore_onCancelled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        service.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, workerStateEvent -> filterCalled.set(true));
+        service.setOnCancelled(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         // Transition to Cancelled state
         service.start();
@@ -1415,12 +1205,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void cancelledCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.setOnCancelled(workerStateEvent -> handlerCalled.set(true));
 
         // Transition to Cancelled state
         service.start();
@@ -1432,11 +1217,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void cancelledCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-                workerStateEvent.consume();
-            }
+        service.setOnCancelled(workerStateEvent -> {
+            handlerCalled.set(true);
+            workerStateEvent.consume();
         });
 
         // Transition to Cancelled state
@@ -1449,12 +1232,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void onCancelledHandlerCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, workerStateEvent -> handlerCalled.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1466,19 +1244,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onCancelledHandlerNotCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, handler);
         service.removeEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, handler);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_CANCELLED, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1490,19 +1259,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onCancelledFilterNotCalled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, filter);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1513,15 +1273,11 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void cancelCalledFromOnCancelled() {
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                service.cancel();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, workerStateEvent -> {
+            service.cancel();
         });
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                cancelNotificationCount.incrementAndGet();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, event -> {
+            cancelNotificationCount.incrementAndGet();
         });
 
         service.start();
@@ -1533,15 +1289,11 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void cancelCalledFromOnFailed() {
         final AtomicInteger cancelNotificationCount = new AtomicInteger();
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                service.cancel();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> {
+            service.cancel();
         });
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                cancelNotificationCount.incrementAndGet();
-            }
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, event -> {
+            cancelNotificationCount.incrementAndGet();
         });
 
         service.start();
@@ -1573,16 +1325,8 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void onFailedFilterCalledBefore_onFailed() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        service.setOnFailed(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> filterCalled.set(true));
+        service.setOnFailed(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         // Transition to Succeeded state
         service.start();
@@ -1594,11 +1338,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void failedCalledAfterHandler() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnFailed(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.setOnFailed(workerStateEvent -> handlerCalled.set(true));
 
         // Transition to Succeeded state
         service.start();
@@ -1610,12 +1350,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void failedCalledAfterHandlerEvenIfConsumed() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.setOnFailed(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.setOnFailed(workerStateEvent -> handlerCalled.set(true));
 
         // Transition to Succeeded state
         service.start();
@@ -1627,12 +1362,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test public void onFailedHandlerCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> handlerCalled.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1644,19 +1374,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onFailedHandlerNotCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
         service.addEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, handler);
         service.removeEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, handler);
-        service.addEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventHandler(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1668,19 +1389,10 @@ public class ServiceLifecycleTest extends ServiceTestBase {
     @Test public void removed_onFailedFilterNotCalled() {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
-        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
         service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, filter);
         service.removeEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, filter);
-        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        service.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> sanity.set(true));
 
         service.start();
         executor.executeScheduled();
@@ -1698,138 +1410,107 @@ public class ServiceLifecycleTest extends ServiceTestBase {
      **************************************************************************/
 
     @Test public void canCreateServiceOnRandomThread() {
-        RandomThread random = new RandomThread(new Runnable() {
-            @Override public void run() {
-                DoNothingService s = null;
-                try {
-                    s = new DoNothingService();
-                } finally {
-                    if (s != null) s.shutdown();
-                }
+        RandomThread random = new RandomThread(() -> {
+            DoNothingService s = null;
+            try {
+                s = new DoNothingService();
+            } finally {
+                if (s != null) s.shutdown();
             }
         });
         random.test();
     }
 
     @Test public void canGetReferencesToPropertiesOnRandomThread() {
-        RandomThread random = new RandomThread(new Runnable() {
-            @Override public void run() {
-                DoNothingService s = null;
-                try {
-                    s = new DoNothingService();
-                    s.exceptionProperty();
-                    s.executorProperty();
-                    s.messageProperty();
-                    s.progressProperty();
-                    s.onCancelledProperty();
-                    s.onFailedProperty();
-                    s.onReadyProperty();
-                    s.onRunningProperty();
-                    s.onScheduledProperty();
-                    s.onSucceededProperty();
-                    s.runningProperty();
-                    s.stateProperty();
-                    s.titleProperty();
-                    s.totalWorkProperty();
-                    s.valueProperty();
-                    s.workDoneProperty();
-                } finally {
-                    if (s != null) s.shutdown();
-                }
+        RandomThread random = new RandomThread(() -> {
+            DoNothingService s = null;
+            try {
+                s = new DoNothingService();
+                s.exceptionProperty();
+                s.executorProperty();
+                s.messageProperty();
+                s.progressProperty();
+                s.onCancelledProperty();
+                s.onFailedProperty();
+                s.onReadyProperty();
+                s.onRunningProperty();
+                s.onScheduledProperty();
+                s.onSucceededProperty();
+                s.runningProperty();
+                s.stateProperty();
+                s.titleProperty();
+                s.totalWorkProperty();
+                s.valueProperty();
+                s.workDoneProperty();
+            } finally {
+                if (s != null) s.shutdown();
             }
         });
         random.test();
     }
 
     @Test public void canInvokeGettersOnRandomThread() {
-        RandomThread random = new RandomThread(new Runnable() {
-            @Override public void run() {
-                DoNothingService s = null;
-                try {
-                    s = new DoNothingService();
-                    s.getException();
-                    s.getExecutor();
-                    s.getMessage();
-                    s.getProgress();
-                    s.getOnCancelled();
-                    s.getOnFailed();
-                    s.getOnReady();
-                    s.getOnRunning();
-                    s.getOnScheduled();
-                    s.getOnSucceeded();
-                    s.isRunning();
-                    s.getState();
-                    s.getTitle();
-                    s.getTotalWork();
-                    s.getValue();
-                    s.getWorkDone();
-                } finally {
-                    if (s != null) s.shutdown();
-                }
+        RandomThread random = new RandomThread(() -> {
+            DoNothingService s = null;
+            try {
+                s = new DoNothingService();
+                s.getException();
+                s.getExecutor();
+                s.getMessage();
+                s.getProgress();
+                s.getOnCancelled();
+                s.getOnFailed();
+                s.getOnReady();
+                s.getOnRunning();
+                s.getOnScheduled();
+                s.getOnSucceeded();
+                s.isRunning();
+                s.getState();
+                s.getTitle();
+                s.getTotalWork();
+                s.getValue();
+                s.getWorkDone();
+            } finally {
+                if (s != null) s.shutdown();
             }
         });
         random.test();
     }
 
     @Test public void canInvokeSettersOnRandomThread() {
-        RandomThread random = new RandomThread(new Runnable() {
-            @Override public void run() {
-                DoNothingService s = null;
-                try {
-                    s = new DoNothingService();
-                    s.setEventHandler(WorkerStateEvent.ANY, new EventHandler() {
-                        @Override
-                        public void handle(Event event) {
-                        }
-                    });
-                    s.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-                        @Override
-                        public void handle(WorkerStateEvent event) {
-                        }
-                    });
-                    s.setOnFailed(new EventHandler<WorkerStateEvent>() {
-                        @Override
-                        public void handle(WorkerStateEvent event) {
-                        }
-                    });
-                    s.setOnReady(new EventHandler<WorkerStateEvent>() {
-                        @Override
-                        public void handle(WorkerStateEvent event) {
-                        }
-                    });
-                    s.setOnRunning(new EventHandler<WorkerStateEvent>() {
-                        @Override
-                        public void handle(WorkerStateEvent event) {
-                        }
-                    });
-                    s.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-                        @Override
-                        public void handle(WorkerStateEvent event) {
-                        }
-                    });
-                    s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-                        @Override
-                        public void handle(WorkerStateEvent event) {
-                        }
-                    });
-                } finally {
-                    if (s != null) s.shutdown();
-                }
+        RandomThread random = new RandomThread(() -> {
+            DoNothingService s = null;
+            try {
+                s = new DoNothingService();
+                s.setEventHandler(WorkerStateEvent.ANY, event -> {
+                });
+                s.setOnCancelled(event -> {
+                });
+                s.setOnFailed(event -> {
+                });
+                s.setOnReady(event -> {
+                });
+                s.setOnRunning(event -> {
+                });
+                s.setOnScheduled(event -> {
+                });
+                s.setOnSucceeded(event -> {
+                });
+            } finally {
+                if (s != null) s.shutdown();
             }
         });
         random.test();
     }
 
     @Test public void canInvokeStartOnRandomThread() {
-        RandomThread random = new RandomThread(new Runnable() {
-            @Override public void run() {
-                DoNothingService s = null;
-                try {
-                    s = new DoNothingService();
-                    s.start();
-                } finally {
-                    if (s != null) s.shutdown();
-                }
+        RandomThread random = new RandomThread(() -> {
+            DoNothingService s = null;
+            try {
+                s = new DoNothingService();
+                s.start();
+            } finally {
+                if (s != null) s.shutdown();
             }
         });
         random.test();
@@ -1837,398 +1518,287 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeRestartOnRandomThreadAfterStart() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.restart();
-            }
-        });
+        assertThrowsException(s -> s.restart());
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeCancelOnRandomThreadAfterStart() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.cancel();
-            }
+        assertThrowsException(s -> {
+            s.cancel();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeSettersOnRandomThreadAfterStart_1() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.setEventHandler(WorkerStateEvent.ANY, new EventHandler() {
-                    @Override public void handle(Event event) { }
-                });
-            }
-        });
+        assertThrowsException(s -> s.setEventHandler(WorkerStateEvent.ANY, event -> {
+        }));
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeSettersOnRandomThreadAfterStart_2() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-                    @Override public void handle(WorkerStateEvent event) { }
-                });
-            }
-        });
+        assertThrowsException(s -> s.setOnCancelled(event -> {
+        }));
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeSettersOnRandomThreadAfterStart_3() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.setOnFailed(new EventHandler<WorkerStateEvent>() {
-                    @Override public void handle(WorkerStateEvent event) { }
-                });
-            }
-        });
+        assertThrowsException(s -> s.setOnFailed(event -> { }));
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeSettersOnRandomThreadAfterStart_4() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.setOnReady(new EventHandler<WorkerStateEvent>() {
-                    @Override public void handle(WorkerStateEvent event) { }
-                });
-            }
-        });
+        assertThrowsException(s -> s.setOnReady(event -> { }));
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeSettersOnRandomThreadAfterStart_5() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.setOnRunning(new EventHandler<WorkerStateEvent>() {
-                    @Override public void handle(WorkerStateEvent event) { }
-                });
-            }
-        });
+        assertThrowsException(s -> s.setOnRunning(event -> { }));
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeSettersOnRandomThreadAfterStart_6() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-                    @Override public void handle(WorkerStateEvent event) { }
-                });
-            }
-        });
+        assertThrowsException(s -> s.setOnScheduled(event -> {
+        }));
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeSettersOnRandomThreadAfterStart_7() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-                    @Override public void handle(WorkerStateEvent event) { }
-                });
-            }
-        });
+        assertThrowsException(s -> s.setOnSucceeded(event -> { }));
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_1() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getException();
-            }
+        assertThrowsException(s -> {
+            s.getException();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_2() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getExecutor();
-            }
+        assertThrowsException(s -> {
+            s.getExecutor();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_3() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getMessage();
-            }
+        assertThrowsException(s -> {
+            s.getMessage();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_4() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getProgress();
-            }
+        assertThrowsException(s -> {
+            s.getProgress();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_5() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getOnCancelled();
-            }
+        assertThrowsException(s -> {
+            s.getOnCancelled();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_6() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getOnFailed();
-            }
+        assertThrowsException(s -> {
+            s.getOnFailed();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_7() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getOnReady();
-            }
+        assertThrowsException(s -> {
+            s.getOnReady();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_8() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getOnRunning();
-            }
+        assertThrowsException(s -> {
+            s.getOnRunning();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_9() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getOnScheduled();
-            }
+        assertThrowsException(s -> {
+            s.getOnScheduled();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_10() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getOnSucceeded();
-            }
+        assertThrowsException(s -> {
+            s.getOnSucceeded();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_11() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.isRunning();
-            }
+        assertThrowsException(s -> {
+            s.isRunning();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_12() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getState();
-            }
+        assertThrowsException(s -> {
+            s.getState();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_13() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getTitle();
-            }
+        assertThrowsException(s -> {
+            s.getTitle();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_14() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getTotalWork();
-            }
+        assertThrowsException(s -> {
+            s.getTotalWork();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_15() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getValue();
-            }
+        assertThrowsException(s -> {
+            s.getValue();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokeGettersOnRandomThreadAfterStart_16() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.getValue();
-            }
+        assertThrowsException(s -> {
+            s.getValue();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_1() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.exceptionProperty();
-            }
+        assertThrowsException(s -> {
+            s.exceptionProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_2() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.executorProperty();
-            }
+        assertThrowsException(s -> {
+            s.executorProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_3() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.messageProperty();
-            }
+        assertThrowsException(s -> {
+            s.messageProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_4() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.progressProperty();
-            }
+        assertThrowsException(s -> {
+            s.progressProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_5() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.onCancelledProperty();
-            }
+        assertThrowsException(s -> {
+            s.onCancelledProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_6() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.onFailedProperty();
-            }
+        assertThrowsException(s -> {
+            s.onFailedProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_7() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.onReadyProperty();
-            }
+        assertThrowsException(s -> {
+            s.onReadyProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_8() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.onRunningProperty();
-            }
+        assertThrowsException(s -> {
+            s.onRunningProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_9() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.onScheduledProperty();
-            }
+        assertThrowsException(s -> {
+            s.onScheduledProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_10() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.onSucceededProperty();
-            }
+        assertThrowsException(s -> {
+            s.onSucceededProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_11() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.runningProperty();
-            }
+        assertThrowsException(s -> {
+            s.runningProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_12() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.stateProperty();
-            }
+        assertThrowsException(s -> {
+            s.stateProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_13() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.titleProperty();
-            }
+        assertThrowsException(s -> {
+            s.titleProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_14() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.totalWorkProperty();
-            }
+        assertThrowsException(s -> {
+            s.totalWorkProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_15() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.valueProperty();
-            }
+        assertThrowsException(s -> {
+            s.valueProperty();
         });
     }
 
     @Test (expected = IllegalStateException.class)
     public void cannotInvokePropertyGettersOnRandomThreadAfterStart_16() throws Throwable {
-        assertThrowsException(new ServiceTestExecution() {
-            @Override public void test(DoNothingService s) {
-                s.workDoneProperty();
-            }
+        assertThrowsException(s -> {
+            s.workDoneProperty();
         });
     }
 
     private void assertThrowsException(final ServiceTestExecution c) throws Throwable {
-        RandomThread random = new RandomThread(new Runnable() {
-            @Override public void run() {
-                DoNothingService s = null;
-                try {
-                    s = new DoNothingService();
-                    s.start();
-                    c.test(s);
-                } finally {
-                    if (s != null) s.shutdown();
-                }
+        RandomThread random = new RandomThread(() -> {
+            DoNothingService s = null;
+            try {
+                s = new DoNothingService();
+                s.start();
+                c.test(s);
+            } finally {
+                if (s != null) s.shutdown();
             }
         });
 
@@ -2290,11 +1860,9 @@ public class ServiceLifecycleTest extends ServiceTestBase {
         private volatile boolean shutdown = false;
 
         public DoNothingService() {
-            setExecutor(new Executor() {
-                @Override public void execute(Runnable command) {
-                    Thread backgroundThread = new Thread(command);
-                    backgroundThread.start();
-                }
+            setExecutor(command -> {
+                Thread backgroundThread = new Thread(command);
+                backgroundThread.start();
             });
         }
 
@@ -2357,11 +1925,7 @@ public class ServiceLifecycleTest extends ServiceTestBase {
 
             @Override protected Service<String> createService() {
                 MythicalService svc = new MythicalService();
-                svc.setHandler(new EventHandler<MythicalEvent>() {
-                    @Override public void handle(MythicalEvent mythicalEvent) {
-                        result.set(true);
-                    }
-                });
+                svc.setHandler(mythicalEvent -> result.set(true));
                 svc.fireEvent(new MythicalEvent());
                 return svc;
             }

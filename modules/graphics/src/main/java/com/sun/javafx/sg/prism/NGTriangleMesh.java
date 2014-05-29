@@ -39,15 +39,19 @@ public class NGTriangleMesh {
 
     // points is an array of x,y,z interleaved
     private float[] points;
+    private int[] pointsFromAndLengthIndices = new int[2];
 
     // texCoords is an array of u,v interleaved
     private float[] texCoords;
+    private int[] texCoordsFromAndLengthIndices = new int[2];
 
     // faces is an array of v1,v2,v3 interleaved (where v = {point, texCoord})
     private int[] faces;
-
+    private int[] facesFromAndLengthIndices = new int[2];
+    
     // faceSmoothingGroups is an array of face smoothing group values
     private int[] faceSmoothingGroups;
+    private int[] faceSmoothingGroupsFromAndLengthIndices = new int[2];
 
     Mesh createMesh(ResourceFactory rf) {
         if (mesh == null) {
@@ -62,7 +66,10 @@ public class NGTriangleMesh {
             return false;
         }
         if (meshDirty) {
-            if (!mesh.buildGeometry(points, texCoords, faces, faceSmoothingGroups)) {
+            if (!mesh.buildGeometry(points, pointsFromAndLengthIndices,
+                    texCoords, texCoordsFromAndLengthIndices,
+                    faces, facesFromAndLengthIndices,
+                    faceSmoothingGroups, faceSmoothingGroupsFromAndLengthIndices)) {
                 throw new RuntimeException("NGTriangleMesh: buildGeometry failed");
             }
             meshDirty = false;
@@ -104,22 +111,22 @@ public class NGTriangleMesh {
 
     public void syncPoints(FloatArraySyncer array) {
         meshDirty = true;
-        points = array != null ? array.syncTo(points) : null;
+        points = array != null ? array.syncTo(points, pointsFromAndLengthIndices) : null;
     }
     
     public void syncTexCoords(FloatArraySyncer array) {
         meshDirty = true;
-        texCoords = array != null ? array.syncTo(texCoords) : null;
+        texCoords = array != null ? array.syncTo(texCoords, texCoordsFromAndLengthIndices) : null;
     }
 
     public void syncFaces(IntegerArraySyncer array) {
         meshDirty = true;
-        faces = array != null ? array.syncTo(faces) : null;
+        faces = array != null ? array.syncTo(faces, facesFromAndLengthIndices) : null;
     }
 
     public void syncFaceSmoothingGroups(IntegerArraySyncer array) {
         meshDirty = true;
-        faceSmoothingGroups = array != null ? array.syncTo(faceSmoothingGroups) : null;
+        faceSmoothingGroups = array != null ? array.syncTo(faceSmoothingGroups, faceSmoothingGroupsFromAndLengthIndices) : null;
     }
 
     // NOTE: This method is used for unit test purpose only.

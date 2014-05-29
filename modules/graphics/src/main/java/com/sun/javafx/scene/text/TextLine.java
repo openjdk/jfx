@@ -63,4 +63,14 @@ public interface TextLine {
      * Returns the right side bearing of the line (positive).
      */
     public float getRightSideBearing();
+
+    /**
+     * Returns the line start offset.
+     */
+    public int getStart();
+
+    /**
+     * Returns the line length in character.
+     */
+    public int getLength();
 }

@@ -673,32 +673,19 @@ public class FocusTest {
         final Node n2 = n();
         scene.setRoot(new Group(n1, n2));
 
-        n1.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov,
-                    Boolean lostFocus, Boolean getFocus) {
-                if (lostFocus) {
-                    n1.requestFocus();
-                }
+        n1.focusedProperty().addListener((ov, lostFocus, getFocus) -> {
+            if (lostFocus) {
+                n1.requestFocus();
             }
         });
 
-        n2.focusedProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable o) {
-                // n2 can be invalidated, but should not have focus
-                assertTrue(n1.isFocused());
-                assertFalse(n2.isFocused());
-            }
+        n2.focusedProperty().addListener(o -> {
+            // n2 can be invalidated, but should not have focus
+            assertTrue(n1.isFocused());
+            assertFalse(n2.isFocused());
         });
 
-        n2.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov,
-                    Boolean lostFocus, Boolean getFocus) {
-                fail("n2 should never get focus");
-            }
-        });
+        n2.focusedProperty().addListener((ov, lostFocus, getFocus) -> fail("n2 should never get focus"));
 
         stage.show();
         n1.requestFocus();
@@ -724,12 +711,11 @@ public class FocusTest {
         actionTaken = false;
 
         ((StubScene) scene.impl_getPeer()).setInputMethodCompositionFinishDelegate(
-                new Runnable() {
-                    @Override public void run() {
-                        assertSame(n1, scene.getFocusOwner());
-                        actionTaken = true;
-                    }
-                });
+                () -> {
+                    assertSame(n1, scene.getFocusOwner());
+                    actionTaken = true;
+                }
+        );
 
         n2.requestFocus();
 

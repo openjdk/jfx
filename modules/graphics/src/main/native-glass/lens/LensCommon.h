@@ -995,6 +995,15 @@ jboolean glass_window_minimize(JNIEnv *env,
 void glass_window_list_lock();
 
 /**
+ * Check that *window* exists in the windows list. Not 
+ * using locks. Use glass_window_list_lock() 
+ * and glass_window_list_unlock() before and after the 
+ * function call.
+ * @return true - if window exists, false otherwise.
+ */
+jboolean glass_window_isExist(NativeWindow window);
+
+/**
  * Unlock the windows list.
  */
 void glass_window_list_unlock();
@@ -1520,6 +1529,13 @@ jboolean glass_cursor_supportsTranslucency(void);
  * Called when the application exit.
  */
 void glass_cursor_terminate(void);
+
+/**
+ * Called when screen characteristics changed.
+ * @param env
+ */
+void glass_application_notifyScreenSettingsChanged(JNIEnv *env);
+
 
 
 #include "LensLogger.h"

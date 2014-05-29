@@ -38,6 +38,9 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * All public members of NumberAxis are tested here . 
  * @author srikalyc
@@ -191,5 +194,65 @@ public class NumberAxisTest {
         axis.setTickUnit(30.0);
         assertEquals(axis.getTickUnit(), 30.0, 0.0);
     }
-    
+
+    @Test public void testTicksWithCollapsedBounds() {
+        axis.setLowerBound(5);
+        axis.setUpperBound(5);
+
+        List<Number> ticks = axis.calculateTickValues(0 /*unused*/, axis.getRange());
+        assertEquals(Arrays.asList(5d), ticks);
+    }
+
+    @Test public void testTicksWithIncorrectTickUnit() {
+        axis.setLowerBound(0);
+        axis.setUpperBound(5);
+        axis.setTickUnit(-1);
+
+        List<Number> ticks = axis.calculateTickValues(0 /*unused*/, axis.getRange());
+        assertEquals(Arrays.asList(0d, 5d), ticks);
+    }
+
+    @Test public void testTicksNoIntermediateTicksIfTickUnitIsLarge() {
+        axis.setLowerBound(-0.1);
+        axis.setUpperBound(5);
+        axis.setTickUnit(6);
+
+        List<Number> ticks = axis.calculateTickValues(0 /*unused*/, axis.getRange());
+        assertEquals(Arrays.asList(-0.1, 5d), ticks);
+    }
+
+    @Test public void testAxisWithFractionalBounds() {
+        axis.setLowerBound(8.4);
+        axis.setTickUnit(1);
+        axis.setUpperBound(10);
+
+        List<Number> ticks = axis.calculateTickValues(0 /*unused*/, axis.getRange());
+        assertEquals(Arrays.asList(8.4, 9d, 10d), ticks);
+    }
+
+    @Test public void testAxisWithFractionalBoundsMinorTicksAligned() {
+        axis.setLowerBound(8.4);
+        axis.setTickUnit(1);
+        axis.setMinorTickCount(4);
+        axis.setUpperBound(10.3);
+
+        List<Number> ticks = axis.calculateMinorTickMarks();
+        assertEquals(Arrays.asList(8.5, 8.75, 9.25, 9.5, 9.75, 10.25), ticks);
+    }
+
+    @Test public void testAxisWithFractionalBoundsTickUnitFractional() {
+        axis.setLowerBound(8.4);
+        axis.setTickUnit(0.1);
+        axis.setMinorTickCount(2);
+        axis.setUpperBound(8.75);
+
+        List<Number> ticks = axis.calculateTickValues(0 /*unused*/, axis.getRange());
+        assertEquals(Arrays.asList(8.4, 8.5, 8.6, 8.7, 8.75), ticks);
+
+        // floating point calculation results in "8.450000000000001" instead of "8.45", so we need double array comparison
+        List<Number> minorTicks = axis.calculateMinorTickMarks();
+        double [] asDoubleArray = minorTicks.stream().mapToDouble(Number::doubleValue).toArray();
+        assertArrayEquals(new double[] {8.45, 8.55, 8.65}, asDoubleArray, 1e-10);
+    }
+
 }

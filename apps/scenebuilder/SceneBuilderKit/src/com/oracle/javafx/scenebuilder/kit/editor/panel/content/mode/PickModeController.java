@@ -40,9 +40,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-import java.util.Objects;
 import javafx.event.EventHandler;
-import javafx.geometry.Point2D;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -138,35 +136,44 @@ public class PickModeController extends AbstractModeController {
         
         final Selection selection 
                 = contentPanelController.getEditorController().getSelection();
-        final FXOMObject hitObject 
-                = pick(e.getSceneX(), e.getSceneY());
+        
+        final FXOMDocument fxomDocument
+                = contentPanelController.getEditorController().getFxomDocument();
+        
+        final FXOMObject hitObject;
+        final Node hitNode;
+        if ((fxomDocument == null) || (fxomDocument.getFxomRoot() == null)) {
+            hitObject = null;
+            hitNode = null;
+        } else {
+            final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
+            final Object sceneGraphRoot = fxomRoot.getSceneGraphObject();
+            if (sceneGraphRoot instanceof Node) {
+                hitNode = Deprecation.pick((Node)sceneGraphRoot, e.getSceneX(), e.getSceneY());
+                FXOMObject fxomObject = null;
+                Node node = hitNode;
+                while ((fxomObject == null) && (node != null)) {
+                    fxomObject = fxomRoot.searchWithSceneGraphObject(node);
+                    node = node.getParent();
+                }
+                hitObject = fxomObject;
+            } else {
+                hitObject = null;
+                hitNode = null;
+            }
+        }
         
         if (hitObject == null) {
             selection.clear();
         } else {
-            final Point2D hitPoint
-                    = computeHitPoint(hitObject, e.getSceneX(), e.getSceneY());
-
             if (selection.isSelected(hitObject)) {
                 assert selection.getGroup() instanceof ObjectSelectionGroup;
-                selection.updateHitObject(hitObject, hitPoint);
+                selection.updateHitObject(hitObject, hitNode);
             } else {
-                selection.select(hitObject, hitPoint);
+                selection.select(hitObject, hitNode);
             }
         }
     }
-    
-    
-    private Point2D computeHitPoint(FXOMObject fxomObject, double hitSceneX, double hitSceneY) {
-        
-        final FXOMObject nodeObject = fxomObject.getClosestNode();
-        assert nodeObject != null; // At least the root is a Node
-        assert nodeObject.getSceneGraphObject() instanceof Node;
-        final Node sceneGraphNode = (Node) nodeObject.getSceneGraphObject();
-        return sceneGraphNode.sceneToLocal(hitSceneX, hitSceneY);
-    }
-    
-    
     
     
     private void updateHitNodeChrome() {
@@ -175,9 +182,9 @@ public class PickModeController extends AbstractModeController {
         
         if ((hitNodeChrome == null) 
                 || (hitNodeChrome.getFxomObject() != selection.getHitItem())
-                || (Objects.equals(hitNodeChrome.getHitPoint(),selection.getHitPoint()) == false)) {
-            if (selection.getHitItem() != null) {
-                newChrome = makeHitNodeChrome(selection.getHitItem(), selection.getHitPoint());
+                || (hitNodeChrome.getHitNode() != selection.getCheckedHitNode())) {
+            if ((selection.getHitItem() != null) && (selection.getCheckedHitNode() != null)){
+                newChrome = makeHitNodeChrome(selection.getHitItem(), selection.getCheckedHitNode());
             } else {
                 newChrome = null;
             }
@@ -192,7 +199,7 @@ public class PickModeController extends AbstractModeController {
                     hitNodeChrome.reconcile();
                     break;
                 case NEEDS_REPLACE:
-                    newChrome = makeHitNodeChrome(selection.getHitItem(), selection.getHitPoint());
+                    newChrome = makeHitNodeChrome(selection.getHitItem(), selection.getCheckedHitNode());
                     assert newChrome.getState() == HitNodeChrome.State.CLEAN;
                     break;
             }
@@ -213,13 +220,13 @@ public class PickModeController extends AbstractModeController {
     }
     
     
-    private HitNodeChrome makeHitNodeChrome(FXOMObject hitItem, Point2D hitPoint) {
+    private HitNodeChrome makeHitNodeChrome(FXOMObject hitItem, Node hitNode) {
         final HitNodeChrome result;
         
         assert hitItem != null;
         
         /*
-         * In some cases, we cannot make a chrome for some hitItem
+         * In some cases, we cannot make a chrome for some hitObject
          * 
          *  MenuButton          <= OK
          *      CustomMenuItem  <= KO because MenuItem are not displayable (case #1)
@@ -239,7 +246,7 @@ public class PickModeController extends AbstractModeController {
                 assert closestNodeObject.getSceneGraphObject() instanceof Node;
                 final Node closestNode = (Node)closestNodeObject.getSceneGraphObject();
                 if (closestNode.getScene() == contentPanelController.getPanelRoot().getScene()) {
-                    result = new HitNodeChrome(contentPanelController, hitItem, hitPoint);
+                    result = new HitNodeChrome(contentPanelController, hitItem, hitNode);
                 } else {
                     // Case #2 above
                     result = null;
@@ -257,33 +264,5 @@ public class PickModeController extends AbstractModeController {
             rudderLayer.getChildren().remove(hitNodeChrome.getRootNode());
             hitNodeChrome = null;
         }
-    }
-    
-    
-    private FXOMObject pick(double sceneX, double sceneY) {
-        final FXOMObject result;
-        
-        final FXOMDocument fxomDocument
-                = contentPanelController.getEditorController().getFxomDocument();
-        
-        if ((fxomDocument == null) || (fxomDocument.getFxomRoot() == null)) {
-            result = null;
-        } else {
-            final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
-            final Object sceneGraphRoot = fxomRoot.getSceneGraphObject();
-            if (sceneGraphRoot instanceof Node) {
-                Node hitNode = Deprecation.pick((Node)sceneGraphRoot, sceneX, sceneY);
-                FXOMObject fxomObject = null;
-                while ((fxomObject == null) && (hitNode != null)) {
-                    fxomObject = fxomRoot.searchWithSceneGraphObject(hitNode);
-                    hitNode = hitNode.getParent();
-                }
-                result = fxomObject;
-            } else {
-                result = null;
-            }
-        }
-        
-        return result;
     }
 }

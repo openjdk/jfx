@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,24 +32,24 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
-/**
- */
 public class HelloRectangle extends Application {
+
     @Override public void start(Stage stage) {
         stage.setTitle("Hello Rectangle");
 
         Group root = new Group();
         Scene scene = new Scene(root, 600, 450);
+        scene.setFill(Color.LIGHTGREEN);
 
         Rectangle rect = new Rectangle();
         rect.setX(25);
         rect.setY(40);
-        rect.setWidth(300);
-        rect.setHeight(300);
+        rect.setWidth(100);
+        rect.setHeight(50);
         rect.setFill(Color.RED);
+        rect.setOnMousePressed(e -> System.out.println("Mouse Pressed:" + e));
 
-        root.getChildren().addAll(rect);
-
+        root.getChildren().add(rect);
         stage.setScene(scene);
         stage.show();
     }

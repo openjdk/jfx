@@ -108,15 +108,14 @@ jobject GlassScreen::CreateJavaMonitor(JNIEnv *env, HMONITOR monitor)
     if (javaIDs.Screen.init == NULL) {
         javaIDs.Screen.init = env->GetMethodID(screenCls, "<init>", "(JIIIIIIIIIIIF)V");
         ASSERT(javaIDs.Screen.init);
+        if (CheckAndClearException(env)) return NULL;
     }
-    
-    if (CheckAndClearException(env)) return NULL;
 
     MonitorInfoStruct mis;
     memset(&mis, 0, sizeof(MonitorInfoStruct));
     GetMonitorSettings(monitor, &mis);
     
-    return env->NewObject(screenCls, javaIDs.Screen.init,
+    jobject gScn = env->NewObject(screenCls, javaIDs.Screen.init,
                           mis.ptr,
 
                           mis.colorDepth,
@@ -134,6 +133,8 @@ jobject GlassScreen::CreateJavaMonitor(JNIEnv *env, HMONITOR monitor)
                           mis.dpiY,
                           
                           mis.scale);
+    if (CheckAndClearException(env)) return NULL;
+    return gScn;
 }
 
 void GlassScreen::HandleDisplayChange()
@@ -146,6 +147,7 @@ void GlassScreen::HandleDisplayChange()
         javaIDs.Screen.notifySettingsChanged
              = env->GetStaticMethodID(screenCls, "notifySettingsChanged", "()V");
         ASSERT(javaIDs.Screen.notifySettingsChanged);
+        if (CheckAndClearException(env)) return;
     }
 
     env->CallStaticVoidMethod(screenCls, javaIDs.Screen.notifySettingsChanged);
@@ -161,6 +163,10 @@ jobjectArray GlassScreen::CreateJavaScreens(JNIEnv *env)
     jclass screenCls = GetScreenCls(env);
 
     jobjectArray jScreens = env->NewObjectArray(numMonitors, screenCls, NULL);
+    if (CheckAndClearException(env)) {
+        free(g_hmpMonitors);
+        return NULL;
+    }
 
     int arrayIndex = 1;
     for (int i = 0; i < numMonitors; i++) {

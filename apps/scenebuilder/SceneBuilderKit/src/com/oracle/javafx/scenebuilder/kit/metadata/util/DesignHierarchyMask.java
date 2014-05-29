@@ -66,7 +66,9 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
+import javafx.scene.control.ToolBar;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.TreeTableColumn;
 import javafx.scene.image.Image;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
@@ -341,7 +343,8 @@ public class DesignHierarchyMask {
                 || sceneGraphObject instanceof Text
                 || sceneGraphObject instanceof TextInputControl
                 || sceneGraphObject instanceof TitledPane
-                || sceneGraphObject instanceof Tooltip;
+                || sceneGraphObject instanceof Tooltip
+                || sceneGraphObject instanceof TreeTableColumn;
     }
     
     public boolean isResourceKey() {
@@ -386,7 +389,12 @@ public class DesignHierarchyMask {
      * @return
      */
     public boolean isAcceptingAccessory(final Accessory accessory, final FXOMObject fxomObject) {
-        final Object sceneGraphObject = fxomObject.getSceneGraphObject();
+        final Object sceneGraphObject;
+        if (fxomObject instanceof FXOMIntrinsic) {
+            sceneGraphObject = ((FXOMIntrinsic) fxomObject).getSourceSceneGraphObject();
+        } else {
+            sceneGraphObject = fxomObject.getSceneGraphObject();
+        }
         final Class<?> accessoryClass = getClassForAccessory(accessory);
         return isAcceptingAccessory(accessory)
                 && accessoryClass.isInstance(sceneGraphObject);
@@ -473,7 +481,13 @@ public class DesignHierarchyMask {
             assert subComponentMetadata != null;
             final Class<?> subComponentClass
                     = subComponentMetadata.getClassMetadata().getKlass();
-            result = subComponentClass.isInstance(obj.getSceneGraphObject());
+            final Object sceneGraphObject;
+            if (obj instanceof FXOMIntrinsic) {
+                sceneGraphObject = ((FXOMIntrinsic) obj).getSourceSceneGraphObject();
+            } else {
+                sceneGraphObject = obj.getSceneGraphObject();
+            }
+            result = subComponentClass.isInstance(sceneGraphObject);
         }
 
         return result;
@@ -495,7 +509,13 @@ public class DesignHierarchyMask {
             final Class<?> subComponentClass
                     = subComponentMetadata.getClassMetadata().getKlass();
             for (FXOMObject obj : fxomObjects) {
-                final Object sceneGraphObject = obj.getSceneGraphObject();
+                final Object sceneGraphObject;
+                if (obj instanceof FXOMIntrinsic) {
+                    final FXOMIntrinsic intrinsicObj = (FXOMIntrinsic) obj;
+                    sceneGraphObject = intrinsicObj.getSourceSceneGraphObject();
+                } else {
+                    sceneGraphObject = obj.getSceneGraphObject();
+                }
                 if (!subComponentClass.isInstance(sceneGraphObject)) {
                     return false;
                 }
@@ -574,7 +594,8 @@ public class DesignHierarchyMask {
                 || sceneGraphObject instanceof TextInputControl
                 || sceneGraphObject instanceof TitledPane
                 || sceneGraphObject instanceof Text
-                || sceneGraphObject instanceof Tooltip) {
+                || sceneGraphObject instanceof Tooltip
+                || sceneGraphObject instanceof TreeTableColumn) {
             propertyName = new PropertyName("text");
         }
         return propertyName;
@@ -750,7 +771,7 @@ public class DesignHierarchyMask {
         final int constraintsSize = getColumnsConstraintsSize();
 
         // Retrieve the max column index
-        int maxColumnIndex = 0;
+        int maxColumnIndex = -1;
         for (int i = 0, count = getSubComponentCount(); i < count; i++) {
             final FXOMObject childObject = getSubComponentAtIndex(i);
             if (childObject.getSceneGraphObject() != null) {
@@ -781,7 +802,7 @@ public class DesignHierarchyMask {
         final int constraintsSize = getRowsConstraintsSize();
 
         // Retrieve the max row index
-        int maxRowIndex = 0;
+        int maxRowIndex = -1;
         for (int i = 0, count = getSubComponentCount(); i < count; i++) {
             final FXOMObject childObject = getSubComponentAtIndex(i);
             if (childObject.getSceneGraphObject() != null) {
@@ -887,25 +908,30 @@ public class DesignHierarchyMask {
      * @return the column index
      */
     public int getColumnIndex() {
-        assert fxomObject instanceof FXOMInstance;
-        assert fxomObject.getSceneGraphObject() != null;
-        final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-        final FXOMObject parentFxomObject = fxomInstance.getParentObject();
-        assert parentFxomObject.getSceneGraphObject() instanceof GridPane;
-
-        final PropertyName propertyName
-                = new PropertyName("columnIndex", javafx.scene.layout.GridPane.class); //NOI18N
-        final ValuePropertyMetadata vpm
-                = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
-        final Object value = vpm.getValueObject(fxomInstance);
-        // TODO : when DTL-5920 will be fixed, the null check will become unecessary
         final int result;
-        if (value == null) {
-            result = 0;
+        
+        if (fxomObject instanceof FXOMInstance) {
+            assert fxomObject.getSceneGraphObject() != null;
+            final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
+            final FXOMObject parentFxomObject = fxomInstance.getParentObject();
+            assert parentFxomObject.getSceneGraphObject() instanceof GridPane;
+
+            final PropertyName propertyName
+                    = new PropertyName("columnIndex", javafx.scene.layout.GridPane.class); //NOI18N
+            final ValuePropertyMetadata vpm
+                    = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
+            final Object value = vpm.getValueObject(fxomInstance);
+            // TODO : when DTL-5920 will be fixed, the null check will become unecessary
+            if (value == null) {
+                result = 0;
+            } else {
+                assert value instanceof Integer;
+                result = ((Integer) value);
+            }
         } else {
-            assert value instanceof Integer;
-            result = ((Integer) value);
+            result = 0;
         }
+        
         return result;
     }
 
@@ -915,25 +941,30 @@ public class DesignHierarchyMask {
      * @return the row index
      */
     public int getRowIndex() {
-        assert fxomObject instanceof FXOMInstance;
-        assert fxomObject.getSceneGraphObject() != null;
-        final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-        final FXOMObject parentFxomObject = fxomInstance.getParentObject();
-        assert parentFxomObject.getSceneGraphObject() instanceof GridPane;
-
-        final PropertyName propertyName
-                = new PropertyName("rowIndex", javafx.scene.layout.GridPane.class); //NOI18N
-        final ValuePropertyMetadata vpm
-                = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
-        final Object value = vpm.getValueObject(fxomInstance);
-        // TODO : when DTL-5920 will be fixed, the null check will become unecessary
         final int result;
-        if (value == null) {
-            result = 0;
+
+        if (fxomObject instanceof FXOMInstance) {
+            assert fxomObject.getSceneGraphObject() != null;
+            final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
+            final FXOMObject parentFxomObject = fxomInstance.getParentObject();
+            assert parentFxomObject.getSceneGraphObject() instanceof GridPane;
+
+            final PropertyName propertyName
+                    = new PropertyName("rowIndex", javafx.scene.layout.GridPane.class); //NOI18N
+            final ValuePropertyMetadata vpm
+                    = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
+            final Object value = vpm.getValueObject(fxomInstance);
+            // TODO : when DTL-5920 will be fixed, the null check will become unecessary
+            if (value == null) {
+                result = 0;
+            } else {
+                assert value instanceof Integer;
+                result = ((Integer) value);
+            }
         } else {
-            assert value instanceof Integer;
-            result = ((Integer) value);
+            result = 0;
         }
+        
         return result;
     }
 
@@ -962,6 +993,7 @@ public class DesignHierarchyMask {
                 || this.isAcceptingAccessory(Accessory.BOTTOM)
                 || this.isAcceptingAccessory(Accessory.LEFT))
                 && ! (fxomObject.getSceneGraphObject() instanceof MenuButton
-                        || fxomObject.getSceneGraphObject() instanceof MenuBar); // Jerome
+                        || fxomObject.getSceneGraphObject() instanceof MenuBar
+                        || fxomObject.getSceneGraphObject() instanceof ToolBar); // Jerome
     }
 }

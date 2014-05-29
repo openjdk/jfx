@@ -217,8 +217,10 @@ class GridPaneMosaic {
             adjustTrayItems(eastTrayGroup.getChildren(), "east", rowCount);
         }
         if (shouldCreateSensors) {
-            adjustGapSensors(hgapSensorsGroup.getChildren(), Cursor.H_RESIZE, columnCount-1);
-            adjustGapSensors(vgapSensorsGroup.getChildren(), Cursor.V_RESIZE, rowCount-1);
+            final int hgapSensorCount = Math.max(0, columnCount-1);
+            final int vgapSensorCount = Math.max(0, rowCount-1);
+            adjustGapSensors(hgapSensorsGroup.getChildren(), Cursor.H_RESIZE, hgapSensorCount);
+            adjustGapSensors(vgapSensorsGroup.getChildren(), Cursor.V_RESIZE, vgapSensorCount);
         }
         
         if (columnCount >= 1) {
@@ -303,7 +305,7 @@ class GridPaneMosaic {
     private void adjustHGapLines() {
         final int hgapLineCount;
         if (gridPane.getHgap() == 0) {
-            hgapLineCount = columnCount-1;
+            hgapLineCount = Math.max(0, columnCount-1);
         } else {
             hgapLineCount = 0;
         }
@@ -319,7 +321,7 @@ class GridPaneMosaic {
     private void adjustVGapLines() {
         final int vgapLineCount;
         if (gridPane.getVgap() == 0) {
-            vgapLineCount = rowCount-1;
+            vgapLineCount = Math.max(0, rowCount-1);
         } else {
             vgapLineCount = 0;
         }

@@ -156,13 +156,11 @@ public class ToolbarTest {
         list1.add(node2);
 
         Button b3 = new Button("button");
-        b3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {                
-                try {
-                    toolBar.getItems().setAll(list1);
-                } catch (Exception iae) {                    
-                    fail("Duplicate items are not allowed " + iae.toString());
-                }
+        b3.setOnAction(e -> {
+            try {
+                toolBar.getItems().setAll(list1);
+            } catch (Exception iae) {
+                fail("Duplicate items are not allowed " + iae.toString());
             }
         });
 

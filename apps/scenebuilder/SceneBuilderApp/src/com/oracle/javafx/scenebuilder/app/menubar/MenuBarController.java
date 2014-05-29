@@ -151,9 +151,13 @@ public class MenuBarController {
     @FXML
     private MenuItem importMediaMenuItem;
     @FXML
-    private MenuItem showPreferencesMenuItem;
+    private MenuItem includeFileMenuItem;
     @FXML
-    private MenuItem separatorAbovePreferencesMenuItem; // Useless as soon as Preferences menu item is implemented
+    private MenuItem editIncludedFileMenuItem;
+    @FXML
+    private MenuItem revealIncludedFileMenuItem;
+    @FXML
+    private MenuItem showPreferencesMenuItem;
     @FXML
     private MenuItem exitMenuItem;
 
@@ -251,10 +255,6 @@ public class MenuBarController {
     @FXML
     private MenuItem decreaseColumnSpanMenuItem;
     @FXML
-    private MenuItem editIncludedFileMenuItem;
-    @FXML
-    private MenuItem revealIncludedFileMenuItem;
-    @FXML
     private RadioMenuItem qvgaSetSizeMenuItem;
     @FXML
     private RadioMenuItem vgaSetSizeMenuItem;
@@ -275,6 +275,8 @@ public class MenuBarController {
     @FXML
     private MenuItem wrapInAnchorPaneMenuItem;
     @FXML
+    private MenuItem wrapInFlowPaneMenuItem;
+    @FXML
     private MenuItem wrapInGridPaneMenuItem;
     @FXML
     private MenuItem wrapInHBoxMenuItem;
@@ -288,6 +290,8 @@ public class MenuBarController {
     private MenuItem wrapInStackPaneMenuItem;
     @FXML
     private MenuItem wrapInTabPaneMenuItem;
+    @FXML
+    private MenuItem wrapInTilePaneMenuItem;
     @FXML
     private MenuItem wrapInTitledPaneMenuItem;
     @FXML
@@ -320,10 +324,6 @@ public class MenuBarController {
     private RadioMenuItem caspianEmbeddedThemeMenuItem;
     @FXML
     private RadioMenuItem caspianEmbeddedQVGAThemeMenuItem;
-    @FXML
-    private MenuItem separatorAboveChooseBackgroundColorMenuItem;
-    @FXML
-    private MenuItem chooseBackgroundColorMenuItem;
     @FXML
     private MenuItem addSceneStyleSheetMenuItem;
     @FXML
@@ -454,7 +454,9 @@ public class MenuBarController {
         assert revealMenuItem != null;
         assert importFxmlMenuItem != null;
         assert importMediaMenuItem != null;
-        assert separatorAbovePreferencesMenuItem != null;
+        assert includeFileMenuItem != null;
+        assert editIncludedFileMenuItem != null;
+        assert revealIncludedFileMenuItem != null;
         assert showPreferencesMenuItem != null;
         assert exitMenuItem != null;
 
@@ -505,8 +507,6 @@ public class MenuBarController {
         assert decreaseRowSpanMenuItem != null;
         assert increaseColumnSpanMenuItem != null;
         assert decreaseColumnSpanMenuItem != null;
-        assert editIncludedFileMenuItem != null;
-        assert revealIncludedFileMenuItem != null;
         assert qvgaSetSizeMenuItem != null;
         assert vgaSetSizeMenuItem != null;
         assert touchSetSizeMenuItem != null;
@@ -517,6 +517,7 @@ public class MenuBarController {
         assert bringForwardMenuItem != null;
         assert sendBackwardMenuItem != null;
         assert wrapInAnchorPaneMenuItem != null;
+        assert wrapInFlowPaneMenuItem != null;
         assert wrapInGridPaneMenuItem != null;
         assert wrapInHBoxMenuItem != null;
         assert wrapInPaneMenuItem != null;
@@ -524,6 +525,7 @@ public class MenuBarController {
         assert wrapInSplitPaneMenuItem != null;
         assert wrapInStackPaneMenuItem != null;
         assert wrapInTabPaneMenuItem != null;
+        assert wrapInTilePaneMenuItem != null;
         assert wrapInTitledPaneMenuItem != null;
         assert wrapInToolBarMenuItem != null;
         assert wrapInVBoxMenuItem != null;
@@ -540,7 +542,6 @@ public class MenuBarController {
         assert caspianHighContrastThemeMenuItem != null;
         assert caspianEmbeddedThemeMenuItem != null;
         assert caspianEmbeddedQVGAThemeMenuItem != null;
-        assert chooseBackgroundColorMenuItem != null;
         assert addSceneStyleSheetMenuItem != null;
         assert removeSceneStyleSheetMenu != null;
         assert openSceneStyleSheetMenu != null;
@@ -617,6 +618,39 @@ public class MenuBarController {
         revealMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.REVEAL_FILE));
         importFxmlMenuItem.setUserData(new DocumentEditActionController(DocumentEditAction.IMPORT_FXML));
         importMediaMenuItem.setUserData(new DocumentEditActionController(DocumentEditAction.IMPORT_MEDIA));
+        includeFileMenuItem.setUserData(new DocumentEditActionController(DocumentEditAction.INCLUDE_FXML));
+        editIncludedFileMenuItem.setUserData(new ControlActionController(ControlAction.EDIT_INCLUDED_FILE) {
+
+            @Override
+            public String getTitle() {
+                String title = I18N.getString("menu.title.edit.included.default");
+                if (documentWindowController != null) {
+                    final File file = documentWindowController.getEditorController().getIncludedFile();
+                    if (file != null) {
+                        title = I18N.getString("menu.title.edit.included", file.getName());
+                    }
+                }
+                return title;
+            }
+        });
+        revealIncludedFileMenuItem.setUserData(new ControlActionController(ControlAction.REVEAL_INCLUDED_FILE) {
+
+            @Override
+            public String getTitle() {
+                String title = I18N.getString("menu.title.reveal.included.default");
+                if (documentWindowController != null) {
+                    final File file = documentWindowController.getEditorController().getIncludedFile();
+                    if (file != null) {
+                        if (EditorPlatform.IS_MAC) {
+                            title = I18N.getString("menu.title.reveal.included.finder", file.getName());
+                        } else {
+                            title = I18N.getString("menu.title.reveal.included.explorer", file.getName());
+                        }
+                    }
+                }
+                return title;
+            }
+        });
         closeMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.CLOSE_FRONT_WINDOW));
         closeMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.W, modifier));
         showPreferencesMenuItem.setUserData(new ApplicationControlActionController(ApplicationControlAction.SHOW_PREFERENCES));
@@ -825,38 +859,6 @@ public class MenuBarController {
         decreaseRowSpanMenuItem.setUserData(new EditActionController(EditAction.DECREASE_ROW_SPAN));
         increaseColumnSpanMenuItem.setUserData(new EditActionController(EditAction.INCREASE_COLUMN_SPAN));
         decreaseColumnSpanMenuItem.setUserData(new EditActionController(EditAction.DECREASE_COLUMN_SPAN));
-        editIncludedFileMenuItem.setUserData(new ControlActionController(ControlAction.EDIT_INCLUDED_FILE) {
-
-            @Override
-            public String getTitle() {
-                String title = I18N.getString("menu.title.edit.included.default");
-                if (documentWindowController != null) {
-                    final File file = documentWindowController.getEditorController().getIncludedFile();
-                    if (file != null) {
-                        title = I18N.getString("menu.title.edit.included", file.getName());
-                    }
-                }
-                return title;
-            }
-        });
-        revealIncludedFileMenuItem.setUserData(new ControlActionController(ControlAction.REVEAL_INCLUDED_FILE) {
-
-            @Override
-            public String getTitle() {
-                String title = I18N.getString("menu.title.reveal.included.default");
-                if (documentWindowController != null) {
-                    final File file = documentWindowController.getEditorController().getIncludedFile();
-                    if (file != null) {
-                        if (EditorPlatform.IS_MAC) {
-                            title = I18N.getString("menu.title.reveal.included.finder", file.getName());
-                        } else {
-                            title = I18N.getString("menu.title.reveal.included.explorer", file.getName());
-                        }
-                    }
-                }
-                return title;
-            }
-        });
         qvgaSetSizeMenuItem.setUserData(new EditActionController(EditAction.SET_SIZE_320x240) {
             @Override
             public void perform() {
@@ -905,6 +907,7 @@ public class MenuBarController {
         sendBackwardMenuItem.setAccelerator(
                 new KeyCharacterCombination("[", modifier)); //NOI18N
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
+        wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
         wrapInGridPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GRID_PANE));
         wrapInHBoxMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_HBOX));
@@ -913,6 +916,7 @@ public class MenuBarController {
         wrapInSplitPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_SPLIT_PANE));
         wrapInStackPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_STACK_PANE));
         wrapInTabPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TAB_PANE));
+        wrapInTilePaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TILE_PANE));
         wrapInTitledPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TITLED_PANE));
         wrapInToolBarMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TOOL_BAR));
         wrapInVBoxMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_VBOX));
@@ -926,8 +930,6 @@ public class MenuBarController {
          */
         showPreviewMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_WINDOW));
         showPreviewMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
-        chooseBackgroundColorMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.CHOOSE_BACKGROUND_COLOR));
-        chooseBackgroundColorMenuItem.setDisable(true);
         caspianHighContrastThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST));
         caspianThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN));
         caspianEmbeddedThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_EMBEDDED));
@@ -1017,12 +1019,6 @@ public class MenuBarController {
         insertMenu.setOnMenuValidation(onCustomPartOfInsertMenuValidationHandler);
         
         windowMenu.setOnMenuValidation(onWindowMenuValidationHandler);
-        
-        /*
-         * Until Preference menu is implemented, we remove it (see DTL-5854).
-         */
-        previewMenu.getItems().remove(separatorAboveChooseBackgroundColorMenuItem);
-        previewMenu.getItems().remove(chooseBackgroundColorMenuItem);
     }
 
     /*
@@ -1119,7 +1115,7 @@ public class MenuBarController {
 
         for (int i = 0; i < scalingTable.length; i++) {
             final double scaling = scalingTable[i];
-            final String title = "%" + (int) (scaling * 100); //NOI18N
+            final String title = String.format("%.0f%%", scaling * 100); //NOI18N
             final RadioMenuItem mi = new RadioMenuItem(title);
             mi.setUserData(new SetZoomActionController(scaling));
             zoomMenu.getItems().add(mi);
@@ -1337,18 +1333,32 @@ public class MenuBarController {
     }
 
     private void updateInsertMenuState(Menu sectionMenu) {
-        final EditorController editorController = documentWindowController.getEditorController();
-        for (MenuItem menuItem : sectionMenu.getItems()) {
-            assert menuItem.getUserData() instanceof LibraryItem;
-            final LibraryItem li = (LibraryItem) menuItem.getUserData();
-            final boolean enabled = editorController.canPerformInsert(li);
-            menuItem.setDisable(!enabled);
+        if (documentWindowController != null && documentWindowController.getStage().isFocused()) {
+            final EditorController editorController = documentWindowController.getEditorController();
+            for (MenuItem menuItem : sectionMenu.getItems()) {
+                assert menuItem.getUserData() instanceof LibraryItem;
+                final LibraryItem li = (LibraryItem) menuItem.getUserData();
+                final boolean enabled = editorController.canPerformInsert(li);
+                menuItem.setDisable(!enabled);
+            }
+        } else {
+            // See DTL-6017 and DTL-6554.
+            // This case is relevant on Mac only; on Win and Linux the top menu
+            // bar is part of the document window then even if some other non-modal
+            // window is opened (Preferences, Skeleton, Preview) one has to give
+            // focus to the document window to become able to open the Insert menu.
+            for (MenuItem menuItem : sectionMenu.getItems()) {
+                assert menuItem.getUserData() instanceof LibraryItem;
+                menuItem.setDisable(true);
+            }
         }
     }
 
     private void handleInsertMenuAction(LibraryItem li) {
-        final EditorController editorController = documentWindowController.getEditorController();
-        editorController.performInsert(li);
+        if (documentWindowController != null) {
+            final EditorController editorController = documentWindowController.getEditorController();
+            editorController.performInsert(li);
+        }
     }
 
     /*
@@ -1452,7 +1462,8 @@ public class MenuBarController {
         @Override
         public boolean canPerform() {
             boolean result;
-            if (documentWindowController == null) {
+            if (documentWindowController == null
+                    || documentWindowController.getStage().isFocused() == false) {
                 result = false;
             } else {
                 result = documentWindowController.getEditorController().canUndo();
@@ -1483,7 +1494,8 @@ public class MenuBarController {
         @Override
         public boolean canPerform() {
             boolean result;
-            if (documentWindowController == null) {
+            if (documentWindowController == null
+                    || documentWindowController.getStage().isFocused() == false) {
                 result = false;
             } else {
                 result = documentWindowController.getEditorController().canRedo();
@@ -1520,7 +1532,8 @@ public class MenuBarController {
         @Override
         public boolean canPerform() {
             boolean result;
-            if (documentWindowController == null) {
+            if (documentWindowController == null
+                    || documentWindowController.getStage().isFocused() == false) {
                 result = false;
             } else {
                 result = documentWindowController.getEditorController().canPerformEditAction(editAction);
@@ -1574,7 +1587,8 @@ public class MenuBarController {
         @Override
         public boolean canPerform() {
             boolean result;
-            if (documentWindowController == null) {
+            if (documentWindowController == null
+                    || documentWindowController.getStage().isFocused() == false) {
                 result = false;
             } else {
                 result = documentWindowController.canPerformEditAction(editAction);
@@ -1649,7 +1663,14 @@ public class MenuBarController {
 
         @Override
         public boolean canPerform() {
-            return documentWindowController.getEditorController().canPerformSetEffect();
+            boolean result;
+            if (documentWindowController == null
+                    || documentWindowController.getStage().isFocused() == false) {
+                result = false;
+            } else {
+                result = documentWindowController.getEditorController().canPerformSetEffect();
+            }
+            return result;
         }
 
         @Override
@@ -1753,7 +1774,9 @@ public class MenuBarController {
         
         @Override
         public String getTitle() {
-            assert documentWindowController != null;
+            if (documentWindowController == null) {
+                return null;
+            }
             
             if (size == EditorController.Size.SIZE_PREFERRED) {
                 String title = I18N.getString("menu.title.size.preferred");

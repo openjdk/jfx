@@ -191,6 +191,7 @@ public class DragGesture extends AbstractGesture {
                     = contentPanelController.getPanelRoot().getScene().getWindow();
             final ExternalDragSource dragSource = new ExternalDragSource(
                     lastDragEvent.getDragboard(), fxomDocument, ownerWindow);
+            assert dragSource.isAcceptable();
             dragController.begin(dragSource);
             shouldInvokeEnd = true;
         }
@@ -244,6 +245,7 @@ public class DragGesture extends AbstractGesture {
     private void dragOverEmptyDocument() {
         dragController.setDropTarget(new RootDropTarget());
         lastDragEvent.acceptTransferModes(dragController.getAcceptedTransferModes());
+        updateShadow(lastDragEvent.getSceneX(), lastDragEvent.getSceneY());
     }
     
     private void dragOverHitObject(FXOMObject hitObject) {
@@ -402,6 +404,7 @@ public class DragGesture extends AbstractGesture {
     private void dragDroppedOnGlassLayer() {    
         lastDragEvent.setDropCompleted(true);
         dragController.commit();
+        contentPanelController.getGlassLayer().requestFocus();
     }
     
     private void dragDoneOnGlassLayer() {

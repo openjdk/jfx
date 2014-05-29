@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+set -e
+if launchctl list "DEPLOY_DAEMON_IDENTIFIER" &> /dev/null; then
+    launchctl unload "/Library/LaunchDaemons/DEPLOY_LAUNCHD_PLIST_FILE"
+fi
+
+exit 0

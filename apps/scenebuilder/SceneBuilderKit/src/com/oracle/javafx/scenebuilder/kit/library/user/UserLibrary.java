@@ -75,6 +75,7 @@ public class UserLibrary extends Library {
             = new BuiltinSectionComparator();
     
     private final ObservableList<JarReport> jarReports = FXCollections.observableArrayList();
+    private final ObservableList<JarReport> previousJarReports = FXCollections.observableArrayList();
     private final SimpleIntegerProperty explorationCountProperty = new SimpleIntegerProperty();
     private final SimpleObjectProperty<Date> explorationDateProperty = new SimpleObjectProperty<>();
 
@@ -102,6 +103,10 @@ public class UserLibrary extends Library {
     
     public ObservableList<JarReport> getJarReports() {
         return jarReports;
+    }
+    
+    public ObservableList<JarReport> getPreviousJarReports() {
+        return previousJarReports;
     }
     
     public synchronized State getState() {
@@ -146,6 +151,7 @@ public class UserLibrary extends Library {
                 // In READY state, we release the class loader.
                 // This enables library import to manipulate jar files.
                 changeClassLoader(null);
+                previousJarReports.clear();
             }
         }
     }
@@ -236,13 +242,14 @@ public class UserLibrary extends Library {
     
     void updateJarReports(Collection<JarReport> newJarReports) {
         if (Platform.isFxApplicationThread()) {
+            previousJarReports.setAll(jarReports);
             jarReports.setAll(newJarReports);
         } else {
             Platform.runLater(new Runnable() {
                 @Override
                 public void run() {
+                    previousJarReports.setAll(jarReports);
                     jarReports.setAll(newJarReports);
-                    assert jarReports.equals(newJarReports);
                 }
             });
         }

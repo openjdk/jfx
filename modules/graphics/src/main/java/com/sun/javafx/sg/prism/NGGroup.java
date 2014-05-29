@@ -190,6 +190,16 @@ public class NGGroup extends NGNode {
     }
 
     @Override
+    public void renderForcedContent(Graphics gOptional) {
+        if (children == null) {
+            return;
+        }
+        for (int i = 0; i < children.size(); i++) {
+            children.get(i).renderForcedContent(gOptional);
+        }
+    }
+
+    @Override
     protected void renderContent(Graphics g) {
         if (children == null) {
             return;
@@ -249,7 +259,7 @@ public class NGGroup extends NGNode {
                     bot = top;
                 } else {
                     ImageData newbot =
-                        b.filterImageDatas(fctx, transform, rclip, bot, top);
+                        b.filterImageDatas(fctx, transform, rclip, null, bot, top);
                     bot.unref();
                     top.unref();
                     bot = newbot;

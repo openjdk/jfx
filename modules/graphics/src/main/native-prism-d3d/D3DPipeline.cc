@@ -36,6 +36,16 @@ typedef HRESULT WINAPI FnDirect3DCreate9Ex(UINT SDKVersion, IDirect3D9Ex**);
 FnDirect3DCreate9 * pD3D9FactoryFunction = 0;
 FnDirect3DCreate9Ex * pD3D9FactoryExFunction = 0;
 
+extern jboolean checkAndClearException(JNIEnv *env);
+
+jboolean checkAndClearException(JNIEnv *env) {
+    if (!env->ExceptionCheck()) {
+        return JNI_FALSE;
+    }
+    env->ExceptionClear();
+    return JNI_TRUE;
+}
+
 void loadD3DLibrary() {
     wchar_t path[MAX_PATH];
     if (::GetSystemDirectory(path, sizeof(path) / sizeof(wchar_t)) != 0) {
@@ -168,6 +178,7 @@ static const char jStringField[]  = "Ljava/lang/String;";
 void setStringField(JNIEnv *env, jobject object, jclass clazz, const char *name, const char * string) {
     if (jobject jString = env->NewStringUTF(string)) {
         jfieldID id = env->GetFieldID(clazz, name, jStringField);
+        if (checkAndClearException(env)) return;
         env->SetObjectField(object, id, jString);
         env->DeleteLocalRef(jString);
     }
@@ -175,6 +186,7 @@ void setStringField(JNIEnv *env, jobject object, jclass clazz, const char *name,
 
 void setIntField(JNIEnv *env, jobject object, jclass clazz, const char *name, int value) {
     jfieldID id = env->GetFieldID(clazz, name, "I");
+    if (checkAndClearException(env)) return;
     env->SetIntField(object, id, value);
 }
 

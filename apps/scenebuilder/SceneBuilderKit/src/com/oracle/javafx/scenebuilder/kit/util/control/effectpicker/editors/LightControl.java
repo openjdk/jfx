@@ -80,7 +80,8 @@ public class LightControl extends VBox {
 
         DISTANT,
         POINT,
-        SPOT
+        SPOT,
+        NONE
     }
 
     public LightControl(EffectPickerController effectPickerController,
@@ -134,8 +135,9 @@ public class LightControl extends VBox {
         lightChoiceBox.getItems().addAll(LightsEnum.values());
 
         setValue(initValue);
-        assert initValue != null;  // SB 2.0 metadatas do not allow to set null value
-        if (initValue instanceof Distant) {
+        if (initValue == null) {
+            lightChoiceBox.setValue(LightsEnum.NONE);
+        } else if (initValue instanceof Distant) {
             lightChoiceBox.setValue(LightsEnum.DISTANT);
         } else if (initValue instanceof Point) {
             lightChoiceBox.setValue(LightsEnum.POINT);
@@ -158,6 +160,9 @@ public class LightControl extends VBox {
                         break;
                     case SPOT:
                         light = defaultSpot;
+                        break;
+                    case NONE:
+                        light = null;
                         break;
                     default:
                         light = null;

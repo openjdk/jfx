@@ -35,6 +35,7 @@ class ViewContainer {
         HKL m_kbLayout;
         UINT m_codePage;
         LANGID m_idLang;
+        WPARAM m_deadKeyWParam;
 
         std::auto_ptr<IDropTarget> m_spDropTarget;
 
@@ -54,16 +55,20 @@ class ViewContainer {
             int commitedTextLength, int caretPos, int visiblePos);
         void GetCandidatePos(LPPOINT curPos);
 
+        void SendViewTypedEvent(int repCount, jchar wChar);
+
     protected:
         void HandleViewMenuEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         void HandleViewInputLangChange(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         void HandleViewPaintEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         void HandleViewSizeEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         void HandleViewKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+        void HandleViewDeadKeyEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         void HandleViewTypedEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         BOOL HandleViewMouseEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         BOOL HandleViewInputMethodEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
         void HandleViewTouchEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+        LRESULT HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM lParam);
     
         virtual void HandleViewTimerEvent(HWND hwnd, UINT_PTR timerID);
 

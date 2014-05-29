@@ -63,28 +63,25 @@ public class SimpleHSBColorPicker extends Region {
         getChildren().addAll(hsbRect, lightRect);
         lightRect.setStroke(Color.GRAY);
         lightRect.setStrokeType(StrokeType.OUTSIDE);
-        EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                double w = getWidth();
-                double h = getHeight();
-                double x = Math.min(w, Math.max(0, e.getX()));
-                double y = Math.min(h, Math.max(0, e.getY()));
-                double hue = (360 / w) * x;
-                double vert = (1 / h) * y;
-                double sat;
-                double bright;
-                if (vert < 0.5) {
-                    bright = 1;
-                    sat = vert * 2;
-                } else {
-                    bright = sat = 1 - 2 * (vert - 0.5);
-                }
-                // convert back to color
-                Color c = Color.hsb((int) hue, sat, bright);
-                color.set(c);
-                e.consume();
+        EventHandler<MouseEvent> ml = (MouseEvent e) -> {
+            double w = getWidth();
+            double h = getHeight();
+            double x = Math.min(w, Math.max(0, e.getX()));
+            double y = Math.min(h, Math.max(0, e.getY()));
+            double hue = (360 / w) * x;
+            double vert = (1 / h) * y;
+            double sat;
+            double bright;
+            if (vert < 0.5) {
+                bright = 1;
+                sat = vert * 2;
+            } else {
+                bright = sat = 1 - 2 * (vert - 0.5);
             }
+            // convert back to color
+            Color c = Color.hsb((int) hue, sat, bright);
+            color.set(c);
+            e.consume();
         };
         lightRect.setOnMouseDragged(ml);
         lightRect.setOnMouseClicked(ml);

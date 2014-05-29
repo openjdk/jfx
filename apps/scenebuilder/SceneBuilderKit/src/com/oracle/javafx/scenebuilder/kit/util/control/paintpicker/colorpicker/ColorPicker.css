@@ -31,12 +31,9 @@
  */
 .small-label {
     -fx-font-size: 0.750em;
-    -fx-text-fill: grey;
+    -fx-text-fill: -sb-content-text-dimmed;
     -fx-padding: 0;
 }
-/*.dimmed-item {
-    -fx-opacity: 0.25;
-}*/
 .chip-background {
     -fx-border-color: -fx-box-border, white;
     -fx-border-insets: 0, 1;
@@ -45,22 +42,17 @@
     -fx-background-position: center;
 }
 .hue-slider {
-    -fx-background-color: lightyellow;
     -fx-background-insets: 0 4 0 4;
     -fx-background-radius: 0;
 }
+.theme-presets .property-sheet .slider > .track {
+    -fx-background-color: transparent;
+}
 /* opacity slider background is applied to a region behind the slider itself */
 .opacity-slider-background {
-    /*-fx-background-color: linear-gradient(to right, transparent, black);*/
     -fx-background-image: url("../images/chequers.png");
     -fx-background-position: left center;
     -fx-background-radius: 0;
-}
-.hue-slider .track {
-    -fx-background-color: transparent;
-}
-.opacity-slider .track {
-    -fx-background-color: transparent;
 }
 .brightnessRect {
     -fx-background-color: linear-gradient(to bottom, transparent, black);
@@ -68,6 +60,3 @@
 .saturationRect {
     -fx-background-color: linear-gradient(to bottom right, white, transparent);
 }
-
-
-

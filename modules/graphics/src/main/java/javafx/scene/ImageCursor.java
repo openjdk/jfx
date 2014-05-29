@@ -433,12 +433,7 @@ public class ImageCursor extends Cursor {
 
     private InvalidationListener getImageListener() {
         if (imageListener == null) {
-            imageListener = new InvalidationListener() {
-                                @Override
-                                public void invalidated(Observable valueModel) {
-                                     invalidateCurrentFrame();
-                                }
-                             };
+            imageListener = valueModel -> invalidateCurrentFrame();
         }
 
         return imageListener;

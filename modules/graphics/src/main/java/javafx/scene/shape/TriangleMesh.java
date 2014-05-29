@@ -760,23 +760,33 @@ public class TriangleMesh extends Mesh {
         }
 
         @Override
-        public float[] syncTo(float[] array) {
+        public float[] syncTo(float[] array, int[] fromAndLengthIndices) {
+            assert ((fromAndLengthIndices != null) && (fromAndLengthIndices.length == 2));
             ObservableFloatArray floatArray = (ObservableFloatArray) this.array;
             if (dirtyInFull || array == null || array.length != floatArray.size()) {
                 // Always allocate a new array when size changes
+                fromAndLengthIndices[0] = 0;
+                fromAndLengthIndices[1] = floatArray.size();
                 return floatArray.toArray(null);
             }
+            fromAndLengthIndices[0] = dirtyRangeFrom;
+            fromAndLengthIndices[1] = dirtyRangeLength;
             floatArray.copyTo(dirtyRangeFrom, array, dirtyRangeFrom, dirtyRangeLength);
             return array;
         }
 
         @Override
-        public int[] syncTo(int[] array) {
+        public int[] syncTo(int[] array, int[] fromAndLengthIndices) {
+            assert ((fromAndLengthIndices != null) && (fromAndLengthIndices.length == 2));
             ObservableIntegerArray intArray = (ObservableIntegerArray) this.array;
             if (dirtyInFull || array == null || array.length != intArray.size()) {
+                fromAndLengthIndices[0] = 0;
+                fromAndLengthIndices[1] = intArray.size();
                 // Always allocate a new array when size changes
                 return intArray.toArray(null);
             }
+            fromAndLengthIndices[0] = dirtyRangeFrom;
+            fromAndLengthIndices[1] = dirtyRangeLength;
             intArray.copyTo(dirtyRangeFrom, array, dirtyRangeFrom, dirtyRangeLength);
             return array;
         }

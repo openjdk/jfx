@@ -575,7 +575,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             public void handle(DragEvent t) {
 //                System.out.println("libPane onDragDropped");
                 AbstractDragSource dragSource = getEditorController().getDragController().getDragSource();
-                if (dragSource != null && dragSource instanceof DocumentDragSource) {
+                if (dragSource instanceof DocumentDragSource) {
                     processInternalImport(((DocumentDragSource)dragSource).getDraggedObjects());
                 } else {
                     initiateImportDialog = false;
@@ -652,11 +652,9 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                 AbstractDragSource dragSource = getEditorController().getDragController().getDragSource();
                 Dragboard db = t.getDragboard();
                 // db has file when dragging a file from native file manager (Mac Finder, Windows Explorer, ...).
-                if (db.hasFiles()) {
+                // dragSource is not null if the user drags something from Hierarchy or Content panel.
+                if (db.hasFiles() || dragSource != null) {
                     t.acceptTransferModes(TransferMode.COPY);
-                } else if (dragSource != null) {
-                    // dragSource is not null if the user drags something from Hierarchy or Content panel.
-                    t.acceptTransferModes(TransferMode.MOVE);
                 }
             }
         });
@@ -710,15 +708,20 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                     final FXOMArchive.Entry entry0 = fxomArchive.getEntries().get(0);
                     String fxmlText = entry0.getFxmlText();
 
-                    // Write the FXML layout into a dedicated file stored in the Library dir
-                    // We use the class name of the top element and append a number:
-                    // if Library dir already contains SplitPane_1.fxml and top element is
-                    // of class SplitPane then we will create SplitPane_2.fxml and so on.
-                    String prefix = asset.getSceneGraphObject().getClass().getSimpleName();
+                    // Write the FXML layout into a dedicated file stored in the user Library dir.
+                    // We use the tag name of the top element and append a number:
+                    // if Library dir already contains SplitPane_1.fxml and top element has
+                    // tag name SplitPane then we will create SplitPane_2.fxml and so on.
+                    // Note the tag name is most of the time identical to the Java class name, see DTL-6643.
+                    String prefix = asset.getGlueElement().getTagName();
                     File fxmlFile = getUniqueFxmlFileName(prefix, userLibraryPathString);
                     writeFxmlFile(fxmlFile, fxmlText, libPath);
                 }
             } finally {
+                if (currentDisplayMode.equals(DISPLAY_MODE.SECTIONS)) {
+                    sectionNameToKeepOpened = UserLibrary.TAG_USER_DEFINED;
+                }
+                    
                 ((UserLibrary) getEditorController().getLibrary()).startWatching();
             }
         }
@@ -736,9 +739,6 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             try (PrintWriter writer = new PrintWriter(targetFile, "UTF-8")) { //NOI18N
                 writer.write(text);
             }
-            
-            getEditorController().getMessageLog().logInfoMessage("log.info.file.creation.confirmation",
-                    I18N.getBundle(), targetFilePath.getFileName().toString());
         } catch (IOException ioe) {
             final ErrorDialog errorDialog = new ErrorDialog(null);
             errorDialog.setTitle(I18N.getString("error.file.create.title"));
@@ -770,6 +770,10 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 
                 if (!fxmlFiles.isEmpty() && enoughFreeSpaceOnDisk(fxmlFiles) && ! hasDependencies(fxmlFiles)) {
                     copyFilesToUserLibraryDir(fxmlFiles);
+                    
+                    if (currentDisplayMode.equals(DISPLAY_MODE.SECTIONS)) {
+                        sectionNameToKeepOpened = UserLibrary.TAG_USER_DEFINED;
+                    }
                 }
 
                 final List<File> jarFiles = getSubsetOfFiles(".jar", importedFiles); //NOI18N

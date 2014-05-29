@@ -37,7 +37,6 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-
 <ScrollPane fitToHeight="true" fitToWidth="true" prefHeight="300.0" prefWidth="270.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
 <content><VBox id="StackPane" spacing="7.0">
   <children>
@@ -65,7 +64,10 @@
             <fx:reference source="leftTableColumn" />
           </sortOrder>
         </TableView>
-        <Label fx:id="bottomLabel" alignment="CENTER" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" styleClass="small-label" text="Label" textAlignment="LEFT" VBox.vgrow="NEVER" />
+        <Label fx:id="bottomLabel" alignment="CENTER" maxHeight="-Infinity" maxWidth="1.7976931348623157E308" minHeight="-Infinity" styleClass="small-label" text="Label" textAlignment="LEFT" VBox.vgrow="NEVER">
+                     <VBox.margin>
+                        <Insets bottom="4.0" />
+                     </VBox.margin></Label>
       </children>
       <VBox.margin>
         <Insets right="10.0" top="10.0" />

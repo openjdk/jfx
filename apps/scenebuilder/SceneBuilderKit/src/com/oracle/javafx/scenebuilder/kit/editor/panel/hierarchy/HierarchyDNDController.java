@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AccessoryDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ContainerZDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -44,6 +45,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.DragEvent;
+import javafx.scene.layout.GridPane;
 
 /**
  * Controller for all drag and drop gestures in hierarchy panel. This class does
@@ -82,12 +84,10 @@ public class HierarchyDNDController {
      *
      * @param treeItem the TreeItem
      * @param event the event
-     * @param location the location
      */
     public void handleOnDragDropped(
             final TreeItem<HierarchyItem> treeItem,
-            final DragEvent event,
-            final DroppingMouseLocation location) {
+            final DragEvent event) {
 
         // Cancel timer if any
         scheduler.cancelTimer();
@@ -188,19 +188,29 @@ public class HierarchyDNDController {
         if (dragController.isDropAccepted()
                 && dropTarget instanceof AccessoryDropTarget
                 && ((AccessoryDropTarget) dropTarget).getAccessory() == Accessory.GRAPHIC) {
-            // GRAPHIC accessories cannot be dropped on empty TreeItems
-            // They can be dropped :
-            // - either on the accessory owner 
-            // - or on its empty graphic place holder if already added
-            assert treeItem != null;
-            // Add empty graphic place holder if not already done :
-            // - we are not over an already added empty graphic place holder 
+            // Retrieve the GRAPHIC accessory owner
+            final TreeItem<HierarchyItem> graphicOwnerTreeItem;
+            if (treeItem != null) {
+                if (treeItem.getValue().isEmpty() == false) {
+                    graphicOwnerTreeItem = treeItem;
+                } else {
+                    // Empty graphic place holder
+                    // => the graphic owner is the parent
+                    graphicOwnerTreeItem = treeItem.getParent();
+                }
+            } else {
+                // TreeItem is null when dropping below the datas
+                // => the graphic owner is the root
+                graphicOwnerTreeItem = panelController.getRoot();
+            }
+            assert graphicOwnerTreeItem != null;
+            assert graphicOwnerTreeItem.getValue().isEmpty() == false;
+            // Schedule adding empty graphic place holder if :
             // - an empty graphic place holder has not yet been added
-            // - we do not already scheduled a job to add the empty graphic place holder
-            if (treeItem.getValue().isEmpty() == false
-                    && getEmptyGraphicTreeItemFor(treeItem) == null
+            // - an empty graphic place holder has not yet been scheduled
+            if (getEmptyGraphicTreeItemFor(graphicOwnerTreeItem) == null
                     && scheduler.isAddEmptyGraphicTaskScheduled() == false) {
-                scheduler.scheduleAddEmptyGraphicTask(treeItem);
+                scheduler.scheduleAddEmptyGraphicTask(graphicOwnerTreeItem);
             }
         }
     }
@@ -388,7 +398,7 @@ public class HierarchyDNDController {
 
         AbstractDropTarget result = null;
 
-        if (dropTargetObject != null && dropTargetObject instanceof FXOMInstance) {
+        if (dropTargetObject instanceof FXOMInstance) {
             final DragController dragController
                     = panelController.getEditorController().getDragController();
             final AbstractDragSource dragSource = dragController.getDragSource();
@@ -401,18 +411,22 @@ public class HierarchyDNDController {
                         = new DesignHierarchyMask(dropTargetInstance);
                 // Check if the drop target accepts sub components
                 if (dropTargetMask.isAcceptingSubComponent(dragSource.getDraggedObjects())) {
-                    final FXOMObject beforeChild;
-                    if (targetIndex == -1) {
-                        beforeChild = null;
+                    if (dropTargetInstance.getSceneGraphObject() instanceof GridPane) {
+                        result = new GridPaneDropTarget(dropTargetInstance, targetIndex);
                     } else {
-                        // targetIndex is the last sub component
-                        if (targetIndex == dropTargetMask.getSubComponentCount()) {
+                        final FXOMObject beforeChild;
+                        if (targetIndex == -1) {
                             beforeChild = null;
                         } else {
-                            beforeChild = dropTargetMask.getSubComponentAtIndex(targetIndex);
+                            // targetIndex is the last sub component
+                            if (targetIndex == dropTargetMask.getSubComponentCount()) {
+                                beforeChild = null;
+                            } else {
+                                beforeChild = dropTargetMask.getSubComponentAtIndex(targetIndex);
+                            }
                         }
+                        result = new ContainerZDropTarget(dropTargetInstance, beforeChild);
                     }
-                    result = new ContainerZDropTarget(dropTargetInstance, beforeChild);
                 } //
                 // Check if the drop target accepts accessories
                 else {

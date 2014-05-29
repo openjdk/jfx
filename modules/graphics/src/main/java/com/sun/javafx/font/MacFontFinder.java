@@ -37,12 +37,10 @@ class MacFontFinder {
 
     static {
         AccessController.doPrivileged(
-            new PrivilegedAction<Void>() {
-                public Void run() {
+                (PrivilegedAction<Void>) () -> {
                     NativeLibLoader.loadLibrary("javafx_font");
                     return null;
                 }
-            }
         );
     }
 

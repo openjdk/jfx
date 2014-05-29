@@ -43,7 +43,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.pring.Node
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.AbstractResizer;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.CanvasResizer;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.ImageViewResizer;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.LazyResizer;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.RegionResizer;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.SubSceneResizer;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.WebViewResizer;
@@ -58,7 +57,6 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import javafx.geometry.Bounds;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.SubScene;
 import javafx.scene.canvas.Canvas;
@@ -67,14 +65,11 @@ import javafx.scene.control.Labeled;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.control.TitledPane;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.shape.Shape;
 import javafx.scene.text.Text;
 import javafx.scene.web.WebView;
 
@@ -141,8 +136,6 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
             result = new RectangleResizer((Rectangle) sceneGraphObject);
         } else if (sceneGraphObject instanceof Text) {
             result = new TextResizer((Text) sceneGraphObject);
-        } else if (sceneGraphObject instanceof Shape) {
-            result = new LazyResizer((Shape) sceneGraphObject);
         } else if (sceneGraphObject instanceof SubScene) {
             result = new SubSceneResizer((SubScene) sceneGraphObject);
         } else {
@@ -185,7 +178,7 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
         
         final Object sceneGraphObject = fxomObject.getSceneGraphObject();
         if (sceneGraphObject instanceof ComboBox) {
-            result = (ComboBox) sceneGraphObject;
+            result = (ComboBox<?>) sceneGraphObject;
         } else if (sceneGraphObject instanceof Labeled) {
             result = (Labeled) sceneGraphObject;
         } else if (sceneGraphObject instanceof Text) {

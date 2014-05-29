@@ -40,11 +40,11 @@
 
 <VBox id="DocumentWindow" alignment="CENTER" prefHeight="800.0" prefWidth="1240.0" spacing="0.0" styleClass="theme-presets" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
-    <SplitPane fx:id="mainSplitPane" dividerPositions="0.656641604010025" focusTraversable="true" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0" VBox.vgrow="ALWAYS">
+    <SplitPane fx:id="mainSplitPane" dividerPositions="0.656641604010025" focusTraversable="false" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0" VBox.vgrow="ALWAYS">
       <items>
-        <SplitPane fx:id="leftRightSplitPane" dividerPositions="0.11812297734627832, 0.889967637540453" focusTraversable="true" prefHeight="-1.0" prefWidth="-1.0">
+        <SplitPane fx:id="leftRightSplitPane" dividerPositions="0.11812297734627832, 0.889967637540453" focusTraversable="false" prefHeight="-1.0" prefWidth="-1.0">
           <items>
-            <SplitPane fx:id="libraryDocumentSplitPane" dividerPositions="0.4990328820116054" focusTraversable="true" maxWidth="450.0" minWidth="280.0" orientation="VERTICAL" SplitPane.resizableWithParent="false">
+            <SplitPane fx:id="libraryDocumentSplitPane" dividerPositions="0.4990328820116054" focusTraversable="false" maxWidth="450.0" minWidth="280.0" orientation="VERTICAL" SplitPane.resizableWithParent="false">
               <items>
                 <VBox id="leftPanelHost" minHeight="50.0" prefHeight="200.0" prefWidth="100.0" SplitPane.resizableWithParent="false">
                   <children>

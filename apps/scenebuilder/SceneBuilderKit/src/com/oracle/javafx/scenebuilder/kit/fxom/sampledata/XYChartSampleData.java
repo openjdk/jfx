@@ -89,12 +89,10 @@ class XYChartSampleData extends AbstractSampleData {
         xyChart.getData().clear();
         xyChart.getData().addAll(samples);
         if (xyChart.getXAxis().getClass() == CategoryAxis.class) {
-            @SuppressWarnings("unchecked")        
             final CategoryAxis axis = (CategoryAxis)(Axis<?>) xyChart.getXAxis();
             axis.getCategories().setAll(categories);
         }
         if (xyChart.getYAxis().getClass() == CategoryAxis.class) {
-            @SuppressWarnings("unchecked")        
             final CategoryAxis axis = (CategoryAxis)(Axis<?>) xyChart.getYAxis();
             axis.getCategories().setAll(categories);
         }

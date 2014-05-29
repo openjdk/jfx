@@ -27,6 +27,7 @@ package com.sun.javafx.scene;
 
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -38,7 +39,7 @@ import javafx.stage.Stage;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 
 /*
@@ -125,5 +126,26 @@ public final class KeyboardShortcutsTest {
             }
         }
         assertTrue(!nodeFound);
+    }
+
+    @Test
+    public void mnemonicRemovedWithNodeTest() {
+        final Text node = new Text("text");
+        ((Group)scene.getRoot()).getChildren().add(node);
+
+        KeyCodeCombination mnemonicKeyCombo =
+                new KeyCodeCombination(KeyCode.Q,KeyCombination.ALT_DOWN);
+
+        Mnemonic myMnemonic = new Mnemonic(node, mnemonicKeyCombo);
+        scene.addMnemonic(myMnemonic);
+
+        ObservableList<Mnemonic> mnemonicsList = scene.getMnemonics().get(mnemonicKeyCombo);
+
+        assertTrue(mnemonicsList.contains(myMnemonic));
+
+        scene.setRoot(new Group());
+
+        assertFalse(mnemonicsList.contains(myMnemonic));
+
     }
 }

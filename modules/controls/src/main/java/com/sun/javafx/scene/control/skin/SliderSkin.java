@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,13 +26,14 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.animation.Transition;
-import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Side;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.control.Slider;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
@@ -82,7 +83,35 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
     }
 
     private void initialize() {
-        thumb = new StackPane();
+        thumb = new StackPane() {
+            @Override
+            public Object accGetAttribute(Attribute attribute, Object... parameters) {
+                switch (attribute) {
+                    case ROLE: return Role.THUMB;
+                    case VALUE: return getSkinnable().getValue();
+                    case MAX_VALUE: {
+                        // This is required for mac-support, to convert from pixel to percent
+                        return getSkinnable().getMax();
+                    }
+                    default: return super.accGetAttribute(attribute, parameters);
+                }
+            }
+
+            @Override
+            public void accExecuteAction(Action action, Object... parameters) {
+                switch (action) {
+                    case MOVE: {
+                        // FIXME for now we just take the x/y values as value, rather than pixel value
+                        final Slider slider = getSkinnable();
+                        final Orientation o = slider.getOrientation();
+                        double value = (double) (o == Orientation.VERTICAL ? parameters[1] : parameters[0]);
+                        slider.setValue(slider.getValue() + value);
+                        break;
+                    }
+                    default: super.accExecuteAction(action, parameters);
+                }
+            }
+        };
         thumb.getStyleClass().setAll("thumb");
         track = new StackPane();
         track.getStyleClass().setAll("track");
@@ -91,54 +120,44 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
         getChildren().clear();
         getChildren().addAll(track, thumb);
         setShowTickMarks(getSkinnable().isShowTickMarks(), getSkinnable().isShowTickLabels());
-        track.setOnMousePressed( new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                if (!thumb.isPressed()) {
-                    trackClicked = true;
-                    if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
-                        getBehavior().trackPress(me, (me.getX() / trackLength));
-                    } else {
-                        getBehavior().trackPress(me, (me.getY() / trackLength));
-                    }
-                    trackClicked = false;
+        track.setOnMousePressed(me -> {
+            if (!thumb.isPressed()) {
+                trackClicked = true;
+                if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
+                    getBehavior().trackPress(me, (me.getX() / trackLength));
+                } else {
+                    getBehavior().trackPress(me, (me.getY() / trackLength));
                 }
+                trackClicked = false;
             }
         });
         
-        track.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                if (!thumb.isPressed()) {
-                    if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
-                        getBehavior().trackPress(me, (me.getX() / trackLength));
-                    } else {
-                        getBehavior().trackPress(me, (me.getY() / trackLength));
-                    }
+        track.setOnMouseDragged(me -> {
+            if (!thumb.isPressed()) {
+                if (getSkinnable().getOrientation() == Orientation.HORIZONTAL) {
+                    getBehavior().trackPress(me, (me.getX() / trackLength));
+                } else {
+                    getBehavior().trackPress(me, (me.getY() / trackLength));
                 }
             }
         });
 
-        thumb.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                getBehavior().thumbPressed(me, 0.0f);
-                dragStart = thumb.localToParent(me.getX(), me.getY());
-                preDragThumbPos = (getSkinnable().getValue() - getSkinnable().getMin()) /
-                        (getSkinnable().getMax() - getSkinnable().getMin());
-            }
+        thumb.setOnMousePressed(me -> {
+            getBehavior().thumbPressed(me, 0.0f);
+            dragStart = thumb.localToParent(me.getX(), me.getY());
+            preDragThumbPos = (getSkinnable().getValue() - getSkinnable().getMin()) /
+                    (getSkinnable().getMax() - getSkinnable().getMin());
         });
 
-        thumb.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                getBehavior().thumbReleased(me);
-            }
+        thumb.setOnMouseReleased(me -> {
+            getBehavior().thumbReleased(me);
         });
 
-        thumb.setOnMouseDragged(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                Point2D cur = thumb.localToParent(me.getX(), me.getY());
-                double dragPos = (getSkinnable().getOrientation() == Orientation.HORIZONTAL)?
-                    cur.getX() - dragStart.getX() : -(cur.getY() - dragStart.getY());
-                getBehavior().thumbDragged(me, preDragThumbPos + dragPos / trackLength);
-            }
+        thumb.setOnMouseDragged(me -> {
+            Point2D cur = thumb.localToParent(me.getX(), me.getY());
+            double dragPos = (getSkinnable().getOrientation() == Orientation.HORIZONTAL)?
+                cur.getX() - dragStart.getX() : -(cur.getY() - dragStart.getY());
+            getBehavior().thumbDragged(me, preDragThumbPos + dragPos / trackLength);
         });
     }
 
@@ -361,10 +380,11 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final Slider s = getSkinnable();
-         if (s.getOrientation() == Orientation.HORIZONTAL) {
-            return(topInset + thumb.prefHeight(-1) + bottomInset);
+        if (s.getOrientation() == Orientation.HORIZONTAL) {
+            double axisHeight = showTickMarks ? (tickLine.prefHeight(-1) + trackToTickGap) : 0;
+            return topInset + thumb.prefHeight(-1) + axisHeight + bottomInset;
         } else {
-            return(topInset + minTrackLength() + thumb.prefHeight(-1) + bottomInset);
+            return topInset + minTrackLength() + thumb.prefHeight(-1) + bottomInset;
         }
     }
 
@@ -377,8 +397,8 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
                 return 140;
             }
         } else {
-            return leftInset + Math.max(thumb.prefWidth(-1), track.prefWidth(-1)) +
-            ((showTickMarks) ? (trackToTickGap+tickLine.prefWidth(-1)) : 0) + rightInset;
+            double axisWidth = showTickMarks ? (tickLine.prefWidth(-1) + trackToTickGap) : 0;
+            return leftInset + Math.max(thumb.prefWidth(-1), track.prefWidth(-1)) + axisWidth + rightInset;
         }
     }
 

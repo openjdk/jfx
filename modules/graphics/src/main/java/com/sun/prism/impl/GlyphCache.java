@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ import java.util.HashMap;
 import java.util.WeakHashMap;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
-import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGER;
+import com.sun.javafx.logging.PulseLogger;
 
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture.WrapMode;
@@ -285,7 +285,9 @@ public class GlyphCache {
                                      rect);
 
                 if (!packer.add(rect)) {
-                    if (PULSE_LOGGING_ENABLED) PULSE_LOGGER.renderIncrementCounter("Font Glyph Cache Cleared");
+                    if (PULSE_LOGGING_ENABLED) {
+                        PulseLogger.incrementCounter("Font Glyph Cache Cleared");
+                    }
                     // If add fails,clear up the cache. Try add again.
                     clearAll();
                     packer.add(rect);

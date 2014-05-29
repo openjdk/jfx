@@ -34,6 +34,7 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -209,10 +210,8 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            scrolled = true;
         });
         
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
@@ -235,14 +234,12 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(66.0, event.getDeltaX(), 0.0001);
-                assertEquals(99.0, event.getDeltaY(), 0.0001);
-                assertEquals(132.0, event.getTotalDeltaX(), 0.0001);
-                assertEquals(198.0, event.getTotalDeltaY(), 0.0001);
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            Assert.assertEquals(66.0, event.getDeltaX(), 0.0001);
+            Assert.assertEquals(99.0, event.getDeltaY(), 0.0001);
+            Assert.assertEquals(132.0, event.getTotalDeltaX(), 0.0001);
+            Assert.assertEquals(198.0, event.getTotalDeltaY(), 0.0001);
+            scrolled = true;
         });
         
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
@@ -259,14 +256,12 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(0.0, event.getTextDeltaX(), 0.0001);
-                assertEquals(0.0, event.getTextDeltaY(), 0.0001);
-                assertSame(ScrollEvent.HorizontalTextScrollUnits.NONE, event.getTextDeltaXUnits());
-                assertSame(ScrollEvent.VerticalTextScrollUnits.NONE, event.getTextDeltaYUnits());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            Assert.assertEquals(0.0, event.getTextDeltaX(), 0.0001);
+            Assert.assertEquals(0.0, event.getTextDeltaY(), 0.0001);
+            assertSame(ScrollEvent.HorizontalTextScrollUnits.NONE, event.getTextDeltaXUnits());
+            assertSame(ScrollEvent.VerticalTextScrollUnits.NONE, event.getTextDeltaYUnits());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 0, 0, 0, 0,
@@ -274,14 +269,12 @@ public class ScrollEventTest {
         assertTrue(scrolled);
 
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(8.0, event.getTextDeltaX(), 0.0001);
-                assertEquals(15.0, event.getTextDeltaY(), 0.0001);
-                assertSame(ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, event.getTextDeltaXUnits());
-                assertSame(ScrollEvent.VerticalTextScrollUnits.LINES, event.getTextDeltaYUnits());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            Assert.assertEquals(8.0, event.getTextDeltaX(), 0.0001);
+            Assert.assertEquals(15.0, event.getTextDeltaY(), 0.0001);
+            assertSame(ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, event.getTextDeltaXUnits());
+            assertSame(ScrollEvent.VerticalTextScrollUnits.LINES, event.getTextDeltaYUnits());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 4, 5, 3, 3,
@@ -289,14 +282,12 @@ public class ScrollEventTest {
         assertTrue(scrolled);
         
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(0.0, event.getTextDeltaX(), 0.0001);
-                assertEquals(3.0, event.getTextDeltaY(), 0.0001);
-                assertSame(ScrollEvent.HorizontalTextScrollUnits.NONE, event.getTextDeltaXUnits());
-                assertSame(ScrollEvent.VerticalTextScrollUnits.PAGES, event.getTextDeltaYUnits());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            Assert.assertEquals(0.0, event.getTextDeltaX(), 0.0001);
+            Assert.assertEquals(3.0, event.getTextDeltaY(), 0.0001);
+            assertSame(ScrollEvent.HorizontalTextScrollUnits.NONE, event.getTextDeltaXUnits());
+            assertSame(ScrollEvent.VerticalTextScrollUnits.PAGES, event.getTextDeltaYUnits());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 5, -1, -1, 3, 3,
@@ -312,14 +303,12 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertTrue(event.isShiftDown());
-                assertFalse(event.isControlDown());
-                assertTrue(event.isAltDown());
-                assertFalse(event.isMetaDown());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            assertTrue(event.isShiftDown());
+            assertFalse(event.isControlDown());
+            assertTrue(event.isAltDown());
+            assertFalse(event.isMetaDown());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
@@ -327,14 +316,12 @@ public class ScrollEventTest {
         assertTrue(scrolled);
 
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertFalse(event.isShiftDown());
-                assertTrue(event.isControlDown());
-                assertFalse(event.isAltDown());
-                assertTrue(event.isMetaDown());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            assertFalse(event.isShiftDown());
+            assertTrue(event.isControlDown());
+            assertFalse(event.isAltDown());
+            assertTrue(event.isMetaDown());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
@@ -349,11 +336,9 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertTrue(event.isDirect());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            assertTrue(event.isDirect());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
@@ -361,11 +346,9 @@ public class ScrollEventTest {
         assertTrue(scrolled);
 
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertFalse(event.isDirect());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            assertFalse(event.isDirect());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
@@ -380,11 +363,9 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertTrue(event.isInertia());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            assertTrue(event.isInertia());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
@@ -392,11 +373,9 @@ public class ScrollEventTest {
         assertTrue(scrolled);
 
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertFalse(event.isInertia());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            assertFalse(event.isInertia());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 1, 1, 1, 3, 3,
@@ -411,11 +390,9 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(0, event.getTouchCount());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            Assert.assertEquals(0, event.getTouchCount());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
@@ -423,11 +400,9 @@ public class ScrollEventTest {
         assertTrue(scrolled);
 
         scrolled = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(5, event.getTouchCount());
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            Assert.assertEquals(5, event.getTouchCount());
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
@@ -442,10 +417,8 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         scrolled = false;
-        rect.setOnScrollStarted(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled = true;
-            }
+        rect.setOnScrollStarted(event -> {
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL_STARTED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
@@ -453,10 +426,8 @@ public class ScrollEventTest {
         assertTrue(scrolled);
 
         scrolled = false;
-        rect.setOnScrollFinished(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled = true;
-            }
+        rect.setOnScrollFinished(event -> {
+            scrolled = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 5, 1, 1, 3, 3,
@@ -470,10 +441,8 @@ public class ScrollEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        rect.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled = true;
-            }
+        rect.addEventHandler(ScrollEvent.ANY, event -> {
+            scrolled = true;
         });
 
         scrolled = false;
@@ -503,15 +472,11 @@ public class ScrollEventTest {
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
 
-        rect1.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled = true;
-            }
+        rect1.addEventHandler(ScrollEvent.ANY, event -> {
+            scrolled = true;
         });
-        rect2.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled2 = true;
-            }
+        rect2.addEventHandler(ScrollEvent.ANY, event -> {
+            scrolled2 = true;
         });
 
         scrolled = false;
@@ -557,22 +522,18 @@ public class ScrollEventTest {
 
         scrolled = false;
         scrolled2 = false;
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(150, event.getX(), 0.00001);
-                assertEquals(150, event.getY(), 0.00001);
-                assertEquals(0, event.getZ(), 0.00001);
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            Assert.assertEquals(150, event.getX(), 0.00001);
+            Assert.assertEquals(150, event.getY(), 0.00001);
+            Assert.assertEquals(0, event.getZ(), 0.00001);
+            scrolled = true;
         });
 
-        scene.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(150, event.getX(), 0.00001);
-                assertEquals(150, event.getY(), 0.00001);
-                assertEquals(50, event.getZ(), 0.00001);
-                scrolled2 = true;
-            }
+        scene.setOnScroll(event -> {
+            Assert.assertEquals(150, event.getX(), 0.00001);
+            Assert.assertEquals(150, event.getY(), 0.00001);
+            Assert.assertEquals(50, event.getZ(), 0.00001);
+            scrolled2 = true;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
@@ -591,17 +552,13 @@ public class ScrollEventTest {
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
 
-        rect1.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                pickRes = event.getPickResult();
-                scrolled = true;
-            }
+        rect1.addEventHandler(ScrollEvent.ANY, event -> {
+            pickRes = event.getPickResult();
+            scrolled = true;
         });
-        rect2.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                pickRes = event.getPickResult();
-                scrolled2 = true;
-            }
+        rect2.addEventHandler(ScrollEvent.ANY, event -> {
+            pickRes = event.getPickResult();
+            scrolled2 = true;
         });
 
         scrolled = false;
@@ -670,15 +627,11 @@ public class ScrollEventTest {
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
 
-        rect1.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled = true;
-            }
+        rect1.addEventHandler(ScrollEvent.ANY, event -> {
+            scrolled = true;
         });
-        rect2.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled2 = true;
-            }
+        rect2.addEventHandler(ScrollEvent.ANY, event -> {
+            scrolled2 = true;
         });
 
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
@@ -726,22 +679,18 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         Rectangle rect2 =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(1);
-        rect1.addEventHandler(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                scrolled = true;
-            }
+        rect1.addEventHandler(ScrollEvent.ANY, event -> {
+            scrolled = true;
         });
 
         MouseEventGenerator generator = new MouseEventGenerator();
 
         scrolled = false;
         scrolled2 = false;
-        rect2.setOnScrollStarted(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(250.0, event.getSceneX(), 0.0001);
-                assertEquals(250.0, event.getSceneY(), 0.0001);
-                scrolled2 = true;
-            }
+        rect2.setOnScrollStarted(event -> {
+            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            scrolled2 = true;
         });
         scene.impl_processMouseEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 250, 250));
@@ -754,12 +703,10 @@ public class ScrollEventTest {
 
         scrolled = false;
         scrolled2 = false;
-        rect2.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                scrolled2 = true;
-            }
+        rect2.setOnScroll(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            scrolled2 = true;
         });
         scene.impl_processMouseEvent(generator.generateMouseEvent(
                 MouseEvent.MOUSE_MOVED, 150, 150));
@@ -772,12 +719,10 @@ public class ScrollEventTest {
 
         scrolled = false;
         scrolled2 = false;
-        rect2.setOnScrollFinished(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                scrolled2 = true;
-            }
+        rect2.setOnScrollFinished(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            scrolled2 = true;
         });
         ((StubScene) scene.impl_getPeer()).getListener().scrollEvent(
                 ScrollEvent.SCROLL_FINISHED, 2, 3, 4, 6, 33, 33, 0, 1, 1, 3, 3,
@@ -792,12 +737,10 @@ public class ScrollEventTest {
         Scene scene = createScene();
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
-        rect.setOnScrollFinished(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(250.0, event.getSceneX(), 0.0001);
-                assertEquals(250.0, event.getSceneY(), 0.0001);
-                scrolled = true;
-            }
+        rect.setOnScrollFinished(event -> {
+            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            scrolled = true;
         });
 
         scrolled = false;
@@ -827,12 +770,10 @@ public class ScrollEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
-        rect.setOnScroll(new EventHandler<ScrollEvent>() {
-            @Override public void handle(ScrollEvent event) {
-                assertEquals(150.0, event.getSceneX(), 0.0001);
-                assertEquals(150.0, event.getSceneY(), 0.0001);
-                scrolled = true;
-            }
+        rect.setOnScroll(event -> {
+            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
+            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            scrolled = true;
         });
 
         scrolled = false;

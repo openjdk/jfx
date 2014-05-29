@@ -41,5 +41,47 @@ jint execute_dnd(JNIEnv *, jobject, jint);
 
 gboolean is_in_drag();
 
+#define DRAG_IMAGE_MAX_WIDTH 320
+#define DRAG_IMAGE_MAX_HEIGH 240
+
+#define BSWAP_32(x) (((int)(x) << 24)  | \
+          (((int)(x) << 8) & 0xff0000) | \
+          (((int)(x) >> 8) & 0xff00)   | \
+          ((int)(x)  >> 24))
+
+class DragView {
+public:
+    class View {
+        GtkWidget* widget;
+        GdkPixbuf* pixbuf;
+        gint width, height;
+        gboolean is_raw_image;
+        gboolean is_offset_set;
+        gint offset_x, offset_y;
+    public:
+        View(GdkPixbuf* pixbuf, gboolean is_raw_image, gboolean is_offset_set, gint offset_x, gint offset_y);
+        void screen_changed();
+        void expose();
+        void move(gint x, gint y);
+        ~View();
+    private:
+        View(View&);
+        View& operator=(const View&);
+    };
+
+    static void reset_drag_view();
+    static void set_drag_view();
+    static void move(gint x, gint y);
+
+private:
+    static View* view;
+    static gboolean get_drag_image_offset(int* x, int* y);
+    static GdkPixbuf* get_drag_image(gboolean* is_raw_image, gint* width, gint* height);
+
+    DragView() {}
+    DragView(DragView&);
+    DragView& operator=(const DragView&);
+};
+
 #endif        /* GLASS_DND_H */
 

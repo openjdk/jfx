@@ -538,14 +538,11 @@ public final class Media {
         @Override
         public void onMetadata(final Map<String, Object> metadata) {
             // Clean up metadata
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    updateMetadata(metadata);
-                    jfxParser.removeListener(metadataListener);
-                    jfxParser.stopParser();
-                    jfxParser = null;
-                }
+            Platform.runLater(() -> {
+                updateMetadata(metadata);
+                jfxParser.removeListener(metadataListener);
+                jfxParser.stopParser();
+                jfxParser = null;
             });
         }
     }

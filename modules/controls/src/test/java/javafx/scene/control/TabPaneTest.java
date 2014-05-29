@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -691,7 +693,7 @@ public class TabPaneTest {
         root.getChildren().add(tabPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.resize(300, 300);
         root.layout();
         
@@ -721,17 +723,15 @@ public class TabPaneTest {
         root.getChildren().add(tabPane);
         show();
 
-        root.impl_reapplyCSS();
+        root.applyCss();
         root.resize(300, 300);
         root.layout();
         
         tk.firePulse();        
         assertTrue(tabPane.isFocused());
 
-        tab2.setOnSelectionChanged(new EventHandler<Event>() {
-            @Override public void handle(Event event) {
-                assertEquals(0, counter++);
-            }
+        tab2.setOnSelectionChanged(event -> {
+            assertEquals(0, counter++);
         });
 
         double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
@@ -788,11 +788,9 @@ public class TabPaneTest {
         tabPane.getTabs().add(tab2);
         tabPane.getTabs().add(tab3);        
 
-        tabPane.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Tab>() {
-            public void changed(ObservableValue<? extends Tab> ov, Tab t, Tab t1) {
-                assertEquals(t.getText(), "one");
-                assertEquals(t1.getText(), "two");
-            }            
+        tabPane.getSelectionModel().selectedItemProperty().addListener((ov, t, t1) -> {
+            assertEquals(t.getText(), "one");
+            assertEquals(t1.getText(), "two");
         });
         
         assertEquals("one", tabPane.getTabs().get(0).getText());
@@ -811,10 +809,8 @@ public class TabPaneTest {
     @Test public void focusTraversalShouldLookInsideEmbeddedEngines() {
 
         Button b1 = new Button("Button1");
-        final ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal, Boolean newVal) {
-                button1Focused = true;
-            }
+        final ChangeListener<Boolean> focusListener = (observable, oldVal, newVal) -> {
+            button1Focused = true;
         };
         b1.focusedProperty().addListener(focusListener);
 
@@ -840,15 +836,151 @@ public class TabPaneTest {
 
         final KeyEvent tabEvent = new KeyEvent(KeyEvent.KEY_PRESSED, "", "", KeyCodeMap.valueOf(0x09),
                                                          false, false, false, false);
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                tabPane.requestFocus();
-                Event.fireEvent(tabPane, tabEvent);
+        Platform.runLater(() -> {
+            tabPane.requestFocus();
+            Event.fireEvent(tabPane, tabEvent);
 
-            }
         });
 
         assertTrue(button1Focused);
 
-    }    
+    }
+
+    @Test public void test_rt_35013() {
+        SplitPane splitPane = new SplitPane();
+        splitPane.getItems().addAll(new Button("Button1"), new Button("Button2"));
+
+        TabPane tabPane = new TabPane();
+        Tab emptyTab;
+        Tab splitTab = new Tab("SplitPane Tab");
+        splitTab.setContent(splitPane);
+        tabPane.getTabs().addAll(emptyTab = new Tab("Empty Tab"), splitTab);
+
+        StageLoader sl = new StageLoader(tabPane);
+
+        tabPane.getSelectionModel().select(emptyTab);
+        Toolkit.getToolkit().firePulse();
+        assertFalse(splitPane.getParent().isVisible());
+
+        tabPane.getSelectionModel().select(splitTab);
+        Toolkit.getToolkit().firePulse();
+        assertTrue(splitPane.getParent().isVisible());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_36456_default_selectionMovesBackwardOne() {
+        Tab tab0 = new Tab("Tab 0");
+        Tab tab1 = new Tab("Tab 1");
+        Tab tab2 = new Tab("Tab 2");
+
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(tab0, tab1, tab2);
+        tabPane.getSelectionModel().select(tab1);
+
+        StageLoader sl = new StageLoader(tabPane);
+
+        assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
+        tabPane.getTabs().remove(tab1);
+        assertEquals(tab0, tabPane.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_36456_selectionMovesBackwardTwoSkippingDisabledTab() {
+        Tab tab0 = new Tab("Tab 0");
+        Tab tab1 = new Tab("Tab 1");
+        tab1.setDisable(true);
+        Tab tab2 = new Tab("Tab 2");
+
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(tab0, tab1, tab2);
+        tabPane.getSelectionModel().select(tab2);
+
+        StageLoader sl = new StageLoader(tabPane);
+
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+        tabPane.getTabs().remove(tab2);
+
+        // selection should jump from tab2 to tab0, as tab1 is disabled
+        assertEquals(tab0, tabPane.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_36456_selectionMovesForwardOne() {
+        Tab tab0 = new Tab("Tab 0");
+        tab0.setDisable(true);
+        Tab tab1 = new Tab("Tab 1");
+        Tab tab2 = new Tab("Tab 2");
+
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(tab0, tab1, tab2);
+        tabPane.getSelectionModel().select(tab1);
+
+        StageLoader sl = new StageLoader(tabPane);
+
+        assertEquals(tab1, tabPane.getSelectionModel().getSelectedItem());
+        tabPane.getTabs().remove(tab1);
+
+        // selection should move to the next non-disabled tab - in this case tab2
+        assertEquals(tab2, tabPane.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_36456_selectionMovesForwardTwoSkippingDisabledTab() {
+        Tab tab0 = new Tab("Tab 0");
+        Tab tab1 = new Tab("Tab 1");
+        tab1.setDisable(true);
+        Tab tab2 = new Tab("Tab 2");
+
+        TabPane tabPane = new TabPane();
+        tabPane.getTabs().addAll(tab0, tab1, tab2);
+        tabPane.getSelectionModel().select(tab0);
+
+        StageLoader sl = new StageLoader(tabPane);
+
+        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+        assertEquals(tab0, selectedTab);
+        tabPane.getTabs().remove(tab0);
+
+        // selection should move to the next non-disabled tab - in this case tab2
+        selectedTab = tabPane.getSelectionModel().getSelectedItem();
+        assertEquals(tab2.getText() + " != " +  tab2.getText(), tab2, selectedTab);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_36908() {
+        TabPane pane = new TabPane();
+        final Tab disabled = new Tab("Disabled");
+        disabled.setDisable(true);
+
+        Tab tab1 = new Tab("Tab 1");
+        Tab tab2 = new Tab("Tab 2");
+        pane.getTabs().addAll(disabled, tab1, tab2);
+
+        assertEquals(1, pane.getSelectionModel().getSelectedIndex());
+        assertEquals(tab1, pane.getSelectionModel().getSelectedItem());
+    }
+
+    @Test public void test_rt_24658() {
+        Button btn = new Button("Button");
+        final Tab disabled = new Tab("Disabled");
+        disabled.setContent(btn);
+
+        TabPane pane = new TabPane();
+        pane.getTabs().addAll(disabled);
+
+        assertEquals(0, pane.getSelectionModel().getSelectedIndex());
+        assertEquals(disabled, pane.getSelectionModel().getSelectedItem());
+        assertFalse(btn.isDisabled());
+
+        disabled.setDisable(true);
+        assertTrue(btn.isDisabled());
+
+        disabled.setDisable(false);
+        assertFalse(btn.isDisabled());
+    }
 }

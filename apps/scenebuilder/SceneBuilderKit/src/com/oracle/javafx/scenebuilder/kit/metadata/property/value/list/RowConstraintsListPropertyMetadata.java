@@ -61,7 +61,7 @@ public class RowConstraintsListPropertyMetadata extends ListValuePropertyMetadat
     
     public void pack(FXOMInstance fxomInstance) {
         final RowConstraints def = new RowConstraints();
-        final List<RowConstraints> v = getValue(fxomInstance);
+        final List<RowConstraints> v = new ArrayList<>(getValue(fxomInstance));
         if (v.isEmpty() == false) {
             RowConstraints last = v.get(v.size()-1);
             while ((last != null) && RowConstraintsPropertyMetadata.equals(last, def)) {
@@ -77,7 +77,7 @@ public class RowConstraintsListPropertyMetadata extends ListValuePropertyMetadat
     }
     
     public void unpack(FXOMInstance fxomInstance, int rowCount) {
-        final List<RowConstraints> value = getValue(fxomInstance);
+        final List<RowConstraints> value = new ArrayList<>(getValue(fxomInstance));
         if (value.size() < rowCount) {
             final List<RowConstraints> newValue = new ArrayList<>();
             newValue.addAll(value);

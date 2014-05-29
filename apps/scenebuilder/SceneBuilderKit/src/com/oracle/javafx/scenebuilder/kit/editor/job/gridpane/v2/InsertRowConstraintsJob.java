@@ -39,6 +39,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.RowConstraintsListPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javafx.scene.layout.GridPane;
@@ -91,7 +92,8 @@ public class InsertRowConstraintsJob extends Job {
 
     @Override
     public void undo() {
-        final List<RowConstraints> constraintsList = rowContraintsMeta.getValue(gridPaneObject);
+        final List<RowConstraints> constraintsList 
+                = new ArrayList<>(rowContraintsMeta.getValue(gridPaneObject));
         assert rowIndex < constraintsList.size();
         for (int i = 0; i < insertCount; i++) {
             constraintsList.remove(rowIndex);
@@ -101,7 +103,8 @@ public class InsertRowConstraintsJob extends Job {
 
     @Override
     public void redo() {
-        final List<RowConstraints> constraintsList = rowContraintsMeta.getValue(gridPaneObject);
+        final List<RowConstraints> constraintsList 
+                = new ArrayList<>(rowContraintsMeta.getValue(gridPaneObject));
         final RowConstraints template;
         if (rowIndex >= 1) {
             template = constraintsList.get(rowIndex-1);

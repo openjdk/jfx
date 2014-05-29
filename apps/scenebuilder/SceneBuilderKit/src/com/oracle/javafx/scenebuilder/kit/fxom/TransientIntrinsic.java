@@ -51,16 +51,11 @@ class TransientIntrinsic extends TransientNode {
         this.glueElement = glueElement;
     }
 
-    public FXOMIntrinsic.Type getType() {
-        return type;
-    }
-
-    public GlueElement getGlueElement() {
-        return glueElement;
-    }
-    
     public FXOMIntrinsic makeFxomIntrinsic(FXOMDocument fxomDocument) {
-        return new FXOMIntrinsic(fxomDocument, glueElement, getSceneGraphObject());
+        final FXOMIntrinsic result
+                = new FXOMIntrinsic(fxomDocument, glueElement, getSceneGraphObject());
+        assert result.getType() == type;
+        return result;
     }
 
 }

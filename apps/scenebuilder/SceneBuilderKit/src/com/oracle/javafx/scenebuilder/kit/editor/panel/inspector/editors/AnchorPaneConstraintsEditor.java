@@ -31,10 +31,12 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -81,15 +83,17 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
     private final Parent root;
     private final ArrayList<ConstraintEditor> contraintEditors = new ArrayList<>();
     private final ChangeListener<Object> constraintListener;
+    private Set<FXOMInstance> selectedInstances;
 
     @SuppressWarnings("LeakingThisInConstructor")
     public AnchorPaneConstraintsEditor(String name, ValuePropertyMetadata topPropMeta,
             ValuePropertyMetadata rightPropMeta,
             ValuePropertyMetadata bottomPropMeta,
             ValuePropertyMetadata leftPropMeta,
-            Node sceneGraphNode) {
+            Set<FXOMInstance> selectedInstances) {
         super(name);
         root = EditorUtils.loadFxml("AnchorPaneConstraintsEditor.fxml", this);
+        this.selectedInstances = selectedInstances;
 
         constraintListener = new ChangeListener<Object>() {
 
@@ -100,22 +104,22 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
             }
         };
 
-        initialize(topPropMeta, rightPropMeta, bottomPropMeta, leftPropMeta, sceneGraphNode);
+        initialize(topPropMeta, rightPropMeta, bottomPropMeta, leftPropMeta);
         propertyChanged();
         styleRegions();
     }
 
     // Method to please findBugs
     private void initialize(ValuePropertyMetadata topPropMeta, ValuePropertyMetadata rightPropMeta,
-            ValuePropertyMetadata bottomPropMeta, ValuePropertyMetadata leftPropMeta, Node sceneGraphNode) {
+            ValuePropertyMetadata bottomPropMeta, ValuePropertyMetadata leftPropMeta) {
         contraintEditors.add(
-                new ConstraintEditor(topTf, topTb, sceneGraphNode, topPropMeta, constraintListener));
+                new ConstraintEditor(topTf, topTb, selectedInstances, topPropMeta, constraintListener));
         contraintEditors.add(
-                new ConstraintEditor(rightTf, rightTb, sceneGraphNode, rightPropMeta, constraintListener));
+                new ConstraintEditor(rightTf, rightTb, selectedInstances, rightPropMeta, constraintListener));
         contraintEditors.add(
-                new ConstraintEditor(bottomTf, bottomTb, sceneGraphNode, bottomPropMeta, constraintListener));
+                new ConstraintEditor(bottomTf, bottomTb, selectedInstances, bottomPropMeta, constraintListener));
         contraintEditors.add(
-                new ConstraintEditor(leftTf, leftTb, sceneGraphNode, leftPropMeta, constraintListener));
+                new ConstraintEditor(leftTf, leftTb, selectedInstances, leftPropMeta, constraintListener));
     }
 
     @Override
@@ -131,11 +135,12 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
             ValuePropertyMetadata rightPropMeta,
             ValuePropertyMetadata bottomPropMeta,
             ValuePropertyMetadata leftPropMeta,
-            Node sceneGraphNode) {
-        contraintEditors.get(0).reset(sceneGraphNode, topPropMeta);
-        contraintEditors.get(1).reset(sceneGraphNode, rightPropMeta);
-        contraintEditors.get(2).reset(sceneGraphNode, bottomPropMeta);
-        contraintEditors.get(3).reset(sceneGraphNode, leftPropMeta);
+            Set<FXOMInstance> selectedInstances) {
+        this.selectedInstances = selectedInstances;
+        contraintEditors.get(0).reset(selectedInstances, topPropMeta);
+        contraintEditors.get(1).reset(selectedInstances, rightPropMeta);
+        contraintEditors.get(2).reset(selectedInstances, bottomPropMeta);
+        contraintEditors.get(3).reset(selectedInstances, leftPropMeta);
         for (int ii = 0; ii < 4; ii++) {
             contraintEditors.get(ii).addValueListener(constraintListener);
         }
@@ -170,19 +175,19 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
 
         private ToggleButton toggleButton;
         private TextField textField;
-        private Node sceneGraphNode;
+        private Set<FXOMInstance> selectedInstances;
         private ValuePropertyMetadata propMeta;
 
         private boolean updateFromTextField = false;
 
         @SuppressWarnings("LeakingThisInConstructor")
-        public ConstraintEditor(TextField textField, ToggleButton toggleButton, Node sceneGraphNode,
+        public ConstraintEditor(TextField textField, ToggleButton toggleButton, Set<FXOMInstance> selectedInstances,
                 ValuePropertyMetadata propMeta, ChangeListener<Object> listener) {
             super(propMeta, null);
             super.addValueListener(listener);
             this.textField = textField;
             this.toggleButton = toggleButton;
-            this.sceneGraphNode = sceneGraphNode;
+            this.selectedInstances = selectedInstances;
             this.propMeta = propMeta;
 
             //
@@ -260,17 +265,19 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
                         double anchor = 0;
                         String propName = ConstraintEditor.this.propMeta.getName().toString();
                         switch (propName) {
+                            // For the moment, we don't support multi-selection with different anchors:
+                            // the first instance anchor only is used.
                             case topAnchorPropName:
-                                anchor = EditorUtils.computeTopAnchor(ConstraintEditor.this.sceneGraphNode);
+                                anchor = EditorUtils.computeTopAnchor(getFirstInstance());
                                 break;
                             case rightAnchorPropName:
-                                anchor = EditorUtils.computeRightAnchor(ConstraintEditor.this.sceneGraphNode);
+                                anchor = EditorUtils.computeRightAnchor(getFirstInstance());
                                 break;
                             case bottomAnchorPropName:
-                                anchor = EditorUtils.computeBottomAnchor(ConstraintEditor.this.sceneGraphNode);
+                                anchor = EditorUtils.computeBottomAnchor(getFirstInstance());
                                 break;
                             case leftAnchorPropName:
-                                anchor = EditorUtils.computeLeftAnchor(ConstraintEditor.this.sceneGraphNode);
+                                anchor = EditorUtils.computeLeftAnchor(getFirstInstance());
                                 break;
                             default:
                                 assert false;
@@ -322,9 +329,9 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
             }
         }
 
-        public void reset(Node sceneGraphNode, ValuePropertyMetadata propMeta) {
+        public void reset(Set<FXOMInstance> selectedInstances, ValuePropertyMetadata propMeta) {
             super.reset(propMeta, null);
-            this.sceneGraphNode = sceneGraphNode;
+            this.selectedInstances = selectedInstances;
             this.propMeta = propMeta;
             textField.setPromptText(null);
         }
@@ -347,6 +354,10 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
                     textField.requestFocus();
                 }
             });
+        }
+        
+        private FXOMInstance getFirstInstance() {
+            return (FXOMInstance) selectedInstances.toArray()[0];
         }
     }
 }

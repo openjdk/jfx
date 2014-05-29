@@ -70,6 +70,7 @@ import java.awt.print.PrinterException;
 import java.util.ArrayList;
 import java.util.Set;
 import com.sun.glass.ui.Application;
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.print.PrintHelper;
 import com.sun.javafx.print.PrinterImpl;
 import com.sun.javafx.print.PrinterJobImpl;
@@ -87,6 +88,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
     
     private JobSettings settings;
     private PrintRequestAttributeSet printReqAttrSet;
+    private volatile Object elo = null;
 
     public J2DPrinterJob(javafx.print.PrinterJob fxJob) {
 
@@ -102,7 +104,12 @@ public class J2DPrinterJob implements PrinterJobImpl {
         printReqAttrSet = new HashPrintRequestAttributeSet();
         // dialog selection is a JDK 1.7 attribute.
         // We expect to run on 1.8 and above so this should be fine.
-        printReqAttrSet.add(DialogTypeSelection.NATIVE);
+        // Don't use on Linux where it has no effect and runs into a JDK bug
+        if (!PlatformUtil.isLinux()) {
+            printReqAttrSet.add(DialogTypeSelection.NATIVE);
+        }
+        j2dPageable = new J2DPageable();
+        pJob2D.setPageable(j2dPageable);
     }
 
     public boolean showPrintDialog(Window owner) {
@@ -694,8 +701,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
         if (!jobRunning) {
             checkPermissions();
-            j2dPageable = new J2DPageable();
-            pJob2D.setPageable(j2dPageable);
             syncSettingsToAttributes();
             PrintJobRunnable runnable = new PrintJobRunnable();
             Thread prtThread = new Thread(runnable, "Print Job Thread");
@@ -728,6 +733,13 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 }
                 jobError = true;
                 jobDone = true;
+            }
+            /*
+             * If the job ends because its reached a page range limit
+             * rather than calling getPage() we need to exit the nested loop.
+             */
+            if (elo != null) {
+                Application.invokeLater(new ExitLoopRunnable(elo, null));
             }
         }
     }
@@ -885,7 +897,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
             if (elo != null && currPageInfo != null) {
                 Application.invokeLater(new ExitLoopRunnable(elo, null));
-            }
+	    }
 
             if (currPageInfo != null) {
                 if (Toolkit.getToolkit().isFxUserThread()) {
@@ -964,8 +976,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
             boolean nextPage = false;
             if (pageIndex > currPageIndex) {
                 nextPage = waitForNextPage(pageIndex);
-            } else if (pageIndex < currPageIndex) {
-                System.err.println("PAGE INDEX DECREASED");
             }
             return nextPage;
         }
@@ -1018,9 +1028,6 @@ public class J2DPrinterJob implements PrinterJobImpl {
             return Pageable.UNKNOWN_NUMBER_OF_PAGES;
         }
 
-
-        private volatile Object elo = null;
-
         /*
          * Executed on the application's thread.
          * Messages over to the printing thread.
@@ -1070,7 +1077,9 @@ public class J2DPrinterJob implements PrinterJobImpl {
                     return jobDone;
                 }
             } catch (IllegalStateException e) {
-                System.err.println("Internal Error " + e);
+                if (com.sun.prism.impl.PrismSettings.debug) {
+                    System.err.println("Internal Error " + e);
+                }
             }
         } else {
             return false;
@@ -1090,7 +1099,9 @@ public class J2DPrinterJob implements PrinterJobImpl {
                     monitor.notify();
                 }
             } catch (IllegalStateException e) {
-                System.err.println("Internal Error " + e);
+                if (com.sun.prism.impl.PrismSettings.debug) {
+                    System.err.println("Internal Error " + e);
+                }
             }
         }
     }

@@ -81,10 +81,8 @@ final class NativeMediaAudioClipPlayer
         private static final Thread schedulerThread;
 
         static {
-            schedulerThread = new Thread(new Runnable() {
-                public void run() {
-                    clipScheduler();
-                }
+            schedulerThread = new Thread(() -> {
+                clipScheduler();
             });
             schedulerThread.setDaemon(true);
             schedulerThread.start();

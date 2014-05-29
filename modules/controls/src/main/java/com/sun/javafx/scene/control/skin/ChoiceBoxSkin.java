@@ -27,14 +27,8 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.util.StringConverter;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
@@ -57,7 +51,7 @@ import javafx.collections.WeakListChangeListener;
 /**
  * ChoiceBoxSkin - default implementation
  */
-    public class ChoiceBoxSkin<T> extends BehaviorSkinBase<ChoiceBox<T>, ChoiceBoxBehavior<T>> {
+public class ChoiceBoxSkin<T> extends BehaviorSkinBase<ChoiceBox<T>, ChoiceBoxBehavior<T>> {
 
     public ChoiceBoxSkin(ChoiceBox<T> control) {
         super(control, new ChoiceBoxBehavior<T>(control));
@@ -131,18 +125,14 @@ import javafx.collections.WeakListChangeListener;
         // When popup is hidden by autohide - the ChoiceBox Showing property needs
         // to be updated. So we listen to when autohide happens. Calling hide()
         // there after causes Showing to be set to false
-        popup.setOnAutoHide(new EventHandler<Event>() {
-            @Override public void handle(Event event) {
-                getSkinnable().hide();
-            }
+        popup.setOnAutoHide(event -> {
+            getSkinnable().hide();
         });
         // fix RT-14469 : When tab shifts ChoiceBox focus to another control,
         // its popup should hide.
-        getSkinnable().focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                if (!newValue) {
-                    getSkinnable().hide();
-                }
+        getSkinnable().focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                getSkinnable().hide();
             }
         });
         // This is used as a way of accessing the context menu within the ChoiceBox.
@@ -263,13 +253,11 @@ import javafx.collections.WeakListChangeListener;
             final RadioMenuItem item = new RadioMenuItem(displayString);
             item.setId("choice-box-menu-item");
             item.setToggleGroup(toggleGroup);
-            item.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent e) {
-                    if (selectionModel == null) return;
-                    int index = getSkinnable().getItems().indexOf(o);
-                    selectionModel.select(index);
-                    item.setSelected(true);
-                }
+            item.setOnAction(e -> {
+                if (selectionModel == null) return;
+                int index = getSkinnable().getItems().indexOf(o);
+                selectionModel.select(index);
+                item.setSelected(true);
             });
             popupItem = item;
         }
@@ -298,10 +286,8 @@ import javafx.collections.WeakListChangeListener;
         }
     }
 
-    private InvalidationListener selectionChangeListener = new InvalidationListener() {
-        @Override public void invalidated(Observable observable) {
-            updateSelection();
-        }
+    private InvalidationListener selectionChangeListener = observable -> {
+        updateSelection();
     };
 
     private void updateSelection() {

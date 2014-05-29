@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,9 +30,9 @@ import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.event.EventHandler;
-import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
+import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
@@ -130,21 +130,17 @@ public class BehaviorBase<C extends Control> {
     /**
      * Listens to any key events on the Control and responds to them
      */
-    private final EventHandler<KeyEvent> keyEventListener = new EventHandler<KeyEvent>() {
-        @Override public void handle(KeyEvent e) {
-            if (!e.isConsumed()) {
-                callActionForEvent(e);
-            }
+    private final EventHandler<KeyEvent> keyEventListener = e -> {
+        if (!e.isConsumed()) {
+            callActionForEvent(e);
         }
     };
 
     /**
      * Listens to any focus events on the Control and calls protected methods as a result
      */
-    private final InvalidationListener focusListener = new InvalidationListener() {
-        @Override public void invalidated(Observable property) {
-            focusChanged();
-        }
+    private final InvalidationListener focusListener = property -> {
+        focusChanged();
     };
 
     /**
@@ -159,7 +155,7 @@ public class BehaviorBase<C extends Control> {
         // Don't need to explicitly check for null because Collections.unmodifiableList
         // will die on null, as will the adding of listeners
         this.control = control;
-        this.keyBindings = keyBindings == null ? Collections.EMPTY_LIST
+        this.keyBindings = keyBindings == null ? Collections.emptyList()
                 : Collections.unmodifiableList(new ArrayList<>(keyBindings));
         control.addEventHandler(KeyEvent.ANY, keyEventListener);
         control.focusedProperty().addListener(focusListener);
@@ -247,21 +243,6 @@ public class BehaviorBase<C extends Control> {
         String action = null;
         if (match != null) {
             action = match.getAction();
-            // Rather than switching the result of the action lookup in this way, the preferred
-            // way to do this according to the current architecture would be to hoist the
-            // getEffectiveNodeOrientation call up into the key bindings, the same way that
-            // list-view orientation (horizontal vs. vertical) is handled in a key binding.
-            if (e.getCode() == LEFT || e.getCode() == RIGHT) {
-                if (control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-                    if (match.getAction().equals("TraverseLeft")) {
-                        action = "TraverseRight";
-                    } else {
-                        if (match.getAction().equals("TraverseRight")) {
-                            action = "TraverseLeft";
-                        }
-                    }
-                }
-            }
         }
         return action;
     }
@@ -415,4 +396,13 @@ public class BehaviorBase<C extends Control> {
      * @param e the mouse event
      */
     public void mouseExited(MouseEvent e) { }
+
+    /**
+     * Invoked by a Skin when the control has had its context menu requested,
+     * most commonly by right-clicking on the control. Subclasses should be sure
+     * to call super unless they intend to disable any built-in support.
+     *
+     * @param e the context menu event
+     */
+    public void contextMenuRequested(ContextMenuEvent e) { }
 }

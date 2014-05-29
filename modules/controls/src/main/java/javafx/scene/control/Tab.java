@@ -25,6 +25,8 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.beans.IDProperty;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.collections.ObservableSet;
 import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
@@ -54,7 +56,6 @@ import java.util.List;
 
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -72,6 +73,7 @@ import javafx.collections.ObservableMap;
  * @since JavaFX 2.0
  */
 @DefaultProperty("content")
+@IDProperty("id")
 public class Tab implements EventTarget, Styleable {
 
     /***************************************************************************
@@ -250,10 +252,8 @@ public class Tab implements EventTarget, Styleable {
         return tabPane;
     }
 
-    private final InvalidationListener parentDisabledChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateDisabled();
-        }
+    private final InvalidationListener parentDisabledChangedListener = valueModel -> {
+        updateDisabled();
     };
     
     private StringProperty text;
@@ -373,7 +373,27 @@ public class Tab implements EventTarget, Styleable {
      */
     public final ObjectProperty<ContextMenu> contextMenuProperty() {
         if (contextMenu == null) {
-            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu");
+            contextMenu = new SimpleObjectProperty<ContextMenu>(this, "contextMenu") {
+                private WeakReference<ContextMenu> contextMenuRef;
+
+                @Override protected void invalidated() {
+                    ContextMenu oldMenu = contextMenuRef == null ? null : contextMenuRef.get();
+                    if (oldMenu != null) {
+                        ControlAcceleratorSupport.removeAcceleratorsFromScene(oldMenu.getItems(), Tab.this);
+                    }
+
+                    ContextMenu ctx = get();
+                    contextMenuRef = new WeakReference<>(ctx);
+
+                    if (ctx != null) {
+                        // if a context menu is set, we need to install any accelerators
+                        // belonging to its menu items ASAP into the scene that this
+                        // Control is in (if the control is not in a Scene, we will need
+                        // to wait until it is and then do it).
+                        ControlAcceleratorSupport.addAcceleratorsIntoScene(ctx.getItems(), Tab.this);
+                    }
+                }
+            };
         }
         return contextMenu;
     }
@@ -625,7 +645,14 @@ public class Tab implements EventTarget, Styleable {
     }
     
     private void updateDisabled() {
-        setDisabled(isDisable() || (getTabPane() != null && getTabPane().isDisabled()));
+        boolean disabled = isDisable() || (getTabPane() != null && getTabPane().isDisabled());
+        setDisabled(disabled);
+
+        // Fix for RT-24658 - content should be disabled if the tab is disabled
+        Node content = getContent();
+        if (content != null) {
+            content.setDisable(disabled);
+        }
     }
     
      /**
@@ -765,6 +792,37 @@ public class Tab implements EventTarget, Styleable {
         eventHandlerManager.setEventHandler(eventType, eventHandler);
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Tab tab = (Tab) o;
+
+        if (content != null ? !content.equals(tab.content) : tab.content != null)
+            return false;
+        if (graphic != null ? !graphic.equals(tab.graphic) : tab.graphic != null)
+            return false;
+        if (selected != null ? !selected.equals(tab.selected) : tab.selected != null)
+            return false;
+        if (tabPane != null ? !tabPane.equals(tab.tabPane) : tab.tabPane != null)
+            return false;
+        if (text != null ? !text.equals(tab.text) : tab.text != null)
+            return false;
+
+        return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        int result = selected != null ? selected.hashCode() : 0;
+        result = 31 * result + (tabPane != null ? tabPane.hashCode() : 0);
+        result = 31 * result + (text != null ? text.hashCode() : 0);
+        result = 31 * result + (graphic != null ? graphic.hashCode() : 0);
+        result = 31 * result + (content != null ? content.hashCode() : 0);
+        return result;
+    }
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -817,6 +875,5 @@ public class Tab implements EventTarget, Styleable {
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return Collections.emptyList();
-    }                
-    
+    }
 }

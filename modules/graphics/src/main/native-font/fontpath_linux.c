@@ -188,14 +188,21 @@ Java_com_sun_javafx_font_FontConfigManager_getFontConfig
     // Deleting local refs as we go along so this should be plenty
     // Unlikely to matter even if it fails.
     (*env)->EnsureLocalCapacity(env, 64);
-
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     fcCompFontClass =
         (*env)->FindClass(env,
                        "com/sun/javafx/font/FontConfigManager$FcCompFont");
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     fcFontClass =
          (*env)->FindClass(env,
                        "com/sun/javafx/font/FontConfigManager$FontConfigFont");
-
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     if (fcCompFontArray == NULL ||
         fcCompFontClass == NULL ||
         fcFontClass == NULL)
@@ -205,25 +212,45 @@ Java_com_sun_javafx_font_FontConfigManager_getFontConfig
 
     fcNameFID = (*env)->GetFieldID(env, fcCompFontClass,
                                    "fcName", "Ljava/lang/String;");
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     fcFirstFontFID =
         (*env)->GetFieldID(env, fcCompFontClass, "firstFont",
                   "Lcom/sun/javafx/font/FontConfigManager$FontConfigFont;");
-
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     fcAllFontsFID =
         (*env)->GetFieldID(env, fcCompFontClass, "allFonts",
                   "[Lcom/sun/javafx/font/FontConfigManager$FontConfigFont;");
-
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     fcFontCons = (*env)->GetMethodID(env, fcFontClass, "<init>", "()V");
-
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     familyNameFID = (*env)->GetFieldID(env, fcFontClass,
-                                       "familyName", "Ljava/lang/String;");
+                                      "familyName", "Ljava/lang/String;");
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     styleNameFID = (*env)->GetFieldID(env, fcFontClass,
                                       "styleStr", "Ljava/lang/String;");
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     fullNameFID = (*env)->GetFieldID(env, fcFontClass,
                                      "fullName", "Ljava/lang/String;");
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     fontFileFID = (*env)->GetFieldID(env, fcFontClass,
                                      "fontFile", "Ljava/lang/String;");
-
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     if (fcNameFID == NULL ||
         fcFirstFontFID == NULL ||
         fcAllFontsFID == NULL ||
@@ -292,6 +319,9 @@ Java_com_sun_javafx_font_FontConfigManager_getFontConfig
         jobject fcCompFontObj;
 
         fcCompFontObj = (*env)->GetObjectArrayElement(env, fcCompFontArray, i);
+        if ((*env)->ExceptionOccurred(env)) {
+            return JNI_FALSE;
+        }
         fcNameStr =
             (jstring)((*env)->GetObjectField(env, fcCompFontObj, fcNameFID));
         fcName = (*env)->GetStringUTFChars(env, fcNameStr, 0);
@@ -555,50 +585,53 @@ Java_com_sun_javafx_font_FontConfigManager_populateMapsNative
     // Deleting local refs as we go along so this should be plenty
     // Unlikely to matter even if it fails.
     (*env)->EnsureLocalCapacity(env, 64);
+    if ((*env)->ExceptionOccurred(env)) {
+        return JNI_FALSE;
+    }
     classID = (*env)->FindClass(env, "java/util/HashMap");
-    if (classID == NULL) {
+    if ((*env)->ExceptionOccurred(env) || classID == NULL) {
         return JNI_FALSE;
     }
     getMID = (*env)->GetMethodID(env, classID, "get",
                  "(Ljava/lang/Object;)Ljava/lang/Object;");
-    if (getMID == NULL) {
+    if ((*env)->ExceptionOccurred(env) || getMID == NULL) {
         return JNI_FALSE;
     }
     putMID = (*env)->GetMethodID(env, classID, "put",
                  "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
-    if (putMID == NULL) {
+    if ((*env)->ExceptionOccurred(env) || putMID == NULL) {
         return JNI_FALSE;
     }
 
     containsKeyMID = (*env)->GetMethodID(env, classID, "containsKey",
                                              "(Ljava/lang/Object;)Z");
-    if (containsKeyMID == NULL) {
+    if ((*env)->ExceptionOccurred(env) || containsKeyMID == NULL) {
         return JNI_FALSE;
     }
 
     arrayListClass = (*env)->FindClass(env, "java/util/ArrayList");
-    if (arrayListClass == NULL) {
+    if ((*env)->ExceptionOccurred(env) || arrayListClass == NULL) {
         return JNI_FALSE;
     }
     arrayListCtr = (*env)->GetMethodID(env, arrayListClass,
                                               "<init>", "(I)V");
-    if (arrayListCtr == NULL) {
+    if ((*env)->ExceptionOccurred(env) || arrayListCtr == NULL) {
         return JNI_FALSE;
     }
     addMID = (*env)->GetMethodID(env, arrayListClass,
                                  "add", "(Ljava/lang/Object;)Z");
-    if (addMID == NULL) {
+    if ((*env)->ExceptionOccurred(env) || addMID == NULL) {
         return JNI_FALSE;
     }
 
     classID = (*env)->FindClass(env, "java/lang/String");
-    if (classID == NULL) {
+    if ((*env)->ExceptionOccurred(env) || classID == NULL) {
         return JNI_FALSE;
     }
     toLowerCaseMID =
         (*env)->GetMethodID(env, classID, "toLowerCase",
                             "(Ljava/util/Locale;)Ljava/lang/String;");
-    if (toLowerCaseMID == NULL) {
+    if ((*env)->ExceptionOccurred(env) || toLowerCaseMID == NULL) {
         return JNI_FALSE;
     }
     pattern = (*FcPatternBuild)(NULL, FC_OUTLINE, FcTypeBool, FcTrue, NULL);

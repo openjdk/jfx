@@ -130,6 +130,10 @@ public class PrefixedValue {
         return type == Type.EXPRESSION;
     }
     
+    public boolean isBindingExpression() {
+        return isExpression() && getSuffix().startsWith("{"); //NOI18N
+    }
+    
     public boolean isPlainString() {
         return type == Type.PLAIN_STRING;
     }

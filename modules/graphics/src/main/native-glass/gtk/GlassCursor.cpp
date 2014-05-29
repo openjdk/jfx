@@ -202,11 +202,15 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCursor__1getBestSize
 {
     int size = gdk_display_get_default_cursor_size(gdk_display_get_default());
 
-    return env->NewObject(
-            env->FindClass("com/sun/glass/ui/Size"),
+    jclass jc = env->FindClass("com/sun/glass/ui/Size");
+    if (env->ExceptionCheck()) return NULL;
+    jobject jo =  env->NewObject(
+            jc,
             jSizeInit,
             size,
             size);
+    EXCEPTION_OCCURED(env);
+    return jo;
 }
 
 } // extern "C"

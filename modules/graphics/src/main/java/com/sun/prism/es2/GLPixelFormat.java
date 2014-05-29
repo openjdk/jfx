@@ -40,13 +40,10 @@ class GLPixelFormat {
     private static int defaultBufferSize;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-
-            public Void run() {
-               defaultDepthSize = Integer.getInteger("prism.glDepthSize", 24);
-               defaultBufferSize = Integer.getInteger("prism.glBufferSize", 32);
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+           defaultDepthSize = Integer.getInteger("prism.glDepthSize", 24);
+           defaultBufferSize = Integer.getInteger("prism.glBufferSize", 32);
+            return null;
         });
     }
 

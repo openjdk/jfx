@@ -30,20 +30,20 @@ import java.util.List;
 /**
  * Expression representing a literal value.
  */
-public class LiteralExpression extends Expression {
-    private Object value;
+public class LiteralExpression<T> extends Expression<T> {
+    private T value;
 
-    public LiteralExpression(Object value) {
+    public LiteralExpression(T value) {
         this.value = value;
     }
 
     @Override
-    public Object evaluate(Object namespace) {
+    public T evaluate(Object namespace) {
         return value;
     }
 
     @Override
-    public void update(Object namespace, Object value) {
+    public void update(Object namespace, T value) {
         throw new UnsupportedOperationException();
     }
 

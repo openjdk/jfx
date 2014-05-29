@@ -72,8 +72,7 @@ public class EditorPlatform {
     /**
      * Javadoc home (for Inspector and CSS Analyzer properties)
      */
-    // Should be set to docs.oracle.com when available (see DTL-6412)
-    public final static String JAVADOC_HOME = "http://download.java.net/jdk8/jfxdocs/"; //NOI18N
+    public final static String JAVADOC_HOME = "http://docs.oracle.com/javase/8/javafx/api/"; //NOI18N
     
 
     /**
@@ -326,7 +325,7 @@ public class EditorPlatform {
      * @return true if the modifier key for non-continuous selection is down.
      */
     public static boolean isNonContinousSelectKeyDown(MouseEvent e) {
-        return IS_WINDOWS ? e.isControlDown() : e.isMetaDown();
+        return IS_MAC ? e.isMetaDown(): e.isControlDown();
     }
 
     /**
@@ -334,11 +333,8 @@ public class EditorPlatform {
      *
      * @return true if the jvm is running with assertions enabled.
      */
-    @SuppressWarnings("AssertWithSideEffects")
     public static boolean isAssertionEnabled() {
-        boolean result = false;
-        assert result = true;
-        return result;
+        return EditorPlatform.class.desiredAssertionStatus();
     }
 
     /*

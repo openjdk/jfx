@@ -191,6 +191,13 @@ LensResult lens_wm_setMouseWindow(NativeWindow window);
  */
 void lens_wm_repaint(JNIEnv *env, NativeWindow window);
 
+/**
+ * Repaint all windows
+ *
+ * @param env env
+ */
+void lens_wm_repaint_all(JNIEnv *env);
+
 /// platform specific calls
 void lens_platform_shutdown(JNIEnv *env);
 
