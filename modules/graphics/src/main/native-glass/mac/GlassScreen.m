@@ -69,18 +69,20 @@ jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
         if (size.height == 0) size.height = rect.size.height * MM_PER_INCH / 72.f;
         NSSize resolution = {rect.size.width / (size.width / MM_PER_INCH), rect.size.height / (size.height / MM_PER_INCH)};
 
+        NSRect primaryFrame = [[[NSScreen screens] objectAtIndex:0] frame];
+
         jscreen = (jobject)(*env)->NewObject(env, jScreenClass, screenInit,
                                              ptr_to_jlong(screen),
 
                                              (jint)NSBitsPerPixelFromDepth([screen depth]),
 
                                              (jint)[screen frame].origin.x,
-                                             (jint)[screen frame].origin.y,
+                                             (jint)(primaryFrame.size.height - [screen frame].size.height - [screen frame].origin.y),
                                              (jint)[screen frame].size.width,
                                              (jint)[screen frame].size.height,
 
                                              (jint)[screen visibleFrame].origin.x,
-                                             (jint)([screen frame].size.height - [screen visibleFrame].size.height - [screen visibleFrame].origin.y),
+                                             (jint)(primaryFrame.size.height - [screen visibleFrame].size.height - [screen visibleFrame].origin.y),
                                              (jint)[screen visibleFrame].size.width,
                                              (jint)[screen visibleFrame].size.height,
 
