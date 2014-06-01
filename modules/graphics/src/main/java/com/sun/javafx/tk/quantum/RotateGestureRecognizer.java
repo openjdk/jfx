@@ -33,25 +33,45 @@ import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import javafx.util.Duration;
 import javafx.event.EventType;
 import javafx.scene.input.RotateEvent;
+import javafx.animation.Animation;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 
 class RotateGestureRecognizer implements GestureRecognizer {
     private ViewScene scene;
 
     // gesture will be activated if |rotation| > ROTATATION_THRESHOLD
     private static double ROTATATION_THRESHOLD = 5; //in degrees
+    private static boolean ROTATION_INERTIA_ENABLED = true;
+    private static double MAX_INITIAL_VELOCITY = 500;
+    private static double ROTATION_INERTIA_MILLIS = 1500;
     static {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.rotate.threshold");
             if (s != null) {
                 ROTATATION_THRESHOLD = Double.valueOf(s);
             }
+            s = System.getProperty("com.sun.javafx.gestures.rotate.inertia");
+            if (s != null) {
+                ROTATION_INERTIA_ENABLED = Boolean.valueOf(s);
+            }
             return null;
         });
-    }    
+    }
 
     private RotateRecognitionState state = RotateRecognitionState.IDLE;
+    private Timeline inertiaTimeline = new Timeline();
+    private DoubleProperty inertiaRotationVelocity = new SimpleDoubleProperty();
+    private double initialInertiaRotationVelocity = 0;
+    private double rotationStartTime = 0;
+    private double lastTouchEventTime = 0;
 
     // from MultiTouchTracker
     Map<Long, TouchPointTracker> trackers =
@@ -63,6 +83,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
     //private int touchCount;
     private int currentTouchCount = 0;
     private boolean touchPointsSetChanged;
+    private boolean touchPointsPressed;
     int touchPointsInEvent;
     long touchPointID1 = -1;
     long touchPointID2 = -1;
@@ -72,9 +93,19 @@ class RotateGestureRecognizer implements GestureRecognizer {
     double currentRotation;
     double angleReference;
     double totalRotation = 0;
+    double inertiaLastTime = 0;
     
     RotateGestureRecognizer(final ViewScene scene) {
         this.scene = scene;
+        inertiaRotationVelocity.addListener(valueModel -> {
+            double currentTime = inertiaTimeline.getCurrentTime().toSeconds();
+            double timePassed = currentTime - inertiaLastTime;
+            inertiaLastTime = currentTime;
+            currentRotation = timePassed * inertiaRotationVelocity.get();
+            totalRotation += currentRotation;
+            //send inertia rotate event
+            sendRotateEvent(true);
+        });
     }
 
     @Override
@@ -82,6 +113,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
             int touchEventCount) {
         params(modifiers, isDirect);
         touchPointsSetChanged = false;
+        touchPointsPressed = false;
         touchPointsInEvent = 0;
     }
 
@@ -92,6 +124,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
         switch(type) {
             case TouchEvent.TOUCH_PRESSED:
                 touchPointsSetChanged = true;
+                touchPointsPressed = true;
                 touchPressed(touchId, time, x, y, xAbs, yAbs);
                 break;
             case TouchEvent.TOUCH_STILL:
@@ -183,51 +216,102 @@ class RotateGestureRecognizer implements GestureRecognizer {
             }
         }
     }
-    
+
     @Override
     public void notifyEndTouchEvent(long time) {
+        lastTouchEventTime = time;
         if (currentTouchCount != trackers.size()) {
             throw new RuntimeException("Error in Rotate gesture recognition: "
                     + "touch count is wrong: " + currentTouchCount);
         }
 
-        if (currentTouchCount < 2) {
+        if (currentTouchCount == 0) {
             if (state == RotateRecognitionState.ACTIVE) {
                 sendRotateFinishedEvent();
             }
-            reset();
+            if (ROTATION_INERTIA_ENABLED && (state == RotateRecognitionState.PRE_INERTIA || state == RotateRecognitionState.ACTIVE)) {
+                double timeFromLastRotation = ((double)time - rotationStartTime) / 1000000;
+                if (timeFromLastRotation < 300) {
+                    state = RotateRecognitionState.INERTIA;
+                    // activate inertia
+                    inertiaLastTime = 0;
+                    if (initialInertiaRotationVelocity > MAX_INITIAL_VELOCITY) 
+                        initialInertiaRotationVelocity = MAX_INITIAL_VELOCITY;
+                    else if (initialInertiaRotationVelocity < -MAX_INITIAL_VELOCITY)
+                        initialInertiaRotationVelocity = -MAX_INITIAL_VELOCITY;
+                        
+                    inertiaTimeline.getKeyFrames().setAll(
+                        new KeyFrame(
+                            Duration.millis(0),
+                            new KeyValue(inertiaRotationVelocity, initialInertiaRotationVelocity, Interpolator.LINEAR)),
+                        new KeyFrame(
+                            Duration.millis(ROTATION_INERTIA_MILLIS * Math.abs(initialInertiaRotationVelocity) / MAX_INITIAL_VELOCITY),
+                            event -> {
+                                //stop inertia
+                                reset();
+                            },
+                            new KeyValue(inertiaRotationVelocity, 0, Interpolator.LINEAR))
+                        );
+                    inertiaTimeline.playFromStart();
+                } else {
+                    reset();
+                }
+            }
         } else {
-            // currentTouchCount >= 2
-            if (state == RotateRecognitionState.IDLE) {
-                state = RotateRecognitionState.TRACKING;
-                assignActiveTouchpoints();
+            // currentTouchCount >= 1
+            if (touchPointsPressed && state == RotateRecognitionState.INERTIA) {
+                //Stop inertia
+                inertiaTimeline.stop();
+                reset();
             }
-            
-            calculateCenter();
-
-            if (touchPointsSetChanged) {
-                assignActiveTouchpoints();
-            }
-            TouchPointTracker tp1 = trackers.get(touchPointID1);
-            TouchPointTracker tp2 = trackers.get(touchPointID2);
-            double newAngle = getAngle(tp1, tp2);
-                
-            if (touchPointsSetChanged) {
-                //No rotate event, just update the current angle. Keep total rotation
-                angleReference = newAngle;
-            } else {
-                currentRotation = getNormalizedDelta(angleReference, newAngle);
-                if (state == RotateRecognitionState.TRACKING) {
-                    if (Math.abs(currentRotation) > ROTATATION_THRESHOLD) {
-                        state = RotateRecognitionState.ACTIVE;
-                        sendRotateStartedEvent();
+            if (currentTouchCount == 1) {
+                if (state == RotateRecognitionState.ACTIVE) {
+                    sendRotateFinishedEvent();
+                    if (ROTATION_INERTIA_ENABLED) {
+                        //prepare for inertia
+                        state = RotateRecognitionState.PRE_INERTIA;
+                    } else {
+                        reset();
                     }
                 }
+            } else {
+                // currentTouchCount >= 2
+                if (state == RotateRecognitionState.IDLE) {
+                    state = RotateRecognitionState.TRACKING;
+                    assignActiveTouchpoints();
+                }
                 
-                if (state == RotateRecognitionState.ACTIVE) {
-                    totalRotation += currentRotation;
-                    sendRotateEvent();
+                calculateCenter();
+
+                if (touchPointsSetChanged) {
+                    assignActiveTouchpoints();
+                }
+                TouchPointTracker tp1 = trackers.get(touchPointID1);
+                TouchPointTracker tp2 = trackers.get(touchPointID2);
+                double newAngle = getAngle(tp1, tp2);
+                    
+                if (touchPointsSetChanged) {
+                    //No rotate event, just update the current angle. Keep total rotation
                     angleReference = newAngle;
+                } else {
+                    currentRotation = getNormalizedDelta(angleReference, newAngle);
+                    if (state == RotateRecognitionState.TRACKING) {
+                        if (Math.abs(currentRotation) > ROTATATION_THRESHOLD) {
+                            state = RotateRecognitionState.ACTIVE;
+                            sendRotateStartedEvent();
+                        }
+                    }
+                    
+                    if (state == RotateRecognitionState.ACTIVE) {
+                        totalRotation += currentRotation;
+                        sendRotateEvent(false);
+                        angleReference = newAngle;
+                        double timePassed = ((double)time - rotationStartTime) / 1000000000;
+                        if (timePassed > 1e-4) {
+                            initialInertiaRotationVelocity = currentRotation / timePassed;
+                            rotationStartTime = time;
+                        }
+                    }
                 }
             }
         }
@@ -251,7 +335,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    private void sendRotateEvent() {
+    private void sendRotateEvent(boolean isInertia) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.rotateEvent(RotateEvent.ROTATE,
@@ -262,7 +346,7 @@ class RotateGestureRecognizer implements GestureRecognizer {
                     (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                     (modifiers & KeyEvent.MODIFIER_ALT) != 0,
                     (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                    direct, false /*inertia*/);
+                    direct, isInertia);
             }
             return null;
         }, scene.getAccessControlContext());
@@ -364,9 +448,11 @@ class RotateGestureRecognizer implements GestureRecognizer {
     }
 
     private enum RotateRecognitionState {
-        IDLE,       // <2 touch points available
-        TRACKING,   // 2+ touch points, angle is tracked
-        ACTIVE,     // threshold accepted, gesture is started
+        IDLE,           // <2 touch points available
+        TRACKING,       // 2+ touch points, angle is tracked
+        ACTIVE,         // threshold accepted, gesture is started
+        PRE_INERTIA,    // prepare for inertia
+        INERTIA,        // inertia is active
         FAILURE
     }
 }
