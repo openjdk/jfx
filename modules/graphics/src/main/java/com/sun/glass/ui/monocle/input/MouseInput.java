@@ -34,6 +34,7 @@ import com.sun.glass.ui.monocle.MonocleSettings;
 import com.sun.glass.ui.monocle.MonocleTrace;
 import com.sun.glass.ui.monocle.MonocleView;
 import com.sun.glass.ui.monocle.MonocleWindow;
+import com.sun.glass.ui.monocle.MonocleWindowManager;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.RunnableProcessor;
@@ -90,22 +91,30 @@ public class MouseInput {
         MonocleView view = (window == null) ? null : (MonocleView) window.getView();
         // send exit event
         if (oldWindow != window && oldWindow != null) {
-            MonocleView oldView = (MonocleView) oldWindow.getView();
-            if (oldView != null) {
-                // send exit event
-                int modifiers = state.getModifiers(); // TODO: include key modifiers
-                int button = state.getButton();
-                boolean isPopupTrigger = false; // TODO
-                int oldX = state.getX();
-                int oldY = state.getY();
-                int oldRelX = oldX - oldWindow.getX();
-                int oldRelY = oldY - oldWindow.getY();
-                try {
-                    postMouseEvent(oldView, MouseEvent.EXIT, button,
-                                   oldRelX, oldRelY, oldX, oldY,
-                                   modifiers, isPopupTrigger, synthesized);
-                } catch (RuntimeException e) {
-                    Application.reportException(e);
+            if (!oldWindow.isEnabled()) {
+                //send focus disabled event
+                RunnableProcessor.runLater(() -> {
+                    MonocleWindowManager.getInstance().notifyFocusDisabled(oldWindow);
+                });
+
+            } else {
+                MonocleView oldView = (MonocleView) oldWindow.getView();
+                if (oldView != null) {
+                    // send exit event
+                    int modifiers = state.getModifiers(); // TODO: include key modifiers
+                    int button = state.getButton();
+                    boolean isPopupTrigger = false; // TODO
+                    int oldX = state.getX();
+                    int oldY = state.getY();
+                    int oldRelX = oldX - oldWindow.getX();
+                    int oldRelY = oldY - oldWindow.getY();
+                    try {
+                        postMouseEvent(oldView, MouseEvent.EXIT, button,
+                                       oldRelX, oldRelY, oldX, oldY,
+                                       modifiers, isPopupTrigger, synthesized);
+                    } catch (RuntimeException e) {
+                        Application.reportException(e);
+                    }
                 }
             }
         }
@@ -118,6 +127,16 @@ public class MouseInput {
             newState.copyTo(state);
             return;
         }
+
+        if (window != null && !window.isEnabled()) {
+            newState.copyTo(state);
+            //send focus disabled event
+            RunnableProcessor.runLater(() -> {
+                MonocleWindowManager.getInstance().notifyFocusDisabled(window);
+            });
+            return;
+        }
+
         int relX = x - window.getX();
         int relY = y - window.getY();
         // send enter event
@@ -140,6 +159,7 @@ public class MouseInput {
                            relX, relY, x, y,
                            modifiers, isPopupTrigger, synthesized);
         }
+
         // send press events
         newState.getButtonsPressed().difference(buttons, state.getButtonsPressed());
         if (!buttons.isEmpty()) {
