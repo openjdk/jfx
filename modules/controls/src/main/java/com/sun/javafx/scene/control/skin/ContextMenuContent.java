@@ -889,8 +889,11 @@ public class ContextMenuContent extends Region {
 
         // translation should never be greater than the preferred height of the
         // menu content (otherwise the menu content will be detaching from the
-        // bottom of the menu)
-        if (getHeight() - newTy > itemsContainer.getHeight()) {
+        // bottom of the menu).
+        // RT-37185: We check the direction of the scroll, to prevent it locking
+        // up when scrolling upwards from the very bottom (using the on-screen
+        // up arrow).
+        if (delta < 0 && (getHeight() - newTy) > itemsContainer.getHeight() - downArrow.getHeight()) {
             newTy = getHeight() - itemsContainer.getHeight() - downArrow.getHeight();
         }
 
