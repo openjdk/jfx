@@ -737,7 +737,6 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             leftArrowButton = new Button() {
                 @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
                     switch (attribute) {
-                        case ROLE: return Role.BUTTON;
                         case TITLE: return getString("Accessibility.title.Pagination.PreviousButton");
                         default: return super.accGetAttribute(attribute, parameters);
                     }
@@ -766,7 +765,6 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             rightArrowButton = new Button() {
                 @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
                     switch (attribute) {
-                        case ROLE: return Role.BUTTON;
                         case TITLE: return getString("Accessibility.title.Pagination.NextButton");
                         default: return super.accGetAttribute(attribute, parameters);
                     }
