@@ -26,6 +26,7 @@
 #include "Monocle.h"
 
 #include <fcntl.h>
+#include <dlfcn.h>
 
 #ifdef USE_DISPMAN
 //Broadcom specials
