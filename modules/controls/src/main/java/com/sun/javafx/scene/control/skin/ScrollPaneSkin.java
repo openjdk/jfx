@@ -767,6 +767,9 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         hsb.setMin(control.getHmin());
         hsb.setMax(control.getHmax());
 
+        contentWidth = w;
+        contentHeight = h;
+
         /*
         ** we want the scrollbars to go right to the border
         */
@@ -775,9 +778,6 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
 
         computeScrollNodeSize(contentWidth, contentHeight);
         computeScrollBarSize();
-
-        contentWidth = w;
-        contentHeight = h;
 
         for (int i = 0; i < 2; ++i) {
             vsbvis = determineVerticalSBVisible();
