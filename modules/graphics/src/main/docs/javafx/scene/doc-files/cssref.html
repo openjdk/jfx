@@ -1062,6 +1062,11 @@
         class="typelink">&lt;percentage&gt;</a>
       ] [ [ repeat | reflect ], ]? <a href="#typecolorstop" class="typelink">&lt;color-stop&gt;</a>[,
       <a href="#typecolorstop" class="typelink">&lt;color-stop&gt;</a>]+) </p>
+    <p>Radial gradient creates a gradient going though all the stop colors radiating outward from
+        the <a href="#typepoint" class="typelink">center point</a>
+        to the <a href="#typelength" class="typelink">radius</a>. If the center point is not given,
+        the center defaults to (0,0). Percentage values are relative to the size of the area
+        being filled. Percentage and length sizes can not be mixed in a single gradient function.</p>
     <p> If neither repeat nor reflect are given, then the CycleMethod defaults
       "NO_CYCLE".<br>
       Stops are per <a href="http://dev.w3.org/csswg/css3-images/#color-stop-syntax."
