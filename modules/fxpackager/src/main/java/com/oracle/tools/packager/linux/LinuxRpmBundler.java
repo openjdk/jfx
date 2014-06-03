@@ -366,7 +366,7 @@ public class LinuxRpmBundler extends AbstractBundler {
 
     private File getConfig_InitScriptFile(Map<String, ? super Object> params) {
         return new File(LinuxAppBundler.getRootDir(RPM_IMAGE_DIR.fetchFrom(params), params),
-                APP_FS_NAME.fetchFrom(params) + ".init");
+                BUNDLE_NAME.fetchFrom(params) + ".init");
     }
 
     private File getConfig_SpecFile(Map<String, ? super Object> params) {

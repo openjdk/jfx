@@ -530,7 +530,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
     private File getConfig_InitScriptFile(Map<String, ? super Object> params) {
         return new File(LinuxAppBundler.getRootDir(APP_IMAGE_ROOT.fetchFrom(params), params),
-                APP_FS_NAME.fetchFrom(params) + ".init");
+                BUNDLE_NAME.fetchFrom(params) + ".init");
     }
 
     private File getConfig_ControlFile(Map<String, ? super Object> params) {
