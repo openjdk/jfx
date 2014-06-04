@@ -1,17 +1,12 @@
 #!/bin/bash
 
-# this script is designed to collect headers and libraries for an ARM HF ABI 
+# this script is designed to collect headers and libraries for an ARM SF ABI 
 # crossbuild of JavaFX. The result is probably bigger than it needs to be.
 # The operation will cache download data in $DEST_VERSION.data so that 
 # rerunning the script can be done faster. When the desired result is complete,
 # it can be removed as it should not be used in the build process.
 
-# How to:
-# Each debian repo will have a Contents and a Packages file (usually as a .gz)
-# the Contents can be used to map a needed file to a package
-# the Package is used to check dependancies
-
-DEST_VERSION=armv6hf-01
+DEST_VERSION=armv6sf-01
 
 confirm() {
     echo -n "Is this correct? [Y/n]: "
@@ -184,24 +179,24 @@ getPackages() {
 
     # misc fixups, patch absolute ld scripts
 
-        cat > usr/lib/arm-linux-gnueabihf/libpthread.so << EOF
+        cat > usr/lib/arm-linux-gnueabi/libpthread.so << EOF
     /* GNU ld script
        Use the shared library, but some functions are only in
           the static library, so try that secondarily.  */
     OUTPUT_FORMAT(elf32-littlearm)
-    GROUP ( ../../../lib/arm-linux-gnueabihf/libpthread.so.0 ../../../usr/lib/arm-linux-gnueabihf/libpthread_nonshared.a )
+    GROUP ( ../../../lib/arm-linux-gnueabi/libpthread.so.0 ../../../usr/lib/arm-linux-gnueabi/libpthread_nonshared.a )
 EOF
         if [[ ! $? -eq 0 ]]; then
             echo libpthread patch failed.
             exit 1
         fi
 
-        cat > usr/lib/arm-linux-gnueabihf/libc.so << EOF
+        cat > usr/lib/arm-linux-gnueabi/libc.so << EOF
     /* GNU ld script
        Use the shared library, but some functions are only in
           the static library, so try that secondarily.  */
     OUTPUT_FORMAT(elf32-littlearm)
-    GROUP ( ../../../lib/arm-linux-gnueabihf/libc.so.6 ../../../usr/lib/arm-linux-gnueabihf/libc_nonshared.a  AS_NEEDED ( ../../../lib/arm-linux-gnueabihf/ld-linux-armhf.so.3 ) )
+    GROUP ( ../../../lib/arm-linux-gnueabi/libc.so.6 ../../../usr/lib/arm-linux-gnueabi/libc_nonshared.a  AS_NEEDED ( ../../../lib/arm-linux-gnueabi/ld-linux.so.3 ) )
 EOF
         if [[ ! $? -eq 0 ]]; then
             echo libc patch failed.
@@ -211,7 +206,7 @@ EOF
 
     # Install an alternative pkg-config
         mkdir -p bin || exit 1
-        cp $SCRIPTDIR/pkg-config bin || exit 1
+        sed -e 's/gnueabihf/gnueabi/g' $SCRIPTDIR/pkg-config > bin/pkg-config || exit 1
         chmod +x bin/pkg-config || exit 1
 
     # Patch package configuration files
@@ -228,7 +223,7 @@ installLibs() {
 
     getPackages  \
         $DESTINATION \
-        http://ftp.us.debian.org/debian/ stable main armhf \
+        http://ftp.us.debian.org/debian/ stable main armel \
             libatk1.0-dev \
             libatk1.0-0 \
             libc6 \
@@ -384,28 +379,9 @@ installLibs() {
             libxslt1-dev \
             libxslt1.1 \
             libudev-dev \
-            libudev0
+            libudev0 \
+            libegl1-mesa-dev 
 
-    # get some rapberry Pi specials
-    getPackages  \
-        $DESTINATION \
-        http://archive.raspbian.org/raspbian wheezy firmware armhf \
-        libraspberrypi-dev
-}
-
-installCrossCompiler() {
-    echo
-    echo Fetching and unpacking compiler in $CROSSLIBS
-    echo
-    echo NOTE: if you use a proxy server then this download will probably fail. In that
-    echo case you need to set a value for the environment variable https_proxy and run
-    echo this script again.
-    echo
-    COMPILER_URL=https://launchpad.net/linaro-toolchain-unsupported/trunk/2012.09/+download/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tar.bz2
-    CMD="wget $COMPILER_URL -O - | tar jx -C $CROSSLIBS"
-    echo $CMD
-    echo
-    /bin/sh -c "$CMD"
 }
 
 SCRIPTDIR=`dirname $0`
@@ -431,11 +407,8 @@ if [[ ! -d $PILIBS ]]; then
     installLibs
 fi
 
-CROSSCOMPILER=$CROSSLIBS/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux
-checkReinstall $CROSSCOMPILER
-if [[ ! -d $CROSSCOMPILER ]]; then
-    installCrossCompiler
-fi
-
+echo
+echo "WARNING: remember to hand patch in bcm_host.h for Pi support:"
+echo
 echo Done.
 
