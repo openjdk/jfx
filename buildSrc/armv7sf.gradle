@@ -24,12 +24,13 @@
  */
 
 ext.ARMV7SF = [:]
+def crossLibsPackage="armv6sf-01"
 
-fetchExternalTools('ARMV7SF', [ "armv6-vfp-04.tgz" ], 
+fetchExternalTools('ARMV7SF', [ "${crossLibsPackage}.tgz" ], 
   rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 
 // Define the location of the sdk and toolchain
-def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armv6-vfp-04")
+def sdk=file("${rootProject.CROSS_TOOLS_DIR}/${crossLibsPackage}")
 
 def compilerHome=file("/opt/arm-linaro-4.7")
 if (rootProject.hasProperty("ARMV7SF_COMPILER")) {
@@ -105,8 +106,10 @@ if (imxHeader.exists()) {
 def extraLFlags = [
         "-I", "-L",
         linkFlags,
-        "-Wl,-rpath-link", "$sdk/usr/lib",
-        "-L$sdk/usr/lib"].flatten()
+        "-L$sdk/usr/lib",
+        "-L$sdk/usr/lib/arm-linux-gnueabi",
+        "-L$sdk/lib/arm-linux-gnueabi"
+        ].flatten()
 
 def x11CFlags = [extraCFlags, "-DUSE_XSHM"].flatten()
 def x11LFlags = [extraLFlags, "-lX11", "-lXext"].flatten()

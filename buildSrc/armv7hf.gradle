@@ -26,13 +26,14 @@
 ext.ARMV7HF = [:]
 
 // Define the location of the sdk and toolchain
-def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-10")
+def crossLibsPackage="armv6hf-01"
+def sdk=file("${rootProject.CROSS_TOOLS_DIR}/$crossLibsPackage")
 def compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
 def compilerPrefix
 def jniPlatform
 if (IS_LINUX) {
     fetchExternalTools('ARMV7HF',
-            ["armhf-raspberry-pi-10.tgz",
+            ["${crossLibsPackage}.tgz",
              "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ],
             rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 
@@ -41,7 +42,7 @@ if (IS_LINUX) {
     jniPlatform="linux"
 } else if (IS_MAC) {
     fetchExternalTools('ARMV7HF',
-            ["armhf-raspberry-pi-10.tgz"],
+            ["${crossLibsPackage}.tgz"],
             rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 
     compilerHome=file("/usr/local/arm-linux")
