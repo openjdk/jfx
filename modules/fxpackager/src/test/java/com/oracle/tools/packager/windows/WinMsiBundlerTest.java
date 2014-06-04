@@ -50,6 +50,7 @@ import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.windows.WinAppBundler.ICON_ICO;
+import static com.oracle.tools.packager.windows.WinMsiBundler.PRODUCT_VERSION;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.MENU_GROUP;
 import static org.junit.Assert.*;
@@ -293,8 +294,9 @@ public class WinMsiBundlerTest {
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(PRODUCT_VERSION.getID(), "1.2.3");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
-        bundleParams.put(VERSION.getID(), "1.2.3");
+        bundleParams.put(VERSION.getID(), "1.2.3-beta_20140604");
         bundleParams.put(WIN_RUNTIME.getID(), System.getProperty("java.home"));
 
         bundleParams.put(DESCRIPTION.getID(), "Everything Description");
