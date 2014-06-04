@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,10 @@
 
 package com.sun.javafx.css.converters;
 
+import com.sun.javafx.css.Size;
+import com.sun.javafx.css.SizeUnits;
+import com.sun.javafx.css.StyleConverterImpl;
+import com.sun.javafx.css.StyleManager;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.image.Image;
@@ -35,22 +39,18 @@ import javafx.scene.paint.Paint;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
-import com.sun.javafx.css.Size;
-import com.sun.javafx.css.SizeUnits;
-import com.sun.javafx.css.StyleConverterImpl;
-import com.sun.javafx.css.StyleManager;
 
 
 public final class PaintConverter extends StyleConverterImpl<ParsedValue<?, Paint>, Paint> {
 
     // lazy, thread-safe instantiation
     private static class Holder {
-        static PaintConverter INSTANCE = new PaintConverter();
-        static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
-        static LinearGradientConverter LINEAR_GRADIENT_INSTANCE = new LinearGradientConverter();
-        static ImagePatternConverter IMAGE_PATTERN_INSTANCE = new ImagePatternConverter();
-        static RepeatingImagePatternConverter REPEATING_IMAGE_PATTERN_INSTANCE = new RepeatingImagePatternConverter();
-        static RadialGradientConverter RADIAL_GRADIENT_INSTANCE = new RadialGradientConverter();
+        static final PaintConverter INSTANCE = new PaintConverter();
+        static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
+        static final LinearGradientConverter LINEAR_GRADIENT_INSTANCE = new LinearGradientConverter();
+        static final ImagePatternConverter IMAGE_PATTERN_INSTANCE = new ImagePatternConverter();
+        static final RepeatingImagePatternConverter REPEATING_IMAGE_PATTERN_INSTANCE = new RepeatingImagePatternConverter();
+        static final RadialGradientConverter RADIAL_GRADIENT_INSTANCE = new RadialGradientConverter();
     }
 
     public static StyleConverter<ParsedValue<?, Paint>, Paint> getInstance() {

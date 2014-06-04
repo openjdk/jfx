@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,24 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import javafx.geometry.*;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
+import javafx.stage.WindowEvent;
 
 public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     
     protected PopupControl popup;
     public static final String COMBO_BOX_STYLE_CLASS = "combo-box-popup";
+
+    private boolean popupNeedsReconfiguring = true;
 
     public ComboBoxPopupControl(ComboBoxBase<T> comboBox, final ComboBoxBaseBehavior<T> behavior) {
         super(comboBox, behavior);
@@ -88,16 +90,19 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     
     private void positionAndShowPopup() {
         final PopupControl _popup = getPopup();
-        final ComboBoxBase<T> comboBoxBase = getSkinnable();
-        if (_popup.getSkin() == null) {
-            comboBoxBase.getScene().getRoot().impl_processCSS(true);
-        }
-        
+        _popup.getScene().setNodeOrientation(getSkinnable().getEffectiveNodeOrientation());
+
+
         getPopupContent().autosize();
         Point2D p = getPrefPopupPosition();
-        _popup.getScene().setNodeOrientation(getSkinnable().getEffectiveNodeOrientation());
+
+        popupNeedsReconfiguring = true;
         reconfigurePopup();
+        
+        final ComboBoxBase<T> comboBoxBase = getSkinnable();
         _popup.show(comboBoxBase.getScene().getWindow(), p.getX(), p.getY());
+
+        getPopupContent().requestFocus();
     }
     
     private void createPopup() {
@@ -112,40 +117,49 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                     @Override public Node getNode() { return getPopupContent(); }
                     @Override public void dispose() { }
                 });
-                getScene().getRoot().impl_processCSS(true);
             }
+
         };
         popup.getStyleClass().add(COMBO_BOX_STYLE_CLASS);
+        popup.setConsumeAutoHidingEvents(false);
         popup.setAutoHide(true);
         popup.setAutoFix(true);
         popup.setHideOnEscape(true);
-        popup.setOnAutoHide(new EventHandler<Event>() {
-            @Override public void handle(Event e) {
-                getBehavior().onAutoHide();
-            }
+        popup.setOnAutoHide(e -> {
+            getBehavior().onAutoHide();
         });
-        popup.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {
-                // RT-18529: We listen to mouse input that is received by the popup
-                // but that is not consumed, and assume that this is due to the mouse
-                // clicking outside of the node, but in areas such as the 
-                // dropshadow.
-                getBehavior().onAutoHide();
-            }
+        popup.addEventHandler(MouseEvent.MOUSE_CLICKED, t -> {
+            // RT-18529: We listen to mouse input that is received by the popup
+            // but that is not consumed, and assume that this is due to the mouse
+            // clicking outside of the node, but in areas such as the
+            // dropshadow.
+            getBehavior().onAutoHide();
+        });
+        popup.addEventHandler(WindowEvent.WINDOW_HIDDEN, t -> {
+            // Make sure the accessibility focus returns to the combo box
+            // after the window closes.
+            getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
         });
         
         // Fix for RT-21207
-        InvalidationListener layoutPosListener = new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                reconfigurePopup();
-            }
+        InvalidationListener layoutPosListener = o -> {
+            popupNeedsReconfiguring = true;
+            reconfigurePopup();
         };
         getSkinnable().layoutXProperty().addListener(layoutPosListener);
         getSkinnable().layoutYProperty().addListener(layoutPosListener);
         getSkinnable().widthProperty().addListener(layoutPosListener);
         getSkinnable().heightProperty().addListener(layoutPosListener);
+
+        // RT-36966 - if skinnable's scene becomes null, ensure popup is closed
+        getSkinnable().sceneProperty().addListener(o -> {
+            if (((ObservableValue)o).getValue() == null) {
+                hide();
+            }
+        });
+
     }
-    
+
     void reconfigurePopup() {
         // RT-26861. Don't call getPopup() here because it may cause the popup
         // to be created too early, which leads to memory leaks like those noted
@@ -154,6 +168,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         final boolean isShowing = popup.isShowing();
         if (! isShowing) return;
+
+        if (! popupNeedsReconfiguring) return;
+        popupNeedsReconfiguring = false;
 
         final Point2D p = getPrefPopupPosition();
 

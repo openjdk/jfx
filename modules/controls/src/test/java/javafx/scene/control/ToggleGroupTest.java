@@ -25,18 +25,18 @@
 
 package javafx.scene.control;
 
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import com.sun.javafx.event.EventUtil;
+import com.sun.javafx.pgstub.StubScene;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 public class ToggleGroupTest {
     private ToggleButton b1, b2, b3, b4;
@@ -456,5 +456,68 @@ public class ToggleGroupTest {
         assertTrue(isMember(b1, g2));
         assertTrue(isMember(b2, g1));
         assertTrue(isMember(b3, g2));
+    }
+
+    @Test public void arrowKeysSelectTogglesTogetherWithFocus() {
+
+        Group root = new Group();
+
+        Scene scene = new Scene(root);
+        root.getChildren().addAll(b1, b2, b3);
+        root.applyCss(); // Initilize the skin
+
+        g1.getToggles().setAll(b1, b2, b3);
+
+        g1.selectToggle(b1);
+
+        assertTrue(b1.isSelected());
+        assertFalse(b2.isSelected());
+        assertFalse(b3.isSelected());
+
+        EventUtil.fireEvent(new KeyEvent(null, null, KeyEvent.KEY_PRESSED, "", "", KeyCode.RIGHT, false, false, false, false),
+                b1);
+
+        assertFalse(b1.isSelected());
+        assertTrue(b2.isSelected());
+        assertFalse(b3.isSelected());
+
+        EventUtil.fireEvent(new KeyEvent(null, null, KeyEvent.KEY_PRESSED, "", "", KeyCode.DOWN, false, false, false, false),
+                b2);
+
+        assertFalse(b1.isSelected());
+        assertFalse(b2.isSelected());
+        assertTrue(b3.isSelected());
+
+        EventUtil.fireEvent(new KeyEvent(null, null, KeyEvent.KEY_PRESSED, "", "", KeyCode.UP, false, false, false, false),
+                b3);
+
+        assertFalse(b1.isSelected());
+        assertTrue(b2.isSelected());
+        assertFalse(b3.isSelected());
+
+        EventUtil.fireEvent(new KeyEvent(null, null, KeyEvent.KEY_PRESSED, "", "", KeyCode.LEFT, false, false, false, false),
+                b2);
+
+        assertTrue(b1.isSelected());
+        assertFalse(b2.isSelected());
+        assertFalse(b3.isSelected());
+    }
+
+    @Test public void testSelectingTwiceIsNop() {
+        b1.setToggleGroup(g1);
+        b2.setToggleGroup(g1);
+
+        assertFalse(b1.isSelected());
+        assertFalse(b2.isSelected());
+
+        g1.selectToggle(b1);
+        assertTrue(b1.isSelected());
+        assertFalse(b2.isSelected());
+        assertEquals(g1.getSelectedToggle(), b1);
+
+        g1.selectToggle(b1);
+        assertTrue(b1.isSelected());
+        assertFalse(b2.isSelected());
+        assertEquals(g1.getSelectedToggle(), b1);
     }
 }

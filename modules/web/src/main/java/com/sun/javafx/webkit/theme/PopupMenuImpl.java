@@ -28,28 +28,22 @@ public final class PopupMenuImpl extends com.sun.webkit.PopupMenu {
     public PopupMenuImpl() {
         popupMenu = new ContextMenu();
 
-        popupMenu.setOnHidden(new EventHandler<WindowEvent>() {
-            @Override public void handle(WindowEvent t) {
-                log.finer("onHidden");
-                // Postpone notification. This is to let webkit
-                // to process a mouse event first (in case the
-                // event is the trigger of the closing). Otherwise,
-                // if this is a click in a drop down list, webkit
-                // will reopen the popup assuming it is hidden.
-                Invoker.getInvoker().postOnEventThread(new Runnable() {
-                    public void run() {
-                        log.finer("onHidden: notifying");
-                        notifyPopupClosed();
-                    }
-                });
-            }
+        popupMenu.setOnHidden(t1 -> {
+            log.finer("onHidden");
+            // Postpone notification. This is to let webkit
+            // to process a mouse event first (in case the
+            // event is the trigger of the closing). Otherwise,
+            // if this is a click in a drop down list, webkit
+            // will reopen the popup assuming it is hidden.
+            Invoker.getInvoker().postOnEventThread(() -> {
+                log.finer("onHidden: notifying");
+                notifyPopupClosed();
+            });
         });
-        popupMenu.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) {
-                MenuItem item = (MenuItem) t.getTarget();
-                log.log(Level.FINE, "onAction: item={0}", item);
-                notifySelectionCommited(popupMenu.getItems().indexOf(item));
-            }
+        popupMenu.setOnAction(t -> {
+            MenuItem item = (MenuItem) t.getTarget();
+            log.log(Level.FINE, "onAction: item={0}", item);
+            notifySelectionCommited(popupMenu.getItems().indexOf(item));
         });
     }
 

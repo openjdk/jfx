@@ -73,15 +73,11 @@ public class StockLineChartApp extends Application {
         // create timeline to add new data every 60th of second
         animation = new Timeline();
         animation.getKeyFrames()
-                .add(new KeyFrame(Duration.millis(1000 / 60), new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                // 6 minutes data per frame
-                for (int count = 0; count < 6; count++) {
-                    nextTime();
-                    plotTime();
-                }
-            }
+                .add(new KeyFrame(Duration.millis(1000 / 60), (ActionEvent actionEvent) -> {
+                    for (int count = 0; count < 6; count++) {
+                        nextTime();
+                        plotTime();
+                    }
         }));
         animation.setCycleCount(Animation.INDEFINITE);
     }

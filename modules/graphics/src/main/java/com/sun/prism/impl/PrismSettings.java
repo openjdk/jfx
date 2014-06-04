@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,7 @@ public final class PrismSettings {
     public static final boolean isVsyncEnabled;
     public static final boolean dirtyOptsEnabled;
     public static final boolean occlusionCullingEnabled;
+    public static final boolean scrollCacheOpt;
     public static final boolean threadCheck;
     public static final boolean cacheSimpleShapes;
     public static final boolean cacheComplexShapes;
@@ -62,7 +63,6 @@ public final class PrismSettings {
     public static final boolean showDirtyRegions;
     public static final boolean showOverdraw;
     public static final boolean printRenderGraph;
-    public static final boolean shutdownHook;
     public static final int minTextureSize;
     public static final int minRTTSize;
     public static final int dirtyRegionCount;
@@ -87,6 +87,8 @@ public final class PrismSettings {
     public static final boolean perfLogFirstPaintFlush;
     public static final boolean perfLogFirstPaintExit;
     public static final boolean superShader;
+    public static final boolean skipMeshNormalComputation;
+    public static final boolean forceUploadingPainter;
 
     private PrismSettings() {
     }
@@ -104,12 +106,7 @@ public final class PrismSettings {
     static {
         final Properties systemProperties =
                 (Properties) AccessController.doPrivileged(
-                                 new PrivilegedAction() {
-                                     @Override
-                                     public Object run() {
-                                         return System.getProperties();
-                                     }
-                                 });
+                        (PrivilegedAction) () -> System.getProperties());
 
         /* Vsync */
         isVsyncEnabled  = getBoolean(systemProperties, "prism.vsync", true)
@@ -128,6 +125,9 @@ public final class PrismSettings {
         // The maximum number of dirty regions to use. The absolute max that we can
         // support at present is 15.
         dirtyRegionCount = Utils.clamp(0, getInt(systemProperties, "prism.dirtyregioncount", 6, null), 15);
+        
+        // Scrolling cache optimization
+        scrollCacheOpt = getBoolean(systemProperties, "prism.scrollcacheopt", true);
 
         /* Dirty region optimizations */
         threadCheck = getBoolean(systemProperties, "prism.threadcheck", false);
@@ -191,6 +191,10 @@ public final class PrismSettings {
 
         /* Force GPU, if GPU is PS 3 capable, disable GPU qualification check. */
         forceGPU = getBoolean(systemProperties, "prism.forceGPU", false);
+        
+        /* Skip mesh normal computation */
+        skipMeshNormalComputation = getBoolean(systemProperties,
+                "prism.experimental.skipMeshNormalComputation", false);
 
         String order = systemProperties.getProperty("prism.order");
         String[] tryOrderArr;
@@ -242,10 +246,6 @@ public final class PrismSettings {
 
         /* Setting for reference type used by Disposer */
         refType = systemProperties.getProperty("prism.reftype");
-
-        /* shutdown the pipeline on System.exit, ^c - needed with X11, so linux default is true */
-        shutdownHook = getBoolean(systemProperties, "prism.shutdownHook",
-                                  PlatformUtil.isUnix());
 
         forcePow2 = getBoolean(systemProperties, "prism.forcepowerof2", false);
         noClampToZero = getBoolean(systemProperties, "prism.noclamptozero", false);
@@ -321,7 +321,7 @@ public final class PrismSettings {
                                           "prism.disableRegionCaching",
                                           false);
 
-        disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", true);
+        disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", false);
 
         disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
 
@@ -340,6 +340,9 @@ public final class PrismSettings {
         perfLogFirstPaintExit = getBoolean(systemProperties, "sun.perflog.fx.firstpaintexit", false, true);
 
         superShader = getBoolean(systemProperties, "prism.supershader", true);
+
+        // Force uploading painter (e.g., to avoid Linux live-resize jittering)
+        forceUploadingPainter = getBoolean(systemProperties, "prism.forceUploadingPainter", false);
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,

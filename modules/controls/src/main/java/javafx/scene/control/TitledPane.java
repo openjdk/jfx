@@ -33,16 +33,22 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
+import javafx.geometry.Orientation;
 import javafx.scene.Node;
-
 import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.scene.control.skin.TitledPaneSkin;
+
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 /**
  * <p>A TitledPane is a panel with a title that can be opened and closed.</p>
@@ -53,6 +59,13 @@ import javafx.css.StyleableProperty;
  * <p>It is not recommended to set the MinHeight, PrefHeight, or MaxHeight
  * for this control.  Unexpected behavior will occur because the
  * TitledPane's height changes when it is opened or closed.</p>
+ *
+ * <p>Note that whilst TitledPane extends from Labeled, the inherited properties
+ * are used to manipulate the TitledPane header, not the content area itself. If
+ * the intent is to modify the content area, consider using a layout container
+ * such as {@link javafx.scene.layout.StackPane} and setting your actual content
+ * inside of that. You can then manipulate the StackPane to get the layout
+ * results you are after.</p>
  *
  * <p>Example:</p>
  * <pre><code>
@@ -140,6 +153,7 @@ public class TitledPane extends Labeled {
             final boolean active = get();
             pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED,   active);
             pseudoClassStateChanged(PSEUDO_CLASS_COLLAPSED, !active);
+            accSendNotification(Attribute.EXPANDED);
         }
 
         @Override
@@ -288,7 +302,7 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty<Boolean>)n.collapsibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.collapsibleProperty();
             }
         };
                
@@ -303,7 +317,7 @@ public class TitledPane extends Labeled {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(TitledPane n) {
-                return (StyleableProperty<Boolean>)n.animatedProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.animatedProperty();
             }
         };
 
@@ -335,4 +349,35 @@ public class TitledPane extends Labeled {
         return getClassCssMetaData();
     }
 
+    @Override
+    public Orientation getContentBias() {
+        final Node c = getContent();
+        return c == null ? super.getContentBias() : c.getContentBias();
+    }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TITLED_PANE;
+            case TITLE: return getText();
+            case EXPANDED: return isExpanded();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case EXPAND: setExpanded(true); break;
+            case COLLAPSE: setExpanded(false); break;
+            default: super.accExecuteAction(action);
+        }
+    }
 }

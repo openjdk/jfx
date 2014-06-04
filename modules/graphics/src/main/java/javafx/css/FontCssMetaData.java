@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,6 @@ import com.sun.javafx.css.converters.StringConverter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import javafx.scene.Node;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
@@ -39,7 +38,7 @@ import javafx.scene.text.FontWeight;
 /**
  * An partial implementation of CssMetaData for Font properties which
  * includes the font sub-properties: weight, style, family and size.
- * @param N The type of Node
+ * @param S The type of Styleable
  * @since JavaFX 8.0
  */
 public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S, Font> {
@@ -75,7 +74,7 @@ public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S
     private static <S extends Styleable> List<CssMetaData<? extends Styleable, ?>> createSubProperties(String property, Font initial) {
         
         final List<CssMetaData<S, ?>> subProperties = 
-                new ArrayList<CssMetaData<S, ?>>();
+                new ArrayList<>();
         
         final Font defaultFont = initial != null ? initial : Font.getDefault();
         

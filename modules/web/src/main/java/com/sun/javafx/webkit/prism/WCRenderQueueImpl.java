@@ -19,10 +19,8 @@ final class WCRenderQueueImpl extends WCRenderQueue {
 
     @Override protected void flush() {
         if (!isEmpty()) {
-            PrismInvoker.invokeOnRenderThread(new Runnable() {
-                @Override public void run() {
-                    decode();
-                }
+            PrismInvoker.invokeOnRenderThread(() -> {
+                decode();
             });
         }
     }

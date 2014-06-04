@@ -29,17 +29,20 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.event.ActionEvent;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.util.StringConverter;
-
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.scene.control.skin.ChoiceBoxSkin;
+
 import javafx.beans.DefaultProperty;
 
 /**
@@ -103,13 +106,11 @@ public class ChoiceBox<T> extends Control {
         // listen to the value property, if the value is
         // set to something that exists in the items list, update the
         // selection model to indicate that this is the selected item
-        valueProperty().addListener(new ChangeListener<T>() {
-            @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
-                if (getItems() == null) return;
-                int index = getItems().indexOf(t1);
-                if (index > -1) {
-                    getSelectionModel().select(index);
-                }
+        valueProperty().addListener((ov, t, t1) -> {
+            if (getItems() == null) return;
+            int index = getItems().indexOf(t1);
+            if (index > -1) {
+                getSelectionModel().select(index);
             }
         });
     }
@@ -142,11 +143,9 @@ public class ChoiceBox<T> extends Control {
         }                
     };
     
-    private ChangeListener<T> selectedItemListener = new ChangeListener<T>() {
-        @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
-            if (! valueProperty().isBound()) {
-                setValue(t1);
-            }
+    private ChangeListener<T> selectedItemListener = (ov, t, t1) -> {
+        if (! valueProperty().isBound()) {
+            setValue(t1);
         }
     };
 
@@ -164,6 +163,7 @@ public class ChoiceBox<T> extends Control {
     private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
             pseudoClassStateChanged(SHOWING_PSEUDOCLASS_STATE, get());
+            accSendNotification(Attribute.EXPANDED);
         }
 
         @Override
@@ -224,28 +224,26 @@ public class ChoiceBox<T> extends Control {
     public final ObservableList<T> getItems() { return items.get(); }
     public final ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
 
-    private final ListChangeListener<T> itemsListener = new ListChangeListener<T>() {
-        @Override public void onChanged(Change<? extends T> c) {
-            final SingleSelectionModel<T> sm = getSelectionModel();
-            if (sm!= null) {
-                if (getItems() == null || getItems().isEmpty()) {
-                    sm.clearSelection();
-                } else {
-                    int newIndex = getItems().indexOf(sm.getSelectedItem());
-                    sm.setSelectedIndex(newIndex);
-                }
+    private final ListChangeListener<T> itemsListener = c -> {
+        final SingleSelectionModel<T> sm = getSelectionModel();
+        if (sm!= null) {
+            if (getItems() == null || getItems().isEmpty()) {
+                sm.clearSelection();
+            } else {
+                int newIndex = getItems().indexOf(sm.getSelectedItem());
+                sm.setSelectedIndex(newIndex);
             }
-            if (sm != null) {
-                
-                // Look for the selected item as having been removed. If it has been,
-                // then we need to clear the selection in the selection model.
-                final T selectedItem = sm.getSelectedItem();
-                while (c.next()) {
-                    if (selectedItem != null && c.getRemoved().contains(selectedItem)) {
-                        sm.clearSelection();
-                        break;
-                        }
-                }
+        }
+        if (sm != null) {
+
+            // Look for the selected item as having been removed. If it has been,
+            // then we need to clear the selection in the selection model.
+            final T selectedItem = sm.getSelectedItem();
+            while (c.next()) {
+                if (selectedItem != null && c.getRemoved().contains(selectedItem)) {
+                    sm.clearSelection();
+                    break;
+                    }
             }
         }
     };
@@ -282,6 +280,7 @@ public class ChoiceBox<T> extends Control {
             if (sm != null) {
                 sm.select(super.getValue());
             }
+            accSendNotification(Attribute.TITLE);
         }
     };
     public final void setValue(T value) { valueProperty().set(value); }
@@ -341,15 +340,13 @@ public class ChoiceBox<T> extends Control {
              */
 
             // watching for changes to the items list content
-            final ListChangeListener<T> itemsContentObserver = new ListChangeListener<T>() {
-                @Override public void onChanged(Change<? extends T> c) {
-                    if (choiceBox.getItems() == null || choiceBox.getItems().isEmpty()) {
-                        setSelectedIndex(-1);
-                    } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                        int newIndex = choiceBox.getItems().indexOf(getSelectedItem());
-                        if (newIndex != -1) {
-                            setSelectedIndex(newIndex);
-                        }
+            final ListChangeListener<T> itemsContentObserver = c -> {
+                if (choiceBox.getItems() == null || choiceBox.getItems().isEmpty()) {
+                    setSelectedIndex(-1);
+                } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
+                    int newIndex = choiceBox.getItems().indexOf(getSelectedItem());
+                    if (newIndex != -1) {
+                        setSelectedIndex(newIndex);
                     }
                 }
             };
@@ -358,21 +355,18 @@ public class ChoiceBox<T> extends Control {
             }
 
             // watching for changes to the items list
-            ChangeListener<ObservableList<T>> itemsObserver = new ChangeListener<ObservableList<T>>() {
-                @Override
-                public void changed(ObservableValue<? extends ObservableList<T>> valueModel, ObservableList<T> oldList, ObservableList<T> newList) {
-                    if (oldList != null) {
-                        oldList.removeListener(itemsContentObserver);
-                    }
-                    if (newList != null) {
-                        newList.addListener(itemsContentObserver);
-                    }
-                    setSelectedIndex(-1);
-                    if (getSelectedItem() != null) {
-                        int newIndex = choiceBox.getItems().indexOf(getSelectedItem());
-                        if (newIndex != -1) {
-                            setSelectedIndex(newIndex);
-                        }
+            ChangeListener<ObservableList<T>> itemsObserver = (valueModel, oldList, newList) -> {
+                if (oldList != null) {
+                    oldList.removeListener(itemsContentObserver);
+                }
+                if (newList != null) {
+                    newList.addListener(itemsContentObserver);
+                }
+                setSelectedIndex(-1);
+                if (getSelectedItem() != null) {
+                    int newIndex = choiceBox.getItems().indexOf(getSelectedItem());
+                    if (newIndex != -1) {
+                        setSelectedIndex(newIndex);
                     }
                 }
             };
@@ -413,4 +407,39 @@ public class ChoiceBox<T> extends Control {
             }
         }
     }
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch(attribute) {
+            case ROLE: return Role.COMBOBOX;
+            case TITLE:
+                //let the skin first.
+                Object title = super.accGetAttribute(attribute, parameters);
+                if (title != null) return title;
+                StringConverter<T> converter = getConverter();
+                if (converter == null) {
+                    return getValue() != null ? getValue().toString() : "";
+                }
+                return converter.toString(getValue());
+            case EXPANDED: return isShowing();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case COLLAPSE: hide(); break;
+            case EXPAND: show(); break;
+            default: super.accExecuteAction(action); break;
+        }
+    }
+
 }

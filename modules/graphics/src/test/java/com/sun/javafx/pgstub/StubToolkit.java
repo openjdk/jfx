@@ -100,7 +100,7 @@ public class StubToolkit extends Toolkit {
     static {
         try {
             // ugly hack to initialize "runLater" method in Platform.java
-            PlatformImpl.startup(new Runnable() { public void run() {}});
+            PlatformImpl.startup(() -> {});
         } catch (Exception ex) {}
 
         // allow tests to access PG scenegraph
@@ -145,9 +145,10 @@ public class StubToolkit extends Toolkit {
         // unsupported
     }
 
+    private final TKSystemMenu systemMenu = new StubSystemMenu();
     @Override
     public TKSystemMenu getSystemMenu() {
-        return new StubSystemMenu();
+        return systemMenu;
     }
 
     @Override
@@ -517,6 +518,11 @@ public class StubToolkit extends Toolkit {
         public float getDPI(Object obj) {
             return ((ScreenConfiguration) obj).getDPI();
         }
+
+        @Override
+        public float getScale(Object obj) {
+            return ((ScreenConfiguration) obj).getScale();
+        }
     };
 
     @Override
@@ -822,6 +828,7 @@ public class StubToolkit extends Toolkit {
         private final int visualWidth;
         private final int visualHeight;
         private final float dpi;
+        private final float scale;
 
         public ScreenConfiguration(final int minX, final int minY,
                                    final int width, final int height,
@@ -839,6 +846,7 @@ public class StubToolkit extends Toolkit {
             this.visualWidth = visualWidth;
             this.visualHeight = visualHeight;
             this.dpi = dpi;
+            this.scale = 1;  // TODO: add a constructor that takes scale
         }
 
         public int getMinX() {
@@ -876,18 +884,34 @@ public class StubToolkit extends Toolkit {
         public float getDPI() {
             return dpi;
         }
+
+        public float getScale() {
+            return scale;
+        }
     }
 
     public static class StubSystemMenu implements TKSystemMenu {
 
+        private  List<MenuBase> menus = null;
+
         @Override
         public boolean isSupported() {
-            return false;
+            // Although not all platforms have a system menu, the only real
+            // interaction with the system menu is this TKSystemMenu instance
+            // so we'll return true on all platforms.
+            return true;
+//                    final String os = System.getProperty("os.name");
+//                    return (os != null && os.startsWith("Mac"));
         }
 
         @Override
         public void setMenus(List<MenuBase> menus) {
-            throw new UnsupportedOperationException("Not supported yet.");
+            this.menus = menus;
+        }
+
+        // make menus accessible to unit tests
+        public List<MenuBase> getMenus() {
+            return menus;
         }
 
     }

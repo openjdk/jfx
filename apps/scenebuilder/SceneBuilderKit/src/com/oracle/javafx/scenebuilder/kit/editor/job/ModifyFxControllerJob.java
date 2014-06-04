@@ -49,7 +49,6 @@ public class ModifyFxControllerJob extends Job {
         super(editorController);
 
         assert fxomObject != null;
-        assert fxomObject.getSceneGraphObject() != null;
 
         this.fxomObject = fxomObject;
         this.newValue = newValue;
@@ -89,7 +88,7 @@ public class ModifyFxControllerJob extends Job {
     public String getDescription() {
         final StringBuilder result = new StringBuilder();
         result.append("Set controller class on ");
-        result.append(fxomObject.getSceneGraphObject().getClass().getSimpleName());
+        result.append(fxomObject.getGlueElement().getTagName());
         return result.toString();
     }
 }

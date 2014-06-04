@@ -60,7 +60,7 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
         // There is no behavior for the separator, so we just create a
         // dummy behavior base instead, since SkinBase will complain
         // about it being null.
-        super(separator, new BehaviorBase<>(separator, Collections.EMPTY_LIST));
+        super(separator, new BehaviorBase<>(separator, Collections.emptyList()));
 
         line = new Region();
         line.getStyleClass().setAll("line");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,21 +114,7 @@ public final class StyleClassSet  extends BitSet<StyleClass> {
 
     @Override
     protected int getIndex(StyleClass t) {
-        
-        if (t instanceof StyleClass) {
-            return ((StyleClass)t).getIndex();
-        }
-        
-        final String styleClass = t.getStyleClassName();
-        Integer index = styleClassMap.get(styleClass);
-        
-        if (index == null) {
-            index = Integer.valueOf(styleClasses.size());
-            styleClasses.add(new StyleClass(styleClass, index.intValue()));
-            styleClassMap.put(styleClass, index);        
-        }
-        return index.intValue();
-        
+        return t.getIndex();
     }
 
    

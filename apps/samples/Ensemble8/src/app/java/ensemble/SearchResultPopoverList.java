@@ -206,11 +206,7 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
             for (SearchResultListCell cell: allCells) {
                 if (cell.isVisible()) visibleCells.add(cell);
             }
-            Collections.sort(visibleCells, new Comparator<Node>() {
-                @Override public int compare(Node o1, Node o2) {
-                    return Double.compare(o1.getLayoutY(), o2.getLayoutY());
-                }
-            });
+            Collections.sort(visibleCells, (Node o1, Node o2) -> Double.compare(o1.getLayoutY(), o2.getLayoutY()));
             
             samplesIcon.setLayoutX(8);
             samplesIcon.resize(24, 24);
@@ -306,35 +302,57 @@ public class SearchResultPopoverList extends PopoverTreeList<SearchResult> imple
             // many times for any change of cell layout in the list but that 
             // dosn't matter as they will all be batched up by layout machanisim
             // and iconPane.layoutChildren() will only be called once per frame.
-            final ChangeListener<Bounds> boundsChangeListener = new ChangeListener<Bounds>() {
-                @Override public void changed(ObservableValue<? extends Bounds> ov, Bounds t, Bounds t1) {
-                    iconPane.requestLayout();
-                }
+            final ChangeListener<Bounds> boundsChangeListener = (ObservableValue<? extends Bounds> ov, Bounds t, Bounds t1) -> {
+                iconPane.requestLayout();
             };
-            parentProperty().addListener(new ChangeListener<Parent>() {
-                @Override public void changed(ObservableValue<? extends Parent> ov, Parent oldParent, Parent newParent) {
-                    if(oldParent != null) {
-                        oldParent.layoutBoundsProperty().removeListener(boundsChangeListener);
-                    }
-                    if (newParent != null && newParent.isVisible()) {
-                        iconPane.allCells.add(SearchResultListCell.this);
-                        newParent.layoutBoundsProperty().addListener(boundsChangeListener);
-                    } else {
-                        iconPane.allCells.remove(SearchResultListCell.this);
-                    }
-                    iconPane.requestLayout();
+            parentProperty().addListener((ObservableValue<? extends Parent> ov, Parent oldParent, Parent newParent) -> {
+                if(oldParent != null) {
+                    oldParent.layoutBoundsProperty().removeListener(boundsChangeListener);
                 }
+                if (newParent != null && newParent.isVisible()) {
+                    iconPane.allCells.add(SearchResultListCell.this);
+                    newParent.layoutBoundsProperty().addListener(boundsChangeListener);
+                } else {
+                    iconPane.allCells.remove(SearchResultListCell.this);
+                }
+                iconPane.requestLayout();
             });
         }
 
+        @Override protected double computeMinWidth(double height) {
+            final Insets insets = getInsets();
+            final double h = height = insets.getBottom() - insets.getTop();
+            return (int)((insets.getLeft() + title.minWidth(h) + TEXT_GAP + details.minWidth(h) + insets.getRight())+ 0.5d);
+        }
+
         @Override protected double computePrefWidth(double height) {
-            return 100;
+            final Insets insets = getInsets();
+            final double h = height = insets.getBottom() - insets.getTop();
+            return (int)((insets.getLeft() + title.prefWidth(h) + TEXT_GAP + details.prefWidth(h) + insets.getRight())+ 0.5d);
+        }
+
+        @Override protected double computeMaxWidth(double height) {
+            final Insets insets = getInsets();
+            final double h = height = insets.getBottom() - insets.getTop();
+            return (int)((insets.getLeft() + title.maxWidth(h) + TEXT_GAP + details.maxWidth(h) + insets.getRight())+ 0.5d);
+        }
+
+        @Override protected double computeMinHeight(double width) {
+            final Insets insets = getInsets();
+            final double w = width - insets.getLeft() - insets.getRight();
+            return (int)((insets.getTop() + title.minHeight(w) + TEXT_GAP + details.minHeight(w) + insets.getBottom())+ 0.5d);
         }
 
         @Override protected double computePrefHeight(double width) {
             final Insets insets = getInsets();
             final double w = width - insets.getLeft() - insets.getRight();
             return (int)((insets.getTop() + title.prefHeight(w) + TEXT_GAP + details.prefHeight(w) + insets.getBottom())+ 0.5d);
+        }
+
+        @Override protected double computeMaxHeight(double width) {
+            final Insets insets = getInsets();
+            final double w = width - insets.getLeft() - insets.getRight();
+            return (int)((insets.getTop() + title.maxHeight(w) + TEXT_GAP + details.maxHeight(w) + insets.getBottom())+ 0.5d);
         }
 
         @Override protected void layoutChildren() {

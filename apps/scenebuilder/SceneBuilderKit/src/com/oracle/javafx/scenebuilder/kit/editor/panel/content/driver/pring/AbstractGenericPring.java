@@ -31,10 +31,8 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.pring;
 
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.pring.AbstractPring.attachPring;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.List;
+
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -44,6 +42,9 @@ import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
+
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 
 /**
  *

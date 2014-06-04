@@ -31,15 +31,41 @@
  */
 
 /*******************************************************************************
- *                                                                             *
- * Document Window - Menubar and Border around document for Windows only       *
- *                                                                             *
+ * Menu Bar - text                                                             *
  ******************************************************************************/
 
-.windows-app-border {
-    -fx-border-color: linear-gradient(to bottom, -sb-sharp-edge-hi, -sb-sharp-edge-lo);
+.theme-presets .menu-bar .context-menu {
+    -fx-background-color: white;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 0;
 }
-.windows-app-border .menu-bar {
+.theme-presets .menu-bar .context-menu .menu-item > .label {
+    -fx-text-fill: -fx-text-base-color;
+}
+.theme-presets .menu-bar .context-menu .separator:horizontal .line {
+    -fx-border-color: rgb(220, 220, 220), white;
+    -fx-border-insets: 0, 1 0 0 0;
+}
+
+/*******************************************************************************
+ * Document Window - Menubar for Linux (Mac uses system Menubar)               *
+ ******************************************************************************/
+
+.theme-presets .menu-bar {
+    -fx-background-color:
+        derive(-sb-sharp-edge-hi, 0%),
+        linear-gradient(to bottom, derive(white, -2%), derive(white, -10%) );
+    -fx-background-insets: 0, 0 0 1 0;
+}
+
+/*******************************************************************************
+ * Document Window - Menubar and Border around document for Windows only       *
+ ******************************************************************************/
+
+.theme-presets .windows-document-decoration {
+    /*-fx-border-color: linear-gradient(to bottom, -sb-sharp-edge-hi, -sb-sharp-edge-lo);*/
+}
+.theme-presets.windows-document-decoration .menu-bar {
     -fx-background-color:
         -sb-sharp-edge-lo, 
         -sb-sharp-edge-hi, 
@@ -48,33 +74,20 @@
 }
 
 /*******************************************************************************
- *                                                                             *
- * Document Window - Menubar for Linux (Mac uses system Menubar)               *
- *                                                                             *
- ******************************************************************************/
-
-.menu-bar {
-    -fx-background-color:
-        derive(-sb-sharp-edge-hi, 0%),
-        linear-gradient(to bottom, derive(white, -2%), derive(white, -10%) );
-    -fx-background-insets: 0, 0 0 1 0;
-}
-
-/*******************************************************************************
  * App SplitPane's                                                             *
  ******************************************************************************/
 
-.split-pane {
-    -fx-background-color: -sb-dark;
+.theme-presets .split-pane {
+    -fx-background-color: -sb-base-dark;
     -fx-background-insets: 0;
     -fx-padding: 0;
 }
-.split-pane > .split-pane-divider {
-    -fx-background-color: -sb-dark;
+.theme-presets .split-pane > .split-pane-divider {
+    -fx-background-color: -sb-base-dark;
     -fx-padding: 0 0.5 0 0;
 }
-.split-pane:horizontal .split-pane-divider .horizontal-grabber,
-.split-pane:vertical .split-pane-divider .vertical-grabber {
+.theme-presets .split-pane:horizontal .split-pane-divider .horizontal-grabber,
+.theme-presets .split-pane:vertical .split-pane-divider .vertical-grabber {
     -fx-padding: 3;
     -fx-shape: "";
 }
@@ -83,30 +96,30 @@
  * Common UI Styling - Panel Headers (Background, search box and menu)         *
  ******************************************************************************/
 
-.panel-header {
+.theme-presets .panel-header {
     -fx-min-height: -sb-header-height;
     -fx-background-color: 
         derive(-sb-grad-hi, 25%), 
         linear-gradient(to bottom, -sb-grad-hi, -sb-flat);
     -fx-background-insets: 0, 1 0 0 0;
 }
-.panel-header > .label {
+.theme-presets .panel-header > .label {
     -fx-padding: 1 32 0 8;
     -fx-text-fill: -sb-header-text;
 }
-.panel-header > .menu-button {
+.theme-presets .panel-header > .menu-button {
     -fx-background-color: null;
     -fx-graphic-text-gap: 0px;
     -fx-padding: 0 0 0 0.666em;
 }
-.panel-header > .menu-button:hover {
+.theme-presets .panel-header > .menu-button:hover {
     -fx-background-color: 
         linear-gradient(to bottom, derive(-sb-sharp-edge-lo, 60%), derive(-sb-sharp-edge-lo, 40%)),
         linear-gradient(to bottom, derive(-sb-flat, 80%), derive(-sb-flat, 20%));
     -fx-background-insets: 0 3 0 5, 1 4 1 6;
     -fx-background-radius: 0;
 }
-.panel-header > .menu-button:focused {
+.theme-presets .panel-header > .menu-button:focused {
     -fx-background-color: 
         -fx-faint-focus-color, 
         -fx-focus-color, 
@@ -114,16 +127,18 @@
     -fx-background-insets: -1.4 1.6 -1.4 3.6, 0 3 0 5, 1 4 1 6;
     -fx-background-radius: 0;
 }
-.panel-header > .menu-button .label {
+.theme-presets .panel-header > .menu-button .label {
     -fx-padding: 0;
 }
-.panel-header > .menu-button > .arrow-button {
+.theme-presets .panel-header > .menu-button > .arrow-button {
     -fx-padding: 0.462em 0.615em 0.462em 0em;
 }
-.panel-header > .menu-button > .arrow-button > .arrow {
-    -fx-padding: 0 0.231em 0.231em 0.154em;
+.theme-presets .panel-header > .menu-button > .arrow-button > .arrow {
+    -fx-padding: 0 0.231em 0.154em 0.154em;
+    -fx-background-color: -sb-header-detail;
+    -fx-effect: null;
 }
-.panel-header .text-field {
+.theme-presets .panel-header .text-field {
     -fx-text-fill: -sb-header-text;
     -fx-font-size: 0.875em;
     -fx-padding: 3 7 2 7;
@@ -135,20 +150,17 @@
     -fx-background-insets: 0 -12 0 0;
     -fx-background-radius: 10;
 }
-.panel-header .text-field:focused {
-    -fx-border-color: -fx-focus-color;
-    -fx-background-color: 
-        -fx-faint-focus-color, 
-        linear-gradient(from 0px 0px to 0px 5px, derive(-sb-control-inner, -9%), -sb-control-inner);
-    -fx-background-insets: -1.4 -13.4 -1.4 -1.4, 0 -12 0 0;
+.theme-presets .panel-header .text-field:focused {
+    -fx-border-color: -sb-focus-color;
+    -fx-background-color: -sb-focus-inner-background;
 }
 
-.search-magnifying-glass {
+.theme-presets .search-magnifying-glass {
     -fx-shape: "M11.936,13.663c-1.105,0.694-2.412,1.095-3.81,1.095c-3.963,0-7.188-3.224-7.188-7.187c0-3.963,3.224-7.188,7.188-7.188
         c3.963,0,7.187,3.224,7.187,7.188c0,1.854-0.706,3.546-1.862,4.822l4.23,4.602c0.374,0.407,0.347,1.039-0.06,1.413
         c-0.192,0.176-0.435,0.264-0.676,0.264c-0.271,0-0.54-0.109-0.737-0.323 M8.125,2.384c-2.86,0-5.188,2.327-5.188,5.188
         s2.327,5.187,5.188,5.187s5.187-2.327,5.187-5.187S10.986,2.384,8.125,2.384z";
-    -fx-background-color: derive(-sb-flat, -30%);
+    -fx-background-color: -sb-header-detail;
     -fx-background-insets: 0 6 0 -6;
     -fx-min-width: 10;
     -fx-max-width: 10;
@@ -156,13 +168,13 @@
     -fx-max-height: 10;
 }
 
-.search-clear {
+.theme-presets .search-clear {
     -fx-shape: "M7.26,5.444l3.503,3.504c0.344,0.344,0.344,0.901,0,1.245c-0.172,0.172-0.397,0.258-0.623,0.258
         c-0.225,0-0.45-0.086-0.623-0.258L6.087,6.498l-3.584,3.697c-0.172,0.172-0.397,0.258-0.623,0.258
         c-0.226,0-0.451-0.086-0.623-0.258c-0.344-0.344-0.344-0.901,0-1.245l3.507-3.508L1.258,1.933c-0.344-0.344-0.344-0.901,0-1.245
         c0.344-0.344,0.901-0.344,1.245,0l3.509,3.508c-0.001,0,3.506-3.508,3.506-3.508c0.344-0.344,0.901-0.344,1.245,0
         c0.344,0.344,0.344,0.901,0,1.245";
-    -fx-background-color: derive(-sb-flat, -30%);
+    -fx-background-color: -sb-header-detail;
     -fx-background-insets: 1 7 1 -5;
     -fx-min-width: 10;
     -fx-max-width: 10;
@@ -177,9 +189,9 @@
 /* We add similar styling as the .panel-header stated in theme but with some
    subtle differences: a darker bottom edge and a shadow effect that bleeds 
    over onto the content panel */
-.selection-bar-container {
+.theme-presets .selection-bar-container {
     -fx-min-height: -sb-header-height;
-    -fx-background-color: -sb-dark, linear-gradient(to bottom, -sb-grad-hi, -sb-flat);
+    -fx-background-color: -sb-base-dark, linear-gradient(to bottom, -sb-grad-hi, -sb-flat);
     -fx-background-insets: 0 0 -1 0, 0;
     -fx-effect: dropshadow(three-pass-box , rgb(0, 0, 0, 0.3), 5, 0.0 , 0, 2);
 }

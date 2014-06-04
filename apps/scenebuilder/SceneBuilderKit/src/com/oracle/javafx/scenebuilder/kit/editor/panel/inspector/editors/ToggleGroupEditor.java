@@ -31,7 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import java.util.List;
@@ -54,25 +53,22 @@ public class ToggleGroupEditor extends AutoSuggestEditor {
         this.suggestedTgs = suggestedTgs;
 
         // text field events handling
-        EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (isHandlingError()) {
-                    // Event received because of focus lost due to error dialog
+        EventHandler<ActionEvent> onActionListener = event -> {
+            if (isHandlingError()) {
+                // Event received because of focus lost due to error dialog
+                return;
+            }
+            String value = textField.getText();
+            if (value != null && !value.isEmpty()) {
+
+                if (!JavaLanguage.isIdentifier(value)) {
+//                        System.err.println(I18N.getString("inspector.fxml.invalid.id", value));
+                    handleInvalidValue(value);
                     return;
                 }
-                String value = textField.getText();
-                if (value != null && !value.isEmpty()) {
-
-                    if (!JavaLanguage.isIdentifier(value)) {
-//                        System.err.println(I18N.getString("inspector.fxml.invalid.id", value));
-                        handleInvalidValue(value);
-                        return;
-                    }
-                }
-                userUpdateValueProperty((value == null || value.isEmpty()) ? null : value);
-                textField.selectAll();
             }
+            userUpdateValueProperty((value == null || value.isEmpty()) ? null : value);
+            textField.selectAll();
         };
         setTextEditorBehavior(this, textField, onActionListener);
     }

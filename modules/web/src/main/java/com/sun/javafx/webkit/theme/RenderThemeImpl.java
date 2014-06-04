@@ -205,11 +205,9 @@ public final class RenderThemeImpl extends RenderTheme {
 
     public RenderThemeImpl(final Accessor accessor) {
         this.accessor = accessor;
-        pool = new Pool<FormControl>(new Pool.Notifier<FormControl>() {
-            @Override public void notifyRemoved(FormControl fc) {
-                // Remove the control from WebView when it's removed from the pool.
-                accessor.removeChild(fc.asControl());
-            }
+        pool = new Pool<FormControl>(fc -> {
+            // Remove the control from WebView when it's removed from the pool.
+            accessor.removeChild(fc.asControl());
         }, FormControl.class);
         accessor.addViewListener(new ViewListener(pool, accessor));
     }

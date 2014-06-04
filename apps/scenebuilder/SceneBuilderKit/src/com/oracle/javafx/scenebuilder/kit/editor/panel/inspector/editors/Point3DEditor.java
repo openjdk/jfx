@@ -71,12 +71,7 @@ public class Point3DEditor extends PropertyEditor {
         doubleFields[1] = yDf;
         doubleFields[2] = zDf;
         for (DoubleField doubleField : doubleFields) {
-            EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    userUpdateValueProperty(getValue());
-                }
-            };
+            EventHandler<ActionEvent> valueListener = event -> userUpdateValueProperty(getValue());
             setNumericEditorBehavior(this, doubleField, valueListener, false);
         }
     }
@@ -140,14 +135,7 @@ public class Point3DEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-
-                xDf.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> xDf.requestFocus());
     }
 
 }

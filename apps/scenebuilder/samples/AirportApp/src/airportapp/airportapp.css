@@ -1,0 +1,199 @@
+/*
+ * Copyright (c) 2014, Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*******************************************************************************
+ *                                                                             *
+ * Embedded Styling                                                            *
+ *                                                                             *
+ ******************************************************************************/
+
+.touch-sizes .button, 
+.touch-sizes .toggle-button,
+.touch-sizes .label {
+    -fx-padding: 0.5em 1.1em 0.5em 1.1em;
+    -fx-font-size: 1.5em;
+}
+.touch-sizes .scroll-bar > .increment-button,
+.touch-sizes .scroll-bar > .decrement-button {
+    -fx-padding: 0.75em;
+}
+.touch-sizes .list-view .list-cell {
+    -fx-padding: 0.4em 0.8em 0.4em 0.8em;
+}
+.touch-sizes .list-view .list-cell {
+    -fx-font-size: 1.3em;
+}
+.touch-sizes .slider {
+    -fx-min-width: 200px;
+}
+.touch-sizes .slider .track {
+    -fx-padding: 0.5em;
+}
+.touch-sizes .slider .thumb {
+    -fx-padding: 1.3em;
+    -fx-background-radius: 100;
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * High Contrast Theme                                                         *
+ *                                                                             *
+ ******************************************************************************/
+
+.contrast {
+    -app-color-hi: #5bf900;
+    -app-color-lo: black;
+    -app-hover: #666666;
+    -fx-background-color: -app-color-lo;
+}
+
+/*-------------------------- map pin ------------------------- */
+
+.map-pin {
+    -fx-shape: "M13.558,0C6.07,0,0,6.07,0,13.558s13.558,22.346,13.558,22.346s13.558-14.858,13.558-22.346S21.045,0,13.558,0z
+M13.558,20.762c-4.084,0-7.395-3.311-7.395-7.395s3.311-7.395,7.395-7.395c4.084,0,7.396,3.311,7.396,7.395
+S17.642,20.762,13.558,20.762z";    
+    -fx-background-color: black, white;
+    -fx-background-insets: 0, 2;
+    -fx-effect: dropshadow( two-pass-box, rgba(0, 0, 0, 0.5), 10, 0.0, 0, 10 );
+    -fx-pref-width: 48;
+    -fx-pref-height: 60;
+}
+.map-pin .arrow-button .arrow {
+    -fx-padding: 0;
+}
+.contrast .map-pin {
+    -fx-background-color: -app-color-lo, -app-color-hi;
+}
+
+/*------------------ button, toggle buttons ------------------ */
+
+.contrast .button,
+.contrast .toggle-button {
+    -fx-text-fill: -app-color-hi;
+    -fx-background-color: -app-color-hi, -app-color-lo;
+    -fx-background-insets: 0, 2;
+    -fx-background-radius: 2, 1;
+}
+.contrast .toggle-button:selected {
+    -fx-background-color: -app-color-hi, -app-hover;
+}
+.contrast .button:hover,
+.contrast .toggle-button:hover {
+    -fx-background-color: -app-color-hi, -app-hover;
+}
+.contrast .toggle-button.left-pill {
+    -fx-background-insets: 0, 2 1 2 2;
+    -fx-background-radius: 2 0 0 2, 1 0 0 1;
+}
+.contrast .toggle-button.right-pill {
+    -fx-background-insets: 0, 2 2 2 1;
+    -fx-background-radius: 0 2 2 0, 0 1 1 0;
+}
+
+/*-------------------------- labels -------------------------- */
+
+.contrast .label {    
+    -fx-text-fill: -app-color-hi;
+}
+
+/*-------------------------- slider -------------------------- */
+
+.contrast .slider .track {
+    -fx-background-color: -app-color-hi, -app-color-lo;
+    -fx-background-insets: 0, 1;    
+}
+.contrast .slider .thumb {
+    -fx-background-color: -app-color-hi, -app-color-lo;    
+    -fx-background-insets: 0, 2;
+}
+.contrast .slider .thumb:hover {
+    -fx-background-color: -app-color-hi, -app-hover;
+}
+
+/*------------------------- ListView ------------------------- */
+
+.contrast .list-view {
+    -fx-background-color: -app-color-lo;
+}
+.contrast .list-view .list-cell .text {
+    -fx-fill: -app-color-hi;
+}
+.contrast .list-view .list-cell {
+    -fx-background-color: -app-color-lo;
+}
+.contrast .list-view .list-cell:filled:hover {
+    -fx-background-color: -app-hover;
+}
+.contrast .list-view .list-cell:selected:filled:hover {
+    -fx-background-color: -app-color-hi;
+}
+.contrast .list-view .list-cell:selected {
+    -fx-background-color: -app-color-hi;
+}
+.contrast .list-view .list-cell:selected .text {
+    -fx-fill: -app-color-lo;
+}
+
+/*------------------------ ScrollBars ------------------------ */
+
+.contrast .scroll-bar .track-background {
+    -fx-background-color: -app-color-lo;
+}
+.contrast .scroll-bar:vertical {
+    -fx-background-color: -app-color-lo;
+    -fx-background-insets: 0;
+}
+.contrast .scroll-bar:horizontal {
+    -fx-background-color: -app-color-lo;
+    -fx-background-insets: 0;
+}
+.contrast .scroll-bar .thumb {
+    -fx-background-color: -app-color-hi, -app-color-lo;
+}
+.contrast .scroll-bar > .increment-button > .increment-arrow,
+.contrast .scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-background-color: -app-color-hi;
+}
+.contrast .scroll-pane > .corner {
+    -fx-background-color: -app-color-lo;
+    -fx-background-insets: 0;
+}
+
+/*------------------------ SplitPane ------------------------- */
+
+.contrast .split-pane {
+    -fx-background-color: -app-color-lo;
+}
+.contrast .split-pane > .split-pane-divider {
+    -fx-background-color: -app-color-lo;
+}

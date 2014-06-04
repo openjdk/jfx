@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,12 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import com.sun.javafx.scene.control.ControlAcceleratorSupport;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.scene.Scene;
-import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.RadioMenuItem;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -66,6 +59,10 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
     protected boolean behaveLikeButton = false;
     private ListChangeListener<MenuItem> itemsChangedListener;
 
+
+
+
+
     /***************************************************************************
      *                                                                         *
      * Constructors                                                            *
@@ -76,18 +73,14 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         super(control, behavior);
 
         if (control.getOnMousePressed() == null) {
-            control.setOnMousePressed(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    getBehavior().mousePressed(e, behaveLikeButton);
-                }
+            control.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
+                getBehavior().mousePressed(e, behaveLikeButton);
             });
         }
 
         if (control.getOnMouseReleased() == null) {
-            control.setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    getBehavior().mouseReleased(e, behaveLikeButton);
-                }
+            control.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> {
+                getBehavior().mouseReleased(e, behaveLikeButton);
             });
         }
 
@@ -116,27 +109,22 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
 
         getSkinnable().requestLayout();
         
-        itemsChangedListener = new ListChangeListener<MenuItem>() {
-            @Override public void onChanged(Change<? extends MenuItem> c) {
-                while (c.next()) {
-                    popup.getItems().removeAll(c.getRemoved());
-                    popup.getItems().addAll(c.getFrom(), c.getAddedSubList());
-                }
+        itemsChangedListener = c -> {
+            while (c.next()) {
+                popup.getItems().removeAll(c.getRemoved());
+                popup.getItems().addAll(c.getFrom(), c.getAddedSubList());
             }
         };
         control.getItems().addListener(itemsChangedListener);
         
         if (getSkinnable().getScene() != null) {
-            addAccelerators(getSkinnable().getItems());
+            ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
         }
-        control.sceneProperty().addListener(new ChangeListener<Scene>() {
-                @Override
-                    public void changed(ObservableValue<? extends Scene> scene, Scene oldValue, Scene newValue) {
-                    if (getSkinnable() != null && getSkinnable().getScene() != null) {
-                        addAccelerators(getSkinnable().getItems());
-                    }
-                }
-            });
+        control.sceneProperty().addListener((scene, oldValue, newValue) -> {
+            if (getSkinnable() != null && getSkinnable().getScene() != null) {
+                ControlAcceleratorSupport.addAcceleratorsIntoScene(getSkinnable().getItems(), getSkinnable());
+            }
+        });
 
 //        If setOnAction() is overridden the code below causes the popup to show and hide.
 //        control.addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
@@ -288,59 +276,15 @@ public abstract class MenuButtonSkinBase<C extends MenuButton, B extends MenuBut
         arrowButton.resizeRelocate(x+(w-arrowButtonWidth), y, arrowButtonWidth, h);
     }
 
-    private void addAccelerators(javafx.collections.ObservableList<javafx.scene.control.MenuItem> mItems) {
-        for (final MenuItem menuitem : mItems) {
-            if (menuitem instanceof Menu) {
-                // add accelerators for this Menu's menuitems, by calling recursively.
-                addAccelerators(((Menu)menuitem).getItems());
-            } else {
-                /*
-                ** check is there are any accelerators in this menuitem
-                */
-                if (menuitem.getAccelerator() != null) {
-                    if (getSkinnable().getScene().getAccelerators() != null) {
-
-                        Runnable acceleratorRunnable = new Runnable() {
-                            public void run() {
-                                if (menuitem.getOnMenuValidation() != null) {
-                                    Event.fireEvent(menuitem, new Event(MenuItem.MENU_VALIDATION_EVENT));
-                                }
-                                Menu target = (Menu)menuitem.getParentMenu();
-                                if(target!= null && target.getOnMenuValidation() != null) {
-                                    Event.fireEvent(target, new Event(MenuItem.MENU_VALIDATION_EVENT));
-                                }
-                                if (!menuitem.isDisable()) {
-                                    if (menuitem instanceof RadioMenuItem) {
-                                        ((RadioMenuItem)menuitem).setSelected(!((RadioMenuItem)menuitem).isSelected());
-                                    }
-                                    else if (menuitem instanceof CheckMenuItem) {
-                                        ((CheckMenuItem)menuitem).setSelected(!((CheckMenuItem)menuitem).isSelected());
-                                    }
-
-                                    menuitem.fire();
-                                }
-                            }
-                        };
-                        getSkinnable().getScene().getAccelerators().put(menuitem.getAccelerator(), acceleratorRunnable);
-                    }
-                }
-            }
-        }
-    }
-   
-    
     private class MenuLabeledImpl extends LabeledImpl {
-
         MenuButton button;
         public MenuLabeledImpl(MenuButton b) {
             super(b);
             button = b;
-            addEventHandler(ActionEvent.ACTION, new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent e) {
-                        button.fireEvent(new ActionEvent());
-                        e.consume();
-                    }
-                });
+            addEventHandler(ActionEvent.ACTION, e -> {
+                button.fireEvent(new ActionEvent());
+                e.consume();
+            });
         }
     }
 }

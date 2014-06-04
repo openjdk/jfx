@@ -27,248 +27,54 @@ package com.sun.javafx.scene.traversal;
 
 import java.util.List;
 import javafx.geometry.Bounds;
-import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import com.sun.javafx.Logging;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 
 import static com.sun.javafx.scene.traversal.Direction.*;
 
 public class ContainerTabOrder implements Algorithm {
 
-    PlatformLogger focusLogger;
-
     ContainerTabOrder() {
-        focusLogger = Logging.getFocusLogger();
     }
 
-    public Node traverse(Node node, Direction dir, TraversalEngine engine) {
-        Node newNode = null;
-        int newNodeIndex = -1;
+    public Node select(Node node, Direction dir, TraversalContext context) {
+        switch (dir) {
+            case NEXT:
+            case NEXT_IN_LINE:
+                return TabOrderHelper.findNextFocusablePeer(node, context.getRoot(), dir == NEXT);
+            case PREVIOUS:
+                return TabOrderHelper.findPreviousFocusablePeer(node, context.getRoot());
+            case UP:
+            case DOWN:
+            case LEFT:
+            case RIGHT:
+                List<Node> nodes = context.getAllTargetNodes();
 
-        if (focusLogger.isLoggable(Level.FINER)) {
-            focusLogger.finer("old focus owner : "+node+", bounds : "+engine.getBounds(node));
-        }
-
-        if (NEXT.equals(dir)) {
-            newNode = findNextFocusablePeer(node);
-        }
-        else if (PREVIOUS.equals(dir)) {
-            newNode = (findPreviousFocusablePeer(node));
-        }
-        else if (UP.equals(dir) || DOWN.equals(dir) || LEFT.equals(dir) || RIGHT.equals(dir) ) {
-            List<Node> nodes = engine.getAllTargetNodes();
-            List<Bounds> bounds = engine.getTargetBounds(nodes);
-
-            int target = trav2D(engine.getBounds(node), dir, bounds);
-            if (target != -1) {
-                newNode = nodes.get(target);
-            }
-            nodes.clear();
-            bounds.clear();
-
-        }
-
-        if (focusLogger.isLoggable(Level.FINER)) {
-            if (newNode != null) {
-                focusLogger.finer("new focus owner : "+newNode+", bounds : "+engine.getBounds(newNode));
-            }
-            else {
-                focusLogger.finer("no focus transfer");
-            }
-        }
-
-        return newNode;
-    }
-
-    private Node findNextFocusablePeer(Node node) {
-        Node startNode = node;
-        Node newNode = null;
-        List<Node> parentNodes = findPeers(startNode);
-        if (parentNodes == null) {
-            if (focusLogger.isLoggable(Level.FINER)) {
-                focusLogger.finer("can't find peers for a node without a parent");
-            }
-            return null;
-        }
-
-        int ourIndex = parentNodes.indexOf(startNode);
-
-        if (ourIndex == -1) {
-            if (focusLogger.isLoggable(Level.FINER)) {
-                focusLogger.finer("index not founds, no focus transfer");
-            }
-            return null;
-        }
-
-        newNode = findNextFocusableInList(parentNodes, ourIndex+1);
-
-        /*
-        ** we've reached the end of the peer nodes, and none have been selected,
-        ** time to look at our parents peers.....
-        */
-        while (newNode == null && startNode != null) {
-            List<Node> peerNodes;
-            int parentIndex;
-
-            Parent parent = startNode.getParent();
-            if (parent != null) {
-                peerNodes = findPeers(parent);
-                if (peerNodes != null) {
-                    parentIndex = peerNodes.indexOf(parent);
-                    newNode = findNextFocusableInList(peerNodes, parentIndex+1);
+                int target = trav2D(context.getSceneLayoutBounds(node), dir, nodes, context);
+                if (target != -1) {
+                    return nodes.get(target);
                 }
-            }
-            startNode = parent;
         }
-
-        if (newNode == null) {
-            /*
-            ** find the top-most parent which is not at it's end-of-list
-            */
-            Parent parent = null;
-            Parent p1 = node.getParent();
-            while (p1 != null) {
-                parent = p1;
-                p1 = p1.getParent();
-            }
-            parentNodes = parent.getChildrenUnmodifiable();
-            newNode = findNextFocusableInList(parentNodes, 0);
-        }
-
-        return newNode;
-    }
-
-    private Node findNextParent(Node node) {
         return null;
     }
 
-    private Node findNextFocusableInList(List<Node> nodeList, int startIndex) {
-        Node newNode = null;
-
-        for (int i = startIndex ; i < nodeList.size() ; i++) {
-
-            Node nextNode = nodeList.get(i);
-            if (nextNode.isFocusTraversable() == true && nextNode.isDisabled() == false && nextNode.impl_isTreeVisible() == true) {
-                newNode = nextNode;
-                break;
-            }
-            else if (nextNode instanceof javafx.scene.Parent) {
-                List<Node> nextNodesList = ((Parent)nextNode).getChildrenUnmodifiable();
-                if (nextNodesList.size() > 0) {
-                    newNode = findNextFocusableInList(nextNodesList, 0);
-                    if (newNode != null) {
-                        break;
-                    }
-                }
-            }
-        }
-        return newNode;
+    @Override
+    public Node selectFirst(TraversalContext context) {
+        return TabOrderHelper.getFirstTargetNode(context.getRoot());
     }
 
-    private Node findPreviousFocusablePeer(Node node) {
-        Node startNode = node;
-        Node newNode = null;
-        List<Node> parentNodes = findPeers(startNode);
-
-        int ourIndex = parentNodes.indexOf(startNode);
-
-        if (ourIndex == -1) {
-            if (focusLogger.isLoggable(Level.FINER)) {
-                focusLogger.finer("index not founds, no focus transfer");
-            }
-            return null;
-        }
-
-        newNode = findPreviousFocusableInList(parentNodes, ourIndex-1);
-
-        /*
-        ** we've reached the end of the peer nodes, and none have been selected,
-        ** time to look at our parents peers.....
-        */
-        while (newNode == null && startNode != null) {
-            List<Node> peerNodes;
-            int parentIndex;
-
-            Parent parent = startNode.getParent();
-            if (parent != null) {
-                peerNodes = findPeers(parent);
-                if (peerNodes != null) {
-                    parentIndex = peerNodes.indexOf(parent);
-                    newNode = findPreviousFocusableInList(peerNodes, parentIndex-1);
-                }
-            }
-            startNode = parent;
-        }
-
-        if (newNode == null) {
-            /*
-            ** find the top-most parent which is not at it's end-of-list
-            */
-            Parent parent = null;
-            Parent p1 = node.getParent();
-            while (p1 != null) {
-                parent = p1;
-                p1 = p1.getParent();
-            }
-
-            parentNodes = parent.getChildrenUnmodifiable();
-            newNode = findPreviousFocusableInList(parentNodes, parentNodes.size()-1);
-        }
-
-        return newNode;
+    @Override
+    public Node selectLast(TraversalContext context) {
+        return TabOrderHelper.getLastTargetNode(context.getRoot());
     }
 
-
-    private Node findPreviousFocusableInList(List<Node> nodeList, int startIndex) {
-        Node newNode = null;
-
-        for (int i = startIndex ; i >= 0 ; i--) {
-            Node prevNode = nodeList.get(i);
-            if (prevNode.isFocusTraversable() == true && prevNode.isDisabled() == false && prevNode.impl_isTreeVisible() == true) {
-                newNode = prevNode;
-                break;
-            }
-            else if (prevNode instanceof javafx.scene.Parent) {
-                List<Node> prevNodesList = ((Parent)prevNode).getChildrenUnmodifiable();
-                if (prevNodesList.size() > 0) {
-                    newNode = findPreviousFocusableInList(prevNodesList, prevNodesList.size()-1);
-                    if (newNode != null) {
-                        break;
-                    }
-                }
-            }
-        }
-        return newNode;
-    }
-
-
-    private List<Node> findPeers(Node node) {
-        List<Node> parentNodes = null;
-        Parent parent = node.getParent();
-        /*
-        ** check that we haven't hit the top-level
-        */
-        if (parent != null) {
-            parentNodes = parent.getChildrenUnmodifiable();
-        }
-        return parentNodes;
-    }
-
-    private static Parent getParent(Node child) {
-        return (child.getParent() instanceof Group) ? (child.getParent().getParent()) : (child.getParent());
-    }
-
-    private int trav2D(Bounds origin, Direction dir, List<Bounds> targets) {
+    private int trav2D(Bounds origin, Direction dir, List<Node> peers, TraversalContext context) {
 
         Bounds bestBounds = null;
         double bestMetric = 0.0;
         int bestIndex = -1;
 
-        for (int i = 0; i < targets.size(); i++) {
-            final Bounds targetBounds = targets.get(i);
+        for (int i = 0; i < peers.size(); i++) {
+            final Bounds targetBounds = context.getSceneLayoutBounds(peers.get(i));
             final double outd = outDistance(dir, origin, targetBounds);
             final double metric;
 

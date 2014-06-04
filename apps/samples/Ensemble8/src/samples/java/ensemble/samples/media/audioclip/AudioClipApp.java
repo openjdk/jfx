@@ -106,11 +106,8 @@ public class AudioClipApp extends Application {
         Lighting lighting = new Lighting(new Light.Point(-20, -20, 100, Color.WHITE));
         lighting.setSurfaceScale(1);
         rectangle.setEffect(lighting);
-        rectangle.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent me) {
-                barNote.play();
-            }
+        rectangle.setOnMousePressed((MouseEvent me) -> {
+            barNote.play();
         });
         return rectangle;
     }

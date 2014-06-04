@@ -68,7 +68,7 @@ public class SpanJob extends CompositeJob {
         final AbstractSelectionGroup selectionGroup = getEditorController().getSelection().getGroup();
         
         // Do we have an asset selected which is a standard one (not a grid) ?
-        if (selectionGroup != null && selectionGroup instanceof ObjectSelectionGroup) {
+        if (selectionGroup instanceof ObjectSelectionGroup) {
             // Is that asset enclosed in a grid ?
             if (selectionGroup.getAncestor() != null
                     && selectionGroup.getAncestor().getSceneGraphObject() instanceof GridPane) {

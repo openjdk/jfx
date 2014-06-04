@@ -38,6 +38,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue.Type;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -48,8 +49,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -99,24 +100,9 @@ public class StylesheetEditor extends InlineListEditor {
         // Set the initial value to empty list (instead of null)
         valueProperty().setValue(FXCollections.observableArrayList());
 
-        documentRelativeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchType(Type.DOCUMENT_RELATIVE_PATH);
-            }
-        });
-        classPathRelativeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchType(Type.CLASSLOADER_RELATIVE_PATH);
-            }
-        });
-        absoluteMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchType(Type.PLAIN_STRING);
-            }
-        });
+        documentRelativeMenuItem.setOnAction(e -> switchType(Type.DOCUMENT_RELATIVE_PATH));
+        classPathRelativeMenuItem.setOnAction(e -> switchType(Type.CLASSLOADER_RELATIVE_PATH));
+        absoluteMenuItem.setOnAction(e -> switchType(Type.PLAIN_STRING));
         getMenu().getItems().addAll(documentRelativeMenuItem, classPathRelativeMenuItem, absoluteMenuItem);
     }
 
@@ -148,12 +134,13 @@ public class StylesheetEditor extends InlineListEditor {
     @SuppressWarnings("unchecked")
     @Override
     public void setValue(Object value) {
+        setValueGeneric(value);
         if (value == null) {
             reset();
             return;
         }
         assert value instanceof List;
-        if (((List) value).isEmpty()) {
+        if (((List<?>) value).isEmpty()) {
             reset();
             return;
         }
@@ -275,10 +262,6 @@ public class StylesheetEditor extends InlineListEditor {
         } catch (MalformedURLException ex) {
             throw new RuntimeException("Invalid URL", ex); //NOI18N
         }
-        if (alreadyUsed(url.toExternalForm())) {
-            System.err.println(I18N.getString("inspector.stylesheet.alreadyexist", url)); // should go to message panel
-            return;
-        }
 
         switchToItemList();
         // Add editor item
@@ -290,6 +273,10 @@ public class StylesheetEditor extends InlineListEditor {
         } else {
             urlStr = url.toExternalForm();
             switchType(Type.PLAIN_STRING);
+        }
+        if (alreadyUsed(url.toExternalForm())) {
+            System.err.println(I18N.getString("inspector.stylesheet.alreadyexist", url)); // should go to message panel
+            return;
         }
         addItem(new StylesheetItem(this, urlStr));
 
@@ -432,37 +419,30 @@ public class StylesheetEditor extends InlineListEditor {
         // Method to please FindBugs
         private void initialize(String url) {
             setValue(url);
-            EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+            EventHandler<ActionEvent> onActionListener = event -> {
 //                    System.out.println("StylesheetItem : onActionListener");
-                    if (getValue().equals(currentValue)) {
-                        // no change
-                        return;
-                    }
-                    if (stylesheetTf.getText().isEmpty()) {
-                        remove(null);
-                    }
-//                        System.out.println("StyleEditorItem : COMMIT");
-                    editor.commit(StylesheetItem.this);
-                    if (event != null && event.getSource() instanceof TextField) {
-                        ((TextField) event.getSource()).selectAll();
-                    }
-                    updateButtons();
-                    updateOpenRevealMenuItems();
-                    currentValue = getValue();
+                if (getValue().equals(currentValue)) {
+                    // no change
+                    return;
                 }
+                if (stylesheetTf.getText().isEmpty()) {
+                    remove(null);
+                }
+//                        System.out.println("StyleEditorItem : COMMIT");
+                editor.commit(StylesheetItem.this);
+                if (event != null && event.getSource() instanceof TextField) {
+                    ((TextField) event.getSource()).selectAll();
+                }
+                updateButtons();
+                updateOpenRevealMenuItems();
+                currentValue = getValue();
             };
 
-            ChangeListener<String> textPropertyChange = new ChangeListener<String>() {
-
-                @Override
-                public void changed(ObservableValue<? extends String> ov, String prevText, String newText) {
-                    if (prevText.isEmpty() || newText.isEmpty()) {
-                        // Text changed FROM empty value, or TO empty value: buttons status change
-                        updateButtons();
-                        updateOpenRevealMenuItems();
-                    }
+            ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
+                if (prevText.isEmpty() || newText.isEmpty()) {
+                    // Text changed FROM empty value, or TO empty value: buttons status change
+                    updateButtons();
+                    updateOpenRevealMenuItems();
                 }
             };
             stylesheetTf.textProperty().addListener(textPropertyChange);
@@ -520,13 +500,7 @@ public class StylesheetEditor extends InlineListEditor {
         }
 
         protected void requestFocus() {
-            EditorUtils.doNextFrame(new Runnable() {
-
-                @Override
-                public void run() {
-                    stylesheetTf.requestFocus();
-                }
-            });
+            EditorUtils.doNextFrame(() -> stylesheetTf.requestFocus());
         }
 
         @Override
@@ -591,11 +565,7 @@ public class StylesheetEditor extends InlineListEditor {
             String suffix = new PrefixedValue(getValue()).getSuffix();
             String fileName = null;
             if (!suffix.isEmpty()) {
-                String[] urlParts = suffix.split("\\/");
-                fileName = urlParts[urlParts.length - 1];
-                // On windows, we may have "\" separators.
-                urlParts = fileName.split("\\\\");
-                fileName = urlParts[urlParts.length - 1];
+                fileName = EditorUtils.getSimpleFileName(suffix);
             }
             if (fileName != null) {
                 openMi.setVisible(true);
@@ -624,10 +594,12 @@ public class StylesheetEditor extends InlineListEditor {
             }
         }
 
+        @SuppressWarnings("unused")
         protected void disablePlusButton(boolean disable) {
             plusBt.setDisable(disable);
         }
 
+        @SuppressWarnings("unused")
         protected void disableRemove(boolean disable) {
             removeMi.setDisable(disable);
         }

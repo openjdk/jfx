@@ -81,12 +81,13 @@ public abstract class ComplexPropertyMetadata<T> extends SingleValuePropertyMeta
 
     @Override
     public boolean canMakeStringFromValue(T value) {
-        return false;
+        return value == null;
     }
 
     @Override
     public String makeStringFromValue(T value) {
-        throw new RuntimeException("Bug"); //NOI18N
+        assert value == null;
+        return "$null"; //NOI18N
     }
 
     @Override

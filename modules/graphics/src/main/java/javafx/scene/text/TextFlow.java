@@ -29,8 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.HPos;
@@ -159,11 +157,7 @@ public class TextFlow extends Pane {
      */
     public TextFlow() {
         super();
-        effectiveNodeOrientationProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                checkOrientation();
-            }
-        });
+        effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
     }
 
     /**
@@ -350,6 +344,9 @@ public class TextFlow extends Pane {
                      * to run a full text analysis in the new content.
                      */
                     double baseline = node.getBaselineOffset();
+                    if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                        baseline = node.getLayoutBounds().getHeight();
+                    }
                     double width = computeChildPrefAreaWidth(node, null);
                     double height = computeChildPrefAreaHeight(node, null);
                     spans[i] = new EmbeddedSpan(node, baseline, width, height);

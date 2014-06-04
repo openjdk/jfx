@@ -25,26 +25,14 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import java.util.Locale;
-import java.util.StringTokenizer;
-
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.KeyCombination;
 
 /**
  * <p>
- * Provides support for embedding a mnemonic, accelerator and text in a single
- * string. A mnemonic is a single character that will either give a control
- * focus or activate it when pressed in conjunction with the base platform's
- * mnemonic modifier (typically the {@code Alt} key). An accelerator is a key
- * combination that will activate the object.
- * </p>
- * 
- * <p>
  * The syntax of the string content is as follows:
  * </p>
- * 
+ *
  * <ul>
  * <li>
  * <p>
@@ -69,20 +57,7 @@ import javafx.scene.input.KeyCombination;
  * skin will also honor the hiding and presentation of the extended mnemonic
  * string on platforms where the mnemonic is only displayed when the mnemonic
  * modifier key is pressed.
- * <li>
- * <p>
- * <b>Accelerator</b>: an accelerator must be defined as the last element in the
- * string. It is delimited from the rest of the string by {@code @}. The
- * {@code @} must be followed by any number of modifier designations delimited
- * by {@code +} then followed by the accelerator character (e.g.,
- * {@code Ctrl+Shift+K}). The legal modifier designations are as follows (case
- * insensitive, and not to be translated): {@code Ctrl}, {@code Alt},
- * {@code Shift} and {@code Shortcut}. If an {@code @} appears 
- * twice in a row in the string, it will be treated as a single {@code @} and 
- * not as the accelerator delimiter.
- * <p></li>
  * </ul>
- * 
  */
 public class TextBinding {
 
@@ -98,7 +73,7 @@ public class TextBinding {
 
     /**
      * Returns the text with any markup for the mnemonic and accelerator removed
-     * 
+     *
      * @return the text with any markup for the mnemonic and accelerator removed
      */
     public String getText() {
@@ -114,7 +89,7 @@ public class TextBinding {
     /**
      * Returns the mnemonic or {@code null} if there is no
      * mnemonic.
-     * 
+     *
      * @return the mnemonic or {@code null} if there is no
      *         mnemonic
      */
@@ -126,7 +101,7 @@ public class TextBinding {
     /**
      * Returns the mnemonic KeyCombination or {@code null} if there is no
      * mnemonic.
-     * 
+     *
      * @return the mnemonic KeyCombination or {@code null} if there is no
      *         mnemonic
      */
@@ -148,7 +123,7 @@ public class TextBinding {
      * Returns the index of the mnemonic character in the text property or -1 if
      * there is no mnemonic character in the text. This is only non-negative if
      * the simple {@code _c} syntax was used to specify the mnemonic.
-     * 
+     *
      * @return the index of the mnemonic character in the text property or -1 if
      *         there is no mnemonic character in the text
      */
@@ -165,7 +140,7 @@ public class TextBinding {
     /**
      * Returns the extended mnemonic text (if it exists). This is only non-null
      * if the extended mnemonic syntax was used to specify the mnemonic.
-     * 
+     *
      * @return the extended mnemonic text (if it exists) or null
      */
     public String getExtendedMnemonicText() {
@@ -173,82 +148,9 @@ public class TextBinding {
     }
 
     /**
-     * The KeyBinding that describes the accelerator or null if there is no
-     * accelerator.
-     */
-    private KeyBinding accelerator = null;
-
-    /**
-     * Returns the KeyBinding that describes the accelerator or null if there is
-     * no accelerator
-     * 
-     * @return the KeyBinding that describes the accelerator or null if there is
-     *         no accelerator
-     */
-    public KeyBinding getAccelerator() {
-        return accelerator;
-    }
-
-    /**
-     * The localized accelerator text for use in presenting in an interface.
-     */
-    private String acceleratorText = null;
-
-    /**
-     * Returns the localized accelerator text for use in presenting in an
-     * interface or null if there is no accelerator text.
-     * 
-     * @return the localized accelerator text for use in presenting in an
-     *         interface or null if there is no accelerator text
-     */
-    public String getAcceleratorText() {
-        return acceleratorText;
-    }
-
-
-    /**
-     * for accelerator : is the control key needed?
-     */ 
-    private boolean ctrl = false;
-    public boolean getCtrl() {
-        return ctrl;
-    }
-
-    /**
-     * for accelerator : is the shift key needed?
-     */ 
-    private boolean shift = false;
-    public boolean getShift() {
-        return shift;
-    }
-
-    /**
-     * for accelerator : is the control key needed?
-     */ 
-    private boolean alt = false;
-    public boolean getAlt() {
-        return alt;
-    }
-    
-    /**
-     * for accelerator : is the shortcut key needed?
-     */ 
-    private boolean shortcut = false;
-    public boolean getShortcut() {
-        return shortcut;
-    }
-
-    /**
      * Creates a new TextBinding instance from the given string.
-     * 
+     *
      * @param s the action text string
-     * 
-     * @see getText
-     * @see getMnemonic
-     * @see getMnemonicIndex
-     * @see getExtendedMnemonicText
-     * @see getAccelerator
-     * @see getAcceleratorText
      */
     public TextBinding(String s) {
         parseAndSplit(s);
@@ -267,32 +169,10 @@ public class TextBinding {
         // mnemonic and accelerator text out of it as we find those things.
         //
         StringBuffer temp = new StringBuffer(s);
-        
-        // Find the accelerator if it exists.
-        //
-        int index = temp.indexOf("@");
-        while (index >= 0 && index < (temp.length() - 1)) {
-            if (temp.charAt(index + 1) == '@') {
-                temp.delete(index, index + 1); // delete the extra '@'
-            } else {
-                // Only strip out the accelerator text if we can parse it.
-                // [[[TODO: WDW - provide a localized form that concatenates
-                // the localized strings for the modifier with the key.]]]
-                acceleratorText = temp.substring(index + 1);
-                accelerator = parseAcceleratorText(acceleratorText);
-                if (accelerator != null) {
-                    temp.delete(index, temp.length());
-                    break;
-                } else {
-                    acceleratorText = null;
-                }
-            }
-            index = temp.indexOf("@", index + 1);
-        }
-        
+
         // Find the mnemonic if it exists.
         //
-        index = temp.indexOf(MNEMONIC_SYMBOL);
+        int index = temp.indexOf(MNEMONIC_SYMBOL);
         while (index >= 0 && index < (temp.length() - 1)) {
             // Skip two _'s in a row
             if (MNEMONIC_SYMBOL.equals(temp.substring(index + 1, index + 2))) {
@@ -325,88 +205,6 @@ public class TextBinding {
         }
         text = temp.toString();
     }
-    
-    /**
-     * Returns a KeyBinding for the given accelerator text or {@code null} if
-     * the accelerator text cannot be parsed.
-     * 
-     * @return a KeyBinding for the given accelerator text or {@code null} if
-     *         the accelerator text cannot be parsed
-     */
-    private KeyBinding parseAcceleratorText(String s) {
-        KeyBinding result = null;
-        String text = null;
-        boolean controlDown = false;
-        boolean altDown = false;
-        boolean shiftDown = false;
-        boolean shortcutDown = false;
-        boolean parseFail = false;
-        StringTokenizer tokenizer = new StringTokenizer(s, "+");
-        while (!parseFail && tokenizer.hasMoreTokens()) {
-            String token = tokenizer.nextToken();
-            if (!tokenizer.hasMoreTokens()) {
-                text = token;
-            } else {
-                KeyCode code = KeyCode.getKeyCode(token.toUpperCase(Locale.ROOT));
-                if (code != null) {
-                    switch (code) {
-                      case CONTROL:
-                        controlDown = true;
-                        break;
-                      case ALT:
-                        altDown = true;
-                        break;
-                      case SHIFT:
-                        shiftDown = true;
-                        break;
-                      case SHORTCUT:
-                        shortcutDown = true;
-                        break;
-                      default:
-                        text = null;
-                        parseFail = true;
-                        break;
-                    }
-                } else {
-                    text = null;
-                    parseFail = true;
-                }
-            }
-        }
-        if (text != null) {
-            KeyCode code = KeyCode.getKeyCode(text.toUpperCase());
-            if (code != null) {
-                if (code != KeyCode.UNDEFINED) {
-                    result = new KeyBinding(code, null);
-                    if (controlDown) {
-                        ctrl = true;
-                        result.ctrl();
-                    }
-                    if (altDown) {
-                        alt = true;
-                        result.alt();
-                    }
-                    if (shiftDown) {
-                        shift = true;
-                        result.shift();
-                    }
-                    if (shortcutDown) {
-                        shortcut = true;
-                        result.shortcut();
-                    }
-                }
-            }
-        }
-        return result;
-    }
-    
-    @Override public String toString() {
-        return "TextBinding [text=" + getText() + ",mnemonic=" + getMnemonic()
-            + ", mnemonicIndex=" + getMnemonicIndex()
-            + ", extendedMnemonicText=" + getExtendedMnemonicText()
-            + ", accelerator=" + getAccelerator() + ", acceleratorText="
-            + getAcceleratorText() + "]";
-    }
 
     /**
      * A modified version of KeyCharacterCombination, which matches
@@ -428,8 +226,8 @@ public class TextBinding {
             this.character = character;
         }
 
-        /** 
-         * Gets the key character associated with this key combination. 
+        /**
+         * Gets the key character associated with this key combination.
          * @return The key character associated with this key combination
          */
         public final String getCharacter() {

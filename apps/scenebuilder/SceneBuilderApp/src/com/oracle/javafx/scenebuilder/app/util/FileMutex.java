@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.app.util;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -50,6 +49,7 @@ import java.util.TimerTask;
 class FileMutex {
     
     private final Path lockFile;
+    private RandomAccessFile lockRAF;
     private FileLock lock;
     
     public FileMutex(Path lockFile) {
@@ -62,33 +62,42 @@ class FileMutex {
     }
     
     public void lock(long timeout) throws IOException {
+        assert lockRAF == null;
         assert lock == null;
         
-        final FileChannel channel = createFileChannel();
+        createFileChannel();
+        assert lockRAF != null;
         final Timer timer = new Timer();
         timer.schedule(new InterruptTask(), timeout);
-        lock = channel.lock();
+        lock = lockRAF.getChannel().lock();
         timer.cancel();
         assert lock != null;
     }
     
     public boolean tryLock() throws IOException {
+        assert lockRAF == null;
         assert lock == null;
 
-        final FileChannel channel = createFileChannel();
-        lock = channel.tryLock();
+        createFileChannel();
+        assert lockRAF != null;
+        lock = lockRAF.getChannel().tryLock();
         if (lock == null) {
-            channel.close();
+            lockRAF.close();
+            lockRAF = null;
         }
         
         return lock != null;
     }
     
     public void unlock() throws IOException {
+        assert lockRAF != null;
         assert lock != null;
+        assert lock.channel() == lockRAF.getChannel();
+        
         lock.release();
-        lock.channel().close();
         lock = null;
+        lockRAF.close();
+        lockRAF = null;
     }
     
     public boolean isLocked() {
@@ -100,14 +109,13 @@ class FileMutex {
      * Private
      */
     
-    private FileChannel createFileChannel() throws IOException {
+    private void createFileChannel() throws IOException {
         try {
             Files.createFile(lockFile);
         } catch(FileAlreadyExistsException x) {
             // Someone else already created it
         }
-        final RandomAccessFile raf = new RandomAccessFile(lockFile.toFile(), "rw"); //NOI18N
-        return raf.getChannel();
+        lockRAF = new RandomAccessFile(lockFile.toFile(), "rw"); //NOI18N
     }
     
     private static class InterruptTask extends TimerTask {

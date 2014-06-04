@@ -481,10 +481,7 @@ public final class EventHandlerManagerTest {
     public void addEventHandlerShouldThrowNPEForNullEventType() {
         eventHandlerManager.addEventHandler(
                 null,
-                new EventHandler<Event>() {
-                    @Override
-                    public void handle(final Event event) {
-                    }
+                event -> {
                 });
     }
 
@@ -497,10 +494,7 @@ public final class EventHandlerManagerTest {
     public void removeEventHandlerShouldThrowNPEForNullEventType() {
         eventHandlerManager.removeEventHandler(
                 null,
-                new EventHandler<Event>() {
-                    @Override
-                    public void handle(final Event event) {
-                    }
+                event -> {
                 });
     }
 
@@ -513,10 +507,7 @@ public final class EventHandlerManagerTest {
     public void addEventFilterShouldThrowNPEForNullEventType() {
         eventHandlerManager.addEventFilter(
                 null,
-                new EventHandler<Event>() {
-                    @Override
-                    public void handle(final Event event) {
-                    }
+                event -> {
                 });
     }
 
@@ -529,10 +520,7 @@ public final class EventHandlerManagerTest {
     public void removeEventFilterShouldThrowNPEForNullEventType() {
         eventHandlerManager.removeEventHandler(
                 null,
-                new EventHandler<Event>() {
-                    @Override
-                    public void handle(final Event event) {
-                    }
+                event -> {
                 });
     }
 
@@ -545,10 +533,7 @@ public final class EventHandlerManagerTest {
     public void setEventHandlerShouldThrowNPEForNullEventType() {
         eventHandlerManager.setEventHandler(
                 null,
-                new EventHandler<Event>() {
-                    @Override
-                    public void handle(final Event event) {
-                    }
+                event -> {
                 });
     }
 

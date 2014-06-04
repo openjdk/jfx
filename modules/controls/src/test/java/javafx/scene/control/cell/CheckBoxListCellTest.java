@@ -47,11 +47,7 @@ public class CheckBoxListCellTest {
     
     @Before public void setup() {
         booleanProperty = new SimpleBooleanProperty(false);
-        callback = new Callback<Object, ObservableValue<Boolean>>() {
-            public ObservableValue<Boolean> call(Object param) {
-                return booleanProperty;
-            }
-        };
+        callback = param -> booleanProperty;
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
                 return null;

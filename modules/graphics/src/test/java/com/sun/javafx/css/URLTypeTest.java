@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,7 +49,7 @@ public class URLTypeTest {
     final String baseURL = "http://a/b/c/d;p?q";
 
     // from rfc3986, section 5
-    String[][] testPairs = new String[][] {
+    final String[][] testPairs = new String[][] {
         {"file:h"           ,  "file:h"},
         {"g"             ,  "http://a/b/c/g"},
         {"./g"           ,  "http://a/b/c/g"},

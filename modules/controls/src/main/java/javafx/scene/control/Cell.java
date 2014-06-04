@@ -36,11 +36,10 @@ import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.shape.Rectangle;
-import com.sun.javafx.scene.control.accessible.AccessibleListItem;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import javafx.css.PseudoClass;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 /**
@@ -352,7 +351,7 @@ public class Cell<T> extends Labeled {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 
         // CssMetaData ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
 
         /**
@@ -620,27 +619,54 @@ public class Cell<T> extends Labeled {
      **************************************************************************/
 
     /**
-     * <p>
-     *     Updates the item associated with this Cell. This method should <strong>
-     *     only</strong> be called by Skin implementations of ListView, TableView,
-     *     TreeView, or other controls using Cells. It is not intended to be called
-     *     by application developers.
-     * </p>
-     * <p>
-     *     Because <code>null</code> is a perfectly valid value in the application
-     *     domain, Cell needs some way to distinguish whether or not the cell
-     *     actually holds a value. The <code>empty</code> flag indicates this.
-     *     It is an error to supply a non-null <code>item</code> but a true value for
-     *     <code>empty</code>.
-     * </p>
-     * @param item The new item for the cell
+     * The updateItem method should not be called by developers, but it is the
+     * best method for developers to override to allow for them to customise the
+     * visuals of the cell. To clarify, developers should never call this method
+     * in their code (they should leave it up to the UI control, such as the
+     * {@link javafx.scene.control.ListView} control) to call this method. However,
+     * the purpose of having the updateItem method is so that developers, when
+     * specifying custom cell factories (again, like the ListView
+     * {@link javafx.scene.control.ListView#cellFactoryProperty() cell factory}),
+     * the updateItem method can be overridden to allow for complete customisation
+     * of the cell.
+     *
+     * <p>It is <strong>very important</strong> that subclasses
+     * of Cell override the updateItem method properly, as failure to do so will
+     * lead to issues such as blank cells or cells with unexpected content
+     * appearing within them. Here is an example of how to properly override the
+     * updateItem method:
+     *
+     * <pre>
+     * protected void updateItem(T item, boolean empty) {
+     *     super.updateItem(item, empty);
+     *
+     *     if (empty || item == null) {
+     *         setText(null);
+     *         setGraphic(null);
+     *     } else {
+     *         setText(item.toString());
+     *     }
+     * }
+     * </pre>
+     *
+     * <p>Note in this code sample two important points:
+     * <ol>
+     *     <li>We call the super.updateItem(T, boolean) method. If this is not
+     *     done, the item and empty properties are not correctly set, and you are
+     *     likely to end up with graphical issues.</li>
+     *     <li>We test for the <code>empty</code> condition, and if true, we
+     *     set the text and graphic properties to null. If we do not do this,
+     *     it is almost guaranteed that end users will see graphical artifacts
+     *     in cells unexpectedly.</li>
+     * </ol>
+     *
+     * @param item The new item for the cell.
      * @param empty whether or not this cell represents data from the list. If it
      *        is empty, then it does not represent any domain data, but is a cell
      *        being used to render an "empty" row.
      * @expert
      */
     protected void updateItem(T item, boolean empty) {
-        if (isEditing()) cancelEdit();
         setItem(item);
         setEmpty(empty);
         if (empty && isSelected()) {
@@ -656,17 +682,6 @@ public class Cell<T> extends Labeled {
     public void updateSelected(boolean selected) {
         if (selected && isEmpty()) return;
         setSelected(selected);
-    }
-
-    private AccessibleListItem accListItem ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
-        if( accListItem == null)
-            accListItem = new AccessibleListItem(this);
-        return (AccessibleProvider)accListItem ;
     }
     
     

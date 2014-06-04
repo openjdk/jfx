@@ -69,11 +69,7 @@ public class TaskEventTest {
     @Test public void onScheduledCalledWhenSetViaProperty() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
-        task.onScheduledProperty().set(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.onScheduledProperty().set(workerStateEvent -> handlerCalled.set(true));
 
         task.simulateSchedule();
         // Events should have happened
@@ -84,18 +80,8 @@ public class TaskEventTest {
         SimpleTask task = new SimpleTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        task.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        task.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        task.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> filterCalled.set(true));
+        task.setOnScheduled(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         // Transition to Scheduled state
         task.simulateSchedule();
@@ -111,11 +97,7 @@ public class TaskEventTest {
                 scheduledCalledLast.set(handlerCalled.get());
             }
         };
-        task.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.setOnScheduled(workerStateEvent -> handlerCalled.set(true));
 
         // Transition to Scheduled state
         task.simulateSchedule();
@@ -130,11 +112,7 @@ public class TaskEventTest {
                 scheduledCalled.set(true);
             }
         };
-        task.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                workerStateEvent.consume();
-            }
-        });
+        task.setOnScheduled(workerStateEvent -> workerStateEvent.consume());
 
         // Transition to Scheduled state
         task.simulateSchedule();
@@ -145,12 +123,7 @@ public class TaskEventTest {
     @Test public void onScheduledHandlerCalled() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
-        task.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> handlerCalled.set(true));
 
         task.simulateSchedule();
         // Events should have happened
@@ -161,18 +134,10 @@ public class TaskEventTest {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
-        EventHandler<WorkerStateEvent> handler = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> handler = workerStateEvent -> handlerCalled.set(true);
         task.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, handler);
         task.removeEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, handler);
-        task.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        task.addEventHandler(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> sanity.set(true));
 
         task.simulateSchedule();
         assertTrue(sanity.get());
@@ -183,18 +148,10 @@ public class TaskEventTest {
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean sanity = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
-        EventHandler<WorkerStateEvent> filter = new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        };
+        EventHandler<WorkerStateEvent> filter = workerStateEvent -> filterCalled.set(true);
         task.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, filter);
         task.removeEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, filter);
-        task.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                sanity.set(true);
-            }
-        });
+        task.addEventFilter(WorkerStateEvent.WORKER_STATE_SCHEDULED, workerStateEvent -> sanity.set(true));
 
         task.simulateSchedule();
         assertTrue(sanity.get());
@@ -226,11 +183,7 @@ public class TaskEventTest {
     @Test public void onRunningCalledWhenSetViaProperty() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
-        task.onRunningProperty().set(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.onRunningProperty().set(workerStateEvent -> handlerCalled.set(true));
 
         task.run();
         // Events should have happened
@@ -241,16 +194,8 @@ public class TaskEventTest {
         SimpleTask task = new SimpleTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        task.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        task.setOnRunning(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        task.addEventFilter(WorkerStateEvent.WORKER_STATE_RUNNING, workerStateEvent -> filterCalled.set(true));
+        task.setOnRunning(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         // Transition to Running state
         task.run();
@@ -266,11 +211,7 @@ public class TaskEventTest {
                 runningCalledLast.set(handlerCalled.get());
             }
         };
-        task.setOnRunning(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.setOnRunning(workerStateEvent -> handlerCalled.set(true));
 
         task.run();
         // Events should have happened
@@ -284,11 +225,7 @@ public class TaskEventTest {
                 runningCalled.set(true);
             }
         };
-        task.setOnRunning(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                workerStateEvent.consume();
-            }
-        });
+        task.setOnRunning(workerStateEvent -> workerStateEvent.consume());
 
         task.run();
         // Events should have happened
@@ -320,11 +257,7 @@ public class TaskEventTest {
     @Test public void onSucceededCalledWhenSetViaProperty() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         SimpleTask task = new SimpleTask();
-        task.onSucceededProperty().set(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.onSucceededProperty().set(workerStateEvent -> handlerCalled.set(true));
 
         task.run();
         // Events should have happened
@@ -335,16 +268,8 @@ public class TaskEventTest {
         SimpleTask task = new SimpleTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        task.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        task.addEventFilter(WorkerStateEvent.WORKER_STATE_SUCCEEDED, workerStateEvent -> filterCalled.set(true));
+        task.setOnSucceeded(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         task.run();
         // Events should have happened
@@ -359,11 +284,7 @@ public class TaskEventTest {
                 succeededCalledLast.set(handlerCalled.get());
             }
         };
-        task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.setOnSucceeded(workerStateEvent -> handlerCalled.set(true));
 
         task.run();
         // Events should have happened
@@ -377,11 +298,7 @@ public class TaskEventTest {
                 succeededCalled.set(true);
             }
         };
-        task.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                workerStateEvent.consume();
-            }
-        });
+        task.setOnSucceeded(workerStateEvent -> workerStateEvent.consume());
 
         task.run();
         // Events should have happened
@@ -413,11 +330,7 @@ public class TaskEventTest {
     @Test public void onCancelledCalledWhenSetViaProperty() throws Exception {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         InfiniteTask task = new InfiniteTask();
-        task.onCancelledProperty().set(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.onCancelledProperty().set(workerStateEvent -> handlerCalled.set(true));
 
         Thread th = new Thread(task);
         th.start();
@@ -431,16 +344,8 @@ public class TaskEventTest {
         InfiniteTask task = new InfiniteTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        task.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        task.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        task.addEventFilter(WorkerStateEvent.WORKER_STATE_CANCELLED, workerStateEvent -> filterCalled.set(true));
+        task.setOnCancelled(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         Thread th = new Thread(task);
         th.start();
@@ -458,12 +363,7 @@ public class TaskEventTest {
                 cancelledCalledLast.set(handlerCalled.get());
             }
         };
-        task.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-            @Override
-            public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.setOnCancelled(workerStateEvent -> handlerCalled.set(true));
 
         Thread th = new Thread(task);
         th.start();
@@ -480,11 +380,7 @@ public class TaskEventTest {
                 cancelledCalled.set(true);
             }
         };
-        task.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                workerStateEvent.consume();
-            }
-        });
+        task.setOnCancelled(workerStateEvent -> workerStateEvent.consume());
 
         Thread th = new Thread(task);
         th.start();
@@ -519,11 +415,7 @@ public class TaskEventTest {
     @Test public void onFailedCalledWhenSetViaProperty() {
         final AtomicBoolean handlerCalled = new AtomicBoolean(false);
         Task<String> task = new EpicFailTask();
-        task.onFailedProperty().set(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.onFailedProperty().set(workerStateEvent -> handlerCalled.set(true));
 
         task.run();
         // Events should have happened
@@ -534,16 +426,8 @@ public class TaskEventTest {
         Task<String> task = new EpicFailTask();
         final AtomicBoolean filterCalled = new AtomicBoolean(false);
         final AtomicBoolean filterCalledFirst = new AtomicBoolean(false);
-        task.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalled.set(true);
-            }
-        });
-        task.setOnFailed(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                filterCalledFirst.set(filterCalled.get());
-            }
-        });
+        task.addEventFilter(WorkerStateEvent.WORKER_STATE_FAILED, workerStateEvent -> filterCalled.set(true));
+        task.setOnFailed(workerStateEvent -> filterCalledFirst.set(filterCalled.get()));
 
         task.run();
         // Events should have happened
@@ -558,11 +442,7 @@ public class TaskEventTest {
                 failedCalledLast.set(handlerCalled.get());
             }
         };
-        task.setOnFailed(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                handlerCalled.set(true);
-            }
-        });
+        task.setOnFailed(workerStateEvent -> handlerCalled.set(true));
 
         task.run();
         // Events should have happened
@@ -576,11 +456,7 @@ public class TaskEventTest {
                 failedCalled.set(true);
             }
         };
-        task.setOnFailed(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent workerStateEvent) {
-                workerStateEvent.consume();
-            }
-        });
+        task.setOnFailed(workerStateEvent -> workerStateEvent.consume());
 
         task.run();
         // Events should have happened
@@ -597,11 +473,7 @@ public class TaskEventTest {
     @Test public void eventFiredOnSubclassWorks() {
         final AtomicBoolean result = new AtomicBoolean(false);
         MythicalTask task = new MythicalTask();
-        task.setHandler(new EventHandler<MythicalEvent>() {
-            @Override public void handle(MythicalEvent mythicalEvent) {
-                result.set(true);
-            }
-        });
+        task.setHandler(mythicalEvent -> result.set(true));
         task.fireEvent(new MythicalEvent());
         assertTrue(result.get());
     }

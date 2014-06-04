@@ -56,14 +56,13 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
     private final Path minorTickPath  = new Path();
 
-    private boolean saveMinorTickVisible = false;
-    private boolean restoreMinorTickVisiblity = false;
-    
     private double offset;
-    /** This is the minimum current data value and it is used while auto ranging. */
-    private double dataMinValue;
-    /** This is the maximum current data value and it is used while auto ranging. */
-    private double dataMaxValue;
+    /** This is the minimum current data value and it is used while auto ranging.
+     *  Package private solely for test purposes */
+    double dataMinValue;
+    /** This is the maximum current data value and it is used while auto ranging.
+     *  Package private solely for test purposes */
+    double dataMaxValue;
     /** List of the values at which there are minor ticks */
     private List<T> minorTickMarkValues = null;
     // -------------- PRIVATE PROPERTIES -------------------------------------------------------------------------------
@@ -161,7 +160,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     private final ObjectProperty<StringConverter<T>> tickLabelFormatter = new ObjectPropertyBase<StringConverter<T>>(null){
         @Override protected void invalidated() {
             invalidateRange();
-            formatterValid = true;
             requestAxisLayout();
         }
 
@@ -182,10 +180,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     /** The length of minor tick mark lines. Set to 0 to not display minor tick marks. */
     private DoubleProperty minorTickLength = new StyleableDoubleProperty(5) {
         @Override protected void invalidated() {
-            // RT-16747 if tick length is negative - set it to 0
-            if (minorTickLength.get() < 0 && !minorTickLength.isBound()) {
-                minorTickLength.set(0);
-            }
             requestAxisLayout();
         }
 
@@ -214,10 +208,6 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      */
     private IntegerProperty minorTickCount = new StyleableIntegerProperty(5) {
         @Override protected void invalidated() {
-            // RT-16747 if the tick count is negative, set it to 0
-            if ((minorTickCount.get() - 1) < 0 && !minorTickCount.isBound()) {
-                minorTickCount.set(0);
-            }
             invalidateRange();
             requestAxisLayout();
         }
@@ -297,8 +287,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      */
     protected final double calculateNewScale(double length, double lowerBound, double upperBound) {
         double newScale = 1;
-        final Side side = getSide();
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL 
+        final Side side = getEffectiveSide();
+        if (side.isVertical()) {
             offset = length;
             newScale = ((upperBound-lowerBound) == 0) ? -length : -(length / (upperBound - lowerBound));
         } else { // HORIZONTAL
@@ -346,8 +336,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * Invoked during the layout pass to layout this axis and all its content.
      */
     @Override protected void layoutChildren() {
-        final Side side = getSide();
-        final double length = (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) ? getHeight() :getWidth() ;
+        final Side side = getEffectiveSide();
+        final double length = side.isVertical() ? getHeight() :getWidth() ;
         // if we are not auto ranging we need to calculate the new scale
         if(!isAutoRanging()) {
             // calculate new scale
@@ -357,69 +347,67 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
         // we have done all auto calcs, let Axis position major tickmarks
         super.layoutChildren();
-        int numMinorTicks = (getTickMarks().size() - 1)*(getMinorTickCount() - 1);
-        double neededLength = (getTickMarks().size()+numMinorTicks)*2;
-        if (length < neededLength) {
-            if (!restoreMinorTickVisiblity) {
-                restoreMinorTickVisiblity = true;
-                saveMinorTickVisible = isMinorTickVisible();
-                setMinorTickVisible(false);
-            }
-        } else {
-            if (restoreMinorTickVisiblity) {
-                setMinorTickVisible(saveMinorTickVisible);
-                restoreMinorTickVisiblity = false;
-            }
-        }
+
         // Update minor tickmarks
         minorTickPath.getElements().clear();
-        if (getMinorTickLength() > 0) {
+
+        double minorTickLength = Math.max(0, getMinorTickLength());
+        // The length must be greater then the space required for tick marks, otherwise, there's no reason to create
+        // minor tick marks
+        if (minorTickLength > 0 && length > 2 * getTickMarks().size()) {
+            // Strip factor is >= 1. When == 1, all minor ticks will fit.
+            // It's computed as number of minor tick marks divided by available length
+            int stripFactor = (int)Math.ceil(2 * minorTickMarkValues.size() / (length - 2 * getTickMarks().size()));
             if (Side.LEFT.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(-0.5);
                 minorTickPath.setLayoutY(0.5);
-                for (T value : minorTickMarkValues) {
+                for (int i = 0; i < minorTickMarkValues.size(); i += stripFactor) {
+                    T value = minorTickMarkValues.get(i);
                     double y = getDisplayPosition(value);
-                    if(y >= 0 && y <= length) {
+                    if (y >= 0 && y <= length) {
                         minorTickPath.getElements().addAll(
-                                new MoveTo(getWidth() - getMinorTickLength(), y),
-                                new LineTo(getWidth()-1, y));
+                                new MoveTo(getWidth() - minorTickLength, y),
+                                new LineTo(getWidth() - 1, y));
                     }
                 }
             } else if (Side.RIGHT.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(0.5);
                 minorTickPath.setLayoutY(0.5);
-                for (T value : minorTickMarkValues) {
+                for (int i = 0; i < minorTickMarkValues.size(); i += stripFactor) {
+                    T value = minorTickMarkValues.get(i);
                     double y = getDisplayPosition(value);
-                    if(y >= 0 && y <= length) {
+                    if (y >= 0 && y <= length) {
                         minorTickPath.getElements().addAll(
                                 new MoveTo(1, y),
-                                new LineTo(getMinorTickLength(), y));
+                                new LineTo(minorTickLength, y));
                     }
                 }
             } else if (Side.TOP.equals(side)) {
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(0.5);
                 minorTickPath.setLayoutY(-0.5);
-                for (T value : minorTickMarkValues) {
+                for (int i = 0; i < minorTickMarkValues.size(); i += stripFactor) {
+                    T value = minorTickMarkValues.get(i);
                     double x = getDisplayPosition(value);
-                    if(x >= 0 && x <= length) {
+                    if (x >= 0 && x <= length) {
                         minorTickPath.getElements().addAll(
-                                new MoveTo(x, getHeight()-1),
-                                new LineTo(x, getHeight() - getMinorTickLength()));
+                                new MoveTo(x, getHeight() - 1),
+                                new LineTo(x, getHeight() - minorTickLength));
                     }
                 }
             } else { // BOTTOM
                 // snap minorTickPath to pixels
                 minorTickPath.setLayoutX(0.5);
                 minorTickPath.setLayoutY(0.5);
-                for (T value : minorTickMarkValues) {
+                for (int i = 0; i < minorTickMarkValues.size(); i += stripFactor) {
+                    T value = minorTickMarkValues.get(i);
                     double x = getDisplayPosition(value);
-                    if(x >= 0 && x <= length) {
+                    if (x >= 0 && x <= length) {
                         minorTickPath.getElements().addAll(
                                 new MoveTo(x, 1.0F),
-                                new LineTo(x, getMinorTickLength()));
+                                new LineTo(x, minorTickLength));
                     }
                 }
             }
@@ -441,7 +429,9 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
             dataMinValue = getLowerBound();
         } else {
             dataMinValue = Double.MAX_VALUE;
-            dataMaxValue = Double.MIN_VALUE;
+            // We need to init to the lowest negative double (which is NOT Double.MIN_VALUE)
+            // in order to find the maximum (positive or negative)
+            dataMaxValue = -Double.MAX_VALUE;
         }
         for(T dataValue: data) {
             dataMinValue = Math.min(dataMinValue, dataValue.doubleValue());
@@ -451,13 +441,15 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     }
 
     /**
-     * Get the display position along this axis for a given value
+     * Get the display position along this axis for a given value.
+     * If the value is not in the current range, the returned value will be an extrapolation of the display
+     * position.
      *
      * @param value The data value to work out display position for
-     * @return display position or Double.NaN if zero is not in current range;
+     * @return display position
      */
     @Override public double getDisplayPosition(T value) {
-        return Math.ceil(offset + ((value.doubleValue() - currentLowerBound.get()) * getScale()));
+        return Math.round(offset + ((value.doubleValue() - currentLowerBound.get()) * getScale()));
     }
 
     /**

@@ -40,9 +40,9 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.robot.FXRobot;
 import com.sun.javafx.robot.FXRobotImage;
-import com.sun.javafx.tk.Toolkit;
 import javafx.scene.input.ScrollEvent;
 
 /**
@@ -122,11 +122,7 @@ public class BaseFXRobot extends FXRobot {
     @Override public void waitForIdle() {
         // TODO: use better scheme for waiting when pulses stop
         final CountDownLatch latch = new CountDownLatch(1);
-        Toolkit.getToolkit().defer(new Runnable() {
-            public void run() {
-                latch.countDown();
-            }
-        });
+        PlatformImpl.runLater(() -> latch.countDown());
         while (true) {
             try {
                 latch.await();
@@ -210,11 +206,9 @@ public class BaseFXRobot extends FXRobot {
             createKeyEvent(eventType, keyCode, keyChar, keyText,
                            isShiftDown, isControlDown, isAltDown, isMetaDown);
 
-        Toolkit.getToolkit().defer(new Runnable() {
-            public void run() {
-                out("doKeyEvent: injecting: {e}");
-                FXRobotHelper.sceneAccessor.processKeyEvent(target, e);
-            }
+        PlatformImpl.runLater(() -> {
+            out("doKeyEvent: injecting: {e}");
+            FXRobotHelper.sceneAccessor.processKeyEvent(target, e);
         });
         if (autoWait) {
             waitForIdle();
@@ -267,11 +261,9 @@ public class BaseFXRobot extends FXRobot {
                              isButton1Pressed,
                              isButton2Pressed,
                              isButton3Pressed);
-        Toolkit.getToolkit().defer(new Runnable() {
-            public void run() {
-                out("doMouseEvent: injecting: " + e);
-                FXRobotHelper.sceneAccessor.processMouseEvent(target, e);
-            }
+        PlatformImpl.runLater(() -> {
+            out("doMouseEvent: injecting: " + e);
+            FXRobotHelper.sceneAccessor.processMouseEvent(target, e);
         });
         if (autoWait) {
             waitForIdle();
@@ -296,11 +288,9 @@ public class BaseFXRobot extends FXRobot {
                              isControlDown,
                              isAltDown,
                              isMetaDown);
-        Toolkit.getToolkit().defer(new Runnable() {
-            public void run() {
-                out("doScrollEvent: injecting: " + e);
-                FXRobotHelper.sceneAccessor.processScrollEvent(target, e);
-            }
+        PlatformImpl.runLater(() -> {
+            out("doScrollEvent: injecting: " + e);
+            FXRobotHelper.sceneAccessor.processScrollEvent(target, e);
         });
         if (autoWait) {
             waitForIdle();

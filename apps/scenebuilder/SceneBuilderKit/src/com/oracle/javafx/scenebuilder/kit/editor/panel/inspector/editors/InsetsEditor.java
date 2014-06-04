@@ -81,16 +81,13 @@ public class InsetsEditor extends PropertyEditor {
         textFields[2] = bottomTf;
         textFields[3] = leftTf;
         for (TextField tf : textFields) {
-            EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    if (isHandlingError()) {
-                        // Event received because of focus lost due to error dialog
-                        return;
-                    }
-                    // !! Should check if invalid value ! 
-                    userUpdateValueProperty(getValue());
+            EventHandler<ActionEvent> valueListener = event -> {
+                if (isHandlingError()) {
+                    // Event received because of focus lost due to error dialog
+                    return;
                 }
+                // !! Should check if invalid value ! 
+                userUpdateValueProperty(getValue());
             };
             setNumericEditorBehavior(this, tf, valueListener, false);
         }
@@ -179,15 +176,11 @@ public class InsetsEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                if (errorTf != null) {
-                    errorTf.requestFocus();
-                } else {
-                    topTf.requestFocus();
-                }
+        EditorUtils.doNextFrame(() -> {
+            if (errorTf != null) {
+                errorTf.requestFocus();
+            } else {
+                topTf.requestFocus();
             }
         });
     }

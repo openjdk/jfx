@@ -38,11 +38,11 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<SplitPane fx:id="inspectorRoot" dividerPositions="0.3847328244274809" focusTraversable="true" orientation="VERTICAL" prefHeight="600.0" styleClass="theme-presets, SBKIT-inspector-panel" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<SplitPane fx:id="inspectorRoot" dividerPositions="0.3847328244274809" focusTraversable="false" orientation="VERTICAL" prefHeight="600.0" styleClass="theme-presets, SBKIT-inspector-panel" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <items>
 <StackPane fx:id="searchStackPane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
 <children>
-    <ScrollPane fitToWidth="true" minHeight="250.0" styleClass="property-sheet">
+    <ScrollPane fitToWidth="true" minHeight="250.0">
       <content>
         <GridPane fx:id="searchContent" gridLinesVisible="false" hgap="1.0" maxWidth="-1.0" minHeight="0.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" style="" vgap="5.0">
           <children>
@@ -69,6 +69,10 @@
           </rowConstraints>
         </GridPane>
       </content>
+               <styleClass>
+                  <String fx:value="theme-presets" />
+                  <String fx:value="property-sheet" />
+               </styleClass>
     </ScrollPane><Region maxHeight="1.0" styleClass="pane-shadow" StackPane.alignment="TOP_CENTER" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" />
 </children>
 </StackPane>
@@ -106,10 +110,10 @@
 </padding>
                 </GridPane>
               </content>
-<styleClass>
-<String fx:value="scroll-pane" />
-<String fx:value="property-sheet" />
-</styleClass>
+                           <styleClass>
+                              <String fx:value="theme-presets" />
+                              <String fx:value="property-sheet" />
+                           </styleClass>
             </ScrollPane>
           </content>
           <graphic>
@@ -143,10 +147,10 @@
                   </rowConstraints>
                 </GridPane>
               </content>
-<styleClass>
-<String fx:value="scroll-pane" />
-<String fx:value="property-sheet" />
-</styleClass>
+                           <styleClass>
+                              <String fx:value="theme-presets" />
+                              <String fx:value="property-sheet" />
+                           </styleClass>
             </ScrollPane>
           </content>
           <graphic>
@@ -180,10 +184,10 @@
                   </rowConstraints>
                 </GridPane>
               </content>
-<styleClass>
-<String fx:value="scroll-pane" />
-<String fx:value="property-sheet" />
-</styleClass>
+                           <styleClass>
+                              <String fx:value="theme-presets" />
+                              <String fx:value="property-sheet" />
+                           </styleClass>
             </ScrollPane>
           </content>
           <graphic>
@@ -211,10 +215,10 @@
                   </rowConstraints>
                 </GridPane>
               </content>
-<styleClass>
-<String fx:value="scroll-pane" />
-<String fx:value="property-sheet" />
-</styleClass>
+                           <styleClass>
+                              <String fx:value="theme-presets" />
+                              <String fx:value="property-sheet" />
+                           </styleClass>
             </ScrollPane>
           </content>
           <graphic>

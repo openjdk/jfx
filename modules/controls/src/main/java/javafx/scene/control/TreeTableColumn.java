@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@ import javafx.css.CssMetaData;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -51,12 +49,14 @@ import javafx.css.Styleable;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 /**
  * A {@link TreeTableView} is made up of a number of TreeTableColumn instances. Each
- * TreeTableColumn in a tree table is responsible for displaying (and editing) the contents
- * of that column. As well as being responsible for displaying and editing data 
- * for a single column, a TableColumn also contains the necessary properties to:
+ * TreeTableColumn in a {@link TreeTableView} is responsible for displaying
+ * (and editing) the contents of that column. As well as being responsible for
+ * displaying and editing data for a single column, a TreeTableColumn also
+ * contains the necessary properties to:
  * <ul>
- *    <li>Be resized (using {@link #minWidthProperty() minWidth}/{@link #prefWidthProperty() prefWidth}/{@link #maxWidthProperty() maxWidth}
- *      and {@link #widthProperty() width} properties)
+ *    <li>Be resized (using {@link #minWidthProperty() minWidth}/
+ *    {@link #prefWidthProperty() prefWidth}/
+ *    {@link #maxWidthProperty() maxWidth} and {@link #widthProperty() width} properties)
  *    <li>Have its {@link #visibleProperty() visibility} toggled
  *    <li>Display {@link #textProperty() header text}
  *    <li>Display any {@link #getColumns() nested columns} it may contain
@@ -74,48 +74,43 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  * (which is used to populate individual cells in the column). This can be 
  * achieved using some variation on the following code:
  * 
- * <p>// TODO update example for TreeTableColumn
- * 
- * <pre>
- * {@code 
- * ObservableList<Person> data = ...
- * TableView<Person> tableView = new TableView<Person>(data);
- * 
- * TableColumn<Person,String> firstNameCol = new TableColumn<Person,String>("First Name");
+ * <pre>{@code
  * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
- *         // p.getValue() returns the Person instance for a particular TableView row
- *         return p.getValue().firstNameProperty();
+ *         // p.getValue() returns the TreeItem<Person> instance for a particular TreeTableView row,
+ *         // p.getValue().getValue() returns the Person instance inside the TreeItem<Person>
+ *         return p.getValue().getValue().firstNameProperty();
  *     }
  *  });
- * }
- * tableView.getColumns().add(firstNameCol);}</pre>
+ * }}</pre>
  * 
- * This approach assumes that the object returned from <code>p.getValue()</code>
+ * This approach assumes that the object returned from <code>p.getValue().getValue()</code>
  * has a JavaFX {@link ObservableValue} that can simply be returned. The benefit of this
  * is that the TableView will internally create bindings to ensure that,
  * should the returned {@link ObservableValue} change, the cell contents will be
  * automatically refreshed. 
  * 
  * <p>In situations where a TableColumn must interact with classes created before
- * JavaFX, or that generally do not wish to use JavaFX apis for properties, it is
+ * JavaFX, or that generally do not wish to use JavaFX APIs for properties, it is
  * possible to wrap the returned value in a {@link ReadOnlyObjectWrapper} instance. For
  * example:
  * 
- * <pre>
- * {@code 
+ *<pre>{@code
  * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
  *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
- *         return new ReadOnlyObjectWrapper(p.getValue().getFirstName());
+ *         // p.getValue() returns the TreeItem<Person> instance for a particular TreeTableView row,
+ *         // p.getValue().getValue() returns the Person instance inside the TreeItem<Person>
+ *         return new ReadOnlyObjectWrapper(p.getValue().getValue().getFirstName());
  *     }
- *  });}</pre>
+ *  });
+ * }}</pre>
  * 
  * It is hoped that over time there will be convenience cell value factories 
  * developed and made available to developers. As of the JavaFX 2.0 release, 
  * there is one such convenience class: {@link javafx.scene.control.cell.TreeItemPropertyValueFactory}.
  * This class removes the need to write the code above, instead relying on reflection to
  * look up a given property from a String. Refer to the 
- * <code>PropertyValueFactory</code> class documentation for more information
+ * <code>TreeItemPropertyValueFactory</code> class documentation for more information
  * on how to use this with a TableColumn.
  * 
  * Finally, for more detail on how to use TableColumn, there is further documentation in
@@ -126,6 +121,7 @@ import com.sun.javafx.scene.control.skin.TableViewSkinBase;
  * @see TableView
  * @see TableCell
  * @see TablePosition
+ * @see javafx.scene.control.cell.TreeItemPropertyValueFactory
  * @since JavaFX 8.0
  */
 public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> implements EventTarget {
@@ -144,7 +140,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType(Event.ANY, "TREE_TABLE_COLUMN_EDIT");
+            new EventType<>(Event.ANY, "TREE_TABLE_COLUMN_EDIT");
 
     /**
      * Indicates that the user has performed some interaction to start an edit
@@ -157,7 +153,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            new EventType(editAnyEvent(), "EDIT_START");
+            new EventType<>(editAnyEvent(), "EDIT_START");
 
     /**
      * Indicates that the editing has been canceled, meaning that no change should
@@ -168,7 +164,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            new EventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType<>(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * Indicates that the editing has been committed by the user, meaning that
@@ -180,7 +176,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         return (EventType<TreeTableColumn.CellEditEvent<S,T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            new EventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType<>(editAnyEvent(), "EDIT_COMMIT");
     
     
     
@@ -238,21 +234,19 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         // all children columns know that this TreeTableColumn is their parent.
         getColumns().addListener(weakColumnsListener);
 
-        treeTableViewProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // set all children of this tableView to have the same TableView
-                // as this column
-                for (TreeTableColumn<S, ?> tc : getColumns()) {
-                    tc.setTreeTableView(getTreeTableView());
-                }
-                
-                // This code was commented out due to RT-22391, with this enabled
-                // the parent column will be null, which is not desired
+        treeTableViewProperty().addListener(observable -> {
+            // set all children of this tableView to have the same TableView
+            // as this column
+            for (TreeTableColumn<S, ?> tc : getColumns()) {
+                tc.setTreeTableView(getTreeTableView());
+            }
+
+            // This code was commented out due to RT-22391, with this enabled
+            // the parent column will be null, which is not desired
 //                // set the parent of this column to also have this tableView
 //                if (getParentColumn() != null) {
 //                    getParentColumn().setTableView(getTableView());
 //                }
-            }
         });
     }
 
@@ -276,17 +270,15 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      *                                                                         *
      **************************************************************************/
     
-    private EventHandler<TreeTableColumn.CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER = 
-            new EventHandler<TreeTableColumn.CellEditEvent<S,T>>() {
-        @Override public void handle(TreeTableColumn.CellEditEvent<S,T> t) {
-            ObservableValue<T> ov = getCellObservableValue(t.getRowValue());
-            if (ov instanceof WritableValue) {
-                ((WritableValue)ov).setValue(t.getNewValue());
-            }
-        }
-    };
+    private EventHandler<TreeTableColumn.CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER =
+            t -> {
+                ObservableValue<T> ov = getCellObservableValue(t.getRowValue());
+                if (ov instanceof WritableValue) {
+                    ((WritableValue)ov).setValue(t.getNewValue());
+                }
+            };
     
-    private ListChangeListener columnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
+    private ListChangeListener<TreeTableColumn<S, ?>> columnsListener = new ListChangeListener<TreeTableColumn<S,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
             while (c.next()) {
                 // update the TreeTableColumn.treeTableView property
@@ -312,8 +304,8 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         }
     };
     
-    private WeakListChangeListener weakColumnsListener = 
-            new WeakListChangeListener(columnsListener);
+    private WeakListChangeListener<TreeTableColumn<S, ?>> weakColumnsListener = 
+            new WeakListChangeListener<>(columnsListener);
     
     
     /***************************************************************************
@@ -357,28 +349,26 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * will be observed internally to allow for updates to the value to be 
      * immediately reflected on screen.
      * 
-     * <p> // TODO update example
+     * <p>An example of how to set a cell value factory is:
      * 
-     * An example of how to set a cell value factory is:
-     * 
-     * <pre><code>
-     * lastNameCol.setCellValueFactory(new Callback&lt;CellDataFeatures&lt;Person, String&gt;, ObservableValue&lt;String&gt;&gt;() {
-     *     public ObservableValue&lt;String&gt; call(CellDataFeatures&lt;Person, String&gt; p) {
-     *         // p.getValue() returns the Person instance for a particular TableView row
-     *         return p.getValue().lastNameProperty();
+     * <pre>{@code
+     * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
+     *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
+     *         // p.getValue() returns the TreeItem<Person> instance for a particular TreeTableView row,
+     *         // p.getValue().getValue() returns the Person instance inside the TreeItem<Person>
+     *         return p.getValue().getValue().firstNameProperty();
      *     }
      *  });
-     * }
-     * </code></pre>
+     * }}</pre>
      * 
      * A common approach is to want to populate cells in a TreeTableColumn using
      * a single value from a Java bean. To support this common scenario, there
      * is the {@link javafx.scene.control.cell.TreeItemPropertyValueFactory} class.
      * Refer to this class for more information on how to use it, but briefly
-     * here is how the above use case could be simplified using the PropertyValueFactory class:
+     * here is how the above use case could be simplified using the TreeItemPropertyValueFactory class:
      * 
      * <pre><code>
-     * lastNameCol.setCellValueFactory(new PropertyValueFactory&lt;Person,String&gt;("lastName"));
+     * firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory&lt;Person,String&gt;("firstName"));
      * </code></pre>
      * 
      * @see javafx.scene.control.cell.TreeItemPropertyValueFactory
@@ -418,9 +408,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
         new SimpleObjectProperty<Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>>(
             this, "cellFactory", (Callback<TreeTableColumn<S,T>, TreeTableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
-                    TreeTableView table = getTreeTableView();
+                    TreeTableView<S> table = getTreeTableView();
                     if (table == null) return;
-                    Map properties = table.getProperties();
+                    Map<Object,Object> properties = table.getProperties();
                     if (properties.containsKey(TableViewSkinBase.RECREATE)) {
                         properties.remove(TableViewSkinBase.RECREATE);
                     }
@@ -820,7 +810,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 //            List<S> items = getTreeTableView().getItems();
 //            if (items == null) return null;
 
-            TreeTableView treeTable = getTreeTableView();
+            TreeTableView<S> treeTable = getTreeTableView();
             int row = pos.getRow();
             if (row < 0 || row >= treeTable.getExpandedItemCount()) return null;
 

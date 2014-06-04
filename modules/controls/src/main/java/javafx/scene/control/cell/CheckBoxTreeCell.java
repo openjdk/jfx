@@ -72,6 +72,16 @@ import javafx.util.StringConverter;
  * is provided that can return an {@code ObservableValue<Boolean>}
  * given a {@link TreeItem} instance. This {@code ObservableValue<Boolean>} 
  * should represent the boolean state of the given {@link TreeItem}.
+ *
+ * <p>Note that the CheckBoxTreeCell renders the CheckBox 'live', meaning that
+ * the CheckBox is always interactive and can be directly toggled by the user.
+ * This means that it is not necessary that the cell enter its
+ * {@link #editingProperty() editing state} (usually by the user double-clicking
+ * on the cell). A side-effect of this is that the usual editing callbacks
+ * (such as {@link javafx.scene.control.TreeView#onEditCommitProperty() on edit commit})
+ * will <strong>not</strong> be called. If you want to be notified of changes,
+ * it is recommended to directly observe the boolean properties that are
+ * manipulated by the CheckBox.</p>
  * 
  * @param <T> The type of the elements contained within the TreeView TreeItem 
  *      instances.
@@ -125,15 +135,13 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
      *      all of its children (recursively).
      */
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView() {
-        Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty = 
-                new Callback<TreeItem<T>, ObservableValue<Boolean>>() {
-            @Override public ObservableValue<Boolean> call(TreeItem<T> item) {
-                if (item instanceof CheckBoxTreeItem<?>) {
-                    return ((CheckBoxTreeItem<?>)item).selectedProperty();
-                }
-                return null;
-            }
-        };
+        Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty =
+                item -> {
+                    if (item instanceof CheckBoxTreeItem<?>) {
+                        return ((CheckBoxTreeItem<?>)item).selectedProperty();
+                    }
+                    return null;
+                };
         return forTreeView(getSelectedProperty, 
                            CellUtils.<T>defaultTreeItemStringConverter());
     }
@@ -212,11 +220,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty, 
             final StringConverter<TreeItem<T>> converter) {
-        return new Callback<TreeView<T>, TreeCell<T>>() {
-            @Override public TreeCell<T> call(TreeView<T> tree) {
-                return new CheckBoxTreeCell<T>(getSelectedProperty, converter);
-            }
-        };
+        return tree -> new CheckBoxTreeCell<T>(getSelectedProperty, converter);
     }
     
     
@@ -251,13 +255,11 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     public CheckBoxTreeCell() {
         // getSelectedProperty as anonymous inner class to deal with situation
         // where the user is using CheckBoxTreeItem instances in their tree
-        this(new Callback<TreeItem<T>, ObservableValue<Boolean>>() {
-            @Override public ObservableValue<Boolean> call(TreeItem<T> item) {
-                if (item instanceof CheckBoxTreeItem<?>) {
-                    return ((CheckBoxTreeItem<?>)item).selectedProperty();
-                }
-                return null;
+        this(item -> {
+            if (item instanceof CheckBoxTreeItem<?>) {
+                return ((CheckBoxTreeItem<?>)item).selectedProperty();
             }
+            return null;
         });
     }
     
@@ -422,7 +424,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
             setText(null);
             setGraphic(null);
         } else {
-            StringConverter c = getConverter();
+            StringConverter<TreeItem<T>> c = getConverter();
             
             TreeItem<T> treeItem = getTreeItem();
             

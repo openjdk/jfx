@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,11 +39,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -234,7 +231,7 @@ public class Stylesheet {
     }
 
     private String[] stringStore;
-    final String[] getStringStore() { return stringStore; };
+    final String[] getStringStore() { return stringStore; }
 
     /** Load a binary stylesheet file from a input stream */
     public static Stylesheet loadBinary(URL url) throws IOException {
@@ -242,15 +239,10 @@ public class Stylesheet {
         if (url == null) return null;
 
         Stylesheet stylesheet = null;
-        InputStream inputStream = null;
-        BufferedInputStream bufferedInputStream = null;
-        DataInputStream dataInputStream = null;
-        try {
-            inputStream = url.openStream();
-            // current bss file is 33k so this leaves a little scope at 40k
-            bufferedInputStream = new BufferedInputStream(inputStream, 40 * 1024);
 
-            dataInputStream = new DataInputStream(bufferedInputStream);
+        try (DataInputStream dataInputStream =
+                     new DataInputStream(new BufferedInputStream(url.openStream(), 40 * 1024))) {
+
             // read file version
             final int bssVersion = dataInputStream.readShort();
             if (bssVersion > Stylesheet.BINARY_CSS_VERSION) {
@@ -263,7 +255,6 @@ public class Stylesheet {
             // read binary data
             stylesheet = new Stylesheet(url.toExternalForm());
 
-            boolean retry = false;
             try {
 
                 dataInputStream.mark(Integer.MAX_VALUE);
@@ -286,11 +277,6 @@ public class Stylesheet {
         } catch (FileNotFoundException fnfe) {
             // This comes from url.openStream() and is expected.
             // It just means that the .bss file doesn't exist.
-        } finally {
-            try {
-                if (dataInputStream != null) dataInputStream.close();
-            } catch (IOException ignored) {
-            }
         }
 
         // return stylesheet
@@ -319,7 +305,7 @@ public class Stylesheet {
             throw new IllegalArgumentException("cannot read source file");
         }
 
-        if ((destination.exists() && destination.canWrite() == false) || destination.createNewFile() == false) {
+        if (destination.exists() ? (destination.canWrite() == false) : (destination.createNewFile() == false)) {
             throw new IllegalArgumentException("cannot write destination file");
         }
 

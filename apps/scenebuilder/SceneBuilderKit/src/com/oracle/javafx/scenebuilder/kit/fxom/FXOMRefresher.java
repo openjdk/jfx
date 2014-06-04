@@ -31,12 +31,17 @@
  */
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
+import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoubleArrayPropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.ListValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Set;
+import javafx.scene.control.SplitPane;
 
 /**
  *
@@ -52,10 +57,12 @@ class FXOMRefresher {
                     = new FXOMDocument(fxmlText, 
                                         document.getLocation(), 
                                         document.getClassLoader(),
-                                        document.getResources());
+                                        document.getResources(),
+                                        false /* normalized */);
             final TransientStateBackup backup = new TransientStateBackup(document);
             refreshDocument(document, newDocument);
             backup.restore();
+            synchronizeDividerPositions(document);
         } catch(RuntimeException|IOException x) {
             final StringBuilder sb = new StringBuilder();
             sb.append("Bug in ");
@@ -121,6 +128,8 @@ class FXOMRefresher {
         assert newInstance != null;
         assert currentInstance.getClass() == newInstance.getClass();
         
+        currentInstance.setDeclaredClass(newInstance.getDeclaredClass());
+        
         final Set<PropertyName> currentNames = currentInstance.getProperties().keySet();
         final Set<PropertyName> newNames = newInstance.getProperties().keySet();
         assert currentNames.equals(newNames);
@@ -134,6 +143,8 @@ class FXOMRefresher {
     private void refreshFxomCollection(FXOMCollection currentCollection, FXOMCollection newCollection) {
         assert currentCollection != null;
         assert newCollection != null;
+        
+        currentCollection.setDeclaredClass(newCollection.getDeclaredClass());
         
         refreshFxomObjects(currentCollection.getItems(), newCollection.getItems());
     }
@@ -176,6 +187,53 @@ class FXOMRefresher {
             refreshFxomObject(currentObject, newObject);
         }
     }
+    
+    /*
+     * The case of SplitPane.dividerPositions property
+     * -----------------------------------------------
+     * 
+     * When user adds a child to a SplitPane, this adds a new entry in
+     * SplitPane.children property but also adds a new value to 
+     * SplitPane.dividerPositions by side-effect.
+     * 
+     * The change in SplitPane.dividerPositions is performed at scene graph
+     * level by FX. Thus it is unseen by FXOM. 
+     * 
+     * So in that case we perform a special operation which copies value of 
+     * SplitPane.dividerPositions into FXOMProperty representing 
+     * dividerPositions in FXOM.
+     */
+    
+    private void synchronizeDividerPositions(FXOMDocument document) {
+        final FXOMObject fxomRoot = document.getFxomRoot();
+        if (fxomRoot != null) {
+            final Metadata metadata
+                    = Metadata.getMetadata();
+            final PropertyName dividerPositionsName
+                    = new PropertyName("dividerPositions");
+            final List<FXOMObject> candidates 
+                    = fxomRoot.collectObjectWithSceneGraphObjectClass(SplitPane.class);
+            
+            for (FXOMObject fxomObject : candidates) {
+                if (fxomObject instanceof FXOMInstance) {
+                    final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
+                    assert fxomInstance.getSceneGraphObject() instanceof SplitPane;
+                    final SplitPane splitPane
+                            = (SplitPane) fxomInstance.getSceneGraphObject();
+                    splitPane.layout();
+                    final ValuePropertyMetadata vpm 
+                            = metadata.queryValueProperty(fxomInstance, dividerPositionsName);
+                    assert vpm instanceof ListValuePropertyMetadata
+                            : "vpm.getClass()=" + vpm.getClass().getSimpleName();
+                    final DoubleArrayPropertyMetadata davpm
+                            = (DoubleArrayPropertyMetadata) vpm;
+                    davpm.synchronizeWithSceneGraphObject(fxomInstance);
+                }
+            }
+        }
+    }
+    
+    
 //    
 //    
 //    private void reloadStylesheets(final Parent p) {

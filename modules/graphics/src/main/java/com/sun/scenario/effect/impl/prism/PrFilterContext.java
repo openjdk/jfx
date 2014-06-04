@@ -45,6 +45,9 @@ public class PrFilterContext extends FilterContext {
         return printerFilterContext;
     }
 
+    private PrFilterContext swinstance;
+    private boolean forceSW;
+
     private PrFilterContext(Object screen) {
         super(screen);
     }
@@ -68,5 +71,38 @@ public class PrFilterContext extends FilterContext {
             defaultScreen = Screen.getMainScreen();
         }
         return getInstance(defaultScreen);
+    }
+
+    // Calledonly from PPSRenderer while making a PPStoPSWDispMapPeer,
+    // assumes original is hw instance.
+    public PrFilterContext getSoftwareInstance() {
+        if (swinstance == null) {
+            if (forceSW) {
+                swinstance = this;
+            } else {
+                swinstance = new PrFilterContext(getReferent());
+                swinstance.forceSW = true;
+            }
+        }
+        return swinstance;
+    }
+
+    public boolean isForceSoftware() {
+        return forceSW;
+    }
+
+    @Override
+    public int hashCode() {
+        return getReferent().hashCode() ^ Boolean.hashCode(forceSW);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof PrFilterContext)) {
+            return false;
+        }
+        PrFilterContext pfctx = (PrFilterContext) o;
+        return (this.getReferent().equals(pfctx.getReferent()) &&
+                this.forceSW == pfctx.forceSW);
     }
 }

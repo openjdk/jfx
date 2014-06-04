@@ -40,30 +40,30 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javafx.scene.accessibility.Accessible;
+
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
-    private native static void _initIDs();
+    private native static void _initIDs(boolean disableSyncRendering);
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                Application.loadNativeLibrary();
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            Application.loadNativeLibrary();
+            return null;
         });
-        _initIDs();
+        boolean disableSyncRendering = AccessController
+                .doPrivileged((PrivilegedAction<Boolean>) () ->
+                        Boolean.getBoolean("glass.disableSyncRendering"));
+        _initIDs(disableSyncRendering);
     }
+
+    native static int _getMacKey(int code);
 
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
     MacApplication() {
         boolean isEventThread = AccessController
-                .doPrivileged(new PrivilegedAction<Boolean>() {
-                    public Boolean run() {
-                        // Embedded in SWT, with shared event thread
-                        return Boolean.getBoolean("javafx.embed.isEventThread");
-                    }
-                });
+                .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
             invokeLaterDispatcher = new InvokeLaterDispatcher(this);
             invokeLaterDispatcher.start();
@@ -79,11 +79,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected void runLoop(final Runnable launchable) {
         isTaskbarApplication =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                public Boolean run() {
-                    String taskbarAppProp = System.getProperty("glass.taskbarApplication");
-                    return  !"false".equalsIgnoreCase(taskbarAppProp); 
-                }
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+                String taskbarAppProp = System.getProperty("glass.taskbarApplication");
+                return  !"false".equalsIgnoreCase(taskbarAppProp);
             });
         
         ClassLoader classLoader = MacApplication.class.getClassLoader();
@@ -93,10 +91,13 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     native private void _finishTerminating();
     @Override
     protected void finishTerminating() {
-        setEventThread(null);
         _finishTerminating();
 
         super.finishTerminating();
+    }
+
+    private void notifyApplicationDidTerminate() {
+        setEventThread(null);
     }
 
     // Called from the native code
@@ -257,6 +258,10 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
 
     @Override protected int staticTimer_getMaxPeriod() {
         return MacTimer.getMaxPeriod_impl();
+    }
+
+    @Override public PlatformAccessible createAccessible(Accessible accessible) {
+        return MacAccessible.createAccessible(accessible);
     }
 
     @Override protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,

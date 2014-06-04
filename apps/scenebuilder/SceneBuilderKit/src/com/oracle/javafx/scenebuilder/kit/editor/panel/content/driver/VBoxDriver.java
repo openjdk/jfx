@@ -63,7 +63,6 @@ public class VBoxDriver extends AbstractNodeDriver {
         
         final VBox hbox = (VBox) fxomObject.getSceneGraphObject();
         assert hbox.getScene() != null;
-        assert hbox.getLayoutBounds().contains(hbox.sceneToLocal(sceneX,sceneY));
         
         final double localY = hbox.sceneToLocal(sceneX, sceneY).getY();
         final int childCount = hbox.getChildrenUnmodifiable().size();
@@ -97,7 +96,11 @@ public class VBoxDriver extends AbstractNodeDriver {
             beforeChild = null;
         } else {
             final DesignHierarchyMask m = new DesignHierarchyMask(fxomObject);
-            beforeChild = m.getSubComponentAtIndex(targetIndex);
+            if (targetIndex < m.getSubComponentCount()) {
+                beforeChild = m.getSubComponentAtIndex(targetIndex);
+            } else {
+                beforeChild = null;
+            }
         }
         
         return new ContainerZDropTarget((FXOMInstance)fxomObject, beforeChild);

@@ -32,7 +32,9 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+
 import java.util.Comparator;
+
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -124,6 +126,7 @@ public class FXOMObjectCourseComparator {
     static class BidimensionalComparator implements Comparator<FXOMObject> {
 
         private final GridCourse course;
+        @SuppressWarnings("unused")
         private static final long serialVersionUID = 0;
 
         public BidimensionalComparator(GridCourse course) {
@@ -178,6 +181,7 @@ public class FXOMObjectCourseComparator {
     static class UnidimensionalComparator implements Comparator<FXOMObject> {
 
         private final GridCourse course;
+        @SuppressWarnings("unused")
         private static final long serialVersionUID = 0;
 
         public UnidimensionalComparator(GridCourse course) {

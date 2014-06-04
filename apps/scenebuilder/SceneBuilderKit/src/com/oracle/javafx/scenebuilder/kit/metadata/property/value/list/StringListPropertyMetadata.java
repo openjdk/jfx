@@ -45,40 +45,28 @@ public class StringListPropertyMetadata extends ListValuePropertyMetadata<String
 
     private final static StringPropertyMetadata itemMetadata
             = new StringPropertyMetadata(new PropertyName("unused"), //NOI18N
-                    true, null, InspectorPath.UNUSED);
+                    true, null, InspectorPath.UNUSED, true /* detectFileURL */);
 
     public StringListPropertyMetadata(PropertyName name, boolean readWrite, 
             List<String> defaultValue, InspectorPath inspectorPath) {
         super(name, String.class, itemMetadata, readWrite, defaultValue, inspectorPath);
     }
     
-    
-    /*
-     * ListValuePropertyMetadata
-     */
-    
-    @Override
-    protected boolean canMakeStringFromValue(List<String> value) {
-        boolean result = true;
+    public static List<String> splitValue(String listValue) {
+        final List<String> result = new ArrayList<>();
         
-        // Returns false if one the string item contains a comma
-        for (String s : value) {
-            if (s.indexOf(FXMLLoader.ARRAY_COMPONENT_DELIMITER) != -1) {
-                result = false;
-                break;
-            }
+        final String[] values = listValue.split(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
+        for (int i = 0, count = values.length; i < count; i++) {
+            result.add(values[i]);
         }
         
         return result;
     }
     
-    @Override
-    protected String makeStringFromValue(List<String> value) {
-        assert canMakeStringFromValue(value);
-        
+   public static String assembleValue(List<String> valueItems) {
         final StringBuilder result = new StringBuilder();
-        for (String s : value) {
-            assert value.indexOf(FXMLLoader.ARRAY_COMPONENT_DELIMITER) == -1;
+        for (String s : valueItems) {
+            assert s.indexOf(FXMLLoader.ARRAY_COMPONENT_DELIMITER) == -1;
             if (result.length() >= 1) {
                 result.append(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
             }
@@ -88,15 +76,23 @@ public class StringListPropertyMetadata extends ListValuePropertyMetadata<String
         return result.toString();
     }
     
+    /*
+     * ListValuePropertyMetadata
+     */
+    
+    @Override
+    protected boolean canMakeStringFromValue(List<String> value) {
+        return value.size() == 1;
+    }
+    
+    @Override
+    protected String makeStringFromValue(List<String> value) {
+        assert canMakeStringFromValue(value);
+        return value.get(0);
+    }
+    
     @Override
     protected List<String> makeValueFromString(String string) {
-        final List<String> result = new ArrayList<>();
-        
-        final String[] values = string.split(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
-        for (int i = 0, count = values.length; i < count; i++) {
-            result.add(values[i]);
-        }
-        
-        return result;
+        return splitValue(string);
     }
 }

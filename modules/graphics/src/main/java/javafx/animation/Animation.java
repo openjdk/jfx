@@ -182,11 +182,9 @@ public abstract class Animation {
                 throw new IllegalStateException("Error: AccessControlContext not captured");
             }
 
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override public Void run() {
-                    impl_timePulse(elapsedTime);
-                    return null;
-                }
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                impl_timePulse(elapsedTime);
+                return null;
             }, accessCtrlCtx);
         }
     };

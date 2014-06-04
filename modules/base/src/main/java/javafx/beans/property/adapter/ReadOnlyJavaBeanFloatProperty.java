@@ -66,12 +66,7 @@ public final class ReadOnlyJavaBeanFloatProperty extends ReadOnlyFloatPropertyBa
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new Runnable() {
-            @Override
-            public void run() {
-                ReadOnlyJavaBeanFloatProperty.this.descriptor.removeListener(listener);
-            }
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
@@ -83,16 +78,14 @@ public final class ReadOnlyJavaBeanFloatProperty extends ReadOnlyFloatPropertyBa
      */
     @Override
     public float get() {
-        return AccessController.doPrivileged(new PrivilegedAction<Float>() {
-            public Float run() {
-                try {
-                    return ((Number)MethodUtil.invoke(
-                        descriptor.getGetter(), getBean(), (Object[])null)).floatValue();
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
+        return AccessController.doPrivileged((PrivilegedAction<Float>) () -> {
+            try {
+                return ((Number)MethodUtil.invoke(
+                    descriptor.getGetter(), getBean(), (Object[])null)).floatValue();
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
         }, acc);
     }

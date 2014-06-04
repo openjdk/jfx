@@ -29,14 +29,22 @@ import java.time.LocalDate;
 import java.time.chrono.*;
 import java.util.*;
 
+import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import com.sun.javafx.scene.control.infrastructure.StageLoader;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.VBox;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -49,6 +57,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class DatePickerTest {
     private DatePicker datePicker;
@@ -255,9 +264,7 @@ public class DatePickerTest {
     }
 
     @Test public void ensureCanSetNonNullDayCellFactory() {
-        Callback<DatePicker, DateCell> cf = new Callback<DatePicker, DateCell>() {
-            @Override public DateCell call(DatePicker p) { return null; }
-        };
+        Callback<DatePicker, DateCell> cf = p -> null;
         datePicker.setDayCellFactory(cf);
         assertSame(cf, datePicker.getDayCellFactory());
     }
@@ -335,9 +342,7 @@ public class DatePickerTest {
     }
 
     @Test public void ensureCanSetOnAction() {
-        EventHandler<ActionEvent> onAction = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) { }
-        };
+        EventHandler<ActionEvent> onAction = t -> { };
         datePicker.setOnAction(onAction);
         assertEquals(onAction, datePicker.getOnAction());
     }
@@ -395,5 +400,64 @@ public class DatePickerTest {
         assertEquals(LocalDate.of(2013, 5, 22), datePicker.getValue());
         datePicker.getEditor().setText(converter.toString(datePicker.getValue()));
         assertEquals("5/22/2013", datePicker.getEditor().getText());
+    }
+
+    @Ignore("fix not yet developed")
+    @Test public void test_rt36902() {
+        final DatePicker dp1 = new DatePicker() {
+            @Override public String toString() {
+                return "dp1";
+            }
+        };
+        final DatePicker dp2 = new DatePicker() {
+            @Override public String toString() {
+                return "dp2";
+            }
+        };
+        dp2.setEditable(true);
+        VBox vbox = new VBox(dp1, dp2);
+
+        // lame - I would rather have one keyboard here but I couldn't get it to
+        // work, so watch out for which keyboard is used below
+        KeyEventFirer dp1Keyboard = new KeyEventFirer(dp1);
+        KeyEventFirer dp2Keyboard = new KeyEventFirer(dp2);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        dp1.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        Scene scene = sl.getStage().getScene();
+
+        assertTrue(dp1.isFocused());
+        assertEquals(dp1, scene.getFocusOwner());
+
+        // move focus forward to dp2
+        dp1Keyboard.doKeyPress(KeyCode.TAB);
+        assertTrue(dp2.isFocused());
+        assertEquals(dp2, scene.getFocusOwner());
+
+        // move focus forward again to dp1
+        dp2Keyboard.doKeyPress(KeyCode.TAB);
+        assertTrue(dp1.isFocused());
+        assertEquals(dp1, scene.getFocusOwner());
+
+        // now start going backwards with shift-tab.
+        // The first half of the bug is here - when we shift-tab into dp2, we
+        // actually go into the FakeFocusTextField subcomponent, so whilst the
+        // dp2.isFocused() returns true as expected, the scene focus owner is
+        // not the ComboBox, but the FakeFocusTextField inside it
+        dp1Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
+        assertTrue("Expect dp2 to be focused, but actual focus owner is: " + scene.getFocusOwner(),
+                dp2.isFocused());
+        assertEquals("Expect dp2 TextField to be focused, but actual focus owner is: " + scene.getFocusOwner(),
+                dp2.getEditor(), scene.getFocusOwner());
+
+        // This is where the second half of the bug appears, as we are stuck in
+        // the FakeFocusTextField of dp2, we never make it to dp1
+        dp2Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
+        assertTrue(dp1.isFocused());
+        assertEquals(dp1, scene.getFocusOwner());
+
+        sl.dispose();
     }
 }

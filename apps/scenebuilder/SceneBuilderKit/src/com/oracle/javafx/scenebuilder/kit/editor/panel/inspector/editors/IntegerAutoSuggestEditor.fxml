@@ -43,7 +43,7 @@
 <children>
     <IntegerField fx:id="integerField" onKeyReleased="#textFieldKeyReleased" onMouseClicked="#textFieldMouseClicked">
       <contextMenu>
-        <ContextMenu maxHeight="-1.0">
+        <ContextMenu maxHeight="-1.0" styleClass="auto-suggest-popup">
           <items>
             <CustomMenuItem mnemonicParsing="false">
               <content>

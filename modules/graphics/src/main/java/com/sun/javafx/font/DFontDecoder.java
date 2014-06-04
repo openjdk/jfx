@@ -33,11 +33,9 @@ import com.sun.glass.utils.NativeLibLoader;
 
 class DFontDecoder extends FontFileWriter {
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                NativeLibLoader.loadLibrary("javafx_font");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            NativeLibLoader.loadLibrary("javafx_font");
+            return null;
         });
     }
     private native static long createCTFont(String fontName);

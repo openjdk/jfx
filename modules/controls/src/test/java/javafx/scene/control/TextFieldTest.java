@@ -137,11 +137,11 @@ public class TextFieldTest {
         txtField.setStyle("-fx-pref-column-count: 100");
         Scene s = new Scene(txtField);
         txtField.impl_processCSS(true);
-        assertEquals(100, txtField.getPrefColumnCount(), 0);
+        assertEquals(100.0, txtField.getPrefColumnCount(), 0);
     }
 
     @Test public void pseudoClassState_isReadOnly() {
-        new StageLoader(txtField);
+        StageLoader sl = new StageLoader(txtField);
         txtField.impl_processCSS(true);
 
         txtField.setEditable(false);
@@ -152,10 +152,12 @@ public class TextFieldTest {
             match = "readonly".equals(pc.getPseudoClassName());
         }
         assertTrue(match);
+
+        sl.dispose();
     }
 
     @Test public void pseudoClassState_isNotReadOnly() {
-        new StageLoader(txtField);
+        StageLoader sl = new StageLoader(txtField);
         txtField.impl_processCSS(true);
 
         txtField.setEditable(true);
@@ -166,6 +168,7 @@ public class TextFieldTest {
             match = "readonly".equals(pc.getPseudoClassName());
         }
         assertFalse(match);
+        sl.dispose();
     }
 
     /*********************************************************************
@@ -191,11 +194,8 @@ public class TextFieldTest {
     
     @Test public void checkOnActionPropertyBind() {
         ObjectProperty<EventHandler<ActionEvent>> op= new SimpleObjectProperty<EventHandler<ActionEvent>>();
-        EventHandler<ActionEvent> ev = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                //Nothing to do
-            }
+        EventHandler<ActionEvent> ev = event -> {
+            //Nothing to do
         };
         op.setValue(ev);
         txtField.onActionProperty().bind(op);

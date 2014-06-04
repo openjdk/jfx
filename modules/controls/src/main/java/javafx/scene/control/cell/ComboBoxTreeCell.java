@@ -36,7 +36,6 @@ import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
-
 import static javafx.scene.control.cell.CellUtils.createComboBox;
 
 /**
@@ -79,6 +78,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @return A {@link Callback} that will return a TreeCell that is able to 
      *      work on the type of element contained within the TreeView.
      */    
+    @SafeVarargs
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(T... items) {
         return forTreeView(FXCollections.observableArrayList(items));
     }
@@ -123,6 +123,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @return A {@link Callback} that will return a TreeCell that is able to 
      *      work on the type of element contained within the TreeView.
      */  
+    @SafeVarargs
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final StringConverter<T> converter, 
             final T... items) {
@@ -150,11 +151,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
     public static <T> Callback<TreeView<T>, TreeCell<T>> forTreeView(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<TreeView<T>, TreeCell<T>>() {
-          @Override public TreeCell<T> call(TreeView<T> list) {
-              return new ComboBoxTreeCell<T>(converter, items);
-          }
-      };
+        return list -> new ComboBoxTreeCell<T>(converter, items);
     }
     
     
@@ -191,6 +188,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ComboBoxTreeCell(T... items) {
         this(FXCollections.observableArrayList(items));
     }
@@ -207,6 +205,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ComboBoxTreeCell(StringConverter<T> converter, T... items) {
         this(converter, FXCollections.observableArrayList(items));
     }

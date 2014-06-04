@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.M
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPickerController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.colorpicker.ColorPicker;
 import com.sun.javafx.Utils;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Side;
@@ -45,11 +46,12 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
@@ -147,13 +149,10 @@ public class GradientPickerStop extends VBox {
         gradientPicker.setSelectedStop(this);
 
         // when we detect a width change, we know node layout is resolved so we position stop in track
-        widthProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
-                if (newValue.doubleValue() > 0) {
-                    thumbWidth = newValue.doubleValue();
-                    valueToPixels();
-                }
+        widthProperty().addListener((ChangeListener<Number>) (ov, oldValue, newValue) -> {
+            if (newValue.doubleValue() > 0) {
+                thumbWidth = newValue.doubleValue();
+                valueToPixels();
             }
         });
     }

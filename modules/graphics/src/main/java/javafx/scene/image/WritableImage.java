@@ -28,12 +28,13 @@ package javafx.scene.image;
 import com.sun.javafx.tk.ImageLoader;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.javafx.tk.Toolkit;
-import java.nio.Buffer;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
 import javafx.beans.NamedArg;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.scene.paint.Color;
+
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 /**
  * The {@code WritableImage} class represents a custom graphical image
@@ -172,6 +173,7 @@ public class WritableImage extends Image {
 
                 @Override
                 public void setColor(int x, int y, Color c) {
+                    if (c == null) throw new NullPointerException("Color cannot be null");
                     int a = (int) Math.round(c.getOpacity() * 255);
                     int r = (int) Math.round(c.getRed()     * 255);
                     int g = (int) Math.round(c.getGreen()   * 255);
@@ -185,6 +187,8 @@ public class WritableImage extends Image {
                                    PixelFormat<T> pixelformat,
                                    T buffer, int scanlineStride)
                 {
+                    if (pixelformat == null) throw new NullPointerException("PixelFormat cannot be null");
+                    if (buffer == null) throw new NullPointerException("Buffer cannot be null");
                     PlatformImage pimg = getWritablePlatformImage();
                     pimg.setPixels(x, y, w, h, pixelformat,
                                    buffer, scanlineStride);
@@ -196,6 +200,8 @@ public class WritableImage extends Image {
                                       PixelFormat<ByteBuffer> pixelformat,
                                       byte buffer[], int offset, int scanlineStride)
                 {
+                    if (pixelformat == null) throw new NullPointerException("PixelFormat cannot be null");
+                    if (buffer == null) throw new NullPointerException("Buffer cannot be null");
                     PlatformImage pimg = getWritablePlatformImage();
                     pimg.setPixels(x, y, w, h, pixelformat,
                                    buffer, offset, scanlineStride);
@@ -207,6 +213,8 @@ public class WritableImage extends Image {
                                       PixelFormat<IntBuffer> pixelformat,
                                       int buffer[], int offset, int scanlineStride)
                 {
+                    if (pixelformat == null) throw new NullPointerException("PixelFormat cannot be null");
+                    if (buffer == null) throw new NullPointerException("Buffer cannot be null");
                     PlatformImage pimg = getWritablePlatformImage();
                     pimg.setPixels(x, y, w, h, pixelformat,
                                    buffer, offset, scanlineStride);
@@ -217,6 +225,7 @@ public class WritableImage extends Image {
                 public void setPixels(int writex, int writey, int w, int h,
                                       PixelReader reader, int readx, int ready)
                 {
+                    if (reader == null) throw new NullPointerException("Reader cannot be null");
                     PlatformImage pimg = getWritablePlatformImage();
                     pimg.setPixels(writex, writey, w, h, reader, readx, ready);
                     pixelsDirty();

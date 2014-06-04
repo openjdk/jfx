@@ -109,12 +109,7 @@ abstract class GlassScene implements TKScene {
         // JDK doesn't provide public APIs to get ACC intersection,
         // so using this ugly workaround
         accessCtrlCtx = javaSecurityAccess.doIntersectionPrivilege(
-                new PrivilegedAction<AccessControlContext>() {
-                    @Override
-                    public AccessControlContext run() {
-                        return AccessController.getContext();
-                    }
-                }, acc, ctx);
+                () -> AccessController.getContext(), acc, ctx);
     }
 
     public void waitForRenderingToComplete() {
@@ -221,11 +216,9 @@ abstract class GlassScene implements TKScene {
             entireSceneDirty = true;
             sceneChanged();
         }  else {
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    entireSceneDirty = true;
-                    sceneChanged();
-                }
+            Platform.runLater(() -> {
+                entireSceneDirty = true;
+                sceneChanged();
             });
         }
     }
@@ -244,19 +237,16 @@ abstract class GlassScene implements TKScene {
             @Override
             public void actionPerformed(final int performedAction) {
                 super.actionPerformed(performedAction);
-                AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                    @Override
-                    public Void run() {
-                        try {
-                            if (dragSourceListener != null) {
-                                dragSourceListener.dragDropEnd(0, 0, 0, 0,
-                                        QuantumToolkit.clipboardActionToTransferMode(performedAction));
-                            }
-                        } finally {
-                            QuantumClipboard.releaseCurrentDragboard();
+                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                    try {
+                        if (dragSourceListener != null) {
+                            dragSourceListener.dragDropEnd(0, 0, 0, 0,
+                                    QuantumToolkit.clipboardActionToTransferMode(performedAction));
                         }
-                        return null;
+                    } finally {
+                        QuantumClipboard.releaseCurrentDragboard();
                     }
+                    return null;
                 }, getAccessControlContext());
             }
         };

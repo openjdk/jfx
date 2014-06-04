@@ -376,7 +376,7 @@ public class CssContentMaker {
         return matchingStyles;
     }
     
-//    private static void printStyles(List<Style> styles) {
+//    protected static void printStyles(List<Style> styles) {
 //        for (Style style : styles) {
 //            printStyle(style);
 //        }

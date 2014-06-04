@@ -883,13 +883,8 @@ public class Image {
         private void addKeyFrame(final int index, final double duration) {
             timeline.getKeyFrames().add(
                     new KeyFrame(Duration.millis(duration),
-                                 new EventHandler<ActionEvent>() {
-                                         @Override
-                                         public void handle(
-                                                 final ActionEvent event) {
-                                             updateImage(index);
-                                         }
-                                     }));
+                            event -> updateImage(index)
+                    ));
         }
     }
 

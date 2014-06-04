@@ -66,12 +66,7 @@ public final class ReadOnlyJavaBeanBooleanProperty extends ReadOnlyBooleanProper
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<Boolean>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new Runnable() {
-            @Override
-            public void run() {
-                ReadOnlyJavaBeanBooleanProperty.this.descriptor.removeListener(listener);
-            }
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
@@ -83,15 +78,13 @@ public final class ReadOnlyJavaBeanBooleanProperty extends ReadOnlyBooleanProper
      */
     @Override
     public boolean get() {
-        return AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            public Boolean run() {
-                try {
-                    return (Boolean)MethodUtil.invoke(descriptor.getGetter(), getBean(), (Object[])null);
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
+        return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            try {
+                return (Boolean)MethodUtil.invoke(descriptor.getGetter(), getBean(), (Object[])null);
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
         }, acc);
     }

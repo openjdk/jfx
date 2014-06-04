@@ -34,6 +34,7 @@ import javafx.scene.image.Image;
 import javafx.scene.shape.Rectangle;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -45,6 +46,7 @@ import com.sun.javafx.test.CssMethodsTestBase;
 import com.sun.javafx.test.ValueComparator;
 import com.sun.javafx.tk.Toolkit;
 
+@Ignore ("pending RT-35594")
 @RunWith(Parameterized.class)
 public final class Node_cssMethods_Test extends CssMethodsTestBase {
     private static final Node TEST_NODE = new Rectangle();

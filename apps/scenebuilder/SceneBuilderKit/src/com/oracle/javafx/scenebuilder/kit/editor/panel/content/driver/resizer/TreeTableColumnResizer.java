@@ -32,17 +32,18 @@
 
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer;
 
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDesignInfoX;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javafx.geometry.Bounds;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.Region;
+
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDesignInfoX;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 
 /**
  *

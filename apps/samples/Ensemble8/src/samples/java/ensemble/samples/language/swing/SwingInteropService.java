@@ -36,23 +36,32 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 
-public class SwingInteropService extends Service<Process> implements ProcessListener {
+public class SwingInteropService extends Service<Process> {
 
-    public SimpleObjectProperty<Process> procObj = new SimpleObjectProperty<>();
-    public SimpleBooleanProperty bp = new SimpleBooleanProperty(false);
+    SimpleBooleanProperty bp = new SimpleBooleanProperty(false);
 
     @Override
     protected Task createTask() {
-        return new SwingInteropTask(this);
+        return new SwingInteropTask();
     }
 
     @Override
-    public void setProcess(Process proc) {
-        procObj.setValue(proc);
-        if (proc == null) {
-            bp.set(false);
-        } else {
-            bp.set(true);
-        }
+    protected void scheduled() {
+        bp.set(true);
+    }
+
+    @Override
+    protected void cancelled() {
+        bp.set(false);
+    }
+
+    @Override
+    protected void succeeded() {
+        bp.set(false);
+    }
+
+    @Override
+    protected void failed() {
+        bp.set(false);
     }
 }

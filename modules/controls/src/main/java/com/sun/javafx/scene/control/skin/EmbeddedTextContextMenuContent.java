@@ -58,31 +58,27 @@ public class EmbeddedTextContextMenuContent extends StackPane {
         updateMenuItemContainer();
         getChildren().addAll(pointer, menuBox);
 
-        contextMenu.ownerNodeProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable arg0) {
-                if (contextMenu.getOwnerNode() instanceof TextArea) {
-                    TextAreaSkin tas = (TextAreaSkin)((TextArea)contextMenu.getOwnerNode()).getSkin();
-                    tas.getSkinnable().getProperties().addListener(new InvalidationListener() {
-                        @Override public void invalidated(Observable arg0) {
-                            requestLayout();
-                        }
-                    });
-                } else if (contextMenu.getOwnerNode() instanceof TextField) {
-                    TextFieldSkin tfs = (TextFieldSkin)((TextField)contextMenu.getOwnerNode()).getSkin();
-                    tfs.getSkinnable().getProperties().addListener(new InvalidationListener() {
-                        @Override public void invalidated(Observable arg0) {
-                            requestLayout();
-                        }
-                    });
-                }
+        contextMenu.ownerNodeProperty().addListener(arg0 -> {
+            if (contextMenu.getOwnerNode() instanceof TextArea) {
+                TextAreaSkin tas = (TextAreaSkin)((TextArea)contextMenu.getOwnerNode()).getSkin();
+                tas.getSkinnable().getProperties().addListener(new InvalidationListener() {
+                    @Override public void invalidated(Observable arg0) {
+                        requestLayout();
+                    }
+                });
+            } else if (contextMenu.getOwnerNode() instanceof TextField) {
+                TextFieldSkin tfs = (TextFieldSkin)((TextField)contextMenu.getOwnerNode()).getSkin();
+                tfs.getSkinnable().getProperties().addListener(new InvalidationListener() {
+                    @Override public void invalidated(Observable arg0) {
+                        requestLayout();
+                    }
+                });
             }
         });
 
-        contextMenu.getItems().addListener(new ListChangeListener<MenuItem>() {
-            @Override public void onChanged(Change<? extends MenuItem> c) {
-                // Listener to items in PopupMenu to update items in PopupMenuContent
-                updateMenuItemContainer();
-            }
+        contextMenu.getItems().addListener((ListChangeListener<MenuItem>) c -> {
+            // Listener to items in PopupMenu to update items in PopupMenuContent
+            updateMenuItemContainer();
         });
     }
 

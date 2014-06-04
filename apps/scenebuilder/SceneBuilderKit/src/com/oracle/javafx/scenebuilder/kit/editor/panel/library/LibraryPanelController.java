@@ -52,6 +52,7 @@ import com.oracle.javafx.scenebuilder.kit.library.LibraryItemNameComparator;
 import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -72,9 +73,9 @@ import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeSet;
+
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -83,7 +84,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TitledPane;
-import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -323,39 +323,28 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         return currentDisplayMode;
     }
     
-    private final ChangeListener<Library> libraryListener = new ChangeListener<Library>() {
-
-        @Override
-        public void changed(ObservableValue<? extends Library> ov, Library t, Library t1) {
-            // When a jar is imported this listener is called two times.
-            // First the UserLibrary is turned into BuiltinLibrary, then it is
-            // turned back into a UserLibrary with the up to date library dir
-            // content.
-//            System.out.println("libraryListener called - t " + t + " - t1 " + t1);
-            if (t instanceof UserLibrary) {
-                t.getItems().removeListener(libraryItemListener);
-                t.getItems().clear();
-            }
-            if (t1 instanceof UserLibrary) {
-                t1.getItems().addListener(libraryItemListener);
-                if (sectionNameToKeepOpened != null) {
-                    sectionNameToKeepOpened = null;
-                }
-            }
-            // libraryDidChange might not be called by several listeners.
-            // Silencing the one below means I dunno how to get the selected index.
-//            libraryDidChange(t);
-        }
-    };
+    final ListChangeListener<LibraryItem> libraryItemListener = change -> libraryDidChange(null);
     
-    final ListChangeListener<LibraryItem> libraryItemListener = new ListChangeListener<LibraryItem>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends LibraryItem> change) {
-//                System.out.println("libraryItemListener called");
-                libraryDidChange(null);
+    private final ChangeListener<Library> libraryListener = (ov, t, t1) -> {
+        // When a jar is imported this listener is called two times.
+        // First the UserLibrary is turned into BuiltinLibrary, then it is
+        // turned back into a UserLibrary with the up to date library dir
+        // content.
+//            System.out.println("libraryListener called - t " + t + " - t1 " + t1);
+        if (t instanceof UserLibrary) {
+            t.getItems().removeListener(libraryItemListener);
+            t.getItems().clear();
+        }
+        if (t1 instanceof UserLibrary) {
+            t1.getItems().addListener(libraryItemListener);
+            if (sectionNameToKeepOpened != null) {
+                sectionNameToKeepOpened = null;
             }
-        };
+        }
+        // libraryDidChange might not be called by several listeners.
+        // Silencing the one below means I dunno how to get the selected index.
+//            libraryDidChange(t);
+    };
     
     private void startListeningToLibrary() {
         getEditorController().libraryProperty().addListener(libraryListener);
@@ -530,21 +519,10 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     // Key events listened onto the ListView
     // For some reason the listener when set on the cell (see LibraryListCell)
     // is never called, probably because it is the ListView which has the focus.
-    private final EventHandler<KeyEvent> keyEventHandler = new EventHandler<KeyEvent>() {
-        @Override
-        public void handle(final KeyEvent e) {
-            handleKeyEvent(e);
-        }
-    };
+    private final EventHandler<KeyEvent> keyEventHandler = e -> handleKeyEvent(e);
     
     private final Callback<ListView<LibraryListItem>, ListCell<LibraryListItem>> cb
-            = new Callback<ListView<LibraryListItem>, ListCell<LibraryListItem>>() {
-    
-        @Override
-        public ListCell<LibraryListItem> call(ListView<LibraryListItem> param) {
-            return new LibraryListCell(getEditorController());
-        }
-    };
+            = param -> new LibraryListCell(getEditorController());
     
     private void handleKeyEvent(KeyEvent e) {
         // On ENTER we try to insert the item which is selected within the Library.
@@ -569,108 +547,84 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     }
     
     private void startListeningToDrop() {
-        libPane.setOnDragDropped(new EventHandler<DragEvent>() {
-
-            @Override
-            public void handle(DragEvent t) {
+        libPane.setOnDragDropped(t -> {
 //                System.out.println("libPane onDragDropped");
-                AbstractDragSource dragSource = getEditorController().getDragController().getDragSource();
-                if (dragSource != null && dragSource instanceof DocumentDragSource) {
-                    processInternalImport(((DocumentDragSource)dragSource).getDraggedObjects());
-                } else {
-                    initiateImportDialog = false;
-                    jarAndFxmlFiles.clear();
-                    t.setDropCompleted(true);
-                    // Drop gesture is only valid when the Library is an instance of UserLibrary
-                    if (getEditorController().getLibrary() instanceof UserLibrary) {
-                        Dragboard db = t.getDragboard();
-                        if (db.hasFiles()) {
-                            final List<File> files = db.getFiles();
-                            for (File file : files) {
-                                // Keep only jar and fxml files
-                                if (file.isFile() && (file.getName().endsWith(".jar") || file.getName().endsWith(".fxml"))) { //NOI18N
+            AbstractDragSource dragSource = getEditorController().getDragController().getDragSource();
+            if (dragSource instanceof DocumentDragSource) {
+                processInternalImport(((DocumentDragSource)dragSource).getDraggedObjects());
+            } else {
+                initiateImportDialog = false;
+                jarAndFxmlFiles.clear();
+                t.setDropCompleted(true);
+                // Drop gesture is only valid when the Library is an instance of UserLibrary
+                if (getEditorController().getLibrary() instanceof UserLibrary) {
+                    Dragboard db = t.getDragboard();
+                    if (db.hasFiles()) {
+                        final List<File> files = db.getFiles();
+                        for (File file : files) {
+                            // Keep only jar and fxml files
+                            if (file.isFile() && (file.getName().endsWith(".jar") || file.getName().endsWith(".fxml"))) { //NOI18N
 //                                System.out.println("libPane onDragDropped - Retaining file " + file.getName());
-                                    jarAndFxmlFiles.add(file);
-                                }
+                                jarAndFxmlFiles.add(file);
                             }
-
-                            // The import dialog might be kept opened by the user quite
-                            // a long time.
-                            // On Mac (not on Win), after around 20 seconds of opening
-                            // time of the import dialog window the user sees a move from
-                            // the lib panel to the Finder of the file icon, as if the drag
-                            // is rejected.
-                            // In order to silence (mask ?) this issue there's:
-                            // - the delegation to setOnDragExited of the call of processImportJarFxml
-                            // so that current handler returns fast.
-                            // - the runLater in setOnDragExited, wrapped with a Timer set with a 1 second delay
-                            // Is there a way to be notified when the import dialog
-                            // can be run without interfering with the drag and drop sequence ?
-                            initiateImportDialog = true;
                         }
+
+                        // The import dialog might be kept opened by the user quite
+                        // a long time.
+                        // On Mac (not on Win), after around 20 seconds of opening
+                        // time of the import dialog window the user sees a move from
+                        // the lib panel to the Finder of the file icon, as if the drag
+                        // is rejected.
+                        // In order to silence (mask ?) this issue there's:
+                        // - the delegation to setOnDragExited of the call of processImportJarFxml
+                        // so that current handler returns fast.
+                        // - the runLater in setOnDragExited, wrapped with a Timer set with a 1 second delay
+                        // Is there a way to be notified when the import dialog
+                        // can be run without interfering with the drag and drop sequence ?
+                        initiateImportDialog = true;
                     }
                 }
             }
         });
         
-        libPane.setOnDragExited(new EventHandler<DragEvent>() {
-
-            @Override
-            public void handle(DragEvent t) {
+        libPane.setOnDragExited(t -> {
 //                System.out.println("libPane onDragExited");
-                if (initiateImportDialog) {
-                    initiateImportDialog = false;
-                    final Timer timer = new Timer(true);
-                    final TimerTask timerTask = new TimerTask() {
+            if (initiateImportDialog) {
+                initiateImportDialog = false;
+                final Timer timer = new Timer(true);
+                final TimerTask timerTask = new TimerTask() {
 
-                        @Override
-                        public void run() {
-                            Platform.runLater(new Runnable() {
-
-                                @Override
-                                public void run() {
-                                    processImportJarFxml(jarAndFxmlFiles);
-                                }
-                            });
-                            // I don't need to use the timer later on so by
-                            // cancelling it right here I'm sure free resources
-                            // that otherwise would prevent the JVM from exiting.
-                            timer.cancel();
-                        }
-                    };
-                    timer.schedule(timerTask, 600); // milliseconds
-                }
+                    @Override
+                    public void run() {
+                        Platform.runLater(() -> processImportJarFxml(jarAndFxmlFiles));
+                        // I don't need to use the timer later on so by
+                        // cancelling it right here I'm sure free resources
+                        // that otherwise would prevent the JVM from exiting.
+                        timer.cancel();
+                    }
+                };
+                timer.schedule(timerTask, 600); // milliseconds
             }
         });
         
         
-        libPane.setOnDragOver(new EventHandler<DragEvent>() {
-
-            @Override
-            public void handle(DragEvent t) {
+        libPane.setOnDragOver(t -> {
 //                System.out.println("libPane onDragOver");
-                AbstractDragSource dragSource = getEditorController().getDragController().getDragSource();
-                Dragboard db = t.getDragboard();
-                // db has file when dragging a file from native file manager (Mac Finder, Windows Explorer, ...).
-                if (db.hasFiles()) {
-                    t.acceptTransferModes(TransferMode.COPY);
-                } else if (dragSource != null) {
-                    // dragSource is not null if the user drags something from Hierarchy or Content panel.
-                    t.acceptTransferModes(TransferMode.MOVE);
-                }
+            AbstractDragSource dragSource = getEditorController().getDragController().getDragSource();
+            Dragboard db = t.getDragboard();
+            // db has file when dragging a file from native file manager (Mac Finder, Windows Explorer, ...).
+            // dragSource is not null if the user drags something from Hierarchy or Content panel.
+            if (db.hasFiles() || dragSource != null) {
+                t.acceptTransferModes(TransferMode.COPY);
             }
         });
         
         // This one is called only if lib is the source of the drop.
-        libPane.setOnDragDone(new EventHandler<DragEvent>() {
-
-            @Override
-            public void handle(DragEvent t) {
-                assert getEditorController().getDragController().getDragSource() != null;
-                getEditorController().getDragController().end();
-                t.getDragboard().clear();
-                t.consume();
-            }
+        libPane.setOnDragDone(t -> {
+            assert getEditorController().getDragController().getDragSource() != null;
+            getEditorController().getDragController().end();
+            t.getDragboard().clear();
+            t.consume();
         });
         
     }
@@ -710,15 +664,20 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                     final FXOMArchive.Entry entry0 = fxomArchive.getEntries().get(0);
                     String fxmlText = entry0.getFxmlText();
 
-                    // Write the FXML layout into a dedicated file stored in the Library dir
-                    // We use the class name of the top element and append a number:
-                    // if Library dir already contains SplitPane_1.fxml and top element is
-                    // of class SplitPane then we will create SplitPane_2.fxml and so on.
-                    String prefix = asset.getSceneGraphObject().getClass().getSimpleName();
+                    // Write the FXML layout into a dedicated file stored in the user Library dir.
+                    // We use the tag name of the top element and append a number:
+                    // if Library dir already contains SplitPane_1.fxml and top element has
+                    // tag name SplitPane then we will create SplitPane_2.fxml and so on.
+                    // Note the tag name is most of the time identical to the Java class name, see DTL-6643.
+                    String prefix = asset.getGlueElement().getTagName();
                     File fxmlFile = getUniqueFxmlFileName(prefix, userLibraryPathString);
                     writeFxmlFile(fxmlFile, fxmlText, libPath);
                 }
             } finally {
+                if (currentDisplayMode.equals(DISPLAY_MODE.SECTIONS)) {
+                    sectionNameToKeepOpened = UserLibrary.TAG_USER_DEFINED;
+                }
+                    
                 ((UserLibrary) getEditorController().getLibrary()).startWatching();
             }
         }
@@ -736,9 +695,6 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             try (PrintWriter writer = new PrintWriter(targetFile, "UTF-8")) { //NOI18N
                 writer.write(text);
             }
-            
-            getEditorController().getMessageLog().logInfoMessage("log.info.file.creation.confirmation",
-                    I18N.getBundle(), targetFilePath.getFileName().toString());
         } catch (IOException ioe) {
             final ErrorDialog errorDialog = new ErrorDialog(null);
             errorDialog.setTitle(I18N.getString("error.file.create.title"));
@@ -770,6 +726,10 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 
                 if (!fxmlFiles.isEmpty() && enoughFreeSpaceOnDisk(fxmlFiles) && ! hasDependencies(fxmlFiles)) {
                     copyFilesToUserLibraryDir(fxmlFiles);
+                    
+                    if (currentDisplayMode.equals(DISPLAY_MODE.SECTIONS)) {
+                        sectionNameToKeepOpened = UserLibrary.TAG_USER_DEFINED;
+                    }
                 }
 
                 final List<File> jarFiles = getSubsetOfFiles(".jar", importedFiles); //NOI18N

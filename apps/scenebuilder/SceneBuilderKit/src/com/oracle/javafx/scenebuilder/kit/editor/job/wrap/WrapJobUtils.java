@@ -46,21 +46,12 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.Set;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
-import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.chart.Axis;
 import javafx.scene.control.Accordion;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.SplitPane;
 import javafx.scene.control.TabPane;
-import javafx.scene.control.TitledPane;
-import javafx.scene.control.ToolBar;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.text.TextFlow;
 
 /**
  * Utilities to build wrap jobs.
@@ -89,6 +80,12 @@ public class WrapJobUtils {
         }
         if (editorController.isSelectionNode() == false) {
             return false;
+        }
+        // Cannot wrap in Axis nodes
+        for (FXOMObject fxomObject : osg.getItems()) {
+            if (fxomObject.getSceneGraphObject() instanceof Axis) {
+                return false;
+            }
         }
         final FXOMObject parent = osg.getAncestor();
         if (parent == null) { // selection == root object
@@ -119,26 +116,29 @@ public class WrapJobUtils {
         if (container instanceof FXOMInstance == false) {
             return false;
         }
-        // Can unwrap the following containers only
-        final Class<?>[] containerClasses = { // (1)
-            AnchorPane.class,
-            GridPane.class,
-            Group.class,
-            HBox.class,
-            Pane.class,
-            ScrollPane.class,
-            SplitPane.class,
-            StackPane.class,
-            TitledPane.class,
-            ToolBar.class,
-            VBox.class
-        };
-        boolean isAssignableFrom = false;
-        for (Class<?> clazz : containerClasses) {
-            isAssignableFrom |= clazz.isAssignableFrom(
-                    ((FXOMInstance) container).getDeclaredClass());
+        final FXOMInstance containerInstance = (FXOMInstance) container;
+        
+        // Unresolved custom type
+        if (container.getSceneGraphObject() == null) {
+            return false;
         }
-        if (!isAssignableFrom) {
+        
+        // Cannot unwrap TabPane
+        if (TabPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
+            return false;
+        }
+        // Cannot unwrap all Pane subclasses (ex : BorderPane and TextFlow)
+        if (BorderPane.class.isAssignableFrom(containerInstance.getDeclaredClass())
+                || TextFlow.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
+            return false;
+        }
+        // Can unwrap classes supporting wrapping except TabPane + some Pane subclasses (see above)
+        boolean isAssignableFrom = false;
+        for (Class<?> clazz : EditorController.getClassesSupportingWrapping()) {
+            isAssignableFrom |= clazz.isAssignableFrom(
+                    containerInstance.getDeclaredClass());
+        }
+        if (isAssignableFrom == false) {
             return false;
         }
 

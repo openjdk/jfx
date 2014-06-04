@@ -31,19 +31,11 @@
  */
 package com.oracle.javafx.scenebuilder.app.template;
 
-import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction;
-import static com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction.NEW_ALERT_DIALOG;
-import static com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction.NEW_ALERT_DIALOG_CSS;
-import static com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction.NEW_ALERT_DIALOG_I18N;
-import static com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction.NEW_BASIC_APPLICATION;
-import static com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction.NEW_BASIC_APPLICATION_CSS;
-import static com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction.NEW_BASIC_APPLICATION_I18N;
-import static com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction.NEW_COMPLEX_APPLICATION;
-import static com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction.NEW_COMPLEX_APPLICATION_CSS;
-import static com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction.NEW_COMPLEX_APPLICATION_I18N;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
+
+import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction;
 
 /**
  *

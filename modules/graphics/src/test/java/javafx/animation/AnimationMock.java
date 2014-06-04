@@ -61,11 +61,8 @@ public class AnimationMock extends Animation {
         setRate(rate);
         setCycleCount(cycleCount);
         setAutoReverse(autoReverse);
-        super.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                finishFlag = true;
-            }
+        super.setOnFinished(event -> {
+            finishFlag = true;
         });
     }
     

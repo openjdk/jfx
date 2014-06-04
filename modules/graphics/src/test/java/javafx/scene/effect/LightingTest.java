@@ -378,27 +378,20 @@ public class LightingTest extends EffectsTestBase {
         ObjectProperty vContentInput = new SimpleObjectProperty();
         effect.contentInputProperty().bind(vContentInput);
         // try setting itself as content input
-        try {
-            vContentInput.set(effect);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, effect.getContentInput());
-            vContentInput.set(null);
-            effect.contentInputProperty().bind(vContentInput);
-        }
+        vContentInput.set(effect);
+        assertEquals(null, effect.getContentInput());
+        vContentInput.set(null);
+
+        effect.contentInputProperty().bind(vContentInput);
 
         // try setting itself as bump input
         ObjectProperty vBumpInput = new SimpleObjectProperty();
         effect.bumpInputProperty().bind(vBumpInput);
-        try {
-            vBumpInput.set(effect);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            Effect efct = effect.getBumpInput();
-            assertNull(efct);
-            vBumpInput.set(null);
-            effect.bumpInputProperty().bind(vBumpInput);
-        }
+        vBumpInput.set(effect);
+        Effect efct = effect.getBumpInput();
+        assertNull(efct);
+        vBumpInput.set(null);
+        effect.bumpInputProperty().bind(vBumpInput);
 
         // test following cycle
         // Lighting <- BoxBlur <- Lighting
@@ -407,37 +400,25 @@ public class LightingTest extends EffectsTestBase {
         blur.inputProperty().bind(vBlur);
         vBumpInput.set(blur);
         vContentInput.set(blur);
-        try {
-            vBlur.set(effect);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, blur.getInput());
-            vBlur.set(null);
-            blur.inputProperty().bind(vBlur);
-        }
+        vBlur.set(effect);
+        assertEquals(null, blur.getInput());
+        vBlur.set(null);
+        blur.inputProperty().bind(vBlur);
 
         // test following cycle
         // BoxBlur <- Lighting <- BoxBlur
         vBumpInput.set(null);
         vContentInput.set(null);
         vBlur.set(effect);
-        try {
-            vBumpInput.set(blur);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, effect.getContentInput());
-            vBumpInput.set(null);
-            effect.bumpInputProperty().bind(vBumpInput);
-        }
+        vBumpInput.set(blur);
+        assertEquals(null, effect.getContentInput());
+        vBumpInput.set(null);
+        effect.bumpInputProperty().bind(vBumpInput);
 
-        try {
-            vContentInput.set(blur);
-            fail("IllegalArgument should have been thrown.");
-        } catch (IllegalArgumentException e) {
-            assertEquals(null, effect.getContentInput());
-            vContentInput.set(null);
-            effect.contentInputProperty().bind(vContentInput);
-        }
+        vContentInput.set(blur);
+        assertEquals(null, effect.getContentInput());
+        vContentInput.set(null);
+        effect.contentInputProperty().bind(vContentInput);
 
         assertEquals(null, effect.getContentInput());
         assertEquals(null, effect.getBumpInput());

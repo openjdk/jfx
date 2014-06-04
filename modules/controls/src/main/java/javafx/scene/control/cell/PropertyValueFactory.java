@@ -99,7 +99,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
 
     private final String property;
 
-    private Class columnClass;
+    private Class<?> columnClass;
     private String previousProperty;
     private PropertyReference<T> propertyRef;
 
@@ -116,7 +116,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
 
     /** {@inheritDoc} */
     @Override public ObservableValue<T> call(CellDataFeatures<S,T> param) {
-        return getCellDataReflectively((T)param.getValue());
+        return getCellDataReflectively(param.getValue());
     }
 
     /**
@@ -124,7 +124,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
      */
     public final String getProperty() { return property; }
 
-    private ObservableValue<T> getCellDataReflectively(T rowData) {
+    private ObservableValue<T> getCellDataReflectively(S rowData) {
         if (getProperty() == null || getProperty().isEmpty() || rowData == null) return null;
 
         try {

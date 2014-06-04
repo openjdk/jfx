@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,14 @@
 
 package javafx.scene;
 
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.SubSceneTraversalEngine;
+import com.sun.javafx.scene.traversal.TopMostTraversalEngine;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.*;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point3D;
@@ -50,7 +51,6 @@ import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.SubSceneHelper;
 import com.sun.javafx.scene.input.PickResultChooser;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
@@ -240,13 +240,10 @@ public class SubScene extends Node {
                     _value.setDisabled(isDisabled());
 
                     if (oldRoot != null) {
+                        StyleManager.getInstance().forget(SubScene.this);
                         oldRoot.setScenes(null, null);
-                        oldRoot.setImpl_traversalEngine(null);
                     }
                     oldRoot = _value;
-                    if (_value.getImpl_traversalEngine() == null) {
-                        _value.setImpl_traversalEngine(new TraversalEngine(_value, true));
-                    }
                     _value.getStyleClass().add(0, "root");
                     _value.setScenes(getScene(), SubScene.this);
                     markDirty(SubSceneDirtyBits.ROOT_SG_DIRTY);
@@ -559,25 +556,77 @@ public class SubScene extends Node {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated @Override
-    protected void impl_processCSS(WritableValue<Boolean> cacheHint) {
+    protected void impl_processCSS(WritableValue<Boolean> unused) {
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) { return; }
 
         if (getRoot().cssFlag == CssFlags.CLEAN) {
             getRoot().cssFlag = cssFlag;
         }
-        super.impl_processCSS(cacheHint);
-        getRoot().processCSS(cacheHint);
+        super.impl_processCSS(unused);
+        getRoot().processCSS();
     }
 
     @Override
-    void processCSS(WritableValue<Boolean> cacheHint) {
+    void processCSS() {
         Parent root = getRoot();
         if (root.impl_isDirty(DirtyBits.NODE_CSS)) {
             root.impl_clearDirty(DirtyBits.NODE_CSS);
             if (cssFlag == CssFlags.CLEAN) { cssFlag = CssFlags.UPDATE; }
         }
-        super.processCSS(cacheHint);
+        super.processCSS();
+    }
+
+    private ObjectProperty<String> userAgentStylesheet = null;
+    /**
+     * @return the userAgentStylesheet property.
+     * @see #getUserAgentStylesheet()
+     * @see #setUserAgentStylesheet(String)
+     * @since  JavaFX 8u20
+     */
+    public final ObjectProperty<String> userAgentStylesheetProperty() {
+        if (userAgentStylesheet == null) {
+            userAgentStylesheet = new SimpleObjectProperty<String>(SubScene.this, "userAgentStylesheet", null) {
+                @Override protected void invalidated() {
+                    StyleManager.getInstance().forget(SubScene.this);
+                    impl_reapplyCSS();
+                }
+            };
+        }
+        return userAgentStylesheet;
+    }
+
+    /**
+     * Get the URL of the user-agent stylesheet that will be used by this SubScene. If the URL has not been set,
+     * the platform-default user-agent stylesheet will be used.
+     * <p>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
+     * </p>
+     * @return The URL of the user-agent stylesheet that will be used by this SubScene,
+     * or null if has not been set.
+     * @since  JavaFX 8u20
+     */
+    public final String getUserAgentStylesheet() {
+        return userAgentStylesheet == null ? null : userAgentStylesheet.get();
+    }
+
+    /**
+     * Set the URL of the user-agent stylesheet that will be used by this SubScene in place of the
+     * the platform-default user-agent stylesheet. If the URL does not resolve to a valid location,
+     * the platform-default user-agent stylesheet will be used.
+     * <p>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
+     * </p>
+     * @param url The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
+     * does not have a [scheme:] component, the URL is considered to be the [path] component only.
+     * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
+     * the root of the application's classpath.
+     * @since  JavaFX 8u20
+     */
+    public final void setUserAgentStylesheet(String url) {
+        userAgentStylesheetProperty().set(url);
     }
 
     @Override void updateBounds() {
@@ -642,6 +691,12 @@ public class SubScene extends Node {
             }
             dirtyLayout = false;
         }
+    }
+
+    private TopMostTraversalEngine traversalEngine = new SubSceneTraversalEngine(this);
+
+    boolean traverse(Node node, Direction dir) {
+        return traversalEngine.trav(node, dir) != null;
     }
 
     private enum SubSceneDirtyBits {

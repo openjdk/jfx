@@ -14,7 +14,6 @@ DIRLIST = progressbuffer       \
 
 TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
 
-OFLAGS = -Os
 CFLAGS = -fPIC                   \
          -Werror=implicit-function-declaration \
          -msse2                  \

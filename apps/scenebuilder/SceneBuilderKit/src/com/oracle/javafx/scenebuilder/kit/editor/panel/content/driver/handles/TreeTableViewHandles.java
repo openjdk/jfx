@@ -66,7 +66,7 @@ public class TreeTableViewHandles extends AbstractNodeHandles<Node> {
     }
     
     public TreeTableView<?> getTreeTableView() {
-        return (TreeTableView) getSceneGraphObject();
+        return (TreeTableView<?>) getSceneGraphObject();
     }
     
     /*

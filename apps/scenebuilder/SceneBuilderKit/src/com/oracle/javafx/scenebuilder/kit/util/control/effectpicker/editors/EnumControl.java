@@ -32,13 +32,14 @@
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors;
 
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -91,15 +92,11 @@ public class EnumControl<T> extends GridPane {
         editor_label.setText(label);
         editor_choicebox.getItems().addAll(values);
         editor_choicebox.setValue(initValue);
-        editor_choicebox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
-
-            @Override
-            public void changed(ObservableValue<? extends T> ov, T t, T t1) {
-                // First update the model
-                setValue(t1);
-                // Then notify the controller a change occured
-                effectPickerController.incrementRevision();
-            }
+        editor_choicebox.getSelectionModel().selectedItemProperty().addListener((ChangeListener<T>) (ov, t, t1) -> {
+            // First update the model
+            setValue(t1);
+            // Then notify the controller a change occured
+            effectPickerController.incrementRevision();
         });
         
         setValue(initValue);

@@ -39,6 +39,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
+import javafx.scene.chart.Axis;
 
 /**
  *
@@ -65,8 +66,19 @@ public class DeleteObjectJob extends Job {
 
     @Override
     public boolean isExecutable() {
-        return (targetFxomObject.getParentProperty() != null)
-                || (targetFxomObject == targetFxomObject.getFxomDocument().getFxomRoot());
+        final boolean result;
+        
+        if (targetFxomObject == targetFxomObject.getFxomDocument().getFxomRoot()) {
+            // targetFxomObject is the root
+            result = true;
+        } else if (targetFxomObject.getSceneGraphObject() instanceof Axis) {
+            // Axis cannot be deleted from their parent Chart
+            result = false;
+        } else {
+            result = (targetFxomObject.getParentProperty() != null);
+        }
+        
+        return result;
     }
 
     @Override

@@ -82,19 +82,6 @@ public class GlueDocument extends GlueNode {
      * Utilities
      */
 
-    public GlueElement lookup(String attrName, String attrValue) {
-        final GlueElement result;
-        
-        if (rootElement == null) {
-            result = null;
-        } else {
-            result = rootElement.lookup(attrName, attrValue);
-        }
-        
-        return result;
-    }
-    
-    
     public List<GlueInstruction> collectInstructions(String target) {
         final List<GlueInstruction> result = new ArrayList<>();
         

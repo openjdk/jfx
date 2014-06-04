@@ -26,10 +26,7 @@
 package javafx.scene.control.cell;
 
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.control.Cell;
 import javafx.scene.control.ChoiceBox;
@@ -37,7 +34,6 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.util.StringConverter;
 
@@ -52,7 +48,7 @@ class CellUtils {
      *                                                                         *
      **************************************************************************/    
     
-    private final static StringConverter defaultStringConverter = new StringConverter<Object>() {
+    private final static StringConverter<?> defaultStringConverter = new StringConverter<Object>() {
         @Override public String toString(Object t) {
             return t == null ? null : t.toString();
         }
@@ -62,15 +58,15 @@ class CellUtils {
         }
     };
     
-    private final static StringConverter defaultTreeItemStringConverter =
-        new StringConverter<TreeItem>() {
-            @Override public String toString(TreeItem treeItem) {
+    private final static StringConverter<?> defaultTreeItemStringConverter =
+        new StringConverter<TreeItem<?>>() {
+            @Override public String toString(TreeItem<?> treeItem) {
                 return (treeItem == null || treeItem.getValue() == null) ? 
                         "" : treeItem.getValue().toString();
             }
 
-            @Override public TreeItem fromString(String string) {
-                return new TreeItem(string);
+            @Override public TreeItem<?> fromString(String string) {
+                return new TreeItem<>(string);
             }
         };
     
@@ -84,6 +80,7 @@ class CellUtils {
      * Simple method to provide a StringConverter implementation in various cell
      * implementations.
      */
+    @SuppressWarnings("unchecked")
     static <T> StringConverter<T> defaultStringConverter() {
         return (StringConverter<T>) defaultStringConverter;
     }
@@ -92,6 +89,7 @@ class CellUtils {
      * Simple method to provide a TreeItem-specific StringConverter 
      * implementation in various cell implementations.
      */
+    @SuppressWarnings("unchecked")
     static <T> StringConverter<TreeItem<T>> defaultTreeItemStringConverter() {
         return (StringConverter<TreeItem<T>>) defaultTreeItemStringConverter;
     }
@@ -156,12 +154,9 @@ class CellUtils {
         ChoiceBox<T> choiceBox = new ChoiceBox<T>(items);
         choiceBox.setMaxWidth(Double.MAX_VALUE);
         choiceBox.converterProperty().bind(converter);
-        choiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
-            @Override
-            public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
-                if (cell.isEditing()) {
-                    cell.commitEdit(newValue);
-                }
+        choiceBox.getSelectionModel().selectedItemProperty().addListener((ov, oldValue, newValue) -> {
+            if (cell.isEditing()) {
+                cell.commitEdit(newValue);
             }
         });
         return choiceBox;
@@ -240,19 +235,23 @@ class CellUtils {
     
     static <T> TextField createTextField(final Cell<T> cell, final StringConverter<T> converter) {
         final TextField textField = new TextField(getItemText(cell, converter));
-        textField.setOnKeyReleased(new EventHandler<KeyEvent>() {
-            @Override public void handle(KeyEvent t) {
-                if (t.getCode() == KeyCode.ENTER) {
-                    if (converter == null) {
-                        throw new IllegalStateException(
-                            "Attempting to convert text input into Object, but provided "
+
+        // Use onAction here rather than onKeyReleased (with check for Enter),
+        // as otherwise we encounter RT-34685
+        textField.setOnAction(event -> {
+            if (converter == null) {
+                throw new IllegalStateException(
+                        "Attempting to convert text input into Object, but provided "
                                 + "StringConverter is null. Be sure to set a StringConverter "
                                 + "in your cell factory.");
-                    }
-                    cell.commitEdit(converter.fromString(textField.getText()));
-                } else if (t.getCode() == KeyCode.ESCAPE) {
-                    cell.cancelEdit();
-                }
+            }
+            cell.commitEdit(converter.fromString(textField.getText()));
+            event.consume();
+        });
+        textField.setOnKeyReleased(t -> {
+            if (t.getCode() == KeyCode.ESCAPE) {
+                cell.cancelEdit();
+                t.consume();
             }
         });
         return textField;
@@ -304,11 +303,9 @@ class CellUtils {
         ComboBox<T> comboBox = new ComboBox<T>(items);
         comboBox.converterProperty().bind(converter);
         comboBox.setMaxWidth(Double.MAX_VALUE);
-        comboBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<T>() {
-            @Override public void changed(ObservableValue<? extends T> ov, T oldValue, T newValue) {
-                if (cell.isEditing()) {
-                    cell.commitEdit(newValue);
-                }
+        comboBox.getSelectionModel().selectedItemProperty().addListener((ov, oldValue, newValue) -> {
+            if (cell.isEditing()) {
+                cell.commitEdit(newValue);
             }
         });
         return comboBox;

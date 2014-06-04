@@ -94,28 +94,12 @@ class TransientObject extends TransientNode {
         this.glueElement = glueElement;
     }
 
-    public Class<?> getDeclaredClass() {
-        return declaredClass;
-    }
-
-    public String getUnknownClassName() {
-        return unknownClassName;
-    }
-
-    public GlueElement getGlueElement() {
-        return glueElement;
-    }
-    
     public List<FXOMProperty> getProperties() {
         return properties;
     }
 
     public List<FXOMObject> getCollectedItems() {
         return collectedItems;
-    }
-
-    public String getFxRootType() {
-        return fxRootType;
     }
 
     public void setFxRootType(String fxRootType) {
@@ -129,8 +113,7 @@ class TransientObject extends TransientNode {
         if (declaredClass != null) {
             assert getSceneGraphObject() != null;
             
-            if (List.class.isAssignableFrom(declaredClass)) {
-                assert getSceneGraphObject() instanceof List;
+            if (getSceneGraphObject() instanceof List) {
                 assert properties.isEmpty();
                 
                 result = new FXOMCollection(fxomDocument, glueElement,

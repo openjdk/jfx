@@ -121,18 +121,19 @@ static int load_egl_symbols(void *lib) {
 
 /*************************************** BROADCOM ******************************************/
 
-static int bcm_loaded = 0;
 
 int load_bcm_symbols() {
 #ifdef USE_DISPMAN
-    if (bcm_loaded) {
-        return useDispman;
+    static int bcm_loaded = -1;
+
+    if (bcm_loaded != -1) {
+        return bcm_loaded;
     }
-    bcm_loaded = 1;
 
     void *lib = dlopen("libbcm_host.so", RTLD_LAZY);
     if (!lib) {
-        return 1;
+        bcm_loaded = 1;
+        return bcm_loaded;
     }
 
     int error = 0;
@@ -160,8 +161,9 @@ int load_bcm_symbols() {
     }
 
     useDispman = 1; 
+    bcm_loaded = 0;
 
-    return 0;
+    return bcm_loaded;
 #else
     return 1;
 #endif /* USE_DISPMAN */
@@ -236,12 +238,14 @@ EGLNativeDisplayType util_getNativeDisplayType() {
     }
 
     if (!cached) {
-        if (useDispman) {
-            cachedNativeDisplayType = EGL_DEFAULT_DISPLAY;
-        } else if (useVivanteFB)  {
-            cachedNativeDisplayType = wr_fbGetDisplayByIndex(0);
+        if (useVivanteFB)  {
+            if (wr_fbGetDisplayByIndex) {
+                cachedNativeDisplayType = wr_fbGetDisplayByIndex(0);
+            } else {
+               cachedNativeDisplayType = (EGLNativeDisplayType)0xBAD;
+            }
         } else {
-            cachedNativeDisplayType = (EGLNativeDisplayType)NULL;
+            cachedNativeDisplayType = EGL_DEFAULT_DISPLAY;
         }
 
         cached ++;

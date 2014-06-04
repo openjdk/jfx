@@ -230,10 +230,8 @@ public class SwingFXUtils {
 
         @Override public boolean enter() {
             if (isRunning.compareAndSet(false, true)) {
-                PlatformImpl.runAndWait(new Runnable() {
-                    @Override public void run() {
-                        Toolkit.getToolkit().enterNestedEventLoop(FwSecondaryLoop.this);
-                    }
+                PlatformImpl.runAndWait(() -> {
+                    Toolkit.getToolkit().enterNestedEventLoop(FwSecondaryLoop.this);
                 });
                 return true;
             }
@@ -242,10 +240,8 @@ public class SwingFXUtils {
 
         @Override public boolean exit() {
             if (isRunning.compareAndSet(true, false)) {
-                PlatformImpl.runAndWait(new Runnable() {
-                    @Override public void run() {
-                        Toolkit.getToolkit().exitNestedEventLoop(FwSecondaryLoop.this, null);
-                    }
+                PlatformImpl.runAndWait(() -> {
+                    Toolkit.getToolkit().exitNestedEventLoop(FwSecondaryLoop.this, null);
                 });
                 return true;
             }
@@ -269,20 +265,16 @@ public class SwingFXUtils {
 
     private static EventQueue getEventQueue() {
         return AccessController.doPrivileged(
-                new PrivilegedAction<EventQueue>() {
-                    @Override public EventQueue run() {
-                        return java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue();
-                    }
-                });
+                (PrivilegedAction<EventQueue>) () -> java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue());
     }
 
     //Called with reflection from PlatformImpl to avoid dependency
-    public static void installFwEventQueue() {
+    private static void installFwEventQueue() {
         AWTAccessor.getEventQueueAccessor().setFwDispatcher(getEventQueue(), new FXDispatcher());
     }
 
     //Called with reflection from PlatformImpl to avoid dependency
-    public static void removeFwEventQueue() {
+    private static void removeFwEventQueue() {
         AWTAccessor.getEventQueueAccessor().setFwDispatcher(getEventQueue(), null);
     }
 }

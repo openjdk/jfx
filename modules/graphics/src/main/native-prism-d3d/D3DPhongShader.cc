@@ -134,7 +134,7 @@ HRESULT D3DPhongShader::setPixelShader(int numLights, int specularMode,
 
     IDirect3DPixelShader9 *pshd = NULL;
     if (numLights == 0) {
-        pshd = selfIllumMode ? pixelShader0 : pixelShader0_si;
+        pshd = selfIllumMode ? pixelShader0_si : pixelShader0;
     } else {
         pshd = pixelShaders[selfIllumMode][bumpMode][specularMode][numLights - 1];
     }

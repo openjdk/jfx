@@ -52,7 +52,7 @@ public class LeakTest extends TestBase {
     @Test public void testGarbageCollectability() throws InterruptedException {
         final BlockingQueue<WeakReference<WebPage>> webPageRefQueue =
                 new LinkedBlockingQueue<WeakReference<WebPage>>();
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             WebView webView = new WebView();
             WeakReference<WebView> webViewRef =
                     new WeakReference<WebView>(webView);
@@ -65,7 +65,7 @@ public class LeakTest extends TestBase {
             System.gc();
             assertNull("WebView has not been GCed", webViewRef.get());
             assertNull("WebEngine has not been GCed", webEngineRef.get());
-        }});
+        });
         
         WeakReference<WebPage> webPageRef = webPageRefQueue.take();
         long endTime = System.currentTimeMillis() + 5000;

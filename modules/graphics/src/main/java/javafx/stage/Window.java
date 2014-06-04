@@ -100,6 +100,18 @@ public class Window implements EventTarget {
                     }
 
                     @Override
+                    public void notifyScreenChanged(Window window,
+                                                  Object from,
+                                                  Object to) {
+                        window.notifyScreenChanged(from, to);
+                    }
+
+                    @Override
+                    public ReadOnlyObjectProperty<Screen> screenProperty(Window window) {
+                        return window.screenProperty();
+                    }
+
+                    @Override
                     public AccessControlContext getAccessControlContext(Window window) {
                         return window.acc;
                     }
@@ -231,7 +243,10 @@ public class Window implements EventTarget {
     private static final float CENTER_ON_SCREEN_Y_FRACTION = 1.0f / 3;
 
     /**
-     * Sets x and y properties on this Window so that it is centered on the screen.
+     * Sets x and y properties on this Window so that it is centered on the
+     * curent screen.
+     * The current screen is determined from the intersection of current window bounds and
+     * visual bounds of all screens.
      */
     public void centerOnScreen() {
         xExplicit = false;
@@ -1090,6 +1105,13 @@ public class Window implements EventTarget {
         } while (window != null);
 
         return Screen.getPrimary();
+    }
+
+    private final ReadOnlyObjectWrapper<Screen> screen = new ReadOnlyObjectWrapper<>(Screen.getPrimary());
+    private ReadOnlyObjectProperty<Screen> screenProperty() { return screen.getReadOnlyProperty(); }
+
+    private void notifyScreenChanged(Object from, Object to) {
+        screen.set(getWindowScreen());
     }
 
     /**

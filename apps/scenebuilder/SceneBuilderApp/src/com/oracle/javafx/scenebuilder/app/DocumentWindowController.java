@@ -38,7 +38,6 @@ import com.oracle.javafx.scenebuilder.app.message.MessageBarController;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesController;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordDocument;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
-import com.oracle.javafx.scenebuilder.app.preview.BackgroundColorDialogController;
 import com.oracle.javafx.scenebuilder.app.preview.PreviewWindowController;
 import com.oracle.javafx.scenebuilder.app.report.JarAnalysisReportController;
 import com.oracle.javafx.scenebuilder.app.selectionbar.SelectionBarController;
@@ -67,10 +66,12 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.library.Library;
 import com.oracle.javafx.scenebuilder.kit.library.user.UserLibrary;
 import com.sun.javafx.scene.control.behavior.KeyBinding;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -88,10 +89,9 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -113,7 +113,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
-import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 
 /**
@@ -143,7 +142,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         TOGGLE_OUTLINES_VISIBILITY,
         TOGGLE_GUIDES_VISIBILITY,
         SHOW_PREVIEW_WINDOW,
-        CHOOSE_BACKGROUND_COLOR,
         ADD_SCENE_STYLE_SHEET,
         SET_RESOURCE,
         REMOVE_RESOURCE,
@@ -157,7 +155,8 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         CUT,
         PASTE,
         IMPORT_FXML,
-        IMPORT_MEDIA
+        IMPORT_MEDIA,
+        INCLUDE_FXML
     }
     
     public enum ActionStatus {
@@ -236,71 +235,67 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     private static List<String> videoExtensions;
     private static List<String> mediaExtensions;
 
-    private final EventHandler<KeyEvent> mainKeyEventFilter = new EventHandler<KeyEvent>() {
-
-        @Override
-        public void handle(KeyEvent event) {
-            //------------------------------------------------------------------
-            // TEXT INPUT CONTROL
-            //------------------------------------------------------------------
-            // Common editing actions handled natively and defined as application accelerators
-            // 
-            // The platform support is not mature/stable enough to rely on.
-            // Indeed, the behavior may differ :
-            // - when using system menu bar vs not using it
-            // - when using accelerators vs using menu items
-            // - depending on the focused control (TextField vs ComboBox)
-            // 
-            // On SB side, we decide for now to consume events that may be handled natively
-            // so ALL actions are defined in our ApplicationMenu class.
-            //
-            // This may be revisit when platform implementation will be more reliable.
-            //
-            final Node focusOwner = getScene().getFocusOwner();
-            final KeyCombination accelerator = getAccelerator(event);
-            if (isTextInputControlEditing(focusOwner) == true 
-                    && accelerator != null) {
-                for (KeyBinding binding : SBTextInputControlBindings.getBindings()) {
-                    // The event is handled natively
-                    if (binding.getSpecificity(null, event) > 0) {
-                        // 
-                        // When using system menu bar, the event is handled natively 
-                        // before the application receives it : we just consume the event 
-                        // so the editing action is not performed a second time by the app.
-                        if (menuBarController.getMenuBar().isUseSystemMenuBar()) {
-                            event.consume();
-                        }
-                        break;
+    private final EventHandler<KeyEvent> mainKeyEventFilter = event -> {
+        //------------------------------------------------------------------
+        // TEXT INPUT CONTROL
+        //------------------------------------------------------------------
+        // Common editing actions handled natively and defined as application accelerators
+        // 
+        // The platform support is not mature/stable enough to rely on.
+        // Indeed, the behavior may differ :
+        // - when using system menu bar vs not using it
+        // - when using accelerators vs using menu items
+        // - depending on the focused control (TextField vs ComboBox)
+        // 
+        // On SB side, we decide for now to consume events that may be handled natively
+        // so ALL actions are defined in our ApplicationMenu class.
+        //
+        // This may be revisit when platform implementation will be more reliable.
+        //
+        final Node focusOwner = getScene().getFocusOwner();
+        final KeyCombination accelerator = getAccelerator(event);
+        if (isTextInputControlEditing(focusOwner) == true 
+                && accelerator != null) {
+            for (KeyBinding binding : SBTextInputControlBindings.getBindings()) {
+                // The event is handled natively
+                if (binding.getSpecificity(null, event) > 0) {
+                    // 
+                    // When using system menu bar, the event is handled natively 
+                    // before the application receives it : we just consume the event 
+                    // so the editing action is not performed a second time by the app.
+                    if (menuBarController.getMenuBar().isUseSystemMenuBar()) {
+                        event.consume();
                     }
+                    break;
                 }
             }
+        }
 
-            //------------------------------------------------------------------
-            // Hierarchy TreeView + select all
-            //------------------------------------------------------------------
-            // Select all is handled natively by TreeView (= hierarchy panel control).
-            boolean modifierDown = (EditorPlatform.IS_MAC ? event.isMetaDown() : event.isControlDown());
-            boolean isSelectAll = KeyCode.A.equals(event.getCode()) && modifierDown;
-            if (getHierarchyPanelController().getPanelControl().isFocused() && isSelectAll) {
-                // Consume the event so the control action is not performed natively.
-                event.consume();
-                // When using system menu bar, the control action is performed by the app.
-                if (menuBarController.getMenuBar().isUseSystemMenuBar() == false) {
-                    if (canPerformControlAction(DocumentControlAction.SELECT_ALL)) {
-                        performControlAction(DocumentControlAction.SELECT_ALL);
-                    }
+        //------------------------------------------------------------------
+        // Hierarchy TreeView + select all
+        //------------------------------------------------------------------
+        // Select all is handled natively by TreeView (= hierarchy panel control).
+        boolean modifierDown = (EditorPlatform.IS_MAC ? event.isMetaDown() : event.isControlDown());
+        boolean isSelectAll = KeyCode.A.equals(event.getCode()) && modifierDown;
+        if (getHierarchyPanelController().getPanelControl().isFocused() && isSelectAll) {
+            // Consume the event so the control action is not performed natively.
+            event.consume();
+            // When using system menu bar, the control action is performed by the app.
+            if (menuBarController.getMenuBar().isUseSystemMenuBar() == false) {
+                if (canPerformControlAction(DocumentControlAction.SELECT_ALL)) {
+                    performControlAction(DocumentControlAction.SELECT_ALL);
                 }
             }
+        }
 
-            // MenuItems define a single accelerator.
-            // BACK_SPACE key must be handled same way as DELETE key.
-            boolean isBackspace = KeyCode.BACK_SPACE.equals(event.getCode());
-            if (isTextInputControlEditing(focusOwner) == false && isBackspace) {
-                if (canPerformEditAction(DocumentEditAction.DELETE)) {
-                    performEditAction(DocumentEditAction.DELETE);
-                }
-                event.consume();
+        // MenuItems define a single accelerator.
+        // BACK_SPACE key must be handled same way as DELETE key.
+        boolean isBackspace = KeyCode.BACK_SPACE.equals(event.getCode());
+        if (isTextInputControlEditing(focusOwner) == false && isBackspace) {
+            if (canPerformEditAction(DocumentEditAction.DELETE)) {
+                performEditAction(DocumentEditAction.DELETE);
             }
+            event.consume();
         }
     };
     
@@ -516,10 +511,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 result = true;
                 break;
                 
-            case CHOOSE_BACKGROUND_COLOR:
-                result = false;
-                break;
-                
             case SAVE_FILE:
                 result = isDocumentDirty()
                         || editorController.getFxomDocument().getLocation() == null; // Save new empty document
@@ -598,10 +589,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     previewWindowController.setToolStylesheet(getToolStylesheet());
                 }
                 previewWindowController.openWindow();
-                break;
-                
-            case CHOOSE_BACKGROUND_COLOR:
-                performChooseBackgroundColor(getStage());
                 break;
                 
             case SAVE_FILE:
@@ -788,13 +775,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 break;
                 
             case IMPORT_FXML:
-                result = true;
-                break;
-                
             case IMPORT_MEDIA:
                 result = true;
                 break;
-                
+
+            case INCLUDE_FXML:
+                // Cannot include as root or if the document is not saved yet
+                final FXOMDocument fxomDocument = editorController.getFxomDocument();
+                result = (fxomDocument != null) 
+                        && (fxomDocument.getFxomRoot() != null)
+                        && (fxomDocument.getLocation() != null);
+                break;
+            
             case PASTE:
                 result = canPerformPaste();
                 break;
@@ -826,6 +818,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 
             case IMPORT_MEDIA:
                 performImportMedia();
+                break;
+
+            case INCLUDE_FXML:
+                performIncludeFxml();
                 break;
 
             case PASTE:
@@ -958,7 +954,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         
         // Add a border to the Windows app, because of the specific window decoration on Windows.
         if (EditorPlatform.IS_WINDOWS) {
-            getRoot().getStyleClass().add("windows-app-border");//NOI18N
+            getRoot().getStyleClass().add("windows-document-decoration");//NOI18N
         }
         
         mainSplitPane.addEventFilter(KeyEvent.KEY_PRESSED, mainKeyEventFilter);
@@ -980,21 +976,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         messageBarController.getSelectionBarHost().getChildren().add(
                 selectionBarController.getPanelRoot());
         
-        inspectorSearchController.textProperty().addListener(new ChangeListener<String>() {
-
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
-                inspectorPanelController.setSearchPattern(newStr);
-            }
-        });
+        inspectorSearchController.textProperty().addListener((ChangeListener<String>) (ov, oldStr, newStr) -> inspectorPanelController.setSearchPattern(newStr));
         
-        librarySearchController.textProperty().addListener(new ChangeListener<String>() {
-
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
-                libraryPanelController.setSearchPattern(newStr);
-            }
-        });
+        librarySearchController.textProperty().addListener((ChangeListener<String>) (ov, oldStr, newStr) -> libraryPanelController.setSearchPattern(newStr));
         
         bottomSplitController = new SplitController(mainSplitPane, SplitController.Target.LAST);
         leftSplitController = new SplitController(leftRightSplitPane, SplitController.Target.FIRST);
@@ -1002,24 +986,15 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         librarySplitController = new SplitController(libraryDocumentSplitPane, SplitController.Target.FIRST);
         documentSplitController = new SplitController(libraryDocumentSplitPane, SplitController.Target.LAST);
         
-        messageBarHost.heightProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable o) {
-                final double h = messageBarHost.getHeight();
-                contentPanelHost.setPadding(new Insets(h, 0.0, 0.0, 0.0));
-            }
+        messageBarHost.heightProperty().addListener((InvalidationListener) o -> {
+            final double h = messageBarHost.getHeight();
+            contentPanelHost.setPadding(new Insets(h, 0.0, 0.0, 0.0));
         });
         
         documentAccordion.setExpandedPane(documentAccordion.getPanes().get(0));
         
         // Monitor the status of the document to set status icon accordingly in message bar
-        getEditorController().getJobManager().revisionProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                messageBarController.setDocumentDirty(isDocumentDirty());
-            }
-        });
+        getEditorController().getJobManager().revisionProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> messageBarController.setDocumentDirty(isDocumentDirty()));
         
         // Setup title of the Library Reveal menu item according the underlying o/s.
         final String revealMenuKey;
@@ -1035,30 +1010,26 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         
         // We need to tune the content of the library menu according if there's
         // or not a selection likely to be dropped onto Library panel.
-        libraryMenuButton.showingProperty().addListener(new ChangeListener<Boolean>() {
+        libraryMenuButton.showingProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> {
+            if (t1) {
+                AbstractSelectionGroup asg = getEditorController().getSelection().getGroup();
+                libraryImportSelection.setDisable(true);
 
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (t1) {
-                    AbstractSelectionGroup asg = getEditorController().getSelection().getGroup();
-                    libraryImportSelection.setDisable(true);
-
-                    if (asg != null && asg instanceof ObjectSelectionGroup) {
-                        if (((ObjectSelectionGroup)asg).getItems().size() >= 1) {
-                            libraryImportSelection.setDisable(false);
-                        }
+                if (asg instanceof ObjectSelectionGroup) {
+                    if (((ObjectSelectionGroup)asg).getItems().size() >= 1) {
+                        libraryImportSelection.setDisable(false);
                     }
-                    
-                    // DTL-6439. The custom library menu shall be enabled only
-                    // in the case there is a user library directory on disk.
-                    Library lib = getEditorController().getLibrary();
-                    if (lib instanceof UserLibrary) {
-                        File userLibDir = new File(((UserLibrary)lib).getPath());
-                        if (userLibDir.canRead()) {
-                            customLibraryMenu.setDisable(false);
-                        } else {
-                            customLibraryMenu.setDisable(true);
-                        }
+                }
+                
+                // DTL-6439. The custom library menu shall be enabled only
+                // in the case there is a user library directory on disk.
+                Library lib = getEditorController().getLibrary();
+                if (lib instanceof UserLibrary) {
+                    File userLibDir = new File(((UserLibrary)lib).getPath());
+                    if (userLibDir.canRead()) {
+                        customLibraryMenu.setDisable(false);
+                    } else {
+                        customLibraryMenu.setDisable(true);
                     }
                 }
             }
@@ -1455,11 +1426,13 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             assert false;
         }
         
-        // Collects fx:ids in selected objects and their descendants
+        // Collects fx:ids in selected objects and their descendants.
+        // We filter out toggle groups because their fx:ids are managed automatically.
         final Map<String, FXOMObject> fxIdMap = new HashMap<>();
         for (FXOMObject selectedObject : selectedObjects) {
             fxIdMap.putAll(selectedObject.collectFxIds());
         }
+        FXOMNodes.removeToggleGroups(fxIdMap);
         
         // Checks if deleted objects have some fx:ids and ask for confirmation.
         final boolean deleteConfirmed;
@@ -1502,6 +1475,12 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 = new ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                         "*.fxml"); //NOI18N
         fileChooser.getExtensionFilters().add(f);
+            
+        final File nextInitialDirectory 
+                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
+        if (nextInitialDirectory != null) {
+            fileChooser.setInitialDirectory(nextInitialDirectory);
+        }
 
         File fxmlFile = fileChooser.showOpenDialog(getStage());
         if (fxmlFile != null) {
@@ -1510,6 +1489,9 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             if (!path.endsWith(".fxml")) { //NOI18N
                 fxmlFile = new File(path + ".fxml"); //NOI18N
             }
+
+            // Keep track of the user choice for next time
+            SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
 
             this.getEditorController().performImportFxml(fxmlFile);
         }
@@ -1536,8 +1518,18 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         fileChooser.getExtensionFilters().add(audioFilter);
         fileChooser.getExtensionFilters().add(videoFilter);
 
+        final File nextInitialDirectory 
+                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
+        if (nextInitialDirectory != null) {
+            fileChooser.setInitialDirectory(nextInitialDirectory);
+        }
+
         File mediaFile = fileChooser.showOpenDialog(getStage());
         if (mediaFile != null) {
+            
+            // Keep track of the user choice for next time
+            SceneBuilderApp.getSingleton().updateNextInitialDirectory(mediaFile);
+
             this.getEditorController().performImportMedia(mediaFile);
         }
     }
@@ -1592,6 +1584,35 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         return mediaExtensions;
     }
     
+    private void performIncludeFxml() {
+
+        final FileChooser fileChooser = new FileChooser();
+        final ExtensionFilter f
+                = new ExtensionFilter(I18N.getString("file.filter.label.fxml"),
+                        "*.fxml"); //NOI18N
+        fileChooser.getExtensionFilters().add(f);
+
+        final File nextInitialDirectory 
+                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
+        if (nextInitialDirectory != null) {
+            fileChooser.setInitialDirectory(nextInitialDirectory);
+        }
+
+        File fxmlFile = fileChooser.showOpenDialog(getStage());
+        if (fxmlFile != null) {
+            // See DTL-5948: on Linux we anticipate an extension less path.
+            final String path = fxmlFile.getPath();
+            if (!path.endsWith(".fxml")) { //NOI18N
+                fxmlFile = new File(path + ".fxml"); //NOI18N
+            }
+
+            // Keep track of the user choice for next time
+            SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
+
+            this.getEditorController().performIncludeFxml(fxmlFile);
+        }
+    }
+
     /**
      * Returns true if the specified node is part of the main scene and is
      * either a TextInputControl or a ComboBox.
@@ -1695,13 +1716,6 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         recordDocument.resetDocumentPreferences();
     }
     
-    private void performChooseBackgroundColor(Window owner) {
-        final BackgroundColorDialogController bcdc 
-                = new BackgroundColorDialogController(owner);
-        bcdc.setToolStylesheet(getToolStylesheet());
-        bcdc.openWindow();
-    }
-    
     ActionStatus performSaveOrSaveAsAction() {
         final ActionStatus result;
         
@@ -1720,13 +1734,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
     }
     
     private void addCssPanelSearchListener() {
-        cssPanelSearchController.textProperty().addListener(new ChangeListener<String>() {
-
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
-                cssPanelController.setSearchPattern(newStr);
-            }
-        });
+        cssPanelSearchController.textProperty().addListener((ChangeListener<String>) (ov, oldStr, newStr) -> cssPanelController.setSearchPattern(newStr));
     }
     
     private void performGoToSection(SectionId sectionId) {
@@ -1953,6 +1961,15 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         // Makes sure that our window is front 
         getStage().toFront();
         
+        // Check if an editing session is on going
+        if (getEditorController().isTextEditingSessionOnGoing()) {
+            // Check if we can commit the editing session
+            if (getEditorController().canGetFxmlText() == false) {
+                // Commit failed
+                return ActionStatus.CANCELLED;
+            }
+        }
+
         // Checks if there are some pending changes
         final boolean closeConfirmed;
         if (isDocumentDirty()) {

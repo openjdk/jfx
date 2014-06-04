@@ -54,14 +54,14 @@ public final class ChartLayoutAnimator extends AnimationTimer implements EventHa
 
     @Override public void handle(long l) {
         if(isAxis) {
-            ((Axis)nodeToLayout).requestAxisLayout();
+            ((Axis<?>)nodeToLayout).requestAxisLayout();
         } else {
             nodeToLayout.requestLayout();
         }
     }
 
     @Override public void handle(ActionEvent actionEvent) {
-        Object removed = activeTimeLines.remove(actionEvent.getSource());
+        activeTimeLines.remove(actionEvent.getSource());
         if(activeTimeLines.isEmpty()) stop();
         // cause one last re-layout to make sure final values were used
         handle(0l);

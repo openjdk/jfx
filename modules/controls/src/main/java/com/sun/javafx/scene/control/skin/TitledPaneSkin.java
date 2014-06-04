@@ -25,17 +25,14 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.animation.Animation.Status;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -43,16 +40,11 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TitledPane;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
 import com.sun.javafx.scene.control.behavior.TitledPaneBehavior;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalEngine;
-import com.sun.javafx.scene.traversal.TraverseListener;
 import javafx.beans.binding.DoubleBinding;
 import javafx.geometry.Insets;
 import javafx.scene.control.Accordion;
@@ -63,12 +55,16 @@ import javafx.scene.text.Font;
 
 public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavior>  {
 
-    public static final int MIN_HEADER_HEIGHT = 22;
     public static final Duration TRANSITION_DURATION = new Duration(350.0);
+
+    // caching results in poorer looking text (it is blurry), so we don't do it
+    // unless on a low powered device (admittedly the test below isn't a great
+    // indicator of power, but it'll do for now).
+    private static final boolean CACHE_ANIMATION = PlatformUtil.isEmbedded();
 
     private final TitleRegion titleRegion;
     private final StackPane contentContainer;
-    private final Content contentRegion;
+    private Node content;
     private Timeline timeline;
     private double transitionStartValue;
     private Rectangle clipRect;
@@ -84,17 +80,14 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         transitionStartValue = 0;
         titleRegion = new TitleRegion();
 
-        contentRegion = new Content(getSkinnable().getContent());
+        content = getSkinnable().getContent();
         contentContainer = new StackPane() {
             {
                 getStyleClass().setAll("content");
 
-                // RT-20266: We want to align the content container so the bottom of the content
-                // is at the bottom of the title region.  If we do not do this the
-                // content will be center aligned.
-                setAlignment(Pos.BOTTOM_CENTER);
-
-                getChildren().setAll(contentRegion);
+                if (content != null) {
+                    getChildren().setAll(content);
+                }
             }
         };
         contentContainer.setClip(clipRect);
@@ -104,8 +97,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             setExpanded(titledPane.isExpanded());
         } else {
             setTransition(0.0f);
-            if (contentRegion.getContent() != null) {
-                contentRegion.getContent().setVisible(false);
+            if (content != null) {
+                content.setVisible(false);
             }
         }
 
@@ -124,15 +117,20 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         vpos = pos == null ? VPos.CENTER : pos.getVpos();
     }
 
-    public StackPane getContentRegion() {
-        return contentRegion;
+    public StackPane getContentContainer() {
+        return contentContainer;
     }
 
     @Override
     protected void handleControlPropertyChanged(String property) {
         super.handleControlPropertyChanged(property);
         if ("CONTENT".equals(property)) {
-            contentRegion.setContent(getSkinnable().getContent());
+            content = getSkinnable().getContent();
+            if (content == null) {
+                contentContainer.getChildren().clear();
+            } else {
+                contentContainer.getChildren().setAll(content);
+            }
         } else if ("EXPANDED".equals(property)) {
             setExpanded(getSkinnable().isExpanded());
         } else if ("COLLAPSIBLE".equals(property)) {
@@ -179,8 +177,8 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             } else {
                 setTransition(0.0f);
             }
-            if (contentRegion.getContent() != null) {
-                contentRegion.getContent().setVisible(expanded);
+            if (content != null) {
+                content.setVisible(expanded);
              }
             getSkinnable().requestLayout();
         }
@@ -208,7 +206,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             final double w, final double h) {
         
         // header
-        double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
+        double headerHeight = snapSize(titleRegion.prefHeight(-1));
 
         titleRegion.resize(w, headerHeight);
         positionInArea(titleRegion, x, y,
@@ -231,11 +229,15 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+        double titleWidth = snapSize(titleRegion.prefWidth(height));
+        double contentWidth = snapSize(contentContainer.minWidth(height));
+        return Math.max(titleWidth, contentWidth) + leftInset + rightInset;
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
+        double headerHeight = snapSize(titleRegion.prefHeight(width));
+        double contentHeight = contentContainer.minHeight(width) * getTransition();
+        return headerHeight + snapSize(contentHeight) + topInset + bottomInset;
     }
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -245,13 +247,17 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
-        double contentHeight = contentContainer.prefHeight(-1) * getTransition();
+        double headerHeight = snapSize(titleRegion.prefHeight(width));
+        double contentHeight = contentContainer.prefHeight(width) * getTransition();
         return headerHeight + snapSize(contentHeight) + topInset + bottomInset;
     }
 
     @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return Double.MAX_VALUE;
+    }
+
+    double getTitleRegionSize(double width) {
+        return snapSize(titleRegion.prefHeight(width)) + snappedTopInset() + snappedBottomInset();
     }
 
     private double prefHeightFromAccordion = 0;
@@ -260,13 +266,13 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
     }
 
     double getTitledPaneHeightForAccordion() {
-        double headerHeight = Math.max(MIN_HEADER_HEIGHT, snapSize(titleRegion.prefHeight(-1)));
+        double headerHeight = snapSize(titleRegion.prefHeight(-1));
         double contentHeight = (prefHeightFromAccordion - headerHeight) * getTransition();
         return headerHeight + snapSize(contentHeight) + snappedTopInset() + snappedBottomInset();
     }
 
     private void doAnimationTransition() {
-        if (contentRegion.getContent() == null) {
+        if (content == null) {
             return;
         }
 
@@ -286,48 +292,40 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
         if (getSkinnable().isExpanded()) {
             k1 = new KeyFrame(
                 Duration.ZERO,
-                new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
+                    event -> {
                         // start expand
-                        contentRegion.getContent().setCache(true);
-                        contentRegion.getContent().setVisible(true);
-                    }
-                },
+                        if (CACHE_ANIMATION) content.setCache(true);
+                        content.setVisible(true);
+                    },
                 new KeyValue(transitionProperty(), transitionStartValue)
             );
 
             k2 = new KeyFrame(
                 duration,
-                    new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
+                    event -> {
                         // end expand
-                        contentRegion.getContent().setCache(false);
-                    }
-                },
+                        if (CACHE_ANIMATION) content.setCache(false);
+                    },
                 new KeyValue(transitionProperty(), 1, Interpolator.LINEAR)
 
             );
         } else {
             k1 = new KeyFrame(
                 Duration.ZERO,
-                new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
+                    event -> {
                         // Start collapse
-                        contentRegion.getContent().setCache(true);
-                    }
-                },
+                        if (CACHE_ANIMATION) content.setCache(true);
+                    },
                 new KeyValue(transitionProperty(), transitionStartValue)
             );
 
             k2 = new KeyFrame(
                 duration,
-                new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
+                    event -> {
                         // end collapse
-                        contentRegion.getContent().setVisible(false);
-                        contentRegion.getContent().setCache(false);
-                    }
-                },
+                        content.setVisible(false);
+                        if (CACHE_ANIMATION) content.setCache(false);
+                    },
                 new KeyValue(transitionProperty(), 0, Interpolator.LINEAR)
             );
         }
@@ -361,16 +359,14 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
 
             setAlignment(Pos.CENTER_LEFT);
 
-            setOnMouseReleased(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    if( e.getButton() != MouseButton.PRIMARY ) return;
-                    ContextMenu contextMenu = getSkinnable().getContextMenu() ;
-                    if (contextMenu != null) {
-                        contextMenu.hide() ;
-                    }
-                    if (getSkinnable().isCollapsible() && getSkinnable().isFocused()) {
-                        getBehavior().toggle();
-                    }
+            setOnMouseReleased(e -> {
+                if( e.getButton() != MouseButton.PRIMARY ) return;
+                ContextMenu contextMenu = getSkinnable().getContextMenu() ;
+                if (contextMenu != null) {
+                    contextMenu.hide() ;
+                }
+                if (getSkinnable().isCollapsible() && getSkinnable().isFocused()) {
+                    getBehavior().toggle();
                 }
             });
 
@@ -530,37 +526,6 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             }
 
             return h + labelPadding.getTop() + labelPadding.getBottom();
-        }
-    }
-
-    class Content extends StackPane {
-        private Node content;
-        private TraversalEngine engine;
-        private Direction direction;
-
-        public Content(Node n) {
-            setContent(n);
-
-            engine = new TraversalEngine(this, false) {
-                @Override public void trav(Node owner, Direction dir) {
-                    direction = dir;
-                    super.trav(owner, dir);
-                }
-            };
-            setImpl_traversalEngine(engine);
-        }
-
-        public final void setContent(Node n) {
-            this.content = n;
-            getChildren().clear();
-            if (n != null) {
-                content.setVisible(getSkinnable().isExpanded());
-                getChildren().setAll(n);
-            }
-        }
-
-        public final Node getContent() {
-            return content;
         }
     }
 }

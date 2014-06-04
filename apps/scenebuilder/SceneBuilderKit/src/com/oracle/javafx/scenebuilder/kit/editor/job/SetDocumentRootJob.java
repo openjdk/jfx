@@ -33,13 +33,9 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
-import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 
 /**
  *
@@ -48,7 +44,7 @@ public class SetDocumentRootJob extends Job {
 
     private final FXOMObject newRoot;
     private FXOMObject oldRoot;
-    private BatchJob trimJob;
+    private Job trimJob;
     
     public SetDocumentRootJob(FXOMObject newRoot, EditorController editorController) {
         super(editorController);
@@ -83,17 +79,12 @@ public class SetDocumentRootJob extends Job {
         oldRoot = fxomDocument.getFxomRoot();
         
         // Before setting newRoot as the root of the fxom document,
-        // we must remove its static properties. 
+        // we must remove its static properties.
         // We create a RemovePropertyJob for each existing static property
-        trimJob = new BatchJob(getEditorController(), true /* refreshSceneGraph */, null);
-        if (newRoot instanceof FXOMInstance) {
-            final FXOMInstance newRootInstance = (FXOMInstance) newRoot;
-            final Metadata metadata = Metadata.getMetadata();
-            for (FXOMProperty p : newRootInstance.getProperties().values()) {
-                if (metadata.isPropertyTrimmingNeeded(p.getName())) {
-                    final Job j = new RemovePropertyJob(p, getEditorController());
-                    trimJob.addSubJob(j);
-                }
+        if (newRoot != null) {
+            trimJob = new PrunePropertiesJob(newRoot, null, getEditorController());
+            if (trimJob.isExecutable() == false) {
+                trimJob = null;
             }
         }
         
@@ -101,7 +92,9 @@ public class SetDocumentRootJob extends Job {
         final Selection selection = getEditorController().getSelection();
         selection.beginUpdate();
         fxomDocument.beginUpdate();
-        trimJob.execute();
+        if (trimJob != null) {
+            trimJob.execute();
+        }
         fxomDocument.setFxomRoot(newRoot);
         fxomDocument.endUpdate();
         selection.endUpdate();
@@ -117,7 +110,9 @@ public class SetDocumentRootJob extends Job {
         selection.beginUpdate();
         fxomDocument.beginUpdate();
         fxomDocument.setFxomRoot(oldRoot);
-        trimJob.undo();
+        if (trimJob != null) {
+            trimJob.undo();
+        }
         fxomDocument.endUpdate();
         selection.endUpdate();
         
@@ -133,7 +128,9 @@ public class SetDocumentRootJob extends Job {
         
         selection.beginUpdate();
         fxomDocument.beginUpdate();
-        trimJob.redo();
+        if (trimJob != null) {
+            trimJob.redo();
+        }
         fxomDocument.setFxomRoot(newRoot);
         fxomDocument.endUpdate();
         selection.endUpdate();

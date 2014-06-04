@@ -69,46 +69,37 @@ public class EventHandlerEditor extends AutoSuggestEditor {
         this.suggestedMethods = suggestedMethods;
 
         // text field events handling
-        EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                String tfValue = getTextField().getText();
-                if (tfValue == null || tfValue.isEmpty()) {
-                    userUpdateValueProperty(null);
+        EventHandler<ActionEvent> onActionListener = event -> {
+            String tfValue = getTextField().getText();
+            if (tfValue == null || tfValue.isEmpty()) {
+                userUpdateValueProperty(null);
+                return;
+            }
+            if (methodNameMode) {
+                // method name should be a java identifier
+                if (!JavaLanguage.isIdentifier(tfValue)) {
+                    System.err.println(I18N.getString("inspector.event.invalid.method", tfValue)); // Will go in message panel
+                    handleInvalidValue(tfValue);
                     return;
                 }
-                if (methodNameMode) {
-                    // method name should be a java identifier
-                    if (!JavaLanguage.isIdentifier(tfValue)) {
-                        System.err.println(I18N.getString("inspector.event.invalid.method", tfValue)); // Will go in message panel
-                        handleInvalidValue(tfValue);
-                        return;
-                    }
-                }
-                Object value = getValue();
-                assert value instanceof String;
-                userUpdateValueProperty((String) value);
-                getTextField().selectAll();
             }
+            Object value = getValue();
+            assert value instanceof String;
+            userUpdateValueProperty((String) value);
+            getTextField().selectAll();
         };
         setTextEditorBehavior(this, getTextField(), onActionListener);
 
-        scriptMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                getTextField().setText(null);
-                userUpdateValueProperty(null);
-                switchToScriptMode();
-            }
+        scriptMenuItem.setOnAction(e -> {
+            getTextField().setText(null);
+            userUpdateValueProperty(null);
+            switchToScriptMode();
         });
 
-        controllerMethodMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                getTextField().setText(null);
-                userUpdateValueProperty(null);
-                switchToMethodNameMode();
-            }
+        controllerMethodMenuItem.setOnAction(e -> {
+            getTextField().setText(null);
+            userUpdateValueProperty(null);
+            switchToMethodNameMode();
         });
         getMenu().getItems().add(controllerMethodMenuItem);
 

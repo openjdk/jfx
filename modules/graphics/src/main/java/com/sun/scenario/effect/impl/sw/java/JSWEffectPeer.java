@@ -28,8 +28,9 @@ package com.sun.scenario.effect.impl.sw.java;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
+import com.sun.scenario.effect.impl.state.RenderState;
 
-public abstract class JSWEffectPeer extends EffectPeer {
+public abstract class JSWEffectPeer<T extends RenderState> extends EffectPeer<T> {
 
     protected JSWEffectPeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);

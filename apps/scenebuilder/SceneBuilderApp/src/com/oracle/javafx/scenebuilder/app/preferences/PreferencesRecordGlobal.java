@@ -33,6 +33,8 @@ package com.oracle.javafx.scenebuilder.app.preferences;
 
 import com.oracle.javafx.scenebuilder.app.DocumentWindowController;
 import com.oracle.javafx.scenebuilder.app.SceneBuilderApp;
+import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction;
+import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ToolTheme;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ALIGNMENT_GUIDES_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BACKGROUND_IMAGE;
@@ -44,6 +46,7 @@ import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesControll
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.PARENT_RING_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS_SIZE;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.TOOL_THEME;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
@@ -68,21 +71,22 @@ import javafx.scene.paint.Color;
 public class PreferencesRecordGlobal {
 
     // Default values
-    private static final double DEFAULT_ROOT_CONTAINER_HEIGHT = 400;
-    private static final double DEFAULT_ROOT_CONTAINER_WIDTH = 600;
+    static final double DEFAULT_ROOT_CONTAINER_HEIGHT = 400;
+    static final double DEFAULT_ROOT_CONTAINER_WIDTH = 600;
 
-    private static final BackgroundImage DEFAULT_BACKGROUND_IMAGE
+    static final BackgroundImage DEFAULT_BACKGROUND_IMAGE
             = BackgroundImage.BACKGROUND_03;
-    private static final Color DEFAULT_ALIGNMENT_GUIDES_COLOR = Color.RED;
-    private static final Color DEFAULT_PARENT_RING_COLOR = Color.rgb(238, 168, 47);
+    static final Color DEFAULT_ALIGNMENT_GUIDES_COLOR = Color.RED;
+    static final Color DEFAULT_PARENT_RING_COLOR = Color.rgb(238, 168, 47);
 
-    private static final DISPLAY_MODE DEFAULT_LIBRARY_DISPLAY_OPTION
+    static final ToolTheme DEFAULT_TOOL_THEME = ToolTheme.DEFAULT;
+    static final DISPLAY_MODE DEFAULT_LIBRARY_DISPLAY_OPTION
             = DISPLAY_MODE.SECTIONS;
-    private static final DisplayOption DEFAULT_HIERARCHY_DISPLAY_OPTION
+    static final DisplayOption DEFAULT_HIERARCHY_DISPLAY_OPTION
             = DisplayOption.INFO;
-    private static final boolean DEFAULT_CSS_TABLE_COLUMNS_ORDERING_REVERSED = false;
+    static final boolean DEFAULT_CSS_TABLE_COLUMNS_ORDERING_REVERSED = false;
 
-    private static final int DEFAULT_RECENT_ITEMS_SIZE = 15;
+    static final int DEFAULT_RECENT_ITEMS_SIZE = 15;
 
     // Global preferences
     private double rootContainerHeight = DEFAULT_ROOT_CONTAINER_HEIGHT;
@@ -90,6 +94,7 @@ public class PreferencesRecordGlobal {
     private BackgroundImage backgroundImage = DEFAULT_BACKGROUND_IMAGE;
     private Color alignmentGuidesColor = DEFAULT_ALIGNMENT_GUIDES_COLOR;
     private Color parentRingColor = DEFAULT_PARENT_RING_COLOR;
+    private ToolTheme toolTheme = DEFAULT_TOOL_THEME;
     private DISPLAY_MODE libraryDisplayOption = DEFAULT_LIBRARY_DISPLAY_OPTION;
     private DisplayOption hierarchyDisplayOption = DEFAULT_HIERARCHY_DISPLAY_OPTION;
     private boolean cssTableColumnsOrderingReversed = DEFAULT_CSS_TABLE_COLUMNS_ORDERING_REVERSED;
@@ -187,6 +192,14 @@ public class PreferencesRecordGlobal {
         parentRingColor = value;
     }
 
+    public ToolTheme getToolTheme() {
+        return toolTheme;
+    }
+    
+    public void setToolTheme(ToolTheme value) {
+        toolTheme = value;
+    }
+    
     public DISPLAY_MODE getLibraryDisplayOption() {
         return libraryDisplayOption;
     }
@@ -203,6 +216,14 @@ public class PreferencesRecordGlobal {
         hierarchyDisplayOption = value;
     }
 
+    public CSSAnalyzerColumnsOrder getDefaultCSSAnalyzerColumnsOrder() {
+        if (DEFAULT_CSS_TABLE_COLUMNS_ORDERING_REVERSED) {
+            return CSSAnalyzerColumnsOrder.DEFAULTS_LAST;
+        } else {
+            return CSSAnalyzerColumnsOrder.DEFAULTS_FIRST;
+        }
+    }
+    
     public CSSAnalyzerColumnsOrder getCSSAnalyzerColumnsOrder() {
         if (isCssTableColumnsOrderingReversed()) {
             return CSSAnalyzerColumnsOrder.DEFAULTS_LAST;
@@ -311,6 +332,24 @@ public class PreferencesRecordGlobal {
         dwc.refreshCssTableColumnsOrderingReversed(cssTableColumnsOrderingReversed);
     }
 
+    public void refreshToolTheme(DocumentWindowController dwc) {
+        final SceneBuilderApp app = SceneBuilderApp.getSingleton();
+        final ApplicationControlAction aca;
+        switch(toolTheme) {
+            case DEFAULT:
+                aca = ApplicationControlAction.USE_DEFAULT_THEME;
+                break;
+            case DARK:
+                aca = ApplicationControlAction.USE_DARK_THEME;
+                break;
+            default:
+                assert false;
+                aca = null;
+                break;
+         }
+        app.performControlAction(aca, dwc);
+    }
+    
     public void refreshLibraryDisplayOption(DocumentWindowController dwc) {
         dwc.refreshLibraryDisplayOption(libraryDisplayOption);
     }
@@ -357,6 +396,10 @@ public class PreferencesRecordGlobal {
         }
     }
 
+    public void refreshToolTheme() {
+        refreshToolTheme(null);
+    }
+
     public void refreshLibraryDisplayOption() {
         final SceneBuilderApp app = SceneBuilderApp.getSingleton();
         for (DocumentWindowController dwc : app.getDocumentWindowControllers()) {
@@ -396,13 +439,14 @@ public class PreferencesRecordGlobal {
         refreshAlignmentGuidesColor(dwc);
         refreshBackgroundImage(dwc);
         refreshCSSAnalyzerColumnsOrder(dwc);
+        refreshToolTheme(dwc);
         refreshLibraryDisplayOption(dwc);
         refreshHierarchyDisplayOption(dwc);
         refreshParentRingColor(dwc);
         refreshRootContainerHeight(dwc);
         refreshRootContainerWidth(dwc);
     }
-
+    
     /**
      * Read data from the java preferences DB and initialize properties.
      */
@@ -432,6 +476,11 @@ public class PreferencesRecordGlobal {
         final String prColor = applicationRootPreferences.get(PARENT_RING_COLOR,
                 DEFAULT_PARENT_RING_COLOR.toString());
         setParentRingColor(Color.valueOf(prColor));
+
+        // Tool Theme
+        final String tool_theme = applicationRootPreferences.get(TOOL_THEME,
+                DEFAULT_TOOL_THEME.name());
+        setToolTheme(ToolTheme.valueOf(tool_theme));
 
         // Library display option
         final String library_DisplayOption = applicationRootPreferences.get(LIBRARY_DISPLAY_OPTION,
@@ -482,6 +531,9 @@ public class PreferencesRecordGlobal {
                 break;
             case PARENT_RING_COLOR:
                 applicationRootPreferences.put(PARENT_RING_COLOR, getParentRingColor().toString());
+                break;
+            case TOOL_THEME:
+                applicationRootPreferences.put(TOOL_THEME, getToolTheme().name());
                 break;
             case LIBRARY_DISPLAY_OPTION:
                 applicationRootPreferences.put(LIBRARY_DISPLAY_OPTION, getLibraryDisplayOption().name());

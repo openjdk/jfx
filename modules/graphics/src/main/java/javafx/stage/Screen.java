@@ -32,6 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Rectangle2D;
 
+import com.sun.javafx.stage.ScreenHelper;
 import com.sun.javafx.tk.ScreenConfigurationAccessor;
 import com.sun.javafx.tk.TKScreenConfigurationListener;
 import com.sun.javafx.tk.Toolkit;
@@ -72,11 +73,11 @@ public final class Screen {
             FXCollections.unmodifiableObservableList(screens);
 
     static {
-        accessor = Toolkit.getToolkit().setScreenConfigurationListener(new TKScreenConfigurationListener() {
-            @Override public void screenConfigurationChanged() {
-                updateConfiguration();
-            }
+        ScreenHelper.setScreenAccessor(new ScreenHelper.ScreenAccessor() {
+            @Override public float getScale(Screen screen) { return screen.getScale(); }
         });
+
+        accessor = Toolkit.getToolkit().setScreenConfigurationListener(() -> updateConfiguration());
     }
 
     private Screen() {
@@ -138,6 +139,7 @@ public final class Screen {
         int visualWidth = accessor.getVisualWidth(obj);
         int visualHeight = accessor.getVisualHeight(obj);
         double dpi = accessor.getDPI(obj);
+        float scale = accessor.getScale(obj);
         if ((screen == null) ||
             (screen.bounds.getMinX() != minX) ||
             (screen.bounds.getMinY() != minY) ||
@@ -147,12 +149,14 @@ public final class Screen {
             (screen.visualBounds.getMinY() != visualMinY) ||
             (screen.visualBounds.getWidth() != visualWidth) ||
             (screen.visualBounds.getHeight() != visualHeight) ||
-            (screen.dpi != dpi))
+            (screen.dpi != dpi) ||
+            (screen.scale != scale))
         {
             Screen s = new Screen();
             s.bounds = new Rectangle2D(minX, minY, width, height);
             s.visualBounds = new Rectangle2D(visualMinX, visualMinY, visualWidth, visualHeight);
             s.dpi = dpi;
+            s.scale = scale;
             return s;
         } else {
             return null;
@@ -255,6 +259,20 @@ public final class Screen {
     }
 
     /**
+     * The scale factor of this {@code Screen}.
+     */
+    private float scale;
+
+    /**
+     * Gets the scale factor of this {@code Screen}.
+     * E.g. on Retina displays on Mac the scale factor may be equal to 2.0.
+     * On regular displays this method returns 1.0.
+     */
+    private float getScale() {
+        return scale;
+    }
+
+    /**
      * Returns a hash code for this {@code Screen} object.
      * @return a hash code for this {@code Screen} object.
      */ 
@@ -263,6 +281,7 @@ public final class Screen {
         bits = 37L * bits + bounds.hashCode();
         bits = 37L * bits + visualBounds.hashCode();
         bits = 37L * bits + Double.doubleToLongBits(dpi);
+        bits = 37L * bits + Float.floatToIntBits(scale);
         return (int) (bits ^ (bits >> 32));
     }
 
@@ -277,7 +296,8 @@ public final class Screen {
             Screen other = (Screen) obj;
             return (bounds == null ? other.bounds == null : bounds.equals(other.bounds))
               && (visualBounds == null ? other.visualBounds == null : visualBounds.equals(other.visualBounds))
-              && other.dpi == dpi;
+              && other.dpi == dpi
+              && other.scale == scale;
         } else return false;
     }
 
@@ -286,6 +306,6 @@ public final class Screen {
      * @return a string representation of this {@code Screen} object.
      */ 
     @Override public String toString() {
-        return super.toString() + "bounds:" + bounds + " visualBounds:" + visualBounds + " dpi:" + dpi;
+        return super.toString() + "bounds:" + bounds + " visualBounds:" + visualBounds + " dpi:" + dpi + " scale:" + scale;
     }
 }

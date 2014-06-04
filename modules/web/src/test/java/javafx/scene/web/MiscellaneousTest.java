@@ -31,11 +31,9 @@ public class MiscellaneousTest extends TestBase {
 
     @Test public void testRT22458() throws Exception {
         final WebEngine webEngine = createWebEngine();
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                webEngine.load(format("file://%d.ajax.googleapis.com/ajax",
-                                      new Random().nextInt()));
-            }
+        Platform.runLater(() -> {
+            webEngine.load(format("file://%d.ajax.googleapis.com/ajax",
+                                  new Random().nextInt()));
         });
         Thread.sleep(200);
         long startTime = System.currentTimeMillis();
@@ -61,20 +59,16 @@ public class MiscellaneousTest extends TestBase {
             }
         }
         final ArrayList<Record> records = new ArrayList<Record>();
-        ChangeListener<State> listener = new ChangeListener<State>() {
-            public void changed(ObservableValue<? extends State> ov,
-                                State oldValue, State newValue)
-            {
-                if (newValue == State.SUCCEEDED) {
-                    records.add(new Record(
-                            getEngine().getDocument(),
-                            getEngine().getLocation()));
-                }
+        ChangeListener<State> listener = (ov, oldValue, newValue) -> {
+            if (newValue == State.SUCCEEDED) {
+                records.add(new Record(
+                        getEngine().getDocument(),
+                        getEngine().getLocation()));
             }
         };
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getEngine().getLoadWorker().stateProperty().addListener(listener);
-        }});
+        });
         String location = new File("src/test/resources/html/RT30835.html")
                 .toURI().toASCIIString().replaceAll("^file:/", "file:///");
         load(location);
@@ -95,10 +89,6 @@ public class MiscellaneousTest extends TestBase {
     }
 
     private WebEngine createWebEngine() {
-        return submit(new Callable<WebEngine>() {
-            public WebEngine call() {
-                return new WebEngine();
-            }
-        });
+        return submit(() -> new WebEngine());
     }
 }

@@ -31,32 +31,29 @@
  */
 package com.oracle.javafx.scenebuilder.app.selectionbar;
 
-import com.oracle.javafx.scenebuilder.app.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
-import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReport;
-import com.oracle.javafx.scenebuilder.kit.editor.report.ErrorReportEntry;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.net.URL;
-import java.util.List;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+
+import com.oracle.javafx.scenebuilder.app.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 
 /**
  *
@@ -67,7 +64,6 @@ public class SelectionBarController extends AbstractFxmlPanelController {
     private HBox pathBox;
 
     private final Image selectionChevronImage;
-    private final Image warningBadgeImage;
 
     public SelectionBarController(EditorController editorController) {
         super(SelectionBarController.class.getResource("SelectionBar.fxml"), I18N.getBundle(), editorController); //NOI18N
@@ -76,7 +72,6 @@ public class SelectionBarController extends AbstractFxmlPanelController {
         final URL selectionChevronURL = SelectionBarController.class.getResource("selection-chevron.png"); //NOI18N
         assert selectionChevronURL != null;
         selectionChevronImage = new Image(selectionChevronURL.toExternalForm());
-        warningBadgeImage = ImageUtils.getWarningBadgeImage();
     }
 
     /*
@@ -142,32 +137,36 @@ public class SelectionBarController extends AbstractFxmlPanelController {
                 assert osg.getItems().isEmpty() == false;
 
                 FXOMObject fxomObject = osg.getItems().iterator().next();
+                // Recursive error report for the leaf object only
+//                boolean recursive = true;
                 while (fxomObject != null) {
                     final DesignHierarchyMask mask = new DesignHierarchyMask(fxomObject);
                     final String entryText = makeEntryText(mask);
                     final Hyperlink boxItem = new Hyperlink();
                     boxItem.setText(entryText);
                     final Node graphic;
-                    final List<ErrorReportEntry> entries = getErrorReportEntries(fxomObject);
-                    if (entries != null) {
-                        assert !entries.isEmpty();
-                        final ImageView classNameImageView
-                                = new ImageView(mask.getClassNameIcon());
-                        final ImageView warningBadgeImageView
-                                = new ImageView(warningBadgeImage);
-                        final StackPane iconsStack = new StackPane();
-                        iconsStack.getChildren().setAll(classNameImageView, warningBadgeImageView);
-                        // Update tooltip with the first entry
-                        final Tooltip iconsTooltip = new Tooltip(entries.get(0).toString());
-
-                        // We use a label to set a tooltip over the node icon 
-                        // (StackPane does not allow to set tooltips)
-                        graphic = new Label();
-                        ((Label) graphic).setGraphic(iconsStack);
-                        ((Label) graphic).setTooltip(iconsTooltip);
-                    } else {
+                    // Do not display warning icon anymore :
+                    // See DTL-6535 : Should we show warnings in the selection bar ?
+//                    final List<ErrorReportEntry> entries = getErrorReportEntries(fxomObject, recursive);
+//                    if (entries != null) {
+//                        assert !entries.isEmpty();
+//                        final ImageView classNameImageView
+//                                = new ImageView(mask.getClassNameIcon());
+//                        final ImageView warningBadgeImageView
+//                                = new ImageView(warningBadgeImage);
+//                        final StackPane iconsStack = new StackPane();
+//                        iconsStack.getChildren().setAll(classNameImageView, warningBadgeImageView);
+//                        // Update tooltip with the first entry
+//                        final Tooltip iconsTooltip = new Tooltip(entries.get(0).toString());
+//
+//                        // We use a label to set a tooltip over the node icon 
+//                        // (StackPane does not allow to set tooltips)
+//                        graphic = new Label();
+//                        ((Label) graphic).setGraphic(iconsStack);
+//                        ((Label) graphic).setTooltip(iconsTooltip);
+//                    } else {
                         graphic = new ImageView(mask.getClassNameIcon());
-                    }
+//                    }
                     boxItem.setGraphic(graphic);
                     boxItem.setFocusTraversable(false);
                     boxItem.setUserData(fxomObject);
@@ -193,6 +192,8 @@ public class SelectionBarController extends AbstractFxmlPanelController {
                         sp.setMinWidth(selectionChevronImage.getWidth());
                         pathBox.getChildren().add(0, sp);
                     }
+                    // Non recursive error report for the parent
+//                    recursive = false;
                 }
 
             } else {
@@ -213,15 +214,12 @@ public class SelectionBarController extends AbstractFxmlPanelController {
         return result.toString();
     }
 
-    private final EventHandler<ActionEvent> hyperlinkHandler = new EventHandler<ActionEvent>() {
-        @Override
-        public void handle(ActionEvent t) {
-            assert t.getSource() instanceof Hyperlink;
-            final Hyperlink hyperlink = (Hyperlink) t.getSource();
-            assert hyperlink.getUserData() instanceof FXOMObject;
-            handleSelect((FXOMObject) hyperlink.getUserData());
-            hyperlink.setVisited(false);
-        }
+    private final EventHandler<ActionEvent> hyperlinkHandler = t -> {
+        assert t.getSource() instanceof Hyperlink;
+        final Hyperlink hyperlink = (Hyperlink) t.getSource();
+        assert hyperlink.getUserData() instanceof FXOMObject;
+        handleSelect((FXOMObject) hyperlink.getUserData());
+        hyperlink.setVisited(false);
     };
 
     private void handleSelect(FXOMObject fxomObject) {
@@ -232,9 +230,9 @@ public class SelectionBarController extends AbstractFxmlPanelController {
         selection.select(fxomObject);
     }
 
-    private List<ErrorReportEntry> getErrorReportEntries(FXOMObject fxomObject) {
-        assert fxomObject != null;
-        final ErrorReport errorReport = getEditorController().getErrorReport();
-        return errorReport.query(fxomObject, false);
-    }
+//    private List<ErrorReportEntry> getErrorReportEntries(FXOMObject fxomObject, boolean recursive) {
+//        assert fxomObject != null;
+//        final ErrorReport errorReport = getEditorController().getErrorReport();
+//        return errorReport.query(fxomObject, recursive);
+//    }
 }

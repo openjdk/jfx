@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -154,6 +154,7 @@ public:
     virtual void process_state(GdkEventWindowState*) = 0;
     
     virtual void notify_state(jint) = 0;
+    virtual void notify_on_top(bool) {}
 
     virtual void add_child(WindowContextTop* child) = 0;
     virtual void remove_child(WindowContextTop* child) = 0;
@@ -176,7 +177,6 @@ public:
 };
 
 class WindowContextBase: public WindowContext {
-    std::set<WindowContextTop*> children;
 
     struct _XIM{
         XIM im;
@@ -187,6 +187,7 @@ class WindowContextBase: public WindowContext {
     size_t events_processing_cnt;
     bool can_be_deleted;
 protected:
+    std::set<WindowContextTop*> children;
     jobject jwindow;
     jobject jview;
     GtkWidget* gtk_widget;
@@ -373,6 +374,7 @@ class WindowContextTop: public WindowContextBase {
     bool map_received;
     bool location_assigned;
     bool size_assigned;
+    bool on_top;
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType);
     void process_map();
@@ -400,6 +402,7 @@ public:
     void set_gravity(float, float);
     void set_level(int);
     void set_visible(bool);
+    void notify_on_top(bool);
 
     void enter_fullscreen();
     void exit_fullscreen();
@@ -417,6 +420,9 @@ private:
     void window_configure(XWindowChanges *, unsigned int);
     void update_window_constraints();
     void set_window_resizable(bool, bool);
+    void update_ontop_tree(bool);
+    bool on_top_inherited();
+    bool effective_on_top();
     WindowContextTop(WindowContextTop&);
     WindowContextTop& operator= (const WindowContextTop&);
 };

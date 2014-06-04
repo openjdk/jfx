@@ -23,13 +23,8 @@ public class Timer {
     public synchronized static Mode getMode() {
         if (mode == null) {
             mode = Boolean.valueOf(AccessController.doPrivileged(
-                new PrivilegedAction<String>() {
-                    @Override
-                    public String run() {
-                        return System.getProperty(
-                                "com.sun.webkit.platformticks", "true");
-                    }
-                })) ? Mode.PLATFORM_TICKS : Mode.SEPARATE_THREAD;
+                    (PrivilegedAction<String>) () -> System.getProperty(
+                            "com.sun.webkit.platformticks", "true"))) ? Mode.PLATFORM_TICKS : Mode.SEPARATE_THREAD;
         }
         return mode;
     }

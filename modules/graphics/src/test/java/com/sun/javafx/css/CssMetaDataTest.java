@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,25 +75,13 @@ public class CssMetaDataTest {
         }
         return null;
     }
-    /**
-     * Test of getStyleables method, of class CssMetaData.
-     */
-    @Test
-    public void testGetStyleables_Node() {
-        Node node = new TestNode();
-        List<CssMetaData<? extends Styleable, ?>> expResult = TestNode.getClassCssMetaData();
-        List<CssMetaData<? extends Styleable, ?>> result = node.getCssMetaData();
-        assertEquals(expResult, result);
-    }
 
     /**
-     * Test of getStyleables method, of class CssMetaData.
+     * Test of getCssMetaData method of class Styleable.
      */
     @Test
-    public void testGetStyleables_Styleable() {
-        Node node = new TestNode();
-        Styleable styleable = node;
-        assertNotNull(styleable);
+    public void testGetCssMetaData_Styleable() {
+        Styleable styleable = new TestNode();
         List<CssMetaData<? extends Styleable, ?>> expResult = TestNode.getClassCssMetaData();
         List result = styleable.getCssMetaData();
         assertEquals(expResult, result);

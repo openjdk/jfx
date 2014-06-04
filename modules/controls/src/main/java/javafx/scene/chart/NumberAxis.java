@@ -39,7 +39,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Side;
 import javafx.util.Duration;
@@ -245,20 +244,29 @@ public final class NumberAxis extends ValueAxis<Number> {
         final double lowerBound = rangeProps[0];
         final double upperBound = rangeProps[1];
         final double tickUnit = rangeProps[2];
-        List<Number> tickValues =  new ArrayList<Number>();
-        if (tickUnit <= 0 || lowerBound == upperBound) {
+        List<Number> tickValues = new ArrayList<>();
+        if (lowerBound == upperBound) {
             tickValues.add(lowerBound);
-        } else if (getTickUnit() > 0) {
-            for (double major = lowerBound; major <= upperBound; major += tickUnit)  {
-                tickValues.add(major);
-                if(tickValues.size()>2000) {
-                    // This is a ridiculous amount of major tick marks, something has probably gone wrong
-                    System.err.println("Warning we tried to create more than 2000 major tick marks on a NumberAxis. " +
-                            "Lower Bound=" + lowerBound + ", Upper Bound=" + upperBound + ", Tick Unit=" + tickUnit);
-                    break;
+        } else if (tickUnit <= 0) {
+            tickValues.add(lowerBound);
+            tickValues.add(upperBound);
+        } else if (tickUnit > 0) {
+            tickValues.add(lowerBound);
+            if (((upperBound - lowerBound) / tickUnit) > 2000) {
+                // This is a ridiculous amount of major tick marks, something has probably gone wrong
+                System.err.println("Warning we tried to create more than 2000 major tick marks on a NumberAxis. " +
+                        "Lower Bound=" + lowerBound + ", Upper Bound=" + upperBound + ", Tick Unit=" + tickUnit);
+            } else {
+                if (lowerBound + tickUnit < upperBound) {
+                    // If tickUnit is integer, start with the nearest integer
+                    double first = Math.rint(tickUnit) == tickUnit ? Math.ceil(lowerBound) : lowerBound + tickUnit;
+                    for (double major = first; major < upperBound; major += tickUnit) {
+                        tickValues.add(major);
+                    }
                 }
             }
-        } 
+            tickValues.add(upperBound);
+        }
         return tickValues;
     }
 
@@ -268,21 +276,31 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @return List of data values where to draw minor tick marks
      */
     protected List<Number> calculateMinorTickMarks() {
-        final List<Number> minorTickMarks = new ArrayList<Number>();
+        final List<Number> minorTickMarks = new ArrayList<>();
         final double lowerBound = getLowerBound();
         final double upperBound = getUpperBound();
         final double tickUnit = getTickUnit();
-        final double minorUnit = tickUnit/getMinorTickCount();
-        if (getTickUnit() > 0) {
-            for (double major = lowerBound; major < upperBound; major += tickUnit)  {
-                for (double minor=major+minorUnit; minor < (major+tickUnit); minor += minorUnit) {
-                    minorTickMarks.add(minor);
-                    if(minorTickMarks.size()>10000) {
-                        // This is a ridiculous amount of major tick marks, something has probably gone wrong
-                        System.err.println("Warning we tried to create more than 10000 minor tick marks on a NumberAxis. " +
-                                "Lower Bound=" + getLowerBound() + ", Upper Bound=" + getUpperBound() + ", Tick Unit=" + tickUnit);
-                        break;
+        final double minorUnit = tickUnit/Math.max(1, getMinorTickCount());
+        if (tickUnit > 0) {
+            if(((upperBound - lowerBound) / minorUnit) > 10000) {
+                // This is a ridiculous amount of major tick marks, something has probably gone wrong
+                System.err.println("Warning we tried to create more than 10000 minor tick marks on a NumberAxis. " +
+                        "Lower Bound=" + getLowerBound() + ", Upper Bound=" + getUpperBound() + ", Tick Unit=" + tickUnit);
+                return minorTickMarks;
+            }
+            final boolean tickUnitIsInteger = Math.rint(tickUnit) == tickUnit;
+            if (tickUnitIsInteger) {
+                for (double minor = Math.floor(lowerBound) + minorUnit; minor < Math.ceil(lowerBound); minor += minorUnit) {
+                    if (minor > lowerBound) {
+                        minorTickMarks.add(minor);
                     }
+                }
+            }
+            double major = tickUnitIsInteger ? Math.ceil(lowerBound) : lowerBound;
+            for (; major < upperBound; major += tickUnit)  {
+                final double next = Math.min(major + tickUnit, upperBound);
+                for (double minor = major + minorUnit; minor < next; minor += minorUnit) {
+                    minorTickMarks.add(minor);
                 }
             }
         }
@@ -332,8 +350,7 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @return The calculated range
      */
     @Override protected Object autoRange(double minValue, double maxValue, double length, double labelSize) {
-        final Side side = getSide();
-        final boolean vertical = Side.LEFT.equals(side) || Side.RIGHT.equals(side);
+        final Side side = getEffectiveSide();
         // check if we need to force zero into range
         if (isForceZeroInRange()) {
             if (maxValue < 0) {
@@ -391,8 +408,8 @@ public final class NumberAxis extends ValueAxis<Number> {
             double last = 0;
             count = 0;
             for (double major = minRounded; major <= maxRounded; major += tickUnitRounded, count ++)  {
-                double size = (vertical) ? measureTickMarkSize((Double)major, getTickLabelRotation(), rangeIndex).getHeight() :
-                                            measureTickMarkSize((Double)major, getTickLabelRotation(), rangeIndex).getWidth();
+                double size = side.isVertical() ? measureTickMarkSize(major, getTickLabelRotation(), rangeIndex).getHeight() :
+                                            measureTickMarkSize(major, getTickLabelRotation(), rangeIndex).getWidth();
                 if (major == minRounded) { // first
                     last = size/2;
                 } else {
@@ -404,6 +421,13 @@ public final class NumberAxis extends ValueAxis<Number> {
             // check if we already found max tick unit
             if (tickUnitRounded == TICK_UNIT_DEFAULTS[TICK_UNIT_DEFAULTS.length-1]) {
                 // nothing we can do so just have to use this
+                break;
+            }
+
+            // fix for RT-35600 where a massive tick unit was being selected
+            // unnecessarily. There is probably a better solution, but this works
+            // well enough for now.
+            if (numOfTickMarks == 2 && reqLength > length) {
                 break;
             }
         }
@@ -481,10 +505,8 @@ public final class NumberAxis extends ValueAxis<Number> {
          */
         public DefaultFormatter(final NumberAxis axis) {
             formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
-            final ChangeListener axisListener = new ChangeListener() {
-                @Override public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-                    formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
-                }
+            final ChangeListener<Object> axisListener = (observable, oldValue, newValue) -> {
+                formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
             };
             axis.currentRangeIndexProperty.addListener(axisListener);
             axis.autoRangingProperty().addListener(axisListener);

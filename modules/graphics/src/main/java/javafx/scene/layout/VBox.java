@@ -193,11 +193,7 @@ public class VBox extends Pane {
         return (Insets)getConstraint(child, MARGIN_CONSTRAINT);
     }
 
-    private static final Callback<Node, Insets> marginAccessor = new Callback<Node, Insets>() {
-        public Insets call(Node n) {
-            return getMargin(n);
-        }
-    };
+    private static final Callback<Node, Insets> marginAccessor = n -> getMargin(n);
 
     /**
      * Removes all vbox constraints from the child node.

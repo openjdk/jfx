@@ -97,12 +97,7 @@ public class BindingsCreateBindingTest<T> {
             log.reset();
 
             // func returns value0, no dependencies specified
-            final Callable<T> func0 = new Callable<T>() {
-                @Override
-                public T call() throws Exception {
-                    return value0;
-                }
-            };
+            final Callable<T> func0 = () -> value0;
             final Binding<T> binding0 = f.create(func0);
 
             f.check(value0, binding0.getValue());
@@ -110,12 +105,7 @@ public class BindingsCreateBindingTest<T> {
             binding0.dispose();
 
             // func returns value1, dependencies set to null
-            final Callable<T> func1 = new Callable<T>() {
-                @Override
-                public T call() throws Exception {
-                    return value1;
-                }
-            };
+            final Callable<T> func1 = () -> value1;
             final Binding<T> binding1 = f.create(func1, (Observable[])null);
 
             f.check(value1, binding1.getValue());
@@ -123,11 +113,8 @@ public class BindingsCreateBindingTest<T> {
             binding1.dispose();
 
             // func throws exception, dependencies set to empty array
-            final Callable<T> func2 = new Callable<T>() {
-                @Override
-                public T call() throws Exception {
-                    throw new Exception();
-                }
+            final Callable<T> func2 = () -> {
+                throw new Exception();
             };
             final Binding<T> binding2 = f.create(func2, new Observable [0]);
 
@@ -140,12 +127,7 @@ public class BindingsCreateBindingTest<T> {
 
     @Test
     public void testOneDependency() {
-        final Callable<T> func = new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return p0.getValue();
-            }
-        };
+        final Callable<T> func = () -> p0.getValue();
         final Binding<T> binding = f.create(func, p0);
 
         f.check(p0.getValue(), binding.getValue());
@@ -157,12 +139,7 @@ public class BindingsCreateBindingTest<T> {
 
     @Test
     public void testCreateBoolean_TwoDependencies() {
-        final Callable<T> func = new Callable<T>() {
-            @Override
-            public T call() throws Exception {
-                return p0.getValue();
-            }
-        };
+        final Callable<T> func = () -> p0.getValue();
         final Binding<T> binding = f.create(func, p0, p1);
 
         f.check(p0.getValue(), binding.getValue());

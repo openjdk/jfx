@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@ package javafx.scene.control;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import java.util.List;
@@ -38,6 +40,7 @@ import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.tk.Toolkit;
+import javafx.scene.layout.HBox;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -47,6 +50,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class ListViewKeyInputTest {
     private ListView<String> listView;
@@ -65,9 +69,7 @@ public class ListViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         keyboard = new KeyEventFirer(listView);
-        
         stageLoader = new StageLoader(listView);
-        stageLoader.getStage().show();
 
         listView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
     }
@@ -1105,15 +1107,11 @@ public class ListViewKeyInputTest {
     @Test public void test_rt29849() {
         listView.setEditable(true);
 
-        listView.setOnEditStart(new EventHandler<ListView.EditEvent<String>>() {
-            @Override public void handle(ListView.EditEvent<String> t) {
-                rt29849_start_count++;
-            }
+        listView.setOnEditStart(t -> {
+            rt29849_start_count++;
         });
-        listView.setOnEditCancel(new EventHandler<ListView.EditEvent<String>>() {
-            @Override public void handle(ListView.EditEvent<String> t) {
-                rt29849_cancel_count++;
-            }
+        listView.setOnEditCancel(t -> {
+            rt29849_cancel_count++;
         });
 
         // initially the counts should be zero
@@ -1148,10 +1146,8 @@ public class ListViewKeyInputTest {
         // event when the selected items list changes (due to deselection).
         // It actually does always contain the right value - it just doesn't
         // let anyone know it!
-        sm.selectedItemProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                rt31577_count++;
-            }
+        sm.selectedItemProperty().addListener(observable -> {
+            rt31577_count++;
         });
 
         assertTrue(sm.getSelectedItems().isEmpty());
@@ -1684,10 +1680,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
-
         sm.clearAndSelect(99);
         listView.scrollTo(99);
         assertEquals(99, getAnchor());
@@ -1706,10 +1698,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
-
         sm.clearAndSelect(99);
         listView.scrollTo(99);
         assertEquals(99, getAnchor());
@@ -1727,10 +1715,6 @@ public class ListViewKeyInputTest {
         for (int i = 0; i < items; i++) {
             listView.getItems().add("Row " + i);
         }
-
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
 
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor());
@@ -1773,10 +1757,6 @@ public class ListViewKeyInputTest {
             listView.getItems().add("Row " + i);
         }
 
-        new StageLoader(listView);
-        final FocusModel fm = listView.getFocusModel();
-        final MultipleSelectionModel sm = listView.getSelectionModel();
-
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor());
         assertEquals(1, fm.getFocusedIndex());
@@ -1794,5 +1774,345 @@ public class ListViewKeyInputTest {
         assertEquals(2, fm.getFocusedIndex());
         assertEquals(2, sm.getSelectedIndex());
         assertTrue(isSelected(1, 2));
+    }
+
+    @Test public void test_rt34407_down_down_up() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+        listView.setPrefHeight(130); // roughly room for four rows
+
+        // this stageLoader is needed....although right now I'm not sure why
+        StageLoader sl = new StageLoader(listView);
+        final FocusModel fm = listView.getFocusModel();
+        final MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0);
+        fm.focus(0);
+        assertEquals(0, getAnchor());
+        assertTrue(fm.isFocused(0));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+
+        // we expect the final Page-up to return us back to this selected index and with the same number of selected indices
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        final int leadSelectedIndex = sm.getSelectedIndex();
+        final int selectedIndicesCount = sm.getSelectedIndices().size();
+        assertEquals(6, leadSelectedIndex);
+        assertEquals(6, fm.getFocusedIndex());
+        assertEquals(7, selectedIndicesCount);
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex * 2, sm.getSelectedIndex());
+        assertEquals(leadSelectedIndex * 2, fm.getFocusedIndex());
+        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex, sm.getSelectedIndex());
+        assertEquals(leadSelectedIndex, fm.getFocusedIndex());
+        assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt34407_up_up_down() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+        listView.setPrefHeight(130); // roughly room for four rows
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(99);
+        fm.focus(99);
+        listView.scrollTo(99);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(99, getAnchor());
+        assertTrue(fm.isFocused(99));
+        assertTrue(sm.isSelected(99));
+        assertFalse(sm.isSelected(98));
+
+        // we expect the final Page-down to return us back to this selected index and with the same number of selected indices
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        final int leadSelectedIndex = sm.getSelectedIndex();
+        final int selectedIndicesCount = sm.getSelectedIndices().size();
+        final int diff = 99 - leadSelectedIndex;
+        assertEquals(99 - diff, leadSelectedIndex);
+        assertEquals(99 - diff, fm.getFocusedIndex());
+        assertEquals(7, selectedIndicesCount);
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        assertEquals(99 - diff * 2, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt34768() {
+        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        listView.getItems().clear();
+
+        // no need for an assert here - we're testing for an AIOOBE
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+    }
+
+    @Test public void test_rt35853_multipleSelection_shiftDown() {
+        final int items = 10;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertTrue(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_multipleSelection_noShiftDown() {
+        final int items = 10;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_singleSelection_shiftDown() {
+        final int items = 10;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(4, getAnchor());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_singleSelection_noShiftDown() {
+        final int items = 10;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt36800() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        final int items = 10;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 4
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 3
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 2
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 1
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 0
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // bug time?
+
+        assertEquals(0, getAnchor());
+        assertTrue(fm.isFocused(0));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+        assertFalse(sm.isSelected(3));
+        assertFalse(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
+    @Test public void test_rt_36942() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        final int items = 3;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        ObservableList<String> selectedItems = sm.getSelectedItems();
+
+        ListView<String> selectedItemsListView = new ListView<>(selectedItems);
+
+        HBox root = new HBox(5, listView, selectedItemsListView);
+
+        StageLoader sl = new StageLoader(root);
+
+        sm.select(0);
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1,2
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1,2,Exception?
+
+        sl.dispose();
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
+    @Test public void test_rt_37130_pageUpAtTop() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(listView);
+
+        sm.select(5);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageUpAtBottom() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(listView);
+
+        sm.select(95);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageDownAtTop() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(listView);
+
+        sm.select(5);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageDownAtBottom() {
+        final int items = 100;
+        listView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            listView.getItems().add("Row " + i);
+        }
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(listView);
+
+        sm.select(95);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
     }
 }

@@ -69,10 +69,7 @@ public class ListCellSkin<T> extends CellSkinBase<ListCell<T>, ListCellBehavior<
         // cell size to prevent the issue identified in RT-19873.
         final double cellSize = getCellSize();
         final double prefHeight = cellSize == DEFAULT_CELL_SIZE ? super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset) : cellSize;
-        
-        // RT-30212: ListCell does not honor minSize of cells
-        final ListCell<T> cell = getSkinnable();
-        return Math.max(cell.getMinHeight(), prefHeight);
+        return prefHeight;
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {

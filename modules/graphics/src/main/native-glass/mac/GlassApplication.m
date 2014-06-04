@@ -54,7 +54,7 @@ static jobject nestedLoopReturnValue = NULL;
 static BOOL isFullScreenExitingLoop = NO;
 static NSMutableDictionary * keyCodeForCharMap = nil;
 static BOOL isEmbedded = NO;
-
+static BOOL disableSyncRendering = NO;
 
 jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
@@ -164,12 +164,14 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
             if ((*env)->ExceptionCheck(env) == JNI_TRUE)
             {
                 (*env)->ExceptionDescribe(env);
+                (*env)->ExceptionClear(env);
             }
 
             jmethodID runMethod = (*env)->GetMethodID(env, runnableClass, "run", "()V");
             if ((*env)->ExceptionCheck(env) == JNI_TRUE)
             {
                 (*env)->ExceptionDescribe(env);
+                (*env)->ExceptionClear(env);
             }
 
             if ((runnableClass != 0) && (runMethod != 0))
@@ -178,10 +180,11 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 if ((*env)->ExceptionCheck(env) == JNI_TRUE)
                 {
                     (*env)->ExceptionDescribe(env);
+                    (*env)->ExceptionClear(env);
                 }
                 else
                 {
-                    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(GlassApplicationDidChangeScreenParameters) name:NSApplicationDidChangeScreenParametersNotification object:nil];
+                [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(GlassApplicationDidChangeScreenParameters) name:NSApplicationDidChangeScreenParametersNotification object:nil];
                 }
             }
             else if (runnableClass == 0)
@@ -328,12 +331,14 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     {
         NSUInteger count = [filenames count];
         jobjectArray files = (*env)->NewObjectArray(env, (jsize)count, [GlassHelper ClassForName:"java.lang.String" withEnv:env], NULL);
+        GLASS_CHECK_EXCEPTION(env);
         for (NSUInteger i=0; i<count; i++)
         {
             NSString *file = [filenames objectAtIndex:i];
             if (file != nil)
             {
                 (*env)->SetObjectArrayElement(env, files, (jsize)i, (*env)->NewStringUTF(env, [file UTF8String]));
+                GLASS_CHECK_EXCEPTION(env);
             }
         }
         (*env)->CallVoidMethod(env, self->jApplication, [GlassHelper ApplicationNotifyOpenFilesMethod], files);
@@ -463,6 +468,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 // make the name available to Java side, before Launchable.fnishLaunching callback
                 jstring jname = (*jEnv)->NewStringUTF(jEnv, [appName UTF8String]);
                 jmethodID setNameMethod = (*jEnv)->GetMethodID(jEnv, cls, "setName", "(Ljava/lang/String;)V");
+                GLASS_CHECK_EXCEPTION(jEnv);
                 if (setNameMethod != NULL) {
                     (*jEnv)->CallVoidMethod(jEnv, glassApp->jApplication, setNameMethod, jname);
                 }
@@ -533,7 +539,7 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
                 [app setDelegate:self];
 
                 // [app activateIgnoringOtherApps:YES] won't activate the menu bar on OS X 10.9, so instead we do this:
-                [[NSRunningApplication currentApplication] activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+                [[NSRunningApplication currentApplication] activateWithOptions:(NSApplicationActivateIgnoringOtherApps | NSApplicationActivateAllWindows)];
             }
             else
             {
@@ -591,6 +597,9 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
             GLASS_CHECK_EXCEPTION(jEnv);
 
+            (*jEnv)->CallVoidMethod(jEnv, self->jApplication, javaIDs.MacApplication.notifyApplicationDidTerminate);
+            GLASS_CHECK_EXCEPTION(jEnv);
+            
             jint err = (*jVM)->DetachCurrentThread(jVM);
             if (err < 0)
             {
@@ -700,6 +709,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     }
 }
 
++ (BOOL)syncRenderingDisabled {
+    return disableSyncRendering;
+}
+
 @end
 
 #pragma mark --- JNI
@@ -710,24 +723,36 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
-(JNIEnv *env, jclass jClass)
+(JNIEnv *env, jclass jClass, jboolean jDisableSyncRendering)
 {
     LOG("Java_com_sun_glass_ui_mac_MacApplication__1initIDs");
 
+    disableSyncRendering = jDisableSyncRendering ? YES : NO;
+   
     jApplicationClass = (*env)->NewGlobalRef(env, jClass);
 
     javaIDs.Application.createPixels = (*env)->GetStaticMethodID(
             env, jClass, "createPixels", "(II[IF)Lcom/sun/glass/ui/Pixels;");
+    if ((*env)->ExceptionCheck(env)) return;
 
     javaIDs.Application.getScaleFactor = (*env)->GetStaticMethodID(
             env, jClass, "getScaleFactor", "(IIII)F");
+    if ((*env)->ExceptionCheck(env)) return;
 
     javaIDs.Application.reportException = (*env)->GetStaticMethodID(
             env, jClass, "reportException", "(Ljava/lang/Throwable;)V");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.MacApplication.notifyApplicationDidTerminate = (*env)->GetMethodID(
+            env, jClass, "notifyApplicationDidTerminate", "()V");
+    if ((*env)->ExceptionCheck(env)) return;
 
     if (jRunnableRun == NULL)
     {
-        jRunnableRun = (*env)->GetMethodID(env, (*env)->FindClass(env, "java/lang/Runnable"), "run", "()V");
+        jclass jcls = (*env)->FindClass(env, "java/lang/Runnable");
+        if ((*env)->ExceptionCheck(env)) return;
+        jRunnableRun = (*env)->GetMethodID(env, jcls, "run", "()V");
+        if ((*env)->ExceptionCheck(env)) return;
     }
 }
 
@@ -1042,3 +1067,15 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getDataDire
     return string;
 }
 
+/*
+ * Class:     com_sun_glass_ui_mac_MacApplication
+ * Method:    _getMacKey
+ * Signature: (I)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getMacKey
+(JNIEnv *env, jclass jClass, jint code)
+{
+	unsigned short macCode = 0;
+    GetMacKey(code, &macCode);
+    return (macCode & 0xFFFF);
+}

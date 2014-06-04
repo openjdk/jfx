@@ -71,10 +71,12 @@ public class FXOMArchive implements Serializable {
         for (Entry e : entries) {
             final URL location = e.getLocation();
             final String fxmlText = e.getFxmlText();
-            final FXOMDocument d = new FXOMDocument(fxmlText, location, null, null);
-            assert d.getFxomRoot() != null;
-            d.getFxomRoot().moveToFxomDocument(targetDocument);
-            result.add(d.getFxomRoot());
+            final FXOMDocument d = new FXOMDocument(fxmlText, location, 
+                    targetDocument.getClassLoader(), targetDocument.getResources());
+            final FXOMObject fxomRoot = d.getFxomRoot();
+            assert fxomRoot != null;
+            fxomRoot.moveToFxomDocument(targetDocument);
+            result.add(fxomRoot);
         }
         
         return result;
@@ -84,10 +86,10 @@ public class FXOMArchive implements Serializable {
         
         // Checks that fxom objects are all self contained
         int selfContainedCount = 0;
-        FXOMIndex fxomIndex = null;
+        FXOMFxIdIndex fxomIndex = null;
         for (FXOMObject o : fxomObjects) {
             if ((fxomIndex == null) || (fxomIndex.getFxomDocument() != o.getFxomDocument())) {
-                fxomIndex = new FXOMIndex(o.getFxomDocument());
+                fxomIndex = new FXOMFxIdIndex(o.getFxomDocument());
             }
             if (fxomIndex.isSelfContained(o)) {
                 selfContainedCount++;

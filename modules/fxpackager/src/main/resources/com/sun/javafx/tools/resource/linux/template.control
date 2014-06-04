@@ -1,9 +1,0 @@
-Package: APPLICATION_PACKAGE
-Version: APPLICATION_VERSION
-Section: unknown
-Maintainer: APPLICATION_MAINTAINER
-Priority: optional
-Architecture: APPLICATION_ARCH
-Provides: APPLICATION_NAME
-Description: APPLICATION_SUMMARY
-Installed-Size: APPLICATION_INSTALLED_SIZE

@@ -119,8 +119,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
     protected synchronized void disposeOnShutdown() {
         if (isCopy || isDecoded) {
             AccessController.doPrivileged(
-                new PrivilegedAction<Void>() {
-                    public Void run() {
+                    (PrivilegedAction<Void>) () -> {
                         try {
                             (new File(filename)).delete();
                             /* Embedded fonts (copy) can also be decoded.
@@ -131,7 +130,6 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                         }
                         return null;
                     }
-               }
             );
             if (PrismFontFactory.debugFonts) {
                 System.err.println("Temp file deleted: " + filename);
@@ -171,8 +169,7 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         public synchronized void dispose() {
             if (fileName != null) {
                 AccessController.doPrivileged(
-                    new PrivilegedAction<Void>() {
-                        public Void run() {
+                        (PrivilegedAction<Void>) () -> {
                             try {
                                 File file = new File(fileName);
                                 int size = (int)file.length();
@@ -201,7 +198,6 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
                             }
                             return null;
                         }
-                    }
                 );
                 fileName = null;
             }
@@ -1222,4 +1218,20 @@ public abstract class PrismFontFile implements FontResource, FontConstants {
         return table;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (!(obj instanceof PrismFontFile)) {
+            return false;
+        }
+        final PrismFontFile other = (PrismFontFile)obj;
+        return filename.equals(other.filename) && fullName.equals(other.fullName);
+    }
+
+    @Override
+    public int hashCode() {
+        return filename.hashCode() + (71 * fullName.hashCode());
+    }
 }

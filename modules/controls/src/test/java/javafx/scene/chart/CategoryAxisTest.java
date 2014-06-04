@@ -40,6 +40,8 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 /**
  * All public members of CatgoryAxis are tested here . 
  * @author srikalyc
@@ -254,5 +256,16 @@ public class CategoryAxisTest {
         assertSame(axis.getCategories(), list);
     }
 
+    @Test
+    public void testDisplayPositionOfValue() {
+        axis.setCategories(FXCollections.observableArrayList("A", "B", "C", "D"));
+        assertTrue(Double.isFinite(axis.getDisplayPosition("C")));
+    }
+
+    @Test
+    public void testDisplayPositionOfInvalidValue() {
+        axis.setCategories(FXCollections.observableArrayList("A", "B", "C", "D"));
+        assertTrue(Double.isNaN(axis.getDisplayPosition("E")));
+    }
     
 }

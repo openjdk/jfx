@@ -68,7 +68,7 @@ public class SampleDataGenerator {
         } else {
             final Class<?> sceneGraphClass = sceneGraphObject.getClass();
             if (sceneGraphClass == ChoiceBox.class) {
-                final ChoiceBox<?> choiceBox = (ChoiceBox) sceneGraphObject;
+                final ChoiceBox<?> choiceBox = (ChoiceBox<?>) sceneGraphObject;
                 if (choiceBox.getItems().isEmpty()) {
                     if (currentData instanceof ChoiceBoxSampleData) {
                         newData = currentData;
@@ -79,7 +79,7 @@ public class SampleDataGenerator {
                     newData = null;
                 }
             } else if (sceneGraphClass == ComboBox.class) {
-                final ComboBox<?> comboBox = (ComboBox) sceneGraphObject;
+                final ComboBox<?> comboBox = (ComboBox<?>) sceneGraphObject;
                 if (comboBox.getItems().isEmpty()) {
                     if (currentData instanceof ComboBoxSampleData) {
                         newData = currentData;
@@ -90,7 +90,7 @@ public class SampleDataGenerator {
                     newData = null;
                 }
             } else if (sceneGraphClass == ListView.class) {
-                final ListView<?> listView = (ListView) sceneGraphObject;
+                final ListView<?> listView = (ListView<?>) sceneGraphObject;
                 if (listView.getItems().isEmpty()) {
                     if (currentData instanceof ListViewSampleData) {
                         newData = currentData;
@@ -101,7 +101,7 @@ public class SampleDataGenerator {
                     newData = null;
                 }
             } else if (sceneGraphClass == TreeView.class) {
-                final TreeView<?> treeView = (TreeView) sceneGraphObject;
+                final TreeView<?> treeView = (TreeView<?>) sceneGraphObject;
                 if (treeView.getRoot() == null) {
                     if (currentData instanceof TreeViewSampleData) {
                         newData = currentData;
@@ -112,7 +112,7 @@ public class SampleDataGenerator {
                     newData = null;
                 }
             } else if (sceneGraphClass == TableView.class) {
-                final TableView<?> treeView = (TableView) sceneGraphObject;
+                final TableView<?> treeView = (TableView<?>) sceneGraphObject;
                 if (TableViewSampleData.canApplyTo(treeView)) {
                     if (currentData instanceof TableViewSampleData) {
                         newData = currentData;
@@ -123,7 +123,7 @@ public class SampleDataGenerator {
                     newData = null;
                 }
             } else if (sceneGraphClass == TreeTableView.class) {
-                final TreeTableView<?> treeTableView = (TreeTableView) sceneGraphObject;
+                final TreeTableView<?> treeTableView = (TreeTableView<?>) sceneGraphObject;
                 if (treeTableView.getRoot() == null) {
                     if (currentData instanceof TreeTableViewSampleData) {
                         newData = currentData;
@@ -145,7 +145,7 @@ public class SampleDataGenerator {
                     newData = null;
                 }
             } else if (XYChartSampleData.isKnownXYChart(sceneGraphObject)) {
-                final XYChart<?,?> xyChart = (XYChart) sceneGraphObject;
+                final XYChart<?,?> xyChart = (XYChart<?,?>) sceneGraphObject;
                 if (xyChart.getData().isEmpty()) {
                     if (currentData instanceof XYChartSampleData) {
                         newData = currentData;

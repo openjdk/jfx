@@ -50,6 +50,9 @@
             <SeparatorMenuItem mnemonicParsing="false" />
             <MenuItem fx:id="moveUpMi" mnemonicParsing="false" onAction="#up" text="Move Up (i18n)" />
             <MenuItem fx:id="moveDownMi" mnemonicParsing="false" onAction="#down" text="Move Down (i18n)" />
+            <SeparatorMenuItem mnemonicParsing="false" />
+            <MenuItem fx:id="openMi" mnemonicParsing="false" onAction="#open" text="Open (i18n)" />
+            <MenuItem fx:id="revealMi" mnemonicParsing="false" onAction="#reveal" text="Reveal (i18n)" />
           </items>
         </MenuButton>
   </children>

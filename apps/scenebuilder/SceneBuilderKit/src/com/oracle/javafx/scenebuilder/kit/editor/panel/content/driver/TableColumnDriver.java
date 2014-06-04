@@ -105,7 +105,7 @@ public class TableColumnDriver extends AbstractDriver {
     @Override
     public Node getInlineEditorBounds(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof TableColumn;
-        final TableColumn<?,?> tc = (TableColumn) fxomObject.getSceneGraphObject();
+        final TableColumn<?,?> tc = (TableColumn<?,?>) fxomObject.getSceneGraphObject();
         final TableViewDesignInfoX di = new TableViewDesignInfoX();
         return di.getColumnNode(tc);
     }
@@ -114,7 +114,7 @@ public class TableColumnDriver extends AbstractDriver {
     public boolean intersectsBounds(FXOMObject fxomObject, Bounds bounds) {
         assert fxomObject.getSceneGraphObject() instanceof TableColumn;
         
-        final TableColumn<?,?> tc = (TableColumn) fxomObject.getSceneGraphObject();
+        final TableColumn<?,?> tc = (TableColumn<?,?>) fxomObject.getSceneGraphObject();
         final TableView<?> tv = tc.getTableView();
         final TableViewDesignInfoX di = new TableViewDesignInfoX();
         final Bounds tcBounds = tv.localToScene(di.getColumnBounds(tc));

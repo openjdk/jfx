@@ -35,6 +35,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.beans.binding.Bindings;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
@@ -58,7 +59,7 @@ public class ProgressIndicatorApp extends Application {
     final Timeline timeline = new Timeline();
     
     public Parent createContent() {
-        GridPane g = new GridPane();
+        GridPane gridPane = new GridPane();
 
         ProgressIndicator p1 = new ProgressIndicator();
         p1.setPrefSize(50, 50);
@@ -78,35 +79,61 @@ public class ProgressIndicatorApp extends Application {
         // styled ProgressIndicator
         final ProgressIndicator p5 = new ProgressIndicator();
         p5.setPrefSize(100, 100);
-        p5.progressProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue ov, Number oldVal, Number newVal) {
-                if (p5.getProgress() < 0.25) {
-                    p5.setStyle("-fx-progress-color: red;");
-                } else if (p5.getProgress() < 0.5) {
-                    p5.setStyle("-fx-progress-color: orange;");
-                } else {
-                    p5.setStyle("-fx-progress-color: green;");
-                }
-            }
-        });
+        p5.styleProperty().bind(Bindings.createStringBinding(
+                () -> {
+                    final double percent = p5.getProgress();
+                    if (percent < 0) return null; // progress bar went indeterminate
+                    //
+                    // poor man's gradient for stops: red, yellow 50%, green
+                    // Based on http://en.wikibooks.org/wiki/Color_Theory/Color_gradient#Linear_RGB_gradient_with_6_segments
+                    //
+                    final double m = (2d * percent);
+                    final int n = (int) m;
+                    final double f = m - n;
+                    final int t = (int) (255 * f);
+                    int r = 0, g = 0, b = 0;
+                    switch (n) {
+                        case 0:
+                            r = 255;
+                            g = t;
+                            b = 0;
+                            break;
+                        case 1:
+                            r = 255 - t;
+                            g = 255;
+                            b = 0;
+                            break;
+                        case 2:
+                            r = 0;
+                            g = 255;
+                            b = 0;
+                            break;
+
+                    }
+                    final String style = String.format("-fx-progress-color: rgb(%d,%d,%d)", r, g, b);
+                    return style;
+                },
+                p5.progressProperty()
+        ));
         // animate the styled ProgressIndicator
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.setAutoReverse(true);
-        final KeyValue kv = new KeyValue(p5.progressProperty(), 1);
-        final KeyFrame kf1 = new KeyFrame(Duration.millis(3000), kv);
-        timeline.getKeyFrames().add(kf1);
+        final KeyValue kv0 = new KeyValue(p5.progressProperty(), 0);
+        final KeyValue kv1 = new KeyValue(p5.progressProperty(), 1);
+        final KeyFrame kf0 = new KeyFrame(Duration.ZERO, kv0);
+        final KeyFrame kf1 = new KeyFrame(Duration.millis(3000), kv1);
+        timeline.getKeyFrames().addAll(kf0, kf1);
 
-        g.add(p1, 1, 0);
-        g.add(p2, 0, 1);
-        g.add(p3, 1, 1);
-        g.add(p4, 2, 1);
-        g.add(p5, 1, 2);
+        gridPane.add(p1, 1, 0);
+        gridPane.add(p2, 0, 1);
+        gridPane.add(p3, 1, 1);
+        gridPane.add(p4, 2, 1);
+        gridPane.add(p5, 1, 2);
 
-        g.setHgap(20);
-        g.setVgap(20);
-        g.setAlignment(Pos.CENTER);
-        return g;
+        gridPane.setHgap(20);
+        gridPane.setVgap(20);
+        gridPane.setAlignment(Pos.CENTER);
+        return gridPane;
     }
 
     public void play() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -121,13 +121,10 @@ public final class SequentialTransition extends Transition {
     private boolean childrenChanged = true;
     private boolean toggledRate;
 
-    private final InvalidationListener childrenListener = new InvalidationListener() {
-        @Override
-        public void invalidated(Observable observable) {
-            childrenChanged = true;
-            if (getStatus() == Status.STOPPED) {
-                setCycleDuration(computeCycleDuration());
-            }
+    private final InvalidationListener childrenListener = observable -> {
+        childrenChanged = true;
+        if (getStatus() == Status.STOPPED) {
+            setCycleDuration(computeCycleDuration());
         }
     };
 
@@ -720,7 +717,7 @@ public final class SequentialTransition extends Transition {
                 //NOTE: do not clean up forceChildSync[i] here. Another sync will be needed during the play
                 // The reason is we have 2 different use-cases for jumping (1)play from start, (2)play next cycle.
                 // and 2 different types of sub-transitions (A)"by" transitions that need to synchronize on
-                // the current state a move property by certain value and (B)"from-to" transitions that 
+                // the current state and move property by certain value and (B)"from-to" transitions that 
                 // move from one point to another on each play/cycle. We can't query if transition is A or B.
                 //
                 // Now for combination 1A we need to synchronize here, as the subsequent jump would move

@@ -1,0 +1,420 @@
+'\" t
+.\"  Copyright (c) 1994, 2013, Oracle and/or its affiliates. All rights reserved.
+.\"     Arch: Generic
+.\"     Software: Oracle Java
+.\"     Date: April 2014
+.\"     SectDesc: User Commands
+.\"     Title: javapackager.1
+.\"
+.if n .pl 99999
+.TH javapackager 1 "April 2014" "Oracle Java" "User Commands"
+.\" -----------------------------------------------------------------
+.\" * Define some portability stuff
+.\" -----------------------------------------------------------------
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.\" http://bugs.debian.org/507673
+.\" http://lists.gnu.org/archive/html/groff/2009-02/msg00013.html
+.\" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.ie \n(.g .ds Aq \(aq
+.el       .ds Aq '
+.\" -----------------------------------------------------------------
+.\" * set default formatting
+.\" -----------------------------------------------------------------
+.\" disable hyphenation
+.nh
+.\" disable justification (adjust text to left margin only)
+.ad l
+.\" -----------------------------------------------------------------
+.\" * MAIN CONTENT STARTS HERE *
+.\" -----------------------------------------------------------------
+
+.SH NAME    
+javapackager \- Performs tasks related to packaging and signing JavaFX applications\&.
+.SH SYNOPSIS    
+.sp     
+.nf     
+
+\fBjavapackager\fR \fIcommand\fR [\fIoptions\fR]
+.fi     
+.nf     
+.fi     
+.sp     
+.TP     
+\fIcommand\fR
+The task that should be performed\&.
+.TP     
+options
+One or more options for the command separated by spaces\&.
+.SH COMMANDS    
+You can specify one of the following commands\&. After the command, specify the options for it\&.
+.TP
+-createbss
+.br
+Converts CSS files into binary form\&.
+.TP
+-createjar
+.br
+Produces a JAR archive according to other parameters\&.
+.TP
+-deploy
+.br
+Assembles the application package for redistribution\&. By default, the deploy task will generate the base application package, but it can also generate a self-contained application package if requested\&.
+.TP
+-makeall
+.br
+Performs compilation, \f3createjar\fR, and \f3deploy\fR steps as one call, with most arguments predefined\&. By default, it attempts to generate all applicable self-contained application packages\&. The source files must be located in a folder called src, and the resulting files (JAR, JNLP, HTML, and self-contained application packages) are put in a folder called dist\&. This command can only be configured in a minimal way and is as automated as possible\&.
+.TP
+-signjar
+.br
+Signs JAR file(s) with a provided certificate\&.
+.SH OPTIONS\ FOR\ THE\ CREATEBSS\ COMMAND    
+.TP
+-outdir \fIdir\fR
+.br
+Name of the directory that will receive generated output files\&.
+.TP
+-srcdir \fIdir\fR
+.br
+Base directory of the files to package\&.
+.TP
+-srcfiles \fIfiles\fR
+.br
+List of files in the directory specified by the \f3-srcdir\fR option\&. If omitted, all files in the directory (which is a mandatory argument in this case) will be used\&. Files in the list must be separated by spaces\&.
+.SH OPTIONS\ FOR\ THE\ CREATEJAR\ COMMAND    
+.TP
+-appclass \fIapp-class\fR
+.br
+Qualified name of the application class to be executed\&.
+.TP
+-argument \fIarg\fR
+.br
+An unnamed argument to be inserted into the JNLP file as an \f3<fx:argument>\fR element\&.
+.TP
+-classpath \fIfiles\fR
+.br
+List of dependent JAR file names\&.
+.TP
+-manifestAttrs \fImanifest-attributes\fR
+.br
+List of names and values for additional manifest attributes\&. Syntax:
+.sp     
+.nf     
+\f3"name1=value1,name2=value2,name3=value3"\fP
+.fi     
+.nf     
+\f3\fP
+.fi     
+.sp     
+
+.TP
+-nocss2bin
+.br
+The packager will not convert CSS files to binary form before copying to JAR\&.
+.TP
+-noembedlauncher
+.br
+If present, the packager will not add the JavaFX launcher classes to the JAR file\&.
+.TP
+-outdir \fIdir\fR
+.br
+Name of the directory that will receive generated output files\&.
+.TP
+-outfile \fIfilename\fR
+.br
+Name (without the extension) of the file that will be generated\&.
+.TP
+-paramfile \fIfile\fR
+.br
+A properties file with default named application parameters\&.
+.TP
+-preloader \fIpreloader-class\fR
+.br
+Qualified name of the preloader class to be executed\&.
+.TP
+-runtimeversion \fIversion\fR
+.br
+Version of the required JavaFX Runtime\&.
+.TP
+-srcdir \fIdir\fR
+.br
+Base directory of the files to package\&.
+.TP
+-srcfiles \fIfiles\fR
+.br
+List of files in the directory specified by the \f3-srcdir\fR option\&. If omitted, all files in the directory (which is a mandatory argument in this case) will be used\&. Files in the list must be separated by spaces\&.
+.SH OPTIONS\ FOR\ THE\ DEPLOY\ COMMAND    
+.TP
+-allpermissions
+.br
+If present, the application will require all security permissions in the JNLP file\&.
+.TP
+-appclass \fIapp-class\fR
+.br
+Qualified name of the application class to be executed\&.
+.TP
+-argument \fIarg\fR
+.br
+An unnamed argument to be inserted into an \f3<fx:argument>\fR element in the JNLP file\&.
+.TP
+-callbacks
+.br
+Specifies user callback methods in generated HTML\&. The format is the following:
+.sp     
+.nf     
+\f3"name1:value1,name2:value2,\&.\&.\&."\fP
+.fi     
+.nf     
+\f3\fP
+.fi     
+.sp     
+
+.TP
+-description \fIdescription\fR
+.br
+Description of the application\&.
+.TP
+-embedCertificates
+.br
+If present, the certificates will be embedded in the JNLP file\&.
+.TP
+-embedjnlp
+.br
+If present, the JNLP file will be embedded in the HTML document\&.
+.TP
+-height \fIheight\fR
+.br
+Height of the application\&.
+.TP
+-htmlparamfile \fIfile\fR
+.br
+Properties file with parameters for the resulting application when it is run in the browser\&.
+.TP
+-isExtension
+.br
+If present, the \f3srcfiles\fR are treated as extensions\&.
+.TP
+-name \fIname\fR
+.br
+Name of the application\&.
+.TP
+-native \fItype\fR
+.br
+Generate self-contained application bundles (if possible)\&. If \fItype\fR is specified, then only a bundle of this type is created\&. List of supported types includes: \f3installer\fR, \f3image\fR, \f3exe\fR, \f3msi\fR, \f3dmg\fR, \f3rpm\fR, \f3deb\fR\&.
+.TP
+-outdir \fIdir\fR
+.br
+Name of the directory that will receive generated output files\&.
+.TP
+-outfile \fIfilename\fR
+.br
+Name (without the extension) of the file that will be generated\&.
+.TP
+-paramfile \fIfile\fR
+.br
+Properties file with default named application parameters\&.
+.TP
+-preloader \fIpreloader-class\fR
+.br
+Qualified name of the preloader class to be executed\&.
+.TP
+-srcdir \fIdir\fR
+.br
+Base directory of the files to package\&.
+.TP
+-srcfiles \fIfiles\fR
+.br
+List of files in the directory specified by the \f3-srcdir\fR option\&. If omitted, all files in the directory (which is a mandatory argument in this case) will be used\&. Files in the list must be separated by spaces\&.
+.TP
+-templateId
+.br
+Application ID of the application for template processing\&.
+.TP
+-templateInFilename
+.br
+Name of the HTML template file\&. Placeholders are in the following form:
+.sp     
+.nf     
+\f3#XXXX\&.YYYY(APPID)#\fP
+.fi     
+.nf     
+\f3\fP
+.fi     
+.sp     
+
+
+Where APPID is the identifier of an application and XXX is one of following:
+.RS     
+.TP 0.2i    
+\(bu
+\f3DT\&.SCRIPT\&.URL\fR
+
+Location of dtjava\&.js in the Deployment Toolkit\&. By default, the location is
+
+http://java\&.com/js/dtjava\&.js
+.TP 0.2i    
+\(bu
+\f3DT\&.SCRIPT\&.CODE\fR
+
+Script element to include dtjava\&.js of the Deployment Toolkit\&.
+.TP 0.2i    
+\(bu
+\f3DT\&.EMBED\&.CODE\&.DYNAMIC\fR
+
+Code to embed the application into a given placeholder\&. It is expected that the code will be wrapped in the \f3function()\fR method\&.
+.TP 0.2i    
+\(bu
+\f3DT\&.EMBED\&.CODE\&.ONLOAD\fR
+
+All the code needed to embed the application into a web page using the \f3onload\fR hook (except inclusion of dtjava\&.js)\&.
+.TP 0.2i    
+\(bu
+\f3DT\&.LAUNCH\&.CODE\fR
+
+Code needed to launch the application\&. It is expected that the code will be wrapped in the \f3function()\fR method\&.
+.RE     
+
+.TP
+-templateOutFilename
+.br
+Name of the HTML file that will be generated from the template\&.
+.TP
+-title \fItitle\fR
+.br
+Title of the application\&.
+.TP
+-vendor \fIvendor\fR
+.br
+Vendor of the application\&.
+.TP
+-width \fIwidth\fR
+.br
+Width of the application\&.
+.TP
+-updatemode \fIupdate-mode\fR
+.br
+Sets the update mode for the JNLP file\&.
+.SH OPTIONS\ FOR\ THE\ MAKEALL\ COMMAND    
+.TP
+-appclass \fIapp-class\fR
+.br
+Qualified name of the application class to be executed\&.
+.TP
+-classpath \fIfiles\fR
+.br
+List of dependent JAR file names\&.
+.TP
+-height \fIheight\fR
+.br
+Height of the application\&.
+.TP
+-name \fIname\fR
+.br
+Name of the application\&.
+.TP
+-preloader \fIpreloader-class\fR
+.br
+Qualified name of the preloader class to be executed\&.
+.TP
+-width \fIwidth\fR
+.br
+Width of the application\&.
+.SH OPTIONS\ FOR\ THE\ SIGNJAR\ COMMAND    
+.TP
+-alias
+.br
+Alias for the key\&.
+.TP
+-keyPass
+.br
+Password for recovering the key\&.
+.TP
+-keyStore \fIfile\fR
+.br
+Keystore file name\&.
+.TP
+-outdir \fIdir\fR
+.br
+Name of the directory that will receive generated output files\&.
+.TP
+-srcdir \fIdir\fR
+.br
+Base directory of the files to be signed\&.
+.TP
+-srcfiles \fIfiles\fR
+.br
+List of files in the directory specified by the \f3-srcdir\fR option\&. If omitted, all files in the directory (which is a mandatory argument in this case) will be used\&. Files in the list must be separated by spaces\&.
+.TP
+-storePass
+.br
+Password to check integrity of the keystore or unlock the keystore
+.TP
+-storeType
+.br
+Keystore type\&. The default value is "jks"\&.
+.SH NOTES    
+.TP 0.2i    
+\(bu
+A \f3-v\fRoption can be used with any task command to enable verbose output\&.
+.TP 0.2i    
+\(bu
+When the \f3-srcdir\fR option is allowed in a command, it can be used more than once\&. If the \f3-srcfiles\fR option is specified, the files named in the argument will be looked for in the location specified in the preceding \f3srcdir\fR option\&. In case there is no \f3-srcdir\fR preceding \f3-srcfiles\fR, the directory where the \f3javapackager\fR command is executed will be used\&.
+.SH EXAMPLES    
+\f3Example 1 Using the -createjar Command\fR
+.sp     
+.nf     
+\f3javapackager \-createjar \-appclass package\&.ClassName\fP
+.fi     
+.nf     
+\f3  \-srcdir classes \-outdir out \-outfile outjar \-v\fP
+.fi     
+.nf     
+\f3\fP
+.fi     
+.sp     
+Packages the contents of the \f3classes\fR directory to \f3outjar\&.jar\fR, sets the application class to \f3package\&.ClassName\fR\&.
+.PP
+\f3Example 2 Using the -deploy Command\fR
+.sp     
+.nf     
+\f3javapackager \-deploy \-outdir outdir \-outfile outfile \-width 34 \-height 43 \fP
+.fi     
+.nf     
+\f3  \-name AppName \-appclass package\&.ClassName \-v \-srcdir compiled\fP
+.fi     
+.nf     
+\f3\fP
+.fi     
+.sp     
+Generates \f3outfile\&.jnlp\fR and the corresponding \f3outfile\&.html\fR files in \f3outdir\fR for application \f3AppName\fR, which is started by \f3package\&.ClassName\fR and has dimensions of 34 by 43 pixels\&.
+.PP
+\f3Example 3 Using the -makeall Command\fR
+.sp     
+.nf     
+\f3javapackager \-makeall \-appclass brickbreaker\&.Main \-name BrickBreaker \-width 600\fP
+.fi     
+.nf     
+\f3\-height 600\fP
+.fi     
+.nf     
+\f3\fP
+.fi     
+.sp     
+Does all the packaging work including compilation, \f3createjar\fR, and \f3deploy\fR\&.
+.PP
+\f3Example 4 Using the -signjar Command\fR
+.sp     
+.nf     
+\f3javapackager \-signJar \-\-outdir dist \-keyStore sampleKeystore\&.jks \-storePass ****\fP
+.fi     
+.nf     
+\f3\-alias javafx \-keypass **** \-srcdir dist\fP
+.fi     
+.nf     
+\f3\fP
+.fi     
+.sp     
+Signs all of the JAR files in the \f3dist\fR directory, attaches a certificate with the specified alias, \f3keyStore\fR and \f3storePass\fR, and puts the signed JAR files back into the \f3dist\fR directory\&.
+.RE
+.br
+'pl 8.5i
+'bp

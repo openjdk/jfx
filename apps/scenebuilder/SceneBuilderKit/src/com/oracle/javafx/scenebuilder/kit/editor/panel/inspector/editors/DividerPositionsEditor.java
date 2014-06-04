@@ -31,7 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor.handleIndeterminate;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -126,14 +125,7 @@ public class DividerPositionsEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-
-                getDoubleFields().get(0).requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> getDoubleFields().get(0).requestFocus());
     }
 
     private void fillVBox(List<Double> values) {
@@ -143,12 +135,7 @@ public class DividerPositionsEditor extends PropertyEditor {
             DoubleField doubleField = new DoubleField();
             doubleField.setText(EditorUtils.valAsStr(val));
             vbox.getChildren().add(doubleField);
-            EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    userUpdateValueProperty(getValue());
-                }
-            };
+            EventHandler<ActionEvent> valueListener = event -> userUpdateValueProperty(getValue());
             setNumericEditorBehavior(this, doubleField, valueListener, false);
         }
     }

@@ -32,10 +32,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -995,5 +992,140 @@ public class MultipleSelectionModelImplTest {
         // being fired where wasAdded() is true, wasRemoved() is true, but most
         // importantly, wasReplaced() is true
         tableSM.clearAndSelect(1);
+    }
+
+    @Test public void test_rt35624_selectedIndices_downwards() {
+        model.select(2);
+
+        msModel().getSelectedIndices().addListener(new ListChangeListener<Integer>() {
+            @Override public void onChanged(final Change<? extends Integer> change) {
+                while (change.next()) {
+                    // we expect two items in the added list: 3 and 4, as index
+                    // 2 has previously been selected
+                    assertEquals(2, change.getAddedSize());
+                    assertEquals(FXCollections.observableArrayList(3, 4), change.getAddedSubList());
+                }
+
+                // In the actual list, we expect three items: 2, 3 and 4
+                assertEquals(3, change.getList().size());
+                assertEquals(FXCollections.observableArrayList(2, 3, 4), change.getList());
+            }
+        });
+
+        model.selectIndices(2, 3, 4);
+    }
+
+    @Test public void test_rt35624_selectedIndices_upwards() {
+        model.select(4);
+
+        msModel().getSelectedIndices().addListener(new ListChangeListener<Integer>() {
+            @Override public void onChanged(final Change<? extends Integer> change) {
+                while (change.next()) {
+                    // we expect two items in the added list: 3 and 2, as index
+                    // 4 has previously been selected
+                    assertEquals(2, change.getAddedSize());
+                    assertEquals(FXCollections.observableArrayList(2, 3), change.getAddedSubList());
+                }
+
+                // In the actual list, we expect three items: 2, 3 and 4
+                assertEquals(3, change.getList().size());
+                assertEquals(FXCollections.observableArrayList(2, 3, 4), change.getList());
+            }
+        });
+
+        model.selectIndices(4, 3, 2);
+    }
+
+    @Test public void test_rt35624_selectedItems_downwards() {
+        model.select(2);
+
+        msModel().getSelectedItems().addListener(new ListChangeListener<String>() {
+            @Override public void onChanged(final Change<? extends String> change) {
+                while (change.next()) {
+                    // we expect two items in the added list: the items in index
+                    // 3 and 4, as index 2 has previously been selected
+                    assertEquals(2, change.getAddedSize());
+
+                    if (isTree()) {
+                        assertEquals(FXCollections.observableArrayList(
+                                root.getChildren().get(2),
+                                root.getChildren().get(3)
+                        ), change.getAddedSubList());
+                    } else {
+                        assertEquals(FXCollections.observableArrayList(
+                                data.get(3),
+                                data.get(4)
+                        ), change.getAddedSubList());
+                    }
+                }
+
+                // In the actual list, we expect three items: the values at index
+                // 2, 3 and 4
+                assertEquals(3, change.getList().size());
+
+                if (isTree()) {
+                    assertEquals(FXCollections.observableArrayList(
+                            root.getChildren().get(1),
+                            root.getChildren().get(2),
+                            root.getChildren().get(3)
+                    ), change.getList());
+                } else {
+                    assertEquals(FXCollections.observableArrayList(
+                            data.get(2),
+                            data.get(3),
+                            data.get(4)
+                    ), change.getList());
+                }
+            }
+        });
+
+        model.selectIndices(2, 3, 4);
+    }
+
+    @Test public void test_rt35624_selectedItems_upwards() {
+        model.select(4);
+
+        msModel().getSelectedItems().addListener(new ListChangeListener<String>() {
+            @Override
+            public void onChanged(final Change<? extends String> change) {
+                while (change.next()) {
+                    // we expect two items in the added list: the items in index
+                    // 2 and 3, as index 4 has previously been selected
+                    assertEquals(2, change.getAddedSize());
+
+                    if (isTree()) {
+                        assertEquals(FXCollections.observableArrayList(
+                                root.getChildren().get(1),
+                                root.getChildren().get(2)
+                        ), change.getAddedSubList());
+                    } else {
+                        assertEquals(FXCollections.observableArrayList(
+                                data.get(2),
+                                data.get(3)
+                        ), change.getAddedSubList());
+                    }
+                }
+
+                // In the actual list, we expect three items: the values at index
+                // 2, 3 and 4
+                assertEquals(3, change.getList().size());
+
+                if (isTree()) {
+                    assertEquals(FXCollections.observableArrayList(
+                            root.getChildren().get(1),
+                            root.getChildren().get(2),
+                            root.getChildren().get(3)
+                    ), change.getList());
+                } else {
+                    assertEquals(FXCollections.observableArrayList(
+                            data.get(2),
+                            data.get(3),
+                            data.get(4)
+                    ), change.getList());
+                }
+            }
+        });
+
+        model.selectIndices(4, 3, 2);
     }
 }

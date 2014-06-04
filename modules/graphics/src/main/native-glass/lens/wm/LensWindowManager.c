@@ -159,6 +159,24 @@ LensResult lens_wm_notifyPlatformWindowRelease(JNIEnv *env, NativeWindow window)
     return LENS_OK;
 }
 
+void lens_wm_repaint_all(JNIEnv *env) {
+    render_lock();
+    glass_window_list_lock();
+    NativeWindow w = glass_window_list_getHead();
+    while (w) {
+        if (w && w->view) {
+            glass_application_notifyViewEvent(env,
+                                              w->view,
+                                              com_sun_glass_events_ViewEvent_REPAINT,
+                                              w->currentBounds.x, w->currentBounds.y,
+                                              w->currentBounds.width, w->currentBounds.height);
+        }
+        w = w->nextWindow;
+    }
+    glass_window_list_unlock();
+    render_unlock();
+}
+
 void lens_wm_repaint(JNIEnv *env, NativeWindow window) {
     render_lock();
 
@@ -1183,6 +1201,8 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
                 break;
             case com_sun_glass_events_TouchEvent_TOUCH_STILL:
                 //nothing to do
+                _mousePosX = absX;
+                _mousePosY = absY;
                 GLASS_LOG_FINEST("touch -> mouse - still, ignoring");
                 break;
             case com_sun_glass_events_TouchEvent_TOUCH_RELEASED:
@@ -1196,15 +1216,20 @@ void lens_wm_notifyMultiTouchEvent(JNIEnv *env,
     }
     
     if (touchWindow != NULL) {
-        dx = -touchWindow->currentBounds.x;
-        dy = -touchWindow->currentBounds.y;
-        glass_application_notifyMultiTouchEvent(env, touchWindow, count,
-                                                states, ids, xabs, yabs,
-                                                dx, dy);
-        if (primaryPointIndex == -1) {
-            //all released
-            touchWindow = NULL;
+        //Check that touchWindow is still valid before using it. 
+        glass_window_list_lock();
+        if (glass_window_isExist(touchWindow)) {
+            dx = -touchWindow->currentBounds.x;
+            dy = -touchWindow->currentBounds.y;
+            glass_application_notifyMultiTouchEvent(env, touchWindow, count,
+                                                    states, ids, xabs, yabs,
+                                                    dx, dy);
+            if (primaryPointIndex == -1) {
+                //all released
+                touchWindow = NULL;
+            }
         }
+        glass_window_list_unlock();
     }
    
 }

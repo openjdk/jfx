@@ -43,11 +43,7 @@ import static org.junit.Assert.assertTrue;
  * Tests for the ScheduledService.
  */
 public class ScheduledServiceTest extends ServiceTestBase {
-    private static final Callback<Void, AbstractTask> EPIC_FAIL_FACTORY = new Callback<Void, AbstractTask>() {
-        @Override public AbstractTask call(Void param) {
-            return new EpicFailTask();
-        }
-    };
+    private static final Callback<Void, AbstractTask> EPIC_FAIL_FACTORY = param -> new EpicFailTask();
 
     /**
      * The service that we're going to test. Because a ScheduledService
@@ -610,15 +606,11 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test public void cumulativePeriodResetOnSuccessfulRun() {
         final AtomicInteger counter = new AtomicInteger();
-        taskFactory = new Callback<Void, AbstractTask>() {
-            @Override public AbstractTask call(Void param) {
-                return new AbstractTask() {
-                    @Override protected String call() throws Exception {
-                        int c = counter.incrementAndGet();
-                        if (c < 10) throw new Exception("Kaboom!");
-                        return "Success";
-                    }
-                };
+        taskFactory = param -> new AbstractTask() {
+            @Override protected String call() throws Exception {
+                int c = counter.incrementAndGet();
+                if (c < 10) throw new Exception("Kaboom!");
+                return "Success";
             }
         };
         s.setPeriod(Duration.seconds(1));
@@ -759,15 +751,11 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test public void lastValueIsSetAfterFailedFirstIterationAndSuccessfulSecondIteration() {
         final AtomicInteger counter = new AtomicInteger();
-        taskFactory = new Callback<Void, AbstractTask>() {
-            @Override public AbstractTask call(Void param) {
-                return new AbstractTask() {
-                    @Override protected String call() throws Exception {
-                        int c = counter.incrementAndGet();
-                        if (c == 1) throw new Exception("Bombed out!");
-                        return "Success";
-                    }
-                };
+        taskFactory = param -> new AbstractTask() {
+            @Override protected String call() throws Exception {
+                int c = counter.incrementAndGet();
+                if (c == 1) throw new Exception("Bombed out!");
+                return "Success";
             }
         };
         s.start();
@@ -780,15 +768,11 @@ public class ScheduledServiceTest extends ServiceTestBase {
 
     @Test public void lastValueIsUnchangedAfterSuccessfulFirstIterationAndFailedSecondIteration() {
         final AtomicInteger counter = new AtomicInteger();
-        taskFactory = new Callback<Void, AbstractTask>() {
-            @Override public AbstractTask call(Void param) {
-                return new AbstractTask() {
-                    @Override protected String call() throws Exception {
-                        int c = counter.incrementAndGet();
-                        if (c == 1) return "Success";
-                        throw new Exception("Bombed out!");
-                    }
-                };
+        taskFactory = param -> new AbstractTask() {
+            @Override protected String call() throws Exception {
+                int c = counter.incrementAndGet();
+                if (c == 1) return "Success";
+                throw new Exception("Bombed out!");
             }
         };
         s.start();
@@ -812,31 +796,17 @@ public class ScheduledServiceTest extends ServiceTestBase {
         AtomicBoolean onReadyCalled = new AtomicBoolean();
         AtomicBoolean onScheduledCalled = new AtomicBoolean();
         AtomicBoolean onCancelledCalled = new AtomicBoolean();
-        s.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                s.cancel();
-                // Reset these so that they only get set to true if called
-                // after the cancel step
-                onReadyCalled.set(false);
-                onScheduledCalled.set(false);
-                onCancelledCalled.set(false);
-            }
+        s.setOnSucceeded(event -> {
+            s.cancel();
+            // Reset these so that they only get set to true if called
+            // after the cancel step
+            onReadyCalled.set(false);
+            onScheduledCalled.set(false);
+            onCancelledCalled.set(false);
         });
-        s.setOnReady(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                onReadyCalled.set(true);
-            }
-        });
-        s.setOnScheduled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                onScheduledCalled.set(true);
-            }
-        });
-        s.setOnCancelled(new EventHandler<WorkerStateEvent>() {
-            @Override public void handle(WorkerStateEvent event) {
-                onCancelledCalled.set(true);
-            }
-        });
+        s.setOnReady(event -> onReadyCalled.set(true));
+        s.setOnScheduled(event -> onScheduledCalled.set(true));
+        s.setOnCancelled(event -> onCancelledCalled.set(true));
 
         s.start();
         assertFalse(s.isRunning());

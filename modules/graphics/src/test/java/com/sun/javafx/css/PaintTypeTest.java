@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,12 +45,12 @@ public class PaintTypeTest {
     public PaintTypeTest() {
     }
 
-    Stop[] stops = new Stop[] {
+    final Stop[] stops = new Stop[] {
         new Stop(0.0f, Color.WHITE),
         new Stop(1.0f, Color.BLACK)
     };
 
-    Paint[] paints = new Paint[] {
+    final Paint[] paints = new Paint[] {
         Color.rgb(0, 128, 255),
         new LinearGradient(0.0f, 0.0f, 1.0f, 1.0f, true, CycleMethod.NO_CYCLE, stops),
         new RadialGradient(225, 0.28, 1f, 1f, 5.0f, false, CycleMethod.NO_CYCLE, stops)
@@ -94,7 +94,7 @@ public class PaintTypeTest {
         return new ParsedValueImpl<ParsedValue[],Paint>(values, PaintConverter.RadialGradientConverter.getInstance());
     }
 
-    ParsedValue[] paintValues = new ParsedValue[] {
+    final ParsedValue[] paintValues = new ParsedValue[] {
         new ParsedValueImpl<Paint,Paint>(paints[0], null),
         linearGradientValues((LinearGradient)paints[1]),
         radialGradientValues((RadialGradient)paints[2])

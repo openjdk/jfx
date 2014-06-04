@@ -82,10 +82,8 @@ public class EventAnyTest {
         Node n = (Node) target.newInstance();
         delivered = false;
 
-        n.addEventHandler(type, new EventHandler() {
-            @Override public void handle(Event event) {
-                delivered = true;
-            }
+        n.addEventHandler(type, event1 -> {
+            delivered = true;
         });
 
         Event.fireEvent(n, event);

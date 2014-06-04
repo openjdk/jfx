@@ -179,13 +179,9 @@ public class ToggleButtonTest {
     @Test public void fireAndCheckActionEventFired() {
         final Boolean []flag = new Boolean[1];
         flag[0] = false;
-        toggle.addEventHandler(EventType.ROOT, new EventHandler<Event>() {
-
-            @Override
-            public void handle(Event event) {
-                if (event != null && event instanceof ActionEvent) {
-                    flag[0] = true;
-                }
+        toggle.addEventHandler(EventType.ROOT, event -> {
+            if (event != null && event instanceof ActionEvent) {
+                flag[0] = true;
             }
         });
         toggle.fire();

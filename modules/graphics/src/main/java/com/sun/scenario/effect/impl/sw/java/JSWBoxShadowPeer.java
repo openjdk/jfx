@@ -38,36 +38,32 @@ import com.sun.scenario.effect.impl.HeapImage;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.BoxRenderState;
 
-public class JSWBoxShadowPeer extends JSWEffectPeer {
+public class JSWBoxShadowPeer extends JSWEffectPeer<BoxRenderState> {
 
     public JSWBoxShadowPeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);
     }
 
     @Override
-    protected final BoxShadow getEffect() {
-        return (BoxShadow)super.getEffect();
-    }
-
-    @Override
     public ImageData filter(Effect effect,
+                            BoxRenderState brstate,
                             BaseTransform transform,
                             Rectangle outputClip,
                             ImageData... inputs)
     {
+        setRenderState(brstate);
         // NOTE: for now, all input images must be TYPE_INT_ARGB_PRE
-        setEffect(effect);
-        Rectangle dstBounds = getResultBounds(transform, outputClip, inputs);
 
         // Calculate the amount the image grows on each iteration (size-1)
         boolean horizontal = (getPass() == 0);
-        int hinc = horizontal ? getEffect().getHorizontalSize() - 1 : 0;
-        int vinc = horizontal ? 0 : getEffect().getVerticalSize() - 1;
+        int hinc = horizontal ? brstate.getBoxPixelSize(0) - 1 : 0;
+        int vinc = horizontal ? 0 : brstate.getBoxPixelSize(1) - 1;
         if (hinc < 0) hinc = 0;
         if (vinc < 0) vinc = 0;
-        int iterations = getEffect().getPasses();
-        float spread = getEffect().getSpread();
+        int iterations = brstate.getBlurPasses();
+        float spread = brstate.getSpread();
         if (horizontal && (iterations < 1 || (hinc < 1 && vinc < 1))) {
             inputs[0].addref();
             return inputs[0];
@@ -77,7 +73,7 @@ public class JSWBoxShadowPeer extends JSWEffectPeer {
         int growx = (hinc * iterations + 1) & (~0x1);
         int growy = (vinc * iterations + 1) & (~0x1);
 
-        // Assert: ((FilterEffect) effect).operatesInUserSpace()...
+        // Assert: rstate.getEffectTransformSpace() == UserSpace
         // NOTE: We could still have a transformed ImageData for other reasons...
         HeapImage src = (HeapImage)inputs[0].getUntransformedImage();
         Rectangle srcr = inputs[0].getUntransformedBounds();
@@ -114,7 +110,7 @@ public class JSWBoxShadowPeer extends JSWEffectPeer {
                                     spread);
             } else {
                 float shadowColor[] =
-                     getEffect().getColor().getPremultipliedRGBComponents();
+                     brstate.getShadowColor().getPremultipliedRGBComponents();
                 if (shadowColor[3] == 1f &&
                     shadowColor[0] == 0f &&
                     shadowColor[1] == 0f &&

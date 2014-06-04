@@ -158,7 +158,7 @@ public class AdjustToggleGroupJob extends Job {
                             = new RemovePropertyJob(declaration, getEditorController());
                     final AddPropertyJob addDeclarationJob
                             = new AddPropertyJob(declaration, firstReference.getParentInstance(), 
-                                    -1, getEditorController());
+                                    0, getEditorController());
                     final AddPropertyJob addReferenceJob
                             = new AddPropertyJob(firstReference, declarer, -1, getEditorController());
                     batchJob.addSubJob(removeFirstReferenceJob);

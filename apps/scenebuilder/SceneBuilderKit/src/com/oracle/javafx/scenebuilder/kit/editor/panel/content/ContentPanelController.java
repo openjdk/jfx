@@ -71,6 +71,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
@@ -78,8 +79,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -167,48 +168,18 @@ public class ContentPanelController extends AbstractFxmlPanelController
         this.editModeController = new EditModeController(this);
         this.pickModeController = new PickModeController(this);
         
-        editorController.getDragController().dragSourceProperty().addListener(new 
-                ChangeListener<AbstractDragSource>() {
-                    @Override
-                    public void changed(ObservableValue<? extends AbstractDragSource> ov, AbstractDragSource t, AbstractDragSource t1) {
-                        dragSourceDidChange();
-                    }
-                }
+        editorController.getDragController().dragSourceProperty().addListener((ChangeListener<AbstractDragSource>) (ov, t, t1) -> dragSourceDidChange()
         );
         
-        editorController.getDragController().dropTargetProperty().addListener(new 
-                ChangeListener<AbstractDropTarget>() {
-                    @Override
-                    public void changed(ObservableValue<? extends AbstractDropTarget> ov, AbstractDropTarget t, AbstractDropTarget t1) {
-                        dropTargetDidChange();
-                    }
-                }
+        editorController.getDragController().dropTargetProperty().addListener((ChangeListener<AbstractDropTarget>) (ov, t, t1) -> dropTargetDidChange()
         );
         
-        editorController.themeProperty().addListener(new 
-                ChangeListener<Theme>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Theme> ov, Theme t, Theme t1) {
-                        themeDidChange();
-                    }
-                }
+        editorController.themeProperty().addListener((ChangeListener<Theme>) (ov, t, t1) -> themeDidChange()
         );
         
-        editorController.sceneStyleSheetProperty().addListener(new 
-                ListChangeListener<File>() {
-                    @Override
-                    public void onChanged(ListChangeListener.Change<? extends File> change) {
-                        sceneStyleSheetsDidChange();
-                    }
-                }
+        editorController.sceneStyleSheetProperty().addListener((ListChangeListener<File>) change -> sceneStyleSheetsDidChange()
         );
-        editorController.pickModeEnabledProperty().addListener(new 
-                ChangeListener<Boolean>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                        pickModeDidChange();
-                    }
-                }
+        editorController.pickModeEnabledProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> pickModeDidChange()
         );
     }
 
@@ -401,14 +372,20 @@ public class ContentPanelController extends AbstractFxmlPanelController
      * @return null or the topmost FXOMObject located at (sceneX, sceneY)
      */
     public FXOMObject pick(double sceneX, double sceneY, Set<FXOMObject> excludes) {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
         final FXOMObject result;
-        if ((fxomDocument == null) 
-                || (fxomDocument.getFxomRoot() == null)
-                || excludes.contains(fxomDocument.getFxomRoot())) {
-            result = null;
+        
+        if (isContentDisplayable()) {
+            final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+            assert fxomDocument != null;
+            if ((fxomDocument.getFxomRoot() == null) 
+                    || excludes.contains(fxomDocument.getFxomRoot())) {
+                result = null;
+            } else {
+                assert fxomDocument.getFxomRoot().getSceneGraphObject() instanceof Node;
+                result = pick(fxomDocument.getFxomRoot(), sceneX, sceneY, excludes);
+            }
         } else {
-            result = pick(fxomDocument.getFxomRoot(), sceneX, sceneY, excludes);
+            result = null;
         }
         
         return result;
@@ -433,42 +410,36 @@ public class ContentPanelController extends AbstractFxmlPanelController
         
         final FXOMObject result;
         
+        assert isContentDisplayable();
         assert startObject != null;
-        assert startObject.getFxomDocument() == getEditorController().getFxomDocument();
+        assert startObject.getSceneGraphObject() instanceof Node;
         assert excludes != null;
         assert excludes.contains(startObject) == false;
         
-        if (startObject.getSceneGraphObject() instanceof Node) {
-            picker.getExcludes().clear();
-            for (FXOMObject exclude : excludes) {
-                if (exclude.getSceneGraphObject() instanceof Node) {
-                    picker.getExcludes().add((Node) exclude.getSceneGraphObject());
-                }
+        picker.getExcludes().clear();
+        for (FXOMObject exclude : excludes) {
+            if (exclude.getSceneGraphObject() instanceof Node) {
+                picker.getExcludes().add((Node) exclude.getSceneGraphObject());
             }
+        }
 
-            final Node startNode = (Node) startObject.getSceneGraphObject();
-            final List<Node> hitNodes = picker.pick(startNode, sceneX, sceneY);
-            if (hitNodes == null) {
-                result = null;
-            } else {
-                assert hitNodes.isEmpty() == false;
-                
-                FXOMObject hitObject = null;
-                Node hitNode = null;
-                final Iterator<Node> it = hitNodes.iterator();
-                while ((hitObject == null) && it.hasNext()) {
-                    hitNode = it.next();
-                    hitObject = searchWithNode(hitNode, sceneX, sceneY);
-                    if (excludes.contains(hitObject)) {
-                        hitObject = null;
-                        hitNode = null;
-                    }
-                }
-                result = hitObject;
-            }
-            
-        } else {
+        final Node startNode = (Node) startObject.getSceneGraphObject();
+        final List<Node> hitNodes = picker.pick(startNode, sceneX, sceneY);
+        if (hitNodes == null) {
             result = null;
+        } else {
+            assert hitNodes.isEmpty() == false;
+
+            FXOMObject hitObject = null;
+            final Iterator<Node> it = hitNodes.iterator();
+            while ((hitObject == null) && it.hasNext()) {
+                final Node hitNode = it.next();
+                hitObject = searchWithNode(hitNode, sceneX, sceneY);
+                if (excludes.contains(hitObject)) {
+                    hitObject = null;
+                }
+            }
+            result = hitObject;
         }
         
         return result;
@@ -652,8 +623,8 @@ public class ContentPanelController extends AbstractFxmlPanelController
      * @treatAsPrivate
      * Returns true if this content panel is able to display the content ie
      * 1) fxomDocument != null
-     * 2) fxomDocument.getFxomRoot() != null
-     * 3) fxomDocument.getFxomRoot().isNode()
+     * 2) (fxomDocument.getFxomRoot() == null) or fxomDocument.getFxomRoot().isNode()
+     * 3) workspaceController.getLayoutException() == null
      * 
      * @return true if this content panel is able to display the content
      */
@@ -661,10 +632,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
         final boolean result;
         
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        if ((fxomDocument == null) || (fxomDocument.getFxomRoot() == null)) {
+        if (fxomDocument == null) {
             result = false;
+        } else if (fxomDocument.getFxomRoot() == null) {
+            result = true;
         } else {
-            result = fxomDocument.getFxomRoot().isNode();
+            result = fxomDocument.getFxomRoot().isNode()
+                    && workspaceController.getLayoutException() == null;
         }
         
         return result;
@@ -690,7 +664,16 @@ public class ContentPanelController extends AbstractFxmlPanelController
             fxomDocument.beginHoldingSceneGraph(this);
         }
         
+        final Exception currentLayoutException
+                = workspaceController.getLayoutException();
         workspaceController.setFxomDocument(fxomDocument);
+        final Exception newLayoutException
+                = workspaceController.getLayoutException();
+        if ((newLayoutException != null) && (newLayoutException != currentLayoutException)) {
+            getEditorController().getMessageLog().logWarningMessage(
+                    "log.warning.layout.failed", newLayoutException.getMessage());
+        }
+        
         if (isOutlinesVisible()) {
             updateOutlines();
         }
@@ -950,12 +933,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
     }
     
     private final EventHandler<Event> eventTracingFilter
-            = new EventHandler<Event>() {
-        @Override
-        public void handle(Event e) {
-            traceEvent(e);
-        }
-    };
+            = e -> traceEvent(e);
     
     
     private void dragSourceDidChange() {

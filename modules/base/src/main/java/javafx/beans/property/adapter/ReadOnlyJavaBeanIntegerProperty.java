@@ -66,12 +66,7 @@ public final class ReadOnlyJavaBeanIntegerProperty extends ReadOnlyIntegerProper
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new Runnable() {
-            @Override
-            public void run() {
-                ReadOnlyJavaBeanIntegerProperty.this.descriptor.removeListener(listener);
-            }
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
@@ -83,16 +78,14 @@ public final class ReadOnlyJavaBeanIntegerProperty extends ReadOnlyIntegerProper
      */
     @Override
     public int get() {
-        return AccessController.doPrivileged(new PrivilegedAction<Integer>() {
-            public Integer run() {
-                try {
-                    return ((Number)MethodUtil.invoke(
-                        descriptor.getGetter(), getBean(), (Object[])null)).intValue();
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
+        return AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
+            try {
+                return ((Number)MethodUtil.invoke(
+                    descriptor.getGetter(), getBean(), (Object[])null)).intValue();
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
         }, acc);
     }

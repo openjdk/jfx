@@ -194,9 +194,10 @@ public class DWGlyphLayout extends GlyphLayout {
         int[] indices = new int[glyphCount];
         Arrays.fill(indices, -1);
         for (int i = 0; i < clusterMap.length; i++) {
+            int index = clusterMap[i];
             /* keep character offset for the first glyph in the cluster */
-            if (indices[clusterMap[i]] == -1) {
-                indices[clusterMap[i]] = i;
+            if (0 <= index && index < glyphCount && indices[index] == -1) {
+                indices[index] = i;
             }
         }
         if (indices.length > 0) {

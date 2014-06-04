@@ -38,11 +38,7 @@ final class LensLogger {
     private static PlatformLogger initLogger() {
         PlatformLogger logger = PlatformLogger.getLogger("lens");
         String levelString = AccessController.doPrivileged(
-        new PrivilegedAction<String>() {
-            public String run() {
-                return System.getProperty("log.lens", "SEVERE").toUpperCase(Locale.ROOT);
-            }
-        });
+                (PrivilegedAction<String>) () -> System.getProperty("log.lens", "SEVERE").toUpperCase(Locale.ROOT));
         try {
             logger.setLevel(Level.valueOf(levelString));
         } catch (Exception e) {

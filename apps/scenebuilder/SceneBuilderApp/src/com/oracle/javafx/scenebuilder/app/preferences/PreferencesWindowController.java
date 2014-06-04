@@ -31,7 +31,9 @@
  */
 package com.oracle.javafx.scenebuilder.app.preferences;
 
+import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ToolTheme;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
+
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.ALIGNMENT_GUIDES_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BACKGROUND_IMAGE;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.CSS_TABLE_COLUMNS_ORDERING_REVERSED;
@@ -42,22 +44,34 @@ import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesControll
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.PARENT_RING_COLOR;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.RECENT_ITEMS_SIZE;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.TOOL_THEME;
+
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.BackgroundImage;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.CSSAnalyzerColumnsOrder;
+
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_ALIGNMENT_GUIDES_COLOR;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_BACKGROUND_IMAGE;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_HIERARCHY_DISPLAY_OPTION;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_LIBRARY_DISPLAY_OPTION;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_PARENT_RING_COLOR;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_RECENT_ITEMS_SIZE;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_ROOT_CONTAINER_HEIGHT;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_ROOT_CONTAINER_WIDTH;
+import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.DEFAULT_TOOL_THEME;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal.recentItemsSizes;
-import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleField;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.library.LibraryPanelController.DISPLAY_MODE;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlWindowController;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
-import java.net.URL;
+
 import java.util.Arrays;
+
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.CustomMenuItem;
@@ -79,6 +93,8 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
     @FXML
     private ChoiceBox<BackgroundImage> backgroundImage;
     @FXML
+    private ChoiceBox<ToolTheme> toolTheme;
+    @FXML
     private ChoiceBox<DISPLAY_MODE> libraryDisplayOption;
     @FXML
     private ChoiceBox<DisplayOption> hierarchyDisplayOption;
@@ -99,6 +115,9 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
     @FXML
     private ChoiceBox<Integer> recentItemsSize;
 
+    private PaintPicker alignmentColorPicker;
+    private PaintPicker parentRingColorPicker;
+
     public PreferencesWindowController() {
         super(PreferencesWindowController.class.getResource("Preferences.fxml"), //NOI18N
                 I18N.getBundle());
@@ -118,32 +137,24 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
 
         // Root container size
         rootContainerHeight.setText(String.valueOf(recordGlobal.getRootContainerHeight()));
-        rootContainerHeight.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent t) {
-                final String value = rootContainerHeight.getText();
-                recordGlobal.setRootContainerHeight(Double.valueOf(value));
-                rootContainerHeight.selectAll();
-                // Update preferences
-                recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_HEIGHT);
-                // Update UI
-                recordGlobal.refreshRootContainerHeight();
-            }
+        rootContainerHeight.setOnAction(t -> {
+            final String value = rootContainerHeight.getText();
+            recordGlobal.setRootContainerHeight(Double.valueOf(value));
+            rootContainerHeight.selectAll();
+            // Update preferences
+            recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_HEIGHT);
+            // Update UI
+            recordGlobal.refreshRootContainerHeight();
         });
         rootContainerWidth.setText(String.valueOf(recordGlobal.getRootContainerWidth()));
-        rootContainerWidth.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent t) {
-                final String value = rootContainerWidth.getText();
-                recordGlobal.setRootContainerWidth(Double.valueOf(value));
-                rootContainerWidth.selectAll();
-                // Update preferences
-                recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_WIDTH);
-                // Update UI
-                recordGlobal.refreshRootContainerWidth();
-            }
+        rootContainerWidth.setOnAction(t -> {
+            final String value = rootContainerWidth.getText();
+            recordGlobal.setRootContainerWidth(Double.valueOf(value));
+            rootContainerWidth.selectAll();
+            // Update preferences
+            recordGlobal.writeToJavaPreferences(ROOT_CONTAINER_WIDTH);
+            // Update UI
+            recordGlobal.refreshRootContainerWidth();
         });
 
         // Background image
@@ -151,11 +162,12 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
         backgroundImage.setValue(recordGlobal.getBackgroundImage());
         backgroundImage.getSelectionModel().selectedItemProperty().addListener(new BackgroundImageListener());
 
+        // PaintPicker delegate shared by alignmentColorPicker and parentRingColorPicker
         final PaintPicker.Delegate delegate = new PaintPickerDelegate();
 
         // Alignment guides color
         final Color alignmentColor = recordGlobal.getAlignmentGuidesColor();
-        final PaintPicker alignmentColorPicker = new PaintPicker(delegate, Mode.COLOR);
+        alignmentColorPicker = new PaintPicker(delegate, Mode.COLOR);
         alignmentGuidesGraphic.setFill(alignmentColor);
         alignmentGuidesMenuItem.setContent(alignmentColorPicker);
         alignmentColorPicker.setPaintProperty(alignmentColor);
@@ -164,12 +176,17 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
 
         // Parent ring color
         final Color parentRingColor = recordGlobal.getParentRingColor();
-        final PaintPicker parentRingColorPicker = new PaintPicker(delegate, Mode.COLOR);
+        parentRingColorPicker = new PaintPicker(delegate, Mode.COLOR);
         parentRingGraphic.setFill(parentRingColor);
         parentRingMenuItem.setContent(parentRingColorPicker);
         parentRingColorPicker.setPaintProperty(parentRingColor);
         parentRingColorPicker.paintProperty().addListener(
                 new ParentRingColorListener(parentRingGraphic));
+
+        // Tool theme
+        toolTheme.getItems().setAll(Arrays.asList(ToolTheme.class.getEnumConstants()));
+        toolTheme.setValue(recordGlobal.getToolTheme());
+        toolTheme.getSelectionModel().selectedItemProperty().addListener(new ToolThemeListener());
 
         // Library view option
         final DISPLAY_MODE availableDisplayMode[] = new DISPLAY_MODE[]{
@@ -212,6 +229,44 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
         super.closeWindow();
     }
 
+    @FXML
+    void resetToDefaultAction(ActionEvent event) {
+        final PreferencesController preferencesController
+                = PreferencesController.getSingleton();
+        final PreferencesRecordGlobal recordGlobal
+                = preferencesController.getRecordGlobal();
+
+        // Root container size
+        rootContainerHeight.setText(String.valueOf(DEFAULT_ROOT_CONTAINER_HEIGHT));
+        rootContainerHeight.getOnAction().handle(new ActionEvent());
+        rootContainerWidth.setText(String.valueOf(DEFAULT_ROOT_CONTAINER_WIDTH));
+        rootContainerWidth.getOnAction().handle(new ActionEvent());
+
+        // Background image
+        backgroundImage.setValue(DEFAULT_BACKGROUND_IMAGE);
+
+        // Alignment guides color
+        alignmentColorPicker.setPaintProperty(DEFAULT_ALIGNMENT_GUIDES_COLOR);
+
+        // Parent ring color
+        parentRingColorPicker.setPaintProperty(DEFAULT_PARENT_RING_COLOR);
+
+        // Tool theme
+        toolTheme.setValue(DEFAULT_TOOL_THEME);
+
+        // Library view option
+        libraryDisplayOption.setValue(DEFAULT_LIBRARY_DISPLAY_OPTION);
+
+        // Hierarchy display option
+        hierarchyDisplayOption.setValue(DEFAULT_HIERARCHY_DISPLAY_OPTION);
+
+        // CSS analyzer column order
+        cssAnalyzerColumnsOrder.setValue(recordGlobal.getDefaultCSSAnalyzerColumnsOrder());
+
+        // Number of open recent items
+        recentItemsSize.setValue(DEFAULT_RECENT_ITEMS_SIZE);
+    }
+
     /**
      * *************************************************************************
      * Static inner class
@@ -231,6 +286,23 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
             recordGlobal.writeToJavaPreferences(BACKGROUND_IMAGE);
             // Update UI
             recordGlobal.refreshBackgroundImage();
+        }
+    }
+
+    private static class ToolThemeListener implements ChangeListener<ToolTheme> {
+
+        @Override
+        public void changed(ObservableValue<? extends ToolTheme> observable,
+                ToolTheme oldValue, ToolTheme newValue) {
+            final PreferencesController preferencesController
+                    = PreferencesController.getSingleton();
+            final PreferencesRecordGlobal recordGlobal
+                    = preferencesController.getRecordGlobal();
+            // Update preferences
+            recordGlobal.setToolTheme(newValue);
+            recordGlobal.writeToJavaPreferences(TOOL_THEME);
+            // Update UI
+            recordGlobal.refreshToolTheme();
         }
     }
 
@@ -347,7 +419,7 @@ public class PreferencesWindowController extends AbstractFxmlWindowController {
             graphic.setFill(newValue);
         }
     }
-    
+
     private static class PaintPickerDelegate implements PaintPicker.Delegate {
 
         @Override

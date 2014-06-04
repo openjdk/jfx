@@ -25,35 +25,21 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.css.converters.FontConverter;
-import com.sun.javafx.css.converters.SizeConverter;
+
 import com.sun.javafx.css.parser.CSSParser;
-import com.sun.javafx.tk.Toolkit;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import javafx.collections.FXCollections;
-import javafx.collections.MapChangeListener;
 import javafx.css.CssMetaData;
-import javafx.css.ParsedValue;
 import javafx.css.PseudoClass;
-import javafx.css.StyleOrigin;
-import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
-import javafx.stage.Stage;
 import static org.junit.Assert.*;
 
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -62,6 +48,15 @@ public class Node_cssStateTransition_Test {
     public Node_cssStateTransition_Test() {
     }
 
+    @Before
+    public void setUp() {
+        StyleManager sm = StyleManager.getInstance();
+        sm.userAgentStylesheetContainers.clear();
+        sm.platformUserAgentStylesheetContainers.clear();
+        sm.stylesheetContainerMap.clear();
+        sm.cacheContainerMap.clear();
+        sm.hasDefaultUserAgentStylesheet = false;
+    }
 
     @Test
     public void testPropertiesResetOnStyleclassChange() {
@@ -101,30 +96,29 @@ public class Node_cssStateTransition_Test {
         StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         Scene scene = new Scene(root);
-        Stage stage = new Stage();
-        stage.setScene(scene);
-        stage.show();
+
+        root.applyCss();
 
         assertEquals(Color.RED, rect.getFill());
         assertEquals(Color.YELLOW, rect.getStroke());
         assertEquals(3d, rect.getStrokeWidth(), 1e-6);
 
         rect.getStyleClass().add("green");
-        Toolkit.getToolkit().firePulse();
+        root.applyCss();
 
         assertEquals(Color.GREEN, rect.getFill());
         assertEquals(Color.GREEN, rect.getStroke());
         assertEquals(3d, rect.getStrokeWidth(), 1e-6);
 
         rect.getStyleClass().remove("rect");
-        Toolkit.getToolkit().firePulse();
+        root.applyCss();
 
         assertEquals(defaultFill, rect.getFill());
         assertEquals(Color.GREEN, rect.getStroke());
         assertEquals(defaultStrokeWidth.doubleValue(), rect.getStrokeWidth(), 1e-6);
 
         rect.getStyleClass().remove("green");
-        Toolkit.getToolkit().firePulse();
+        root.applyCss();
 
         assertEquals(defaultFill, rect.getFill());
         assertEquals(defaultStroke, rect.getStroke());
@@ -169,37 +163,36 @@ public class Node_cssStateTransition_Test {
         StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
 
         Scene scene = new Scene(root);
-        Stage stage = new Stage();
-        stage.setScene(scene);
-        stage.show();
+
+        root.applyCss();
 
         assertEquals(defaultFill, rect.getFill());
         assertEquals(defaultStroke, rect.getStroke());
         assertEquals(defaultStrokeWidth, rect.getStrokeWidth(), 1e-6);
 
         rect.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
-        Toolkit.getToolkit().firePulse();
+        root.applyCss();
 
         assertEquals(Color.RED, rect.getFill());
         assertEquals(Color.YELLOW, rect.getStroke());
         assertEquals(3d, rect.getStrokeWidth(), 1e-6);
 
         rect.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
-        Toolkit.getToolkit().firePulse();
+        root.applyCss();
 
         assertEquals(Color.GREEN, rect.getFill());
         assertEquals(Color.GREEN, rect.getStroke());
         assertEquals(3d, rect.getStrokeWidth(), 1e-6);
 
         rect.pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), false);
-        Toolkit.getToolkit().firePulse();
+        root.applyCss();
 
         assertEquals(defaultFill, rect.getFill());
         assertEquals(Color.GREEN, rect.getStroke());
         assertEquals(defaultStrokeWidth.doubleValue(), rect.getStrokeWidth(), 1e-6);
 
         rect.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), false);
-        Toolkit.getToolkit().firePulse();
+        root.applyCss();
 
         assertEquals(defaultFill, rect.getFill());
         assertEquals(defaultStroke, rect.getStroke());

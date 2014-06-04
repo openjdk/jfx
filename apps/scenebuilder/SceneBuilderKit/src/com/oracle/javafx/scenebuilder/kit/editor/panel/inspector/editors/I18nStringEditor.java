@@ -72,41 +72,32 @@ public class I18nStringEditor extends PropertyEditor {
     public I18nStringEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
 
-        valueListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                userUpdateValueProperty(getValue());
-                textNode.selectAll();
-            }
+        valueListener = event -> {
+            userUpdateValueProperty(getValue());
+            textNode.selectAll();
         };
         setTextEditorBehavior(this, textNode, valueListener);
 
         getMenu().getItems().add(i18nMenuItem);
         getMenu().getItems().add(multilineMenuItem);
 
-        i18nMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                if (!i18nMode) {
-                    setValue(new PrefixedValue(PrefixedValue.Type.RESOURCE_KEY, I18N.getString("inspector.i18n.dummykey")).toString());
-                } else {
-                    setValue(""); //NOI18N
-                }
-                I18nStringEditor.this.getCommitListener().handle(null);
-                updateMenuItems();
+        i18nMenuItem.setOnAction(e -> {
+            if (!i18nMode) {
+                setValue(new PrefixedValue(PrefixedValue.Type.RESOURCE_KEY, I18N.getString("inspector.i18n.dummykey")).toString());
+            } else {
+                setValue(""); //NOI18N
             }
+            I18nStringEditor.this.getCommitListener().handle(null);
+            updateMenuItems();
         });
-        multilineMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                if (!multiLineMode) {
-                    switchToTextArea();
-                } else {
-                    switchToTextField();
-                }
-                multiLineMode = !multiLineMode;
-                updateMenuItems();
+        multilineMenuItem.setOnAction(e -> {
+            if (!multiLineMode) {
+                switchToTextArea();
+            } else {
+                switchToTextField();
             }
+            multiLineMode = !multiLineMode;
+            updateMenuItems();
         });
     }
 
@@ -259,13 +250,7 @@ public class I18nStringEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                textNode.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> textNode.requestFocus());
     }
 
     private void updateMenuItems() {

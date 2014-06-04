@@ -36,8 +36,8 @@ import java.util.List;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.css.*;
 import javafx.scene.control.Labeled;
 import javafx.scene.paint.Color;
@@ -113,7 +113,7 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Font> fontMirror = null;
     private StyleableProperty<Font> fontMirror() {
         if (fontMirror == null) {
-            fontMirror = new StyleablePropertyMirror<Font>(FONT, "fontMirror", Font.getDefault(), (StyleableProperty<Font>)labeled.fontProperty());
+            fontMirror = new StyleablePropertyMirror<Font>(FONT, "fontMirror", Font.getDefault(), (StyleableProperty<Font>)(WritableValue<Font>)labeled.fontProperty());
             fontProperty().addListener(fontMirror);
         }
         return fontMirror;
@@ -136,7 +136,7 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Paint> fillMirror;
     private StyleableProperty<Paint> fillMirror() {
         if (fillMirror == null) {
-            fillMirror = new StyleablePropertyMirror<Paint>(FILL, "fillMirror", Color.BLACK, (StyleableProperty<Paint>)labeled.textFillProperty());
+            fillMirror = new StyleablePropertyMirror<Paint>(FILL, "fillMirror", Color.BLACK, (StyleableProperty<Paint>)(WritableValue<Paint>)labeled.textFillProperty());
             fillProperty().addListener(fillMirror);
         }
         return fillMirror;        
@@ -160,7 +160,7 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<TextAlignment> textAlignmentMirror;
     private StyleableProperty<TextAlignment> textAlignmentMirror() {
         if (textAlignmentMirror == null) {
-            textAlignmentMirror = new StyleablePropertyMirror<TextAlignment>(TEXT_ALIGNMENT, "textAlignmentMirror", TextAlignment.LEFT, (StyleableProperty<TextAlignment>)labeled.textAlignmentProperty());
+            textAlignmentMirror = new StyleablePropertyMirror<TextAlignment>(TEXT_ALIGNMENT, "textAlignmentMirror", TextAlignment.LEFT, (StyleableProperty<TextAlignment>)(WritableValue<TextAlignment>)labeled.textAlignmentProperty());
             textAlignmentProperty().addListener(textAlignmentMirror);
         }
         return textAlignmentMirror;        
@@ -185,7 +185,7 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Boolean> underlineMirror;
     private StyleableProperty<Boolean> underlineMirror() {
         if (underlineMirror == null) {
-            underlineMirror = new StyleablePropertyMirror<Boolean>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty<Boolean>)labeled.underlineProperty());
+            underlineMirror = new StyleablePropertyMirror<Boolean>(UNDERLINE, "underLineMirror", Boolean.FALSE, (StyleableProperty<Boolean>)(WritableValue<Boolean>)labeled.underlineProperty());
             underlineProperty().addListener(underlineMirror);
         }
         return underlineMirror;        
@@ -210,7 +210,7 @@ public class LabeledText extends Text {
     private StyleablePropertyMirror<Number> lineSpacingMirror;
     private StyleableProperty<Number> lineSpacingMirror() {
         if (lineSpacingMirror == null) {
-            lineSpacingMirror = new StyleablePropertyMirror<Number>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty<Number>)labeled.lineSpacingProperty());
+            lineSpacingMirror = new StyleablePropertyMirror<Number>(LINE_SPACING, "lineSpacingMirror", 0d, (StyleableProperty<Number>)(WritableValue<Number>)labeled.lineSpacingProperty());
             lineSpacingProperty().addListener(lineSpacingMirror);
         }
         return lineSpacingMirror;        
@@ -289,13 +289,15 @@ public class LabeledText extends Text {
 
             //
             // if propOrigin is null, then the property is in init state
-            // if origin is null, then some code is initializing this prop
+            // if newOrigin is null, then CSS is resetting this property -
+            //    but don't let CSS overwrite a user set value
             // if propOrigin is greater than origin, then the style should
             //    not override
             //
             if (propOrigin == null ||
-                   (newOrigin != null &&
-                    propOrigin.compareTo(newOrigin) <= 0)) {
+                    (newOrigin != null
+                            ? propOrigin.compareTo(newOrigin) <= 0
+                            : propOrigin != StyleOrigin.USER)) {
                 super.applyStyle(newOrigin, value);
                 property.applyStyle(newOrigin, value);
             }

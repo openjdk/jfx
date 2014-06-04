@@ -25,7 +25,6 @@
 
 package com.sun.javafx.font.freetype;
 
-import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import com.sun.glass.utils.NativeLibLoader;
@@ -33,11 +32,9 @@ import com.sun.glass.utils.NativeLibLoader;
 class OSPango {
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-           public Void run() {
-               NativeLibLoader.loadLibrary("javafx_font_pango");
-               return null;
-           }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            NativeLibLoader.loadLibrary("javafx_font_pango");
+            return null;
         });
     }
 
@@ -77,11 +74,15 @@ class OSPango {
     static final native long pango_attr_fallback_new(boolean enable_fallback);
     static final native void pango_attr_list_unref(long list);
     static final native void pango_attr_list_insert(long list, long attr);
-    static final native long pango_itemize(long context, ByteBuffer text, int start_index, int length, long attrs, long cached_iter);
-    static final native PangoGlyphString pango_shape(ByteBuffer text, long pangoItem);
+    static final native long pango_itemize(long context, long text, int start_index, int length, long attrs, long cached_iter);
+    static final native PangoGlyphString pango_shape(long text, long pangoItem);
     static final native void pango_item_free(long item);
 
     /* Miscellaneous (glib, fontconfig) */
+    static final native long g_utf8_offset_to_pointer(long str, long offset);
+    static final native long g_utf8_pointer_to_offset(long str, long pos);
+    static final native long g_utf16_to_utf8(char[] str);
+    static final native void g_free(long ptr);
     static final native int g_list_length(long list);
     static final native long g_list_nth_data(long list, int n);
     static final native void g_list_free(long list);

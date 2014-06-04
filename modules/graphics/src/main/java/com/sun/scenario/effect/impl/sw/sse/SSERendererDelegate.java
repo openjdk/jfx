@@ -37,11 +37,9 @@ public class SSERendererDelegate implements RendererDelegate {
     public static native boolean isSupported();
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
-                NativeLibLoader.loadLibrary("decora_sse");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction) () -> {
+            NativeLibLoader.loadLibrary("decora_sse");
+            return null;
         });
     }
 

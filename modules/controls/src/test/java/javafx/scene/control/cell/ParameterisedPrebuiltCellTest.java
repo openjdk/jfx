@@ -91,10 +91,8 @@ public class ParameterisedPrebuiltCellTest {
     
     @Test public void testTextProperty() {
         assertEquals(0, count);
-        cell.textProperty().addListener(new ChangeListener<Object>() {
-            @Override public void changed(ObservableValue observable, Object oldValue, Object newValue) {
-                count++;
-            }
+        cell.textProperty().addListener((observable, oldValue, newValue) -> {
+            count++;
         });
 
         cell.setText("TEST");
@@ -125,10 +123,8 @@ public class ParameterisedPrebuiltCellTest {
     
     @Test public void testGraphicProperty() {
         assertEquals(0, count);
-        cell.graphicProperty().addListener(new ChangeListener<Node>() {
-            @Override public void changed(ObservableValue observable, Node oldValue, Node newValue) {
-                count++;
-            }
+        cell.graphicProperty().addListener((observable, oldValue, newValue) -> {
+            count++;
         });
         
         Rectangle rect1 = new Rectangle(10, 10, Color.RED);

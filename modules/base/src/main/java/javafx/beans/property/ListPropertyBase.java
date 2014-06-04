@@ -50,13 +50,10 @@ import javafx.collections.ObservableList;
  */
 public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
-    private final ListChangeListener<E> listChangeListener = new ListChangeListener<E>() {
-        @Override
-        public void onChanged(Change<? extends E> change) {
-            invalidateProperties();
-            invalidated();
-            fireValueChangedEvent(change);
-        }
+    private final ListChangeListener<E> listChangeListener = change -> {
+        invalidateProperties();
+        invalidated();
+        fireValueChangedEvent(change);
     };
 
     private ObservableList<E> value;

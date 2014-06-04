@@ -33,7 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
-import javafx.event.EventHandler;
+
 import javafx.scene.Node;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.MouseEvent;
@@ -77,34 +77,25 @@ public abstract class AbstractMouseDragGesture extends AbstractGesture {
         assert eventTarget.getOnMouseReleased() == null;
         assert eventTarget.getOnMouseExited() == null;
         
-        eventTarget.setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                try {
-                    mouseDragDetected(e);
-                } finally {
-                    performTermination();
-                }
+        eventTarget.setOnDragDetected(e1 -> {
+            try {
+                mouseDragDetected(e1);
+            } finally {
+                performTermination();
             }
         });
-        eventTarget.setOnMouseReleased(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                try {
-                    mouseReleased(e);
-                } finally {
-                    performTermination();
-                }
+        eventTarget.setOnMouseReleased(e1 -> {
+            try {
+                mouseReleased(e1);
+            } finally {
+                performTermination();
             }
         });
-        eventTarget.setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                try {
-                    mouseExited(e);
-                } finally {
-                    performTermination();
-                }
+        eventTarget.setOnMouseExited(e1 -> {
+            try {
+                mouseExited(e1);
+            } finally {
+                performTermination();
             }
         });
         

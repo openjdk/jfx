@@ -32,8 +32,6 @@ import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
@@ -215,11 +213,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         final Node bar = item.getNode();
         if (shouldAnimate()) {
             Timeline t = createDataRemoveTimeline(item, bar, series);
-            t.setOnFinished(new EventHandler<ActionEvent>() {
-
-                public void handle(ActionEvent event) {
-                    removeDataItemFromDisplay(series, item);
-                }
+            t.setOnFinished(event -> {
+                removeDataItemFromDisplay(series, item);
             });
             t.play();
         } else {
@@ -323,10 +318,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             t.getKeyFrames().addAll(
                     new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item), 
                     getCurrentDisplayedYValue(item))),
-                    new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().remove(bar);
-                        }
+                    new KeyFrame(Duration.millis(700), actionEvent -> {
+                        getPlotChildren().remove(bar);
                     },
                     new KeyValue(currentDisplayedYValueProperty(item), item.getYValue(), Interpolator.EASE_BOTH)));
         } else {
@@ -334,10 +327,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             t.getKeyFrames().addAll(
                     new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item), 
                     getCurrentDisplayedXValue(item))),
-                    new KeyFrame(Duration.millis(700), new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().remove(bar);
-                        }
+                    new KeyFrame(Duration.millis(700), actionEvent -> {
+                        getPlotChildren().remove(bar);
                     },
                     new KeyValue(currentDisplayedXValueProperty(item), item.getXValue(), Interpolator.EASE_BOTH)));
         }
@@ -348,12 +339,9 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         // remove all symbol nodes
         if (shouldAnimate()) {
             ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(new EventHandler<ActionEvent>() {
-
-                public void handle(ActionEvent event) {
-                    removeSeriesFromDisplay(series);
-                    requestChartLayout();
-                }
+            pt.setOnFinished(event -> {
+                removeSeriesFromDisplay(series);
+                requestChartLayout();
             });
             for (Data<X, Y> d : series.getData()) {
                 final Node bar = d.getNode();
@@ -369,12 +357,9 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                     FadeTransition ft = new FadeTransition(Duration.millis(700), bar);
                     ft.setFromValue(1);
                     ft.setToValue(0);
-                    ft.setOnFinished(new EventHandler<ActionEvent>() {
-
-                        @Override
-                        public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().remove(bar);
-                        }
+                    ft.setOnFinished(actionEvent -> {
+                        getPlotChildren().remove(bar);
+                        bar.setOpacity(1.0);
                     });
                     pt.getChildren().add(ft);
                 }
@@ -394,69 +379,40 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     @Override protected void updateAxisRange() {
         // This override is necessary to update axis range based on cumulative Y value for the
         // Y axis instead of the inherited way where the max value in the data range is used.
-        final Axis<X> xa = getXAxis();
-        final Axis<Y> ya = getYAxis();
-        if (xa.isAutoRanging()) {
-            List xData = new ArrayList<Number>();
-            if (xa instanceof CategoryAxis) {
-                xData.addAll(categoryAxis.getCategories());
-            } else {
-                int catIndex = 0;
-                for (String category : categoryAxis.getCategories()) {
-                    int index = 0;
-                    double totalXN = 0;
-                    double totalXP = 0;
-                    Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
-                    while (seriesIterator.hasNext()) {
-                        Series<X, Y> series = seriesIterator.next();
-                        for (final Data<X, Y> item : getDataItem(series, index, catIndex, category)) {;
-                            if (item != null) {
-                                boolean isNegative = item.getNode().getStyleClass().contains("negative");
-                                if (!isNegative) {
-                                    totalXP += xa.toNumericValue(item.getXValue());
-                                } else {
-                                    totalXN += xa.toNumericValue(item.getXValue());
-                                }
-                            }
-                        }
-                    }
-                    xData.add(totalXP);
-                    xData.add(totalXN);
-                    catIndex++;
+        boolean categoryIsX = categoryAxis == getXAxis();
+        if (categoryAxis.isAutoRanging()) {
+            List cData = new ArrayList();
+            for (Series<X, Y> series : getData()) {
+                for (Data<X, Y> data : series.getData()) {
+                    if (data != null) cData.add(categoryIsX ? data.getXValue() : data.getYValue());
                 }
             }
-            xa.invalidateRange(xData);
+            categoryAxis.invalidateRange(cData);
         }
-        if (ya.isAutoRanging()) {
-            List yData = new ArrayList<Number>();
-            if (ya instanceof CategoryAxis) {
-                yData.addAll(categoryAxis.getCategories());
-            } else {
-                int catIndex = 0;
-                for (String category : categoryAxis.getCategories()) {
-                    int index = 0;
-                    double totalYP = 0;
-                    double totalYN = 0;
-                    Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
-                    while (seriesIterator.hasNext()) {
-                        Series<X, Y> series = seriesIterator.next();
-                        for (final Data<X, Y> item : getDataItem(series, index, catIndex, category)) {;
-                            if(item != null) {
-                                boolean isNegative = item.getNode().getStyleClass().contains("negative");
-                                if (!isNegative) {
-                                    totalYP += ya.toNumericValue(item.getYValue());
-                                } else {
-                                    totalYN += ya.toNumericValue(item.getYValue());
-                                }
+        if (valueAxis.isAutoRanging()) {
+            List<Number> vData = new ArrayList<>();
+            for (String category : categoryAxis.getAllDataCategories()) {
+                double totalXN = 0;
+                double totalXP = 0;
+                Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
+                while (seriesIterator.hasNext()) {
+                    Series<X, Y> series = seriesIterator.next();
+                    for (final Data<X, Y> item : getDataItem(series, category)) {
+                        if (item != null) {
+                            boolean isNegative = item.getNode().getStyleClass().contains("negative");
+                            Number value = (Number) (categoryIsX ? item.getYValue() : item.getXValue());
+                            if (!isNegative) {
+                                totalXP += valueAxis.toNumericValue(value);
+                            } else {
+                                totalXN += valueAxis.toNumericValue(value);
                             }
                         }
                     }
-                    yData.add(totalYP);
-                    yData.add(totalYN);
-                    catIndex++;
                 }
+                vData.add(totalXP);
+                vData.add(totalXN);
             }
-            ya.invalidateRange(yData);
+            valueAxis.invalidateRange(vData);
         }
     }
 
@@ -467,62 +423,53 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         final double availableBarSpace = catSpace - getCategoryGap();
         final double barWidth = availableBarSpace;
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
-        final double zeroPos = valueAxis.getZeroPosition();
+        final double lowerBoundValue = valueAxis.getLowerBound();
+        final double upperBoundValue = valueAxis.getUpperBound();
         // update bar positions and sizes
-        int catIndex = 0;
         for (String category : categoryAxis.getCategories()) {
-            int index = 0;
-            int currentPositiveHeight = 0;
-            int currentNegativeHeight = 0;
+            int currentPositiveValue = 0;
+            int currentNegativeValue = 0;
             Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
             while (seriesIterator.hasNext()) {
                 Series<X, Y> series = seriesIterator.next();
-                for (final Data<X, Y> item : getDataItem(series, index, catIndex, category)) {;
+                for (final Data<X, Y> item : getDataItem(series, category)) {
                     if (item != null) {
                         final Node bar = item.getNode();
                         final double categoryPos;
-                        final double valPos;
+                        final double valNumber;
+                        final X xValue = getCurrentDisplayedXValue(item);
+                        final Y yValue = getCurrentDisplayedYValue(item);
                         if (orientation == Orientation.VERTICAL) {
-                            categoryPos = getXAxis().getDisplayPosition(getCurrentDisplayedXValue(item));
-                            valPos = getYAxis().getDisplayPosition(getCurrentDisplayedYValue(item));
+                            categoryPos = getXAxis().getDisplayPosition(xValue);
+                            valNumber = getYAxis().toNumericValue(yValue);
                         } else {
-                            categoryPos = getYAxis().getDisplayPosition(getCurrentDisplayedYValue(item));
-                            valPos = getXAxis().getDisplayPosition(getCurrentDisplayedXValue(item));
+                            categoryPos = getYAxis().getDisplayPosition(yValue);
+                            valNumber = getXAxis().toNumericValue(xValue);
                         }
-                        final double bottom;
-                        final double top;
+                        double bottom;
+                        double top;
                         boolean isNegative = bar.getStyleClass().contains("negative");
                         if (!isNegative) {
-                            bottom = currentPositiveHeight + Math.min(valPos, zeroPos);
-                            top = currentPositiveHeight + Math.max(valPos, zeroPos);
-                            if (orientation == Orientation.VERTICAL) {
-                                currentPositiveHeight -= top - bottom;
-                            } else {
-                                currentPositiveHeight += top - bottom;
-                            }
+                            bottom = valueAxis.getDisplayPosition(currentPositiveValue);
+                            top = valueAxis.getDisplayPosition(currentPositiveValue + valNumber);
+                            currentPositiveValue += valNumber;
                         } else {
-                            bottom = currentNegativeHeight + Math.min(valPos, zeroPos);
-                            top = currentNegativeHeight + Math.max(valPos, zeroPos);
-                            if (orientation == Orientation.VERTICAL) {
-                                currentNegativeHeight += top - bottom;
-                            } else {
-                                currentNegativeHeight += top - bottom;
-                            }
+                            bottom = valueAxis.getDisplayPosition(currentNegativeValue + valNumber);
+                            top = valueAxis.getDisplayPosition(currentNegativeValue);
+                            currentNegativeValue += valNumber;
                         }
+
                         if (orientation == Orientation.VERTICAL) {
                             bar.resizeRelocate(categoryPos + barOffset,
-                                    bottom, barWidth, top - bottom);
+                                    top, barWidth, bottom - top);
                         } else {
-                            //noinspection SuspiciousNameCombination
                             bar.resizeRelocate(bottom,
                                     categoryPos + barOffset,
                                     top - bottom, barWidth);
                         }
-                        index++;
                     }
                 }
             }
-            catIndex++;
         }
     }
 
@@ -575,7 +522,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         return bar;
     }
 
-    private List<Data<X, Y>> getDataItem(Series<X, Y> series, int seriesIndex, int itemIndex, String category) {
+    private List<Data<X, Y>> getDataItem(Series<X, Y> series, String category) {
         Map<String, List<Data<X, Y>>> catmap = seriesCategoryMap.get(series);
         return catmap != null ? catmap.get(category) != null ? catmap.get(category) : new ArrayList<Data<X, Y>>() : new ArrayList<Data<X, Y>>();
     }

@@ -182,31 +182,16 @@ public class FileWatcher {
                 if ((lastModifiedTime == null) && (newModifiedTime != null)) {
                     // target has been created
                     modifiedTimes.put(target, newModifiedTime);
-                    Platform.runLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            delegate.fileWatcherDidWatchTargetCreation(target);
-                        }
-                    });
+                    Platform.runLater(() -> delegate.fileWatcherDidWatchTargetCreation(target));
                 } else if ((lastModifiedTime != null) && (newModifiedTime == null)) {
                     // target has been deleted
                     modifiedTimes.remove(target);
-                    Platform.runLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            delegate.fileWatcherDidWatchTargetDeletion(target);
-                        }
-                    });
+                    Platform.runLater(() -> delegate.fileWatcherDidWatchTargetDeletion(target));
                 } else if (Objects.equals(lastModifiedTime, newModifiedTime) == false) {
                     // target has been modified
                     assert newModifiedTime != null;
                     modifiedTimes.put(target, newModifiedTime);
-                    Platform.runLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            delegate.fileWatcherDidWatchTargetModification(target);
-                        }
-                    });
+                    Platform.runLater(() -> delegate.fileWatcherDidWatchTargetModification(target));
                 }
             }
         }

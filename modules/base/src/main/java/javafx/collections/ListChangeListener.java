@@ -99,7 +99,9 @@ public interface ListChangeListener<E> {
      * <p>
      * <b>Warning:</b> This class directly accesses the source list to acquire information about the changes.
      * <br> This effectively makes the Change object invalid when another change occurs on the list.
-     * <br> For this reason it is <b>not</b> safe to use this class on a different thread.
+     * <br> For this reason it is <b>not safe to use this class on a different thread</b>.
+     * <br> It also means <b>the source list cannot be modified inside the listener</b> since that would invalidate this Change object
+     * for all subsequent listeners.
      * <p>
      * Note: in case the change contains multiple changes of different type, these changes must be in the following order:
      * <em> permutation change(s), add or remove changes, update changes </em>
