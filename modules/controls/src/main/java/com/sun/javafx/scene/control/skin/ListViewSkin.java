@@ -34,6 +34,7 @@ import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
@@ -502,8 +503,12 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
                 return flow.getPrivateCell(focusedIndex);
             }
             case ROW_AT_INDEX: {
-                int rowIndex = (Integer)parameters[0];
-                return flow.getPrivateCell(rowIndex);
+                Integer rowIndex = (Integer)parameters[0];
+                if (rowIndex == null) return null;
+                if (0 <= rowIndex && rowIndex < getItemCount()) {
+                    return flow.getPrivateCell(rowIndex);
+                }
+                return null;
             }
             case SELECTED_ROWS: {
                 MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
@@ -511,11 +516,6 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
                 List<Node> selection = new ArrayList<>(indices.size());
                 for (int i : indices) {
                     ListCell<T> row = flow.getPrivateCell(i);
-
-                    // We should never, ever get row == null. If we do then
-                    // something is very wrong.
-                    assert row != null;
-
                     if (row != null) selection.add(row);
                 }
                 return FXCollections.observableArrayList(selection);
@@ -523,6 +523,18 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             case VERTICAL_SCROLLBAR: return flow.getVbar();
             case HORIZONTAL_SCROLLBAR: return flow.getHbar();
             default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                Integer index = (Integer)parameters[0];
+                if (index != null) flow.show(index);
+                break;
+            }
+            default: super.accExecuteAction(action, parameters);
         }
     }
 }

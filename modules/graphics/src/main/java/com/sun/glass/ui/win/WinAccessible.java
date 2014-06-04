@@ -865,6 +865,25 @@ final class WinAccessible extends PlatformAccessible {
         return new int[] {UiaAppendRuntimeId, id};
     }
 
+    private long NavigateListView(WinAccessible listItemAccessible, int direction) {
+        Node list = listItemAccessible.getContainerNode();
+        if (list == null) return 0;
+        Accessible listAccessible = list.getAccessible();
+        if (listAccessible == null) return 0;
+        Integer count = (Integer)listAccessible.getAttribute(ROW_COUNT);
+        if (count == null || count == 0) return 0;
+        Integer index = (Integer)listItemAccessible.getAttribute(INDEX);
+        if (index == null) return 0;
+        switch (direction) {
+            case NavigateDirection_NextSibling: index++; break;
+            case NavigateDirection_PreviousSibling: index--; break;
+            case NavigateDirection_FirstChild: index = 0; break;
+            case NavigateDirection_LastChild: index = count - 1; break;
+        }
+        Node node = (Node)listAccessible.getAttribute(ROW_AT_INDEX, index);
+        return getAccessible(node);
+    }
+
     long Navigate(int direction) {
         if (isDisposed()) return 0;
         Role role = (Role)getAttribute(ROLE);
@@ -903,6 +922,10 @@ final class WinAccessible extends PlatformAccessible {
             }
             case NavigateDirection_NextSibling:
             case NavigateDirection_PreviousSibling: {
+                if (role == Role.LIST_ITEM) {
+                    return NavigateListView(this, direction);
+                }
+
                 Node parent = (Node)getAttribute(treeCell ? TREE_ITEM_PARENT : PARENT);
                 /* 
                  * When the parent is NULL is indicates either the root node for the scene
@@ -965,6 +988,13 @@ final class WinAccessible extends PlatformAccessible {
                             node = children.get(0);
                         } else {
                             node = children.get(size - 1);
+                        }
+                    }
+                    if (node != null) {
+                        role = (Role)node.getAccessible().getAttribute(ROLE);
+                        if (role == Role.LIST_ITEM) {
+                            WinAccessible itemAcc = (WinAccessible)node.getAccessible().impl_getDelegate();
+                            return NavigateListView(itemAcc, direction);
                         }
                     }
                 }
@@ -1712,6 +1742,7 @@ final class WinAccessible extends PlatformAccessible {
         if (isDisposed()) return;
 
         Integer cellIndex = (Integer)getAttribute(INDEX);
+        if (cellIndex == null) cellIndex = (Integer)getAttribute(ROW_INDEX);
         Node container = getContainerNode();
         if (cellIndex != null && container != null) {
             container.getAccessible().executeAction(Action.SCROLL_TO_INDEX, cellIndex);

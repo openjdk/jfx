@@ -1099,18 +1099,6 @@ public class ListView<T> extends Control {
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
-        switch (action) {
-            case SCROLL_TO_INDEX: {
-                int index = (int) parameters[0];
-                scrollTo(index);
-                break;
-            }
-            default: super.accExecuteAction(action, parameters);
-        }
-    }
-
 
     /***************************************************************************
      *                                                                         *
