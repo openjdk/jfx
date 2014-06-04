@@ -39,7 +39,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import static com.oracle.tools.packager.linux.LinuxAppBundler.APP_FS_NAME;
 import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
 
 public class LinuxDebBundler extends AbstractBundler {

@@ -40,7 +40,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import static com.oracle.tools.packager.linux.LinuxAppBundler.APP_FS_NAME;
 
 public class LinuxRpmBundler extends AbstractBundler {
 

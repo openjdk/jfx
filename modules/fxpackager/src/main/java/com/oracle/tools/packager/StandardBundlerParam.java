@@ -38,6 +38,7 @@ import java.util.function.Function;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import java.util.regex.Pattern;
 
 public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
 
@@ -109,6 +110,19 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     },
                     (s, p) -> s
             );
+
+    private static Pattern TO_FS_NAME = Pattern.compile("[^-a-zA-Z0-9.]");
+
+    public static final StandardBundlerParam<String> APP_FS_NAME =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.app-fs-name.name"),
+                    I18N.getString("param.app-fs-name.description"),
+                    "name.fs",
+                    String.class,
+                    params -> TO_FS_NAME.matcher(APP_NAME.fetchFrom(params)).replaceAll(""),
+                    (s, p) -> s
+            );
+
 
     public static final StandardBundlerParam<String> VENDOR =
             new StandardBundlerParam<>(

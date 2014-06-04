@@ -48,7 +48,6 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import static com.oracle.tools.packager.linux.LinuxAppBundler.APP_FS_NAME;
 import static com.oracle.tools.packager.linux.LinuxDebBundler.BUNDLE_NAME;
 import static com.oracle.tools.packager.linux.LinuxDebBundler.EMAIL;
 import static org.junit.Assert.*;
