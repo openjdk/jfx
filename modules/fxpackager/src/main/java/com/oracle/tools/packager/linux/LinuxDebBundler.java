@@ -223,6 +223,13 @@ public class LinuxDebBundler extends AbstractBundler {
                 Log.info(I18N.getString("message.debs-like-licenses"));
             }
 
+            // for services, the app launcher must be less than 16 characters or init.d complains
+            if (p.containsKey(SERVICE_HINT.getID()) && SERVICE_HINT.fetchFrom(p) && BUNDLE_NAME.fetchFrom(p).length() > 16) {
+                throw new ConfigException(
+                        MessageFormat.format(I18N.getString("error.launcher-name-too-long"), BUNDLE_NAME.fetchFrom(p)),
+                        MessageFormat.format(I18N.getString("error.launcher-name-too-long.advice"), BUNDLE_NAME.getID()));
+            }
+
             return true;
         } catch (RuntimeException re) {
             if (re.getCause() instanceof ConfigException) {
