@@ -43,6 +43,13 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
         super(DEFAULT_ALGORITHM);
     }
 
+    /**
+     * For testing purposes only!
+     */
+    TopMostTraversalEngine(Algorithm algorithm) {
+        super(algorithm);
+    }
+
     public final Node trav(Node node, Direction dir) {
         Node newNode = null;
         Parent p = node.getParent();
