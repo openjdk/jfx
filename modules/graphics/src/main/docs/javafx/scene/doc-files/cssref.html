@@ -191,6 +191,7 @@
           <li><a href="#intronaming">Naming Conventions</a></li>
           <li><a href="#intropublicapi">CSS Public API</a></li>
           <li><a href="#introinheritance">Inheritance</a></li>
+          <li><a href="#introatrules">&#64; Rules</a></li>
           <li><a href="#introexamples">Examples</a></li>
           <li><a href="#introparserwarnings">Understanding Parser Warnings</a></li>
           <li><a href="#introlimitations">Limitations</a></li>
@@ -609,6 +610,52 @@
         inherited provided there is not an author or an inline-style that applies specifically to that node.
         In this case, the inherited font is created from the user-set font and any parts of the applicable
         author or in-line style.
+    <h3><a name="introatrules" id="introatrules">&#64; Rules</a></h3>
+    <p>
+        Beginning with JavaFX 8u20, the CSS
+        <a href="http://www.w3.org/TR/CSS21/cascade.html#at-import">@import</a> is also partially supported.
+        Only unconditional import is supported. In other words, the media&#8209;type qualifier is not supported.
+        Also, the JavaFX CSS parser is non-compliant with regard to where an @import may appear within a stylesheet
+        (see <a href="http://www.w3.org/TR/CSS21/syndata.html#at-rules">At&#8209;rules</a>).
+        Users are cautioned that this will be fixed in a future release. Adherence to the W3C standard is strongly advised.
+    </p>
+    <p>Since JavaFX 8, the implementation partially supports the CSS3 syntax to load a font from a URL using the
+    <a href="http://www.w3.org/TR/css3-fonts/#the-font-face-rule">@font&#8209;face</a> rule:
+    <code><pre>
+     @font-face {
+        font-family: 'sample';
+        font-style: normal;
+        font-weight: normal;
+        src: local('sample'), url('http://font.samples/resources/sample.ttf';) format('truetype');
+    }
+    </pre></code>
+    This allows public resources for fonts to be used in a JavaFX application. For example, assume the URL
+    "http://font.samples/web?family=samples" returns the @font&#8209;face rule given above. Then the
+        following code shows how the sample font could be used in a JavaFX application.
+    <code><pre>
+    import javafx.application.Application;
+    import javafx.scene.Scene;
+    import javafx.scene.control.Label;
+    import javafx.stage.Stage;
+
+    public class HelloFontFace extends Application {
+        @Override public void start(Stage primaryStage) {
+            Label label = new Label("Hello @FontFace");
+            label.setStyle("-fx-font-family: sample; -fx-font-size: 80;");
+            Scene scene = new Scene(label);
+            scene.getStylesheets().add("http://font.samples/web?family=samples");
+            primaryStage.setTitle("Hello @FontFace");
+            primaryStage.setScene(scene);
+            primaryStage.show();
+        }
+
+        public static void main(String[] args) { launch(args); }
+    }
+    </pre></code>
+    Or, the URL could be imported into a stylesheet with the @import rule.</p>
+    <p>Although the parser will parse the syntax, all @font&#8209;face descriptors are ignored except for
+        the <code>src</code> descriptor. The <code>src</code> descriptor is expected to be a
+        <a href="#typeurl" class="typelink">&lt;url&gt;</a>. The <code>format</code> hint is ignored.</p>
     <h3><a name="introexamples" id="introexamples">Examples</a></h3>
     <p>Consider the following simple JavaFX application: </p>
     <p class="example">Scene scene = new Scene(new Group()); <br>
@@ -663,9 +710,6 @@
         fully compliant CSS parser. One should not expect the parser to handle
         syntax not specified in this document.</li>
     <li>With the exception of @font&#8209;face and @import, @-keyword statements are ignored.</li>
-    <li>All @font&#8209;face descriptors are ignored except for the <code>src</code> descriptor. The
-        <code>src</code> descriptor is expected to be a <a href="#typeurl" class="typelink">&lt;url&gt;</a>
-        The <code>format</code> hint is ignored.</li>.
     <li>The &lt;media-query-list&gt; of the @import statement is not parsed.</li>
     <li>The structural pseudo&#8209;classes are not supported. </li>
     <li>The ":active" and ":focus" dynamic pseudo&#8209;classes are not supported.
@@ -1062,6 +1106,11 @@
         class="typelink">&lt;percentage&gt;</a>
       ] [ [ repeat | reflect ], ]? <a href="#typecolorstop" class="typelink">&lt;color-stop&gt;</a>[,
       <a href="#typecolorstop" class="typelink">&lt;color-stop&gt;</a>]+) </p>
+    <p>Radial gradient creates a gradient going though all the stop colors radiating outward from
+        the <a href="#typepoint" class="typelink">center point</a>
+        to the <a href="#typelength" class="typelink">radius</a>. If the center point is not given,
+        the center defaults to (0,0). Percentage values are relative to the size of the area
+        being filled. Percentage and length sizes can not be mixed in a single gradient function.</p>
     <p> If neither repeat nor reflect are given, then the CycleMethod defaults
       "NO_CYCLE".<br>
       Stops are per <a href="http://dev.w3.org/csswg/css3-images/#color-stop-syntax."
@@ -3898,6 +3947,25 @@
         </tr>
       </tbody>
     </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>.list-view &mdash; the ListView&lt;T&gt;
+            <ul>
+                <li>.virtual-flow &mdash; VirtualFlow</li>
+                <ul>
+                    <li>.clipped-container &mdash; <a href="#region">Region</a></li>
+                    <ul>
+                        <li>.sheet &mdash; Group</li>
+                        <ul>
+                            <li>.cell.indexed-cell.list-cell &mdash; <a href="#listcell">ListCell&lt;T&gt;</a></li>
+                        </ul>
+                        <li>.scroll-bar &mdash <a href="#scrollbar">ScrollBar</a></li>
+                    </ul>
+                </ul>
+            </ul>
+        </li>
+    </ul>
+
     <h4><a name="menu" id="menu">Menu</a></h4>
     <p class="styleclass">Style class: menu</p>
     <h4>Pseudo-classes</h4>
@@ -4357,6 +4425,12 @@
     </table>
     <h4>Substructure</h4>
     <ul>
+        <li>viewport &mdash; StackPane
+            <ul>
+                <li> * &mdash; StackPane</li>
+                <ul><li>The ScrollPane's content</li></ul>
+            </ul>
+        </li>
       <li>scroll-bar:vertical &mdash; ScrollBar</li>
       <li>scroll-bar:horizontall &mdash; ScrollBar</li>
       <li>corner &mdash; StackPane</li>

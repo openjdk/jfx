@@ -786,8 +786,7 @@ public class SwingNode extends Node {
                 mouseClickedAllowed.remove(event.getButton());
             }
             int swingModifiers = SwingEvents.fxMouseModsToMouseMods(event);
-            // TODO: popupTrigger
-            boolean swingPopupTrigger = event.getButton() == MouseButton.SECONDARY;
+            boolean swingPopupTrigger = event.isPopupTrigger();
             int swingButton = SwingEvents.fxMouseButtonToMouseButton(event);
             long swingWhen = System.currentTimeMillis();
             java.awt.event.MouseEvent mouseEvent =

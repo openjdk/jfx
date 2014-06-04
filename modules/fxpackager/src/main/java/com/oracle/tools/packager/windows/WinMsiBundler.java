@@ -462,7 +462,7 @@ public class WinMsiBundler  extends AbstractBundler {
     //name of post-image script
     private File getConfig_Script(Map<String, ? super Object> params) {
         return new File(CONFIG_ROOT.fetchFrom(params),
-                APP_NAME.fetchFrom(params) + "-post-image.wsf");
+                APP_FS_NAME.fetchFrom(params) + "-post-image.wsf");
     }
 
     private boolean prepareBasicProjectConfig(Map<String, ? super Object> params) throws IOException {
@@ -664,15 +664,15 @@ public class WinMsiBundler  extends AbstractBundler {
                     + (BIT_ARCH_64.fetchFrom(params) ? " ProcessorArchitecture=\"x64\"" : "")
                     + " KeyPath=\"yes\">");
             out.println(prefix + "   </File>");
-            out.println(prefix + "   <ServiceInstall Id=\"" + APP_NAME.fetchFrom(params) + "\""
+            out.println(prefix + "   <ServiceInstall Id=\"" + APP_FS_NAME.fetchFrom(params) + "\""
                     + " Name=\"" + APP_NAME.fetchFrom(params) + "\""
                     + " Description=\"" + DESCRIPTION.fetchFrom(params) + "\""
                     + " ErrorControl=\"normal\""
                     + " Start=\"" + (RUN_AT_STARTUP.fetchFrom(params) ? "auto" : "demand") + "\""
                     + " Type=\"ownProcess\" Vital=\"yes\" Account=\"LocalSystem\""
-                    + " Arguments=\"-mainExe " + launcherFile.getName() + "\"/>");
+                    + " Arguments='-mainExe \"" + launcherFile.getName() + "\"'/>");
 
-            out.println(prefix + "   <ServiceControl Id=\""+ APP_NAME.fetchFrom(params) + "\""
+            out.println(prefix + "   <ServiceControl Id=\""+ APP_FS_NAME.fetchFrom(params) + "\""
                     + " Name=\"" + APP_NAME.fetchFrom(params) + "\""
                     + (START_ON_INSTALL.fetchFrom(params) ? " Start=\"install\"" : "")
                     + (STOP_ON_UNINSTALL.fetchFrom(params) ? " Stop=\"uninstall\"" : "")

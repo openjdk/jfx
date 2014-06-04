@@ -264,4 +264,40 @@ public class LinuxRpmBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
     }
+
+    @Test
+    public void servicePackage() throws Exception {
+        Bundler bundler = new LinuxRpmBundler();
+        Collection<BundlerParamInfo<?>> parameters = bundler.getBundleParameters();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(START_ON_INSTALL.getID(), true);
+        bundleParams.put(STOP_ON_UNINSTALL.getID(), true);
+        bundleParams.put(RUN_AT_STARTUP.getID(), true);
+
+        bundleParams.put(APP_NAME.getID(), "Java Packager Service Test #1");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloService");
+        bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
+        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+
+        bundleParams.put(DESCRIPTION.getID(), "Does a random heart beat every 30 seconds or so to a log file in tmp");
+        bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
+        bundleParams.put(LICENSE_TYPE.getID(), "GPL v2 + CLASSPATH");
+        bundleParams.put(VENDOR.getID(), "OpenJDK");
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        // assert it validates
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File result = bundler.execute(bundleParams, new File(workDir, "service"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
+    }
 }

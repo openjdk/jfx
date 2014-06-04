@@ -130,7 +130,10 @@ import java.util.Stack;
 import java.util.TreeMap;
 
 import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.HPos;
@@ -273,8 +276,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private final SectionId[] sections = {SectionId.PROPERTIES, SectionId.LAYOUT, SectionId.CODE};
     //
     // State variables
-    private ViewMode viewMode = ViewMode.SECTION;
-    private ShowMode showMode = ShowMode.ALL;
+    private final ObjectProperty<ViewMode> viewModeProperty = new SimpleObjectProperty<>();
+    private final ObjectProperty<ShowMode> showModeProperty = new SimpleObjectProperty<>();
+    private final ObjectProperty<SectionId> expandedSectionProperty = new SimpleObjectProperty<>();
 
     // Inspector state
     private SelectionState selectionState;
@@ -288,6 +292,33 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     public InspectorPanelController(EditorController editorController) {
         super(InspectorPanelController.class.getResource(fxmlFile), I18N.getBundle(), editorController);
         this.editorController = editorController;
+        
+        viewModeProperty.setValue(ViewMode.SECTION);
+        viewModeProperty.addListener(new ChangeListener<ViewMode>() {
+            @Override
+            public void changed(ObservableValue<? extends ViewMode> arg0,
+                    ViewMode previousMode, ViewMode mode) {
+                viewModeChanged(previousMode, mode);
+            }
+        });
+
+        showModeProperty.setValue(ShowMode.ALL);
+        showModeProperty.addListener(new ChangeListener<ShowMode>() {
+            @Override
+            public void changed(ObservableValue<? extends ShowMode> arg0,
+                    ShowMode previousMode, ShowMode mode) {
+                showModeChanged();
+            }
+        });
+
+        expandedSectionProperty.setValue(SectionId.PROPERTIES);
+        expandedSectionProperty.addListener(new ChangeListener<SectionId>() {
+            @Override
+            public void changed(ObservableValue<? extends SectionId> arg0,
+                    SectionId previousSectionId, SectionId sectionId) {
+                expandedSectionChanged();
+            }
+        });
 
         // Editor pools init
         editorPools.put(I18nStringEditor.class, i18nStringEditorPool);
@@ -351,37 +382,16 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         return result;
     }
 
-    public final void setExpandedSection(SectionId sectionId) {
-        final TitledPane tp;
-
-        switch (sectionId) {
-            case NONE:
-                tp = null;
-                break;
-            case PROPERTIES:
-                tp = propertiesTitledPane;
-                break;
-            case LAYOUT:
-                tp = layoutTitledPane;
-                break;
-            case CODE:
-                tp = codeTitledPane;
-                break;
-            default:
-                throw new IllegalStateException("Unexpected section id " + sectionId); //NOI18N
-            }
-
-        accordion.setExpandedPane(tp);
+    public ViewMode getViewMode() {
+        return viewModeProperty.getValue();
     }
-
+    
     public void setViewMode(ViewMode mode) {
         assert mode != null;
-        if (viewMode == mode) {
-            // no change
-            return;
-        }
-        ViewMode previousMode = viewMode;
-        viewMode = mode;
+        viewModeProperty.setValue(mode);
+    }
+    
+    private void viewModeChanged(ViewMode previousMode, ViewMode mode) {
         if (!isInspectorLoaded()) {
             return;
         }
@@ -408,29 +418,59 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         updateClassNameInSectionTitles();
     }
 
-    public ViewMode getViewMode() {
-        return viewMode;
+    public ShowMode getShowMode() {
+        return showModeProperty.getValue();
     }
 
     public void setShowMode(ShowMode mode) {
         assert mode != null;
-        if (showMode == mode) {
-            // no change
-            return;
-        }
-        showMode = mode;
+        showModeProperty.setValue(mode);
+    }
+    
+    private void showModeChanged() {
         if (!isInspectorLoaded()) {
             return;
         }
         rebuild();
     }
 
-    public ShowMode getShowMode() {
-        return showMode;
+    public SectionId getExpandedSection() {
+        return expandedSectionProperty.getValue();
+    }
+
+    public void setExpandedSection(SectionId sectionId) {
+        assert sectionId != null;
+        expandedSectionProperty.setValue(sectionId);
+    }
+    
+    private void expandedSectionChanged() {
+        if (!isInspectorLoaded()) {
+            return;
+        }
+        final TitledPane tp;
+
+        switch (getExpandedSection()) {
+            case NONE:
+                tp = null;
+                break;
+            case PROPERTIES:
+                tp = propertiesTitledPane;
+                break;
+            case LAYOUT:
+                tp = layoutTitledPane;
+                break;
+            case CODE:
+                tp = codeTitledPane;
+                break;
+            default:
+                throw new IllegalStateException("Unexpected section id " + getExpandedSection()); //NOI18N
+            }
+
+        accordion.setExpandedPane(tp);
     }
 
     public boolean isEditedMode() {
-        return showMode == ShowMode.EDITED;
+        return getShowMode() == ShowMode.EDITED;
     }
 
     public String getSearchPattern() {
@@ -538,8 +578,8 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         
         accordion.getStyleClass().add("INSPECTOR_THEME"); //NOI18N
         selectionState = new SelectionState(editorController);
-        setViewMode(ViewMode.SECTION);
-        accordion.setExpandedPane(propertiesTitledPane);
+        viewModeChanged(null, getViewMode());
+        expandedSectionChanged();
         accordion.setPrefSize(300, 700);
         buildExpandedSection();
         updateClassNameInSectionTitles();
@@ -600,7 +640,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // TBD: we could optimize this by only refreshing values if 
         //      same element class + same container class + same search pattern.
         clearSections();
-        if (viewMode == ViewMode.SECTION) {
+        if (getViewMode() == ViewMode.SECTION) {
             buildExpandedSection();
         } else {
             buildFlatContent(allContent);
@@ -892,7 +932,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             addMessage(gridPane, I18N.getString("inspector.message.searchpattern.empty"));
             return;
         }
-        boolean isOrderdByType = viewMode == ViewMode.PROPERTY_TYPE;
+        boolean isOrderdByType = getViewMode() == ViewMode.PROPERTY_TYPE;
 
         // Get Metadata
         Set<ValuePropertyMetadata> propMetadatas = getValuePropertyMetadata();
@@ -1008,7 +1048,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             // PropertiesEditor
             propNameNode = ((PropertiesEditor) editor).getNameNode();
             propNameText = ((PropertiesEditor) editor).getPropertyNameText();
-            if (viewMode == ViewMode.SECTION) {
+            if (getViewMode() == ViewMode.SECTION) {
                 editorLayout = LayoutFormat.SIMPLE_LINE_NO_NAME;
             } else {
                 editorLayout = LayoutFormat.DOUBLE_LINE;

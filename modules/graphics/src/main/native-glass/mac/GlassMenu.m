@@ -164,8 +164,9 @@ static jfieldID  jDelegateMenuField = 0;
     }
 }
 
-
-- (void)menuNeedsUpdate: (NSMenu *)menu
+// RT-37304: do not use menuNeedsUpdate here, even though Cocoa prohibits
+// changing the menu structure during menuWillOpen...
+- (void)menuWillOpen: (NSMenu *)menu
 {
     GET_MAIN_JENV;
     if (env != NULL)

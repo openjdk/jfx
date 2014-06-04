@@ -45,13 +45,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.MessageFormat;
 import java.util.*;
-import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 public class LinuxAppBundler extends AbstractBundler {
-
-    private static Pattern TO_FS_NAME = Pattern.compile("[^-a-zA-Z0-9.]");
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(LinuxAppBundler.class.getName());
@@ -59,16 +56,6 @@ public class LinuxAppBundler extends AbstractBundler {
     protected static final String LINUX_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "linux" + File.separator;
     private static final String EXECUTABLE_NAME = "JavaAppLauncher";
-
-    public static final StandardBundlerParam<String> APP_FS_NAME =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.app-fs-name.name"),
-                    I18N.getString("param.app-fs-name.description"),
-                    "name.fs",
-                    String.class,
-                    params -> TO_FS_NAME.matcher(APP_NAME.fetchFrom(params)).replaceAll(""),
-                    (s, p) -> s
-            );
 
     public static final BundlerParamInfo<File> ICON_PNG = new StandardBundlerParam<>(
             I18N.getString("param.icon-png.name"),

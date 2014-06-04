@@ -25,6 +25,7 @@
 
 package com.sun.glass.ui.monocle;
 
+import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.glass.ui.Cursor;
@@ -33,6 +34,8 @@ import com.sun.glass.ui.PlatformFactory;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.glass.ui.Application;
+
 
 public final class MonocleWindow extends Window {
 
@@ -329,7 +332,18 @@ public final class MonocleWindow extends Window {
     }
 
     @Override
-    protected void _setEnabled(long ptr, boolean enabled){}
+    protected void _setEnabled(long ptr, boolean enabled){
+        if (!enabled &&
+            (this == MonocleWindowManager.getInstance().getFocusedWindow())) {
+            MonocleView view = (MonocleView)getView();
+            try {
+                view.notifyMouse(MouseEvent.EXIT, MouseEvent.BUTTON_NONE,
+                        0, 0, 0, 0, 0, false, false);
+            } catch (RuntimeException e) {
+                Application.reportException(e);
+            }
+        }
+    }
 
     @Override
     protected boolean _setMinimumSize(long ptr, int width, int height) {

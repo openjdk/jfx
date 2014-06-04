@@ -39,7 +39,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import static com.oracle.tools.packager.linux.LinuxAppBundler.APP_FS_NAME;
 import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
 
 public class LinuxDebBundler extends AbstractBundler {
@@ -221,6 +220,13 @@ public class LinuxDebBundler extends AbstractBundler {
                 }
             } else {
                 Log.info(I18N.getString("message.debs-like-licenses"));
+            }
+
+            // for services, the app launcher must be less than 16 characters or init.d complains
+            if (p.containsKey(SERVICE_HINT.getID()) && SERVICE_HINT.fetchFrom(p) && BUNDLE_NAME.fetchFrom(p).length() > 16) {
+                throw new ConfigException(
+                        MessageFormat.format(I18N.getString("error.launcher-name-too-long"), BUNDLE_NAME.fetchFrom(p)),
+                        MessageFormat.format(I18N.getString("error.launcher-name-too-long.advice"), BUNDLE_NAME.getID()));
             }
 
             return true;
@@ -530,7 +536,7 @@ public class LinuxDebBundler extends AbstractBundler {
 
     private File getConfig_InitScriptFile(Map<String, ? super Object> params) {
         return new File(LinuxAppBundler.getRootDir(APP_IMAGE_ROOT.fetchFrom(params), params),
-                APP_FS_NAME.fetchFrom(params) + ".init");
+                BUNDLE_NAME.fetchFrom(params) + ".init");
     }
 
     private File getConfig_ControlFile(Map<String, ? super Object> params) {

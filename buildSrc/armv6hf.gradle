@@ -26,13 +26,14 @@
 ext.ARMV6HF = [:]
 
 // Define the location of the sdk and toolchain
-def sdk=file("${rootProject.CROSS_TOOLS_DIR}/armhf-raspberry-pi-10")
+def crossLibsPackage="armv6hf-01"
+def sdk=file("${rootProject.CROSS_TOOLS_DIR}/$crossLibsPackage")
 def compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
 def compilerPrefix
 def jniPlatform
 if (IS_LINUX) {
     fetchExternalTools('ARMV6HF',
-            ["armhf-raspberry-pi-10.tgz",
+            ["${crossLibsPackage}.tgz",
              "gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux.tgz" ],
             rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 
@@ -41,7 +42,7 @@ if (IS_LINUX) {
     jniPlatform="linux"
 } else if (IS_MAC) {
     fetchExternalTools('ARMV6HF',
-            ["armhf-raspberry-pi-10.tgz"],
+            ["${crossLibsPackage}.tgz"],
             rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
 
     compilerHome=file("/usr/local/arm-linux")
@@ -117,7 +118,7 @@ if (imxHeader.exists()) {
 def extraLFlags = [
         "-I", "-L",
         linkFlags,
-        "-L$sdk/lib/arm-linux/gnueabihf",
+        "-L$sdk/lib/arm-linux-gnueabihf",
         "-L$sdk/usr/lib",
         "-L$sdk/usr/lib/arm-linux-gnueabihf",
         "-L$sdk/opt/vc/lib"].flatten()
@@ -130,9 +131,11 @@ def monocleCFlags = [
 def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 
 def fontCFlags = [extraCFlags].flatten()
-def fontLFlags = [extraLFlags].flatten()
+def fontLFlags = [extraLFlags, "-ldl"].flatten()
 
-def iioCFlags = [extraCFlags].flatten()
+def iioCFlags = [extraCFlags, 
+         "-Wno-main" // suppress warnings about using main as a variable, 3rd party code
+         ].flatten()
 def iioLFlags = [extraLFlags].flatten()
 
 def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
@@ -173,6 +176,10 @@ setupTools("armv6hf_tools",
         propFile << "libs=" << results.toString().trim();
     },
     { properties ->
+        if (properties.getProperty("cflags") == null || properties.getProperty("libs") == null ) {
+            fail("pkg-config failed for tools")
+             throw new GradleException("FAIL: pkg-config failed for tools")
+        }
         gtkCFlags.addAll(properties.getProperty("cflags").split(" "))
         gtkLFlags.addAll(properties.getProperty("libs").split(" "))
     }
@@ -485,7 +492,7 @@ ARMV6HF.prismES2.eglfb.nativeSource = [
 ARMV6HF.prismES2.eglfb.compiler = compiler
 ARMV6HF.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", ARMV6HF.glass.lensport.nativeSource ].flatten()
 ARMV6HF.prismES2.eglfb.linker = linker
-ARMV6HF.prismES2.eglfb.linkFlags = es2EglfbLFlags
+ARMV6HF.prismES2.eglfb.linkFlags = [ es2EglfbLFlags, "-dl" ] .flatten()
 ARMV6HF.prismES2.eglfb.lib = "prism_es2_eglfb"
 
 ARMV6HF.prismES2.monocle= [:]
@@ -497,7 +504,7 @@ ARMV6HF.prismES2.monocle.nativeSource = [
 ARMV6HF.prismES2.monocle.compiler = compiler
 ARMV6HF.prismES2.monocle.ccFlags = [ es2EglfbCFlags, "-I", ARMV6HF.glass.lensport.nativeSource ].flatten()
 ARMV6HF.prismES2.monocle.linker = linker
-ARMV6HF.prismES2.monocle.linkFlags = es2EglfbLFlags
+ARMV6HF.prismES2.monocle.linkFlags =[  es2EglfbLFlags, "-ldl" ].flatten()
 ARMV6HF.prismES2.monocle.lib = "prism_es2_monocle"
 
 ARMV6HF.prismES2.eglx11 = [:]
@@ -541,7 +548,7 @@ ARMV6HF.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
 ARMV6HF.fontFreetype.compiler = compiler
 ARMV6HF.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", ccFlags, fontCFlags, freetypeCCFlags].flatten()
 ARMV6HF.fontFreetype.linker = linker
-ARMV6HF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags].flatten()
+ARMV6HF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags, "-ldl"].flatten()
 ARMV6HF.fontFreetype.lib = "javafx_font_freetype"
 
 ARMV6HF.fontPango = [:]

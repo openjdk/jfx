@@ -95,17 +95,17 @@ public class DeleteObjectSelectionJob extends CompositeJob {
         final String result;
         final List<Job> subJobs = getSubJobs();
         final int subJobCount = subJobs.size();
-        assert (subJobCount == 0) || (subJobCount >= 2);
+        assert (subJobCount == 0) || (subJobCount >= 3);
         
         switch (subJobCount) {
             case 0:
                 result = "Unexecutable Delete"; // NO18N
                 break;
-            case 2: // Clear + one delete
+            case 3: // Clear + one delete + one AdjustAllToggleGroup
                 result = subJobs.get(1).getDescription();
                 break;
             default:
-                result = I18N.getString("label.action.edit.delete.n", subJobCount-1);
+                result = I18N.getString("label.action.edit.delete.n", subJobCount-2);
                 break;
         }
         

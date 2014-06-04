@@ -144,4 +144,14 @@ public abstract class ImageUtils {
     public static URL getNodeIconURL(String name) {
         return ImageUtils.class.getResource(NODE_ICONS_DIR + "/" + name); //NOI18N
     }
+    
+    /**
+     * Returns the URL corresponding to the specified name.
+     * The file MUST be located in the UI_DIR.
+     * @param name
+     * @return
+     */
+    public static URL getUIURL(String name) {
+        return ImageUtils.class.getResource(UI_DIR + "/" + name); //NOI18N
+    }
 }

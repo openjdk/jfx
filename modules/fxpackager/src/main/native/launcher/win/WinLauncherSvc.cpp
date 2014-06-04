@@ -205,7 +205,7 @@ VOID SvcInstall(TCHAR *svcName, TCHAR *svcDesc, TCHAR *mainExe,
     }
 
     // append the service arguments to the service executable
-    StringCchPrintf(szPath, MAX_PATH, _T("%s -mainExe %s"), szModuleName, mainExe);
+    StringCchPrintf(szPath, MAX_PATH, _T("%s -mainExe \"%s\""), szModuleName, mainExe);
 
     // Get a handle to the SCM database. 
     schSCManager = OpenSCManager( 
@@ -287,7 +287,7 @@ VOID SvcStartOnInstall(SC_HANDLE schService)
 
     if (!StartService(
                       schService,  // handle to service 
-                      0,           // number of arguments 
+                      0,           // number of arguments
                       NULL) )      // no arguments 
     {
         debug(TEXT("StartService failed (%d)"), GetLastError());

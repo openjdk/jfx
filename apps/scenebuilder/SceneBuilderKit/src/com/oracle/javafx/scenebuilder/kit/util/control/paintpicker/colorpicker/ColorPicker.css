@@ -31,7 +31,6 @@
  */
 .small-label {
     -fx-font-size: 0.750em;
-    -fx-text-fill: -sb-content-text-dimmed;
     -fx-padding: 0;
 }
 .chip-background {

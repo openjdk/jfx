@@ -59,10 +59,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.prefs.Preferences;
 import javafx.scene.image.Image;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundPosition;
-import javafx.scene.layout.BackgroundRepeat;
-import javafx.scene.layout.BackgroundSize;
 import javafx.scene.paint.Color;
 
 /**
@@ -311,21 +307,7 @@ public class PreferencesRecordGlobal {
 
     public void refreshBackgroundImage(DocumentWindowController dwc) {
         // Background images
-        final Image img1 = getImage(backgroundImage);
-        final javafx.scene.layout.BackgroundImage bgi1
-                = new javafx.scene.layout.BackgroundImage(img1,
-                        BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT,
-                        BackgroundPosition.CENTER, BackgroundSize.DEFAULT);
-        // Does the shadow image render something different ?
-//        final Image img2 = getShadowImage();
-//        final javafx.scene.layout.BackgroundImage bgi2
-//                = new javafx.scene.layout.BackgroundImage(img2,
-//                        BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT,
-//                        BackgroundPosition.CENTER, BackgroundSize.DEFAULT);
-//        final Background bg = new Background(bgi1, bgi2);
-        final Background bg = new Background(bgi1);
-        final ContentPanelController cpc = dwc.getContentPanelController();
-        cpc.getWorkspacePane().setBackground(bg);
+        dwc.getContentPanelController().setWorkspaceBackground(getImage(backgroundImage));
     }
 
     public void refreshCSSAnalyzerColumnsOrder(DocumentWindowController dwc) {
@@ -571,7 +553,7 @@ public class PreferencesRecordGlobal {
                 url = PreferencesRecordGlobal.class.getResource("Background-Neutral-Grid.png"); //NOI18N
                 break;
             case BACKGROUND_03:
-                url = PreferencesRecordGlobal.class.getResource("Background-Neutral-Uniform.png"); //NOI18N
+                url = ContentPanelController.getDefaultWorkspaceBackgroundURL();
                 break;
             default:
                 url = null;

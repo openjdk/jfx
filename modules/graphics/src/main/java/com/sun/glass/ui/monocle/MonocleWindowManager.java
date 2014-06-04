@@ -140,11 +140,18 @@ public final class MonocleWindowManager {
             MonocleWindow w = windows[i];
             if (x >= w.getX() && y >= w.getY()
                    && x < w.getX() + w.getWidth()
-                   && y < w.getY() + w.getHeight()) {
+                   && y < w.getY() + w.getHeight()
+                   && w.isEnabled()) {
                 return w;
             }
         }
         return null;
+    }
+
+    public void notifyFocusDisabled(MonocleWindow window) {
+        if (window != null) {
+            window._notifyFocusDisabled();
+        }
     }
     
     public MonocleWindow getFocusedWindow() {

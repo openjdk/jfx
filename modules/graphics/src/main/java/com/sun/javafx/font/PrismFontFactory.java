@@ -1581,10 +1581,21 @@ public abstract class PrismFontFactory implements FontFactory {
         String psname = fr.getPSName();
         if (psname == null || psname.length() == 0) return null;
 
-        /* Use filename from the resource so woff fonts are handled */
-        if (!registerEmbeddedFont(fr.getFileName())) {
-            /* This font file can't be used by the underlying rasterizer */
-            return null;
+        boolean registerEmbedded = true;
+        if (embeddedFonts != null) {
+            FontResource resource = embeddedFonts.get(fullname);
+            if (resource != null && fr.equals(resource)) {
+                /* Do not register the same font twice in the OS */
+                registerEmbedded = false;
+            }
+        }
+
+        if (registerEmbedded) {
+            /* Use filename from the resource so woff fonts are handled */
+            if (!registerEmbeddedFont(fr.getFileName())) {
+                /* This font file can't be used by the underlying rasterizer */
+                return null;
+            }
         }
 
         if (!register) {
@@ -1617,10 +1628,9 @@ public abstract class PrismFontFactory implements FontFactory {
             storeInMap(name, fr);
         }
 
-        String fname = fr.getFullName();
-        removeEmbeddedFont(fname);
-        embeddedFonts.put(fname, fr);
-        storeInMap(fname, fr);
+        removeEmbeddedFont(fullname);
+        embeddedFonts.put(fullname, fr);
+        storeInMap(fullname, fr);
         family = family + dotStyleStr(fr.isBold(), fr.isItalic());
         storeInMap(family, fr);
         /* The remove call is to assist the case where we have

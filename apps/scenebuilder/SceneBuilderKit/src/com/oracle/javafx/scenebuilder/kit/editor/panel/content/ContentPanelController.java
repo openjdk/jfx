@@ -31,47 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 
-import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
-import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
-import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
-import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.AbstractModeController;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.EditModeController;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.PickModeController;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.AbstractDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.FlowPaneDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.BorderPaneDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.GenericDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.GridPaneDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.HBoxDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.LineDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.SplitPaneDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabPaneDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TableColumnDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TableViewDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TextFlowDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.ToolBarDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableColumnDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.VBoxDriver;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractHandles;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.outline.NodeOutline;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.BoundsUnion;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.Picker;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.ScrollPaneBooster;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.editor.util.ContextMenuController;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
-import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
@@ -100,10 +59,16 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
+import javafx.scene.image.Image;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundImage;
+import javafx.scene.layout.BackgroundPosition;
+import javafx.scene.layout.BackgroundRepeat;
+import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -116,6 +81,48 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.TextFlow;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Transform;
+
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.AbstractDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.BorderPaneDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.FlowPaneDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.GenericDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.GridPaneDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.HBoxDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.LineDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.SplitPaneDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabPaneDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TableColumnDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TableViewDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TextFlowDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.ToolBarDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableColumnDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.VBoxDriver;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractHandles;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.outline.NodeOutline;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.AbstractModeController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.EditModeController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode.PickModeController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.BoundsUnion;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.Picker;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.ScrollPaneBooster;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
+import com.oracle.javafx.scenebuilder.kit.editor.util.ContextMenuController;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 
 /**
  * This class creates and controls the <b>Content Panel</b> of Scene Builder Kit.
@@ -297,6 +304,52 @@ public class ContentPanelController extends AbstractFxmlPanelController
         workspaceController.setAutoResize3DContent(autoResize3DContent);
     }
     
+    /**
+     * Returns null or the image used for tiling the background of this content panel.
+     * 
+     * @return null or the image used for tiling the background of this content panel.
+     */
+    public Image getWorkspaceBackground() {
+        final Image result;
+        
+        final Background bg = workspacePane.getBackground();
+        if (bg == null) {
+            result = null;
+        } else {
+            assert bg.getImages().size() == 1;
+            result = bg.getImages().get(0).getImage();
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Sets the image used for tiling the background of this content panel.
+     * 
+     * @param image null or the image for tiling the background of this content panel.
+     */
+    public void setWorkspaceBackground(Image image) {
+        final Background bg;
+        if (image == null) {
+            bg = null;
+        } else {
+            final BackgroundImage bgi = new javafx.scene.layout.BackgroundImage(image,
+                BackgroundRepeat.REPEAT, BackgroundRepeat.REPEAT,
+                BackgroundPosition.CENTER, BackgroundSize.DEFAULT);
+            bg = new Background(bgi);
+        }
+        workspacePane.setBackground(bg);
+    }
+    
+    /**
+     * Returns URL of the default workspace background.
+     * 
+     * @return URL of the default workspace background (never null).
+     */
+    public static URL getDefaultWorkspaceBackgroundURL() {
+        assert ImageUtils.getUIURL("Background-Neutral-Uniform.png") != null;
+        return ImageUtils.getUIURL("Background-Neutral-Uniform.png"); //NOI18N
+    }
     
     /**
      * Scrolls this content panel so that the selected objects are visible.
@@ -802,6 +855,9 @@ public class ContentPanelController extends AbstractFxmlPanelController
         final ContextMenuController contextMenuController
                 = getEditorController().getContextMenuController();
         scrollPane.setContextMenu(contextMenuController.getContextMenu());
+        
+        // Setup default workspace background
+        setWorkspaceBackground(ImageUtils.getImage(getDefaultWorkspaceBackgroundURL()));
     }
     
     /*

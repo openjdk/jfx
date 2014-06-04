@@ -277,7 +277,7 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
 
         webPage = Accessor.getPageFor(webView.getEngine());
 
-        webView.addEventHandler(MouseEvent.ANY, event2 -> {
+        webView.addEventHandler(MouseEvent.MOUSE_RELEASED, event2 -> {
             Platform.runLater(new Runnable() {
                 @Override public void run() {
                     updateToolbarState(true);
