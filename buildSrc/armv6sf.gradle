@@ -151,7 +151,7 @@ def prismSWLFlags = [extraLFlags].flatten()
 def mediaCFlags = [extraCFlags,
     "-I$sdk/usr/include/gstreamer-0.10",
     "-I$sdk/usr/include/glib-2.0",
-    "-I$sdk/usr/lib/glib-2.0/include",
+    "-I$sdk/usr/lib/arm-linux-gnueabi/glib-2.0/include",
     "-DENABLE_NATIVE_SOURCE=1", "-DENABLE_GST_FFMPEG=1"].flatten()
 def mediaLFlags = [extraLFlags, "-lgstreamer-0.10", "-lgstapp-0.10",
     "-lgstbase-0.10", "-lglib-2.0", "-lgobject-2.0", "-lgmodule-2.0", "-lgthread-2.0"].flatten()
