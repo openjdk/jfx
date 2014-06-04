@@ -51,7 +51,4 @@
       </children>
     </HBox>
   </children>
-  <stylesheets>
-    <URL value="@PaintPicker.css" />
-  </stylesheets>
 </VBox>

@@ -716,7 +716,8 @@
     -fx-padding: 4 0 3 0;
 }
 
-.theme-presets.property-sheet .button {
+.theme-presets.property-sheet .button,
+.theme-presets.property-sheet .toggle-button {
     -fx-text-fill: -sb-content-text;
 }
 

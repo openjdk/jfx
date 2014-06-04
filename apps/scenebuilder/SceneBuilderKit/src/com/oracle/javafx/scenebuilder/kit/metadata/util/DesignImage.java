@@ -68,6 +68,6 @@ public class DesignImage {
     }
     
     public static URL getVoidImageUrl() {
-        return DesignImage.class.getResource("DesignImage.jpg"); //NOI18N
+        return DesignImage.class.getResource("DesignImage.png"); //NOI18N
     }
 }
