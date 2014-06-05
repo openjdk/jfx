@@ -129,6 +129,7 @@ final class CssStyleHelper {
                 node.styleHelper.cacheContainer.fontSizeCache.clear();
             }
             node.styleHelper.cacheContainer.forceSlowpath = true;
+            node.styleHelper.triggerStates.addAll(triggerStates[0]);
             updateParentTriggerStates(node, depth, triggerStates);
             return node.styleHelper;
 
