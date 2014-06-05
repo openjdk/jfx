@@ -151,16 +151,16 @@ public class BundleParams {
     }
 
     public void setJvmargs(List<String> jvmargs) {
-        putUnlessNull(JVM_OPTIONS.getID(), jvmargs);
+        putUnlessNullOrEmpty(JVM_OPTIONS.getID(), jvmargs);
     }
 
     public void setJvmUserArgs(Map<String, String> userArgs) {
 
-        putUnlessNull(USER_JVM_OPTIONS.getID(), userArgs);
+        putUnlessNullOrEmpty(USER_JVM_OPTIONS.getID(), userArgs);
     }
 
     public void setJvmProperties(Map<String, String> jvmProperties) {
-        putUnlessNull(JVM_PROPERTIES.getID(), jvmProperties);
+        putUnlessNullOrEmpty(JVM_PROPERTIES.getID(), jvmProperties);
     }
 
     public String getApplicationID() {
@@ -546,6 +546,18 @@ public class BundleParams {
     
     public void putUnlessNull(String param, Object value) {
         if (value != null) {
+            params.put(param, value);
+        }
+    }
+
+    public void putUnlessNullOrEmpty(String param, Collection value) {
+        if (value != null && !value.isEmpty()) {
+            params.put(param, value);
+        }
+    }
+
+    public void putUnlessNullOrEmpty(String param, Map value) {
+        if (value != null && !value.isEmpty()) {
             params.put(param, value);
         }
     }

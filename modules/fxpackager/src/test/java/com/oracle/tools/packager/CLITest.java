@@ -85,6 +85,22 @@ public class CLITest {
                 "-Bruntime=" + System.getProperty("java.home"));
     }
 
+    @Test
+    public void propsViaBundlerArgs() throws Exception {
+        com.sun.javafx.tools.packager.Main.main("-deploy",
+                "-verbose", // verbose is required or test will call System.exit() on failures and break the build
+                "-srcfiles", fakeMainJar.getCanonicalPath(),
+                "-outdir", workDir.getCanonicalPath(),
+                "-outfile", "SimpleTest",
+                "-appclass", "hello.TestPackager",
+                "-native", "image",
+                "-name", "SimpleTest",
+                "-BjvmOptions=-Dsqe.foo.bar=baz -Dsqe.qux.corge=grault",
+                "-BuserJvmOptions=-Xmx=1g\n-Xms=512m",
+                "-BjvmProperties=sqe.aba.caba=dabacaba"
+        );
+    }
+
     @Test(expected = PackagerException.class)
     public void duplicateNameClash() throws Exception {
         com.sun.javafx.tools.packager.Main.main("-deploy",
