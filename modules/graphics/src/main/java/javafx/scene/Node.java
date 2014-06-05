@@ -8789,9 +8789,21 @@ public abstract class Node implements EventTarget, Styleable {
             // minor optimization to avoid calling createStyleHelper on children
             // when we know there will not be any change in the style maps.
             final boolean visitChildren =
+                    // If we don't have a styleHelper, then we should visit the children of this parent
+                    // since there might be styles that depend on being a child of this parent.
+                    // In other words, we have .a > .b { blah: blort; }, but no styles for ".a" itself.
+                    styleHelper == null ||
+                    // if the styleHelper changed, then we definitely need to visit the children
+                    // since the new styles may have an effect on the children's styles calculated values.
                     (oldStyleHelper != styleHelper) ||
-                            (getParent() == null) ||
-                            (getParent().cssFlag != CssFlags.CLEAN);
+                    // If our parent is null, then we're the root of a scene or sub-scene, most likely,
+                    // and we'll visit children because elsewhere the code depends on root.impl_reapplyCSS()
+                    // to force css to be reapplied (whether it needs to be or not).
+                    (getParent() == null) ||
+                    // If our parent's cssFlag is other than clean, then the parent may have just had
+                    // CSS reapplied. If the parent just had CSS reapplied, then some of its styles
+                    // may affect my children's styles.
+                    (getParent().cssFlag != CssFlags.CLEAN);
 
             if (visitChildren) {
 
