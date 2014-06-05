@@ -27,11 +27,7 @@ package com.sun.glass.ui.monocle.input;
 
 import com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.Before;
-import org.junit.Ignore;
+import org.junit.*;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
@@ -49,6 +45,8 @@ public class RotateTest extends ParameterizedTestBase {
     private int centerX;
     private int centerY;
     private int radius;
+    private int p1;
+    private int p2;
 
     public RotateTest(TestTouchDevice device) {
         super(device);
@@ -66,6 +64,17 @@ public class RotateTest extends ParameterizedTestBase {
         centerX = (int) Math.round(width * 0.5);
         centerY = (int) Math.round(height * 0.5);
         radius = (int) Math.round(height * 0.45);
+    }
+
+    @After
+    public void releaseAll() throws Exception {
+        if (device.getPressedPoints() == 2) {
+            TestLog.reset();
+            device.removePoint(p1);
+            device.removePoint(p2);
+            device.sync();
+        }
+        Thread.sleep(2000);
     }
 
     private void updateNewTouchPoint(int angle, int radius, int centerX, int centerY) {
@@ -99,8 +108,8 @@ public class RotateTest extends ParameterizedTestBase {
         updateNewTouchPoint(startAngle, radius, x2, y2);
 
         TestLog.reset();
-        int p1 = device.addPoint(newX1, newY1);
-        int p2 = device.addPoint(x2, y2);
+        p1 = device.addPoint(newX1, newY1);
+        p2 = device.addPoint(x2, y2);
         device.sync();
         //verify pressing two fingers
         TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", newX1, newY1);
