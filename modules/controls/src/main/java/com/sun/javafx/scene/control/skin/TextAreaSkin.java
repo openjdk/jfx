@@ -420,8 +420,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         // Initialize content
         scrollPane = new ScrollPane();
-        scrollPane.setMinWidth(0);
-        scrollPane.setMinHeight(0);
         scrollPane.setFitToWidth(textArea.isWrapText());
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
@@ -731,25 +729,6 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         paragraphNode.fontProperty().bind(textArea.fontProperty());
         paragraphNode.fillProperty().bind(textFill);
         paragraphNode.impl_selectionFillProperty().bind(highlightTextFill);
-    }
-
-    @Override public void layoutChildren(final double x, final double y,
-            final double w, final double h) {
-        
-        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-
-        super.layoutChildren(x,y,w,h);
-
-        // Hide the scrollbars if the viewport is too small to show
-        // even the minimum amount of text (one character by default).
-        Bounds bounds = scrollPane.getViewportBounds();
-        if (bounds != null && bounds.getWidth() > 0 && bounds.getHeight() > 0 &&
-            (bounds.getWidth() < contentView.minWidth(-1) ||
-             bounds.getHeight() < contentView.minHeight(-1))) {
-            scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-            scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        }
     }
 
     @Override
