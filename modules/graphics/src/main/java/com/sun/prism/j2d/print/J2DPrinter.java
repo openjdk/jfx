@@ -839,7 +839,7 @@ public class J2DPrinter implements PrinterImpl {
             MediaPrintableArea[] mpa = (MediaPrintableArea[])service.
                 getSupportedAttributeValues(MediaPrintableArea.class,
                                             null, pras);
-            if (mpa != null && mpa.length > 0) {
+            if (mpa != null && mpa.length > 0 && mpa[0] != null) {
                 int MPA_INCH = MediaPrintableArea.INCH;
                 area = new Rectangle2D(mpa[0].getX(MPA_INCH),
                                        mpa[0].getY(MPA_INCH),

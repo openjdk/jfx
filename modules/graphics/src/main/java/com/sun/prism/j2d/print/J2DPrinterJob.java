@@ -389,6 +389,10 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 bm = pWid - mpaX - mpaW;
                 break;
             }
+            if (Math.abs(lm) < 0.01) lm = 0;
+            if (Math.abs(rm) < 0.01) rm = 0;
+            if (Math.abs(tm) < 0.01) tm = 0;
+            if (Math.abs(bm) < 0.01) bm = 0;
             newLayout = fxPrinter.createPageLayout(paper, orient,
                                                    lm, rm, tm, bm);
         }
