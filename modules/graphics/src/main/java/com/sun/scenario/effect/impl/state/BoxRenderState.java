@@ -316,8 +316,8 @@ public class BoxRenderState extends LinearConvolveRenderState {
     @Override
     public Rectangle getInputClip(int i, Rectangle filterClip) {
         if (filterClip != null) {
-            int klenh = ((int) Math.ceil(Math.max(inputSizeH, 1.0))) | 1;
-            int klenv = ((int) Math.ceil(Math.max(inputSizeV, 1.0))) | 1;
+            int klenh = getInputKernelSize(0);
+            int klenv = getInputKernelSize(1);
             if ((klenh | klenv) > 1) {
                 filterClip = new Rectangle(filterClip);
                 // We actually want to grow them by (klen-1)/2, but since we
