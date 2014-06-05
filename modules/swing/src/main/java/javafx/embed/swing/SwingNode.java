@@ -853,6 +853,8 @@ public class SwingNode extends Node {
             // Don't let Arrows, Tab, Shift+Tab traverse focus out.
             if (event.getCode() == KeyCode.LEFT  ||
                 event.getCode() == KeyCode.RIGHT ||
+                event.getCode() == KeyCode.UP ||
+                event.getCode() == KeyCode.DOWN ||
                 event.getCode() == KeyCode.TAB)
             {
                 event.consume();
