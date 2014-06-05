@@ -194,6 +194,24 @@ public class WinAppBundlerTest {
         }
     }
 
+    /**
+     * Test a misconfiguration where the runtime is misconfigured.
+     */
+    @Test(expected = ConfigException.class)
+    public void runtimeBad() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(WIN_RUNTIME.getID(), APP_RESOURCES.fetchFrom(bundleParams));
+
+        bundler.validate(bundleParams);
+    }
+
     @Test
     public void configureEverything() throws Exception {
         AbstractBundler bundler = new WinAppBundler();

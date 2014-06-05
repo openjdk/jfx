@@ -50,6 +50,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.linux.LinuxAppBundler.LINUX_RUNTIME;
 import static org.junit.Assert.*;
 
 public class LinuxAppBundlerTest {
@@ -187,6 +188,24 @@ public class LinuxAppBundlerTest {
             // - make sure 'app.classpath=null' doesn't show up, prefer 'app.classpath='
             assertFalse(p.getProperty("app.classpath").equals("null"));
         }
+    }
+
+    /**
+     * Test a misconfiguration where the runtime is misconfigured.
+     */
+    @Test(expected = ConfigException.class)
+    public void runtimeBad() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LINUX_RUNTIME.getID(), APP_RESOURCES.fetchFrom(bundleParams));
+
+        bundler.validate(bundleParams);
     }
 
     @Test

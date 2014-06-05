@@ -158,8 +158,12 @@ public class WinAppBundler extends AbstractBundler {
         }
 
         //validate required inputs
+        testRuntime(WIN_RUNTIME.fetchFrom(p), new String[] {
+                "bin\\\\[^\\\\]+\\\\jvm.dll", // most reliable
+                "lib\\\\rt.jar", // fallback canary for JDK 8
+        });
         if (USE_FX_PACKAGING.fetchFrom(p)) {
-            testRuntime(WIN_RUNTIME.fetchFrom(p), new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
+            testRuntime(WIN_RUNTIME.fetchFrom(p), new String[] {"lib\\ext\\jfxrt.jar", "lib\\jfxrt.jar"});
         }
 
         //validate runtime bit-architectire

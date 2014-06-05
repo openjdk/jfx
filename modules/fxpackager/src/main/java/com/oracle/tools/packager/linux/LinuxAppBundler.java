@@ -156,10 +156,13 @@ public class LinuxAppBundler extends AbstractBundler {
         }
 
         //validate required inputs
+        testRuntime(LINUX_RUNTIME.fetchFrom(p), new String[] {
+                "lib/[^/]+/[^/]+/libjvm.so", // most reliable
+                "lib/rt.jar", // fallback canary for JDK 8
+        });
         if (USE_FX_PACKAGING.fetchFrom(p)) {
             testRuntime(LINUX_RUNTIME.fetchFrom(p), new String[] {"lib/ext/jfxrt.jar", "lib/jfxrt.jar"});
         }
-        testRuntime(LINUX_RUNTIME.fetchFrom(p), new String[] { "lib/rt.jar" });
 
         return true;
     }
