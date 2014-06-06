@@ -77,7 +77,22 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             @Override public void onChanged(final Change<? extends Integer> c) {
                 // when the selectedIndices ObservableList changes, we manually call
                 // the observers of the selectedItems ObservableList.
-                selectedItemsSeq.callObservers(new MappingChange<Integer,T>(c, map, selectedItemsSeq));
+
+                // Fix for a bug identified whilst fixing RT-37395:
+                // We shouldn't fire events on the selectedItems list unless
+                // the indices list has actually changed. This means that index
+                // permutation events should not be forwarded blindly through the
+                // items list, as a index permutation implies the items list is
+                // unchanged, not changed!
+                boolean hasRealChangeOccurred = false;
+                while (c.next() && ! hasRealChangeOccurred) {
+                    hasRealChangeOccurred = c.wasAdded() || c.wasRemoved();
+                }
+
+                if (hasRealChangeOccurred) {
+                    c.reset();
+                    selectedItemsSeq.callObservers(new MappingChange<Integer, T>(c, map, selectedItemsSeq));
+                }
                 c.reset();
             }
         });

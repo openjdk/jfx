@@ -26,7 +26,6 @@
 package javafx.scene.control;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -48,25 +47,17 @@ import static org.junit.Assert.assertEquals;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxTreeCell;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTreeCell;
-import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -1827,5 +1818,123 @@ public class TreeViewTest {
         tv.getRoot().getChildren().add(new TreeItem("1"));
         assertEquals(0, rt_37061_index_counter);
         assertEquals(0, rt_37061_item_counter);
+    }
+
+    private int rt_37395_index_addCount = 0;
+    private int rt_37395_index_removeCount = 0;
+    private int rt_37395_index_permutationCount = 0;
+    private int rt_37395_item_addCount = 0;
+    private int rt_37395_item_removeCount = 0;
+    private int rt_37395_item_permutationCount = 0;
+
+    @Test public void test_rt_37395() {
+        // tree items - 3 items, 2nd item has 2 children
+        TreeItem<String> root = new TreeItem<>();
+
+        TreeItem<String> two = new TreeItem<>("two");
+        two.getChildren().add(new TreeItem<>("childOne"));
+        two.getChildren().add(new TreeItem<>("childTwo"));
+
+        root.getChildren().add(new TreeItem<>("one"));
+        root.getChildren().add(two);
+        root.getChildren().add(new TreeItem<>("three"));
+
+        // tree
+        TreeView<String> tree = new TreeView<>();
+        tree.setShowRoot(false);
+        tree.setRoot(root);
+
+        MultipleSelectionModel sm = tree.getSelectionModel();
+        sm.getSelectedIndices().addListener(new ListChangeListener<Integer>() {
+            @Override public void onChanged(Change<? extends Integer> c) {
+                while (c.next()) {
+                    if (c.wasRemoved()) {
+                        c.getRemoved().forEach(item -> {
+                            if (item == null) {
+                                fail("Removed index should never be null");
+                            } else {
+                                rt_37395_index_removeCount++;
+                            }
+                        });
+                    }
+                    if (c.wasAdded()) {
+                        c.getAddedSubList().forEach(item -> {
+                            rt_37395_index_addCount++;
+                        });
+                    }
+                    if (c.wasPermutated()) {
+                        rt_37395_index_permutationCount++;
+                    }
+                }
+            }
+        });
+        sm.getSelectedItems().addListener(new ListChangeListener<TreeItem<String>>() {
+            @Override public void onChanged(Change<? extends TreeItem<String>> c) {
+                while (c.next()) {
+                    if (c.wasRemoved()) {
+                        c.getRemoved().forEach(item -> {
+                            if (item == null) {
+                                fail("Removed item should never be null");
+                            } else {
+                                rt_37395_item_removeCount++;
+                            }
+                        });
+                    }
+                    if (c.wasAdded()) {
+                        c.getAddedSubList().forEach(item -> {
+                            rt_37395_item_addCount++;
+                        });
+                    }
+                    if (c.wasPermutated()) {
+                        rt_37395_item_permutationCount++;
+                    }
+                }
+            }
+        });
+
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(0, rt_37395_index_addCount);
+        assertEquals(0, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(0, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        StageLoader sl = new StageLoader(tree);
+
+        // step one: select item 'three' in index 2
+        sm.select(2);
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(1, rt_37395_index_addCount);
+        assertEquals(0, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(1, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        // step two: expand item 'two'
+        // The first part of the bug report was that we received add/remove
+        // change events here, when in reality we shouldn't have, so lets enforce
+        // that. We do expect a permutation event on the index, as it has been
+        // pushed down, but this should not result in an item permutation event,
+        // as it remains unchanged
+        two.setExpanded(true);
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(1, rt_37395_index_addCount);
+        assertEquals(1, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(1, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        // step three: collapse item 'two'
+        // Same argument as in step two above: no addition or removal, just a
+        // permutation on the index
+        two.setExpanded(false);
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(1, rt_37395_index_addCount);
+        assertEquals(2, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(1, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        sl.dispose();
     }
 }

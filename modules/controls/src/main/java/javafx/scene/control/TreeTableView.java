@@ -2373,6 +2373,13 @@ public class TreeTableView<S> extends Control {
                 
                 shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
                     @Override public Void call(ShiftParams param) {
+
+                        // we make the shifts atomic, as otherwise listeners to
+                        // the items / indices lists get a lot of intermediate
+                        // noise. They eventually get the summary event fired
+                        // from within shiftSelection, so this is ok.
+                        makeAtomic = true;
+
                         final int clearIndex = param.getClearIndex();
                         TreeTablePosition<S,?> oldTP = null;
                         if (clearIndex > -1) {
@@ -2385,14 +2392,16 @@ public class TreeTableView<S> extends Control {
                                 }
                             }
                         }
-                        
+
                         if (oldTP != null && param.isSelected()) {
                             TreeTablePosition<S,?> newTP = new TreeTablePosition<>(
                                     treeTableView, param.getSetIndex(), oldTP.getTableColumn());
 
                             selectedCellsMap.add(newTP);
                         }
-                        
+
+                        makeAtomic = false;
+
                         return null;
                     }
                 });
