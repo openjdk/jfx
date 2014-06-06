@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,11 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package javafxports.android;
 
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
@@ -46,14 +48,21 @@ import android.widget.FrameLayout;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
-import javafx.application.Platform;
+
 
 public class FXActivity extends Activity implements SurfaceHolder.Callback,
         SurfaceHolder.Callback2 {
@@ -63,10 +72,16 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
     private static final String ACTIVITY_LIB = "activity";
     private static final String META_DATA_LAUNCHER_CLASS = "launcher.class";
     private static final String DEFAULT_LAUNCHER_CLASS = "javafxports.android.DalvikLauncher";
+    private static final String META_DATA_MAIN_CLASS = "main.class";
+    private static final String META_DATA_PRELOADER_CLASS = "preloader.class";
     private static final String META_DATA_DEBUG_PORT = "debug.port";
 
-    public static final String APPLICATION_DEX_NAME = "Application_dex.jar";
-    static final int BUF_SIZE = 8 * 1024;
+    private static final String APPLICATION_DEX_NAME = "Application_dex.jar";
+    private static final String APPLICATION_RESOURCES_NAME = "Application_resources.jar";
+    private static final String CLASSLOADER_PROPERTIES_NAME = "classloader.properties";
+    private static final String BUILD_TIME_NAME = "buildtime";
+    private static final int BUF_SIZE = 8 * 1024;
+    public static String dexClassPath = new String();
 
     private static FXActivity instance;
     private static Launcher launcher;
@@ -81,18 +96,44 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
 
     private static CountDownLatch cdlEvLoopFinished;
 
+    // Cache method handles
+    // Can not access com.sun.glass.ui.android.DalvikInput directly, because the javafx classes are loaded with a different classloader 
+    private Method onMultiTouchEventMethod;
+    private Method onKeyEventMethod;
+    private Method onSurfaceChangedNativeMethod1;
+    private Method onSurfaceChangedNativeMethod2;
+    private Method onSurfaceRedrawNeededNativeMethod;
+    private Method onConfigurationChangedNativeMethod;
+
     //configurations
     private int SCREEN_ORIENTATION = 1;
+    
+    private String launcherClassName;
+    private String mainClassName;
+    private String preloaderClassName;
+    
+    private String currentBuildStamp;
+    private Properties classLoaderProperties;
+    private File dexInternalStoragePath;
+    
+    private static final Bundle metadata = new Bundle();
 
     static {
         System.loadLibrary(ACTIVITY_LIB);
-    }
+        System.setProperty("javax.xml.stream.XMLInputFactory",
+                "com.sun.xml.stream.ZephyrParserFactory");
+        System.setProperty("javax.xml.stream.XMLOutputFactory",
+                "com.sun.xml.stream.ZephyrWriterFactory");
+        System.setProperty("javax.xml.stream.XMLEventFactory",
+                "com.sun.xml.stream.events.ZephyrEventFactory");
 
+    }
+        
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Log.v(TAG, "onCreate");
+        Log.v(TAG, "onCreate FXActivity");
         if (launcher != null) {
             Log.v(TAG, "JavaFX application is already running");
             return;
@@ -114,34 +155,22 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
 
         // Before the secondary dex file can be processed by the DexClassLoader,
         // it has to be first copied from asset resource to a storage location.
-        File dexInternalStoragePath = new File(getDir("dex", Context.MODE_PRIVATE), APPLICATION_DEX_NAME);
-        BufferedInputStream bis = null;
-        OutputStream dexWriter = null;
-
+        dexInternalStoragePath = getDir("dex", Context.MODE_PRIVATE);
+        
         try {
-            bis = new BufferedInputStream(getAssets().open(APPLICATION_DEX_NAME));
-            Log.v(TAG, "copy secondary dex file '" + APPLICATION_DEX_NAME + "' from asset resource to storage location");
-            dexWriter = new BufferedOutputStream(new FileOutputStream(dexInternalStoragePath));
-            byte[] buf = new byte[BUF_SIZE];
-            int len;
-            while ((len = bis.read(buf, 0, BUF_SIZE)) > 0) {
-                dexWriter.write(buf, 0, len);
+            if(isUptodate()) {
+                dexClassPath = (String) getClassLoaderProperties().get("classpath");
+            } else {
+                extractDexFiles(APPLICATION_DEX_NAME);
+                copy(APPLICATION_RESOURCES_NAME);
+                writeClassLoaderProperties();
             }
         } catch (FileNotFoundException e) {
-            Log.v(TAG, "no secondary dex file '" + APPLICATION_DEX_NAME + "' found");
+            Log.v(TAG, "Not found application dex and resources jars.", e);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to copy secondary dex file.", e);
-        } finally {
-            try {
-                if (dexWriter != null) {
-                    dexWriter.close();
-                }
-                if (bis != null) {
-                    bis.close();
-                }
-            } catch (Exception e2) {
-            }
+            throw new RuntimeException("Failed to copy a file.", e);
         }
+        Log.v(TAG, "Secondary dex file classpath " + dexClassPath);
         configuration = new DeviceConfiguration();
         configuration.setConfiguration(getResources().getConfiguration());
         Log.v(TAG, String.format("Confiuration orientation: %s",
@@ -154,32 +183,207 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         jfxEventsLoop();
     }
 
-    private Bundle getMetadata() {
+    private boolean isUptodate() {
+        
         try {
-            ActivityInfo ai = FXActivity.this.getPackageManager().getActivityInfo(
-                    getIntent().getComponent(), PackageManager.GET_META_DATA);
-            return ai.metaData;
-
-        } catch (NameNotFoundException e) {
-            throw new RuntimeException("Error getting activity info", e);
+            String currentBuildTime = getCurrentBuildStamp();
+            if (currentBuildTime == null) {
+                return false;
+            }
+            Properties props = getClassLoaderProperties();
+            if(props == null) {
+                return false;
+            }
+            String extractedBuildTime = props.getProperty("buildStamp");
+            return currentBuildTime.equals(extractedBuildTime);
+        } catch (IOException e) {
+            Log.d(TAG, "Failed to compare build timestamps. reason:" + e.getMessage());
         }
+        return false;
     }
 
+    private String getCurrentBuildStamp() {
+        if(currentBuildStamp == null) {
+            BufferedReader reader = null;
+            try {
+                reader = new BufferedReader(new InputStreamReader(getAssets().open(BUILD_TIME_NAME), "UTF-8"));
+                currentBuildStamp = reader.readLine();
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to read build timestamp.", e);
+            } finally {
+                if(reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) { }
+                }
+            }
+        }
+        return currentBuildStamp;
+    }
+    
+    private Properties getClassLoaderProperties() throws IOException {
+        if(classLoaderProperties == null) {
+            BufferedReader reader = null;
+            Properties props;
+            try {
+                props = new Properties();
+                reader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(dexInternalStoragePath, CLASSLOADER_PROPERTIES_NAME)), "UTF-8"));
+                props.load(reader);
+            } catch (FileNotFoundException e) {
+                return null;
+            } finally {
+                if(reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) { }
+                }
+            }
+            classLoaderProperties = props;
+        }
+        return classLoaderProperties;
+    }
+    
+    private void extractDexFiles(String file) throws IOException {
+        BufferedInputStream bis = null;
+        ZipInputStream zis = null;
+        try {
+            Log.v(TAG, "extracting secondary dex files from '" + file + "' from asset resource to storage location");
+            bis = new BufferedInputStream(getAssets().open(file));
+            zis = new ZipInputStream(bis);
+            ZipEntry ze;
+            while ((ze = zis.getNextEntry()) != null) {
+                if(ze.getName().endsWith(".dex")) {
+                    OutputStream dexWriter = null;
+                    try {
+                        File dexFile = new File(dexInternalStoragePath, ze.getName());
+                        if(! dexClassPath.isEmpty()) {
+                            dexClassPath += File.pathSeparator;
+                        }
+                        dexClassPath += dexFile.getAbsolutePath();
+                        dexWriter = new BufferedOutputStream(new FileOutputStream(dexFile));
+                        byte[] buf = new byte[BUF_SIZE];
+                        int len;
+                        while ((len = zis.read(buf, 0, BUF_SIZE)) > 0) {
+                            dexWriter.write(buf, 0, len);
+                        }
+                    } finally {
+                        if(dexWriter != null) { dexWriter.close(); };
+                    }
+                }
+            }
+        } finally {
+            try {
+                if (zis != null) {
+                    zis.close();
+                }
+                if (bis != null) {
+                    bis.close();
+                }
+            } catch (Exception e2) {
+            }
+        }
+    }
+    
+    
+    private void copy(String file) throws IOException, FileNotFoundException {
+            BufferedOutputStream writer = null;
+            BufferedInputStream bis = null;
+            Log.v(TAG, "copy secondary resource file '" + file + 
+                    "' from asset resource to storage location");
+            bis = new BufferedInputStream(getAssets().open(file));
+            try {
+                File dexFile = new File(dexInternalStoragePath, file);
+                if(! dexClassPath.isEmpty()) {
+                    dexClassPath += File.pathSeparator;
+                }
+                dexClassPath += dexFile.getAbsolutePath();
+                writer = new BufferedOutputStream(new FileOutputStream(dexFile));
+                byte[] buf = new byte[BUF_SIZE];
+                int len;
+                while ((len = bis.read(buf, 0, BUF_SIZE)) > 0) {
+                    writer.write(buf, 0, len);
+                }
+            
+            } finally {
+                  if(writer != null) { writer.close(); }
+                  if (bis != null) {bis.close();}
+            }
+    }
+    
+    private void writeClassLoaderProperties() {
+        Properties props =  new Properties();
+        props.put("classpath", dexClassPath);
+        props.put("buildStamp", getCurrentBuildStamp());
+
+        BufferedOutputStream writer = null;
+        File propertyFile = new File(dexInternalStoragePath, CLASSLOADER_PROPERTIES_NAME);
+        Log.d(TAG, "writing " + propertyFile.getAbsolutePath());
+        
+        try {
+            writer = new BufferedOutputStream(new FileOutputStream(propertyFile));
+            props.store(writer, null);
+        } catch (IOException e) {
+            Log.e(TAG, "failed to write " + propertyFile.getAbsolutePath(), e);
+        } finally {
+            if (writer != null) { 
+                try {
+                    writer.close();
+                } catch (IOException e) { }
+            }
+        }
+    }
+    
     private void getLauncherAndLaunchApplication() {
-        Bundle metaData = getMetadata();
-        int dport = metaData.getInt(META_DATA_DEBUG_PORT);
+        //load metadata
+        try {
+            ApplicationInfo appi = getPackageManager().getApplicationInfo(
+                    getPackageName(), PackageManager.GET_META_DATA);
+            if (appi != null && appi.metaData != null) {
+                metadata.putAll(appi.metaData);
+            }
+
+        } catch (NameNotFoundException e) {
+            Log.w(TAG, "Error getting Application info.");
+        }    
+    
+        try {            
+            ActivityInfo ai = FXActivity.this.getPackageManager().getActivityInfo(
+                    getIntent().getComponent(), PackageManager.GET_META_DATA);
+            if (ai != null && ai.metaData != null) {
+                metadata.putAll(ai.metaData);           
+            }
+
+        } catch (NameNotFoundException e) {
+            Log.w(TAG, "Error getting Activity info.");
+        }
+        
+        int dport = metadata.getInt(META_DATA_DEBUG_PORT);
         if (dport > 0) {
             android.os.Debug.waitForDebugger();
         }
-        String launcherClass = metaData.getString(
-                META_DATA_LAUNCHER_CLASS);
-        if (launcherClass == null) {
-            launcherClass = DEFAULT_LAUNCHER_CLASS;
+
+        launcherClassName = metadata.containsKey(META_DATA_LAUNCHER_CLASS) ?
+                metadata.getString(META_DATA_LAUNCHER_CLASS) : DEFAULT_LAUNCHER_CLASS;
+        
+        mainClassName = metadata.containsKey(META_DATA_MAIN_CLASS) ?
+                metadata.getString(META_DATA_MAIN_CLASS) : null;
+        
+        preloaderClassName = metadata.containsKey(META_DATA_PRELOADER_CLASS) ?
+                metadata.getString(META_DATA_PRELOADER_CLASS) : null;
+        if (mainClassName == null || mainClassName.length() == 0) {
+            throw new RuntimeException("Main application class must be defined.\n"
+                    + "Use <meta-data android.name=\"main.class\" "
+                    + "android.value=\"your.package.YourMainClass\"/>");
         }
+        if (preloaderClassName != null && preloaderClassName.length() == 0) {
+            preloaderClassName = null;
+        }
+        
+        //launch application
         try {
-            Class clazz = Class.forName(launcherClass);
-            launcher = (Launcher) clazz.newInstance();
-            launcher.launchApp(this, metaData);
+            Class<Launcher> clazz = (Class<Launcher>) Thread.currentThread().getContextClassLoader().loadClass(launcherClassName);
+            launcher = clazz.newInstance();
+            launcher.launchApp(this, mainClassName, preloaderClassName);
 
         } catch (Exception ex) {
             throw new RuntimeException("Did not create correct launcher.", ex);
@@ -240,7 +444,11 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
             //surface ready now is time to launch javafx
             getLauncherAndLaunchApplication();
         } else {
-            _surfaceChanged(surfaceDetails.surface);
+            try {
+                onSurfaceChangedNativeMethod1.invoke(null);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to invoke com.sun.glass.ui.android.DalvikInput.onSurfaceChangedNative1 method by reflection", e);
+            }
         }
     }
 
@@ -308,10 +516,11 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         surfaceDetails = new SurfaceDetails(holder.getSurface(), format, width, height);
         _setSurface(surfaceDetails.surface);
         if (glassHasStarted) {
-            _surfaceChanged(surfaceDetails.surface,
-                    surfaceDetails.format,
-                    surfaceDetails.width,
-                    surfaceDetails.height);
+            try {
+                onSurfaceChangedNativeMethod2.invoke(null, surfaceDetails.format, surfaceDetails.width, surfaceDetails.height);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to invoke com.sun.glass.ui.android.DalvikInput.onSurfaceChangedNative2 method by reflection", e);
+            }
         }
     }
 
@@ -321,7 +530,11 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         surfaceDetails = new SurfaceDetails();
         _setSurface(surfaceDetails.surface);
         if (glassHasStarted) {
-            _surfaceChanged(null);
+            try {
+                onSurfaceChangedNativeMethod1.invoke(null);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to invoke com.sun.glass.ui.android.DalvikInput.onSurfaceChangedNative1 method by reflection", e);
+            }
         }
     }
 
@@ -333,7 +546,11 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
             _setSurface(surfaceDetails.surface);
         }
         if (glassHasStarted) {
-            _surfaceRedrawNeeded(surfaceDetails.surface);
+            try {
+                onSurfaceRedrawNeededNativeMethod.invoke(null);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to invoke com.sun.glass.ui.android.DalvikInput.onSurfaceRedrawNeededNative method by reflection", e);
+            }
         }
     }
 
@@ -349,14 +566,6 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
     private native void _setDataDir(String dir);
 
     private native void _setSurface(Surface surface);
-
-    private native void _surfaceChanged(Surface surface);
-
-    private native void _surfaceChanged(Surface surface, int format, int width, int height);
-
-    private native void _surfaceRedrawNeeded(Surface surface);
-
-    private native void _configurationChanged(int flag);
 
     class DeviceConfiguration {
 
@@ -385,7 +594,12 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         void dispatch() {
             if ((change & ORIENTATION_CHANGE) > 0) {
                 Log.v(TAG, "Dispatching orientation change to");
-                FXActivity.this._configurationChanged(SCREEN_ORIENTATION);
+                try {
+                    onConfigurationChangedNativeMethod.invoke(null, SCREEN_ORIENTATION);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to invoke com.sun.glass.ui.android.DalvikInput.onConfigurationChangedNative method by reflection", e);
+                }
+       
             }
             change = 0;
         }
@@ -463,11 +677,11 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
                 touchYs[0] = (int) event.getY();
             }
             Log.e(TAG, "call native MultitouchEvent");
-            Platform.runLater(new Runnable() {
-                public void run() {
-                    onMultiTouchEventNative(pcount, actions, ids, touchXs, touchYs);
-                }
-            });
+            try {
+                onMultiTouchEventMethod.invoke(null, pcount, actions, ids, touchXs, touchYs);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to invoke com.sun.glass.ui.android.DalvikInput.onMultiTouchEvent method by reflection", e);
+            }
             return true;
         }
 
@@ -476,19 +690,41 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
             if (!glassHasStarted) {
                 return false;
             }
-            Platform.runLater(new Runnable() {
-                public void run() {
-                    onKeyEventNative(event.getAction(), event.getKeyCode(), event.getCharacters());
-                }
-            });
+            try {
+                onKeyEventMethod.invoke(null, event.getAction(), event.getKeyCode(), event.getCharacters());
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to invoke com.sun.glass.ui.android.DalvikInput.onKeyEventMethod method by reflection", e);
+            }
             return true;
         }
+    }
 
-        private native void onMultiTouchEventNative(int count, int[] actions,
-                int[] ids, int[] touchXs, int[] touchYs);
+    protected void setOnMultiTouchEventMethod(Method onMultiTouchEventMethod) {
+        this.onMultiTouchEventMethod = onMultiTouchEventMethod;
+    }
 
-        private native void onKeyEventNative(int action, int keycode, String characters);
+    protected void setOnKeyEventMethod(Method onKeyEventMethod) {
+        this.onKeyEventMethod = onKeyEventMethod;
+    }
 
+    protected void setOnSurfaceChangedNativeMethod1(
+            Method onSurfaceChangedNativeMethod1) {
+        this.onSurfaceChangedNativeMethod1 = onSurfaceChangedNativeMethod1;
+    }
+
+    protected void setOnSurfaceChangedNativeMethod2(
+            Method onSurfaceChangedNativeMethod2) {
+        this.onSurfaceChangedNativeMethod2 = onSurfaceChangedNativeMethod2;
+    }
+
+    protected void setOnSurfaceRedrawNeededNativeMethod(
+            Method onSurfaceRedrawNeededNativeMethod) {
+        this.onSurfaceRedrawNeededNativeMethod = onSurfaceRedrawNeededNativeMethod;
+    }
+
+    protected void setOnConfigurationChangedNativeMethod(
+            Method onConfigurationChangedNativeMethod) {
+        this.onConfigurationChangedNativeMethod = onConfigurationChangedNativeMethod;
     }
 
 }

@@ -26,8 +26,7 @@
 package javafxports.android;
 
 import android.app.Activity;
-import android.os.Bundle;
 
 public interface Launcher {
-    public void launchApp(Activity a, Bundle metadata);
+    public void launchApp(Activity a, String mainClassName, String preloaderClassName);
 }
