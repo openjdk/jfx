@@ -6,7 +6,7 @@
 # rerunning the script can be done faster. When the desired result is complete,
 # it can be removed as it should not be used in the build process.
 
-DEST_VERSION=armv6sf-01
+DEST_VERSION=armv6sf-02
 
 confirm() {
     echo -n "Is this correct? [Y/n]: "
@@ -408,7 +408,8 @@ if [[ ! -d $PILIBS ]]; then
 fi
 
 echo
-echo "WARNING: remember to hand patch in bcm_host.h for Pi support:"
+echo "WARNING: remember to hand patch in bcm_host.h for Pi support"
+echo "WARNING: remember to hand patch in usr/include/linux/mxcfb.h for i.mx cursor support"
 echo
 echo Done.
 

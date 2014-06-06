@@ -11,7 +11,7 @@
 # the Contents can be used to map a needed file to a package
 # the Package is used to check dependancies
 
-DEST_VERSION=armv6hf-01
+DEST_VERSION=armv6hf-02
 
 confirm() {
     echo -n "Is this correct? [Y/n]: "
@@ -437,5 +437,8 @@ if [[ ! -d $CROSSCOMPILER ]]; then
     installCrossCompiler
 fi
 
+echo
+echo "WARNING: remember to hand patch in usr/include/linux/mxcfb.h for i.mx cursor support"
+echo
 echo Done.
 

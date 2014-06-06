@@ -24,7 +24,7 @@
  */
 
 ext.ARMV6SF = [:]
-def crossLibsPackage="armv6sf-01"
+def crossLibsPackage="armv6sf-02"
 
 fetchExternalTools('ARMV6SF', [ "${crossLibsPackage}.tgz" ], 
   rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)

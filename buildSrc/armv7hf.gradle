@@ -26,7 +26,7 @@
 ext.ARMV7HF = [:]
 
 // Define the location of the sdk and toolchain
-def crossLibsPackage="armv6hf-01"
+def crossLibsPackage="armv6hf-02"
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/$crossLibsPackage")
 def compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/gcc-linaro-arm-linux-gnueabihf-raspbian-2012.09-20120921_linux")
 def compilerPrefix
