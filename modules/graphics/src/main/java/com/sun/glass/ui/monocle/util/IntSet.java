@@ -82,13 +82,14 @@ public class IntSet {
         return elements[index];
     }
 
-    /** Adds to the set "dest" values that are not in the set "compared". */
+    /** Adds to the set "dest" values that in this set but are not in the set
+     * "compared". */
     public void difference(IntSet dest, IntSet compared) {
         int i = 0;
         int j = 0;
         while (i < size && j < compared.size) {
             int a = elements[i];
-            int b = elements[j];
+            int b = compared.elements[j];
             if (a < b) {
                 // our set has a value that is not in "compared"
                 dest.addInt(a);

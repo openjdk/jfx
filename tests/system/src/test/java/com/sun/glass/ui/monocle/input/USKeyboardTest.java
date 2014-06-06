@@ -154,4 +154,50 @@ public class USKeyboardTest {
         TestLog.waitForLog("Key released: CAPS");
     }
 
+    /** Key presses and releases are allowed to overlap. RT-37425. */
+    @Test
+    public void testPressReleaseOrder() throws Exception {
+        TestApplication.showFullScreenScene();
+        TestApplication.addKeyListeners();
+        ui.processLine("OPEN");
+        ui.processLine("EVBIT EV_KEY");
+        ui.processLine("EVBIT EV_SYN");
+        ui.processLine("KEYBIT KEY_1");
+        ui.processLine("KEYBIT KEY_2");
+        ui.processLine("KEYBIT KEY_3");
+        ui.processLine("KEYBIT KEY_4");
+        ui.processLine("KEYBIT KEY_CAPSLOCK");
+        ui.processLine("PROPERTY ID_INPUT_KEYBOARD 1");
+        ui.processLine("CREATE");
+
+        ui.processLine("EV_KEY KEY_1 1");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key pressed: DIGIT1");
+        TestLog.waitForLog("Key typed: 1");
+        ui.processLine("EV_KEY KEY_2 1");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key pressed: DIGIT2");
+        TestLog.waitForLog("Key typed: 2");
+        ui.processLine("EV_KEY KEY_1 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key released: DIGIT1");
+        ui.processLine("EV_KEY KEY_3 1");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key pressed: DIGIT3");
+        TestLog.waitForLog("Key typed: 3");
+        ui.processLine("EV_KEY KEY_2 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key released: DIGIT2");
+        ui.processLine("EV_KEY KEY_4 1");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key pressed: DIGIT4");
+        TestLog.waitForLog("Key typed: 4");
+        ui.processLine("EV_KEY KEY_3 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key released: DIGIT3");
+        ui.processLine("EV_KEY KEY_4 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key released: DIGIT3");
+    }
+
 }
