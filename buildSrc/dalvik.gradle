@@ -197,6 +197,8 @@ project(":swing") {
 project(":fxml") {
     apply plugin: 'java'
 
+    jar.dependsOn("retroClass");
+
     compileJava {
         enabled = true
     }
@@ -210,31 +212,60 @@ project(":jmx") {
     }
 }
 
+
+allprojects() {
+    repositories {
+        mavenCentral()
+    }
+    configurations {
+        retroconfig
+    }
+
+    dependencies {
+        retroconfig 'net.orfjackal.retrolambda:retrolambda:1.1.4'
+    }
+    task retroClass() <<{
+            file classdirs = file ("$buildDir/classes");
+            lf = classdirs.listFiles();
+            classdirs.eachDir{t -> 
+                javaexec {
+                    inputdir = t
+                    basecp = files(lf, "modules/base/build/classes/main", "modules/graphics/build/classes/main").asPath
+                    myconfig = configurations.retroconfig;
+                    lambdaloc = myconfig.resolve().toArray()[0];
+                    classpath = configurations.retroconfig
+                    main = 'net.orfjackal.retrolambda.Main'
+                    jvmArgs = [
+                                "-Xbootclasspath:/opt/java/jre/lib/rt.jar",
+                                "-Dretrolambda.inputDir=$inputdir",
+                                "-Dretrolambda.classpath=$basecp",
+                                "-Dretrolambda.bytecodeVersion=51",
+                                "-javaagent:$lambdaloc"
+                   ]
+            }
+        }
+    }
+}
+
+
 project(":base") {
 
-    afterEvaluate {
-        compileJava {
-            options.compilerArgs << "-Xbootclasspath/p:../compat/build/libs/compat.jar"
-            options.bootClasspath = "$sdk/platforms/$sdk_target/android.jar"
-            dependsOn project(":compat").jarCompatLib
-        }
-        
-        jfxrtDalvik {
-            eachFile {
-                if (it.name.endsWith('.class')) {
-                    RandomAccessFile raf = new RandomAccessFile(it.file.path, "rw");
-                    raf.seek(7);
-                    raf.writeByte(0x32); //make it jdk6
-                    raf.close();
-                }
-            }
-        }        
-    }
+    apply plugin: 'java'
+
+    jar.dependsOn("retroClass");
+
 }
 
 
 project(":graphics") {
 
+    apply plugin: 'java'
+
+    sourceSets.main.java {
+        exclude "com/sun/glass/ui/swt/**"
+    }
+
+    assemble.dependsOn("retroClass");
     task compileDalvikLibs(type: JavaCompile, group: "Build") {
         description = "Task compiles dalvik vm based libraries."
         options.bootClasspath = "$sdk/platforms/$sdk_target/android.jar"
@@ -265,11 +296,6 @@ project(":graphics") {
     }
      
     afterEvaluate {
-        compileJava {
-            options.compilerArgs << "-Xbootclasspath/p:../compat/build/libs/compat.jar"
-        }
-
-
         addNative(project, "activity")
         if (compileNativeText) {
             addNative(project, "fontNativeFreetype")
@@ -298,10 +324,12 @@ project(":graphics") {
                     from ("modules/graphics/build/libs/${props.jfxdvklib}")
                     into ("build/dalvik-sdk/dalvik/lib")
                 }
+/*
                 copy {
                     from ("modules/compat/build/libs/compat.jar")
                     into ("build/dalvik-sdk/rt/lib/ext")
                 }
+*/
                 if (compileNativeText) {
                     copy {
                         from ("modules/graphics/build/libs/fontNativeFreetype/dalvik")
@@ -314,25 +342,27 @@ project(":graphics") {
 }
 
 project(":controls") {
+
+    apply plugin: 'java'
+
+    assemble.dependsOn("compileControlsJavaDalvik","retroClass");
+
+    sourceSets.main.java {
+        exclude 'javafx/scene/control/Date*.java'
+        exclude 'com/sun/javafx/scene/control/skin/Date*.java'
+        exclude 'com/sun/javafx/scene/control/behavior/Date*.java'
+    }
+    task compileControlsJavaDalvik(type: JavaCompile, group: "Build", dependsOn: [":graphics:compileJava", ":controls:compileJava"]) << {
+        description = "Task compiles controls for Android"
+        classpath = files("modules/base/build/classes/main",
+            "modules/graphics/build/classes/main",
+            "modules/controls/build/classes/main"
+        )
+        destinationDir = file("modules/controls/build/classes/dalvik")
+        dependencyCacheDir = file("modules/controls/build/dependency-cache")
+        source file("modules/controls/src/android/java")
+    }
     afterEvaluate {
-        compileJava {
-            options.compilerArgs << '-Xbootclasspath/p:../compat/build/libs/compat.jar'
-        }
-		sourceSets.main.java {
-            exclude 'javafx/scene/control/Date*.java'
-            exclude 'com/sun/javafx/scene/control/skin/Date*.java'
-            exclude 'com/sun/javafx/scene/control/behavior/Date*.java'
-        }
-        task compileControlsJavaDalvik(type: JavaCompile, group: "Build", dependsOn: [":graphics:compileJava", ":controls:compileJava"]) {
-            description = "Task compiles controls for Android"
-            classpath = files("modules/base/build/classes/main",
-                "modules/graphics/build/classes/main",
-                "modules/controls/build/classes/main"
-            )
-            destinationDir = file("modules/controls/build/classes/dalvik")
-            dependencyCacheDir = file("modules/controls/build/dependency-cache")
-            source file("modules/controls/src/android/java")
-        }
 
        task processControlsResourcesDalvik() {
            copy {
@@ -502,7 +532,7 @@ DALVIK.glass.eglfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens"),
     file("modules/graphics/src/main/native-glass/lens/wm"),
     file("modules/graphics/src/main/native-glass/lens/cursor/nullCursor"),
-    file("modules/graphics/src/main/native-glass/lens/input/dalvik")
+    file("modules/graphics/src/main/native-glass/lens/dalvik")
 ]
 DALVIK.glass.eglfb.compiler = compiler
 DALVIK.glass.eglfb.linker = linker
@@ -622,3 +652,7 @@ DALVIK.media = [:]
 DALVIK.media.compiler = compiler
 DALVIK.media.linker = linker
 DALVIK.media.lib = file("$compilerHome/bin/${toolchainArchs[0]}-ar").getAbsolutePath()
+DALVIK.includeEGL = true
+DALVIK.includeGTK = true
+DALVIK.includeLens = true
+ext.IS_COMPILE_PANGO = false

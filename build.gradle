@@ -2751,7 +2751,7 @@ compileTargets { t ->
                      "com/sun/prism/es2/IOS*"
                      )
         }
-        if (t.name != 'android') {
+        if (t.name != 'android' && t.name != 'dalvik') {
             exclude ("com/sun/glass/ui/android/*")
         }
 
