@@ -1185,6 +1185,7 @@ allprojects {
         options.addBooleanOption("XDignore.symbol.file").setValue(true);
         options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
         options.addBooleanOption("javafx").setValue(true);
+        options.addBooleanOption("use").setValue(true);
         // All doc-files are located in src/main/docs because Gradle's javadoc doesn't copy
         // over the doc-files if they are embedded with the sources. I find this arrangement
         // somewhat cleaner anyway (never was a fan of mixing javadoc files with the sources)
@@ -2540,6 +2541,7 @@ task javadoc(type: Javadoc) {
     options.addBooleanOption("XDignore.symbol.file").setValue(true);
     options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
     options.addBooleanOption("javafx").setValue(true);
+    options.addBooleanOption("use").setValue(true);
     doLast {
         projectsToDocument.each { p ->
             copy {
