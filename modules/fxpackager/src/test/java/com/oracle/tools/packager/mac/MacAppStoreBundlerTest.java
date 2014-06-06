@@ -70,6 +70,10 @@ public class MacAppStoreBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        // and only if we have the correct JRE settings
+        String jre = System.getProperty("java.home").toLowerCase();
+        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+
         // make sure we have a default signing key
         String signingKeyName = MacAppStoreBundler.MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(new TreeMap<>());
         Assume.assumeNotNull(signingKeyName);

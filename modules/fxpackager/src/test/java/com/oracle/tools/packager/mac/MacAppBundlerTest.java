@@ -68,6 +68,10 @@ public class MacAppBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        // and only if we have the correct JRE settings
+        String jre = System.getProperty("java.home").toLowerCase();
+        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+
         Log.setLogger(new Log.Logger(true));
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
