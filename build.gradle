@@ -1908,16 +1908,16 @@ project(":fxpackager") {
         task buildJavaPackager(group: "Build") {
             enabled = COMPILE_FXPACKAGER
             doLast {
-	            copy {
-    	            from "src/main/native/javapackager/shell"
-        		    into "$buildDir/javapackager"
-                	fileMode = 0755
+                copy {
+                    from "src/main/native/javapackager/shell"
+                    into "$buildDir/javapackager"
+                    fileMode = 0755
                 }
-	            copy {
-    	            from "src/main/native/javapackager/shell"
-        		    into "$buildDir/javapackager"
+                copy {
+                    from "src/main/native/javapackager/shell"
+                    into "$buildDir/javapackager"
                     rename ('javapackager', 'javafxpackager')
-                	fileMode = 0755
+                    fileMode = 0755
                 }
             }
         }
