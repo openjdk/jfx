@@ -162,19 +162,14 @@ public class Canvas extends Node {
                 public void invalidated() {
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
+                    if (theContext != null) {
+                        theContext.updateDimensions();
+                    }
                 }
 
                 @Override
                 public Object getBean() {
                     return Canvas.this;
-                }
-
-                @Override
-                public void set(double newValue) {
-                    super.set(newValue);
-                    if (theContext != null) {
-                        theContext.updateDimensions();
-                    }
                 }
 
                 @Override
@@ -210,19 +205,14 @@ public class Canvas extends Node {
                 public void invalidated() {
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
+                    if (theContext != null) {
+                        theContext.updateDimensions();
+                    }
                 }
 
                 @Override
                 public Object getBean() {
                     return Canvas.this;
-                }
-
-                @Override
-                public void set(double newValue) {
-                    super.set(newValue);
-                    if (theContext != null) {
-                        theContext.updateDimensions();
-                    }
                 }
 
                 @Override
