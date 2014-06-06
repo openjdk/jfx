@@ -635,9 +635,9 @@ public enum KeyCode {
     DEAD_ACUTE(0x81, "Dead Acute"),
 
     /**
-     * Constant for the {@code Circumflex} key.
+     * Constant for the {@code Dead Circumflex} key.
      */
-    DEAD_CIRCUMFLEX(0x82, "Circumflex"),
+    DEAD_CIRCUMFLEX(0x82, "Dead Circumflex"),
 
     /**
      * Constant for the {@code Dead Tilde} key.
