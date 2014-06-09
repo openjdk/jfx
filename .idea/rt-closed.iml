@@ -85,7 +85,6 @@
     </src_description>
   </component>
   <component name="NewModuleRootManager" inherit-compiler-output="true">
-    <output url="file://$MODULE_DIR$/../rt-closed/bin" />
     <exclude-output />
     <content url="file://$MODULE_DIR$/../rt-closed">
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/glass/UseCases/src" isTestSource="false" />
