@@ -413,6 +413,8 @@ final class WinAccessible extends PlatformAccessible {
                 }
                 break;
             }
+            case PARENT:
+                break;
             default:
                 UiaRaiseAutomationEvent(peer, UIA_AutomationPropertyChangedEventId);
         }

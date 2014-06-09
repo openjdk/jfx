@@ -745,6 +745,7 @@ public abstract class Node implements EventTarget, Styleable {
                     oldParent = newParent;
                     invalidateLocalToSceneTransform();
                     parentResolvedOrientationInvalidated();
+                    accSendNotification(Attribute.PARENT);
                 }
 
                 @Override

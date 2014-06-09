@@ -776,6 +776,9 @@ final class MacAccessible extends PlatformAccessible {
                 }
                 break;
             }
+            case PARENT:
+                ignoreInnerText = null;
+                break;
             default:
                 macNotification = MacNotification.NSAccessibilityValueChangedNotification;
         }
@@ -828,6 +831,39 @@ final class MacAccessible extends PlatformAccessible {
             inSlider = getContainerNode(Role.SLIDER) != null;
         }
         return inSlider;
+    }
+
+    Boolean ignoreInnerText;
+    boolean ignoreInnerText() {
+        if (ignoreInnerText != null) return ignoreInnerText;
+        /* JavaFX controls are implemented by the skin by adding new nodes.
+         * In accessibility these nodes sometimes duplicate the data in the
+         * control. For example, a Label is implemented using a Text, creating a
+         * AXStaticText inside an AXStaticText. In order to  improve accessibility
+         * navigation to following code ignores these inner text for the most 
+         * common cases.
+         */
+        Role role = (Role)getAttribute(ROLE);
+        ignoreInnerText = false;
+        if (role == Role.TEXT) {
+            Node parent = (Node)getAttribute(PARENT);
+            if (parent == null) return ignoreInnerText;
+            Role parentRole = (Role)parent.getAccessible().getAttribute(ROLE);
+            if (parentRole == null) return ignoreInnerText;
+            switch (parentRole) {
+                case BUTTON:
+                case TOGGLE_BUTTON:
+                case CHECKBOX:
+                case RADIO_BUTTON:
+                case COMBOBOX:
+                case TEXT:
+                case HYPERLINK:
+                case TAB_ITEM:
+                    ignoreInnerText = true;
+                default:
+            }
+        }
+        return ignoreInnerText;
     }
 
     private int getMenuItemCmdGlyph(KeyCode code) {
@@ -1757,6 +1793,9 @@ final class MacAccessible extends PlatformAccessible {
         if (isInMenu()) {
             Role role = (Role)getAttribute(ROLE);
             return role != Role.CONTEXT_MENU && role != Role.MENU_ITEM && role != Role.MENU_BAR;
+        }
+        if (ignoreInnerText()) {
+            return true;
         }
         return false;
     }
