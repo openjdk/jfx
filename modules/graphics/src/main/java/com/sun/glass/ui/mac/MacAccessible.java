@@ -255,20 +255,12 @@ final class MacAccessible extends PlatformAccessible {
             null,
             null
         ),
-        /* ProgressIndicator can be either a ProgressIndicatorRole or a BusyIndicatorRole (Based on INDETERMINATE) */
         NSAccessibilityProgressIndicatorRole(Role.PROGRESS_INDICATOR,
             new MacAttribute[] {
                 MacAttribute.NSAccessibilityOrientationAttribute,
                 MacAttribute.NSAccessibilityValueAttribute,
                 MacAttribute.NSAccessibilityMaxValueAttribute,
                 MacAttribute.NSAccessibilityMinValueAttribute,
-            },
-            null
-        ),
-        NSAccessibilityBusyIndicatorRole(Role.PROGRESS_INDICATOR,
-            new MacAttribute[] {
-                MacAttribute.NSAccessibilityOrientationAttribute,
-                MacAttribute.NSAccessibilityValueAttribute,
             },
             null
         ),
@@ -922,14 +914,7 @@ final class MacAccessible extends PlatformAccessible {
                 return MacRole.NSAccessibilityPopUpButtonRole;
             }
         }
-        MacRole macRole = MacRole.getRole(role);
-        if (macRole == MacRole.NSAccessibilityProgressIndicatorRole) {
-            Boolean state = (Boolean)getAttribute(INDETERMINATE);
-            if (Boolean.TRUE.equals(state)) {
-                macRole = MacRole.NSAccessibilityBusyIndicatorRole;
-            }
-        }
-        return macRole;
+        return MacRole.getRole(role);
     }
 
     private Bounds flipBounds(Bounds bounds) {
@@ -1327,6 +1312,16 @@ final class MacAccessible extends PlatformAccessible {
                  * to the lower-left corner in screen.
                  */
                 result = flipBounds((Bounds)result);
+                break;
+            }
+            case NSAccessibilityMaxValueAttribute: {
+                /* 
+                 * VoiceOver reports 'Indeterminate Progress Indicator' when
+                 * the max value is not specified.
+                 */
+                if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) {
+                    return null;
+                }
                 break;
             }
             case NSAccessibilityTitleAttribute: {
