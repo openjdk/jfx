@@ -167,7 +167,7 @@ public class WinServiceBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloService");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
 
         bundleParams.put(DESCRIPTION.getID(), "Does a random heart beat every 30 seconds or so to a log file in tmp");
         bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
@@ -208,7 +208,7 @@ public class WinServiceBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloService");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
 
         bundleParams.put(DESCRIPTION.getID(), "Does a random heart beat every 30 seconds or so to a log file in tmp");
         bundleParams.put(LICENSE_FILE.getID(), "LICENSE");

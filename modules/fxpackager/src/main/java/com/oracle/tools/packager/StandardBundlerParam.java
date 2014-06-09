@@ -190,10 +190,10 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     }
             );
 
-    public static final StandardBundlerParam<String> MAIN_JAR_CLASSPATH =
+    public static final StandardBundlerParam<String> CLASSPATH =
             new StandardBundlerParam<>(
-                    I18N.getString("param.main-jar-classpath.name"),
-                    I18N.getString("param.main-jar-classpath.description"),
+                    I18N.getString("param.classpath.name"),
+                    I18N.getString("param.classpath.description"),
                     "classpath",
                     String.class,
                     params -> {
@@ -454,7 +454,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
     public static void extractMainClassInfoFromAppResources(Map<String, ? super Object> params) {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
-        boolean hasMainJarClassPath = params.containsKey(MAIN_JAR_CLASSPATH.getID());
+        boolean hasMainJarClassPath = params.containsKey(CLASSPATH.getID());
 
         if (hasMainClass && hasMainJar && hasMainJarClassPath) {
             return;
@@ -467,7 +467,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             files = rfs.getIncludedFiles();
             srcdir = rfs.getBaseDirectory();
         } else if (hasMainJarClassPath) {
-            files = Arrays.asList(MAIN_JAR_CLASSPATH.fetchFrom(params).split("\\s+"));
+            files = Arrays.asList(CLASSPATH.fetchFrom(params).split("\\s+"));
             srcdir = APP_RESOURCES.fetchFrom(params).getBaseDirectory();
         } else {
             RelativeFileSet rfs = APP_RESOURCES.fetchFrom(params);
@@ -530,7 +530,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     }
                     if (!hasMainJarClassPath) {
                         String cp = attrs.getValue(Attributes.Name.CLASS_PATH);
-                        params.put(MAIN_JAR_CLASSPATH.getID(), cp == null ? "" : cp);
+                        params.put(CLASSPATH.getID(), cp == null ? "" : cp);
                     }
                     break;
                 }
@@ -543,7 +543,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
     public static void validateMainClassInfoFromAppResources(Map<String, ? super Object> params) throws ConfigException {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
-        boolean hasMainJarClassPath = params.containsKey(MAIN_JAR_CLASSPATH.getID());
+        boolean hasMainJarClassPath = params.containsKey(CLASSPATH.getID());
 
         if (hasMainClass && hasMainJar && hasMainJarClassPath) {
             return;

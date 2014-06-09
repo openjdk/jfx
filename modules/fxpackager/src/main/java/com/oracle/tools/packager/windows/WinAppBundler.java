@@ -343,8 +343,7 @@ public class WinAppBundler extends AbstractBundler {
             out.println("app.mainclass=" +
                     MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
         }
-        //This will be emtry string for correctly packaged JavaFX apps
-        out.println("app.classpath=" + MAIN_JAR_CLASSPATH.fetchFrom(params));
+        out.println("app.classpath=" + CLASSPATH.fetchFrom(params));
 
         List<String> jvmargs = JVM_OPTIONS.fetchFrom(params);
         int idx = 1;
@@ -425,7 +424,7 @@ public class WinAppBundler extends AbstractBundler {
                 JVM_PROPERTIES,
                 MAIN_CLASS,
                 MAIN_JAR,
-                MAIN_JAR_CLASSPATH,
+                CLASSPATH,
                 PREFERENCES_ID,
                 USER_JVM_OPTIONS,
                 VERSION,
