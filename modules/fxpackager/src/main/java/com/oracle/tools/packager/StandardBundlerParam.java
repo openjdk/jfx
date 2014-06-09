@@ -201,7 +201,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         String cp = (String) params.get("classpath");
                         return cp == null ? "" : cp;
                     },
-                    (s, p) -> s
+                    (s, p) -> s.replace(File.pathSeparator, " ")
             );
 
     public static final StandardBundlerParam<Boolean> USE_FX_PACKAGING =
@@ -467,7 +467,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             files = rfs.getIncludedFiles();
             srcdir = rfs.getBaseDirectory();
         } else if (hasMainJarClassPath) {
-            files = Arrays.asList(MAIN_JAR_CLASSPATH.fetchFrom(params).split(File.pathSeparator));
+            files = Arrays.asList(MAIN_JAR_CLASSPATH.fetchFrom(params).split("\\s+"));
             srcdir = APP_RESOURCES.fetchFrom(params).getBaseDirectory();
         } else {
             RelativeFileSet rfs = APP_RESOURCES.fetchFrom(params);
