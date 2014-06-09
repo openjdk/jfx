@@ -246,6 +246,7 @@ public class NGCanvas extends NGNode {
             }
             if (init_type == InitType.CLEAR) {
                 g.setCompositeMode(CompositeMode.CLEAR);
+                g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
                 g.fillRect(0, 0, tw, th);
                 g.setCompositeMode(CompositeMode.SRC_OVER);
             }
