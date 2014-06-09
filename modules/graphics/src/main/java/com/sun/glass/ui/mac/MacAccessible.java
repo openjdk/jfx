@@ -1554,16 +1554,7 @@ final class MacAccessible extends PlatformAccessible {
     }
 
     long accessibilityIndexOfChild(long child) {
-        //TODO this method might not be necessary
-        ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
-        if (children != null) {
-            for (int i = 0; i < children.size(); i++) {
-                Node node = children.get(i);
-                if (child == getAccessible(node)) {
-                    return i;
-                }
-            }
-        }
+        /* Forward to native code */
         return -1;
     }
 
