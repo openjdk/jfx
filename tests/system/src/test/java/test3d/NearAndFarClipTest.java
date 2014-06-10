@@ -55,97 +55,92 @@ public class NearAndFarClipTest extends VisualTestBase {
         final double NEAR = 0.1;
         final double FAR = 10.0;
 
-        runAndWait(new Runnable() {
-            @Override
-            public void run() {
-                testStage = getStage();
-                testStage.setTitle("Near and Far Clip Test");
+        runAndWait(() -> {
+            testStage = getStage();
+            testStage.setTitle("Near and Far Clip Test");
 
-                final double tanOfHalfFOV = Math.tan(Math.toRadians(FOV) / 2.0);
-                final double halfHeight = HEIGHT / 2;
-                final double focalLength = halfHeight / tanOfHalfFOV;
-                final double eyePositionZ = -1.0 * focalLength;
-                final double nearClipDistance = focalLength * NEAR + eyePositionZ;
-                final double farClipDistance =  focalLength * FAR + eyePositionZ;
-                final double nearClipDistanceOffset = Math.abs(nearClipDistance * OFFSET_PERCENT);
-                final double farClipDistanceOffset = Math.abs(farClipDistance * OFFSET_PERCENT);
-        
+            final double tanOfHalfFOV = Math.tan(Math.toRadians(FOV) / 2.0);
+            final double halfHeight = HEIGHT / 2;
+            final double focalLength = halfHeight / tanOfHalfFOV;
+            final double eyePositionZ = -1.0 * focalLength;
+            final double nearClipDistance = focalLength * NEAR + eyePositionZ;
+            final double farClipDistance =  focalLength * FAR + eyePositionZ;
+            final double nearClipDistanceOffset = Math.abs(nearClipDistance * OFFSET_PERCENT);
+            final double farClipDistanceOffset = Math.abs(farClipDistance * OFFSET_PERCENT);
+      
 //                System.out.println("In scene coordinate: focalLength = " + focalLength
 //                        + ", nearClipDistance = " + nearClipDistance
 //                        + ", nearClipDistanceOffset = " + nearClipDistanceOffset
 //                        + ", farClipDistance = " + farClipDistance
 //                        + ", farClipDistanceOffset = " + farClipDistanceOffset);
 
-                Rectangle insideRect = new Rectangle(220, 220, Color.GREEN);
-                insideRect.setLayoutX(140);
-                insideRect.setLayoutY(140);
+            Rectangle insideRect = new Rectangle(220, 220, Color.GREEN);
+            insideRect.setLayoutX(140);
+            insideRect.setLayoutY(140);
 
-                Rectangle insideNearClip = new Rectangle(16, 16, Color.BLUE);
-                insideNearClip.setLayoutX(242);
-                insideNearClip.setLayoutY(242);
-                insideNearClip.setTranslateZ(nearClipDistance + nearClipDistanceOffset);
+            Rectangle insideNearClip = new Rectangle(16, 16, Color.BLUE);
+            insideNearClip.setLayoutX(242);
+            insideNearClip.setLayoutY(242);
+            insideNearClip.setTranslateZ(nearClipDistance + nearClipDistanceOffset);
 
-                Rectangle outsideNearClip = new Rectangle(16, 16, Color.YELLOW);
-                outsideNearClip.setLayoutX(242);
-                outsideNearClip.setLayoutY(242);
-                outsideNearClip.setTranslateZ(nearClipDistance - nearClipDistanceOffset);
+            Rectangle outsideNearClip = new Rectangle(16, 16, Color.YELLOW);
+            outsideNearClip.setLayoutX(242);
+            outsideNearClip.setLayoutY(242);
+            outsideNearClip.setTranslateZ(nearClipDistance - nearClipDistanceOffset);
 
-                Rectangle insideFarClip = new Rectangle(3000, 3000, Color.RED);
-                insideFarClip.setTranslateX(-1250);
-                insideFarClip.setTranslateY(-1250);
-                insideFarClip.setTranslateZ(farClipDistance - farClipDistanceOffset);
+            Rectangle insideFarClip = new Rectangle(3000, 3000, Color.RED);
+            insideFarClip.setTranslateX(-1250);
+            insideFarClip.setTranslateY(-1250);
+            insideFarClip.setTranslateZ(farClipDistance - farClipDistanceOffset);
 
-                Rectangle outsideFarClip = new Rectangle(4000, 4000, Color.CYAN);
-                outsideFarClip.setTranslateX(-1750);
-                outsideFarClip.setTranslateY(-1750);
-                outsideFarClip.setTranslateZ(farClipDistance + farClipDistanceOffset);
+            Rectangle outsideFarClip = new Rectangle(4000, 4000, Color.CYAN);
+            outsideFarClip.setTranslateX(-1750);
+            outsideFarClip.setTranslateY(-1750);
+            outsideFarClip.setTranslateZ(farClipDistance + farClipDistanceOffset);
 
-                Group root = new Group();
+            Group root = new Group();
 
-                // Render in painter order (far to near)
-                root.getChildren().addAll(outsideFarClip, insideFarClip, insideRect, insideNearClip, outsideNearClip);
+            // Render in painter order (far to near)
+            root.getChildren().addAll(outsideFarClip, insideFarClip, insideRect, insideNearClip, outsideNearClip);
 
-                // Intentionally set depth buffer to false to reduce test complexity
-                testScene = new Scene(root, WIDTH, HEIGHT, false);
+            // Intentionally set depth buffer to false to reduce test complexity
+            testScene = new Scene(root, WIDTH, HEIGHT, false);
 
-                PerspectiveCamera camera = new PerspectiveCamera();
-                camera.setFieldOfView(FOV);
-                camera.setNearClip(NEAR);
-                camera.setFarClip(FAR);
-                testScene.setCamera(camera);
+            PerspectiveCamera camera = new PerspectiveCamera();
+            camera.setFieldOfView(FOV);
+            camera.setNearClip(NEAR);
+            camera.setFarClip(FAR);
+            testScene.setCamera(camera);
 
-                testStage.setScene(testScene);
-                testStage.show();
-            }
+            testStage.setScene(testScene);
+            testStage.show();
         });
         waitFirstFrame();
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                
-                if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
-                    System.out.println("*************************************************************");
-                    System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
-                    System.out.println("*************************************************************");
-                    return;
-                }
-
-                Color color;
-                // Verify Near Clip
-                color = getColor(testScene, WIDTH / 2, HEIGHT / 2);
-                assertColorEquals(Color.BLUE, color, TOLERANCE);
-
-                // Verify Inside Rect
-                color = getColor(testScene, (WIDTH / 3), HEIGHT / 2);
-                assertColorEquals(Color.GREEN, color, TOLERANCE);
-
-                // Verify Far Clip
-                color = getColor(testScene, WIDTH / 5, HEIGHT / 2);
-                assertColorEquals(Color.RED, color, TOLERANCE);
-
-                // Verify Fill
-                color = getColor(testScene, WIDTH / 8, HEIGHT / 2);
-                assertColorEquals(Color.WHITE, color, TOLERANCE);
+        runAndWait(() -> {
+            
+            if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                System.out.println("*************************************************************");
+                System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
+                System.out.println("*************************************************************");
+                return;
             }
+
+            Color color;
+            // Verify Near Clip
+            color = getColor(testScene, WIDTH / 2, HEIGHT / 2);
+            assertColorEquals(Color.BLUE, color, TOLERANCE);
+
+            // Verify Inside Rect
+            color = getColor(testScene, (WIDTH / 3), HEIGHT / 2);
+            assertColorEquals(Color.GREEN, color, TOLERANCE);
+
+            // Verify Far Clip
+            color = getColor(testScene, WIDTH / 5, HEIGHT / 2);
+            assertColorEquals(Color.RED, color, TOLERANCE);
+
+            // Verify Fill
+            color = getColor(testScene, WIDTH / 8, HEIGHT / 2);
+            assertColorEquals(Color.WHITE, color, TOLERANCE);
         });
     }
 

@@ -75,16 +75,10 @@ public class ListenerTestCommon {
 
     private void setup() {
         // Start the FX Platform
-        new Thread(new Runnable() {
-            @Override public void run() {
-                PlatformImpl.startup(new Runnable() {
-                    @Override public void run() {
-                        assertTrue(Platform.isFxApplicationThread());
-                        launchLatch.countDown();
-                    }
-                });
-            }
-        }).start();
+        new Thread(() -> PlatformImpl.startup(() -> {
+            assertTrue(Platform.isFxApplicationThread());
+            launchLatch.countDown();
+        })).start();
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
@@ -133,11 +127,9 @@ public class ListenerTestCommon {
         setup();
         assertNotNull(listener);
 
-        Util.runAndWait(new Runnable() {
-            @Override public void run() {
-                assertTrue(Platform.isFxApplicationThread());
-                assertTrue(Platform.isImplicitExit());
-            }
+        Util.runAndWait(() -> {
+            assertTrue(Platform.isFxApplicationThread());
+            assertTrue(Platform.isImplicitExit());
         });
 
         Util.sleep(DELAY);
@@ -170,26 +162,22 @@ public class ListenerTestCommon {
         setup();
         assertNotNull(listener);
 
-        Util.runAndWait(new Runnable() {
-            @Override public void run() {
-                assertTrue(Platform.isFxApplicationThread());
-                assertTrue(Platform.isImplicitExit());
-                if (!implicit) {
-                    Platform.setImplicitExit(false);
-                }
-                PlatformImpl.addListener(listener);
+        Util.runAndWait(() -> {
+            assertTrue(Platform.isFxApplicationThread());
+            assertTrue(Platform.isImplicitExit());
+            if (!implicit) {
+                Platform.setImplicitExit(false);
             }
+            PlatformImpl.addListener(listener);
         });
 
         Util.sleep(DELAY);
         assertEquals(1, exitNotification.getCount());
         assertEquals(1, idleNotification.getCount());
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                stage = makeStage();
-                stage.show();
-            }
+        Util.runAndWait(() -> {
+            stage = makeStage();
+            stage.show();
         });
 
         Util.sleep(SLEEP_TIME);
@@ -197,17 +185,15 @@ public class ListenerTestCommon {
         assertEquals(1, idleNotification.getCount());
 
         final CountDownLatch rDone = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            public void run() {
-                try {
-                    if (throwableType == ThrowableType.EXCEPTION) {
-                        throw new RuntimeException("this exception is expected");
-                    } else if (throwableType == ThrowableType.ERROR) {
-                        throw new InternalError("this error is expected");
-                    }
-                } finally {
-                    rDone.countDown();
+        Platform.runLater(() -> {
+            try {
+                if (throwableType == ThrowableType.EXCEPTION) {
+                    throw new RuntimeException("this exception is expected");
+                } else if (throwableType == ThrowableType.ERROR) {
+                    throw new InternalError("this error is expected");
                 }
+            } finally {
+                rDone.countDown();
             }
         });
 
@@ -221,11 +207,7 @@ public class ListenerTestCommon {
                         + throwableType);
         }
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                stage.hide();
-            }
-        });
+        Util.runAndWait(stage::hide);
 
         try {
             if (!idleNotification.await(TIMEOUT, TimeUnit.MILLISECONDS)) {

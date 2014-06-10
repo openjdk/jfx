@@ -36,12 +36,11 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.SelectionMode;
@@ -51,7 +50,6 @@ import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.shape.SVGPath;
-import javafx.util.Callback;
 
 /**
  * Helper class for creating tree table views for testing
@@ -141,83 +139,63 @@ public class SamplePageTreeTableHelper {
         // --- name column
         TreeTableColumn<DummyFile, String> nameColumn = new TreeTableColumn<DummyFile, String>("Name");
         nameColumn.setPrefWidth(300);
-        nameColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<DummyFile, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<DummyFile, String> p) {
-                DummyFile f = p.getValue().getValue();
-                String text = f == ROOT ? "/" : f.getName();
-                return new ReadOnlyObjectWrapper<String>(text);
-            }
+        nameColumn.setCellValueFactory(p -> {
+            DummyFile f = p.getValue().getValue();
+            String text = f == ROOT ? "/" : f.getName();
+            return new ReadOnlyObjectWrapper<String>(text);
         });
 
         // --- size column
         TreeTableColumn<DummyFile, DummyFile> sizeColumn = new TreeTableColumn<DummyFile, DummyFile>("Size");
         sizeColumn.setPrefWidth(100);
-        sizeColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<DummyFile, DummyFile>, ObservableValue<DummyFile>>() {
-            @Override public ObservableValue<DummyFile> call(TreeTableColumn.CellDataFeatures<DummyFile, DummyFile> p) {
-                return new ReadOnlyObjectWrapper<DummyFile>(p.getValue().getValue());
-            }
-        });
-        sizeColumn.setCellFactory(new Callback<TreeTableColumn<DummyFile, DummyFile>, TreeTableCell<DummyFile, DummyFile>>() {
-            @Override public TreeTableCell<DummyFile, DummyFile> call(final TreeTableColumn<DummyFile, DummyFile> p) {
-                return new TreeTableCell<DummyFile, DummyFile>() {
-                    @Override protected void updateItem(DummyFile item, boolean empty) {
-                        super.updateItem(item, empty);
-                        
-                        TreeTableView treeTable = p.getTreeTableView();
+        sizeColumn.setCellValueFactory(p -> new ReadOnlyObjectWrapper<DummyFile>(p.getValue().getValue()));
+        sizeColumn.setCellFactory(p -> new TreeTableCell<DummyFile, DummyFile>() {
+            @Override protected void updateItem(DummyFile item, boolean empty) {
+                super.updateItem(item, empty);
+                
+                TreeTableView treeTable = p.getTreeTableView();
 
-                        // if the File is a directory, it has no size...
+                // if the File is a directory, it has no size...
 //                        ObservableList<TreeItem<DummyFile>> items = p.getTreeTableView().getItems();
-                        if (getIndex() >= treeTable.getExpandedItemCount()) {
-                            setText(null);
-                        } else {
-                            TreeItem<DummyFile> treeItem = treeTable.getTreeItem(getIndex());
-                            if (item == null || empty || treeItem == null || 
-                                    treeItem.getValue() == null || treeItem.getValue().isDirectory()) {
-                                setText(null);
-                            } else {
-                                setText(nf.format(item.getSize()) + " KB");
-                            }
-                        }
+                if (getIndex() >= treeTable.getExpandedItemCount()) {
+                    setText(null);
+                } else {
+                    TreeItem<DummyFile> treeItem = treeTable.getTreeItem(getIndex());
+                    if (item == null || empty || treeItem == null || 
+                            treeItem.getValue() == null || treeItem.getValue().isDirectory()) {
+                        setText(null);
+                    } else {
+                        setText(nf.format(item.getSize()) + " KB");
                     }
-                };
+                }
             }
         });
-        sizeColumn.setComparator(new Comparator<DummyFile>() {
-            @Override public int compare(DummyFile f1, DummyFile f2) {
-                long s1 = f1.isDirectory() ? 0 : f1.getSize();
-                long s2 = f2.isDirectory() ? 0 : f2.getSize();
-                long result = s1 - s2;
-                if (result < 0) {
-                    return -1;
-                } else if (result == 0) {
-                    return 0;
-                } else {
-                    return 1;
-                }
+        sizeColumn.setComparator((f1, f2) -> {
+            long s1 = f1.isDirectory() ? 0 : f1.getSize();
+            long s2 = f2.isDirectory() ? 0 : f2.getSize();
+            long result = s1 - s2;
+            if (result < 0) {
+                return -1;
+            } else if (result == 0) {
+                return 0;
+            } else {
+                return 1;
             }
         });
         
         // --- modified column
         TreeTableColumn<DummyFile, Date> lastModifiedColumn = new TreeTableColumn<DummyFile, Date>("Last Modified");
         lastModifiedColumn.setPrefWidth(130);
-        lastModifiedColumn.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<DummyFile, Date>, ObservableValue<Date>>() {
-            @Override public ObservableValue<Date> call(TreeTableColumn.CellDataFeatures<DummyFile, Date> p) {
-                return new ReadOnlyObjectWrapper<Date>(p.getValue().getValue().getModified());
-            }
-        });
-        lastModifiedColumn.setCellFactory(new Callback<TreeTableColumn<DummyFile, Date>, TreeTableCell<DummyFile, Date>>() {
-            @Override public TreeTableCell<DummyFile, Date> call(TreeTableColumn<DummyFile, Date> p) {
-                return new TreeTableCell<DummyFile, Date>() {
-                    @Override protected void updateItem(Date item, boolean empty) {
-                        super.updateItem(item, empty);
-                        
-                        if (item == null || empty) {
-                            setText(null);
-                        } else {
-                            setText(df.format(item));
-                        }
-                    }
-                };
+        lastModifiedColumn.setCellValueFactory(p -> new ReadOnlyObjectWrapper<Date>(p.getValue().getValue().getModified()));
+        lastModifiedColumn.setCellFactory(p -> new TreeTableCell<DummyFile, Date>() {
+            @Override protected void updateItem(Date item, boolean empty) {
+                super.updateItem(item, empty);
+                
+                if (item == null || empty) {
+                    setText(null);
+                } else {
+                    setText(df.format(item));
+                }
             }
         });
         

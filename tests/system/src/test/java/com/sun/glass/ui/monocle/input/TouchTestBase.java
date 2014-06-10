@@ -84,9 +84,7 @@ public class TouchTestBase {
         ui = new UInput();
         systemErrFilter = new SystemErrFilter(System.err);
         System.setErr(systemErrFilter);
-        TestRunnable.invokeAndWait(() -> {
-            screen = Screen.getPrimary().getBounds();
-        });
+        TestRunnable.invokeAndWait(() -> screen = Screen.getPrimary().getBounds());
     }
 
     @After

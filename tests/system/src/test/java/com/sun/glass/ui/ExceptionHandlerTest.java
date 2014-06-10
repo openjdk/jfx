@@ -49,13 +49,10 @@ public class ExceptionHandlerTest {
     public static class TestApp extends Application {
         @Override
         public void start(Stage t) {
-            Thread.currentThread().setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread t, Throwable e) {
-                    exception = e;
-                    System.out.println("Exception caught: " + e);
-                    System.out.flush();
-                }
+            Thread.currentThread().setUncaughtExceptionHandler((t2, e) -> {
+                exception = e;
+                System.out.println("Exception caught: " + e);
+                System.out.flush();
             });
             startupLatch.countDown();
         }
@@ -69,12 +66,7 @@ public class ExceptionHandlerTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Application.launch(TestApp.class);
-            }
-        }).start();
+        new Thread(() -> Application.launch(TestApp.class)).start();
         startupLatch.await();
     }
 
@@ -82,18 +74,10 @@ public class ExceptionHandlerTest {
     public void test1() throws Throwable {
         exception = null;
         final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                throw new TestException("test1");
-            }
+        Platform.runLater(() -> {
+            throw new TestException("test1");
         });
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                l.countDown();
-            }
-        });
+        Platform.runLater(l::countDown);
         l.await(10000, TimeUnit.MILLISECONDS);
         if (exception == null) {
             throw new RuntimeException("Test FAILED: TestException is not caught");

@@ -112,11 +112,7 @@ public class PhongMaterialTest {
         System.setProperty("prism.order", "es2");
 
         // Start the Application
-        new Thread(new Runnable() {
-            @Override public void run() {
-                Application.launch(MyApp.class, (String[])null);
-            }
-        }).start();
+        new Thread(() -> Application.launch(MyApp.class, (String[])null)).start();
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
@@ -140,18 +136,14 @@ public class PhongMaterialTest {
     private RuntimeException exception = null;
 
     private void runAndWait(final Runnable r) {
-        PlatformImpl.runAndWait(new Runnable() {
-
-            public void run() {
-                try {
-                    r.run();
-                } catch (RuntimeException ex) {
-                    exception = ex;
-                } catch (Error err) {
-                    error = err;
-                }
+        PlatformImpl.runAndWait(() -> {
+            try {
+                r.run();
+            } catch (RuntimeException ex) {
+                exception = ex;
+            } catch (Error err) {
+                error = err;
             }
-
         });
 
         if (error != null) {
@@ -182,29 +174,25 @@ public class PhongMaterialTest {
     public void testDefaultPhongMaterial() {
 
 
-        runAndWait(new Runnable() {
-            public void run() {
-                testMat = new PhongMaterial();
-                shape = new Sphere();
-                shape.setMaterial(testMat);
-                Group root = (Group) myApp.scene.getRoot();
-                root.getChildren().add(shape);
-            }
+        runAndWait(() -> {
+            testMat = new PhongMaterial();
+            shape = new Sphere();
+            shape.setMaterial(testMat);
+            Group root = (Group) myApp.scene.getRoot();
+            root.getChildren().add(shape);
         });
 
         //TODO: should just wait for pulse
         sleep(SLEEP_TIME);
 
-        runAndWait(new Runnable() {
-            public void run() {
-                final NGShape3D peer = shape.impl_getPeer();
-                final NGPhongMaterial phongMaterial = NGHelper.getMaterial(peer);
-                com.sun.prism.PhongMaterial tmp = NGHelper.createMaterial(phongMaterial);
-                if (com.sun.prism.es2.ES2Pipeline.class.equals(pipelineClass)) {
-                    ES2Helper.checkMaterial(testMat, tmp);
-                }
-
+        runAndWait(() -> {
+            final NGShape3D peer = shape.impl_getPeer();
+            final NGPhongMaterial phongMaterial = NGHelper.getMaterial(peer);
+            com.sun.prism.PhongMaterial tmp = NGHelper.createMaterial(phongMaterial);
+            if (com.sun.prism.es2.ES2Pipeline.class.equals(pipelineClass)) {
+                ES2Helper.checkMaterial(testMat, tmp);
             }
+
         });
 
     }

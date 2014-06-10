@@ -55,20 +55,12 @@ public class DefaultExceptionHandlerTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-            @Override
-            public void uncaughtException(Thread t, Throwable e) {
-                exception = e;
-                System.out.println("Exception caught: " + e);
-                System.out.flush();
-            }
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            exception = e;
+            System.out.println("Exception caught: " + e);
+            System.out.flush();
         });
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Application.launch(TestApp.class);
-            }
-        }).start();
+        new Thread(() -> Application.launch(TestApp.class)).start();
         startupLatch.await();
     }
 
@@ -76,18 +68,10 @@ public class DefaultExceptionHandlerTest {
     public void test1() throws Throwable {
         exception = null;
         final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                throw new TestException("test1");
-            }
+        Platform.runLater(() -> {
+            throw new TestException("test1");
         });
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                l.countDown();
-            }
-        });
+        Platform.runLater(l::countDown);
         l.await(10000, TimeUnit.MILLISECONDS);
         if (exception == null) {
             throw new RuntimeException("Test FAILED: TestException is not caught");

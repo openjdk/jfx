@@ -75,44 +75,40 @@ public class ImagePaintTest extends VisualTestBase {
         final Color COLOR1 = Color.RED;
         final Color COLOR2 = Color.GREEN;
 
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                Image image1;
-                Image image2;
-                image1 = createImage(IMAGE_WIDTH, IMAGE_HEIGHT, COLOR1, COLOR2);
-                if (useSeparateImage) {
-                    image2 = createImage(IMAGE_WIDTH, IMAGE_HEIGHT, COLOR1, COLOR2);
-                } else {
-                    image2 = image1;
-                }
-                Rectangle rect1 = createRect(image1, 0, 0, 0, 0);
-                Rectangle rect2 = createRect(image2, IMAGE_WIDTH / 2, 0, 0, IMAGE_HEIGHT);
-                Group root = new Group(rect1, rect2);
-                testScene = new Scene(root, WIDTH, HEIGHT);
-                testScene.setFill(Color.WHITE);
-
-                testStage = getStage();
-                testStage.setScene(testScene);
-                testStage.show();
+        runAndWait(() -> {
+            Image image1;
+            Image image2;
+            image1 = createImage(IMAGE_WIDTH, IMAGE_HEIGHT, COLOR1, COLOR2);
+            if (useSeparateImage) {
+                image2 = createImage(IMAGE_WIDTH, IMAGE_HEIGHT, COLOR1, COLOR2);
+            } else {
+                image2 = image1;
             }
+            Rectangle rect1 = createRect(image1, 0, 0, 0, 0);
+            Rectangle rect2 = createRect(image2, IMAGE_WIDTH / 2, 0, 0, IMAGE_HEIGHT);
+            Group root = new Group(rect1, rect2);
+            testScene = new Scene(root, WIDTH, HEIGHT);
+            testScene.setFill(Color.WHITE);
+
+            testStage = getStage();
+            testStage.setScene(testScene);
+            testStage.show();
         });
         waitFirstFrame();
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                Color color;
+        runAndWait(() -> {
+            Color color;
 
-                // Test first rectangle, anchor at (0,0)
-                color = getColor(testScene, 1, 1);
-                assertColorEquals(COLOR1, color, TOLERANCE);
-                color = getColor(testScene, 1 + IMAGE_WIDTH / 2, 1);
-                assertColorEquals(COLOR2, color, TOLERANCE);
+            // Test first rectangle, anchor at (0,0)
+            color = getColor(testScene, 1, 1);
+            assertColorEquals(COLOR1, color, TOLERANCE);
+            color = getColor(testScene, 1 + IMAGE_WIDTH / 2, 1);
+            assertColorEquals(COLOR2, color, TOLERANCE);
 
-                // Test second rectangle, anchor at (w/2,0)
-                color = getColor(testScene, 1, 1 + IMAGE_HEIGHT);
-                assertColorEquals(COLOR2, color, TOLERANCE);
-                color = getColor(testScene, 1 + IMAGE_WIDTH / 2, 1 + IMAGE_HEIGHT);
-                assertColorEquals(COLOR1, color, TOLERANCE);
-            }
+            // Test second rectangle, anchor at (w/2,0)
+            color = getColor(testScene, 1, 1 + IMAGE_HEIGHT);
+            assertColorEquals(COLOR2, color, TOLERANCE);
+            color = getColor(testScene, 1 + IMAGE_WIDTH / 2, 1 + IMAGE_HEIGHT);
+            assertColorEquals(COLOR1, color, TOLERANCE);
         });
     }
 

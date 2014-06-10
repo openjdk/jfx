@@ -90,7 +90,7 @@ public class RapidTapTest extends ParameterizedTestBase {
                 while (System.nanoTime() < end) { } // spin
             }
         };
-        Platform.runLater(() -> a.start());
+        Platform.runLater(a::start);
         latch.await();
         try {
             for (int i = 0; i < 20; i++) {
@@ -109,7 +109,7 @@ public class RapidTapTest extends ParameterizedTestBase {
                 Assert.assertEquals(20, TestLog.countLogContaining("Mouse clicked"));
             }, 10000);
         } finally {
-            Platform.runLater(() -> a.stop());
+            Platform.runLater(a::stop);
         }
     }
 

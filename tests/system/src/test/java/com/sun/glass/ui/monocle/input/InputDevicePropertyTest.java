@@ -55,26 +55,20 @@ public class InputDevicePropertyTest  extends ParameterizedTestBase {
 
     @Test
     public void testTouch() throws Exception {
-        TestRunnable.invokeAndWait(() -> {
-            Assert.assertTrue(Platform.isSupported(ConditionalFeature.INPUT_TOUCH));
-        });
+        TestRunnable.invokeAndWait(() -> Assert.assertTrue(Platform.isSupported(ConditionalFeature.INPUT_TOUCH)));
     }
 
     @Test
     public void testMultiTouch() throws Exception {
-        TestRunnable.invokeAndWait(() -> {
-            Assert.assertEquals(device.getPointCount() > 1,
-                                Platform.isSupported(
-                                        ConditionalFeature.INPUT_MULTITOUCH));
-        });
+        TestRunnable.invokeAndWait(() -> Assert.assertEquals(device.getPointCount() > 1,
+                            Platform.isSupported(
+                                    ConditionalFeature.INPUT_MULTITOUCH)));
     }
 
     @Test
     public void testPointer() throws Exception {
-        TestRunnable.invokeAndWait(() -> {
-            Assert.assertFalse(
-                    Platform.isSupported(ConditionalFeature.INPUT_POINTER));
-        });
+        TestRunnable.invokeAndWait(() -> Assert.assertFalse(
+                Platform.isSupported(ConditionalFeature.INPUT_POINTER)));
     }
 
 }

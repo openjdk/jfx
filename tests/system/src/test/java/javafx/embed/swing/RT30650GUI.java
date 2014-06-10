@@ -87,38 +87,22 @@ public class RT30650GUI extends Application {
         stage.setTitle("RT-30650");
         stage.show();
         
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                JPanel panel = new JPanel();
-                panel.setBackground(Color.RED);
-                swingNode.setContent(panel);
-                
-                Platform.runLater(new Runnable() {
-                    @Override public void run() {
-                        pulseListener = new TKPulseListener() {
-                            @Override
-                            public void pulse() {
-                                if (--pulseCount == 0) {
-                                    SwingUtilities.invokeLater(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            passed = testColor(stage);
-                                            Platform.runLater(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    stage.close();
-                                                }
-                                            });
-                                        }
-                                    });
-                                }
-                            }
-                        };
-                        com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(pulseListener);
+        SwingUtilities.invokeLater(() -> {
+            JPanel panel = new JPanel();
+            panel.setBackground(Color.RED);
+            swingNode.setContent(panel);
+            
+            Platform.runLater(() -> {
+                pulseListener = () -> {
+                    if (--pulseCount == 0) {
+                        SwingUtilities.invokeLater(() -> {
+                            passed = testColor(stage);
+                            Platform.runLater(stage::close);
+                        });
                     }
-                });
-            }
+                };
+                com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(pulseListener);
+            });
         });        
     }
     

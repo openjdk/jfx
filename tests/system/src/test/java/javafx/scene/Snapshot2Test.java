@@ -105,11 +105,9 @@ public class Snapshot2Test extends SnapshotCommon {
 
     @After
     public void teardownEach() {
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                if (tmpStage != null && tmpStage.isShowing()) {
-                    tmpStage.hide();
-                }
+        Util.runAndWait(() -> {
+            if (tmpStage != null && tmpStage.isShowing()) {
+                tmpStage.hide();
             }
         });
     }
@@ -117,17 +115,15 @@ public class Snapshot2Test extends SnapshotCommon {
     // ========================== TEST CASES ==========================
 
     private void setupEmptyScene() {
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                Group root = new Group();
-                tmpScene = new Scene(root);
-                if (live) {
-                    tmpStage = new TestStage(tmpScene);
-                    assertNotNull(tmpScene.getWindow());
-                    tmpStage.show();
-                } else {
-                    assertNull(tmpScene.getWindow());
-                }
+        Util.runAndWait(() -> {
+            Group root = new Group();
+            tmpScene = new Scene(root);
+            if (live) {
+                tmpStage = new TestStage(tmpScene);
+                assertNotNull(tmpScene.getWindow());
+                tmpStage.show();
+            } else {
+                assertNull(tmpScene.getWindow());
             }
         });
     }
@@ -138,17 +134,15 @@ public class Snapshot2Test extends SnapshotCommon {
         setupEmptyScene();
 
         final WritableImage img = useImage ? new WritableImage(1, 1) : null;
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                WritableImage wimg = tmpScene.snapshot(img);
-                assertNotNull(wimg);
-                if (img != null) {
-                    assertSame(img, wimg);
-                }
-
-                assertEquals(1, (int)wimg.getWidth());
-                assertEquals(1, (int)wimg.getHeight());
+        Util.runAndWait(() -> {
+            WritableImage wimg = tmpScene.snapshot(img);
+            assertNotNull(wimg);
+            if (img != null) {
+                assertSame(img, wimg);
             }
+
+            assertEquals(1, (int)wimg.getWidth());
+            assertEquals(1, (int)wimg.getHeight());
         });
     }
 
@@ -156,37 +150,33 @@ public class Snapshot2Test extends SnapshotCommon {
     public void testSnapshotEmptySceneDefer() {
         setupEmptyScene();
         final WritableImage img = useImage ? new WritableImage(1, 1) : null;
-        runDeferredSnapshotWait(tmpScene, new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult result) {
-                assertSame(tmpScene, result.getSource());
-                assertNull(result.getSnapshotParameters());
-                assertNotNull(result.getImage());
-                if (img != null) {
-                    assertSame(img, result.getImage());
-                }
-
-                assertEquals(1, (int)result.getImage().getWidth());
-                assertEquals(1, (int)result.getImage().getHeight());
-
-                return null;
+        runDeferredSnapshotWait(tmpScene, result -> {
+            assertSame(tmpScene, result.getSource());
+            assertNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (img != null) {
+                assertSame(img, result.getImage());
             }
+
+            assertEquals(1, (int)result.getImage().getWidth());
+            assertEquals(1, (int)result.getImage().getHeight());
+
+            return null;
         }, img);
     }
 
     private void doTestSnapshotEmptyNodeImm(final SnapshotParameters snapshotParams) {
         setupEmptyScene();
         final WritableImage img = useImage ? new WritableImage(1, 1) : null;
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
-                assertNotNull(wimg);
-                if (img != null) {
-                    assertSame(img, wimg);
-                }
-
-                assertEquals(1, (int)wimg.getWidth());
-                assertEquals(1, (int)wimg.getHeight());
+        Util.runAndWait(() -> {
+            WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
+            assertNotNull(wimg);
+            if (img != null) {
+                assertSame(img, wimg);
             }
+
+            assertEquals(1, (int)wimg.getWidth());
+            assertEquals(1, (int)wimg.getHeight());
         });
     }
 
@@ -203,20 +193,18 @@ public class Snapshot2Test extends SnapshotCommon {
     private void doTestSnapshotEmptyNodeDefer(final SnapshotParameters snapshotParams) {
         setupEmptyScene();
         final WritableImage img = useImage ? new WritableImage(1, 1) : null;
-        runDeferredSnapshotWait(tmpScene.getRoot(), new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult result) {
-                assertSame(tmpScene.getRoot(), result.getSource());
-                assertNotNull(result.getSnapshotParameters());
-                assertNotNull(result.getImage());
-                if (img != null) {
-                    assertSame(img, result.getImage());
-                }
-
-                assertEquals(1, (int)result.getImage().getWidth());
-                assertEquals(1, (int)result.getImage().getHeight());
-
-                return null;
+        runDeferredSnapshotWait(tmpScene.getRoot(), result -> {
+            assertSame(tmpScene.getRoot(), result.getSource());
+            assertNotNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (img != null) {
+                assertSame(img, result.getImage());
             }
+
+            assertEquals(1, (int)result.getImage().getWidth());
+            assertEquals(1, (int)result.getImage().getHeight());
+
+            return null;
         }, snapshotParams, img);
     }
 
@@ -236,19 +224,17 @@ public class Snapshot2Test extends SnapshotCommon {
     private static final int NODE_H = SCENE_H - 2*5;
 
     private void setupSimpleScene() {
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpNode = new Rectangle(10, 5, NODE_W, NODE_H);
-                Group root = new Group();
-                tmpScene = new Scene(root, SCENE_W, SCENE_H);
-                root.getChildren().add(tmpNode);
-                if (live) {
-                    tmpStage = new TestStage(tmpScene);
-                    assertNotNull(tmpScene.getWindow());
-                    tmpStage.show();
-                } else {
-                    assertNull(tmpScene.getWindow());
-                }
+        Util.runAndWait(() -> {
+            tmpNode = new Rectangle(10, 5, NODE_W, NODE_H);
+            Group root = new Group();
+            tmpScene = new Scene(root, SCENE_W, SCENE_H);
+            root.getChildren().add(tmpNode);
+            if (live) {
+                tmpStage = new TestStage(tmpScene);
+                assertNotNull(tmpScene.getWindow());
+                tmpStage.show();
+            } else {
+                assertNull(tmpScene.getWindow());
             }
         });
     }
@@ -260,17 +246,15 @@ public class Snapshot2Test extends SnapshotCommon {
         setupSimpleScene();
 
         final WritableImage img = useImage ? new WritableImage(SCENE_W, SCENE_H) : null;
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                WritableImage wimg = tmpScene.snapshot(img);
-                assertNotNull(wimg);
-                if (img != null) {
-                    assertSame(img, wimg);
-                }
-
-                assertEquals(SCENE_W, (int)wimg.getWidth());
-                assertEquals(SCENE_H, (int)wimg.getHeight());
+        Util.runAndWait(() -> {
+            WritableImage wimg = tmpScene.snapshot(img);
+            assertNotNull(wimg);
+            if (img != null) {
+                assertSame(img, wimg);
             }
+
+            assertEquals(SCENE_W, (int)wimg.getWidth());
+            assertEquals(SCENE_H, (int)wimg.getHeight());
         });
     }
 
@@ -279,20 +263,18 @@ public class Snapshot2Test extends SnapshotCommon {
         setupSimpleScene();
 
         final WritableImage img = useImage ? new WritableImage(SCENE_W, SCENE_H) : null;
-        runDeferredSnapshotWait(tmpScene, new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult result) {
-                assertSame(tmpScene, result.getSource());
-                assertNull(result.getSnapshotParameters());
-                assertNotNull(result.getImage());
-                if (img != null) {
-                    assertSame(img, result.getImage());
-                }
-
-                assertEquals(SCENE_W, (int)result.getImage().getWidth());
-                assertEquals(SCENE_H, (int)result.getImage().getHeight());
-
-                return null;
+        runDeferredSnapshotWait(tmpScene, result -> {
+            assertSame(tmpScene, result.getSource());
+            assertNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (img != null) {
+                assertSame(img, result.getImage());
             }
+
+            assertEquals(SCENE_W, (int)result.getImage().getWidth());
+            assertEquals(SCENE_H, (int)result.getImage().getHeight());
+
+            return null;
         }, img);
     }
 
@@ -301,17 +283,15 @@ public class Snapshot2Test extends SnapshotCommon {
         setupSimpleScene();
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
-                assertNotNull(wimg);
-                if (img != null) {
-                    assertSame(img, wimg);
-                }
-
-                assertEquals(NODE_W, (int)wimg.getWidth());
-                assertEquals(NODE_H, (int)wimg.getHeight());
+        Util.runAndWait(() -> {
+            WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
+            assertNotNull(wimg);
+            if (img != null) {
+                assertSame(img, wimg);
             }
+
+            assertEquals(NODE_W, (int)wimg.getWidth());
+            assertEquals(NODE_H, (int)wimg.getHeight());
         });
     }
 
@@ -320,20 +300,18 @@ public class Snapshot2Test extends SnapshotCommon {
         setupSimpleScene();
         final SnapshotParameters snapshotParams = new SnapshotParameters();
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
-        runDeferredSnapshotWait(tmpScene.getRoot(), new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult result) {
-                assertSame(tmpScene.getRoot(), result.getSource());
-                assertNotNull(result.getSnapshotParameters());
-                assertNotNull(result.getImage());
-                if (img != null) {
-                    assertSame(img, result.getImage());
-                }
-
-                assertEquals(NODE_W, (int)result.getImage().getWidth());
-                assertEquals(NODE_H, (int)result.getImage().getHeight());
-
-                return null;
+        runDeferredSnapshotWait(tmpScene.getRoot(), result -> {
+            assertSame(tmpScene.getRoot(), result.getSource());
+            assertNotNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (img != null) {
+                assertSame(img, result.getImage());
             }
+
+            assertEquals(NODE_W, (int)result.getImage().getWidth());
+            assertEquals(NODE_H, (int)result.getImage().getHeight());
+
+            return null;
         }, snapshotParams, img);
     }
 
@@ -346,17 +324,15 @@ public class Snapshot2Test extends SnapshotCommon {
         final int WIDTH = NODE_W * xScale;
         final int HEIGHT = NODE_H * yScale;
         final WritableImage img = useImage ? new WritableImage(WIDTH, HEIGHT) : null;
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
-                assertNotNull(wimg);
-                if (img != null) {
-                    assertSame(img, wimg);
-                }
-
-                assertEquals(WIDTH, (int)wimg.getWidth());
-                assertEquals(HEIGHT, (int)wimg.getHeight());
+        Util.runAndWait(() -> {
+            WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
+            assertNotNull(wimg);
+            if (img != null) {
+                assertSame(img, wimg);
             }
+
+            assertEquals(WIDTH, (int)wimg.getWidth());
+            assertEquals(HEIGHT, (int)wimg.getHeight());
         });
     }
 
@@ -367,20 +343,18 @@ public class Snapshot2Test extends SnapshotCommon {
         final int WIDTH = NODE_W * xScale;
         final int HEIGHT = NODE_H * yScale;
         final WritableImage img = useImage ? new WritableImage(WIDTH, HEIGHT) : null;
-        runDeferredSnapshotWait(tmpScene.getRoot(), new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult result) {
-                assertSame(tmpScene.getRoot(), result.getSource());
-                assertNotNull(result.getSnapshotParameters());
-                assertNotNull(result.getImage());
-                if (img != null) {
-                    assertSame(img, result.getImage());
-                }
-
-                assertEquals(WIDTH, (int)result.getImage().getWidth());
-                assertEquals(HEIGHT, (int)result.getImage().getHeight());
-
-                return null;
+        runDeferredSnapshotWait(tmpScene.getRoot(), result -> {
+            assertSame(tmpScene.getRoot(), result.getSource());
+            assertNotNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (img != null) {
+                assertSame(img, result.getImage());
             }
+
+            assertEquals(WIDTH, (int)result.getImage().getWidth());
+            assertEquals(HEIGHT, (int)result.getImage().getHeight());
+
+            return null;
         }, snapshotParams, img);
     }
 
@@ -429,17 +403,15 @@ public class Snapshot2Test extends SnapshotCommon {
         final int WIDTH = NODE_H;
         final int HEIGHT = NODE_W;
         final WritableImage img = useImage ? new WritableImage(WIDTH, HEIGHT) : null;
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
-                assertNotNull(wimg);
-                if (img != null) {
-                    assertSame(img, wimg);
-                }
-
-                assertEquals(WIDTH, (int)wimg.getWidth());
-                assertEquals(HEIGHT, (int)wimg.getHeight());
+        Util.runAndWait(() -> {
+            WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
+            assertNotNull(wimg);
+            if (img != null) {
+                assertSame(img, wimg);
             }
+
+            assertEquals(WIDTH, (int)wimg.getWidth());
+            assertEquals(HEIGHT, (int)wimg.getHeight());
         });
     }
 
@@ -452,20 +424,18 @@ public class Snapshot2Test extends SnapshotCommon {
         final int WIDTH = NODE_H;
         final int HEIGHT = NODE_W;
         final WritableImage img = useImage ? new WritableImage(WIDTH, HEIGHT) : null;
-        runDeferredSnapshotWait(tmpScene.getRoot(), new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult result) {
-                assertSame(tmpScene.getRoot(), result.getSource());
-                assertNotNull(result.getSnapshotParameters());
-                assertNotNull(result.getImage());
-                if (img != null) {
-                    assertSame(img, result.getImage());
-                }
-
-                assertEquals(WIDTH, (int)result.getImage().getWidth());
-                assertEquals(HEIGHT, (int)result.getImage().getHeight());
-
-                return null;
+        runDeferredSnapshotWait(tmpScene.getRoot(), result -> {
+            assertSame(tmpScene.getRoot(), result.getSource());
+            assertNotNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (img != null) {
+                assertSame(img, result.getImage());
             }
+
+            assertEquals(WIDTH, (int)result.getImage().getWidth());
+            assertEquals(HEIGHT, (int)result.getImage().getHeight());
+
+            return null;
         }, snapshotParams, img);
     }
 
@@ -483,17 +453,15 @@ public class Snapshot2Test extends SnapshotCommon {
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
         final int WIDTH = useImage ? NODE_W : VP_WIDTH;
         final int HEIGHT = useImage ? NODE_H : VP_HEIGHT;
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
-                assertNotNull(wimg);
-                if (img != null) {
-                    assertSame(img, wimg);
-                }
-
-                assertEquals(WIDTH, (int)wimg.getWidth());
-                assertEquals(HEIGHT, (int)wimg.getHeight());
+        Util.runAndWait(() -> {
+            WritableImage wimg = tmpScene.getRoot().snapshot(snapshotParams, img);
+            assertNotNull(wimg);
+            if (img != null) {
+                assertSame(img, wimg);
             }
+
+            assertEquals(WIDTH, (int)wimg.getWidth());
+            assertEquals(HEIGHT, (int)wimg.getHeight());
         });
     }
 
@@ -505,20 +473,18 @@ public class Snapshot2Test extends SnapshotCommon {
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
         final int WIDTH = useImage ? NODE_W : VP_WIDTH;
         final int HEIGHT = useImage ? NODE_H : VP_HEIGHT;
-        runDeferredSnapshotWait(tmpScene.getRoot(), new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult result) {
-                assertSame(tmpScene.getRoot(), result.getSource());
-                assertNotNull(result.getSnapshotParameters());
-                assertNotNull(result.getImage());
-                if (img != null) {
-                    assertSame(img, result.getImage());
-                }
-
-                assertEquals(WIDTH, (int)result.getImage().getWidth());
-                assertEquals(HEIGHT, (int)result.getImage().getHeight());
-
-                return null;
+        runDeferredSnapshotWait(tmpScene.getRoot(), result -> {
+            assertSame(tmpScene.getRoot(), result.getSource());
+            assertNotNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (img != null) {
+                assertSame(img, result.getImage());
             }
+
+            assertEquals(WIDTH, (int)result.getImage().getWidth());
+            assertEquals(HEIGHT, (int)result.getImage().getHeight());
+
+            return null;
         }, snapshotParams, img);
     }
 
@@ -536,28 +502,24 @@ public class Snapshot2Test extends SnapshotCommon {
         final WritableImage img = useImage ? new WritableImage(NODE_W, NODE_H) : null;
         final int WIDTH = useImage ? NODE_W : NEW_WIDTH;
         final int HEIGHT = useImage ? NODE_H : NEW_HEIGHT;
-        Callback<SnapshotResult, Void> cb = new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult result) {
-                assertSame(tmpScene.getRoot(), result.getSource());
-                assertNotNull(result.getSnapshotParameters());
-                assertNotNull(result.getImage());
-                if (img != null) {
-                    assertSame(img, result.getImage());
-                }
-
-                assertEquals(WIDTH, (int)result.getImage().getWidth());
-                assertEquals(HEIGHT, (int)result.getImage().getHeight());
-
-                return null;
+        Callback<SnapshotResult, Void> cb = result -> {
+            assertSame(tmpScene.getRoot(), result.getSource());
+            assertNotNull(result.getSnapshotParameters());
+            assertNotNull(result.getImage());
+            if (img != null) {
+                assertSame(img, result.getImage());
             }
+
+            assertEquals(WIDTH, (int)result.getImage().getWidth());
+            assertEquals(HEIGHT, (int)result.getImage().getHeight());
+
+            return null;
         };
-        Runnable runAfter = new Runnable() {
-            public void run() {
-                assertTrue(tmpNode instanceof Rectangle);
-                Rectangle rect = (Rectangle)tmpNode;
-                rect.setWidth(NEW_WIDTH);
-                rect.setHeight(NEW_HEIGHT);
-            }
+        Runnable runAfter = () -> {
+            assertTrue(tmpNode instanceof Rectangle);
+            Rectangle rect = (Rectangle)tmpNode;
+            rect.setWidth(NEW_WIDTH);
+            rect.setHeight(NEW_HEIGHT);
         };
 
         runDeferredSnapshotWait(tmpScene.getRoot(), cb, snapshotParams, img, runAfter);

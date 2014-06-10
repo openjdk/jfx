@@ -54,10 +54,8 @@ public class TestPreloader extends Preloader {
             System.exit(ERROR_PRELOADER_START_WRONG_THREAD);
         }
 
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                // No-op
-            }
+        Platform.runLater(() -> {
+            // No-op
         });
     }
 
@@ -74,10 +72,8 @@ public class TestPreloader extends Preloader {
         }
 
         try {
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    // do nothing
-                }
+            Platform.runLater(() -> {
+                // do nothing
             });
         } catch (IllegalStateException ex) {
             ex.printStackTrace();

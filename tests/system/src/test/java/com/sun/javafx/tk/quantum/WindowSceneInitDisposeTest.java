@@ -56,13 +56,10 @@ public class WindowSceneInitDisposeTest {
             t.setHeight(100);
             t.show();
 
-            Thread.currentThread().setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-                @Override
-                public void uncaughtException(Thread t, Throwable e) {
-                    System.out.println("Exception caught: " + e);
-                    System.out.flush();
-                    exception = e;
-                }
+            Thread.currentThread().setUncaughtExceptionHandler((t2, e) -> {
+                System.out.println("Exception caught: " + e);
+                System.out.flush();
+                exception = e;
             });
 
             startupLatch.countDown();
@@ -71,45 +68,29 @@ public class WindowSceneInitDisposeTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Application.launch(TestApp.class);
-            }
-        }).start();
+        new Thread(() -> Application.launch(TestApp.class)).start();
         startupLatch.await();
     }
 
     @AfterClass
     public static void shutdown() {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                primaryStage.hide();
-            }
-        });
+        Platform.runLater(primaryStage::hide);
     }
 
     @Test
     public void test1() throws Throwable {
         final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                final Stage t = new Stage();
-                t.setScene(new Scene(new Group()));
-                t.show();
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            t.hide();
-                        } finally {
-                            l.countDown();
-                        }
-                    }
-                });
-            }
+        Platform.runLater(() -> {
+            final Stage t = new Stage();
+            t.setScene(new Scene(new Group()));
+            t.show();
+            Platform.runLater(() -> {
+                try {
+                    t.hide();
+                } finally {
+                    l.countDown();
+                }
+            });
         });
         l.await();
         if (exception != null) {
@@ -120,23 +101,17 @@ public class WindowSceneInitDisposeTest {
     @Test
     public void test2() throws Throwable {
         final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                final Stage t = new Stage();
-                t.show();
-                t.setScene(new Scene(new Group()));
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            t.hide();
-                        } finally {
-                            l.countDown();
-                        }
-                    }
-                });
-            }
+        Platform.runLater(() -> {
+            final Stage t = new Stage();
+            t.show();
+            t.setScene(new Scene(new Group()));
+            Platform.runLater(() -> {
+                try {
+                    t.hide();
+                } finally {
+                    l.countDown();
+                }
+            });
         });
         l.await();
         if (exception != null) {
@@ -147,22 +122,16 @@ public class WindowSceneInitDisposeTest {
     @Test
     public void test3() throws Throwable {
         final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                final Stage t = new Stage();
-                t.show();
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            t.hide();
-                        } finally {
-                            l.countDown();
-                        }
-                    }
-                });
-            }
+        Platform.runLater(() -> {
+            final Stage t = new Stage();
+            t.show();
+            Platform.runLater(() -> {
+                try {
+                    t.hide();
+                } finally {
+                    l.countDown();
+                }
+            });
         });
         l.await();
         if (exception != null) {
@@ -173,24 +142,18 @@ public class WindowSceneInitDisposeTest {
     @Test
     public void test4() throws Throwable {
         final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                final Stage t = new Stage();
-                t.setScene(new Scene(new Group()));
-                t.show();
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            t.setScene(null);
-                            t.hide();
-                        } finally {
-                            l.countDown();
-                        }
-                    }
-                });
-            }
+        Platform.runLater(() -> {
+            final Stage t = new Stage();
+            t.setScene(new Scene(new Group()));
+            t.show();
+            Platform.runLater(() -> {
+                try {
+                    t.setScene(null);
+                    t.hide();
+                } finally {
+                    l.countDown();
+                }
+            });
         });
         l.await();
         if (exception != null) {
@@ -201,24 +164,18 @@ public class WindowSceneInitDisposeTest {
     @Test
     public void test5() throws Throwable {
         final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                final Stage t = new Stage();
-                t.setScene(new Scene(new Group()));
-                t.show();
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            t.hide();
-                            t.setScene(null);
-                        } finally {
-                            l.countDown();
-                        }
-                    }
-                });
-            }
+        Platform.runLater(() -> {
+            final Stage t = new Stage();
+            t.setScene(new Scene(new Group()));
+            t.show();
+            Platform.runLater(() -> {
+                try {
+                    t.hide();
+                    t.setScene(null);
+                } finally {
+                    l.countDown();
+                }
+            });
         });
         l.await();
         if (exception != null) {
@@ -229,24 +186,18 @@ public class WindowSceneInitDisposeTest {
     @Test
     public void test6() throws Throwable {
         final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                final Stage t = new Stage();
-                t.setScene(new Scene(new Group()));
-                t.show();
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            t.setScene(new Scene(new Group()));
-                            t.hide();
-                        } finally {
-                            l.countDown();
-                        }
-                    }
-                });
-            }
+        Platform.runLater(() -> {
+            final Stage t = new Stage();
+            t.setScene(new Scene(new Group()));
+            t.show();
+            Platform.runLater(() -> {
+                try {
+                    t.setScene(new Scene(new Group()));
+                    t.hide();
+                } finally {
+                    l.countDown();
+                }
+            });
         });
         l.await();
         if (exception != null) {
@@ -257,28 +208,22 @@ public class WindowSceneInitDisposeTest {
     @Test
     public void test7() throws Throwable {
         final CountDownLatch l = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                final Stage t = new Stage();
-                final Scene s = new Scene(new Group());
-                t.setScene(s);
-                t.show();
-                final Stage p = new Stage();
-                p.show();
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            p.setScene(s);
-                            p.hide();
-                            t.hide();
-                        } finally {
-                            l.countDown();
-                        }
-                    }
-                });
-            }
+        Platform.runLater(() -> {
+            final Stage t = new Stage();
+            final Scene s = new Scene(new Group());
+            t.setScene(s);
+            t.show();
+            final Stage p = new Stage();
+            p.show();
+            Platform.runLater(() -> {
+                try {
+                    p.setScene(s);
+                    p.hide();
+                    t.hide();
+                } finally {
+                    l.countDown();
+                }
+            });
         });
         l.await();
         if (exception != null) {

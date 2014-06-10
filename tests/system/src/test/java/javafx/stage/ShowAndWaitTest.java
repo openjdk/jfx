@@ -114,11 +114,7 @@ public class ShowAndWaitTest {
     @BeforeClass
     public static void setupOnce() {
         // Start the Application
-        new Thread(new Runnable() {
-            @Override public void run() {
-                Application.launch(MyApp.class, (String[])null);
-            }
-        }).start();
+        new Thread(() -> Application.launch(MyApp.class, (String[])null)).start();
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
@@ -172,11 +168,7 @@ public class ShowAndWaitTest {
             if (stage.isShowing()) {
                 System.err.println("Cleaning up stage after a failed test...");
                 try {
-                    Util.runAndWait(new Runnable() {
-                        public void run() {
-                            stage.hide();
-                        }
-                    });
+                    Util.runAndWait(stage::hide);
                 } catch (Throwable t) {
                     System.err.println("WARNING: unable to hide stage after test failure");
                     t.printStackTrace(System.err);
@@ -209,21 +201,19 @@ public class ShowAndWaitTest {
         test1Run = true;
 
         assertEquals(0, launchLatch.getCount());
-        Util.runAndWait(new Runnable() {
-            @Override public void run() {
-                assertTrue(Platform.isFxApplicationThread());
-                assertTrue(myApp.primaryStage.isPrimary());
-                assertFalse(myApp.primaryStage.isShowing());
+        Util.runAndWait(() -> {
+            assertTrue(Platform.isFxApplicationThread());
+            assertTrue(myApp.primaryStage.isPrimary());
+            assertFalse(myApp.primaryStage.isShowing());
 
-                // Verify that we cannot call showAndWait on the primaryStage
-                try {
-                    myApp.primaryStage.showAndWait();
-                    throw new AssertionFailedError("Expected IllegalStateException was not thrown");
-                } catch (IllegalStateException ex) {
-                }
-
-                myApp.primaryStage.show();
+            // Verify that we cannot call showAndWait on the primaryStage
+            try {
+                myApp.primaryStage.showAndWait();
+                throw new AssertionFailedError("Expected IllegalStateException was not thrown");
+            } catch (IllegalStateException ex) {
             }
+
+            myApp.primaryStage.show();
         });
     }
 
@@ -246,13 +236,11 @@ public class ShowAndWaitTest {
     public void testShowWaitWrongThread() {
         ensureTest1();
         assertFalse(Platform.isFxApplicationThread());
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpStage1 = new TestStage(modality);
-                stages.add(tmpStage1);
-                assertFalse(tmpStage1.isPrimary());
-                assertFalse(tmpStage1.isShowing());
-            }
+        Util.runAndWait(() -> {
+            tmpStage1 = new TestStage(modality);
+            stages.add(tmpStage1);
+            assertFalse(tmpStage1.isPrimary());
+            assertFalse(tmpStage1.isShowing());
         });
         assertNotNull(tmpStage1);
 
@@ -264,21 +252,19 @@ public class ShowAndWaitTest {
     @Test (expected=IllegalStateException.class)
     public void testVisibleThrow() {
         ensureTest1();
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpStage1 = new TestStage(modality);
-                stages.add(tmpStage1);
-                assertFalse(tmpStage1.isPrimary());
-                assertFalse(tmpStage1.isShowing());
-                tmpStage1.show();
-                assertTrue(tmpStage1.isShowing());
+        Util.runAndWait(() -> {
+            tmpStage1 = new TestStage(modality);
+            stages.add(tmpStage1);
+            assertFalse(tmpStage1.isPrimary());
+            assertFalse(tmpStage1.isShowing());
+            tmpStage1.show();
+            assertTrue(tmpStage1.isShowing());
 
-                try {
-                    // The following should throw IllegalStateException
-                    tmpStage1.showAndWait();
-                } finally {
-                    tmpStage1.hide();
-                }
+            try {
+                // The following should throw IllegalStateException
+                tmpStage1.showAndWait();
+            } finally {
+                tmpStage1.hide();
             }
         });
     }
@@ -291,27 +277,23 @@ public class ShowAndWaitTest {
         final AtomicBoolean stageShowReturned = new AtomicBoolean(false);
         final AtomicBoolean hideActionReached = new AtomicBoolean(false);
 
-        Runnable rShow = new Runnable() {
-            @Override public void run() {
-                tmpStage1 = new TestStage(modality);
-                stages.add(tmpStage1);
-                assertFalse(tmpStage1.isPrimary());
-                assertFalse(tmpStage1.isShowing());
-                tmpStage1.show();
-                stageShowReturned.set(true);
-                assertTrue(tmpStage1.isShowing());
-                assertFalse(hideActionReached.get());
-            }
+        Runnable rShow = () -> {
+            tmpStage1 = new TestStage(modality);
+            stages.add(tmpStage1);
+            assertFalse(tmpStage1.isPrimary());
+            assertFalse(tmpStage1.isShowing());
+            tmpStage1.show();
+            stageShowReturned.set(true);
+            assertTrue(tmpStage1.isShowing());
+            assertFalse(hideActionReached.get());
         };
 
-        Runnable rHide = new Runnable() {
-            @Override public void run() {
-                assertNotNull(tmpStage1);
-                assertTrue(tmpStage1.isShowing());
-                assertTrue(stageShowReturned.get());
-                hideActionReached.set(true);
-                tmpStage1.hide();
-            }
+        Runnable rHide = () -> {
+            assertNotNull(tmpStage1);
+            assertTrue(tmpStage1.isShowing());
+            assertTrue(stageShowReturned.get());
+            hideActionReached.set(true);
+            tmpStage1.hide();
         };
 
         Util.runAndWait(rShow, rHide);
@@ -331,37 +313,28 @@ public class ShowAndWaitTest {
         final AtomicBoolean hide1EventReached = new AtomicBoolean(false);
         final AtomicBoolean nextRunnableReached = new AtomicBoolean(false);
 
-        Runnable rShow1 = new Runnable() {
-            @Override public void run() {
-                tmpStage1 = new TestStage(modality);
-                stages.add(tmpStage1);
-                assertFalse(tmpStage1.isPrimary());
-                assertFalse(tmpStage1.isShowing());
-                tmpStage1.showAndWait();
-                stage1ShowReturned.set(true);
-                assertFalse(tmpStage1.isShowing());
-                assertTrue(hide1EventReached.get());
-                assertFalse(nextRunnableReached.get());
-            }
+        Runnable rShow1 = () -> {
+            tmpStage1 = new TestStage(modality);
+            stages.add(tmpStage1);
+            assertFalse(tmpStage1.isPrimary());
+            assertFalse(tmpStage1.isShowing());
+            tmpStage1.showAndWait();
+            stage1ShowReturned.set(true);
+            assertFalse(tmpStage1.isShowing());
+            assertTrue(hide1EventReached.get());
+            assertFalse(nextRunnableReached.get());
         };
 
-        Runnable rHide1 = new Runnable() {
-            @Override public void run() {
-                hide1EventReached.set(true);
-                assertFalse(stage1ShowReturned.get());
-                assertNotNull(tmpStage1);
-                tmpStage1.hide();
-                Util.sleep(1);
-                assertFalse(stage1ShowReturned.get());
-            }
+        Runnable rHide1 = () -> {
+            hide1EventReached.set(true);
+            assertFalse(stage1ShowReturned.get());
+            assertNotNull(tmpStage1);
+            tmpStage1.hide();
+            Util.sleep(1);
+            assertFalse(stage1ShowReturned.get());
         };
 
-        Runnable rNext = new Runnable() {
-            public void run() {
-                // This should happen after the nested event loop exits
-                nextRunnableReached.set(true);
-            }
-        };
+        Runnable rNext = () -> nextRunnableReached.set(true);
 
         Util.runAndWait(rShow1, rHide1, rNext);
 
@@ -381,35 +354,26 @@ public class ShowAndWaitTest {
         final AtomicBoolean hide1EventReached = new AtomicBoolean(false);
         final AtomicBoolean nextRunnableReached = new AtomicBoolean(false);
 
-        Runnable rShow1 = new Runnable() {
-            @Override public void run() {
-                tmpStage1 = new TestStage(modality);
-                stages.add(tmpStage1);
-                assertFalse(tmpStage1.isPrimary());
-                assertFalse(tmpStage1.isShowing());
-                tmpStage1.showAndWait();
-                stage1ShowReturned.set(true);
-                assertFalse(tmpStage1.isShowing());
-                assertTrue(hide1EventReached.get());
-                assertFalse(nextRunnableReached.get());
-            }
+        Runnable rShow1 = () -> {
+            tmpStage1 = new TestStage(modality);
+            stages.add(tmpStage1);
+            assertFalse(tmpStage1.isPrimary());
+            assertFalse(tmpStage1.isShowing());
+            tmpStage1.showAndWait();
+            stage1ShowReturned.set(true);
+            assertFalse(tmpStage1.isShowing());
+            assertTrue(hide1EventReached.get());
+            assertFalse(nextRunnableReached.get());
         };
 
-        Runnable rHide1 = new Runnable() {
-            @Override public void run() {
-                hide1EventReached.set(true);
-                assertFalse(stage1ShowReturned.get());
-                assertNotNull(tmpStage1);
-                tmpStage1.hide();
-                Util.sleep(1);
-                assertFalse(stage1ShowReturned.get());
-                Platform.runLater(new Runnable() {
-                    public void run() {
-                        // This should happen after the nested event loop exits
-                        nextRunnableReached.set(true);
-                    }
-                });
-            }
+        Runnable rHide1 = () -> {
+            hide1EventReached.set(true);
+            assertFalse(stage1ShowReturned.get());
+            assertNotNull(tmpStage1);
+            tmpStage1.hide();
+            Util.sleep(1);
+            assertFalse(stage1ShowReturned.get());
+            Platform.runLater(() -> nextRunnableReached.set(true));
         };
 
         Util.runAndWait(rShow1, rHide1);
@@ -428,60 +392,52 @@ public class ShowAndWaitTest {
         final AtomicBoolean stage2ShowReturned = new AtomicBoolean(false);
         final AtomicBoolean hide2EventReached = new AtomicBoolean(false);
 
-        Runnable rShow1 = new Runnable() {
-            @Override public void run() {
-                tmpStage1 = new TestStage(modality);
-                stages.add(tmpStage1);
-                assertFalse(tmpStage1.isPrimary());
-                assertFalse(tmpStage1.isShowing());
-                tmpStage1.showAndWait();
-                stage1ShowReturned.set(true);
-                assertFalse(tmpStage1.isShowing());
-                assertTrue(stage2ShowReturned.get());
-                assertTrue(hide1EventReached.get());
-                assertTrue(hide2EventReached.get());
-            }
+        Runnable rShow1 = () -> {
+            tmpStage1 = new TestStage(modality);
+            stages.add(tmpStage1);
+            assertFalse(tmpStage1.isPrimary());
+            assertFalse(tmpStage1.isShowing());
+            tmpStage1.showAndWait();
+            stage1ShowReturned.set(true);
+            assertFalse(tmpStage1.isShowing());
+            assertTrue(stage2ShowReturned.get());
+            assertTrue(hide1EventReached.get());
+            assertTrue(hide2EventReached.get());
         };
 
-        Runnable rShow2 = new Runnable() {
-            @Override public void run() {
-                tmpStage2 = new TestStage(modality);
-                stages.add(tmpStage2);
-                assertFalse(tmpStage2.isPrimary());
-                assertFalse(tmpStage2.isShowing());
-                tmpStage2.showAndWait();
-                stage2ShowReturned.set(true);
-                assertFalse(stage1ShowReturned.get());
-                assertFalse(tmpStage2.isShowing());
-                assertTrue(hide2EventReached.get());
-                assertFalse(hide1EventReached.get());
-            }
+        Runnable rShow2 = () -> {
+            tmpStage2 = new TestStage(modality);
+            stages.add(tmpStage2);
+            assertFalse(tmpStage2.isPrimary());
+            assertFalse(tmpStage2.isShowing());
+            tmpStage2.showAndWait();
+            stage2ShowReturned.set(true);
+            assertFalse(stage1ShowReturned.get());
+            assertFalse(tmpStage2.isShowing());
+            assertTrue(hide2EventReached.get());
+            assertFalse(hide1EventReached.get());
         };
 
-        Runnable rHide1 = new Runnable() {
-            @Override public void run() {
-                hide1EventReached.set(true);
-                assertFalse(stage1ShowReturned.get());
-                assertTrue(stage2ShowReturned.get());
-                assertTrue(hide2EventReached.get());
-                assertNotNull(tmpStage1);
-                tmpStage1.hide();
-                Util.sleep(1);
-                assertFalse(stage1ShowReturned.get());
-            }
+        Runnable rHide1 = () -> {
+            hide1EventReached.set(true);
+            assertFalse(stage1ShowReturned.get());
+            assertTrue(stage2ShowReturned.get());
+            assertTrue(hide2EventReached.get());
+            assertNotNull(tmpStage1);
+            tmpStage1.hide();
+            Util.sleep(1);
+            assertFalse(stage1ShowReturned.get());
         };
 
-        Runnable rHide2 = new Runnable() {
-            @Override public void run() {
-                hide2EventReached.set(true);
-                assertFalse(stage2ShowReturned.get());
-                assertFalse(stage1ShowReturned.get());
-                assertFalse(hide1EventReached.get());
-                assertNotNull(tmpStage2);
-                tmpStage2.hide();
-                Util.sleep(1);
-                assertFalse(stage2ShowReturned.get());
-            }
+        Runnable rHide2 = () -> {
+            hide2EventReached.set(true);
+            assertFalse(stage2ShowReturned.get());
+            assertFalse(stage1ShowReturned.get());
+            assertFalse(hide1EventReached.get());
+            assertNotNull(tmpStage2);
+            tmpStage2.hide();
+            Util.sleep(1);
+            assertFalse(stage2ShowReturned.get());
         };
 
         Util.runAndWait(rShow1, rShow2, rHide2, rHide1);
@@ -501,60 +457,52 @@ public class ShowAndWaitTest {
         final AtomicBoolean stage2ShowReturned = new AtomicBoolean(false);
         final AtomicBoolean hide2EventReached = new AtomicBoolean(false);
 
-        Runnable rShow1 = new Runnable() {
-            @Override public void run() {
-                tmpStage1 = new TestStage(modality);
-                stages.add(tmpStage1);
-                assertFalse(tmpStage1.isPrimary());
-                assertFalse(tmpStage1.isShowing());
-                tmpStage1.showAndWait();
-                stage1ShowReturned.set(true);
-                assertFalse(tmpStage1.isShowing());
-                assertTrue(stage2ShowReturned.get());
-                assertTrue(hide1EventReached.get());
-                assertTrue(hide2EventReached.get());
-            }
+        Runnable rShow1 = () -> {
+            tmpStage1 = new TestStage(modality);
+            stages.add(tmpStage1);
+            assertFalse(tmpStage1.isPrimary());
+            assertFalse(tmpStage1.isShowing());
+            tmpStage1.showAndWait();
+            stage1ShowReturned.set(true);
+            assertFalse(tmpStage1.isShowing());
+            assertTrue(stage2ShowReturned.get());
+            assertTrue(hide1EventReached.get());
+            assertTrue(hide2EventReached.get());
         };
 
-        Runnable rShow2 = new Runnable() {
-            @Override public void run() {
-                tmpStage2 = new TestStage(modality);
-                stages.add(tmpStage2);
-                assertFalse(tmpStage2.isPrimary());
-                assertFalse(tmpStage2.isShowing());
-                tmpStage2.showAndWait();
-                stage2ShowReturned.set(true);
-                assertFalse(tmpStage2.isShowing());
-                assertFalse(stage1ShowReturned.get());
-                assertTrue(hide2EventReached.get());
-                assertTrue(hide1EventReached.get());
-            }
+        Runnable rShow2 = () -> {
+            tmpStage2 = new TestStage(modality);
+            stages.add(tmpStage2);
+            assertFalse(tmpStage2.isPrimary());
+            assertFalse(tmpStage2.isShowing());
+            tmpStage2.showAndWait();
+            stage2ShowReturned.set(true);
+            assertFalse(tmpStage2.isShowing());
+            assertFalse(stage1ShowReturned.get());
+            assertTrue(hide2EventReached.get());
+            assertTrue(hide1EventReached.get());
         };
 
-        Runnable rHide1 = new Runnable() {
-            @Override public void run() {
-                hide1EventReached.set(true);
-                assertFalse(stage1ShowReturned.get());
-                assertFalse(stage2ShowReturned.get());
-                assertFalse(hide2EventReached.get());
-                assertNotNull(tmpStage1);
-                tmpStage1.hide();
-                Util.sleep(1);
-                assertFalse(stage1ShowReturned.get());
-            }
+        Runnable rHide1 = () -> {
+            hide1EventReached.set(true);
+            assertFalse(stage1ShowReturned.get());
+            assertFalse(stage2ShowReturned.get());
+            assertFalse(hide2EventReached.get());
+            assertNotNull(tmpStage1);
+            tmpStage1.hide();
+            Util.sleep(1);
+            assertFalse(stage1ShowReturned.get());
         };
 
-        Runnable rHide2 = new Runnable() {
-            @Override public void run() {
-                hide2EventReached.set(true);
-                assertFalse(stage2ShowReturned.get());
-                assertFalse(stage1ShowReturned.get());
-                assertTrue(hide1EventReached.get());
-                assertNotNull(tmpStage2);
-                tmpStage2.hide();
-                Util.sleep(1);
-                assertFalse(stage2ShowReturned.get());
-            }
+        Runnable rHide2 = () -> {
+            hide2EventReached.set(true);
+            assertFalse(stage2ShowReturned.get());
+            assertFalse(stage1ShowReturned.get());
+            assertTrue(hide1EventReached.get());
+            assertNotNull(tmpStage2);
+            tmpStage2.hide();
+            Util.sleep(1);
+            assertFalse(stage2ShowReturned.get());
         };
 
         Util.runAndWait(rShow1, rShow2, rHide1, rHide2);
@@ -580,43 +528,39 @@ public class ShowAndWaitTest {
             final int idx = i;
             stageShowReturned[idx] = new AtomicBoolean(false);
             hideEventReached[idx] = new AtomicBoolean(false);
-            rShow[idx] = new Runnable() {
-                @Override public void run() {
-                    tmpStage[idx] = new TestStage(modality);
-                    stages.add(tmpStage[idx]);
-                    assertFalse(tmpStage[idx].isShowing());
-                    tmpStage[idx].showAndWait();
-                    stageShowReturned[idx].set(true);
-                    assertFalse(tmpStage[idx].isShowing());
-                    assertTrue(hideEventReached[idx].get());
-                    for (int j = 0; j < idx; j++) {
-                        assertFalse(stageShowReturned[j].get());
-                        assertFalse(hideEventReached[j].get());
-                    }
-                    for (int j = idx+1; j < N; j++) {
-                        assertTrue(stageShowReturned[j].get());
-                        assertTrue(hideEventReached[j].get());
-                    }
+            rShow[idx] = () -> {
+                tmpStage[idx] = new TestStage(modality);
+                stages.add(tmpStage[idx]);
+                assertFalse(tmpStage[idx].isShowing());
+                tmpStage[idx].showAndWait();
+                stageShowReturned[idx].set(true);
+                assertFalse(tmpStage[idx].isShowing());
+                assertTrue(hideEventReached[idx].get());
+                for (int j = 0; j < idx; j++) {
+                    assertFalse(stageShowReturned[j].get());
+                    assertFalse(hideEventReached[j].get());
+                }
+                for (int j = idx+1; j < N; j++) {
+                    assertTrue(stageShowReturned[j].get());
+                    assertTrue(hideEventReached[j].get());
                 }
             };
 
-            rHide[idx] = new Runnable() {
-                @Override public void run() {
-                    hideEventReached[idx].set(true);
-                    assertFalse(stageShowReturned[idx].get());
-                    for (int j = 0; j < idx; j++) {
-                        assertFalse(stageShowReturned[j].get());
-                        assertFalse(hideEventReached[j].get());
-                    }
-                    for (int j = idx+1; j < N; j++) {
-                        assertTrue(stageShowReturned[j].get());
-                        assertTrue(hideEventReached[j].get());
-                    }
-                    assertNotNull(tmpStage[idx]);
-                    tmpStage[idx].hide();
-                    Util.sleep(1);
-                    assertFalse(stageShowReturned[idx].get());
+            rHide[idx] = () -> {
+                hideEventReached[idx].set(true);
+                assertFalse(stageShowReturned[idx].get());
+                for (int j = 0; j < idx; j++) {
+                    assertFalse(stageShowReturned[j].get());
+                    assertFalse(hideEventReached[j].get());
                 }
+                for (int j = idx+1; j < N; j++) {
+                    assertTrue(stageShowReturned[j].get());
+                    assertTrue(hideEventReached[j].get());
+                }
+                assertNotNull(tmpStage[idx]);
+                tmpStage[idx].hide();
+                Util.sleep(1);
+                assertFalse(stageShowReturned[idx].get());
             };
         }
 
@@ -649,43 +593,39 @@ public class ShowAndWaitTest {
             final int idx = i;
             stageShowReturned[idx] = new AtomicBoolean(false);
             hideEventReached[idx] = new AtomicBoolean(false);
-            rShow[idx] = new Runnable() {
-                @Override public void run() {
-                    tmpStage[idx] = new TestStage(modality);
-                    stages.add(tmpStage[idx]);
-                    assertFalse(tmpStage[idx].isShowing());
-                    tmpStage[idx].showAndWait();
-                    stageShowReturned[idx].set(true);
-                    assertFalse(tmpStage[idx].isShowing());
-                    assertTrue(hideEventReached[idx].get());
-                    for (int j = 0; j < idx; j++) {
-                        assertFalse(stageShowReturned[j].get());
-                        assertTrue(hideEventReached[j].get());
-                    }
-                    for (int j = idx+1; j < N; j++) {
-                        assertTrue(stageShowReturned[j].get());
-                        assertTrue(hideEventReached[j].get());
-                    }
+            rShow[idx] = () -> {
+                tmpStage[idx] = new TestStage(modality);
+                stages.add(tmpStage[idx]);
+                assertFalse(tmpStage[idx].isShowing());
+                tmpStage[idx].showAndWait();
+                stageShowReturned[idx].set(true);
+                assertFalse(tmpStage[idx].isShowing());
+                assertTrue(hideEventReached[idx].get());
+                for (int j = 0; j < idx; j++) {
+                    assertFalse(stageShowReturned[j].get());
+                    assertTrue(hideEventReached[j].get());
+                }
+                for (int j = idx+1; j < N; j++) {
+                    assertTrue(stageShowReturned[j].get());
+                    assertTrue(hideEventReached[j].get());
                 }
             };
 
-            rHide[idx] = new Runnable() {
-                @Override public void run() {
-                    hideEventReached[idx].set(true);
-                    assertFalse(stageShowReturned[idx].get());
-                    for (int j = 0; j < idx; j++) {
-                        assertFalse(stageShowReturned[j].get());
-                        assertTrue(hideEventReached[j].get());
-                    }
-                    for (int j = idx+1; j < N; j++) {
-                        assertFalse(stageShowReturned[j].get());
-                        assertFalse(hideEventReached[j].get());
-                    }
-                    assertNotNull(tmpStage[idx]);
-                    tmpStage[idx].hide();
-                    Util.sleep(1);
-                    assertFalse(stageShowReturned[idx].get());
+            rHide[idx] = () -> {
+                hideEventReached[idx].set(true);
+                assertFalse(stageShowReturned[idx].get());
+                for (int j = 0; j < idx; j++) {
+                    assertFalse(stageShowReturned[j].get());
+                    assertTrue(hideEventReached[j].get());
                 }
+                for (int j = idx+1; j < N; j++) {
+                    assertFalse(stageShowReturned[j].get());
+                    assertFalse(hideEventReached[j].get());
+                }
+                assertNotNull(tmpStage[idx]);
+                tmpStage[idx].hide();
+                Util.sleep(1);
+                assertFalse(stageShowReturned[idx].get());
             };
         }
 

@@ -1,20 +1,16 @@
 import java.util.Set;
+
 import javafx.print.JobSettings;
 import javafx.print.Printer;
 import javafx.print.PrinterAttributes;
-
 import javafx.print.PrinterJob;
 import javafx.print.PrintColor;
 import javafx.print.PageOrientation;
 import javafx.print.PageLayout;
 import static javafx.print.PageOrientation.*;
-
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
-
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -82,14 +78,11 @@ public class PrintOrientTest extends Application {
         Button print = new Button("Print");
         print.setLayoutX(80);
         print.setLayoutY(200);
-        print.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                createJob(PORTRAIT);
-                createJob(REVERSE_PORTRAIT);
-                createJob(LANDSCAPE);
-                createJob(REVERSE_LANDSCAPE);
-            }
+        print.setOnAction(e -> {
+            createJob(PORTRAIT);
+            createJob(REVERSE_PORTRAIT);
+            createJob(LANDSCAPE);
+            createJob(REVERSE_LANDSCAPE);
         });
         ((Group)scene.getRoot()).getChildren().add(print);
         return scene;

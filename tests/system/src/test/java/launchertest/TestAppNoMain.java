@@ -40,11 +40,7 @@ public class TestAppNoMain extends Application {
 
     @Override public void start(Stage stage) throws Exception {
         startCalled = true;
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                Platform.exit();
-            }
-        });
+        Platform.runLater(Platform::exit);
     }
 
     @Override public void stop() {
@@ -56,10 +52,8 @@ public class TestAppNoMain extends Application {
 
     static {
         try {
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    // do nothing
-                }
+            Platform.runLater(() -> {
+                // do nothing
             });
         } catch (IllegalStateException ex) {
             ex.printStackTrace();

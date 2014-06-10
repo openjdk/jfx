@@ -33,9 +33,9 @@ package modena;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
@@ -67,33 +67,19 @@ public class SameHeightTestController implements Initializable{
     private Node arrow;
 
     @Override public void initialize(URL url, ResourceBundle rb) {
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                Text buttonTextNode = (Text)horizFirstButton.lookup(".text");
-                buttonTextNode.layoutYProperty().addListener(new ChangeListener<Number>() {
-                    @Override public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                        StackPane.setMargin(horizBaseLine, new Insets(t1.doubleValue(),0,0,0));
-                    }
-                });
-                Text textFieldTextNode = (Text)vertFirstTextField.lookup(".text");
-                textFieldTextNode.layoutXProperty().addListener(new ChangeListener<Number>() {
-                    @Override public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                        StackPane.setMargin(vertBaseLine, new Insets(0,0,0,t1.doubleValue()));
-                    }
-                });
-                arrowButton = editableCombo.lookup(".arrow-button");
-                arrow = editableCombo.lookup(".arrow");
-                ChangeListener updater = new ChangeListener() {
-                    @Override public void changed(ObservableValue ov, Object t, Object t1) {
-                        updateArrowLinePositions();
-                    }
-                };
-                arrow.layoutBoundsProperty().addListener(updater);
-                arrowButton.layoutBoundsProperty().addListener(updater);
-                editableCombo.layoutBoundsProperty().addListener(updater);
-                arrowButtonContainer.layoutBoundsProperty().addListener(updater);
-                updateArrowLinePositions();
-            }
+        Platform.runLater(() -> {
+            Text buttonTextNode = (Text)horizFirstButton.lookup(".text");
+            buttonTextNode.layoutYProperty().addListener((ov, t, t1) -> StackPane.setMargin(horizBaseLine, new Insets(t1.doubleValue(),0,0,0)));
+            Text textFieldTextNode = (Text)vertFirstTextField.lookup(".text");
+            textFieldTextNode.layoutXProperty().addListener((ov, t, t1) -> StackPane.setMargin(vertBaseLine, new Insets(0,0,0,t1.doubleValue())));
+            arrowButton = editableCombo.lookup(".arrow-button");
+            arrow = editableCombo.lookup(".arrow");
+            ChangeListener updater = (ov, t, t1) -> updateArrowLinePositions();
+            arrow.layoutBoundsProperty().addListener(updater);
+            arrowButton.layoutBoundsProperty().addListener(updater);
+            editableCombo.layoutBoundsProperty().addListener(updater);
+            arrowButtonContainer.layoutBoundsProperty().addListener(updater);
+            updateArrowLinePositions();
         });
     }
     

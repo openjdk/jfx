@@ -83,12 +83,7 @@ public abstract class VisualTestBase {
     @BeforeClass
     public static void doSetupOnce() {
         // Start the Application
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Application.launch(MyApp.class, (String[]) null);
-            }
-        }).start();
+        new Thread(() -> Application.launch(MyApp.class, (String[]) null)).start();
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
@@ -110,25 +105,19 @@ public abstract class VisualTestBase {
 
     @Before
     public void doSetup() {
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                robot = com.sun.glass.ui.Application.GetApplication().createRobot();
-            }
-        });
+        runAndWait(() -> robot = com.sun.glass.ui.Application.GetApplication().createRobot());
     }
 
     @After
     public void doTeardown() {
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                if (!stages.isEmpty()) {
-                    for (final Stage stage : stages) {
-                        if (stage.isShowing()) {
-                            stage.hide();
-                        }
+        runAndWait(() -> {
+            if (!stages.isEmpty()) {
+                for (final Stage stage : stages) {
+                    if (stage.isShowing()) {
+                        stage.hide();
                     }
-                    stages.clear();
                 }
+                stages.clear();
             }
         });
     }
@@ -204,15 +193,13 @@ public abstract class VisualTestBase {
 
     private void frameWait(int n) {
         final CountDownLatch frameCounter = new CountDownLatch(n);
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                timer = new AnimationTimer() {
-                    @Override public void handle(long l) {
-                        frameCounter.countDown();
-                    }
-                };
-                timer.start();
-            }
+        Platform.runLater(() -> {
+            timer = new AnimationTimer() {
+                @Override public void handle(long l) {
+                    frameCounter.countDown();
+                }
+            };
+            timer.start();
         });
 
         try {
@@ -220,11 +207,9 @@ public abstract class VisualTestBase {
         } catch (InterruptedException ex) {
             throw new AssertionFailedError("Unexpected exception: " + ex);
         } finally {
-            runAndWait(new Runnable() {
-                @Override public void run() {
-                    if (timer != null) {
-                        timer.stop();
-                    }
+            runAndWait(() -> {
+                if (timer != null) {
+                    timer.stop();
                 }
             });
         }

@@ -86,21 +86,19 @@ public class SimpleWindowPage extends StackPane {
             ubuntuWindowContent = (Node)FXMLLoader.load(SimpleWindowPage.class.getResource("simple-window.fxml"));
             ubuntuWindow.getChildren().add(ubuntuWindowContent);
             
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    final Node macRB2 = macWindowContent.lookup("#RadioButton2");
-                    macRB2.setMouseTransparent(true);
-                    macRB2.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
-                    final Node windows7RB2 = windows7WindowContent.lookup("#RadioButton2");
-                    windows7RB2.setMouseTransparent(true);
-                    windows7RB2.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
-                    final Node windows8RB2 = windows8WindowContent.lookup("#RadioButton2");
-                    windows8RB2.setMouseTransparent(true);
-                    windows8RB2.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
-                    final Node ubuntuRB2 = ubuntuWindowContent.lookup("#RadioButton2");
-                    ubuntuRB2.setMouseTransparent(true);
-                    ubuntuRB2.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
-                }
+            Platform.runLater(() -> {
+                final Node macRB2 = macWindowContent.lookup("#RadioButton2");
+                macRB2.setMouseTransparent(true);
+                macRB2.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
+                final Node windows7RB2 = windows7WindowContent.lookup("#RadioButton2");
+                windows7RB2.setMouseTransparent(true);
+                windows7RB2.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
+                final Node windows8RB2 = windows8WindowContent.lookup("#RadioButton2");
+                windows8RB2.setMouseTransparent(true);
+                windows8RB2.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
+                final Node ubuntuRB2 = ubuntuWindowContent.lookup("#RadioButton2");
+                ubuntuRB2.setMouseTransparent(true);
+                ubuntuRB2.pseudoClassStateChanged(PseudoClass.getPseudoClass("focused"), true);
             });
             
             box.getChildren().addAll(macWindow, ubuntuWindow, windows7Window, windows8Window);

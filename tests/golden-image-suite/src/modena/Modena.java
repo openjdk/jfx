@@ -49,10 +49,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -90,6 +89,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.transform.Scale;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+
 import javax.imageio.ImageIO;
 
 public class Modena extends Application {
@@ -151,18 +151,12 @@ public class Modena extends Application {
     private TabPane contentTabs;
     private boolean test = false;
     private boolean embeddedPerformanceMode = false;
-    private final EventHandler<ActionEvent> rebuild = new EventHandler<ActionEvent>(){
-        @Override public void handle(ActionEvent event) {
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    updateUserAgentStyleSheet();
-                    rebuildUI(modenaButton.isSelected(), retinaButton.isSelected(),
-                              contentTabs.getSelectionModel().getSelectedIndex(),
-                              samplePageNavigation.getCurrentSection());
-                }
-            });
-        }
-    };
+    private final EventHandler<ActionEvent> rebuild = event -> Platform.runLater(() -> {
+        updateUserAgentStyleSheet();
+        rebuildUI(modenaButton.isSelected(), retinaButton.isSelected(),
+                  contentTabs.getSelectionModel().getSelectedIndex(),
+                  samplePageNavigation.getCurrentSection());
+    });
     
     private static Modena instance;
 
@@ -290,11 +284,7 @@ public class Modena extends Application {
         if (root != null) root.requestLayout();
 
         // restore scrolled section
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                samplePageNavigation.setCurrentSection(scrolledSection);
-            }
-        });
+        Platform.runLater(() -> samplePageNavigation.setCurrentSection(scrolledSection));
     }
     
     private void rebuildUI(boolean modena, boolean retina, int selectedTab, final SamplePage.Section scrolledSection) {
@@ -344,25 +334,21 @@ public class Modena extends Application {
             contentTabs.getSelectionModel().select(selectedTab);
             samplePage.setMouseTransparent(test);
             // height test set selection for 
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    for (Node n: heightTest.lookupAll(".choice-box")) {
-                        ((ChoiceBox)n).getSelectionModel().selectFirst();
-                    }
-                    for (Node n: heightTest.lookupAll(".combo-box")) {
-                        ((ComboBox)n).getSelectionModel().selectFirst();
-                    }
+            Platform.runLater(() -> {
+                for (Node n: heightTest.lookupAll(".choice-box")) {
+                    ((ChoiceBox)n).getSelectionModel().selectFirst();
+                }
+                for (Node n: heightTest.lookupAll(".combo-box")) {
+                    ((ComboBox)n).getSelectionModel().selectFirst();
                 }
             });
             // Create Toolbar
             retinaButton = ToggleButtonBuilder.create()
                 .text("@2x")
                 .selected(retina)
-                .onAction(new EventHandler<ActionEvent>(){
-                    @Override public void handle(ActionEvent event) {
-                        ToggleButton btn = (ToggleButton)event.getSource();
-                        setRetinaMode(btn.isSelected());
-                    }
+                .onAction(event -> {
+                    ToggleButton btn = (ToggleButton)event.getSource();
+                    setRetinaMode(btn.isSelected());
                 })
                 .build();
             ToggleGroup themesToggleGroup = new ToggleGroup();
@@ -391,22 +377,16 @@ public class Modena extends Application {
                     .build(),
                 rtlButton = ToggleButtonBuilder.create()
                     .text("RTL")
-                    .onAction(new EventHandler<ActionEvent>() {
-                            @Override public void handle(ActionEvent event) {
-                                root.setNodeOrientation(rtlButton.isSelected() ? 
-                                        NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT);
-                            }
-                        })
+                    .onAction(event -> root.setNodeOrientation(rtlButton.isSelected() ? 
+                            NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT))
                     .build(),
                 embeddedPerformanceButton = ToggleButtonBuilder.create()
                     .text("EP")
                     .selected(embeddedPerformanceMode)
                     .tooltip(new Tooltip("Apply Embedded Performance extra stylesheet"))
-                    .onAction(new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent event) {
-                            embeddedPerformanceMode = embeddedPerformanceButton.isSelected();
-                            rebuild.handle(event);
-                        }
+                    .onAction(event -> {
+                        embeddedPerformanceMode = embeddedPerformanceButton.isSelected();
+                        rebuild.handle(event);
                     })
                     .build(),
                 new Separator(),
@@ -419,11 +399,7 @@ public class Modena extends Application {
                 createAccentColorPicker(),
                 new Separator(),
                 ButtonBuilder.create().text("Save...").onAction(saveBtnHandler).build(),
-                ButtonBuilder.create().text("Restart").onAction(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent event) {
-                        restart();
-                    }
-                }).build()
+                ButtonBuilder.create().text("Restart").onAction(event -> restart()).build()
             );
             toolBar.setId("TestAppToolbar");
             // Create content group used for scaleing @2x
@@ -449,12 +425,10 @@ public class Modena extends Application {
                 contentTabs.getTransforms().setAll(new Scale(2,2));
             }
             // update state
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    // move focus out of the way
-                    modenaButton.requestFocus();
-                    samplePageNavigation.setCurrentSection(scrolledSection);
-                }
+            Platform.runLater(() -> {
+                // move focus out of the way
+                modenaButton.requestFocus();
+                samplePageNavigation.setCurrentSection(scrolledSection);
             });
         } catch (IOException ex) {
             Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
@@ -462,11 +436,7 @@ public class Modena extends Application {
     }
 
     public RadioMenuItem buildFontRadioMenuItem(String name, final String in_fontName, final int in_fontSize, ToggleGroup tg) {
-        return RadioMenuItemBuilder.create().text(name).onAction(new EventHandler<ActionEvent>(){
-                   @Override public void handle(ActionEvent event) {
-                       setFont(in_fontName, in_fontSize);
-                   }
-               }).style("-fx-font: " + in_fontSize + "px \"" + in_fontName + "\";").toggleGroup(tg).build();
+        return RadioMenuItemBuilder.create().text(name).onAction(event -> setFont(in_fontName, in_fontSize)).style("-fx-font: " + in_fontSize + "px \"" + in_fontName + "\";").toggleGroup(tg).build();
     }
     
     public void setFont(String in_fontName, int in_fontSize) {
@@ -497,11 +467,7 @@ public class Modena extends Application {
                 Color.MAGENTA,
                 Color.BLACK
         );
-        colorPicker.valueProperty().addListener(new ChangeListener<Color>() {
-            @Override public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color c) {
-                setBaseColor(c);
-            }
-        });
+        colorPicker.valueProperty().addListener((observable, oldValue, c) -> setBaseColor(c));
         return colorPicker;
     }
     
@@ -533,15 +499,13 @@ public class Modena extends Application {
                 Color.MAGENTA,
                 Color.BLACK
         );
-        colorPicker.valueProperty().addListener(new ChangeListener<Color>() {
-            @Override public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color c) {
-                if (c == null) {
-                    backgroundColor = null;
-                } else {
-                    backgroundColor = c;
-                }
-                updateUserAgentStyleSheet();
+        colorPicker.valueProperty().addListener((observable, oldValue, c) -> {
+            if (c == null) {
+                backgroundColor = null;
+            } else {
+                backgroundColor = c;
             }
+            updateUserAgentStyleSheet();
         });
         return colorPicker;
     }
@@ -567,11 +531,7 @@ public class Modena extends Application {
                 Color.MAGENTA,
                 Color.BLACK
         );
-        colorPicker.valueProperty().addListener(new ChangeListener<Color>() {
-            @Override public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color c) {
-                setAccentColor(c);
-            }
-        });
+        colorPicker.valueProperty().addListener((observable, oldValue, c) -> setAccentColor(c));
         return colorPicker;
     }
 
@@ -584,31 +544,29 @@ public class Modena extends Application {
         updateUserAgentStyleSheet();
     }
     
-    private EventHandler<ActionEvent> saveBtnHandler = new EventHandler<ActionEvent>() {
-        @Override public void handle(ActionEvent event) {
-            FileChooser fc = new FileChooser();
-            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG", "*.png"));
-            File file = fc.showSaveDialog(mainStage);
-            if (file != null) {
-                try {
-                    samplePage.getStyleClass().add("root");
-                    int width = (int)(samplePage.getLayoutBounds().getWidth()+0.5d);
-                    int height = (int)(samplePage.getLayoutBounds().getHeight()+0.5d);
-                    BufferedImage imgBuffer = new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
-                    Graphics2D g2 = imgBuffer.createGraphics();
-                    for (int y=0; y<height; y+=2048) {
-                        SnapshotParameters snapshotParameters = new SnapshotParameters();
-                        int remainingHeight = Math.min(2048, height - y);
-                        snapshotParameters.setViewport(new Rectangle2D(0,y,width,remainingHeight));
-                        WritableImage img = samplePage.snapshot(snapshotParameters, null);
-                        g2.drawImage(SwingFXUtils.fromFXImage(img,null),0,y,null);
-                    }
-                    g2.dispose();
-                    ImageIO.write(imgBuffer, "PNG", file);
-                    System.out.println("Written image: "+file.getAbsolutePath());
-                } catch (IOException ex) {
-                    Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
+    private EventHandler<ActionEvent> saveBtnHandler = event -> {
+        FileChooser fc = new FileChooser();
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG", "*.png"));
+        File file = fc.showSaveDialog(mainStage);
+        if (file != null) {
+            try {
+                samplePage.getStyleClass().add("root");
+                int width = (int)(samplePage.getLayoutBounds().getWidth()+0.5d);
+                int height = (int)(samplePage.getLayoutBounds().getHeight()+0.5d);
+                BufferedImage imgBuffer = new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g2 = imgBuffer.createGraphics();
+                for (int y=0; y<height; y+=2048) {
+                    SnapshotParameters snapshotParameters = new SnapshotParameters();
+                    int remainingHeight = Math.min(2048, height - y);
+                    snapshotParameters.setViewport(new Rectangle2D(0,y,width,remainingHeight));
+                    WritableImage img = samplePage.snapshot(snapshotParameters, null);
+                    g2.drawImage(SwingFXUtils.fromFXImage(img,null),0,y,null);
                 }
+                g2.dispose();
+                ImageIO.write(imgBuffer, "PNG", file);
+                System.out.println("Written image: "+file.getAbsolutePath());
+            } catch (IOException ex) {
+                Logger.getLogger(Modena.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     };

@@ -61,11 +61,7 @@ public class RunLaterTest {
     @BeforeClass
     public static void setupOnce() {
         // Start the Application
-        new Thread(new Runnable() {
-            @Override public void run() {
-                Application.launch(MyApp.class, (String[])null);
-            }
-        }).start();
+        new Thread(() -> Application.launch(MyApp.class, (String[])null)).start();
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
@@ -91,14 +87,12 @@ public class RunLaterTest {
         Runnable[] runnables = new Runnable[numRunnables];
         for (int i = 0; i < numRunnables; i++) {
             final int idx = i;
-            runnables[idx] = new Runnable() {
-                @Override public void run() {
-                    if (idx == 0) {
-                        Util.sleep(100);
-                    }
-                    int seq = seqNum.getAndIncrement();
-                    assertEquals(idx, seq);
+            runnables[idx] = () -> {
+                if (idx == 0) {
+                    Util.sleep(100);
                 }
+                int seq = seqNum.getAndIncrement();
+                assertEquals(idx, seq);
             };
         }
         Util.runAndWait(DELAY, runnables);
