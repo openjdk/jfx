@@ -26,7 +26,7 @@
 package com.sun.glass.ui.monocle.input;
 
 import org.junit.After;
-import org.junit.Assume;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -198,6 +198,79 @@ public class USKeyboardTest {
         ui.processLine("EV_KEY KEY_4 0");
         ui.processLine("EV_SYN");
         TestLog.waitForLog("Key released: DIGIT3");
+    }
+
+    @Test
+    public void testBackspace() throws Exception {
+        TestApplication.showFullScreenScene();
+        TestApplication.addKeyListeners();
+        ui.processLine("OPEN");
+        ui.processLine("EVBIT EV_KEY");
+        ui.processLine("EVBIT EV_SYN");
+        ui.processLine("KEYBIT KEY_BACKSPACE");
+        ui.processLine("KEYBIT KEY_LEFTSHIFT");
+        ui.processLine("KEYBIT KEY_CAPSLOCK");
+        ui.processLine("PROPERTY ID_INPUT_KEYBOARD 1");
+        ui.processLine("CREATE");
+
+        ui.processLine("EV_KEY KEY_BACKSPACE 1");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key pressed: BACK_SPACE");
+        ui.processLine("EV_KEY KEY_BACKSPACE 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key released: BACK_SPACE");
+        Assert.assertEquals(0l, TestLog.countLogContaining("Key typed"));
+
+        TestLog.reset();
+        ui.processLine("EV_KEY KEY_LEFTSHIFT 1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_BACKSPACE 1");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key pressed: BACK_SPACE");
+        ui.processLine("EV_KEY KEY_BACKSPACE 0");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_LEFTSHIFT 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key released: BACK_SPACE");
+        Assert.assertEquals(0l, TestLog.countLogContaining("Key typed"));
+
+        TestLog.reset();
+        ui.processLine("EV_KEY KEY_CAPSLOCK 1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_CAPSLOCK 0");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_BACKSPACE 1");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key pressed: BACK_SPACE");
+        ui.processLine("EV_KEY KEY_BACKSPACE 0");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_CAPSLOCK 1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_CAPSLOCK 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key released: BACK_SPACE");
+        Assert.assertEquals(0l, TestLog.countLogContaining("Key typed"));
+
+        TestLog.reset();
+        ui.processLine("EV_KEY KEY_CAPSLOCK 1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_CAPSLOCK 0");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_LEFTSHIFT 1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_BACKSPACE 1");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key pressed: BACK_SPACE");
+        ui.processLine("EV_KEY KEY_BACKSPACE 0");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_LEFTSHIFT 0");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_CAPSLOCK 1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_KEY KEY_CAPSLOCK 0");
+        ui.processLine("EV_SYN");
+        TestLog.waitForLog("Key released: BACK_SPACE");
+        Assert.assertEquals(0l, TestLog.countLogContaining("Key typed"));
     }
 
 }

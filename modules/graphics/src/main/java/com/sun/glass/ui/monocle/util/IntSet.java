@@ -42,7 +42,6 @@ public class IntSet {
                 elements = Arrays.copyOf(elements, size * 2);
             }
             if (insertionPoint != size) {
-            } else {
                 System.arraycopy(elements, insertionPoint,
                                  elements, insertionPoint + 1,
                                  size - insertionPoint);
@@ -124,7 +123,7 @@ public class IntSet {
 
     /** Copies the contents of this set to the target set. */
     public void copyTo(IntSet target) {
-        if (target.elements.length > size) {
+        if (target.elements.length < size) {
             target.elements = Arrays.copyOf(elements, elements.length);
         } else {
             System.arraycopy(elements, 0, target.elements, 0, size);
