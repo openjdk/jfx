@@ -1337,9 +1337,9 @@ public class ListView<T> extends Control {
                         } else if (index < getItemCount() && index >= 0) {
                             // Fix for RT-18969: the list had setAll called on it
                             // Use of makeAtomic is a fix for RT-20945
-                            makeAtomic = true;
+                            startAtomic();
                             clearSelection(index);
-                            makeAtomic = false;
+                            stopAtomic();
                             select(index);
                         } else {
                             // Fix for RT-22079

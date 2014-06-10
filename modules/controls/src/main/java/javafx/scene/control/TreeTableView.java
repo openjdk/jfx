@@ -1659,16 +1659,11 @@ public class TreeTableView<S> extends Control {
         
         // update the Comparator property
         final Comparator<TreeItem<S>> oldComparator = getComparator();
-        if (sortOrder.isEmpty()) {
-            setComparator(null);
-        } else {
-            Comparator<TreeItem<S>> newComparator = new TableColumnComparatorBase.TreeTableColumnComparator(sortOrder);
-            setComparator(newComparator);
-        }
+        setComparator(sortOrder.isEmpty() ? null : new TableColumnComparatorBase.TreeTableColumnComparator(sortOrder));
         
         // fire the onSort event and check if it is consumed, if
         // so, don't run the sort
-        SortEvent<TreeTableView<S>> sortEvent = new SortEvent<TreeTableView<S>>(TreeTableView.this, TreeTableView.this);
+        SortEvent<TreeTableView<S>> sortEvent = new SortEvent<>(TreeTableView.this, TreeTableView.this);
         fireEvent(sortEvent);
         if (sortEvent.isConsumed()) {
             // if the sort is consumed we could back out the last action (the code
@@ -1681,10 +1676,20 @@ public class TreeTableView<S> extends Control {
             return;
         }
 
+        final List<TreeTablePosition<S,?>> prevState = new ArrayList<>(getSelectionModel().getSelectedCells());
+        final int itemCount = prevState.size();
+
+        // we set makeAtomic to true here, so that we don't fire intermediate
+        // sort events - instead we send a single permutation event at the end
+        // of this method.
+        getSelectionModel().startAtomic();
+
         // get the sort policy and run it
         Callback<TreeTableView<S>, Boolean> sortPolicy = getSortPolicy();
         if (sortPolicy == null) return;
         Boolean success = sortPolicy.call(this);
+
+        getSelectionModel().stopAtomic();
         
         if (success == null || ! success) {
             // the sort was a failure. Need to backout if possible
@@ -1692,6 +1697,33 @@ public class TreeTableView<S> extends Control {
             TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
             setComparator(oldComparator);
             sortLock = false;
+        } else {
+            // sorting was a success, now we possibly fire an event on the
+            // selection model that the items list has 'permutated' to a new ordering
+
+            // FIXME we should support alternative selection model implementations!
+            if (getSelectionModel() instanceof TreeTableViewArrayListSelectionModel) {
+                final TreeTableViewArrayListSelectionModel<S> sm = (TreeTableViewArrayListSelectionModel<S>) getSelectionModel();
+                final ObservableList<TreeTablePosition<S, ?>> newState = sm.getSelectedCells();
+
+                List<TreeTablePosition<S, ?>> removed = new ArrayList<>();
+                for (int i = 0; i < itemCount; i++) {
+                    TreeTablePosition<S, ?> prevItem = prevState.get(i);
+                    if (!newState.contains(prevItem)) {
+                        removed.add(prevItem);
+                    }
+                }
+
+                if (!removed.isEmpty()) {
+                    // the sort operation effectively permutates the selectedCells list,
+                    // but we cannot fire a permutation event as we are talking about
+                    // TreeTablePosition's changing (which may reside in the same list
+                    // position before and after the sort). Therefore, we need to fire
+                    // a single add/remove event to cover the added and removed positions.
+                    ListChangeListener.Change<TreeTablePosition<S, ?>> c = new NonIterableChange.GenericAddRemoveChange<>(0, itemCount, removed, newState);
+                    sm.handleSelectedCellsListChangeEvent(c);
+                }
+            }
         }
     }
     
@@ -2206,9 +2238,7 @@ public class TreeTableView<S> extends Control {
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
 
-            selectedCellsMap = new SelectedCellsMap<>(c -> {
-                handleSelectedCellsListChangeEvent(c);
-            });
+            selectedCellsMap = new SelectedCellsMap<>(c -> handleSelectedCellsListChangeEvent(c));
 
             selectedItems = new ReadOnlyUnbackedObservableList<TreeItem<S>>() {
                 @Override public TreeItem<S> get(int i) {
@@ -2378,7 +2408,7 @@ public class TreeTableView<S> extends Control {
                         // the items / indices lists get a lot of intermediate
                         // noise. They eventually get the summary event fired
                         // from within shiftSelection, so this is ok.
-                        makeAtomic = true;
+                        startAtomic();
 
                         final int clearIndex = param.getClearIndex();
                         TreeTablePosition<S,?> oldTP = null;
@@ -2400,7 +2430,7 @@ public class TreeTableView<S> extends Control {
                             selectedCellsMap.add(newTP);
                         }
 
-                        makeAtomic = false;
+                        stopAtomic();
 
                         return null;
                     }
@@ -2475,7 +2505,7 @@ public class TreeTableView<S> extends Control {
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.
             // makeAtomic toggle added to resolve RT-32618
-            makeAtomic = true;
+            startAtomic();
 
             // firstly we make a copy of the selection, so that we can send out
             // the correct details in the selection change event
@@ -2487,7 +2517,7 @@ public class TreeTableView<S> extends Control {
             // and select the new cell
             select(row, column);
 
-            makeAtomic = false;
+            stopAtomic();
 
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
@@ -2508,24 +2538,17 @@ public class TreeTableView<S> extends Control {
             // if I'm in cell selection mode but the column is null, I don't want
             // to select the whole row instead...
             if (isCellSelectionEnabled() && column == null) return;
-//            
-//            // If I am not in cell selection mode (so I want to select rows only),
-//            // if a column is given, I return
-//            if (! isCellSelectionEnabled() && column != null) return;
 
             TreeTablePosition<S,?> pos = new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column);
             
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
             }
+
             selectedCellsMap.add(pos);
 
-//            setSelectedIndex(row);
             updateSelectedIndex(row);
-            focus(row, (TreeTableColumn<S,?>)column);
-            
-            int changeIndex = selectedCellsSeq.indexOf(pos);
-            selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<TreeTablePosition<S,?>>(changeIndex, changeIndex+1, selectedCellsSeq));
+            focus(row, (TreeTableColumn<S, ?>) column);
         }
 
         @Override public void select(TreeItem<S> obj) {
@@ -2672,7 +2695,7 @@ public class TreeTableView<S> extends Control {
 
         @Override public void selectRange(int minRow, TableColumnBase<TreeItem<S>,?> minColumn,
                                           int maxRow, TableColumnBase<TreeItem<S>,?> maxColumn) {
-            makeAtomic = true;
+            startAtomic();
 
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
@@ -2709,7 +2732,7 @@ public class TreeTableView<S> extends Control {
                     // end copy/paste
                 }
             }
-            makeAtomic = false;
+            stopAtomic();
 
             // fire off events
             // Note that focus and selection always goes to maxRow, not _maxRow.
@@ -2746,7 +2769,7 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void clearSelection() {
-            if (! makeAtomic) {
+            if (! isAtomic()) {
                 updateSelectedIndex(-1);
                 focus(-1);
             }
@@ -2970,8 +2993,8 @@ public class TreeTableView<S> extends Control {
             // }
             //
             // A more efficient solution:
-            final List<Integer> newlySelectedRows = new ArrayList<Integer>();
-            final List<Integer> newlyUnselectedRows = new ArrayList<Integer>();
+            final List<Integer> newlySelectedRows = new ArrayList<>();
+            final List<Integer> newlyUnselectedRows = new ArrayList<>();
 
             while (c.next()) {
                 if (c.wasRemoved()) {
@@ -3001,7 +3024,7 @@ public class TreeTableView<S> extends Control {
             }
             c.reset();
 
-            if (makeAtomic) {
+            if (isAtomic()) {
                 return;
             }
 
@@ -3009,9 +3032,49 @@ public class TreeTableView<S> extends Control {
             // the observers of the selectedItems, selectedIndices and
             // selectedCells lists.
 
-            // create an on-demand list of the removed objects contained in the
-            // given rows
-            selectedItems.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeItem<S>>(c, cellToItemsMap, selectedItems));
+            // here we are considering whether to notify the observers of the
+            // selectedItems list. However, we can't just blindly do that, as
+            // noted below. This is a part of the fix for RT-37429.
+            while (c.next()) {
+                boolean fireChangeEvent;
+                outer: if (c.wasReplaced()) {
+                    // if a replace happened, we need to check to see if the
+                    // change actually impacts on the selected items - it may
+                    // be that the index changed to the new location of the same
+                    // item (i.e. if a sort occurred). Only if the item has changed
+                    // should we fire an event to the observers of the selectedItems
+                    // list
+                    for (int i = 0; i < c.getRemovedSize(); i++) {
+                        TreeTablePosition<S,?> removed = c.getRemoved().get(i);
+                        TreeItem<S> removedTreeItem = removed.getTreeItem();
+
+                        boolean matchFound = false;
+                        for (int j = 0; j < c.getAddedSize(); j++) {
+                            TreeTablePosition<S,?> added = c.getAddedSubList().get(j);
+                            TreeItem<S> addedTreeItem = added.getTreeItem();
+
+                            if (removedTreeItem.equals(addedTreeItem)) {
+                                matchFound = true;
+                                break;
+                            }
+                        }
+
+                        if (! matchFound) {
+                            fireChangeEvent = true;
+                            break outer;
+                        }
+                    }
+                    fireChangeEvent = false;
+                } else {
+                    fireChangeEvent = true;
+                }
+
+                if (fireChangeEvent) {
+                    // create an on-demand list of the removed objects contained in the
+                    // given rows.
+                    selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
+                }
+            }
             c.reset();
 
             // Fix for RT-31577 - the selectedItems list was going to
@@ -3038,11 +3101,11 @@ public class TreeTableView<S> extends Control {
                 ListChangeListener.Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows);
                 selectedIndicesSeq.callObservers(change);
             } else {
-                selectedIndicesSeq.callObservers(new MappingChange<TreeTablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndicesSeq));
+                selectedIndicesSeq.callObservers(new MappingChange<>(c, cellToIndicesMap, selectedIndicesSeq));
                 c.reset();
             }
 
-            selectedCellsSeq.callObservers(new MappingChange<TreeTablePosition<S,?>, TreeTablePosition<S,?>>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+            selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
             c.reset();
         }
     }

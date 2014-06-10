@@ -530,7 +530,7 @@ public class TreeTableViewMouseInputTest {
         final int items = 8;
         root.getChildren().clear();
         root.setExpanded(true);
-        for (int i = 0; i < items; i++) {
+        for (int i = 1; i < items; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
         tableView.setRoot(root);

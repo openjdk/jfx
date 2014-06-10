@@ -1423,7 +1423,6 @@ public class TableView<S> extends Control {
         
         // update the Comparator property
         final Comparator<S> oldComparator = getComparator();
-
         setComparator(sortOrder.isEmpty() ? null : new TableColumnComparator(sortOrder));
 
         // fire the onSort event and check if it is consumed, if
@@ -1441,10 +1440,20 @@ public class TableView<S> extends Control {
             return;
         }
 
+        final List<TablePosition> prevState = new ArrayList<>(getSelectionModel().getSelectedCells());
+        final int itemCount = prevState.size();
+
+        // we set makeAtomic to true here, so that we don't fire intermediate
+        // sort events - instead we send a single permutation event at the end
+        // of this method.
+        getSelectionModel().startAtomic();
+
         // get the sort policy and run it
         Callback<TableView<S>, Boolean> sortPolicy = getSortPolicy();
         if (sortPolicy == null) return;
         Boolean success = sortPolicy.call(this);
+
+        getSelectionModel().stopAtomic();
         
         if (success == null || ! success) {
             // the sort was a failure. Need to backout if possible
@@ -1452,6 +1461,33 @@ public class TableView<S> extends Control {
             TableUtil.handleSortFailure(sortOrder, lastSortEventType, lastSortEventSupportInfo);
             setComparator(oldComparator);
             sortLock = false;
+        } else {
+            // sorting was a success, now we possibly fire an event on the
+            // selection model that the items list has 'permutated' to a new ordering
+
+            // FIXME we should support alternative selection model implementations!
+            if (getSelectionModel() instanceof TableViewArrayListSelectionModel) {
+                final TableViewArrayListSelectionModel<S> sm = (TableViewArrayListSelectionModel<S>) getSelectionModel();
+                final ObservableList<TablePosition<S,?>> newState = (ObservableList<TablePosition<S,?>>)(Object)sm.getSelectedCells();
+
+                List<TablePosition<S, ?>> removed = new ArrayList<>();
+                for (int i = 0; i < itemCount; i++) {
+                    TablePosition<S, ?> prevItem = prevState.get(i);
+                    if (!newState.contains(prevItem)) {
+                        removed.add(prevItem);
+                    }
+                }
+
+                if (!removed.isEmpty()) {
+                    // the sort operation effectively permutates the selectedCells list,
+                    // but we cannot fire a permutation event as we are talking about
+                    // TablePosition's changing (which may reside in the same list
+                    // position before and after the sort). Therefore, we need to fire
+                    // a single add/remove event to cover the added and removed positions.
+                    ListChangeListener.Change<TablePosition<S, ?>> c = new NonIterableChange.GenericAddRemoveChange<>(0, itemCount, removed, newState);
+                    sm.handleSelectedCellsListChangeEvent(c);
+                }
+            }
         }
     }
     
@@ -1945,9 +1981,7 @@ public class TableView<S> extends Control {
                 clearSelection();
             });
 
-            selectedCellsMap = new SelectedCellsMap<>(c -> {
-                handleSelectedCellsListChangeEvent(c);
-            });
+            selectedCellsMap = new SelectedCellsMap<>(c -> handleSelectedCellsListChangeEvent(c));
 
             selectedItems = new ReadOnlyUnbackedObservableList<S>() {
                 @Override public S get(int i) {
@@ -2106,9 +2140,9 @@ public class TableView<S> extends Control {
                         } else if (index < getItemCount() && index >= 0) {
                             // Fix for RT-18969: the list had setAll called on it
                             // Use of makeAtomic is a fix for RT-20945
-                            makeAtomic = true;
+                            startAtomic();
                             clearSelection(index);
-                            makeAtomic = false;
+                            stopAtomic();
                             select(index);
                         } else {
                             // Fix for RT-22079
@@ -2161,55 +2195,58 @@ public class TableView<S> extends Control {
                     //   -- detected a sort has happened
                     //   -- Create a permutation lookup map (1)
                     //   -- dump all the selected indices into a list (2)
-                    //   -- clear the selected items / indexes (3)
-                    //   -- create a list containing the new indices (4)
-                    //   -- for each previously-selected index (5)
+                    //   -- create a list containing the new indices (3)
+                    //   -- for each previously-selected index (4)
                     //     -- if index is in the permutation lookup map
                     //       -- add the new index to the new indices list
-                    //   -- Perform batch selection (6)
+                    //   -- Perform batch selection (5)
 
-                    makeAtomic = true;
+                    startAtomic();
 
                     final int oldSelectedIndex = getSelectedIndex();
 
                     // (1)
                     int length = c.getTo() - c.getFrom();
-                    HashMap<Integer, Integer> pMap = new HashMap<Integer, Integer> (length);
+                    HashMap<Integer, Integer> pMap = new HashMap<> (length);
                     for (int i = c.getFrom(); i < c.getTo(); i++) {
                         pMap.put(i, c.getPermutation(i));
                     }
 
                     // (2)
-                    List<TablePosition<S,?>> selectedIndices =
-                            new ArrayList<TablePosition<S,?>>((ObservableList<TablePosition<S,?>>)(Object)getSelectedCells());
-
+                    List<TablePosition<S,?>> selectedIndices = new ArrayList<>((ObservableList<TablePosition<S,?>>)(Object)getSelectedCells());
 
                     // (3)
-                    clearSelection();
+                    List<TablePosition<S,?>> newIndices = new ArrayList<>(selectedIndices.size());
 
                     // (4)
-                    List<TablePosition<S,?>> newIndices = new ArrayList<TablePosition<S,?>>(getSelectedIndices().size());
-
-                    // (5)
+                    boolean selectionIndicesChanged = false;
                     for (int i = 0; i < selectedIndices.size(); i++) {
-                        TablePosition<S,?> oldIndex = selectedIndices.get(i);
+                        final TablePosition<S,?> oldIndex = selectedIndices.get(i);
+                        final int oldRow = oldIndex.getRow();
 
-                        if (pMap.containsKey(oldIndex.getRow())) {
-                            Integer newIndex = pMap.get(oldIndex.getRow());
+                        if (pMap.containsKey(oldRow)) {
+                            int newIndex = pMap.get(oldRow);
+
+                            selectionIndicesChanged = selectionIndicesChanged || newIndex != oldRow;
+
                             newIndices.add(new TablePosition<>(oldIndex.getTableView(), newIndex, oldIndex.getTableColumn()));
                         }
                     }
 
-                    // (6)
-                    quietClearSelection();
-                    makeAtomic = false;
-                    selectedCellsMap.setAll(newIndices);
-                    selectedCellsSeq.callObservers(new NonIterableChange.SimpleAddChange<>(0, newIndices.size(), selectedCellsSeq));
+                    if (selectionIndicesChanged) {
+                        // (5)
+                        quietClearSelection();
+                        stopAtomic();
 
-                    if (oldSelectedIndex >= 0 && oldSelectedIndex < itemCount) {
-                        int newIndex = c.getPermutation(oldSelectedIndex);
-                        setSelectedIndex(newIndex);
-                        focus(newIndex);
+                        selectedCellsMap.setAll(newIndices);
+
+                        if (oldSelectedIndex >= 0 && oldSelectedIndex < itemCount) {
+                            int newIndex = c.getPermutation(oldSelectedIndex);
+                            setSelectedIndex(newIndex);
+                            focus(newIndex);
+                        }
+                    } else {
+                        stopAtomic();
                     }
                 }
             }
@@ -2247,7 +2284,7 @@ public class TableView<S> extends Control {
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.
             // makeAtomic toggle added to resolve RT-32618
-            makeAtomic = true;
+            startAtomic();
 
             // firstly we make a copy of the selection, so that we can send out
             // the correct details in the selection change event
@@ -2259,7 +2296,7 @@ public class TableView<S> extends Control {
             // and select the new cell
             select(row, column);
 
-            makeAtomic = false;
+            stopAtomic();
 
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
@@ -2280,10 +2317,6 @@ public class TableView<S> extends Control {
             // if I'm in cell selection mode but the column is null, I don't want
             // to select the whole row instead...
             if (isCellSelectionEnabled() && column == null) return;
-//            
-//            // If I am not in cell selection mode (so I want to select rows only),
-//            // if a column is given, I return
-//            if (! isCellSelectionEnabled() && column != null) return;
 
             TablePosition<S,?> pos = new TablePosition<>(getTableView(), row, column);
             
@@ -2440,7 +2473,7 @@ public class TableView<S> extends Control {
 
         @Override public void selectRange(int minRow, TableColumnBase<S,?> minColumn,
                                           int maxRow, TableColumnBase<S,?> maxColumn) {
-            makeAtomic = true;
+            startAtomic();
 
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
@@ -2477,7 +2510,7 @@ public class TableView<S> extends Control {
                     // end copy/paste
                 }
             }
-            makeAtomic = false;
+            stopAtomic();
 
             // fire off events.
             // Note that focus and selection always goes to maxRow, not _maxRow.
@@ -2516,7 +2549,7 @@ public class TableView<S> extends Control {
         }
 
         @Override public void clearSelection() {
-            if (! makeAtomic) {
+            if (! isAtomic()) {
                 updateSelectedIndex(-1);
                 focus(-1);
             }
@@ -2733,8 +2766,8 @@ public class TableView<S> extends Control {
             // }
             //
             // A more efficient solution:
-            final List<Integer> newlySelectedRows = new ArrayList<Integer>();
-            final List<Integer> newlyUnselectedRows = new ArrayList<Integer>();
+            final List<Integer> newlySelectedRows = new ArrayList<>();
+            final List<Integer> newlyUnselectedRows = new ArrayList<>();
 
             while (c.next()) {
                 if (c.wasRemoved()) {
@@ -2764,7 +2797,7 @@ public class TableView<S> extends Control {
             }
             c.reset();
 
-            if (makeAtomic) {
+            if (isAtomic()) {
                 return;
             }
 
@@ -2772,9 +2805,49 @@ public class TableView<S> extends Control {
             // the observers of the selectedItems, selectedIndices and
             // selectedCells lists.
 
-            // create an on-demand list of the removed objects contained in the
-            // given rows
-            selectedItems.callObservers(new MappingChange<TablePosition<S,?>, S>(c, cellToItemsMap, selectedItems));
+            // here we are considering whether to notify the observers of the
+            // selectedItems list. However, we can't just blindly do that, as
+            // noted below. This is a part of the fix for RT-37429.
+            while (c.next()) {
+                boolean fireChangeEvent;
+                outer: if (c.wasReplaced()) {
+                    // if a replace happened, we need to check to see if the
+                    // change actually impacts on the selected items - it may
+                    // be that the index changed to the new location of the same
+                    // item (i.e. if a sort occurred). Only if the item has changed
+                    // should we fire an event to the observers of the selectedItems
+                    // list
+                    for (int i = 0; i < c.getRemovedSize(); i++) {
+                        TablePosition<S,?> removed = c.getRemoved().get(i);
+                        S removedItem = removed.getItem();
+
+                        boolean matchFound = false;
+                        for (int j = 0; j < c.getAddedSize(); j++) {
+                            TablePosition<S,?> added = c.getAddedSubList().get(j);
+                            S addedItem = added.getItem();
+
+                            if (removedItem.equals(addedItem)) {
+                                matchFound = true;
+                                break;
+                            }
+                        }
+
+                        if (! matchFound) {
+                            fireChangeEvent = true;
+                            break outer;
+                        }
+                    }
+                    fireChangeEvent = false;
+                } else {
+                    fireChangeEvent = true;
+                }
+
+                if (fireChangeEvent) {
+                    // create an on-demand list of the removed objects contained in the
+                    // given rows.
+                    selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
+                }
+            }
             c.reset();
 
             // Fix for RT-31577 - the selectedItems list was going to
@@ -2801,11 +2874,11 @@ public class TableView<S> extends Control {
                 ListChangeListener.Change<Integer> change = createRangeChange(selectedIndicesSeq, newlySelectedRows);
                 selectedIndicesSeq.callObservers(change);
             } else {
-                selectedIndicesSeq.callObservers(new MappingChange<TablePosition<S,?>, Integer>(c, cellToIndicesMap, selectedIndicesSeq));
+                selectedIndicesSeq.callObservers(new MappingChange<>(c, cellToIndicesMap, selectedIndicesSeq));
                 c.reset();
             }
 
-            selectedCellsSeq.callObservers(new MappingChange<TablePosition<S,?>, TablePosition<S,?>>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
+            selectedCellsSeq.callObservers(new MappingChange<>(c, MappingChange.NOOP_MAP, selectedCellsSeq));
             c.reset();
         }
     }

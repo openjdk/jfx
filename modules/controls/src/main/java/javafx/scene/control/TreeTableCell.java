@@ -116,7 +116,11 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      * storeTableView method.
      */
     private ListChangeListener<TreeTablePosition<S,?>> selectedListener = c -> {
-        updateSelection();
+        while (c.next()) {
+            if (c.wasAdded() || c.wasRemoved()) {
+                updateSelection();
+            }
+        }
     };
 
     // same as above, but for focus

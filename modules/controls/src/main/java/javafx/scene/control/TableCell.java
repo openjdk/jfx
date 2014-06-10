@@ -119,7 +119,11 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * storeTableView method.
      */
     private ListChangeListener<TablePosition> selectedListener = c -> {
-        updateSelection();
+        while (c.next()) {
+            if (c.wasAdded() || c.wasRemoved()) {
+                updateSelection();
+            }
+        }
     };
 
     // same as above, but for focus
