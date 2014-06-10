@@ -77,21 +77,6 @@ final class LEInputStream {
             throw new EOFException();
         }
     }
-
-    public void readFully(byte[] b) throws IOException {
-        readFully(b, 0, b.length);
-    }
-
-    public void readFully(byte[] b, int off, int len) throws IOException {
-        while (len > 0) {
-            int nbytes = in.read(b, off, len);
-            if (nbytes == -1) {
-                throw new EOFException();
-            }
-            off += nbytes;
-            len -= nbytes;
-        }
-    }
 }
 
 final class BitmapInfoHeader {
@@ -227,7 +212,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
             imgSize = bfSize - bfOffBits;
         }
         byte imgData[] = new byte[imgSize];
-        data.readFully(imgData);
+        ImageTools.readFully(data.in, imgData);
 
         boolean isBottomUp = bih.biHeight > 0;
         int line = isBottomUp ? hght - 1 : 0;
@@ -310,7 +295,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
 
         byte lineBuf[] = new byte[srcStride];
         for (int i = 0; i != hght; ++i) {
-            data.readFully(lineBuf);
+            ImageTools.readFully(data.in, lineBuf);
             int line = bih.biHeight < 0 ? i : hght - i - 1;
             int dstOffset = line * rowLength;
 
@@ -343,7 +328,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
         int srcStride = (bytesPerLine + 3) & ~3;
         byte lineBuf[] = new byte[srcStride];
         for (int i = 0; i != hght; ++i) {
-            data.readFully(lineBuf);
+            ImageTools.readFully(data.in, lineBuf);
             int line = bih.biHeight < 0 ? i : hght - i - 1;
             int dstOffset = line * rowLength;
 
@@ -360,7 +345,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
         int bytesPerLine = bih.biWidth * 4;
         byte lineBuf[] = new byte[bytesPerLine];
         for (int i = 0; i != hght; ++i) {
-            data.readFully(lineBuf);
+            ImageTools.readFully(data.in, lineBuf);
             int line = bih.biHeight < 0 ? i : hght - i - 1;
             int dstOff = line * rowLength;
 
@@ -380,7 +365,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
         for (int i = 0; i != hght; ++i) {
             int line = bih.biHeight < 0 ? i : hght - i - 1;
             int lineOffset = line * rowLength;
-            data.readFully(image, lineOffset, rowLength);
+            ImageTools.readFully(data.in, image, lineOffset, rowLength);
             data.skipBytes(padding);
             BGRtoRGB(image, lineOffset, rowLength);
         }
