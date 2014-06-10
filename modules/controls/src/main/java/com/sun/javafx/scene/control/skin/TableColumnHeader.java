@@ -513,13 +513,6 @@ public class TableColumnHeader extends Region {
         label.setGraphic(column.getGraphic());
         label.setVisible(column.isVisible());
 
-        label.fontProperty().addListener((o, old, newValue) -> {
-            // The font has changed (probably due to CSS being applied), so we
-            // need to re-run the column resizing algorithm to ensure columns
-            // fit nicely based on their content and their header
-            doColumnAutoSize(column, 30);
-        });
-
         // ---- container for the sort arrow (which is not supported on embedded
         // platforms)
         if (isSortingEnabled()) {
