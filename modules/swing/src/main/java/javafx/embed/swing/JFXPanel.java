@@ -319,6 +319,15 @@ public class JFXPanel extends JComponent {
         if (scenePeer == null || !isFxEnabled()) {
             return;
         }
+        
+        // FX only supports 3 buttons so don't send the event for other buttons
+        switch (e.getID()) {
+            case MouseEvent.MOUSE_DRAGGED:
+            case MouseEvent.MOUSE_PRESSED:
+            case MouseEvent.MOUSE_RELEASED:
+                if (e.getButton() > 3)  return;
+                break;
+        }
 
         int extModifiers = e.getModifiersEx();
         // Fix for RT-15457: we should report no mouse button upon mouse release, so

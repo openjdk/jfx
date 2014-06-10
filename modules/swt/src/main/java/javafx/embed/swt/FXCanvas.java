@@ -398,17 +398,26 @@ public class FXCanvas extends Canvas {
             }
             @Override
             public void mouseDown(MouseEvent me) {
+                // FX only supports 3 buttons so don't send the event for other buttons
+                if (me.button > 3) return;
                 FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_PRESSED);
             }
             @Override
             public void mouseUp(MouseEvent me) {
+                // FX only supports 3 buttons so don't send the event for other buttons
+                if (me.button > 3) return;
                 FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_RELEASED);
             }
         });
 
         addMouseMoveListener(me -> {
             if ((me.stateMask & SWT.BUTTON_MASK) != 0) {
-                FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_DRAGGED);
+                // FX only supports 3 buttons so don't send the event for other buttons
+                if ((me.stateMask & (SWT.BUTTON1 | SWT.BUTTON2 | SWT.BUTTON3)) != 0) {
+                    FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_DRAGGED);
+                } else {
+                    FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_MOVED);
+                }
             } else {
                 FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_MOVED);
             }
