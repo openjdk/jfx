@@ -581,7 +581,12 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
             } else {
                 getChildren().setAll(graphic, text);
             }
+
+            // RT-37420
+            graphic.impl_processCSS(false);
+
         }
+
     }
 
     /**
