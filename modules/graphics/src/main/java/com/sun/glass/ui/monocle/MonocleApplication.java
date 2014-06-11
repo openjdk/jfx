@@ -372,4 +372,9 @@ public final class MonocleApplication extends Application {
         _leaveNestedEventLoop(null);
     }
 
+    @Override
+    protected int _getKeyCodeForChar(char c) {
+        throw new UnsupportedOperationException("Missing function _getKeyCodeForChar ");
+    }
+
 }

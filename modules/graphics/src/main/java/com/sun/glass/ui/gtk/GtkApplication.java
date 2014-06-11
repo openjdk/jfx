@@ -324,4 +324,7 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
         return false;
     }
 
+    @Override
+    protected native int _getKeyCodeForChar(char c);
+
 }

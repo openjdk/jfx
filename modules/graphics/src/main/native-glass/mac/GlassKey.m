@@ -25,6 +25,7 @@
 
 #import "common.h"
 #import "com_sun_glass_events_KeyEvent.h"
+#import "com_sun_glass_ui_mac_MacApplication.h"
 
 #import "GlassApplication.h"
 #import "GlassMacros.h"
@@ -369,14 +370,14 @@ NSString* GetStringForJavaKey(jchar jKeyCode) {
 }
 
 /*
- * Class:     com_sun_glass_events_KeyEvent
+ * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _getKeyCodeForChar
  * Signature: (C)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar
-(JNIEnv * env, jclass cls, jchar c)
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getKeyCodeForChar
+(JNIEnv * env, jobject jApplication, jchar c)
 {
-    LOG("Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar");
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1getKeyCodeForChar");
 
     return [GlassApplication getKeyCodeForChar:c];
 }

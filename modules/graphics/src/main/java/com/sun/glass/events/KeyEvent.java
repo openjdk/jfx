@@ -24,13 +24,9 @@
  */
 package com.sun.glass.events;
 
+import com.sun.glass.ui.Application;
+
 public class KeyEvent {
-    /***************************************************************************
-     *                                                                         *
-     * Native methods                                                          *
-     *                                                                         *
-     **************************************************************************/
-    native private static int _getKeyCodeForChar(char c);
 
     /***************************************************************************
      *                                                                         *
@@ -249,7 +245,7 @@ public class KeyEvent {
      * @return integer code for the given char
      */
     public static int getKeyCodeForChar(char c) {
-        return _getKeyCodeForChar(c);
+        return Application.getKeyCodeForChar(c);
     }
 
     /**

@@ -1798,4 +1798,7 @@ final class LensApplication extends Application {
         return deviceFlags[DEVICE_POINTER] > 0;
     }
 
+    @Override
+    protected native int _getKeyCodeForChar(char c);
+
 }

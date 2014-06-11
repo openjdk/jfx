@@ -729,4 +729,17 @@ public abstract class Application {
         checkEventThread();
         return _supportsSystemMenu();
     }
+
+    protected abstract int _getKeyCodeForChar(char c);
+    /**
+     * Returns a VK_ code of a key capable of producing the given unicode
+     * character with respect to the currently active keyboard layout or
+     * VK_UNDEFINED if the character isn't present in the current layout.
+     *
+     * @param c the character
+     * @return integer code for the given char
+     */
+    public static int getKeyCodeForChar(char c) {
+        return application._getKeyCodeForChar(c);
+    }
 }
