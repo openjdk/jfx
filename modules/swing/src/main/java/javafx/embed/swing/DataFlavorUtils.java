@@ -45,11 +45,38 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 
+import java.nio.ByteBuffer;
+
 
 final class DataFlavorUtils {
 
     static String getFxMimeType(final DataFlavor flavor) {
         return flavor.getPrimaryType() + "/" + flavor.getSubType();
+    }
+
+    /**
+     * InputStream implementation backed by a ByteBuffer.
+     * It can handle byte buffers that are backed by arrays
+     * as well as operating system memory.
+     */
+    private static class ByteBufferInputStream extends InputStream {
+        private final ByteBuffer bb;
+
+        private ByteBufferInputStream(ByteBuffer bb) { this.bb = bb; }
+
+        @Override public int available() { return bb.remaining(); }
+
+        @Override public int read() throws IOException {
+            if (!bb.hasRemaining()) return -1;
+            return bb.get() & 0xFF; // Make sure the value is in [0..255]
+        }
+
+        @Override public int read(byte[] bytes, int off, int len) throws IOException {
+            if (!bb.hasRemaining()) return -1;
+            len = Math.min(len, bb.remaining());
+            bb.get(bytes, off, len);
+            return len;
+        }
     }
 
     static Object adjustFxData(final DataFlavor flavor, final Object fxData)
@@ -65,6 +92,11 @@ final class DataFlavorUtils {
             }
             if (flavor.isRepresentationClassByteBuffer()) {
                 // ...
+            }
+        }
+        if (fxData instanceof ByteBuffer) {
+            if (flavor.isRepresentationClassInputStream()) {
+                return new ByteBufferInputStream((ByteBuffer)fxData);
             }
         }
         return fxData;
