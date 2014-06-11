@@ -119,6 +119,10 @@ public class SpeedGaugeApp extends Application {
         timer.stop();
     }
 
+    public void play() {
+        timer.start();
+    }
+
     /**
      * @param args the command line arguments
      */

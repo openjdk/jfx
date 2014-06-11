@@ -86,6 +86,11 @@ public class BrickBreakerApp extends Application {
         currentMainFrame.endGame();
     }
 
+    public void play() {
+        MainFrame currentMainFrame = getMainFrame();
+        currentMainFrame.restartGame();
+    }
+
     public static void main(String[] args) {
         Application.launch(args);
     }
@@ -151,6 +156,15 @@ public class BrickBreakerApp extends Application {
             }
             if (level != null) {
                 level.stop();
+            }
+        }
+
+        public void restartGame() {
+            if (splash != null) {
+                splash.start();
+            }
+            if (level != null) {
+                level.restart();
             }
         }
 
