@@ -31,7 +31,6 @@
 #include <string.h>
 #endif // TARGET_OS_LINUX
 
-bool      CJavaInputStreamCallbacks::m_areJMethodIDsInitialized = false;
 jfieldID  CJavaInputStreamCallbacks::m_BufferFID = 0;
 jmethodID CJavaInputStreamCallbacks::m_NeedBufferMID = 0;
 jmethodID CJavaInputStreamCallbacks::m_ReadNextBlockMID = 0;
@@ -70,9 +69,13 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
         return false;
     }
 
-    if (!m_areJMethodIDsInitialized)
+    static bool methodIDsInitialized = false;
+    if (!methodIDsInitialized)
     {
-        jclass klass = env->GetObjectClass(m_ConnectionHolder);
+        // Get the parent abstract class. It's wrong to get method ids from the concrete implementation
+        // because it crashes jvm when it tries to call virtual methods. 
+        // See https://javafx-jira.kenai.com/browse/RT-37115
+        jclass klass = env->FindClass("com/sun/media/jfxmedia/locator/ConnectionHolder"); 
 
         m_BufferFID = env->GetFieldID(klass, "buffer", "Ljava/nio/ByteBuffer;");
         m_NeedBufferMID = env->GetMethodID(klass, "needBuffer", "()Z");
@@ -85,7 +88,7 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
         m_PropertyMID = env->GetMethodID(klass, "property", "(II)I");
         m_GetStreamSizeMID = env->GetMethodID(klass, "getStreamSize", "()I");
 
-        m_areJMethodIDsInitialized = true;
+        methodIDsInitialized = true;
         env->DeleteLocalRef(klass);
     }
 
