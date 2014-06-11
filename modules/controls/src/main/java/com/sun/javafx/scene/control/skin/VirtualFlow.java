@@ -1296,6 +1296,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         final double viewportLength = getViewportLength();
 
+        // Fix for RT-37421, which was a regression caused by RT-36556
+        if (offset < 0 && !fillEmptyCells) {
+            return false;
+        }
+
         //
         // RT-36507: viewportLength - offset gives the maximum number of
         // additional cells that should ever be able to fit in the viewport if
@@ -2297,10 +2302,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 positionCell(cell, getCellPosition(cell) - delta);
             }
 
-            // Now throw away any cells that don't fit
-            // (take one - this resolves RT-36556)
-            cull();
-
             // Fix for RT-32908
             T firstCell = cells.getFirst();
             double layoutY = firstCell == null ? 0 : getCellPosition(firstCell);
@@ -2361,7 +2362,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
-        // Now throw away any cells that don't fit (take two)
+        // Now throw away any cells that don't fit
         cull();
 
         // Finally, update the scroll bars

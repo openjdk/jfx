@@ -3040,7 +3040,7 @@ public class TableViewTest {
         VirtualFlow flow = VirtualFlowTestUtils.getVirtualFlow(tableView);
         flow.adjustPixels(1000 * 24);
 
-        assertEquals(cellCountAtStart + 1, rt36556_instanceCount);
+        assertEquals(cellCountAtStart, rt36556_instanceCount);
 
         sl.dispose();
     }
