@@ -585,7 +585,8 @@ final class MacAccessible extends PlatformAccessible {
         ;long ptr; /* Initialized natively - treat as final */
     }
 
-    /* Do not access the following lists directly from the Mac enums.
+    /* 
+     * Do not access the following lists directly from the Mac enums.
      * It can cause the static initialization to happen in an unexpected order.
      */
     static final List<MacAttribute> baseAttributes = Arrays.asList(
@@ -692,7 +693,8 @@ final class MacAccessible extends PlatformAccessible {
                 Node node = (Node)getAttribute(FOCUS_NODE);
                 View view = getView();
                 if (node == null && view == null) {
-                    /* The transientFocusContainer resigns focus.
+                    /* 
+                     * The transientFocusContainer resigns focus.
                      * Delegate to the scene.
                      */
                     Scene scene = (Scene)getAttribute(SCENE);
@@ -709,7 +711,8 @@ final class MacAccessible extends PlatformAccessible {
                     Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
                     id = item != null ? getAccessible(item) : getAccessible(node);
                 } else {
-                    /* No focused element. Send the notification to the scene itself.
+                    /* 
+                     * No focused element. Send the notification to the scene itself.
                      * Note, the view is NULL when the FOCUS_NODE notification is sent
                      * by the transientFocusContainer.
                      */
@@ -753,11 +756,12 @@ final class MacAccessible extends PlatformAccessible {
                     } else {
                         macNotification = MacNotification.AXMenuClosed;
 
-                        /* When a submenu closes the focus is returned to the main
+                        /* 
+                         * When a submenu closes the focus is returned to the main
                          * window, as opposite of the previous menu.
                          * The work around is to look for a previous menu
                          * and send a close and open event for it.
-                         * */
+                         */
                         Node menuItemOwner = (Node)getAttribute(MENU_FOR);
                         long menu = getAccessible(getContainerNode(menuItemOwner, Role.CONTEXT_MENU));
                         if (menu != 0) {
@@ -828,7 +832,8 @@ final class MacAccessible extends PlatformAccessible {
     Boolean ignoreInnerText;
     boolean ignoreInnerText() {
         if (ignoreInnerText != null) return ignoreInnerText;
-        /* JavaFX controls are implemented by the skin by adding new nodes.
+        /* 
+         * JavaFX controls are implemented by the skin by adding new nodes.
          * In accessibility these nodes sometimes duplicate the data in the
          * control. For example, a Label is implemented using a Text, creating a
          * AXStaticText inside an AXStaticText. In order to  improve accessibility
@@ -992,6 +997,13 @@ final class MacAccessible extends PlatformAccessible {
                 return count != null ? count : 1;
             }
             case NSAccessibilityChildrenAttribute: {
+                /*
+                 * The way VoiceOver identifies a menu item as having a sub menu is
+                 * by detecting an AXMenu child. It is important that the AXMenu
+                 * child be the actual sub menu so that navigation between menus
+                 * work.
+                 * Note: strictly the context menu is a child of the PopWindow.
+                 */
                 if (getAttribute(ROLE) == Role.MENU_ITEM) {
                     @SuppressWarnings("unchecked")
                     ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
@@ -1771,7 +1783,8 @@ final class MacAccessible extends PlatformAccessible {
     boolean accessibilityIsIgnored() {
         if (isIgnored()) return true;
         if (isInSlider()) {
-            /* Ignoring the children within the slider, otherwise VoiceOver
+            /* 
+             * Ignoring the children within the slider, otherwise VoiceOver
              * reports 'multiple indicator slider' instead of the value.
              */
             return true;
