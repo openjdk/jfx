@@ -34,7 +34,7 @@ import com.sun.scenario.animation.AbstractMasterTimer;
 import com.sun.scenario.animation.shared.TimelineClipCore;
 
 /**
- * A {@code Timeline} can be used to define a free from animation of any
+ * A {@code Timeline} can be used to define a free form animation of any
  * {@link javafx.beans.value.WritableValue}, e.g. all
  * {@link javafx.beans.property.Property JavaFX Properties}.
  * <p>
