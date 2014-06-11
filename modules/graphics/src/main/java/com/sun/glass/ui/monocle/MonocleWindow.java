@@ -403,6 +403,7 @@ public final class MonocleWindow extends Window {
     @Override
     protected void notifyDestroy() {
         super.notifyDestroy();
+        MonocleWindowManager.getInstance().repaintAll();
     }
 
     @Override
