@@ -205,7 +205,6 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
     }
 
     @Override protected void handleControlPropertyChanged(String p) {
-        super.handleControlPropertyChanged(p);
 
         if ("CHRONOLOGY".equals(p) ||
             "DAY_CELL_FACTORY".equals(p)) {
@@ -243,6 +242,8 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                 datePickerContent.displayedYearMonthProperty().set((date != null) ? YearMonth.from(date) : YearMonth.now());
                 datePickerContent.updateValues();
             }
+        } else {
+            super.handleControlPropertyChanged(p);
         }
     }
 

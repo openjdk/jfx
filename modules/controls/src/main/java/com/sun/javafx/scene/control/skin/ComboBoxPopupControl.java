@@ -93,7 +93,9 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         _popup.getScene().setNodeOrientation(getSkinnable().getEffectiveNodeOrientation());
 
 
-        getPopupContent().autosize();
+        final Node popupContent = getPopupContent();
+        popupContent.applyCss();
+        popupContent.autosize();
         Point2D p = getPrefPopupPosition();
 
         popupNeedsReconfiguring = true;
@@ -102,7 +104,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         final ComboBoxBase<T> comboBoxBase = getSkinnable();
         _popup.show(comboBoxBase.getScene().getWindow(), p.getX(), p.getY());
 
-        getPopupContent().requestFocus();
+        popupContent.requestFocus();
     }
     
     private void createPopup() {
