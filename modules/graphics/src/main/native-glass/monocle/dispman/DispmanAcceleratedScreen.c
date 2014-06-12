@@ -36,7 +36,7 @@
 #endif /* USE_DISPMAN */
 
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanAcceleratedScreen__1platformGetNativeWindow
-    (JNIEnv *env, jobject obj) {
+    (JNIEnv *env, jobject obj, jint displayID, jint layerID) {
 
 #ifdef USE_DISPMAN
 
@@ -53,7 +53,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanAccelerated
 
     dispmanWindow = (EGL_DISPMANX_WINDOW_T *)calloc(sizeof(EGL_DISPMANX_WINDOW_T), 1);
 
-    display = (*wr_vc_dispmanx_display_open)(0 /* LCD */);
+    display = (*wr_vc_dispmanx_display_open)(displayID);
     if (display == 0) {
         fprintf(stderr, "Dispman: Cannot open display\n");
         return 0;
@@ -84,7 +84,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanAccelerated
     element = (*wr_vc_dispmanx_element_add)(
                   update,
                   display,
-                  1 /*layer*/,
+                  layerID,
                   &dst,
                   0 /*src*/,
                   &src,
