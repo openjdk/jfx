@@ -3302,7 +3302,7 @@ public class FXMLLoader {
         private static final int PACKAGE = 4;
         private static final int PRIVATE = 8;
         private static final int INITIAL_CLASS_ACCESS =
-                PUBLIC | PACKAGE | PRIVATE;
+                PUBLIC | PROTECTED | PACKAGE | PRIVATE;
         private static final int INITIAL_MEMBER_ACCESS =
                 PUBLIC | PROTECTED | PACKAGE | PRIVATE;
 
