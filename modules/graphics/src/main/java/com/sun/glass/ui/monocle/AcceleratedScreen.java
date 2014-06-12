@@ -43,12 +43,22 @@ public class AcceleratedScreen {
         return 0L;
     }
 
-    public AcceleratedScreen(int[] attributes) throws GLException {
+    public AcceleratedScreen(int[] attributes) throws GLException, UnsatisfiedLinkError {
         initPlatformLibraries();
 
         int major[] = {0}, minor[]={0};
+        long nativeDisplay = platformGetNativeDisplay();
+        long nativeWindow = platformGetNativeWindow();
+
+        if (nativeDisplay == -1l) { // error condition
+            throw new GLException(0, "Could not get native display");
+        }
+        if (nativeWindow == -1l) { // error condition
+            throw new GLException(0, "Could not get native window");
+        }
+
         eglDisplay =
-                EGL.eglGetDisplay(platformGetNativeDisplay());
+                EGL.eglGetDisplay(nativeDisplay);
         if (eglDisplay == EGL.EGL_NO_DISPLAY) {
             throw new GLException(EGL.eglGetError(), "Could not get EGL display");
         }
@@ -71,7 +81,7 @@ public class AcceleratedScreen {
 
         eglSurface =
                 EGL.eglCreateWindowSurface(eglDisplay, eglConfigs[0],
-                        platformGetNativeWindow(), null);
+                        nativeWindow, null);
         if (eglSurface == EGL.EGL_NO_SURFACE) {
             throw new GLException(EGL.eglGetError(), "Could not get EGL surface");
         }
@@ -92,12 +102,18 @@ public class AcceleratedScreen {
         }
     }
 
-    protected boolean initPlatformLibraries() {
+    protected boolean initPlatformLibraries() throws UnsatisfiedLinkError{
         if (!initialized) {
             glesLibraryHandle = ls.dlopen("libGLESv2.so",
                     LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
+            if (glesLibraryHandle == 0l) {
+                throw new UnsatisfiedLinkError("Error loading libGLESv2.so");
+            }
             eglLibraryHandle = ls.dlopen("libEGL.so",
                     LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
+            if (eglLibraryHandle == 0l) {
+                throw new UnsatisfiedLinkError("Error loading libEGL.so");
+            }
             initialized = true;
         }
         return true;

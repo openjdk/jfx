@@ -32,6 +32,7 @@ import java.util.HashMap;
 import com.sun.glass.ui.monocle.EGL;
 import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.AcceleratedScreen;
+import com.sun.prism.impl.PrismSettings;
 
 class MonocleGLFactory extends GLFactory {
 
@@ -109,6 +110,12 @@ class MonocleGLFactory extends GLFactory {
 
                     attrArr);
 
+            // If the native platform can't provide hardware accelerated rendering,
+            // accScreen can be null
+            if (accScreen == null) {
+                return false;
+            }
+
             accScreen.enableRendering(true);
 
             nativeCtxInfo = nPopulateNativeCtxInfo(accScreen.getGLHandle());
@@ -123,7 +130,14 @@ class MonocleGLFactory extends GLFactory {
                 return true;
             }
         } catch (GLException e) {
-            e.printStackTrace();
+            if (PrismSettings.verbose) {
+                e.printStackTrace();
+            }
+            return false;
+        } catch (UnsatisfiedLinkError e) {
+            if (PrismSettings.verbose) {
+                e.printStackTrace();
+            }
             return false;
         }
     }

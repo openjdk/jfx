@@ -45,13 +45,21 @@ public class MX6AcceleratedScreen extends AcceleratedScreen {
     @Override
     protected long platformGetNativeWindow() {
         fbCreateWindowHandle = ls.dlsym(getEGLHandle(), "fbCreateWindow");
-        return _platformGetNativeWindow(fbCreateWindowHandle, cachedNativeDisplay);
+        if (fbCreateWindowHandle == 0l) {
+            return -1l;
+        } else {
+            return _platformGetNativeWindow(fbCreateWindowHandle, cachedNativeDisplay);
+        }
     }
 
     @Override
     protected long platformGetNativeDisplay() {
         fbGetDisplayByIndexHandle = ls.dlsym(getEGLHandle(), "fbGetDisplayByIndex");
-        cachedNativeDisplay = _platformGetNativeDisplay(fbGetDisplayByIndexHandle);
-        return cachedNativeDisplay;
+        if (fbGetDisplayByIndexHandle == 0l) {
+            return -1l;
+        } else {
+            cachedNativeDisplay = _platformGetNativeDisplay(fbGetDisplayByIndexHandle);
+            return cachedNativeDisplay;
+        }
     }
 }

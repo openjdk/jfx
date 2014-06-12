@@ -81,7 +81,7 @@ public abstract class NativePlatform {
     }
 
     public synchronized AcceleratedScreen getAcceleratedScreen(int[] attributes)
-            throws GLException {
+            throws GLException, UnsatisfiedLinkError {
         if (accScreen == null) {
             accScreen = new AcceleratedScreen(attributes);
         }
