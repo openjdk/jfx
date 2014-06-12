@@ -698,8 +698,10 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             } // end of inner for loop 
             
             // Draw the SeriesLine and Series fill
-            seriesLine.getElements().add(new MoveTo(currentSeriesData.get(0).displayX, currentSeriesData.get(0).displayY));
-            fillPath.getElements().add(new MoveTo(currentSeriesData.get(0).displayX, currentSeriesData.get(0).displayY));
+            if (!currentSeriesData.isEmpty()) {
+                seriesLine.getElements().add(new MoveTo(currentSeriesData.get(0).displayX, currentSeriesData.get(0).displayY));
+                fillPath.getElements().add(new MoveTo(currentSeriesData.get(0).displayX, currentSeriesData.get(0).displayY));
+            }
             for (DataPointInfo<X,Y> point : currentSeriesData) {
                 if (!point.lineTo) {
                     seriesLine.getElements().add(new MoveTo(point.displayX, point.displayY));
@@ -723,7 +725,9 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                     fillPath.getElements().add(new  LineTo(point.displayX, point.displayY));
                 }
             }
-            fillPath.getElements().add(new ClosePath());
+            if (!fillPath.getElements().isEmpty()) {
+                fillPath.getElements().add(new ClosePath());
+            }
              
         }  // end of out for loop
      }
