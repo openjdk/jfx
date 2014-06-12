@@ -91,9 +91,17 @@ public class PrFilterContext extends FilterContext {
         return forceSW;
     }
 
+    /*
+     * Method copied from Boolean.hashCode(boolean) to remove dependency on
+     * 1.8 method in existing class
+     */
+    private static int hashCode(boolean value) {
+        return value ? 1231 : 1237;
+    }
+
     @Override
     public int hashCode() {
-        return getReferent().hashCode() ^ Boolean.hashCode(forceSW);
+        return getReferent().hashCode() ^ hashCode(forceSW);
     }
 
     @Override
