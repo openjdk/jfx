@@ -369,7 +369,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     // It is important that interactions with this list go directly into the
     // children property, rather than via getChildren(), as this may be 
     // a very expensive call.
-    private ObservableList<TreeItem<T>> children;
+    ObservableList<TreeItem<T>> children;
 
     // Made static based on findings of RT-18344 - EventHandlerManager is an
     // expensive class and should be reused amongst classes if at all possible.
