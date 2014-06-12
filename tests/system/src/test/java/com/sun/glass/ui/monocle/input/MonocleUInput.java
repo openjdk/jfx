@@ -61,15 +61,13 @@ class MonocleUInput extends NativeUInput {
                    + Integer.toHexString(vendor) + "/"
                    + Integer.toHexString(product) + "/"
                    + Integer.toHexString(version));
-        Application.invokeAndWait(() -> {
-            device = registry.addDevice(
-                    new LinuxInputDevice(capabilities,
-                                         createAbsCapsMap(),
-                                         pipe.source(),
-                                         udevManifest,
-                                         uevent),
-                    "Simulated Linux Input Device");
-        });
+        Application.invokeAndWait(() -> device = registry.addDevice(
+                new LinuxInputDevice(capabilities,
+                                     createAbsCapsMap(),
+                                     pipe.source(),
+                                     udevManifest,
+                                     uevent),
+                "Simulated Linux Input Device"));
     }
 
     protected void openConnection() {

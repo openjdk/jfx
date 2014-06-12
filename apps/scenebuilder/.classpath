@@ -2,6 +2,13 @@
 <classpath>
     <classpathentry kind="src" path="SceneBuilderApp/src"/>
     <classpathentry kind="src" path="SceneBuilderKit/src"/>
+    <classpathentry kind="src" path="samples/AirportApp/src"/>
+    <classpathentry kind="src" path="samples/HelloI18N/src"/>
+    <classpathentry kind="src" path="samples/HelloSwingNode/src"/>
+    <classpathentry kind="src" path="samples/IssueTrackingBiDi/src"/>
+    <classpathentry kind="src" path="samples/IssueTrackingLite/src"/>
+    <classpathentry kind="src" path="samples/Login/src"/>
+    <classpathentry kind="src" path="samples/UnlockCustom/src"/>
     <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
     <classpathentry combineaccessrules="false" kind="src" exported="true" path="/rt">
     <attributes>

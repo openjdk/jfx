@@ -332,4 +332,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         }
         return baseDirectory + File.separator + name + File.separator;
     }
+
+    @Override
+    protected native int _getKeyCodeForChar(char c);
 }

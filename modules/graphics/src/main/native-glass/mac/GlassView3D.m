@@ -330,12 +330,6 @@
     [self->_delegate updateTrackingAreas];
 }
 
-- (NSMenu *)menuForEvent:(NSEvent *)theEvent
-{
-    [self->_delegate sendJavaMenuEvent:theEvent];
-    return [super menuForEvent: theEvent];
-}
-
 - (void)mouseEntered:(NSEvent *)theEvent
 {
     MOUSELOG("mouseEntered");
@@ -383,10 +377,9 @@
 {
     MOUSELOG("rightMouseDown");
     [self->_delegate sendJavaMouseEvent:theEvent];
-    // By default, calling rightMouseDown: generates menuForEvent: but none of the other glass mouse handlers call the super
-    // To be consistent with the rest of glass, call the menu event handler directly rather than letting the operating system do it
-    [self->_delegate sendJavaMenuEvent:theEvent];
-//    return [super rightMouseDown: theEvent];
+    // NOTE: menuForEvent: is invoked differently for right-click
+    // and Ctrl+Click actions. So instead we always synthesize
+    // the menu event in Glass. See sendJavaMouseEvent for details.
 }
 
 - (void)rightMouseDragged:(NSEvent *)theEvent

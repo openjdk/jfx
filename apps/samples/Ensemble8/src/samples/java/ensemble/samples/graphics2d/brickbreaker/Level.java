@@ -329,8 +329,15 @@ public class Level extends Parent {
     }
 
     public void stop() {
-        startingTimeline.stop();
+        startingTimeline.pause();
         animationTimer.stop();
+    }
+
+    public void restart() {
+        if (message.isVisible()) {
+            startingTimeline.play();
+        }
+        animationTimer.start();
     }
 
     private void initLevel() {

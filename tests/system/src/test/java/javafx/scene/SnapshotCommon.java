@@ -101,11 +101,7 @@ public class SnapshotCommon {
 
     static void doSetupOnce() {
         // Start the Application
-        new Thread(new Runnable() {
-            @Override public void run() {
-                Application.launch(MyApp.class, (String[])null);
-            }
-        }).start();
+        new Thread(() -> Application.launch(MyApp.class, (String[])null)).start();
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
@@ -133,25 +129,21 @@ public class SnapshotCommon {
         final Throwable[] testError = new Throwable[1];
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                node.snapshot(new Callback<SnapshotResult, Void>() {
-                    public Void call(SnapshotResult result) {
-                        try {
-                            cb.call(result);
-                        } catch (Throwable th) {
-                            testError[0] = th;
-                        } finally {
-                            latch.countDown();
-                        }
-                        return null;
-                    }
-                }, params, img);
-                assertEquals(1, latch.getCount());
-
-                if (runAfter != null) {
-                    runAfter.run();
+        Util.runAndWait(() -> {
+            node.snapshot(result -> {
+                try {
+                    cb.call(result);
+                } catch (Throwable th) {
+                    testError[0] = th;
+                } finally {
+                    latch.countDown();
                 }
+                return null;
+            }, params, img);
+            assertEquals(1, latch.getCount());
+
+            if (runAfter != null) {
+                runAfter.run();
             }
         });
 
@@ -193,22 +185,18 @@ public class SnapshotCommon {
         final Throwable[] testError = new Throwable[1];
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                scene.snapshot(new Callback<SnapshotResult, Void>() {
-                    public Void call(SnapshotResult result) {
-                        try {
-                            cb.call(result);
-                        } catch (Throwable th) {
-                            testError[0] = th;
-                        } finally {
-                            latch.countDown();
-                        }
-                        return null;
-                    }
-                }, img);
-                assertEquals(1, latch.getCount());
-            }
+        Util.runAndWait(() -> {
+            scene.snapshot(result -> {
+                try {
+                    cb.call(result);
+                } catch (Throwable th) {
+                    testError[0] = th;
+                } finally {
+                    latch.countDown();
+                }
+                return null;
+            }, img);
+            assertEquals(1, latch.getCount());
         });
 
         try {

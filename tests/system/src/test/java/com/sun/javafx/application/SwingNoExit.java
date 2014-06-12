@@ -68,13 +68,11 @@ public class SwingNoExit {
         frame.getContentPane().add(fxPanel, BorderLayout.CENTER);
 
         // Create scene and add it to the panel
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                Group root = new Group();
-                Scene scene = new Scene(root);
-                scene.setFill(Color.LIGHTYELLOW);
-                fxPanel.setScene(scene);
-            }
+        Util.runAndWait(() -> {
+            Group root = new Group();
+            Scene scene = new Scene(root);
+            scene.setFill(Color.LIGHTYELLOW);
+            fxPanel.setScene(scene);
         });
 
         // show frame
@@ -88,14 +86,12 @@ public class SwingNoExit {
         final AtomicReference<Throwable> error = new AtomicReference<>(null);
 
         final CountDownLatch initLatch = new CountDownLatch(1);
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    init();
-                    initLatch.countDown();
-                } catch (Throwable th) {
-                    error.set(th);
-                }
+        SwingUtilities.invokeLater(() -> {
+            try {
+                init();
+                initLatch.countDown();
+            } catch (Throwable th) {
+                error.set(th);
             }
         });
         if (!initLatch.await(Util.TIMEOUT, TimeUnit.MILLISECONDS)) {
@@ -107,11 +103,9 @@ public class SwingNoExit {
         }
 
         final CountDownLatch runAndWait = new CountDownLatch(1);
-        Platform.runLater(new Runnable() {
-            public void run() {
-                Platform.exit();
-                runAndWait.countDown();
-            }
+        Platform.runLater(() -> {
+            Platform.exit();
+            runAndWait.countDown();
         });
         if (!runAndWait.await(Util.TIMEOUT, TimeUnit.MILLISECONDS)) {
             throw new AssertionFailedError("Timeout waiting for Platform.exit()");
@@ -124,11 +118,9 @@ public class SwingNoExit {
                             1, exitLatch.getCount());
 
         try {
-            SwingUtilities.invokeAndWait(new Runnable() {
-                public void run() {
-                    frame.setVisible(false);
-                    frame.dispose();
-                }
+            SwingUtilities.invokeAndWait(() -> {
+                frame.setVisible(false);
+                frame.dispose();
             });
         }
         catch (InvocationTargetException ex) {

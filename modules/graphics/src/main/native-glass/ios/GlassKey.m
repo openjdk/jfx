@@ -26,19 +26,20 @@
 #import <UIKit/UIKit.h>
 
 #include "com_sun_glass_events_KeyEvent.h"
+#include "com_sun_glass_ui_ios_IosApplication.h"
 
 #include "GlassMacros.h"
 
 
 /*
- * Class:     com_sun_glass_events_KeyEvent
+ * Class:     com_sun_glass_ui_ios_IosApplication
  * Method:    _getKeyCodeForChar
  * Signature: (C)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar
-(JNIEnv * env, jclass cls, jchar c)
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosApplication__1getKeyCodeForChar
+(JNIEnv * env, jobject jApplication, jchar c)
 {
-    GLASS_LOG("Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar");
+    GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1getKeyCodeForChar");
     
     return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
 }

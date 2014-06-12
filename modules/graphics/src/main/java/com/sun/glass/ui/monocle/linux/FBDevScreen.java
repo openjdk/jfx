@@ -39,6 +39,8 @@ import java.nio.channels.FileChannel;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 public class FBDevScreen implements NativeScreen {
 
@@ -50,10 +52,14 @@ public class FBDevScreen implements NativeScreen {
     private int consoleCursorBlink;
     private Framebuffer fb;
     private LinuxFrameBuffer linuxFB;
+    private final String fbDevPath;
 
     public FBDevScreen() {
+        fbDevPath = AccessController.doPrivileged(
+                (PrivilegedAction<String>) () ->
+                        System.getProperty("monocle.screen.fb", "/dev/fb0"));
         try {
-            linuxFB = new LinuxFrameBuffer("/dev/fb0");
+            linuxFB = new LinuxFrameBuffer(fbDevPath);
             nativeHandle = 1l;
             nativeFormat = Pixels.Format.BYTE_BGRA_PRE;
             try {
@@ -109,7 +115,7 @@ public class FBDevScreen implements NativeScreen {
 
     private void openFBDev() throws IOException {
         if (mappedFB == null) {
-            Path fbdevPath = FileSystems.getDefault().getPath("/dev/fb0");
+            Path fbdevPath = FileSystems.getDefault().getPath(fbDevPath);
             fbdev = FileChannel.open(fbdevPath, StandardOpenOption.WRITE);
         }
     }

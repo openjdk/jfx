@@ -108,7 +108,7 @@ class TreeUtil {
         List<TreeItem<T>> siblings;
         
         while (!i.equals(root) && p != null) {
-            siblings = p.getChildren();
+            siblings = p.children;
             
             // work up each sibling, from the current item
             int itemIndex = siblings.indexOf(i);

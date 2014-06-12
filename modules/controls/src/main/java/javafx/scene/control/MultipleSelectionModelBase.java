@@ -160,8 +160,17 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      *                                                                     *
      **********************************************************************/
 
-    // Fix for RT-20945
-    boolean makeAtomic = false;
+    // Fix for RT-20945 (and numerous other issues!)
+    private int atomicityCount = 0;
+    boolean isAtomic() {
+        return atomicityCount > 0;
+    }
+    void startAtomic() {
+        atomicityCount++;
+    }
+    void stopAtomic() {
+        atomicityCount = Math.max(0, --atomicityCount);
+    }
 
 
     /***********************************************************************
@@ -301,7 +310,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // resulted in the selectedItems and selectedIndices lists never
         // reporting that they were empty.
         // makeAtomic toggle added to resolve RT-32618
-        makeAtomic = true;
+        startAtomic();
 
         // firstly we make a copy of the selection, so that we can send out
         // the correct details in the selection change event
@@ -314,7 +323,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         // and select the new row
         select(row);
-        makeAtomic = false;
+        stopAtomic();
 
         // fire off a single add/remove/replace notification (rather than
         // individual remove and add notifications) - see RT-33324
@@ -348,7 +357,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         setSelectedIndex(row);
         focus(row);
 
-        if (! makeAtomic) {
+        if (! isAtomic()) {
             int changeIndex = selectedIndicesSeq.indexOf(row);
             selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(changeIndex, changeIndex+1, selectedIndicesSeq));
         }
@@ -612,7 +621,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearSelection() {
-        if (! makeAtomic) {
+        if (! isAtomic()) {
             setSelectedIndex(-1);
             focus(-1);
         }
@@ -632,7 +641,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
             quietClearSelection();
 
-            if (! makeAtomic) {
+            if (! isAtomic()) {
                 selectedIndicesSeq.callObservers(
                         new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0,
                         removed, selectedIndicesSeq));

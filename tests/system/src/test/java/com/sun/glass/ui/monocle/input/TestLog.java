@@ -29,6 +29,7 @@ import junit.framework.AssertionFailedError;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Formatter;
 import java.util.List;
 
@@ -114,15 +115,28 @@ public class TestLog {
         return countLog(s, 0, false);
     }
 
-    private static String checkLog(String s, int startIndex, boolean exact) {
+    private static String checkLog(String[] matches, int startIndex, boolean exact) {
         for (int i = startIndex; i < log.size(); i++) {
             String line  = log.get(i);
-            if (exact) {
-                if (line.equals(s)) {
-                    return line;
+            if (matches.length == 1) {
+                if (exact) {
+                    if (line.equals(matches[0])) {
+                        return line;
+                    }
+                } else {
+                    if (line.indexOf(matches[0]) >= 0) {
+                        return line;
+                    }
                 }
             } else {
-                if (line.indexOf(s) >= 0) {
+                boolean isMatch = true;
+                for (String match : matches) {
+                    if (line.indexOf(match) < 0) {
+                        isMatch = false;
+                        break;
+                    }
+                }
+                if (isMatch) {
                     return line;
                 }
             }
@@ -131,11 +145,11 @@ public class TestLog {
     }
 
     public static boolean checkLog(String s) {
-        return checkLog(s, 0, true) != null;
+        return checkLog(new String[] {s}, 0, true) != null;
     }
 
     public static boolean checkLogContaining(String s) {
-        return checkLog(s, 0, false) != null;
+        return checkLog(new String[] {s}, 0, false) != null;
     }
 
     public static void assertLog(String s) {
@@ -162,11 +176,12 @@ public class TestLog {
         }
     }
 
-    private static String waitForLog(String s, long timeout, boolean exact) throws InterruptedException {
+    private static String waitForLog(String[] s, long timeout, boolean exact) throws InterruptedException {
         long startTime = System.currentTimeMillis();
         long timeNow = startTime;
         long endTime = timeNow + (long) (timeout * TestApplication.getTimeScale());
         String line;
+        String logString = Arrays.toString(s).substring(1, Arrays.toString(s).length() - 1);
         synchronized (lock) {
             int index = 0;
             while ((line = checkLog(s, index, exact)) == null) {
@@ -177,7 +192,7 @@ public class TestLog {
                 timeNow = System.currentTimeMillis();
                 if (timeNow >= endTime) {
                     String message = "Timed out after " + (timeNow - startTime)
-                            + "ms waiting for '" + s + "'";
+                            + "ms waiting for '" + logString + "'";
                     if (!TestApplication.isVerbose()) {
                         System.out.flush();
                         System.err.flush();
@@ -194,12 +209,12 @@ public class TestLog {
         if (TestApplication.isVerbose()) {
             if (exact) {
                 System.out.println("TestLog matched '"
-                        + s + "' in "
+                        + logString + "' in "
                         + matchTime + "ms");
 
             } else {
                 System.out.println("TestLog matched '"
-                        + s + "' with '"
+                        + logString + "' with '"
                         + line + "' in "
                         + matchTime + "ms");
             }
@@ -208,23 +223,25 @@ public class TestLog {
     }
 
     public static String waitForLog(String s, long timeout) throws InterruptedException {
-        return waitForLog(s, timeout, true);
+        return waitForLog(new String [] {s}, timeout, true);
     }
 
     public static String waitForLogContaining(String s, long timeout) throws InterruptedException {
-        return waitForLog(s, timeout, false);
+        return waitForLog(new String [] {s}, timeout, false);
     }
 
     public static String waitForLog(String format, Object... args) throws InterruptedException {
         return waitForLog(new Formatter().format(format, args).toString(),
                           DEFAULT_TIMEOUT);
-
     }
 
     public static String waitForLogContaining(String format, Object... args) throws InterruptedException {
         return waitForLogContaining(new Formatter().format(format, args).toString(),
                           DEFAULT_TIMEOUT);
+    }
 
+    public static String waitForLogContaining(String... s) throws InterruptedException {
+        return waitForLog(s, DEFAULT_TIMEOUT, false);
     }
 
 }

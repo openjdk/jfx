@@ -366,6 +366,8 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
 
             // remove clip
             bar.setClip(null);
+            bar.setScaleX(1);
+            bar.setTranslateX(0);
             clipRegion.translateXProperty().unbind();
         }
     }

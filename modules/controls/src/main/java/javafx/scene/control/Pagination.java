@@ -254,8 +254,6 @@ public class Pagination extends Control {
                     setCurrentPageIndex(getPageCount() - 1);
                 }
             }
-
-            accSendNotification(Attribute.SELECTED_PAGE);
         }
 
         @Override

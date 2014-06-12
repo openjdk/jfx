@@ -81,14 +81,14 @@ public class HelloSanity extends Application {
         Button bRobot = new Button("Robot");
         bRobot.setOnAction(e -> builder.robotTest(globalScene, mainBox, primaryStage));
 
-        Button bswipe = new Button("Swipe");
-        bswipe.setOnAction(e -> builder.swipeTest(globalScene, mainBox));
+        Button bgestures = new Button("Gesture Actions");
+        bgestures.setOnAction(e -> builder.GestureTest(globalScene, mainBox));
         
         Button bquit = new Button("Quit");
         bquit.setOnAction(e -> primaryStage.close());
         
         mainBox.getChildren().addAll(welcome, bControls, bTabs, bWins, bRobot,
-                                     bAnim, bEffs, bswipe, bquit);
+                                     bAnim, bEffs, bgestures, bquit);
         globalScene.setRoot(mainBox);
         globalScene.getStylesheets().add("hello/HelloSanityStyles.css");
         primaryStage.setScene(globalScene);

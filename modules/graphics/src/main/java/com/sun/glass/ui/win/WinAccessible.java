@@ -25,6 +25,7 @@
 
 package com.sun.glass.ui.win;
 
+import java.util.function.Function;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
@@ -207,6 +208,14 @@ final class WinAccessible extends PlatformAccessible {
     WinTextRangeProvider documentRange;
     WinTextRangeProvider selectionRange;
     boolean documentRangeValid, selectionRangeValid;
+
+    /* The lastIndex is used by parents to keep track of the index of the last child
+     * returned in Navigate. It is very common for Narrator to traverse the children
+     * list by calling next sibling sequentially, without lastIndex the caller would
+     * have to traverse the list to find the location of the current child before it
+     * can return the next sibling.
+     */
+    private int lastIndex = 0;
 
     /* Creates a GlassAccessible linked to the caller (GlobalRef) */
     private native long _createGlassAccessible();
@@ -413,6 +422,8 @@ final class WinAccessible extends PlatformAccessible {
                 }
                 break;
             }
+            case PARENT:
+                break;
             default:
                 UiaRaiseAutomationEvent(peer, UIA_AutomationPropertyChangedEventId);
         }
@@ -933,34 +944,46 @@ final class WinAccessible extends PlatformAccessible {
                  */
                 if (parent != null) {
                     Accessible parentAccessible = parent.getAccessible();
+                    Function<Integer, Node> getChild;
+                    int count = 0;
                     if (treeCell) {
                         Integer result = (Integer)parentAccessible.getAttribute(TREE_ITEM_COUNT);
-                        int count = result != null ? result : 0;
+                        if (result == null) return 0;
+                        count = result;
+                        getChild = index -> {
+                            return (Node)parentAccessible.getAttribute(Attribute.TREE_ITEM_AT_INDEX, index);
+                        };
+                    } else {
+                        ObservableList<Node> children = (ObservableList<Node>)parentAccessible.getAttribute(CHILDREN);
+                        if (children == null) return 0;
+                        count = children.size();
+                        getChild = index -> {
+                            return children.get(index);
+                        };
+                    }
+
+                    WinAccessible winAcc = (WinAccessible)parentAccessible.impl_getDelegate();
+                    int lastIndex = winAcc.lastIndex;
+                    int currentIndex = -1;
+                    if (0 <= lastIndex && lastIndex < count && getAccessible(getChild.apply(lastIndex)) == peer) {
+                        currentIndex = lastIndex;
+                    } else {
                         for (int i = 0; i < count; i++) {
-                            Node item = (Node)parentAccessible.getAttribute(Attribute.TREE_ITEM_AT_INDEX, i);
-                            if (getAccessible(item) == peer) {
-                                if (direction == NavigateDirection_NextSibling && i + 1 < count) {
-                                    node = (Node)parentAccessible.getAttribute(TREE_ITEM_AT_INDEX, i + 1);
-                                }
-                                if (direction == NavigateDirection_PreviousSibling && i > 0) {
-                                    node = (Node)parentAccessible.getAttribute(TREE_ITEM_AT_INDEX, i - 1);
-                                }
+                            if (getAccessible(getChild.apply(i)) == peer) {
+                                currentIndex = i;
                                 break;
                             }
                         }
-                    } else {
-                        ObservableList<Node> children = (ObservableList<Node>)parentAccessible.getAttribute(CHILDREN);
-                        int size = children != null ? children.size() : 0;
-                        for (int i = 0; i < size; i++) {
-                            if (getAccessible(children.get(i)) == peer) {
-                                if (direction == NavigateDirection_NextSibling && i + 1 < size) {
-                                   node = children.get(i + 1);
-                                }
-                                if (direction == NavigateDirection_PreviousSibling && i > 0) {
-                                   node = children.get(i - 1);
-                                }
-                                break;
-                            }
+                    }
+                    if (currentIndex != -1) {
+                        if (direction == NavigateDirection_NextSibling) {
+                            currentIndex++;
+                        } else {
+                            currentIndex--;
+                        }
+                        if (0 <= currentIndex && currentIndex < count) {
+                            node = getChild.apply(currentIndex);
+                            winAcc.lastIndex = currentIndex;
                         }
                     }
                 }
@@ -968,27 +991,22 @@ final class WinAccessible extends PlatformAccessible {
             }
             case NavigateDirection_FirstChild:
             case NavigateDirection_LastChild: {
+                lastIndex = -1;
                 if (role == Role.TREE_VIEW || role == Role.TREE_TABLE_VIEW) {
                     /* The TreeView only returns the root node as child */
+                    lastIndex = 0;
                     node = (Node)getAttribute(ROW_AT_INDEX, 0);
                 } else if (treeCell) {
                     Integer count = (Integer)getAttribute(TREE_ITEM_COUNT);
                     if (count != null && count > 0) {
-                        if (direction == NavigateDirection_FirstChild) {
-                            node = (Node)getAttribute(TREE_ITEM_AT_INDEX, 0);
-                        } else if (direction == NavigateDirection_LastChild) {
-                            node = (Node)getAttribute(TREE_ITEM_AT_INDEX, count - 1);
-                        }
+                        lastIndex = direction == NavigateDirection_FirstChild ? 0 : count - 1;
+                        node = (Node)getAttribute(TREE_ITEM_AT_INDEX, lastIndex);
                     }
                 } else {
                     ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
-                    int size = children != null ? children.size() : 0;
-                    if (size > 0) {
-                        if (direction == NavigateDirection_FirstChild) {
-                            node = children.get(0);
-                        } else {
-                            node = children.get(size - 1);
-                        }
+                    if (children != null && children.size() > 0) {
+                        lastIndex = direction == NavigateDirection_FirstChild ? 0 : children.size() - 1;
+                        node = children.get(lastIndex);
                     }
                     if (node != null) {
                         role = (Role)node.getAccessible().getAttribute(ROLE);

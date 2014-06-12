@@ -854,6 +854,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     break;
                 }
             }
+            getSkinnable().accSendNotification(Attribute.SELECTED_PAGE);
         }
 
         // Update the page index using the currentIndex and updates the page set

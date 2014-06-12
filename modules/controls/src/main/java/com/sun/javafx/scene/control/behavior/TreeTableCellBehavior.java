@@ -121,7 +121,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
         if (column == treeColumn) {
             final Node disclosureNode = getControl().getTreeTableRow().getDisclosureNode();
             if (disclosureNode != null) {
-                if (disclosureNode.getBoundsInLocal().contains(x, y)) {
+                if (disclosureNode.getBoundsInParent().contains(x, y)) {
                     if (treeItem != null) {
                         treeItem.setExpanded(!treeItem.isExpanded());
                     }

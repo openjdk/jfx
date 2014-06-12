@@ -110,11 +110,7 @@ public class Snapshot1Test extends SnapshotCommon {
     public void testSnapshotSceneImmediateWrongThread() {
         assertFalse(Platform.isFxApplicationThread());
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpScene = new Scene(new Group(), 200, 100);
-            }
-        });
+        Util.runAndWait(() -> tmpScene = new Scene(new Group(), 200, 100));
 
         // Should throw IllegalStateException
         tmpScene.snapshot(null);
@@ -126,17 +122,11 @@ public class Snapshot1Test extends SnapshotCommon {
     public void testSnapshotSceneDeferredWrongThread() {
         assertFalse(Platform.isFxApplicationThread());
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpScene = new Scene(new Group(), 200, 100);
-            }
-        });
+        Util.runAndWait(() -> tmpScene = new Scene(new Group(), 200, 100));
 
         // Should throw IllegalStateException
-        tmpScene.snapshot(new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult p) {
-                throw new AssertionFailedError("Should never get here");
-            }
+        tmpScene.snapshot(p -> {
+            throw new AssertionFailedError("Should never get here");
         }, null);
     }
 
@@ -161,22 +151,18 @@ public class Snapshot1Test extends SnapshotCommon {
         tmpNode = new Rectangle(10, 10);
 
         // Should throw IllegalStateException
-        tmpNode.snapshot(new Callback<SnapshotResult, Void>() {
-            public Void call(SnapshotResult p) {
-                throw new AssertionFailedError("Should never get here");
-            }
+        tmpNode.snapshot(p -> {
+            throw new AssertionFailedError("Should never get here");
         }, null, null);
     }
 
     // Test immediate snapshot
     @Test
     public void testSceneImmediate() {
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpScene = new Scene(new Group(), 200, 100);
-                WritableImage img = tmpScene.snapshot(null);
-                assertNotNull(img);
-            }
+        Util.runAndWait(() -> {
+            tmpScene = new Scene(new Group(), 200, 100);
+            WritableImage img = tmpScene.snapshot(null);
+            assertNotNull(img);
         });
     }
 
@@ -185,23 +171,19 @@ public class Snapshot1Test extends SnapshotCommon {
     public void testSceneCallback() {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpScene = new Scene(new Group(), 200, 100);
+        Util.runAndWait(() -> {
+            tmpScene = new Scene(new Group(), 200, 100);
 
-                Callback<SnapshotResult, Void> cb = new Callback<SnapshotResult, Void>() {
-                    @Override public Void call(SnapshotResult param) {
-                        assertNotNull(param);
+            Callback<SnapshotResult, Void> cb = param -> {
+                assertNotNull(param);
 
-                        latch.countDown();
-                        return null;
-                    }
-                };
+                latch.countDown();
+                return null;
+            };
 
-                tmpScene.snapshot(cb, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-            }
+            tmpScene.snapshot(cb, null);
+            Util.sleep(SLEEP_TIME);
+            assertEquals(1, latch.getCount());
         });
 
         try {
@@ -299,23 +281,19 @@ public class Snapshot1Test extends SnapshotCommon {
     // Test deferred snapshot with null callback (should throw NPE)
     @Test (expected=NullPointerException.class)
     public void testNullSceneCallback() {
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpScene = new Scene(new Group(), 200, 100);
-                tmpScene.snapshot(null, null);
-            }
+        Util.runAndWait(() -> {
+            tmpScene = new Scene(new Group(), 200, 100);
+            tmpScene.snapshot(null, null);
         });
     }
 
     // Test immediate snapshot
     @Test
     public void testNodeImmediate() {
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpNode = new Rectangle(10, 10);
-                WritableImage img = tmpNode.snapshot(null, null);
-                assertNotNull(img);
-            }
+        Util.runAndWait(() -> {
+            tmpNode = new Rectangle(10, 10);
+            WritableImage img = tmpNode.snapshot(null, null);
+            assertNotNull(img);
         });
     }
 
@@ -324,23 +302,19 @@ public class Snapshot1Test extends SnapshotCommon {
     public void testNodeCallback() {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpNode = new Rectangle(10, 10);
+        Util.runAndWait(() -> {
+            tmpNode = new Rectangle(10, 10);
 
-                Callback<SnapshotResult, Void> cb = new Callback<SnapshotResult, Void>() {
-                    @Override public Void call(SnapshotResult param) {
-                        assertNotNull(param);
+            Callback<SnapshotResult, Void> cb = param -> {
+                assertNotNull(param);
 
-                        latch.countDown();
-                        return null;
-                    }
-                };
+                latch.countDown();
+                return null;
+            };
 
-                tmpNode.snapshot(cb, null, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-            }
+            tmpNode.snapshot(cb, null, null);
+            Util.sleep(SLEEP_TIME);
+            assertEquals(1, latch.getCount());
         });
 
         try {
@@ -438,11 +412,9 @@ public class Snapshot1Test extends SnapshotCommon {
     // Test deferred snapshot with null callback (should throw NPE)
     @Test (expected=NullPointerException.class)
     public void testNullNodeCallback() {
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpNode = new Rectangle(10, 10);
-                tmpNode.snapshot(null, null, null);
-            }
+        Util.runAndWait(() -> {
+            tmpNode = new Rectangle(10, 10);
+            tmpNode.snapshot(null, null, null);
         });
     }
 

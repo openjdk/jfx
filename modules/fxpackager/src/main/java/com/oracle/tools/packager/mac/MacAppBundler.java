@@ -612,8 +612,7 @@ public class MacAppBundler extends AbstractBundler {
 //        } else {
         data.put("DEPLOY_LAUNCHER_CLASS", MAIN_CLASS.fetchFrom(params));
 //        }
-        // This will be an empty string for correctly packaged JavaFX apps
-        data.put("DEPLOY_APP_CLASSPATH", MAIN_JAR_CLASSPATH.fetchFrom(params).replace(":", " "));
+        data.put("DEPLOY_APP_CLASSPATH", CLASSPATH.fetchFrom(params));
 
         //TODO: Add remainder of the classpath
 
@@ -681,7 +680,7 @@ public class MacAppBundler extends AbstractBundler {
                 MAC_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
-                MAIN_JAR_CLASSPATH,
+                CLASSPATH,
                 PREFERENCES_ID,
                 USER_JVM_OPTIONS,
                 VERSION

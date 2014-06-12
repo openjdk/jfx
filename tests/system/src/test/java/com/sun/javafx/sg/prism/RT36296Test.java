@@ -68,11 +68,7 @@ public class RT36296Test {
     @BeforeClass
     public static void setupOnce() {
         // Start the Application
-        new Thread(new Runnable() {
-            @Override public void run() {
-                Application.launch(MyApp.class, (String[])null);
-            }
-        }).start();
+        new Thread(() -> Application.launch(MyApp.class, (String[])null)).start();
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {

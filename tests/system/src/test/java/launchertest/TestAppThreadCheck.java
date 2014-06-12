@@ -53,11 +53,7 @@ public class TestAppThreadCheck extends Application {
             System.exit(ERROR_START_WRONG_THREAD);
         }
 
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                Platform.exit();
-            }
-        });
+        Platform.runLater(Platform::exit);
     }
 
     @Override public void stop() {
@@ -82,10 +78,8 @@ public class TestAppThreadCheck extends Application {
         }
 
         try {
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    // do nothing
-                }
+            Platform.runLater(() -> {
+                // do nothing
             });
         } catch (IllegalStateException ex) {
             ex.printStackTrace();

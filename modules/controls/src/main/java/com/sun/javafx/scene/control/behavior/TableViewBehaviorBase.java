@@ -225,6 +225,10 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     protected final ListChangeListener<TablePositionBase> selectedCellsListener = c -> {
         while (c.next()) {
+            if (! c.wasAdded()) {
+                continue;
+            }
+
             TableSelectionModel sm = getSelectionModel();
             if (sm == null) return;
 

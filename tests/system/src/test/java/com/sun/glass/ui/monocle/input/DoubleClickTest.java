@@ -50,11 +50,9 @@ public class DoubleClickTest extends ParameterizedTestBase {
     public void testDoubleClick1() throws Exception {
         int x = (int) Math.round(width / 2.0);
         int y = (int) Math.round(height / 2.0);
-        TestApplication.getStage().getScene().setOnMouseClicked((e) -> {
-            TestLog.format("Mouse clicked: %d, %d: clickCount %d",
-                           (int) e.getScreenX(), (int) e.getScreenY(),
-                           e.getClickCount());
-        });
+        TestApplication.getStage().getScene().setOnMouseClicked((e) -> TestLog.format("Mouse clicked: %d, %d: clickCount %d",
+                       (int) e.getScreenX(), (int) e.getScreenY(),
+                       e.getClickCount()));
         TestLog.reset();
         int p = device.addPoint(x, y);
         device.sync();
@@ -75,11 +73,9 @@ public class DoubleClickTest extends ParameterizedTestBase {
         int x2 = x1 + device.getTapRadius();
         int y2 = y1 + device.getTapRadius();
 
-        TestApplication.getStage().getScene().setOnMouseClicked((e) -> {
-            TestLog.format("Mouse clicked: %d, %d: clickCount %d",
-                           (int) e.getScreenX(), (int) e.getScreenY(),
-                           e.getClickCount());
-        });
+        TestApplication.getStage().getScene().setOnMouseClicked((e) -> TestLog.format("Mouse clicked: %d, %d: clickCount %d",
+                       (int) e.getScreenX(), (int) e.getScreenY(),
+                       e.getClickCount()));
         TestLog.reset();
         int p = device.addPoint(x1, y1);
         device.sync();

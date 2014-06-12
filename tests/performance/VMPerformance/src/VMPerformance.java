@@ -610,15 +610,13 @@ public class VMPerformance {
 
     static class CreateAndCollectWeakReferenceWithQueue extends ObjectCreationTest {
         final ReferenceQueue queue = new ReferenceQueue();
-        Thread queueThread = new Thread(new Runnable() {
-            public void run() {
-                try {
-                    while (true) {
-                        Reference r = queue.remove();
-                    }
-                } catch (InterruptedException e) {
-                    return;
+        Thread queueThread = new Thread(() -> {
+            try {
+                while (true) {
+                    Reference r = queue.remove();
                 }
+            } catch (InterruptedException e) {
+                return;
             }
         });
         {
@@ -637,15 +635,13 @@ public class VMPerformance {
     static class CreateAndCollectPhantomReferenceWithQueue
             extends ObjectCreationTest {
         final ReferenceQueue queue = new ReferenceQueue();
-        Thread queueThread = new Thread(new Runnable() {
-            public void run() {
-                try {
-                    while (true) {
-                        Reference r = queue.remove();
-                    }
-                } catch (InterruptedException e) {
-                    return;
+        Thread queueThread = new Thread(() -> {
+            try {
+                while (true) {
+                    Reference r = queue.remove();
                 }
+            } catch (InterruptedException e) {
+                return;
             }
         });
         {

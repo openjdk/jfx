@@ -25,7 +25,6 @@
 
 package javafx.embed.swing;
 
-import com.sun.javafx.tk.TKPulseListener;
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
@@ -36,15 +35,18 @@ import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Robot;
 import java.awt.Toolkit;
+
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+
 import sun.awt.SunToolkit;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import javafx.animation.AnimationTimer;
 
+import javafx.animation.AnimationTimer;
 import junit.framework.Assert;
+
 import org.junit.Test;
 import org.junit.Ignore;
 
@@ -58,12 +60,7 @@ public class RT23603Test {
 
     @Test
     public void test() {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                initAndShowGUI();
-            }
-        });
+        SwingUtilities.invokeLater(this::initAndShowGUI);
 
         //
         // wait for frame to be set visible and jfxpanel to be installed
@@ -77,12 +74,7 @@ public class RT23603Test {
 
         // 3 pulses should guarantee the scene is rendered
         final CountDownLatch l2 = new CountDownLatch(3);
-        com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(new TKPulseListener() {
-            @Override
-            public void pulse() {
-                l2.countDown();
-            }
-        });
+        com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(l2::countDown);
 
         //
         // wait for jfxpanel to be rendered
@@ -118,21 +110,18 @@ public class RT23603Test {
 
         final JFXPanel fxPanel = new JFXPanel();
 
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                Region rgn = new Region();
-                Scene scene = new Scene(rgn);
-                rgn.setStyle("-fx-background-color: #00ff00;");
-                fxPanel.setScene(scene);
+        Platform.runLater(() -> {
+            Region rgn = new Region();
+            Scene scene = new Scene(rgn);
+            rgn.setStyle("-fx-background-color: #00ff00;");
+            fxPanel.setScene(scene);
 
-                // start constant pulse activity
-                new AnimationTimer() {
-                    @Override public void handle(long l) {}
-                }.start();
+            // start constant pulse activity
+            new AnimationTimer() {
+                @Override public void handle(long l) {}
+            }.start();
 
-                l1.countDown(); // jfxpanel is installed
-            }
+            l1.countDown(); // jfxpanel is installed
         });
 
         frame.getContentPane().setBackground(java.awt.Color.RED);

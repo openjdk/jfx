@@ -158,4 +158,10 @@ public final class MonocleWindowManager {
         return focusedWindow;
     }
 
+    public void repaintAll() {
+        for (int i = 0; i < windows.length; i++) {
+            ((MonocleView)(windows[i].getView())).notifyRepaint();
+        }
+    }
+
 }

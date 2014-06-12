@@ -61,9 +61,7 @@ public class TouchButtonTest extends ParameterizedTestBase {
         button.setId(text);
         button.setLayoutX(x);
         button.setLayoutY(y);
-        button.setOnMousePressed((e) -> {
-            button.requestFocus();
-        });
+        button.setOnMousePressed((e) -> button.requestFocus());
         if (setListeners) {
             button.addEventHandler(MouseEvent.ANY, e ->
                 TestLog.log(e.getEventType().getName() +": " 

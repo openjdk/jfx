@@ -246,6 +246,7 @@ public class NGCanvas extends NGNode {
             }
             if (init_type == InitType.CLEAR) {
                 g.setCompositeMode(CompositeMode.CLEAR);
+                g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
                 g.fillRect(0, 0, tw, th);
                 g.setCompositeMode(CompositeMode.SRC_OVER);
             }
@@ -835,6 +836,7 @@ public class NGCanvas extends NGNode {
                     // fillQuad does hard edges which matches the concept
                     // of setting adjacent abutting, non-overlapping "pixels"
                     gr.fillQuad(dx1, dy1, dx1+highestPixelScale, dy1+highestPixelScale);
+                    gr.setCompositeMode(CompositeMode.SRC_OVER);
                     break;
                 }
                 case PUT_ARGBPRE_BUF:

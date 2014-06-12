@@ -22,8 +22,6 @@
  */
 
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -32,7 +30,6 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-
 import javafx.print.PageLayout;
 import javafx.print.PageOrientation;
 import javafx.print.Paper;
@@ -113,12 +110,7 @@ public class PageLayoutTest extends Application {
         scene.setFill(Color.RED);
 
         Button print = new Button("Print");
-        print.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                createJob();
-            }
-        });
+        print.setOnAction(e -> createJob());
         ((Group) scene.getRoot()).getChildren().add(print);
         return scene;
 

@@ -33,9 +33,8 @@ package modena;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
@@ -75,7 +74,6 @@ import javafx.scene.layout.StackPaneBuilder;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.LineBuilder;
 import javafx.scene.shape.RectangleBuilder;
-import javafx.util.Callback;
 
 /**
  * Helper static methods for Sample Page
@@ -98,18 +96,16 @@ public class SamplePageHelpers {
     
     static <T extends Node> T withState(final T node, final String state, final String subNodeStyleClass, final String subNodeState) {
         withState(node, state);
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                if (node != null) {
-                    Node subNode = node.lookup(subNodeStyleClass);
-                    if (subNode != null) {
-                        withState(node.lookup(subNodeStyleClass), subNodeState);
-                    } else {
-                        System.err.println("node = " + node+" node.lookup("+subNodeStyleClass+") = " + subNode);
-                    }
+        Platform.runLater(() -> {
+            if (node != null) {
+                Node subNode = node.lookup(subNodeStyleClass);
+                if (subNode != null) {
+                    withState(node.lookup(subNodeStyleClass), subNodeState);
                 } else {
-                    System.err.println("node = " + node);
+                    System.err.println("node = " + node+" node.lookup("+subNodeStyleClass+") = " + subNode);
                 }
+            } else {
+                System.err.println("node = " + node);
             }
         });
         return node;
@@ -225,11 +221,7 @@ public class SamplePageHelpers {
         Pagination pagination = new Pagination(numOfPages);
         if (bullet) pagination.getStyleClass().add("bullet");
         if (!arrows) pagination.setStyle("-fx-arrows-visible:false;");
-        pagination.setPageFactory(new Callback<Integer, Node>() {
-            @Override public Node call(Integer param) {
-                return new Label("Page Label "+param);
-            }
-        });
+        pagination.setPageFactory(param -> new Label("Page Label "+param));
         return pagination;
     }
     
@@ -272,13 +264,11 @@ public class SamplePageHelpers {
             createMenu("Help")
         );
 //        mb.setMouseTransparent(true);
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                // get second menu and force into hover state
-                try {
-                    new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
-                } catch (Exception e) { e.printStackTrace(); }
-            }
+        Platform.runLater(() -> {
+            // get second menu and force into hover state
+            try {
+                new ArrayList<Node>(mb.lookupAll(".menu")).get(1).pseudoClassStateChanged(PseudoClass.getPseudoClass("hover"), true);
+            } catch (Exception e) { e.printStackTrace(); }
         });
         return  mb;
     }
@@ -302,18 +292,16 @@ public class SamplePageHelpers {
         // create a place holder container
         final StackPane contextMenu = new StackPane();
         // show context menu then steal and place inline
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                menu.show(contextMenu,-1000,-1000);
-                menu.hide();
-                Platform.runLater(new Runnable() {
-                    @Override public void run() {
-                        final Node menuContent = menu.getSkin().getNode();
-                        contextMenu.getChildren().add(menuContent);
-                        menuContent.setMouseTransparent(true);
+        Platform.runLater(() -> {
+            menu.show(contextMenu,-1000,-1000);
+            menu.hide();
+            Platform.runLater(() -> {
+                final Node menuContent = menu.getSkin().getNode();
+                contextMenu.getChildren().add(menuContent);
+                menuContent.setMouseTransparent(true);
 //                        System.out.println("menuContent = " + menuContent);
 //                        System.out.println("menuContent.lookupAll(\".menu-item\") = " + menuContent.lookupAll(".menu-item"));
-                        
+                
 //                        Platform.runLater(new Runnable() {
 //                            @Override public void run() {
 ////                        if (selectAll) {
@@ -326,9 +314,7 @@ public class SamplePageHelpers {
 ////                        }
 //                            }
 //                        });
-                    }
-                });
-            }
+            });
         });
         return contextMenu;
     }
@@ -371,11 +357,9 @@ public class SamplePageHelpers {
         final MenuItem menu112 = new MenuItem("foo");
         final CheckMenuItem menu113 = new CheckMenuItem("Show \"foo\" item");
         menu113.setSelected(true);
-        menu113.selectedProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                menu112.setVisible(menu113.isSelected());
-                System.err.println("MenuItem \"foo\" is now " + (menu112.isVisible() ? "" : "not") + " visible.");
-            }
+        menu113.selectedProperty().addListener(valueModel -> {
+            menu112.setVisible(menu113.isSelected());
+            System.err.println("MenuItem \"foo\" is now " + (menu112.isVisible() ? "" : "not") + " visible.");
         });
         menu11.getItems().addAll(menu111, menu112, menu113);
 

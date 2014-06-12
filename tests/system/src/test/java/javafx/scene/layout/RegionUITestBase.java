@@ -56,26 +56,20 @@ public abstract class RegionUITestBase extends VisualTestBase {
     @Override
     public void doSetup() {
         super.doSetup();
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                stage = getStage();
-                region = new Region();
-                region.setPrefSize(REGION_WIDTH, REGION_HEIGHT);
-                region.relocate(REGION_LEFT, REGION_TOP);
-                scene = new Scene(root = new Group(region), WIDTH, HEIGHT);
-                scene.setFill(SCENE_FILL);
-                stage.setScene(scene);
-                stage.show();
-            }
+        runAndWait(() -> {
+            stage = getStage();
+            region = new Region();
+            region.setPrefSize(REGION_WIDTH, REGION_HEIGHT);
+            region.relocate(REGION_LEFT, REGION_TOP);
+            scene = new Scene(root = new Group(region), WIDTH, HEIGHT);
+            scene.setFill(SCENE_FILL);
+            stage.setScene(scene);
+            stage.show();
         });
     }
 
     protected void setStyle(final String style) {
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                region.setStyle(style);
-            }
-        });
+        runAndWait(() -> region.setStyle(style));
         waitFirstFrame();
     }
 
@@ -97,12 +91,7 @@ public abstract class RegionUITestBase extends VisualTestBase {
 
     private Color getColor(int x, int y) {
         AtomicReference<Color> color = new AtomicReference<>();
-        runAndWait(new Runnable() {
-            @Override
-            public void run() {
-                color.set(getColor(scene, x, y));
-            }
-        });
+        runAndWait(() -> color.set(getColor(scene, x, y)));
         return color.get();
     }
 

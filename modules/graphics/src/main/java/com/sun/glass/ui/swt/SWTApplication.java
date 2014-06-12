@@ -978,4 +978,9 @@ public final class SWTApplication extends Application {
 //        return new SWTPixels(width, height, buffer);
         return null;
     }
+
+    @Override
+    protected int _getKeyCodeForChar(char c) {
+        return KeyEvent.VK_UNDEFINED;
+    }
 }

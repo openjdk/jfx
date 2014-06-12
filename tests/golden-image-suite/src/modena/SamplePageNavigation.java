@@ -1,7 +1,5 @@
 package modena;
 
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -25,37 +23,31 @@ public class SamplePageNavigation extends BorderPane {
         toolBar.getStyleClass().add("bottom");
         toolBar.getItems().add(new Label("Go to section:"));
         final ChoiceBox<SamplePage.Section> sectionChoiceBox = new ChoiceBox<>();
-        sectionChoiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<SamplePage.Section>() {
-            @Override public void changed(ObservableValue<? extends SamplePage.Section> observable, SamplePage.Section oldValue, SamplePage.Section newValue) {
-                setCurrentSection(newValue);
-            }
-        });
+        sectionChoiceBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> setCurrentSection(newValue));
         sectionChoiceBox.getItems().addAll(samplePage.getSections());
         toolBar.getItems().add(sectionChoiceBox);
         setBottom(toolBar);
-        scrollPane.vvalueProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                if (!isLocalChange) {
-                    isLocalChange = true;
-                    // calc scroll position relative to scroll pane content
-                    double posPixels = samplePage.getLayoutBounds().getHeight() * newValue.doubleValue();
-                    // move to top of view port
-                    posPixels -=  scrollPane.getLayoutBounds().getHeight() * newValue.doubleValue();
-                    // move to center of view port
-                    posPixels +=  scrollPane.getLayoutBounds().getHeight() * 0.5;
-                    // find section that contains view port center
-                    currentSection = null;
-                    for (SamplePage.Section section: samplePage.getSections()) {
-                        if (section.box.getBoundsInParent().getMaxY() > posPixels ) {
-                            currentSection = section;
-                            break;
-                        }
+        scrollPane.vvalueProperty().addListener((observable, oldValue, newValue) -> {
+            if (!isLocalChange) {
+                isLocalChange = true;
+                // calc scroll position relative to scroll pane content
+                double posPixels = samplePage.getLayoutBounds().getHeight() * newValue.doubleValue();
+                // move to top of view port
+                posPixels -=  scrollPane.getLayoutBounds().getHeight() * newValue.doubleValue();
+                // move to center of view port
+                posPixels +=  scrollPane.getLayoutBounds().getHeight() * 0.5;
+                // find section that contains view port center
+                currentSection = null;
+                for (SamplePage.Section section: samplePage.getSections()) {
+                    if (section.box.getBoundsInParent().getMaxY() > posPixels ) {
+                        currentSection = section;
+                        break;
                     }
-                    sectionChoiceBox.getSelectionModel().select(currentSection);
-                    isLocalChange = false;
                 }
-
+                sectionChoiceBox.getSelectionModel().select(currentSection);
+                isLocalChange = false;
             }
+
         });
     }
 

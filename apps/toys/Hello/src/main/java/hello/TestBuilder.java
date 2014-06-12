@@ -1870,49 +1870,55 @@ public class TestBuilder {
 
     /**
      * The method updates globalScene with rectangle that should be 
-     * swiped (touch only)
+     * swiped, scrolled, zoomed or rotated (touch only)
      * @param globalScene the global Scene
      * @param mainBox the Box to insert into
      */
-    public void swipeTest(final Scene globalScene, final VBox mainBox){
+    public void GestureTest(final Scene globalScene, final VBox mainBox){
 
         final Rectangle rect;
         final boolean playing = false;
 
-        Label l = new Label("Swipe demo");
+        Label l = new Label("Gesture demo: Swipe, Scroll, Rotate and Zoom");
 
         Button btn = new Button("Back");
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
+        btn.setOnAction(event -> {
                 globalScene.setRoot(mainBox);
-            }
         });
         
         rect = new Rectangle(200, 200, 200, 200);
         rect.setFill(Color.RED);
-        rect.setOnSwipeLeft(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                rotate(-event.getTouchCount(), Rotate.Z_AXIS, rect, playing);
-                event.consume();
-            }
+        rect.setOnSwipeLeft(event -> {
+            rotate(event.getTouchCount(), Rotate.Z_AXIS, rect, playing);
+            event.consume();
         });
-        rect.setOnSwipeRight(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {                
-                rotate(event.getTouchCount(), Rotate.Z_AXIS, rect, playing);
-                event.consume();
-            }
+        rect.setOnSwipeRight(event -> {
+            rotate(event.getTouchCount(), Rotate.Z_AXIS, rect, playing);
+            event.consume();
         });
-        rect.setOnSwipeUp(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                yTranslate(event.getTouchCount(), 0f, -100f, rect, playing);
-                event.consume();
-            }
+        rect.setOnSwipeUp(event -> {
+            yTranslate(event.getTouchCount(), 0f, -100f, rect, playing);
+            event.consume();
         });
-        rect.setOnSwipeDown(new EventHandler<SwipeEvent>() {
-            @Override public void handle(SwipeEvent event) {
-                yTranslate(event.getTouchCount(), 0f, 100f, rect, playing);
-                event.consume();
-            }
+        rect.setOnSwipeDown(event -> {
+            yTranslate(event.getTouchCount(), 0f, 100f, rect, playing);
+            event.consume();
+        });
+        rect.setOnRotate(event -> {
+            rect.setRotate(rect.getRotate() + event.getAngle());
+            event.consume();
+        });
+
+        rect.setOnScroll(event -> {
+            rect.setTranslateX(rect.getTranslateX() + event.getDeltaX());
+            rect.setTranslateY(rect.getTranslateY() + event.getDeltaY());
+            event.consume();
+        });
+
+        rect.setOnZoom(event -> {
+            rect.setScaleX(rect.getScaleX() * event.getZoomFactor());
+            rect.setScaleY(rect.getScaleY() * event.getZoomFactor());
+            event.consume();
         });
 		VBox vb = new VBox(40);
         vb.setAlignment(Pos.CENTER);

@@ -171,7 +171,7 @@ public class MacAppStoreBundlerTest {
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
         bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
         bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
@@ -205,7 +205,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");

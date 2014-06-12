@@ -1937,4 +1937,55 @@ public class TreeViewTest {
 
         sl.dispose();
     }
+
+    @Test public void test_rt_37502() {
+        final TreeView<Long> tree = new TreeView<>(new NumberTreeItem(1));
+        tree.setCellFactory(new Callback<TreeView<Long>, TreeCell<Long>>() {
+            @Override
+            public TreeCell<Long> call(TreeView<Long> param) {
+                return new TreeCell<Long>() {
+                    @Override
+                    protected void updateItem(Long item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (!empty) {
+                            setText(item != null ? String.valueOf(item) : "");
+                        } else{
+                            setText(null);
+                        }
+                    }
+                };
+            }
+        });
+
+        StageLoader sl = new StageLoader(tree);
+
+        tree.getSelectionModel().select(0);
+        tree.getRoot().setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        sl.dispose();
+    }
+
+    private static class NumberTreeItem extends TreeItem<Long>{
+        private boolean loaded = false;
+
+        private NumberTreeItem(long value) {
+            super(value);
+        }
+
+        @Override public boolean isLeaf() {
+            return false;
+        }
+
+        @Override public ObservableList<TreeItem<Long>> getChildren() {
+            if(!loaded){
+                final ObservableList<TreeItem<Long>> children =  super.getChildren();
+                for (int i = 0; i < 10; i++) {
+                    children.add(new NumberTreeItem(10 * getValue() + i));
+                }
+                loaded = true;
+            }
+            return super.getChildren();
+        }
+    }
 }

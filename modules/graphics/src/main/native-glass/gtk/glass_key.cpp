@@ -25,6 +25,7 @@
 #include "glass_key.h"
 #include "glass_gtkcompat.h"
 #include <com_sun_glass_events_KeyEvent.h>
+#include <com_sun_glass_ui_gtk_GtkApplication.h>
 
 #include <glib.h>
 #include <gdk/gdk.h>
@@ -289,12 +290,12 @@ jint glass_key_to_modifier(jint glassKey) {
 extern "C" {
 
 /*
- * Class:     com_sun_glass_events_KeyEvent
+ * Class:     com_sun_glass_ui_gtk_GtkApplication
  * Method:    _getKeyCodeForChar
  * Signature: (C)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar
-  (JNIEnv *env, jclass clazz, jchar character)
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForChar
+  (JNIEnv *env, jobject jApplication, jchar character)
 {
     gunichar *ucs_char = g_utf16_to_ucs4(&character, 1, NULL, NULL, NULL);
     if (ucs_char == NULL) {

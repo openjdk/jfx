@@ -173,12 +173,11 @@ final public class StyleManager {
 
         if (root == null) return null;
 
-        CacheContainer container = cacheContainerMap.computeIfAbsent(
-                root,
-                (key) -> {
-                    return new CacheContainer();
-                }
-        );
+        CacheContainer container = cacheContainerMap.get(root);
+        if (container == null) {
+            container = new CacheContainer();
+            cacheContainerMap.put(root, container);
+        }
 
         return container;
 

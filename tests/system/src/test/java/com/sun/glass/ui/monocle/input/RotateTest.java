@@ -133,9 +133,10 @@ public class RotateTest extends ParameterizedTestBase {
 
         if (Math.abs(angleStep) >= getRotateThreshold()) {
             TestLog.waitForLogContaining("Rotation started, angle: " + ZERO_ANGLE
-                + ", total angle: " + ZERO_ANGLE);
+                + ", total angle: " + ZERO_ANGLE + ", inertia value: false");
             TestLog.waitForLogContaining("Rotation, angle: " + angleStep
-                + ", total angle: " + totalAngle);
+                + ", total angle: " + totalAngle
+                + ", inertia value: false");
         } else {
             Assert.assertEquals(0, TestLog.countLogContaining("Rotation started"));
             Assert.assertEquals(0, TestLog.countLogContaining("Rotation, angle"));
@@ -157,18 +158,21 @@ public class RotateTest extends ParameterizedTestBase {
                     if(Math.abs(totalAngle) >= getRotateThreshold()) {
                         if (!passedTheThreshold) {
                             expectedLog = "Rotation, angle: " + totalAngle
-                                + ", total angle: " + totalAngle;
+                                + ", total angle: " + totalAngle
+                                + ", inertia value: false";
                             passedTheThreshold = true;
                         } else {
                             expectedLog = "Rotation, angle: " + angleStep
-                                + ", total angle: " + totalAngle;
+                                + ", total angle: " + totalAngle
+                                + ", inertia value: false";
                         }
                     } else {
                         expectedLog = "sync";
                     }
                 } else {
                     expectedLog = "Rotation, angle: " + angleStep
-                            + ", total angle: " + totalAngle;
+                            + ", total angle: " + totalAngle
+                            + ", inertia value: false";
                 }
                 TestLog.waitForLogContaining(expectedLog);
             }
@@ -181,14 +185,19 @@ public class RotateTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", newX1, newY1);
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
         if (Math.abs(totalAngle) >= getRotateThreshold()) {
-            TestLog.waitForLogContaining("Rotation finished, angle: "
-                    + ZERO_ANGLE + ", total angle: " + totalAngle);
-            Assert.assertEquals(1, TestLog.countLogContaining("Rotation " +
-                    "finished, "
-                    + "angle: " + ZERO_ANGLE + ", total angle: " + totalAngle));
+            TestLog.waitForLogContaining("Rotation finished, angle: " + ZERO_ANGLE
+                    + ", total angle: " + totalAngle + ", inertia value: false");
+            Assert.assertEquals(1, TestLog.countLogContaining("Rotation "
+                    + "finished, " + "angle: " + ZERO_ANGLE
+                    + ", total angle: " + totalAngle
+                    + ", inertia value: false"));
         } else {
             Assert.assertEquals(0, TestLog.countLogContaining("Rotation finished, "
-                    + "angle: " + ZERO_ANGLE + ", total angle: " + totalAngle));
+                    + "angle: " + ZERO_ANGLE + ", total angle: " + totalAngle
+                    + ", inertia value: false"));
+        }
+        if (TestLog.countLogContaining("Rotation finished") > 0) {
+            TestLog.waitForLogContaining("Rotation", "inertia value: true");
         }
     }
 

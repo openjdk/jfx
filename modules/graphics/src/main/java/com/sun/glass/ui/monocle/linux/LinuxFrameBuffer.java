@@ -49,7 +49,7 @@ public class LinuxFrameBuffer {
     public LinuxFrameBuffer(String devNode) throws IOException {
         system = LinuxSystem.getLinuxSystem();
         FBIO_WAITFORVSYNC = system.IOW('F', 0x20, 4);
-        fd = system.open("/dev/fb0", LinuxSystem.O_RDWR);
+        fd = system.open(devNode, LinuxSystem.O_RDWR);
         if (fd == -1) {
             throw new IOException(system.getErrorMessage());
         }

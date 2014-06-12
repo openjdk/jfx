@@ -279,4 +279,7 @@ public final class IosApplication extends Application {
     public boolean hasMultiTouch() {
         return true;
     }   
+
+    @Override
+    protected native int _getKeyCodeForChar(char c);
 }

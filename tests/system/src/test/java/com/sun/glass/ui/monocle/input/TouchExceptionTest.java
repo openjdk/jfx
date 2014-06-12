@@ -48,9 +48,7 @@ public class TouchExceptionTest extends ParameterizedTestBase {
     public void testRuntimeException() throws Exception {
         Platform.runLater(
                 () -> Thread.currentThread()
-                        .setUncaughtExceptionHandler((t, e) -> {
-                            TestLog.log(e.toString());
-                        })
+                        .setUncaughtExceptionHandler((t, e) -> TestLog.log(e.toString()))
         );
         TestApplication.getStage().getScene().addEventHandler(
                 InputEvent.ANY,

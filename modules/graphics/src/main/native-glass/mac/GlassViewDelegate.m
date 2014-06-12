@@ -578,6 +578,10 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                     modifiers, isPopupTrigger, isSynthesized);
         }
         GLASS_CHECK_EXCEPTION(env);
+
+        if (isPopupTrigger) {
+            [self sendJavaMenuEvent:theEvent];
+        }
     }
 }
 

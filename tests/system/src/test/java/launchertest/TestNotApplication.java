@@ -37,10 +37,8 @@ public class TestNotApplication {
 
     public static void main(String[] args) {
         try {
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    // do nothing
-                }
+            Platform.runLater(() -> {
+                // do nothing
             });
             System.exit(ERROR_TOOLKIT_IS_RUNNING);
         } catch (IllegalStateException ex) {

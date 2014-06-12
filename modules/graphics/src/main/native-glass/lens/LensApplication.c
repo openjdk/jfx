@@ -789,12 +789,12 @@ void glass_application_notifyScreenSettingsChanged(JNIEnv *env) {
 
 
 /*
- * Class:     com_sun_glass_events_KeyEvent
+ * Class:     com_sun_glass_ui_lens_LensApplication
  * Method:    _getKeyCodeForChar
  * Signature: (C)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar
-(JNIEnv *env, jclass keyeventClass, jchar c) {
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_lens_LensApplication__1getKeyCodeForChar
+(JNIEnv *env, jobject jApplication, jchar c) {
     GLASS_LOG_FINE("Java key code requested for c='%c' (0x%04x)",
                    (char) c, (int) c);
     return glass_inputEvents_getJavaKeyCodeFromJChar(c);

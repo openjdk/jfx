@@ -152,15 +152,13 @@ public class SingleExitCommon {
         final Thread testThread = Thread.currentThread();
 
         // Start the Application
-        new Thread(new Runnable() {
-            @Override public void run() {
-                try {
-                    Application.launch(MyApp.class, (String[])null);
-                    latch.countDown();
-                } catch (Throwable th) {
-                    testError[0] = th;
-                    testThread.interrupt();
-                }
+        new Thread(() -> {
+            try {
+                Application.launch(MyApp.class, (String[])null);
+                latch.countDown();
+            } catch (Throwable th) {
+                testError[0] = th;
+                testThread.interrupt();
             }
         }).start();
 
@@ -174,17 +172,15 @@ public class SingleExitCommon {
             }
 
             final CountDownLatch rDone = new CountDownLatch(1);
-            Platform.runLater(new Runnable() {
-                public void run() {
-                    try {
-                        if (throwableType == ThrowableType.EXCEPTION) {
-                            throw new RuntimeException("this exception is expected");
-                        } else if (throwableType == ThrowableType.ERROR) {
-                            throw new InternalError("this error is expected");
-                        }
-                    } finally {
-                        rDone.countDown();
+            Platform.runLater(() -> {
+                try {
+                    if (throwableType == ThrowableType.EXCEPTION) {
+                        throw new RuntimeException("this exception is expected");
+                    } else if (throwableType == ThrowableType.ERROR) {
+                        throw new InternalError("this error is expected");
                     }
+                } finally {
+                    rDone.countDown();
                 }
             });
 
@@ -195,11 +191,7 @@ public class SingleExitCommon {
 
             if (stageShown) {
                 Thread.sleep(SLEEP_TIME);
-                Util.runAndWait(new Runnable() {
-                    public void run() {
-                        myApp.primaryStage.hide();
-                    }
-                });
+                Util.runAndWait(myApp.primaryStage::hide);
             }
 
             final CountDownLatch exitLatch = PlatformImpl.test_getPlatformExitLatch();

@@ -56,11 +56,7 @@ public class TestApp2 extends Application {
             throw new NullPointerException("TestApp2.init: myCcl is null");
         }
 
-        PlatformImpl.runAndWait(new Runnable() {
-            public void run() {
-                Thread.currentThread().setContextClassLoader(myCcl);
-            }
-        });
+        PlatformImpl.runAndWait(() -> Thread.currentThread().setContextClassLoader(myCcl));
     }
 
     @Override public void start(final Stage stage) throws Exception {

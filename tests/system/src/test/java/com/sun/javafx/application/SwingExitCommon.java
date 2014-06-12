@@ -81,13 +81,11 @@ public class SwingExitCommon {
         frame.getContentPane().add(fxPanel, BorderLayout.CENTER);
 
         // Create scene and add it to the panel
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                Group root = new Group();
-                Scene scene = new Scene(root);
-                scene.setFill(Color.LIGHTYELLOW);
-                fxPanel.setScene(scene);
-            }
+        Util.runAndWait(() -> {
+            Group root = new Group();
+            Scene scene = new Scene(root);
+            scene.setFill(Color.LIGHTYELLOW);
+            fxPanel.setScene(scene);
         });
 
         // show frame
@@ -108,14 +106,12 @@ public class SwingExitCommon {
         final Thread testThread = Thread.currentThread();
 
         // Start the Application
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    init();
-                } catch (Throwable th) {
-                    testError[0] = th;
-                    testThread.interrupt();
-                }
+        SwingUtilities.invokeLater(() -> {
+            try {
+                init();
+            } catch (Throwable th) {
+                testError[0] = th;
+                testThread.interrupt();
             }
         });
 
@@ -126,11 +122,9 @@ public class SwingExitCommon {
 
             Thread.sleep(SLEEP_TIME);
             try {
-                SwingUtilities.invokeAndWait(new Runnable() {
-                    public void run() {
-                        frame.setVisible(false);
-                        frame.dispose();
-                    }
+                SwingUtilities.invokeAndWait(() -> {
+                    frame.setVisible(false);
+                    frame.dispose();
                 });
             }
             catch (InvocationTargetException ex) {

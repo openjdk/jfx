@@ -204,10 +204,31 @@ public final class MonocleWindow extends Window {
 
     @Override
     protected boolean _minimize(long nativeWindowPointer, boolean minimize) {
-        if (minimize) {
+        int x = getX();
+        int y = getY();
+        int width = getWidth();
+        int height = getHeight();
+        if (minimize && !(state == STATE_MINIMIZED)) {
             state = STATE_MINIMIZED;
-        } else {
+            cachedX = x;
+            cachedY = y;
+            cachedW = width;
+            cachedH = height;
+            // remove the window from the list of visible windows in the
+            // superclass
+            remove(this);
+            notifyResize(WindowEvent.MINIMIZE, width, height);
+
+        } else if (!minimize && state == STATE_MINIMIZED) {
             state = STATE_NORMAL;
+            x = cachedX;
+            y = cachedY;
+            width = cachedW;
+            height = cachedH;
+            // this call will add the window back into the visible list of
+            // windows in the superclass
+            add(this);
+            notifyResize(WindowEvent.RESTORE, width, height);
         }
         return true;
     }
@@ -403,6 +424,7 @@ public final class MonocleWindow extends Window {
     @Override
     protected void notifyDestroy() {
         super.notifyDestroy();
+        MonocleWindowManager.getInstance().repaintAll();
     }
 
     @Override

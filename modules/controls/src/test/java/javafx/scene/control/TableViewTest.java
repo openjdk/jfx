@@ -3040,7 +3040,7 @@ public class TableViewTest {
         VirtualFlow flow = VirtualFlowTestUtils.getVirtualFlow(tableView);
         flow.adjustPixels(1000 * 24);
 
-        assertEquals(cellCountAtStart + 1, rt36556_instanceCount);
+        assertEquals(cellCountAtStart, rt36556_instanceCount);
 
         sl.dispose();
     }
@@ -3579,6 +3579,95 @@ public class TableViewTest {
 
         final int incrementedValue = (Integer) cell.getItem();
         assertEquals(initialValue + 1, incrementedValue);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37429() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        // table columns - 1 column; name
+        TableColumn<String, String> nameColumn = new TableColumn<>("name");
+        nameColumn.setCellValueFactory(param -> new ReadOnlyObjectWrapper(param.getValue()));
+        nameColumn.setPrefWidth(200);
+
+        // table
+        TableView<String> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList("one", "two", "three", "four", "five"));
+        table.getColumns().addAll(nameColumn);
+
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<String>) c -> {
+            while (c.next()) {
+                if(c.wasRemoved()) {
+                    // The removed list of items must be iterated or the AIOOBE will
+                    // not be thrown when getAddedSubList is called.
+                    c.getRemoved().forEach(item -> {});
+                }
+
+                if (c.wasAdded()) {
+                    c.getAddedSubList();
+                }
+            }
+        });
+
+        StageLoader sl = new StageLoader(table);
+
+        table.getSelectionModel().select(0);
+        table.getSortOrder().add(nameColumn);
+
+        sl.dispose();
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
+    private int rt_37429_items_change_count = 0;
+    private int rt_37429_cells_change_count = 0;
+    @Test public void test_rt_37429_sortEventsShouldNotFireExtraChangeEvents() {
+        // table columns - 1 column; name
+        TableColumn<String, String> nameColumn = new TableColumn<>("name");
+        nameColumn.setCellValueFactory(param -> new ReadOnlyObjectWrapper(param.getValue()));
+        nameColumn.setPrefWidth(200);
+
+        // table
+        TableView<String> table = new TableView<>();
+        table.setItems(FXCollections.observableArrayList("a", "c", "b"));
+        table.getColumns().addAll(nameColumn);
+
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener<String>) c -> {
+            while (c.next()) {
+                rt_37429_items_change_count++;
+            }
+        });
+        table.getSelectionModel().getSelectedCells().addListener((ListChangeListener<TablePosition>) c -> {
+            while (c.next()) {
+                rt_37429_cells_change_count++;
+            }
+        });
+
+        StageLoader sl = new StageLoader(table);
+
+        assertEquals(0, rt_37429_items_change_count);
+        assertEquals(0, rt_37429_cells_change_count);
+
+        table.getSelectionModel().select(0);
+        assertEquals(1, rt_37429_items_change_count);
+        assertEquals(1, rt_37429_cells_change_count);
+
+        table.getSortOrder().add(nameColumn);
+        assertEquals(1, rt_37429_items_change_count);
+        assertEquals(1, rt_37429_cells_change_count);
+
+        nameColumn.setSortType(TableColumn.SortType.DESCENDING);
+        assertEquals(1, rt_37429_items_change_count);
+        assertEquals(2, rt_37429_cells_change_count);
+
+        nameColumn.setSortType(TableColumn.SortType.ASCENDING);
+        assertEquals(1, rt_37429_items_change_count);
+        assertEquals(3, rt_37429_cells_change_count);
 
         sl.dispose();
     }

@@ -143,7 +143,7 @@ public class LinuxRpmBundlerTest {
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(LICENSE_TYPE.getID(), "GPL2 + Classpath Exception");
@@ -213,7 +213,7 @@ public class LinuxRpmBundlerTest {
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
@@ -281,7 +281,7 @@ public class LinuxRpmBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloService");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(MAIN_JAR_CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
 
         bundleParams.put(DESCRIPTION.getID(), "Does a random heart beat every 30 seconds or so to a log file in tmp");
         bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
