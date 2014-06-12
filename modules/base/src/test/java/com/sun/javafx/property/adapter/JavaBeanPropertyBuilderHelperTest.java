@@ -28,8 +28,10 @@ package com.sun.javafx.property.adapter;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
@@ -200,6 +202,21 @@ public class JavaBeanPropertyBuilderHelperTest {
         helperPOJOBeanWithNonStandardNames.getDescriptor();
     }
 
+    @Test
+    public void testReusabilityWhenChangeOfBeanClass() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        Object x = new Object();
+
+        PropertyDescriptor descriptor = helperPOJOBean.getDescriptor();
+        assertEquals(x, descriptor.getGetter().invoke(new POJOBean(x)));
+        descriptor.getSetter().invoke(new POJOBean(x), new Object());
+
+        helperPOJOBean.beanClass(POJOBean2.class);
+
+        descriptor = helperPOJOBean.getDescriptor();
+        assertEquals(x, descriptor.getGetter().invoke(new POJOBean2(x)));
+        descriptor.getSetter().invoke(new POJOBean2(x), new Object());
+    }
+
     public static class POJOBean {
         private Object x;
 
@@ -207,6 +224,16 @@ public class JavaBeanPropertyBuilderHelperTest {
 
         public Object getX() {return x;}
         public void setX(Object x) {this.x = x;}
+    }
+
+    public static class POJOBean2 {
+        private Object x;
+
+        public POJOBean2(Object x) {this.x = x;}
+
+        public Object getX() {return x;}
+        public void setX(Object x) {this.x = x;}
+
     }
 
     public static class POJOBeanWithNonStandardNames {
