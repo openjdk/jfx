@@ -27,10 +27,8 @@ package javafxports.android;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.content.res.AssetManager;
 import android.util.Log;
 import dalvik.system.DexClassLoader;
-import dalvik.system.PathClassLoader;
 import java.io.BufferedInputStream;
 
 import java.io.File;
@@ -65,7 +63,7 @@ public class DalvikLauncher implements Launcher {
         this.activity = a;
         this.preloaderClassName = preloaderClassName;
         this.mainClassName = mainClassName;
-        
+
         InputStream is = null;
         Properties userProperties = new Properties();
         try {
@@ -81,10 +79,15 @@ public class DalvikLauncher implements Launcher {
             System.getProperties().list(System.out);
 
         } catch (IOException e) {
+            Log.v(TAG, "Can't load properties");
             throw new RuntimeException("Can't load properties", e);
         } finally {
-            try { is.close(); } catch(Exception e) {}
-            
+            try {
+                is.close();
+            } catch (Exception e) {
+                 Log.v(TAG, "Exception closing properties InputStream");
+            }
+
         }
 
         Log.v(TAG, "Launch JavaFX application on dalvik vm.");
@@ -140,9 +143,9 @@ public class DalvikLauncher implements Launcher {
             Log.e(TAG, "Launch failed with exception.", e);
         }
     }
-    
+
     private static ClassLoader applicationClassLoader;
-    
+
     private ClassLoader getApplicationClassLoader() {
         if (applicationClassLoader == null) {
             // Internal storage where the DexClassLoader writes the optimized dex file to.
@@ -150,11 +153,10 @@ public class DalvikLauncher implements Launcher {
 
             // Initialize the class loader with the secondary dex file.
             // This includes the javafx, compatibility and application classes
-            
             ClassLoader cl = new DexClassLoader(FXActivity.dexClassPath,
-                        optimizedDexOutputPath.getAbsolutePath(),
-                        FXActivity.getInstance().getApplicationInfo().nativeLibraryDir,
-                        activity.getClassLoader());            
+                    optimizedDexOutputPath.getAbsolutePath(),
+                    FXActivity.getInstance().getApplicationInfo().nativeLibraryDir,
+                    activity.getClassLoader());
             Thread.currentThread().setContextClassLoader(cl);
             applicationClassLoader = cl;
             Log.v(TAG, "Application classloader initialized: " + applicationClassLoader);
@@ -171,7 +173,7 @@ public class DalvikLauncher implements Launcher {
         FXActivity.getInstance().setOnSurfaceRedrawNeededNativeMethod(dalvikInputClass.getMethod("onSurfaceRedrawNeededNative"));
         FXActivity.getInstance().setOnConfigurationChangedNativeMethod(dalvikInputClass.getMethod("onConfigurationChangedNative", int.class));
     }
-    
+
     private Class resolveApplicationClass()
             throws PackageManager.NameNotFoundException, ClassNotFoundException {
 

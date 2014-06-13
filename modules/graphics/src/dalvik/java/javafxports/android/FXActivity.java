@@ -68,7 +68,8 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
         SurfaceHolder.Callback2 {
 
     private static final String TAG = "FXActivity";
-
+    private static final String JFX_BUILD = "8udev";
+    
     private static final String ACTIVITY_LIB = "activity";
     private static final String META_DATA_LAUNCHER_CLASS = "launcher.class";
     private static final String DEFAULT_LAUNCHER_CLASS = "javafxports.android.DalvikLauncher";
@@ -133,7 +134,7 @@ public class FXActivity extends Activity implements SurfaceHolder.Callback,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Log.v(TAG, "onCreate FXActivity");
+        Log.v(TAG, "onCreate called, using "+JFX_BUILD);
         if (launcher != null) {
             Log.v(TAG, "JavaFX application is already running");
             return;
