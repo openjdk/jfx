@@ -1132,8 +1132,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             super.requestLayout();
         }
 
+        /**
+         * This method should be treated as final and should not be overridden by any subclasses of CSSBridge.
+         */
         @Override
-        public final Styleable getStyleableParent() {
+        public Styleable getStyleableParent() {
             return PopupControl.this.getStyleableParent();
         }
 
