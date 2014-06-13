@@ -57,6 +57,8 @@ import static org.junit.Assert.*;
 
 public class MacAppStoreBundlerTest {
 
+    static final int MIN_SIZE=0x100000; // 1MiB
+
     static File tmpBase;
     static File workDir;
     static File appResourcesDir;
@@ -184,6 +186,7 @@ public class MacAppStoreBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+        assertTrue(result.length() > MIN_SIZE);
     }
 
     @Test
@@ -250,5 +253,6 @@ public class MacAppStoreBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+        assertTrue(result.length() > MIN_SIZE);
     }
 }

@@ -55,6 +55,8 @@ import static org.junit.Assert.*;
 
 public class MacDmgBundlerTest {
 
+    static final int MIN_SIZE=0x100000; // 1MiB
+
     static File tmpBase;
     static File workDir;
     static File appResourcesDir;
@@ -162,6 +164,7 @@ public class MacDmgBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+        assertTrue(result.length() > MIN_SIZE);
     }
 
     /**
@@ -190,6 +193,7 @@ public class MacDmgBundlerTest {
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
+        assertTrue(output.length() > MIN_SIZE);
     }
 
     /**
@@ -236,6 +240,7 @@ public class MacDmgBundlerTest {
         System.err.println(".dmg at - " + dmgOutput);
         assertNotNull(dmgOutput);
         assertTrue(dmgOutput.exists());
+        assertTrue(dmgOutput.length() > MIN_SIZE);
     }
 
     @Test(expected = ConfigException.class)
@@ -345,5 +350,6 @@ public class MacDmgBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+        assertTrue(result.length() > MIN_SIZE);
     }
 }

@@ -51,10 +51,13 @@ import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.mac.MacAppBundler.*;
+import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.MAC_APP_IMAGE;
 import static com.oracle.tools.packager.mac.MacPkgBundler.DEVELOPER_ID_INSTALLER_SIGNING_KEY;
 import static org.junit.Assert.*;
 
 public class MacPkgBundlerTest {
+
+    static final int MIN_SIZE=0x100000; // 1MiB
 
     static File tmpBase;
     static File workDir;
@@ -162,6 +165,7 @@ public class MacPkgBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+        assertTrue(result.length() > MIN_SIZE);
     }
 
     /**
@@ -193,6 +197,7 @@ public class MacPkgBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+        assertTrue(result.length() > MIN_SIZE);
 
         // mark it as though it's been downloaded
         ProcessBuilder pb = new ProcessBuilder(
@@ -225,6 +230,84 @@ public class MacPkgBundlerTest {
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
+        assertTrue(output.length() > MIN_SIZE);
+    }
+
+    /**
+     * Create a PKG with an external app rather than a self-created one.
+     */
+    @Test
+    public void externalApp() throws IOException, ConfigException, UnsupportedPlatformException {
+        // only run with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        // first create the external app
+        Bundler appBundler = new MacAppBundler();
+
+        Map<String, Object> appBundleParams = new HashMap<>();
+
+        appBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        appBundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        appBundleParams.put(APP_NAME.getID(), "External APP PKG Test");
+        appBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
+        appBundleParams.put(VERBOSE.getID(), true);
+
+        appBundler.validate(appBundleParams);
+        File appOutput = appBundler.execute(appBundleParams, new File(workDir, "PKGExternalApp1"));
+        System.err.println("App at - " + appOutput);
+        assertNotNull(appOutput);
+        assertTrue(appOutput.exists());
+
+        // now create the PKG referencing this external app
+        Bundler pkgBundler = new MacPkgBundler();
+
+        Map<String, Object> pkgBundleParams = new HashMap<>();
+
+        pkgBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        pkgBundleParams.put(MAC_APP_IMAGE.getID(), appOutput);
+        pkgBundleParams.put(APP_NAME.getID(), "External APP PKG Test");
+        pkgBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
+
+        pkgBundleParams.put(VERBOSE.getID(), true);
+
+        pkgBundler.validate(pkgBundleParams);
+        File pkgOutput = pkgBundler.execute(pkgBundleParams, new File(workDir, "PKGExternalApp2"));
+        System.err.println(".pkg at - " + pkgOutput);
+        assertNotNull(pkgOutput);
+        assertTrue(pkgOutput.exists());
+        assertTrue(pkgOutput.length() > MIN_SIZE);
+    }
+
+    @Test(expected = ConfigException.class)
+    public void externanNoAppName() throws ConfigException, UnsupportedPlatformException {
+        Bundler pkgBundler = new MacPkgBundler();
+
+        Map<String, Object> pkgBundleParams = new HashMap<>();
+
+        pkgBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        pkgBundleParams.put(MAC_APP_IMAGE.getID(), ".");
+        pkgBundleParams.put(IDENTIFIER.getID(), "net.example.bogus");
+        pkgBundleParams.put(VERBOSE.getID(), true);
+
+        pkgBundler.validate(pkgBundleParams);
+    }
+
+    @Test(expected = ConfigException.class)
+    public void externanNoID() throws ConfigException, UnsupportedPlatformException {
+        Bundler pkgBundler = new MacPkgBundler();
+
+        Map<String, Object> pkgBundleParams = new HashMap<>();
+
+        pkgBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        pkgBundleParams.put(MAC_APP_IMAGE.getID(), ".");
+        pkgBundleParams.put(APP_NAME.getID(), "Bogus App");
+        pkgBundleParams.put(VERBOSE.getID(), true);
+
+        pkgBundler.validate(pkgBundleParams);
     }
 
     @Test(expected = ConfigException.class)
@@ -309,5 +392,6 @@ public class MacPkgBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+        assertTrue(result.length() > MIN_SIZE);
     }
 }

@@ -121,30 +121,28 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outdir.getAbsolutePath()));
         }
 
-        File appImageDir = APP_IMAGE_BUILD_ROOT.fetchFrom(p);
-        File daemonImageDir = DAEMON_IMAGE_BUILD_ROOT.fetchFrom(p);
 
         try {
-            appImageDir.mkdirs();
-            prepareAppBundle(p);
+            File appImageDir = prepareAppBundle(p);
 
             if (SERVICE_HINT.fetchFrom(p)) {
+                File daemonImageDir = DAEMON_IMAGE_BUILD_ROOT.fetchFrom(p);
                 daemonImageDir.mkdirs();
                 prepareDaemonBundle(p);
             }
 
-            return createPKG(p, outdir);
+            return createPKG(p, outdir, appImageDir);
         } catch (Exception ex) {
             return null;
         }
     }
 
     private File getPackages_AppPackage(Map<String, ? super Object> params) {
-        return new File(PACKAGES_ROOT.fetchFrom(params), APP_NAME.fetchFrom(params) + "-app.pkg");
+        return new File(PACKAGES_ROOT.fetchFrom(params), APP_FS_NAME.fetchFrom(params) + "-app.pkg");
     }
 
     private File getPackages_DaemonPackage(Map<String, ? super Object> params) {
-        return new File(PACKAGES_ROOT.fetchFrom(params), APP_NAME.fetchFrom(params) + "-daemon.pkg");
+        return new File(PACKAGES_ROOT.fetchFrom(params), APP_FS_NAME.fetchFrom(params) + "-daemon.pkg");
     }
 
     private void cleanupPackagesFiles(Map<String, ? super Object> params) {
@@ -315,16 +313,9 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
         prepareDistributionXMLFile(params);
     }
 
-    private File createPKG(Map<String, ? super Object> params, File outdir) {
+    private File createPKG(Map<String, ? super Object> params, File outdir, File appLocation) {
         //generic find attempt
         try {
-            String appLocation =
-                    APP_IMAGE_BUILD_ROOT.fetchFrom(params) + "/" + APP_NAME.fetchFrom(params) + ".app";
-            File predefinedImage = getPredefinedImage(params);
-            if (predefinedImage != null) {
-                appLocation = predefinedImage.getAbsolutePath();
-            }
-
             String daemonLocation = DAEMON_IMAGE_BUILD_ROOT.fetchFrom(params) + "/" + APP_NAME.fetchFrom(params) + ".daemon";
 
             File appPKG = getPackages_AppPackage(params);
@@ -333,7 +324,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             // build application package
             ProcessBuilder pb = new ProcessBuilder("pkgbuild",
                     "--component",
-                    appLocation,
+                    appLocation.toString(),
                     "--install-location",
                     "/Applications",
                     appPKG.getAbsolutePath());
@@ -449,7 +440,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
 
             //run basic validation to ensure requirements are met
             //we are not interested in return code, only possible exception
-            APP_BUNDLER.fetchFrom(params).doValidate(params);
+            validateAppImageAndBundeler(params);
 
             // validate license file, if used, exists in the proper place
             if (params.containsKey(LICENSE_FILE.getID())) {
