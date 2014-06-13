@@ -318,11 +318,11 @@ project(":graphics") {
                     from(
                          "modules/graphics/build/libs/activity/dalvik/${props.library(props.activity.lib)}"
                     )                    
-                    into ("build/dalvik-sdk/dalvik/${props.libDest}")
+                    into ("build/dalvik-sdk/rt/${props.libDest}")
                 }
                 copy {
                     from ("modules/graphics/build/libs/${props.jfxdvklib}")
-                    into ("build/dalvik-sdk/dalvik/lib")
+                    into ("build/dalvik-sdk/rt/lib/ext")
                 }
 /*
                 copy {
@@ -333,7 +333,7 @@ project(":graphics") {
                 if (compileNativeText) {
                     copy {
                         from ("modules/graphics/build/libs/fontNativeFreetype/dalvik")
-                        into ("build/dalvik-sdk/rt/$DALVIK.libDest")
+                        into ("build/dalvik-sdk/rt/${props.libDest}")
                     }
                 }
             }
@@ -656,3 +656,4 @@ DALVIK.includeEGL = true
 DALVIK.includeGTK = true
 DALVIK.includeLens = true
 ext.IS_COMPILE_PANGO = false
+ext.IS_COMPILE_JFR = false
