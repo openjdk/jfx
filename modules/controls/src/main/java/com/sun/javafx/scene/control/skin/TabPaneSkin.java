@@ -172,7 +172,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private Rectangle clipRect;
     private Rectangle tabHeaderAreaClipRect;
     private Tab selectedTab;
-    private Tab previousSelectedTab;
     private boolean isSelectingTab;
 
     public TabPaneSkin(TabPane tabPane) {
@@ -202,7 +201,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         registerChangeListener(tabPane.widthProperty(), "WIDTH");
         registerChangeListener(tabPane.heightProperty(), "HEIGHT");
 
-        previousSelectedTab = null;        
         selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
         // Could not find the selected tab try and get the selected tab using the selected index
         if (selectedTab == null && getSkinnable().getSelectionModel().getSelectedIndex() != -1) {
@@ -232,7 +230,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         super.handleControlPropertyChanged(property);
         if ("SELECTED_TAB".equals(property)) {            
             isSelectingTab = true;
-            previousSelectedTab = selectedTab;
             selectedTab = getSkinnable().getSelectionModel().getSelectedItem();
             getSkinnable().requestLayout();
         } else if ("SIDE".equals(property)) {
