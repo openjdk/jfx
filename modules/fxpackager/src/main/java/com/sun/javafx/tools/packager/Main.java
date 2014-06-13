@@ -159,6 +159,7 @@ public class Main {
     }
 
 
+    @SuppressWarnings("deprecation")
     public static void main(String... args) throws Exception {
         if (args.length == 0 || args.length == 1 && args[0].equals("-help")) {
             System.out.println(help);
@@ -311,7 +312,9 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-templateOutFilename")) {
                             templateOutFile = new File(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-appId")) {
-                            deployParams.setAppId(nextArg(args, i++));
+                            String appIdArg = nextArg(args, i++);
+                            deployParams.setAppId(appIdArg);
+                            deployParams.setId(appIdArg);
                         } else if (arg.equalsIgnoreCase("-verbose") || arg.equalsIgnoreCase("-v")) {
                             deployParams.setVerbose(true);
                             verbose = true;

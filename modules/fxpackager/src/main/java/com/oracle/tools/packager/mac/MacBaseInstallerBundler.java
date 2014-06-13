@@ -175,6 +175,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         File applicationImage = null;
         if (MAC_APP_IMAGE.fetchFrom(p) != null) {
             applicationImage = MAC_APP_IMAGE.fetchFrom(p);
+            Log.debug("Using App Image from " + applicationImage);
             if (!applicationImage.exists()) {
                 throw new RuntimeException(
                         MessageFormat.format(I18N.getString("message.app-image-dir-does-not-exist"), MAC_APP_IMAGE.getID(), applicationImage.toString()));
@@ -191,14 +192,25 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                         MessageFormat.format(I18N.getString("message.app-image-dir-does-not-exist"), MAC_APP_IMAGE.getID(), applicationImage.toString()),
                         MessageFormat.format(I18N.getString("message.app-image-dir-does-not-exist.advice"), MAC_APP_IMAGE.getID()));
             }
+            if (APP_NAME.fetchFrom(params) == null) {
+                throw new ConfigException(
+                        I18N.getString("message.app-image-requires-app-name"),
+                        I18N.getString("message.app-image-requires-app-name.advice"));
+            }
+            if (IDENTIFIER.fetchFrom(params) == null) {
+                throw new ConfigException(
+                        I18N.getString("message.app-image-requires-identifier"),
+                        I18N.getString("message.app-image-requires-identifier.advice"));
+            }
         } else {
             APP_BUNDLER.fetchFrom(params).doValidate(params);
         }
     }
 
     protected File prepareAppBundle(Map<String, ? super Object> p) {
-        if (getPredefinedImage(p) != null) {
-            return null;
+        File predefinedImage = getPredefinedImage(p);
+        if (predefinedImage != null) {
+            return predefinedImage;
         }
 
         File appImageRoot = APP_IMAGE_BUILD_ROOT.fetchFrom(p);

@@ -94,6 +94,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                     Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), CONFIG_ROOT.fetchFrom(params).getAbsolutePath()));
                 }
             } catch (FileNotFoundException ex) {
+                Log.debug(ex);
                 //noinspection ReturnInsideFinallyBlock
                 return null;
             }
