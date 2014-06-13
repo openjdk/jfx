@@ -900,14 +900,16 @@ final class LensApplication extends Application {
     @Override
     protected void runLoop(Runnable launchable) {
         _invokeLater(launchable);
-        Thread toolkitThread = new Thread(
+        long stackSize = AccessController.doPrivileged(
+                (PrivilegedAction<Long>) () -> Long.getLong("glass.lens.stackSize", 0));
+        Thread toolkitThread = new Thread(new ThreadGroup("Events"),
                 () -> {
                     if (!_initialize()) {
                         LensLogger.getLogger().severe("Display failed initialization");
                         throw new RuntimeException("Display failed initialization");
                     }
                     _runLoop();
-                }, "Lens Event Thread");
+                }, "Lens Event Thread", stackSize);
         setEventThread(toolkitThread);
         toolkitThread.start();
         Runtime.getRuntime().addShutdownHook(new Thread() {
