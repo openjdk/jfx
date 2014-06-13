@@ -1137,6 +1137,13 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             return PopupControl.this.getStyleableParent();
         }
 
+        /**
+         * @treatAsPrivate implementation detail
+         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+         */
+        @Deprecated
+        protected void setSkinClassName(String skinClassName) { /* no-op - retain for binary compatibility */ }
+
         @Override
         public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
             return PopupControl.this.getCssMetaData();
