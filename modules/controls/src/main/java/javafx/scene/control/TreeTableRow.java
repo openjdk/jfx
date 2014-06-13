@@ -41,9 +41,9 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Action;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 
@@ -523,82 +523,82 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        final TreeItem<T> treeItem = getTreeItem();
-        final TreeTableView<T> treeTableView = getTreeTableView();
-        final List<TreeTableColumn<T,?>> visibleColumns = treeTableView.getVisibleLeafColumns();
-
-        TreeTableColumn<T,?> treeColumn = treeTableView.getTreeColumn();
-        treeColumn = treeColumn != null ? treeColumn :
-                    !visibleColumns.isEmpty() ? visibleColumns.get(0) :
-                    null;
-
-        switch (attribute) {
-            case ROLE: return Role.TREE_TABLE_ITEM;
-            case TREE_ITEM_PARENT: {
-                if (treeItem == null) return null;
-                TreeItem<T> parent = treeItem.getParent();
-                if (parent == null) return null;
-                int parentIndex = treeTableView.getRow(parent);
-                return treeTableView.accGetAttribute(Attribute.ROW_AT_INDEX, parentIndex);
-            }
-            case TREE_ITEM_COUNT: {
-                return treeItem == null  ? 0 : treeItem.getChildren().size();
-            }
-            case TREE_ITEM_AT_INDEX:
-                if (treeItem == null) return null;
-                int index = (Integer)parameters[0];
-                if (index >= treeItem.getChildren().size()) return null;
-                TreeItem<T> child = treeItem.getChildren().get(index);
-                if (child == null) return null;
-                int childIndex = treeTableView.getRow(child);
-                return treeTableView.accGetAttribute(Attribute.ROW_AT_INDEX, childIndex);
-            case TITLE: {
-                if (treeItem == null) return "";
-                return treeColumn.getCellData(treeItem);
-            }
-            case ROW_INDEX: return getIndex();
-            case COLUMN_INDEX: return visibleColumns.indexOf(treeColumn);
-            case LEAF: return treeItem == null ? true : treeItem.isLeaf();
-            case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
-            case INDEX: return getIndex();
-            case SELECTED: return isSelected();
-            case DISCLOSURE_LEVEL: {
-                return treeTableView == null ? 0 : treeTableView.getTreeItemLevel(treeItem);
-            }
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
-
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
-        final TreeTableView<T> treeTableView = getTreeTableView();
-        final TreeItem<T> treeItem = getTreeItem();
-        final TreeTableView.TreeTableViewSelectionModel<T> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
-
-        switch (action) {
-            case EXPAND: {
-                if (treeItem != null) treeItem.setExpanded(true);
-                break;
-            }
-            case COLLAPSE: {
-                if (treeItem != null) treeItem.setExpanded(false);
-                break;
-            }
-            case SELECT: {
-                if (sm != null) sm.clearAndSelect(getIndex());
-                break;
-            }
-            case ADD_TO_SELECTION: {
-                if (sm != null) sm.select(getIndex());
-                break;
-            }
-            case REMOVE_FROM_SELECTION: {
-                if (sm != null) sm.clearSelection(getIndex());
-                break;
-            }
-            default: super.accExecuteAction(action);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        final TreeItem<T> treeItem = getTreeItem();
+//        final TreeTableView<T> treeTableView = getTreeTableView();
+//        final List<TreeTableColumn<T,?>> visibleColumns = treeTableView.getVisibleLeafColumns();
+//
+//        TreeTableColumn<T,?> treeColumn = treeTableView.getTreeColumn();
+//        treeColumn = treeColumn != null ? treeColumn :
+//                    !visibleColumns.isEmpty() ? visibleColumns.get(0) :
+//                    null;
+//
+//        switch (attribute) {
+//            case ROLE: return Role.TREE_TABLE_ITEM;
+//            case TREE_ITEM_PARENT: {
+//                if (treeItem == null) return null;
+//                TreeItem<T> parent = treeItem.getParent();
+//                if (parent == null) return null;
+//                int parentIndex = treeTableView.getRow(parent);
+//                return treeTableView.accGetAttribute(Attribute.ROW_AT_INDEX, parentIndex);
+//            }
+//            case TREE_ITEM_COUNT: {
+//                return treeItem == null  ? 0 : treeItem.getChildren().size();
+//            }
+//            case TREE_ITEM_AT_INDEX:
+//                if (treeItem == null) return null;
+//                int index = (Integer)parameters[0];
+//                if (index >= treeItem.getChildren().size()) return null;
+//                TreeItem<T> child = treeItem.getChildren().get(index);
+//                if (child == null) return null;
+//                int childIndex = treeTableView.getRow(child);
+//                return treeTableView.accGetAttribute(Attribute.ROW_AT_INDEX, childIndex);
+//            case TITLE: {
+//                if (treeItem == null) return "";
+//                return treeColumn.getCellData(treeItem);
+//            }
+//            case ROW_INDEX: return getIndex();
+//            case COLUMN_INDEX: return visibleColumns.indexOf(treeColumn);
+//            case LEAF: return treeItem == null ? true : treeItem.isLeaf();
+//            case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
+//            case INDEX: return getIndex();
+//            case SELECTED: return isSelected();
+//            case DISCLOSURE_LEVEL: {
+//                return treeTableView == null ? 0 : treeTableView.getTreeItemLevel(treeItem);
+//            }
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
+//
+//    /** @treatAsPrivate */
+//    @Override public void accExecuteAction(Action action, Object... parameters) {
+//        final TreeTableView<T> treeTableView = getTreeTableView();
+//        final TreeItem<T> treeItem = getTreeItem();
+//        final TreeTableView.TreeTableViewSelectionModel<T> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
+//
+//        switch (action) {
+//            case EXPAND: {
+//                if (treeItem != null) treeItem.setExpanded(true);
+//                break;
+//            }
+//            case COLLAPSE: {
+//                if (treeItem != null) treeItem.setExpanded(false);
+//                break;
+//            }
+//            case SELECT: {
+//                if (sm != null) sm.clearAndSelect(getIndex());
+//                break;
+//            }
+//            case ADD_TO_SELECTION: {
+//                if (sm != null) sm.select(getIndex());
+//                break;
+//            }
+//            case REMOVE_FROM_SELECTION: {
+//                if (sm != null) sm.clearSelection(getIndex());
+//                break;
+//            }
+//            default: super.accExecuteAction(action);
+//        }
+//    }
 }

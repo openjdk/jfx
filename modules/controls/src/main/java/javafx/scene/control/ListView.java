@@ -52,9 +52,9 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Action;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 import javafx.css.StyleableObjectProperty;
@@ -1082,22 +1082,22 @@ public class ListView<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.LIST_VIEW;
-            case ROW_COUNT: return getItems().size();
-            case MULTIPLE_SELECTION: {
-                MultipleSelectionModel<T> sm = getSelectionModel();
-                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
-            }
-            case ROW_AT_INDEX: //Skin
-            case SELECTED_ROWS: //Skin
-            case VERTICAL_SCROLLBAR: //Skin
-            case HORIZONTAL_SCROLLBAR: // Skin
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.LIST_VIEW;
+//            case ROW_COUNT: return getItems().size();
+//            case MULTIPLE_SELECTION: {
+//                MultipleSelectionModel<T> sm = getSelectionModel();
+//                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+//            }
+//            case ROW_AT_INDEX: //Skin
+//            case SELECTED_ROWS: //Skin
+//            case VERTICAL_SCROLLBAR: //Skin
+//            case HORIZONTAL_SCROLLBAR: // Skin
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 
 
     /***************************************************************************
@@ -1420,7 +1420,7 @@ public class ListView<T> extends Control {
             if (listView.getFocusModel() == null) return;
             listView.getFocusModel().focus(row);
 
-            listView.accSendNotification(Attribute.SELECTED_ROWS);
+//            listView.accSendNotification(Attribute.SELECTED_ROWS);
         }
 
         /** {@inheritDoc} */

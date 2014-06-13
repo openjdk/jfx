@@ -41,9 +41,9 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Action;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -492,31 +492,31 @@ public class ScrollBar extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.SCROLL_BAR;
-            case VALUE: return getValue();
-            case MAX_VALUE: return getMax();
-            case MIN_VALUE: return getMin();
-            case ORIENTATION: return getOrientation();
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
-
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
-        switch (action) {
-            case INCREMENT: increment(); break;
-            case DECREMENT: decrement(); break;
-            case BLOCK_INCREMENT: blockIncrement(); break;
-            case BLOCK_DECREMENT: blockDecrement(); break;
-            case SET_VALUE: {
-                Double value = (Double) parameters[0];
-                if (value != null) setValue(value);
-                break;
-            }
-            default: super.accExecuteAction(action, parameters);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.SCROLL_BAR;
+//            case VALUE: return getValue();
+//            case MAX_VALUE: return getMax();
+//            case MIN_VALUE: return getMin();
+//            case ORIENTATION: return getOrientation();
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
+//
+//    /** @treatAsPrivate */
+//    @Override public void accExecuteAction(Action action, Object... parameters) {
+//        switch (action) {
+//            case INCREMENT: increment(); break;
+//            case DECREMENT: decrement(); break;
+//            case BLOCK_INCREMENT: blockIncrement(); break;
+//            case BLOCK_DECREMENT: blockDecrement(); break;
+//            case SET_VALUE: {
+//                Double value = (Double) parameters[0];
+//                if (value != null) setValue(value);
+//                break;
+//            }
+//            default: super.accExecuteAction(action, parameters);
+//        }
+//    }
 }

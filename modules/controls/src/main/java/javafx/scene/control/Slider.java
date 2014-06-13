@@ -38,9 +38,9 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.Orientation;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Action;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.Utils;
@@ -147,7 +147,7 @@ public class Slider extends Control {
                         setMin(get());
                     }
                     adjustValues();
-                    accSendNotification(Attribute.MAX_VALUE);
+//                    accSendNotification(Attribute.MAX_VALUE);
                 }
 
                 @Override
@@ -184,7 +184,7 @@ public class Slider extends Control {
                         setMax(get());
                     }
                     adjustValues();
-                    accSendNotification(Attribute.MIN_VALUE);
+//                    accSendNotification(Attribute.MIN_VALUE);
                 }
 
                 @Override
@@ -221,7 +221,7 @@ public class Slider extends Control {
             value = new DoublePropertyBase(0) {
                 @Override protected void invalidated() {
                     adjustValues();
-                    accSendNotification(Attribute.VALUE);
+//                    accSendNotification(Attribute.VALUE);
                 }
 
                 @Override
@@ -814,29 +814,29 @@ public class Slider extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.SLIDER;
-            case VALUE: return getValue();
-            case MAX_VALUE: return getMax();
-            case MIN_VALUE: return getMin();
-            case ORIENTATION: return getOrientation();
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
-
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
-        switch (action) {
-            case INCREMENT: increment(); break;
-            case DECREMENT: decrement(); break;
-            case SET_VALUE: {
-                Double value = (Double) parameters[0];
-                if (value != null) setValue(value);
-                break;
-            }
-            default: super.accExecuteAction(action, parameters);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.SLIDER;
+//            case VALUE: return getValue();
+//            case MAX_VALUE: return getMax();
+//            case MIN_VALUE: return getMin();
+//            case ORIENTATION: return getOrientation();
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
+//
+//    /** @treatAsPrivate */
+//    @Override public void accExecuteAction(Action action, Object... parameters) {
+//        switch (action) {
+//            case INCREMENT: increment(); break;
+//            case DECREMENT: decrement(); break;
+//            case SET_VALUE: {
+//                Double value = (Double) parameters[0];
+//                if (value != null) setValue(value);
+//                break;
+//            }
+//            default: super.accExecuteAction(action, parameters);
+//        }
+//    }
 }

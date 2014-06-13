@@ -36,8 +36,8 @@ import javafx.beans.value.WritableValue;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.css.PseudoClass;
 
 import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
@@ -161,7 +161,7 @@ import javafx.css.StyleableProperty;
                     // Note: these changes need to be done before selectToggle/clearSelectedToggle since
                     // those operations change properties and can execute user code, possibly modifying selected property again
                     pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, selected);
-                    accSendNotification(Attribute.SELECTED);
+//                    accSendNotification(Attribute.SELECTED);
                     if (tg != null) {
                         if (selected) {
                             tg.selectToggle(ToggleButton.this);
@@ -289,12 +289,12 @@ import javafx.css.StyleableProperty;
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TOGGLE_BUTTON;
-            case SELECTED: return isSelected();
-            default: return super.accGetAttribute(attribute, parameters); 
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.TOGGLE_BUTTON;
+//            case SELECTED: return isSelected();
+//            default: return super.accGetAttribute(attribute, parameters); 
+//        }
+//    }
 }

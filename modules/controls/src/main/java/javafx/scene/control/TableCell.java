@@ -31,9 +31,9 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.Event;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Action;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
 import com.sun.javafx.scene.control.skin.TableCellSkin;
@@ -779,37 +779,37 @@ public class TableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TABLE_CELL;
-            case ROW_INDEX: return getIndex();
-            case COLUMN_INDEX: return columnIndex;
-            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
-            case TITLE: //fall through so that mnemonic can be properly handled
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
-
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
-        final TableView<S> tableView = getTableView();
-        final TableSelectionModel<S> sm = tableView == null ? null : tableView.getSelectionModel();
-
-        switch (action) {
-            case SELECT: {
-                if (sm != null) sm.clearAndSelect(getIndex(), getTableColumn());
-                break;
-            }
-            case ADD_TO_SELECTION: {
-                if (sm != null) sm.select(getIndex(), getTableColumn());
-                break;
-            }
-            case REMOVE_FROM_SELECTION: {
-                if (sm != null) sm.clearSelection(getIndex(), getTableColumn());
-                break;
-            }
-            default: super.accExecuteAction(action);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.TABLE_CELL;
+//            case ROW_INDEX: return getIndex();
+//            case COLUMN_INDEX: return columnIndex;
+//            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
+//            case TITLE: //fall through so that mnemonic can be properly handled
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
+//
+//    /** @treatAsPrivate */
+//    @Override public void accExecuteAction(Action action, Object... parameters) {
+//        final TableView<S> tableView = getTableView();
+//        final TableSelectionModel<S> sm = tableView == null ? null : tableView.getSelectionModel();
+//
+//        switch (action) {
+//            case SELECT: {
+//                if (sm != null) sm.clearAndSelect(getIndex(), getTableColumn());
+//                break;
+//            }
+//            case ADD_TO_SELECTION: {
+//                if (sm != null) sm.select(getIndex(), getTableColumn());
+//                break;
+//            }
+//            case REMOVE_FROM_SELECTION: {
+//                if (sm != null) sm.clearSelection(getIndex(), getTableColumn());
+//                break;
+//            }
+//            default: super.accExecuteAction(action);
+//        }
+//    }
 }

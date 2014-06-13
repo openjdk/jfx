@@ -56,9 +56,9 @@ import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Action;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TouchEvent;
@@ -700,15 +700,15 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         layoutInArea(navigation, x, stackPaneHeight, w, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 
-    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            // Role: Pagination (specified in Pagination class)
-            case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
-            case SELECTED_PAGE: return navigation.indicatorButtons.getSelectedToggle();
-            case PAGES: return navigation.indicatorButtons.getToggles();
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+//    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            // Role: Pagination (specified in Pagination class)
+//            case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
+//            case SELECTED_PAGE: return navigation.indicatorButtons.getSelectedToggle();
+//            case PAGES: return navigation.indicatorButtons.getToggles();
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 
     class NavigationControl extends StackPane {
 
@@ -735,12 +735,12 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             controlBox.getStyleClass().add("control-box");
 
             leftArrowButton = new Button() {
-                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-                    switch (attribute) {
-                        case TITLE: return getString("Accessibility.title.Pagination.PreviousButton");
-                        default: return super.accGetAttribute(attribute, parameters);
-                    }
-                }
+//                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//                    switch (attribute) {
+//                        case TITLE: return getString("Accessibility.title.Pagination.PreviousButton");
+//                        default: return super.accGetAttribute(attribute, parameters);
+//                    }
+//                }
             };
             minButtonSize = leftArrowButton.getFont().getSize() * 2;
             leftArrowButton.fontProperty().addListener((arg0, arg1, newFont) -> {
@@ -763,12 +763,12 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             leftArrow.getStyleClass().add("left-arrow");
 
             rightArrowButton = new Button() {
-                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-                    switch (attribute) {
-                        case TITLE: return getString("Accessibility.title.Pagination.NextButton");
-                        default: return super.accGetAttribute(attribute, parameters);
-                    }
-                }
+//                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//                    switch (attribute) {
+//                        case TITLE: return getString("Accessibility.title.Pagination.NextButton");
+//                        default: return super.accGetAttribute(attribute, parameters);
+//                    }
+//                }
             };
             rightArrowButton.setMinSize(minButtonSize, minButtonSize);
             rightArrowButton.prefWidthProperty().bind(rightArrowButton.minWidthProperty());
@@ -854,7 +854,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     break;
                 }
             }
-            getSkinnable().accSendNotification(Attribute.SELECTED_PAGE);
+//            getSkinnable().accSendNotification(Attribute.SELECTED_PAGE);
         }
 
         // Update the page index using the currentIndex and updates the page set
@@ -1250,21 +1250,21 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             }
         }
 
-        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-            switch (attribute) {
-                case ROLE: return Role.PAGE;
-                case TITLE: return getText();
-                case SELECTED: return isSelected();
-                default: return super.accGetAttribute(attribute, parameters);
-            }
-        }
-
-        @Override public void accExecuteAction(Action action, Object... parameters) {
-            switch (action) {
-                case SELECT: setSelected(true); break;
-                default: super.accExecuteAction(action);
-            }
-        }
+//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//            switch (attribute) {
+//                case ROLE: return Role.PAGE;
+//                case TITLE: return getText();
+//                case SELECTED: return isSelected();
+//                default: return super.accGetAttribute(attribute, parameters);
+//            }
+//        }
+//
+//        @Override public void accExecuteAction(Action action, Object... parameters) {
+//            switch (action) {
+//                case SELECT: setSelected(true); break;
+//                default: super.accExecuteAction(action);
+//            }
+//        }
     }
 
     /***************************************************************************

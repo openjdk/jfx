@@ -41,7 +41,7 @@ import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.ListCell;
@@ -653,7 +653,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             int index = listView.getSelectionModel().getSelectedIndex();
             comboBox.getSelectionModel().select(index);
             updateDisplayNode();
-            comboBox.accSendNotification(Attribute.TITLE);
+//            comboBox.accSendNotification(Attribute.TITLE);
         });
          
         comboBox.getSelectionModel().selectedItemProperty().addListener(o -> {
@@ -751,45 +751,45 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             setFocused(b);
         }
 
-        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-            switch (attribute) {
-                case FOCUS_ITEM: 
-                    /* Internally comboBox reassign its focus the text field.
-                     * For the accessibility perspective it is more meaningful
-                     * if the focus stays with the comboBox control.
-                     */
-                    return getParent();
-                default: return super.accGetAttribute(attribute, parameters);
-            }
-        }
+//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//            switch (attribute) {
+//                case FOCUS_ITEM: 
+//                    /* Internally comboBox reassign its focus the text field.
+//                     * For the accessibility perspective it is more meaningful
+//                     * if the focus stays with the comboBox control.
+//                     */
+//                    return getParent();
+//                default: return super.accGetAttribute(attribute, parameters);
+//            }
+//        }
     }
 
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case FOCUS_ITEM: {
-                if (comboBox.isShowing()) {
-                    /* On Mac, for some reason, changing the selection on the list is not
-                     * reported by VoiceOver the first time it shows.
-                     * Note that this fix returns a child of the PopupWindow back to the main
-                     * Stage, which doesn't seem to cause problems.
-                     */
-                    return listView.accGetAttribute(attribute, parameters);
-                }
-                return null;
-            }
-            case TITLE: {
-                String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();
-                if (title == null || title.isEmpty()) {
-                    title = comboBox.getPromptText();
-                }
-                return title;
-            }
-            case SELECTION_START: return textField.getSelection().getStart();
-            case SELECTION_END: return textField.getSelection().getEnd();
-
-            //fall through
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case FOCUS_ITEM: {
+//                if (comboBox.isShowing()) {
+//                    /* On Mac, for some reason, changing the selection on the list is not
+//                     * reported by VoiceOver the first time it shows.
+//                     * Note that this fix returns a child of the PopupWindow back to the main
+//                     * Stage, which doesn't seem to cause problems.
+//                     */
+//                    return listView.accGetAttribute(attribute, parameters);
+//                }
+//                return null;
+//            }
+//            case TITLE: {
+//                String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();
+//                if (title == null || title.isEmpty()) {
+//                    title = comboBox.getPromptText();
+//                }
+//                return title;
+//            }
+//            case SELECTION_START: return textField.getSelection().getStart();
+//            case SELECTION_END: return textField.getSelection().getEnd();
+//
+//            //fall through
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 }
 

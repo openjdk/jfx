@@ -30,7 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.property.DoubleProperty;
-import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
@@ -129,45 +129,45 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
         }
     }
 
-    @Override
-    protected Object accGetAttribute(Attribute attribute,
-                                     Object... parameters) {
-        switch (attribute) {
-            case SELECTED_CELLS: {
-                // FIXME this could be optimised to iterate over cellsMap only
-                // (selectedCells could be big, cellsMap is much smaller)
-                List<Node> selection = new ArrayList<>();
-                int index = getSkinnable().getIndex();
-                for (TablePosition pos : tableView.getSelectionModel().getSelectedCells()) {
-                    if (pos.getRow() == index) {
-                        TableColumn column = pos.getTableColumn();
-                        if (column == null) {
-                            /* This is the row-based case */
-                            column = tableView.getVisibleLeafColumn(0);
-                        }
-                        TableCell cell = cellsMap.get(column);
-                        if (cell != null) selection.add(cell);
-                    }
-                    return FXCollections.observableArrayList(selection);
-                }
-            }
-            case CELL_AT_ROW_COLUMN: {
-                int colIndex = (Integer)parameters[1];
-                TableColumn column = tableView.getVisibleLeafColumn(colIndex);
-                return cellsMap.get(column);
-            }
-            case FOCUS_ITEM: {
-                TableViewFocusModel<T> fm = tableView.getFocusModel();
-                TablePosition focusedCell = fm.getFocusedCell();
-                TableColumn column = focusedCell.getTableColumn();
-                if (column == null) {
-                    /* This is the row-based case */
-                    column = tableView.getVisibleLeafColumn(0);
-                }
-                return cellsMap.get(column);
-            }
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+//    @Override
+//    protected Object accGetAttribute(Attribute attribute,
+//                                     Object... parameters) {
+//        switch (attribute) {
+//            case SELECTED_CELLS: {
+//                // FIXME this could be optimised to iterate over cellsMap only
+//                // (selectedCells could be big, cellsMap is much smaller)
+//                List<Node> selection = new ArrayList<>();
+//                int index = getSkinnable().getIndex();
+//                for (TablePosition pos : tableView.getSelectionModel().getSelectedCells()) {
+//                    if (pos.getRow() == index) {
+//                        TableColumn column = pos.getTableColumn();
+//                        if (column == null) {
+//                            /* This is the row-based case */
+//                            column = tableView.getVisibleLeafColumn(0);
+//                        }
+//                        TableCell cell = cellsMap.get(column);
+//                        if (cell != null) selection.add(cell);
+//                    }
+//                    return FXCollections.observableArrayList(selection);
+//                }
+//            }
+//            case CELL_AT_ROW_COLUMN: {
+//                int colIndex = (Integer)parameters[1];
+//                TableColumn column = tableView.getVisibleLeafColumn(colIndex);
+//                return cellsMap.get(column);
+//            }
+//            case FOCUS_ITEM: {
+//                TableViewFocusModel<T> fm = tableView.getFocusModel();
+//                TablePosition focusedCell = fm.getFocusedCell();
+//                TableColumn column = focusedCell.getTableColumn();
+//                if (column == null) {
+//                    /* This is the row-based case */
+//                    column = tableView.getVisibleLeafColumn(0);
+//                }
+//                return cellsMap.get(column);
+//            }
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 
 }

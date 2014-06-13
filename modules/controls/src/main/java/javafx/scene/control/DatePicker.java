@@ -54,8 +54,8 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -547,21 +547,21 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.DATE_PICKER;
-            case DATE: return getValue();
-            case TITLE: {
-                LocalDate date = getValue();
-                StringConverter<LocalDate> c = getConverter();
-                if (date != null && c != null) {
-                    return c.toString(date);
-                }
-                return "";
-            }
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.DATE_PICKER;
+//            case DATE: return getValue();
+//            case TITLE: {
+//                LocalDate date = getValue();
+//                StringConverter<LocalDate> c = getConverter();
+//                if (date != null && c != null) {
+//                    return c.toString(date);
+//                }
+//                return "";
+//            }
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 
 }

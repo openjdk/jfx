@@ -31,7 +31,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Action;
+//import javafx.scene.accessibility.Action;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 
@@ -194,13 +194,13 @@ public abstract class ButtonBase extends Labeled {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
-        switch (action) {
-            case FIRE: 
-                fire();
-                break;
-            default: super.accExecuteAction(action);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public void accExecuteAction(Action action, Object... parameters) {
+//        switch (action) {
+//            case FIRE: 
+//                fire();
+//                break;
+//            default: super.accExecuteAction(action);
+//        }
+//    }
 }

@@ -25,11 +25,11 @@
 
 package com.sun.glass.ui.win;
 
-import static javafx.scene.accessibility.Attribute.*;
+import static com.sun.javafx.scene.accessibility.Attribute.*;
 import java.text.BreakIterator;
 import javafx.geometry.Bounds;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
+import com.sun.javafx.scene.accessibility.Action;
+import com.sun.javafx.scene.accessibility.Attribute;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 

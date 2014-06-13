@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.LinkedList;
 
-import javafx.scene.accessibility.Accessible;
+import com.sun.javafx.scene.accessibility.Accessible;
 
 public abstract class Application {
 

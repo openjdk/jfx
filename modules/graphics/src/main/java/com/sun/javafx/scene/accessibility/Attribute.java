@@ -23,7 +23,7 @@
  * questions.
  */
 
-package javafx.scene.accessibility;
+package com.sun.javafx.scene.accessibility;
 
 import java.time.LocalDate;
 import javafx.collections.ObservableList;

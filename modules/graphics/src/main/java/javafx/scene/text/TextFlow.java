@@ -37,8 +37,8 @@ import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Pane;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
@@ -553,22 +553,22 @@ public class TextFlow extends Pane {
     }
     /* end of copied code */
 
-    /** @treatAsPrivate */
-    @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TEXT;
-            case TITLE: {
-                StringBuilder title = new StringBuilder();
-                for (Node node: getChildren()) {
-                    Object text = node.accGetAttribute(Attribute.TITLE, parameters);
-                    if (text != null) {
-                        title.append(text.toString());
-                    }
-                }
-                return title.toString();
-            }
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override
+//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.TEXT;
+//            case TITLE: {
+//                StringBuilder title = new StringBuilder();
+//                for (Node node: getChildren()) {
+//                    Object text = node.accGetAttribute(Attribute.TITLE, parameters);
+//                    if (text != null) {
+//                        title.append(text.toString());
+//                    }
+//                }
+//                return title.toString();
+//            }
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 }

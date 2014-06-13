@@ -26,9 +26,9 @@
 package javafx.scene.control;
 
 import javafx.event.ActionEvent;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Action;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import com.sun.javafx.scene.control.skin.SplitMenuButtonSkin;
 
 /**
@@ -140,29 +140,29 @@ public class SplitMenuButton extends MenuButton {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.SPLIT_MENU_BUTTON;
-            case EXPANDED: return isShowing();
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
-
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
-        switch (action) {
-            case FIRE:
-                fire();
-                break;
-            case EXPAND:
-                show();
-                break;
-            case COLLAPSE:
-                hide();
-                break;
-            default: super.accExecuteAction(action);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.SPLIT_MENU_BUTTON;
+//            case EXPANDED: return isShowing();
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
+//
+//    /** @treatAsPrivate */
+//    @Override public void accExecuteAction(Action action, Object... parameters) {
+//        switch (action) {
+//            case FIRE:
+//                fire();
+//                break;
+//            case EXPAND:
+//                show();
+//                break;
+//            case COLLAPSE:
+//                hide();
+//                break;
+//            default: super.accExecuteAction(action);
+//        }
+//    }
 
 }

@@ -40,8 +40,8 @@ import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -870,7 +870,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             SceneHelper.getSceneAccessor().setTransientFocusContainer(getSkinnable().getScene(), null);
 
             /* Return the a11y focus to a control in the scene. */
-            getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+//            getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
         }
         focusedMenuIndex = -1;
     }
@@ -988,19 +988,19 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             setHover(true);
 
             /* Transfer the a11y focus to an item in the menu bar. */
-            menuBarSkin.getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+//            menuBarSkin.getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
         }
 
-        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-            switch (attribute) {
-                case ROLE: return Role.MENU_ITEM;
-                case MENU_ITEM_TYPE: return Role.CONTEXT_MENU;
-                case FOCUS_ITEM: return MenuBarButton.this;
-                case TITLE: //fall through because the super class handles mnemonics right
-                case MNEMONIC:
-                default: return super.accGetAttribute(attribute, parameters);
-            }
-        }
+//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//            switch (attribute) {
+//                case ROLE: return Role.MENU_ITEM;
+//                case MENU_ITEM_TYPE: return Role.CONTEXT_MENU;
+//                case FOCUS_ITEM: return MenuBarButton.this;
+//                case TITLE: //fall through because the super class handles mnemonics right
+//                case MNEMONIC:
+//                default: return super.accGetAttribute(attribute, parameters);
+//            }
+//        }
     }
 
     /***************************************************************************
@@ -1064,11 +1064,11 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case FOCUS_NODE: return openMenuButton;
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case FOCUS_NODE: return openMenuButton;
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 }

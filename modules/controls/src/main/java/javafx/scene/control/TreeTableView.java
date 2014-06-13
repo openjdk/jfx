@@ -75,9 +75,9 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Action;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
@@ -1902,65 +1902,65 @@ public class TreeTableView<S> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TREE_TABLE_VIEW;
-
-            case TREE_ITEM_COUNT:
-            case ROW_COUNT: return getExpandedItemCount();
-            case COLUMN_COUNT: return getVisibleLeafColumns().size();
-
-            /*
-             * TreeTableViewSkin returns TreeTableRows back to TreeTableView.
-             * TreeTableRowSkin returns TreeTableCells back to TreeTableRow.
-             */
-            case SELECTED_CELLS: {
-                ObservableList<TreeTableRow<S>> rows = (ObservableList<TreeTableRow<S>>)super.accGetAttribute(attribute, parameters);
-                List<Node> selection = new ArrayList<>();
-                for (TreeTableRow<S> row : rows) {
-                    ObservableList<Node> cells = (ObservableList<Node>)row.accGetAttribute(attribute, parameters);
-                    if (cells != null) selection.addAll(cells);
-                }
-                return FXCollections.observableArrayList(selection);
-            }
-            case FOCUS_ITEM: {
-                Node row = (Node)super.accGetAttribute(attribute, parameters);
-                if (row == null) return null;
-                Node cell = (Node)row.accGetAttribute(attribute, parameters);
-                /* cell equals to null means the row is a placeholder node */
-                return cell != null ?  cell : row;
-            }
-            case CELL_AT_ROW_COLUMN: {
-                TreeTableRow<S> row = (TreeTableRow<S>)super.accGetAttribute(attribute, parameters);
-                return row != null ? row.accGetAttribute(attribute, parameters) : null;
-            }
-            case MULTIPLE_SELECTION: {
-                TreeTableViewSelectionModel<S> sm = getSelectionModel();
-                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
-            }
-
-            case COLUMN_INDEX: //Skin
-            case HEADER: //Skin
-            case ROW_AT_INDEX: //Skin
-            case VERTICAL_SCROLLBAR: //Skin
-            case HORIZONTAL_SCROLLBAR: // Skin
-
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
-
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
-        switch (action) {
-            case SCROLL_TO_INDEX: {
-                int index = (int) parameters[0];
-                scrollTo(index);
-                break;
-            }
-            default: super.accExecuteAction(action, parameters);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.TREE_TABLE_VIEW;
+//
+//            case TREE_ITEM_COUNT:
+//            case ROW_COUNT: return getExpandedItemCount();
+//            case COLUMN_COUNT: return getVisibleLeafColumns().size();
+//
+//            /*
+//             * TreeTableViewSkin returns TreeTableRows back to TreeTableView.
+//             * TreeTableRowSkin returns TreeTableCells back to TreeTableRow.
+//             */
+//            case SELECTED_CELLS: {
+//                ObservableList<TreeTableRow<S>> rows = (ObservableList<TreeTableRow<S>>)super.accGetAttribute(attribute, parameters);
+//                List<Node> selection = new ArrayList<>();
+//                for (TreeTableRow<S> row : rows) {
+//                    ObservableList<Node> cells = (ObservableList<Node>)row.accGetAttribute(attribute, parameters);
+//                    if (cells != null) selection.addAll(cells);
+//                }
+//                return FXCollections.observableArrayList(selection);
+//            }
+//            case FOCUS_ITEM: {
+//                Node row = (Node)super.accGetAttribute(attribute, parameters);
+//                if (row == null) return null;
+//                Node cell = (Node)row.accGetAttribute(attribute, parameters);
+//                /* cell equals to null means the row is a placeholder node */
+//                return cell != null ?  cell : row;
+//            }
+//            case CELL_AT_ROW_COLUMN: {
+//                TreeTableRow<S> row = (TreeTableRow<S>)super.accGetAttribute(attribute, parameters);
+//                return row != null ? row.accGetAttribute(attribute, parameters) : null;
+//            }
+//            case MULTIPLE_SELECTION: {
+//                TreeTableViewSelectionModel<S> sm = getSelectionModel();
+//                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+//            }
+//
+//            case COLUMN_INDEX: //Skin
+//            case HEADER: //Skin
+//            case ROW_AT_INDEX: //Skin
+//            case VERTICAL_SCROLLBAR: //Skin
+//            case HORIZONTAL_SCROLLBAR: // Skin
+//
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
+//
+//    /** @treatAsPrivate */
+//    @Override public void accExecuteAction(Action action, Object... parameters) {
+//        switch (action) {
+//            case SCROLL_TO_INDEX: {
+//                int index = (int) parameters[0];
+//                scrollTo(index);
+//                break;
+//            }
+//            default: super.accExecuteAction(action, parameters);
+//        }
+//    }
 
 
 
@@ -2937,7 +2937,7 @@ public class TreeTableView<S> extends Control {
             setSelectedItem(getModelItem(row));
 
             /* Does this get all the change events ? */
-            getTreeTableView().accSendNotification(Attribute.SELECTED_CELLS);
+//            getTreeTableView().accSendNotification(Attribute.SELECTED_CELLS);
         }
         
         @Override public void focus(int row) {

@@ -40,8 +40,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -609,15 +609,15 @@ public class TabPane extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TAB_PANE;
-            case TABS: //Skin
-            case SELECTED_TAB: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.TAB_PANE;
+//            case TABS: //Skin
+//            case SELECTED_TAB: //Skin
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 
 
 
@@ -697,7 +697,7 @@ public class TabPane extends Control {
             }
 
             /* Does this get all the change events */
-            tabPane.accSendNotification(Attribute.SELECTED_TAB);
+//            tabPane.accSendNotification(Attribute.SELECTED_TAB);
         }
 
         @Override public void select(Tab tab) {

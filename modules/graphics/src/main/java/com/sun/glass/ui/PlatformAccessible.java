@@ -25,13 +25,13 @@
 
 package com.sun.glass.ui;
 
-import static javafx.scene.accessibility.Attribute.PARENT;
-import static javafx.scene.accessibility.Attribute.ROLE;
+import static com.sun.javafx.scene.accessibility.Attribute.PARENT;
+import static com.sun.javafx.scene.accessibility.Attribute.ROLE;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Accessible;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import com.sun.javafx.scene.accessibility.Accessible;
+import com.sun.javafx.scene.accessibility.Action;
+import com.sun.javafx.scene.accessibility.Attribute;
+import com.sun.javafx.scene.accessibility.Role;
 
 public abstract class PlatformAccessible {
 
@@ -72,7 +72,7 @@ public abstract class PlatformAccessible {
     @SuppressWarnings("deprecation")
     protected long getAccessible(Node node) {
         if (node == null) return 0L;
-        Accessible acc = node.getAccessible();
+        Accessible acc = null;//node.getAccessible();
         if (acc == null) return 0L;
         PlatformAccessible pAcc = acc.impl_getDelegate();
         return pAcc != null ? pAcc.getNativeAccessible() : 0;
@@ -80,7 +80,7 @@ public abstract class PlatformAccessible {
 
     protected Node getContainerNode(Node node, Role targetRole) {
         while (node != null) {
-            Accessible acc = node.getAccessible();
+            Accessible acc = null;//node.getAccessible();
             Role role = (Role)acc.getAttribute(ROLE);
             if (role == targetRole) return node;
             node = (Node)acc.getAttribute(PARENT);
