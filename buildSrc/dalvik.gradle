@@ -236,7 +236,7 @@ allprojects() {
                     classpath = configurations.retroconfig
                     main = 'net.orfjackal.retrolambda.Main'
                     jvmArgs = [
-                                "-Xbootclasspath:/opt/java/jre/lib/rt.jar",
+                               "-Xbootclasspath:$JDK_HOME/jre/lib/rt.jar",
                                 "-Dretrolambda.inputDir=$inputdir",
                                 "-Dretrolambda.classpath=$basecp",
                                 "-Dretrolambda.bytecodeVersion=51",
