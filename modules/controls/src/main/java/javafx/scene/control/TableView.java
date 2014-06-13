@@ -2808,45 +2808,44 @@ public class TableView<S> extends Control {
             // here we are considering whether to notify the observers of the
             // selectedItems list. However, we can't just blindly do that, as
             // noted below. This is a part of the fix for RT-37429.
-            while (c.next()) {
-                boolean fireChangeEvent;
-                outer: if (c.wasReplaced()) {
-                    // if a replace happened, we need to check to see if the
-                    // change actually impacts on the selected items - it may
-                    // be that the index changed to the new location of the same
-                    // item (i.e. if a sort occurred). Only if the item has changed
-                    // should we fire an event to the observers of the selectedItems
-                    // list
-                    for (int i = 0; i < c.getRemovedSize(); i++) {
-                        TablePosition<S,?> removed = c.getRemoved().get(i);
-                        S removedItem = removed.getItem();
+            c.next();
+            boolean fireChangeEvent;
+            outer: if (c.wasReplaced()) {
+                // if a replace happened, we need to check to see if the
+                // change actually impacts on the selected items - it may
+                // be that the index changed to the new location of the same
+                // item (i.e. if a sort occurred). Only if the item has changed
+                // should we fire an event to the observers of the selectedItems
+                // list
+                for (int i = 0; i < c.getRemovedSize(); i++) {
+                    TablePosition<S,?> removed = c.getRemoved().get(i);
+                    S removedItem = removed.getItem();
 
-                        boolean matchFound = false;
-                        for (int j = 0; j < c.getAddedSize(); j++) {
-                            TablePosition<S,?> added = c.getAddedSubList().get(j);
-                            S addedItem = added.getItem();
+                    boolean matchFound = false;
+                    for (int j = 0; j < c.getAddedSize(); j++) {
+                        TablePosition<S,?> added = c.getAddedSubList().get(j);
+                        S addedItem = added.getItem();
 
-                            if (removedItem.equals(addedItem)) {
-                                matchFound = true;
-                                break;
-                            }
-                        }
-
-                        if (! matchFound) {
-                            fireChangeEvent = true;
-                            break outer;
+                        if (removedItem.equals(addedItem)) {
+                            matchFound = true;
+                            break;
                         }
                     }
-                    fireChangeEvent = false;
-                } else {
-                    fireChangeEvent = true;
-                }
 
-                if (fireChangeEvent) {
-                    // create an on-demand list of the removed objects contained in the
-                    // given rows.
-                    selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
+                    if (! matchFound) {
+                        fireChangeEvent = true;
+                        break outer;
+                    }
                 }
+                fireChangeEvent = false;
+            } else {
+                fireChangeEvent = true;
+            }
+
+            if (fireChangeEvent) {
+                // create an on-demand list of the removed objects contained in the
+                // given rows.
+                selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
             }
             c.reset();
 

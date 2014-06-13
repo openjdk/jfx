@@ -41,10 +41,12 @@ import java.util.List;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -902,5 +904,48 @@ public class ListViewTest {
         tv.getItems().add(2);
         assertEquals(0, rt_37061_index_counter);
         assertEquals(0, rt_37061_item_counter);
+    }
+
+    private int rt_37538_count = 0;
+    @Test public void test_rt_37538_noCNextCall() {
+        test_rt_37538(false, false);
+    }
+
+    @Test public void test_rt_37538_callCNextOnce() {
+        test_rt_37538(true, false);
+    }
+
+    @Test public void test_rt_37538_callCNextInLoop() {
+        test_rt_37538(false, true);
+    }
+
+    private void test_rt_37538(boolean callCNextOnce, boolean callCNextInLoop) {
+        ListView<Integer> list = new ListView<>();
+        for ( int i = 1; i <= 50; i++ ) {
+            list.getItems().add(i);
+        }
+
+        list.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends Integer> c) -> {
+            if (callCNextOnce) {
+                c.next();
+            } else if (callCNextInLoop) {
+                while (c.next()) {
+                    // no-op
+                }
+            }
+
+            if (rt_37538_count >= 1) {
+                Thread.dumpStack();
+                fail("This method should only be called once");
+            }
+
+            rt_37538_count++;
+        });
+
+        StageLoader sl = new StageLoader(list);
+        assertEquals(0, rt_37538_count);
+        list.getSelectionModel().select(0);
+        assertEquals(1, rt_37538_count);
+        sl.dispose();
     }
 }

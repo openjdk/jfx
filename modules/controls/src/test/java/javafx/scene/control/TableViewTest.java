@@ -3671,4 +3671,50 @@ public class TableViewTest {
 
         sl.dispose();
     }
+
+    private int rt_37538_count = 0;
+    @Test public void test_rt_37538_noCNextCall() {
+        test_rt_37538(false, false);
+    }
+
+    @Test public void test_rt_37538_callCNextOnce() {
+        test_rt_37538(true, false);
+    }
+
+    @Test public void test_rt_37538_callCNextInLoop() {
+        test_rt_37538(false, true);
+    }
+
+    private void test_rt_37538(boolean callCNextOnce, boolean callCNextInLoop) {
+        TableView<Integer> table = new TableView<>();
+        for ( int i = 1; i <= 50; i++ ) {
+            table.getItems().add(i);
+        }
+        final TableColumn<Integer, Integer> column = new TableColumn<>("Column");
+        table.getColumns().add(column);
+        column.setCellValueFactory( cdf -> new ReadOnlyObjectWrapper<Integer>(cdf.getValue()));
+
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends Integer> c) -> {
+            if (callCNextOnce) {
+                c.next();
+            } else if (callCNextInLoop) {
+                while (c.next()) {
+                    // no-op
+                }
+            }
+
+            if (rt_37538_count >= 1) {
+                Thread.dumpStack();
+                fail("This method should only be called once");
+            }
+
+            rt_37538_count++;
+        });
+
+        StageLoader sl = new StageLoader(table);
+        assertEquals(0, rt_37538_count);
+        table.getSelectionModel().select(0);
+        assertEquals(1, rt_37538_count);
+        sl.dispose();
+    }
 }

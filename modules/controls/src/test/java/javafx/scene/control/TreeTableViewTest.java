@@ -3719,4 +3719,55 @@ public class TreeTableViewTest {
 
         sl.dispose();
     }
+
+    private int rt_37538_count = 0;
+    @Test public void test_rt_37538_noCNextCall() {
+        test_rt_37538(false, false);
+    }
+
+    @Test public void test_rt_37538_callCNextOnce() {
+        test_rt_37538(true, false);
+    }
+
+    @Test public void test_rt_37538_callCNextInLoop() {
+        test_rt_37538(false, true);
+    }
+
+    private void test_rt_37538(boolean callCNextOnce, boolean callCNextInLoop) {
+        // create table with a bunch of rows and 1 column...
+        TreeItem<Integer> root = new TreeItem<>(0);
+        root.setExpanded(true);
+        for (int i = 1; i <= 50; i++) {
+            root.getChildren().add(new TreeItem<>(i));
+        }
+
+        final TreeTableColumn<Integer, Integer> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory( cdf -> new ReadOnlyObjectWrapper<Integer>(cdf.getValue().getValue()));
+
+        final TreeTableView<Integer> table = new TreeTableView<>(root);
+        table.getColumns().add( column );
+
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends TreeItem<Integer>> c) -> {
+            if (callCNextOnce) {
+                c.next();
+            } else if (callCNextInLoop) {
+                while (c.next()) {
+                    // no-op
+                }
+            }
+
+            if (rt_37538_count >= 1) {
+                Thread.dumpStack();
+                fail("This method should only be called once");
+            }
+
+            rt_37538_count++;
+        });
+
+        StageLoader sl = new StageLoader(table);
+        assertEquals(0, rt_37538_count);
+        table.getSelectionModel().select(0);
+        assertEquals(1, rt_37538_count);
+        sl.dispose();
+    }
 }
