@@ -148,7 +148,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
         }
         return new IntegerPropertyBase() {
             {
-                BidirectionalBinding.bindNumber(property, this);
+                BidirectionalBinding.bindNumber(this, property);
             }
 
             @Override

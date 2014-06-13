@@ -148,10 +148,10 @@ public class BooleanPropertyTest {
     
     @Test
     public void testObjectToBoolean() {
-        final ObjectProperty<Boolean> valueModel = new SimpleObjectProperty<Boolean>();
+        final ObjectProperty<Boolean> valueModel = new SimpleObjectProperty<Boolean>(true);
         final BooleanProperty exp = BooleanProperty.booleanProperty(valueModel);
 
-        assertEquals(false, exp.get());
+        assertEquals(true, exp.get());
         valueModel.set(true);
         assertEquals(true, exp.get());
         valueModel.set(false);

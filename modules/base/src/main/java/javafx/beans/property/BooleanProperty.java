@@ -138,7 +138,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
         }
         return property instanceof BooleanProperty ? (BooleanProperty)property : new BooleanPropertyBase() {
             {
-                BidirectionalBinding.bind(property, this);
+                BidirectionalBinding.bind(this, property);
             }
 
             @Override

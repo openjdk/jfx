@@ -133,10 +133,10 @@ public class DoublePropertyTest {
     
     @Test
     public void testAsObject() {
-        final DoubleProperty valueModel = new SimpleDoubleProperty();
+        final DoubleProperty valueModel = new SimpleDoubleProperty(2d);
         final ObjectProperty<Double> exp = valueModel.asObject();
 
-        assertEquals(0.0, exp.getValue(), EPSILON);
+        assertEquals(2d, exp.getValue(), EPSILON);
         valueModel.set(-4354.3);
         assertEquals(-4354.3, exp.getValue(), EPSILON);
         valueModel.set(5e11);

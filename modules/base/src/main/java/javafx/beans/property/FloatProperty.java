@@ -148,7 +148,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
         }
         return new FloatPropertyBase() {
             {
-                BidirectionalBinding.bindNumber(property, this);
+                BidirectionalBinding.bindNumber(this, property);
             }
 
             @Override

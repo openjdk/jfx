@@ -147,10 +147,10 @@ public class LongPropertyTest {
     
     @Test
     public void testObjectToLong() {
-        final ObjectProperty<Long> valueModel = new SimpleObjectProperty<Long>();
+        final ObjectProperty<Long> valueModel = new SimpleObjectProperty<Long>(2L);
         final LongProperty exp = LongProperty.longProperty(valueModel);
 
-        assertEquals(0L, exp.longValue());
+        assertEquals(2L, exp.longValue());
         valueModel.set(-4354L);
         assertEquals(-4354L, exp.longValue());
         valueModel.set(5L);

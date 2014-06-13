@@ -149,10 +149,10 @@ public class FloatPropertyTest {
     
     @Test
     public void testObjectToFloat() {
-        final ObjectProperty<Float> valueModel = new SimpleObjectProperty<Float>();
+        final ObjectProperty<Float> valueModel = new SimpleObjectProperty<Float>(2f);
         final FloatProperty exp = FloatProperty.floatProperty(valueModel);
 
-        assertEquals(0.0f, exp.floatValue(), EPSILON);
+        assertEquals(2f, exp.floatValue(), EPSILON);
         valueModel.set(-4354.3f);
         assertEquals(-4354.3f, exp.floatValue(), EPSILON);
         valueModel.set(5e11f);

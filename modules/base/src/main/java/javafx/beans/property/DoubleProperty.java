@@ -153,7 +153,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
         }
         return new DoublePropertyBase() {
             {
-                BidirectionalBinding.bindNumber(property, this);
+                BidirectionalBinding.bindNumber(this, property);
             }
 
             @Override

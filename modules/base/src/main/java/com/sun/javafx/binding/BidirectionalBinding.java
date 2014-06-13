@@ -125,6 +125,33 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         return bindNumber(property1, (Property<Number>)property2);
     }
 
+    public static BidirectionalBinding bindNumber(IntegerProperty property1, Property<Integer> property2) {
+        return bindNumberObject(property1, property2);
+    }
+
+    public static BidirectionalBinding bindNumber(LongProperty property1, Property<Long> property2) {
+        return bindNumberObject(property1, property2);
+    }
+
+    public static BidirectionalBinding bindNumber(FloatProperty property1, Property<Float> property2) {
+        return bindNumberObject(property1, property2);
+    }
+
+    public static BidirectionalBinding bindNumber(DoubleProperty property1, Property<Double> property2) {
+        return bindNumberObject(property1, property2);
+    }
+
+    private static <T extends Number> BidirectionalBinding bindNumberObject(Property<Number> property1, Property<T> property2) {
+        checkParameters(property1, property2);
+
+        final BidirectionalBinding<Number> binding = new TypedNumberBidirectionalBinding<T>(property2, property1);
+
+        property1.setValue(property2.getValue());
+        property1.addListener(binding);
+        property2.addListener(binding);
+        return binding;
+    }
+
     private static <T extends Number> BidirectionalBinding bindNumber(Property<T> property1, Property<Number> property2) {
         checkParameters(property1, property2);
         

@@ -146,7 +146,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
         }
         return new LongPropertyBase() {
             {
-                BidirectionalBinding.bindNumber(property, this);
+                BidirectionalBinding.bindNumber(this, property);
             }
 
             @Override
