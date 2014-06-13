@@ -126,7 +126,9 @@ public class AcceleratedScreen {
     public long getEGLHandle() { return eglLibraryHandle; }
 
     public boolean swapBuffers() {
-        EGL.eglSwapBuffers(eglDisplay, eglSurface);
+        synchronized(NativeScreen.framebufferSwapLock) {
+            EGL.eglSwapBuffers(eglDisplay, eglSurface);
+        }
         return true;
     }
 

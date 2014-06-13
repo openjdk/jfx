@@ -95,6 +95,16 @@ public class LinuxFrameBuffer {
         }
     }
 
+    public int getNativeOffset() {
+        int nativeOffsetX = screenInfo.getOffsetX(screenInfo.p);
+        int nativeOffsetY = screenInfo.getOffsetY(screenInfo.p);
+        if (system.ioctl(fd, LinuxSystem.FBIOGET_VSCREENINFO, screenInfo.p) == 0) {
+            nativeOffsetX = screenInfo.getOffsetX(screenInfo.p);
+            nativeOffsetY = screenInfo.getOffsetY(screenInfo.p);
+        }
+        return (nativeOffsetY * width) * byteDepth;
+    }
+
     public int getNextAddress() {
         switch (state) {
             case 1:

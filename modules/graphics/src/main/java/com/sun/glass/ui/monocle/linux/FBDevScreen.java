@@ -212,8 +212,15 @@ public class FBDevScreen implements NativeScreen {
     }
 
     @Override
-    public synchronized IntBuffer getScreenCapture() {
-        getFramebuffer().getBuffer().clear();
-        return getFramebuffer().getBuffer().asIntBuffer();
+    public synchronized ByteBuffer getScreenCapture() {
+        ByteBuffer buffer = getFramebuffer().getBuffer();
+        int start = linuxFB.getNativeOffset();
+        int len = getWidth() * getHeight() * (getDepth() >>> 3);
+        buffer.position(start);
+        buffer.limit(start + len);
+        ByteBuffer ret = buffer.asReadOnlyBuffer();
+        // this is critical, as order is lost
+        ret.order(buffer.order());
+        return ret;
     }
 }

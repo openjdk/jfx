@@ -26,7 +26,7 @@
 package com.sun.glass.ui.monocle;
 
 import java.nio.Buffer;
-import java.nio.IntBuffer;
+import java.nio.ByteBuffer;
 
 public interface NativeScreen {
 
@@ -42,6 +42,15 @@ public interface NativeScreen {
 
     public void swapBuffers();
 
-    public IntBuffer getScreenCapture();
+    /**
+     * Returns a read-only ByteBuffer in the native pixel format containing the screen contents.
+     * @return ByteBuffer a read-only ByteBuffer containing the screen contents
+     */
+    public ByteBuffer getScreenCapture();
+
+    /**
+     * An Object to lock against when rendering
+     */
+    public static final Object framebufferSwapLock = new Object();
 
 }

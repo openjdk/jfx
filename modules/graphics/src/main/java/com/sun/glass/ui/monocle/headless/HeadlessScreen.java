@@ -123,7 +123,7 @@ public class HeadlessScreen implements NativeScreen {
     }
 
     @Override
-    public IntBuffer getScreenCapture() {
-        return fb.getBuffer().asIntBuffer();
+    public ByteBuffer getScreenCapture() {
+        return fb.getBuffer();
     }
 }

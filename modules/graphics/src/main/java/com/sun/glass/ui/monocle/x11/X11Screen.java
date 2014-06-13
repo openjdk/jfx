@@ -30,7 +30,7 @@ import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.AcceleratedScreen;
 
 import java.nio.Buffer;
-import java.nio.IntBuffer;
+import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
@@ -197,7 +197,7 @@ public class X11Screen implements NativeScreen {
     }
 
     @Override
-    public IntBuffer getScreenCapture() {
+    public ByteBuffer getScreenCapture() {
         return null;
     }
 }
