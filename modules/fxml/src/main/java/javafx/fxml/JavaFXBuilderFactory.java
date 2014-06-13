@@ -217,8 +217,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
         Constructor constructors[] = ConstructorUtil.getConstructors(type);
         for (Constructor constructor : constructors) {
             Annotation[][] paramAnnotations = constructor.getParameterAnnotations();
-            Parameter[] params = constructor.getParameters();
-            for (int i = 0; i < params.length; i++) {
+            for (int i = 0; i < constructor.getParameterTypes().length; i++) {
                 for (Annotation annotation : paramAnnotations[i]) {
                     if (annotation instanceof NamedArg) {
                         return true;
