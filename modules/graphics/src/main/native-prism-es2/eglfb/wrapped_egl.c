@@ -156,16 +156,23 @@ EGLNativeWindowType getNativeWindowType() {
     }
 
 #ifdef ANDROID_NDK
+#ifdef DALVIK_VM
+#define ANDROID_LIB "libactivity.so"
+#define GET_NATIVE_WINDOW "android_getNativeWindow"
+#else
+#define ANDROID_LIB "libglass_lens_android.so"    
+#define GET_NATIVE_WINDOW "ANDROID_getNativeWindow"    
+#endif
     //don't cache for Android!
-    printf("Using getAndroidNativeWindow() from glass.\n");
-    void *libglass_android = dlopen("libglass_lens_android.so", RTLD_LAZY | RTLD_GLOBAL);
+    printf("Using %s\n", ANDROID_LIB);
+    void *libglass_android = dlopen(ANDROID_LIB, RTLD_LAZY | RTLD_GLOBAL);
     if (!libglass_android) {
-        fprintf(stderr, "Did not find libglass_lens_android.so %s\n", dlerror());
+        fprintf(stderr, "Did not find %s %s\n", ANDROID_LIB, dlerror());
            return NULL;
     }
-    _ANDROID_getNativeWindow = dlsym(libglass_android, "ANDROID_getNativeWindow");
+    _ANDROID_getNativeWindow = dlsym(libglass_android, GET_NATIVE_WINDOW);
     if (!_ANDROID_getNativeWindow) {
-       fprintf(stderr, "Did not find symbol \"ANDROID_getNativeWindow\" %s\n", dlerror());
+       fprintf(stderr, "Did not find symbol \"%s\" %s\n", GET_NATIVE_WINDOW, dlerror());
        return NULL;
     }
     return (*_ANDROID_getNativeWindow)();
