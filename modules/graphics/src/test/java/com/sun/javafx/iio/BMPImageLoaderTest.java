@@ -27,9 +27,6 @@ package com.sun.javafx.iio;
 
 import com.sun.javafx.iio.bmp.BMPImageLoaderFactory;
 import com.sun.prism.Image;
-import java.awt.Color;
-import java.awt.GradientPaint;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.IndexColorModel;
@@ -39,13 +36,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
-import java.util.Random;
-import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.ImageOutputStream;
 import javax.imageio.stream.MemoryCacheImageInputStream;
 import static org.junit.Assert.*;
 import org.junit.Test;
@@ -140,27 +131,14 @@ public class BMPImageLoaderTest {
         return new BufferedImage(testWidth, testHeight, type);
     }
 
-    void writeImage(BufferedImage bImg, Object out, String compression) {
-        try {
-            ImageOutputStream ios = ImageIO.createImageOutputStream(out);
-            Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName("bmp");
-            ImageWriter writer = iter.next();
-            ImageWriteParam iwp = writer.getDefaultWriteParam();
-            if (compression != null) {
-                iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                iwp.setCompressionType(compression);
-            }
-            writer.setOutput(ios);
-            writer.write(null, new IIOImage(bImg, null, null), iwp);
-        } catch (IOException e) {
-            fail("unexpected IOException: " + e);
-        }
-    }
+    void writeBMPImage(BufferedImage bImg, String fileName, String compression) {
+        ImageTestHelper.writeImage(bImg, fileName, "bmp", compression); 
+   }
 
     Image getImage(BufferedImage bImg, String compression) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        writeImage(bImg, out, compression);
-        return loadImage(new ByteArrayInputStream(out.toByteArray()));
+        ByteArrayInputStream stream =
+                ImageTestHelper.writeImageToStream(bImg, "bmp", compression, null);
+        return loadImage(stream);
     }
 
     void testImageType(int type, String fileName, String compression) {
@@ -173,59 +151,12 @@ public class BMPImageLoaderTest {
         testImage(bImg, fileName, null);
     }
 
-    void drawImageGradient(BufferedImage bImg) {
-        Graphics2D graphics = bImg.createGraphics();
-        GradientPaint g = new GradientPaint(0, 0, Color.RED, testWidth, testHeight, Color.GREEN);
-        graphics.setPaint(g);
-        graphics.fillRect(0, 0, testWidth, testHeight);
-    }
-
-    void drawImageRandom(BufferedImage bImg) {
-        int h = bImg.getHeight(), w = bImg.getWidth();
-        Random r = new Random(1);
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                bImg.setRGB(x, y, r.nextInt(1 << 24));
-            }
-        }
-    }
-
-    void drawImageHue(BufferedImage bImg) {
-        int h = bImg.getHeight(), w = bImg.getWidth();
-        for (int y = 0; y < h; y++) {
-            float s = 2.0f * y / h;
-            if (s > 1) {
-                s = 1;
-            }
-            float b = 2.0f * (h - y) / h;
-            if (b > 1) {
-                b = 1;
-            }
-            for (int x = 0; x < w; x++) {
-                float hue = (float) x / w;
-                bImg.setRGB(x, y, Color.HSBtoRGB(hue, s, b));
-            }
-        }
-    }
-
-    void drawImageAll(BufferedImage bImg) {
-        int h = bImg.getHeight(), w = bImg.getWidth();
-        //if (h*w < (1<<24)) return;
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                bImg.setRGB(x, y, y * h + x);
-            }
-        }
-    }
-
     void testImage(BufferedImage bImg, String fileName, String compression) {
-        //drawImageHue(bImg);
-        //drawImageAll(bImg);
-        drawImageRandom(bImg);
-        if (writeFiles && fileName != null) {
-            File file = new File(fileName);
-            file.delete();
-            writeImage(bImg, file, compression);
+        //ImageTestHelper.drawImageHue(bImg);
+        //ImageTestHelper.drawImageAll(bImg);
+        ImageTestHelper.drawImageRandom(bImg);
+        if (writeFiles) {
+            writeBMPImage(bImg, fileName, compression);
         }
         Image image = getImage(bImg, compression);
         compare(image, bImg);
@@ -295,10 +226,8 @@ public class BMPImageLoaderTest {
         try {
             Image image = loadImage(new FileInputStream(fileName));
             BufferedImage bImg = ImageIO.read(new File(fileName));
-            if (writeFiles && outFileName != null) {
-                File outFile = new File(outFileName);
-                outFile.delete();
-                writeImage(bImg, outFile, compression);
+            if (writeFiles) {
+                writeBMPImage(bImg, outFileName, compression);
             }
             compare(image, bImg);
         } catch (IOException e) {

@@ -69,21 +69,16 @@ public class RoughScaler implements PushbroomScaler {
         this.scaleY = (double) sourceHeight / (double) destHeight;
 
         this.colPositions = new int[destWidth];
-        int maxPos = sourceWidth - 1;
         for (int i = 0; i < destWidth; i++) {
-            int pos = (int) (i * scaleX);
-            if (pos < 0) {
-                pos = 0;
-            } else if (pos > maxPos) {
-                pos = maxPos;
-            }
-            colPositions[i] = pos;
+            int pos = (int) ((i + 0.5) * scaleX);
+            colPositions[i] = pos * numBands;
         }
 
         // initialize line numbers to track source and destination lines
         this.sourceLine = 0;
         this.destLine = 0;
-        this.nextSourceLine = 0;
+        // find nearest source line
+        this.nextSourceLine = (int) (0.5 * scaleY);
     }
 
     /**
@@ -118,18 +113,18 @@ public class RoughScaler implements PushbroomScaler {
 
                 int doff = destOffset;
                 for (int i = 0; i < destWidth; i++) {
-                    int sourceOffset = off + this.colPositions[i] * numBands;
+                    int sourceOffset = off + this.colPositions[i];
                     for (int j = 0; j < numBands; j++) {
                         dest[doff++] = scanline[sourceOffset + j];
                     }
                 }
 
-                while ((int) (++destLine * scaleY) == sourceLine) {
+                while ((int) ((++destLine + 0.5) * scaleY) == sourceLine)
+                {
                     System.arraycopy(dest, destOffset, dest, doff, destWidth * numBands);
                     doff += destWidth * numBands;
                 }
-
-                nextSourceLine = (int) (destLine * scaleY);
+                nextSourceLine = (int) ((destLine + 0.5) * scaleY);
             }
 
             ++sourceLine;
