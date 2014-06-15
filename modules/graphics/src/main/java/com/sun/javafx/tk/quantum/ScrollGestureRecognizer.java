@@ -32,17 +32,32 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
+import javafx.util.Duration;
 import javafx.event.EventType;
 import javafx.scene.input.ScrollEvent;
+import javafx.animation.Animation;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.Timeline;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 
 class ScrollGestureRecognizer implements GestureRecognizer {
     // gesture will be activated if |scroll amount| > SCROLL_THRESHOLD
     private static double SCROLL_THRESHOLD = 10; //in pixels
+    private static boolean SCROLL_INERTIA_ENABLED = true;
+    private static double MAX_INITIAL_VELOCITY = 1000;
+    private static double SCROLL_INERTIA_MILLIS = 1500;
     static {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.scroll.threshold");
             if (s != null) {
                 SCROLL_THRESHOLD = Double.valueOf(s);
+            }
+            s = System.getProperty("com.sun.javafx.gestures.scroll.inertia");
+            if (s != null) {
+                SCROLL_INERTIA_ENABLED = Boolean.valueOf(s);
             }
             return null;
         });
@@ -51,6 +66,11 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     private ViewScene scene;
 
     private ScrollRecognitionState state = ScrollRecognitionState.IDLE;
+    private Timeline inertiaTimeline = new Timeline();
+    private DoubleProperty inertiaScrollVelocity = new SimpleDoubleProperty();
+    private double initialInertiaScrollVelocity = 0;
+    private double scrollStartTime = 0;
+    private double lastTouchEventTime = 0;
 
     private Map<Long, TouchPointTracker> trackers =
             new HashMap<Long, TouchPointTracker>();
@@ -61,6 +81,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     private int currentTouchCount = 0;
     private int lastTouchCount;
     private boolean touchPointsSetChanged;
+    private boolean touchPointsPressed;
 
     private double centerX, centerY;
     private double centerAbsX, centerAbsY;
@@ -68,9 +89,25 @@ class ScrollGestureRecognizer implements GestureRecognizer {
 
     private double deltaX, deltaY;
     private double totalDeltaX, totalDeltaY;
+    private double factorX, factorY;
+    double inertiaLastTime = 0;
     
     ScrollGestureRecognizer(final ViewScene scene) {
         this.scene = scene;
+        inertiaScrollVelocity.addListener(valueModel -> {
+            double currentTime = inertiaTimeline.getCurrentTime().toSeconds();
+            double timePassed = currentTime - inertiaLastTime;
+            inertiaLastTime = currentTime;
+
+            double scrollVectorSize = timePassed * inertiaScrollVelocity.get();
+            deltaX = scrollVectorSize * factorX;
+            totalDeltaX += deltaX;
+            deltaY = scrollVectorSize * factorY;
+            totalDeltaY += deltaY;
+
+            //send inertia scroll event
+            sendScrollEvent(true, centerAbsX, centerAbsY, currentTouchCount);
+        });
     }
 
     @Override
@@ -78,6 +115,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
             int touchEventCount) {
         params(modifiers, isDirect);
         touchPointsSetChanged = false;
+        touchPointsPressed = false;
     }
 
     @Override
@@ -86,6 +124,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         switch(type) {
             case TouchEvent.TOUCH_PRESSED:
                 touchPointsSetChanged = true;
+                touchPointsPressed = true;
                 touchPressed(touchId, time, x, y, xAbs, yAbs);
                 break;
             case TouchEvent.TOUCH_STILL:
@@ -126,6 +165,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
     
     @Override
     public void notifyEndTouchEvent(long time) {
+        lastTouchEventTime = time;
         if (currentTouchCount != trackers.size()) {
             throw new RuntimeException("Error in Scroll gesture recognition: "
                     + "touch count is wrong: " + currentTouchCount);
@@ -134,11 +174,45 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         if (currentTouchCount < 1) {
             if (state == ScrollRecognitionState.ACTIVE) {
                 sendScrollFinishedEvent(lastCenterAbsX, lastCenterAbsY, lastTouchCount);
+
+                if (SCROLL_INERTIA_ENABLED) {
+                    double timeFromLastScroll = ((double)time - scrollStartTime) / 1000000;
+                    if (timeFromLastScroll < 300) {
+                        state = ScrollRecognitionState.INERTIA;
+                        // activate inertia
+                        inertiaLastTime = 0;
+                        if (initialInertiaScrollVelocity > MAX_INITIAL_VELOCITY) 
+                            initialInertiaScrollVelocity = MAX_INITIAL_VELOCITY;
+                            
+                        inertiaTimeline.getKeyFrames().setAll(
+                            new KeyFrame(
+                                Duration.millis(0),
+                                new KeyValue(inertiaScrollVelocity, initialInertiaScrollVelocity, Interpolator.LINEAR)),
+                            new KeyFrame(
+                                Duration.millis(SCROLL_INERTIA_MILLIS * Math.abs(initialInertiaScrollVelocity) / MAX_INITIAL_VELOCITY),
+                                event -> {
+                                    //stop inertia
+                                    reset();
+                                },
+                                new KeyValue(inertiaScrollVelocity, 0, Interpolator.LINEAR))
+                            );
+                        inertiaTimeline.playFromStart();
+                    } else {
+                        reset();
+                    }
+                } else {
+                    reset();
+                }
             }
-            reset();
         } else {
             // currentTouchCount >= 1
             calculateCenter();
+
+            if (touchPointsPressed && state == ScrollRecognitionState.INERTIA) {
+                //Stop inertia
+                inertiaTimeline.stop();
+                reset();
+            }
 
             if (touchPointsSetChanged) {
                 if (state == ScrollRecognitionState.IDLE) {
@@ -169,7 +243,17 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     totalDeltaX += deltaX;
                     totalDeltaY += deltaY;
 
-                    sendScrollEvent(centerAbsX, centerAbsY, currentTouchCount);
+                    sendScrollEvent(false, centerAbsX, centerAbsY, currentTouchCount);
+                    double timePassed = ((double)time - scrollStartTime) / 1000000000;
+                    if (timePassed > 1e-4) {
+                        //capture radius (pytaguras) or init to variables x,y ???
+                        double scrollMagnitude = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                        factorX = deltaX / scrollMagnitude;
+                        factorY = deltaY / scrollMagnitude;
+                        initialInertiaScrollVelocity = scrollMagnitude / timePassed;
+                        
+                        scrollStartTime = time;
+                    }
 
                     lastCenterAbsX = centerAbsX;
                     lastCenterAbsY = centerAbsY;
@@ -199,7 +283,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         }, scene.getAccessControlContext());
     }
 
-    private void sendScrollEvent(double centerX, double centerY, int touchCount) {
+    private void sendScrollEvent(boolean isInertia, double centerX, double centerY, int touchCount) {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             if (scene.sceneListener != null) {
                 scene.sceneListener.scrollEvent(ScrollEvent.SCROLL,
@@ -214,7 +298,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
                     (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                     (modifiers & KeyEvent.MODIFIER_ALT) != 0,
                     (modifiers & KeyEvent.MODIFIER_WINDOWS) != 0,
-                    direct, false /*inertia*/);
+                    direct, isInertia);
             }
             return null;
         }, scene.getAccessControlContext());
@@ -320,6 +404,7 @@ class ScrollGestureRecognizer implements GestureRecognizer {
         IDLE,       // no touch points available
         TRACKING,   // 1+ touch points, center position is tracked
         ACTIVE,     // threshold accepted, gesture is started
+        INERTIA,        // inertia is active
         FAILURE
     }
 }
