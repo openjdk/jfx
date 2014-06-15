@@ -192,4 +192,51 @@ public class KeyInput {
         return c == '\000' ? NO_CHAR : new char[] { c };
     }
 
+    public int getKeyCodeForChar(char c) {
+        c = Character.toUpperCase(c);
+        // remove shift modification
+        switch (c) {
+            case '!': c = '1'; break;
+            case '@': c = '2'; break;
+            case '#': c = '3'; break;
+            case '$': c = '4'; break;
+            case '%': c = '5'; break;
+            case '^': c = '6'; break;
+            case '&': c = '7'; break;
+            case '*': c = '8'; break;
+            case '(': c = '9'; break;
+            case ')': c = '0'; break;
+            case '~': c = '`'; break;
+            case '_': c = '-'; break;
+            case '+': c = '='; break;
+            case '{': c = '['; break;
+            case '}': c = ']'; break;
+            case '|': c = '\\'; break;
+            case ':': c = ';'; break;
+            case '\"': c = '\''; break;
+            case '<': c = ','; break;
+            case '>': c = '.'; break;
+            case '?': c = '/'; break;
+        }
+        if (c >= 'A' && c <= 'Z') {
+            return (c - 'A') + KeyEvent.VK_A;
+        } else if (c >= '0' && c <= '9') {
+            return (c - '0') + KeyEvent.VK_0;
+        }
+        switch (c) {
+            case '`': return KeyEvent.VK_BACK_QUOTE;
+            case '-': return KeyEvent.VK_MINUS;
+            case '=': return KeyEvent.VK_EQUALS;
+            case '[': return KeyEvent.VK_BRACELEFT;
+            case ']': return KeyEvent.VK_BRACERIGHT;
+            case '\\': return KeyEvent.VK_BACK_SLASH;
+            case ';': return KeyEvent.VK_SEMICOLON;
+            case '\'': return KeyEvent.VK_QUOTE;
+            case ',': return KeyEvent.VK_COMMA;
+            case '.': return KeyEvent.VK_PERIOD;
+            case '/': return KeyEvent.VK_SLASH;
+            default: return KeyEvent.VK_UNDEFINED;
+        }
+    }
+
 }
