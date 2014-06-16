@@ -130,27 +130,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             I18N.getString("param.signing-key-name.description"),
             "mac.signing-key-user-name",
             String.class,
-            params -> {
-                try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
-                    ProcessBuilder pb = new ProcessBuilder(
-                            "dscacheutil",
-                            "-q", "user", "-a", "name", System.getProperty("user.name"));
-
-                    IOUtils.exec(pb, Log.isDebug(), false, ps);
-
-                    String commandOutput = baos.toString();
-
-                    Pattern pattern = Pattern.compile(".*gecos: (.*)");
-                    Matcher matcher = pattern.matcher(commandOutput);
-                    if (matcher.matches()) {
-                        return (matcher.group(1));
-                    }
-                } catch (IOException ioe) {
-                    Log.info(I18N.getString("message.could-not-retrieve-name"));
-                    Log.debug(ioe);
-                }
-                return null;
-            },
+            params -> "",
             null);
 
     public static final BundlerParamInfo<String> INSTALLER_NAME = new StandardBundlerParam<> (

@@ -188,7 +188,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             ProcessBuilder pb;
 
             // create the final pkg file
-            File finalPKG = new File(outdir, INSTALLER_NAME.fetchFrom(p)+".pkg");
+            File finalPKG = new File(outdir, INSTALLER_NAME.fetchFrom(p)+"-MacAppStore.pkg");
             outdir.mkdirs();
 
             pb = new ProcessBuilder("productbuild",
