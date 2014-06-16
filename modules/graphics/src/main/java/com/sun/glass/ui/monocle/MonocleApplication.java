@@ -115,7 +115,14 @@ public final class MonocleApplication extends Application {
     @Override
     protected void runLoop(Runnable launchable) {
         runnableProcessor.invokeLater(launchable);
-        Thread t = new Thread(runnableProcessor);
+        long stackSize = AccessController.doPrivileged(
+                (PrivilegedAction<Long>) 
+                        () -> Long.getLong("monocle.stackSize", 0));
+        Thread t = new Thread(
+                new ThreadGroup("Event"),
+                runnableProcessor,
+                "Event Thread",
+                stackSize);
         setEventThread(t);
         t.start();
         shutdownHookThread = new Thread("Monocle shutdown hook") {
