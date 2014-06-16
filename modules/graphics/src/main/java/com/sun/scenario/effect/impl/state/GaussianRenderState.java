@@ -204,8 +204,8 @@ public class GaussianRenderState extends LinearConvolveRenderState {
                 txScaleY = MAX_RADIUS / yradius;
                 scaled = true;
             }
-            this.inputRadiusX = (float) scaledRadiusX;
-            this.inputRadiusY = (float) scaledRadiusY;
+            this.inputRadiusX = scaledRadiusX;
+            this.inputRadiusY = scaledRadiusY;
             // We need to apply the spread on only one pass
             // Prefer pass1 if r1 is not tiny (or at least bigger than r0)
             // Otherwise use pass 0 so that it doesn't disappear
@@ -454,11 +454,15 @@ public class GaussianRenderState extends LinearConvolveRenderState {
     }
 
     @Override
-    public Rectangle getPassResultBounds(Rectangle srcdimension) {
+    public Rectangle getPassResultBounds(Rectangle srcdimension, Rectangle outputClip) {
         // Note that the pass vector and the pass radius may be adjusted for
         // a transformed input, but our output will be in the untransformed
         // "filter" coordinate space so we need to use the "input" values that
         // are in that same coordinate space.
+        // The srcdimension is padded by the amount of extra data we produce
+        // for this pass.
+        // The outputClip is padded by the amount of extra input data we will
+        // need for subsequent passes to do their work.
         double r = (validatedPass == 0) ? inputRadiusX : inputRadiusY;
         int i = validatedPass * 2;
         double dx = samplevectors[i+0] * r;
@@ -467,6 +471,22 @@ public class GaussianRenderState extends LinearConvolveRenderState {
         int pady = (int) Math.ceil(Math.abs(dy));
         Rectangle ret = new Rectangle(srcdimension);
         ret.grow(padx, pady);
+        if (outputClip != null) {
+            if (validatedPass == 0) {
+                // Pass 0 needs to retain any added area for Pass 1 to
+                // compute the bounds within the outputClip, so we expand
+                // the outputClip accordingly.
+                dx = samplevectors[2] * r;
+                dy = samplevectors[3] * r;
+                padx = (int) Math.ceil(Math.abs(dx));
+                pady = (int) Math.ceil(Math.abs(dy));
+                if ((padx | pady) != 0) {
+                    outputClip = new Rectangle(outputClip);
+                    outputClip.grow(padx, pady);
+                }
+            }
+            ret.intersectWith(outputClip);
+        }
         return ret;
     }
 

@@ -235,7 +235,9 @@ public abstract class LinearConvolveRenderState implements RenderState {
      * @param fctx the {@code FilterContext} being used for this filter operation
      * @return the {@code EffectPeer} to use for this pass, or null
      */
-    public EffectPeer getPassPeer(Renderer r, FilterContext fctx) {
+    public EffectPeer<? extends LinearConvolveRenderState>
+        getPassPeer(Renderer r, FilterContext fctx)
+    {
         if (isPassNop()) {
             return null;
         }
@@ -247,16 +249,19 @@ public abstract class LinearConvolveRenderState implements RenderState {
 
     /**
      * Returns the size of the scaled result image needed to hold the output
-     * for the currently validated pass with the indicated input dimensions.
+     * for the currently validated pass with the indicated input dimensions
+     * and output clip.
      * The image may be further scaled after the shader operation is through
      * to obtain the final result bounds.
      * This value is only of use to the actual shader to understand exactly
      * how much room to allocate for the shader result.
      *
      * @param srcdimension the bounds of the input image
-     * @return the bounds of the result image
+     * @param outputClip the area needed for the final result
+     * @return the bounds of the result image for the current pass
      */
-    public abstract Rectangle getPassResultBounds(Rectangle srcdimension);
+    public abstract Rectangle getPassResultBounds(Rectangle srcdimension,
+                                                  Rectangle outputClip);
 
     /**
      * Return a hint about the way that the weights will be applied to the

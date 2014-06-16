@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,10 +55,11 @@ public class SSELinearConvolvePeer extends SSEEffectPeer<LinearConvolveRenderSta
                             ImageData... inputs)
     {
         setRenderState(lcrstate);
-        Rectangle dstRawBounds = inputs[0].getTransformedBounds(null);
-        dstRawBounds = lcrstate.getPassResultBounds(dstRawBounds);
-        Rectangle dstBounds = new Rectangle(dstRawBounds);
-        dstBounds.intersectWith(outputClip);
+        Rectangle inputBounds = inputs[0].getTransformedBounds(null);
+        // If the non-VECTOR loops below could handle clipped output, then
+        // we would not need to call getPassResultBounds twice (RT-27406)
+        Rectangle dstRawBounds = lcrstate.getPassResultBounds(inputBounds, null);
+        Rectangle dstBounds = lcrstate.getPassResultBounds(inputBounds, outputClip);
         setDestBounds(dstBounds);
         int dstw = dstBounds.width;
         int dsth = dstBounds.height;

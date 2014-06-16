@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,9 @@ public Rectangle getResultBounds(com.sun.javafx.geom.transform.BaseTransform tra
                                  com.sun.javafx.geom.Rectangle outputClip,
                                  com.sun.scenario.effect.ImageData... inputDatas)
 {
-    return getRenderState().getPassResultBounds(inputDatas[0].getTransformedBounds(outputClip));
+    Rectangle r = inputDatas[0].getTransformedBounds(null);
+    r = getRenderState().getPassResultBounds(r, outputClip);
+    return r;
 }
 
 private int getCount() {

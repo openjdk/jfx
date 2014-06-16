@@ -289,7 +289,7 @@ public class BoxRenderState extends LinearConvolveRenderState {
     }
 
     @Override
-    public EffectPeer getPassPeer(Renderer r, FilterContext fctx) {
+    public EffectPeer<BoxRenderState> getPassPeer(Renderer r, FilterContext fctx) {
         if (isPassNop()) {
             return null;
         }
@@ -407,16 +407,27 @@ public class BoxRenderState extends LinearConvolveRenderState {
     }
 
     @Override
-    public Rectangle getPassResultBounds(Rectangle srcdimension) {
+    public Rectangle getPassResultBounds(Rectangle srcdimension, Rectangle outputClip) {
         // Note that the pass vector and the pass radius may be adjusted for
         // a transformed input, but our output will be in the untransformed
         // "filter" coordinate space so we need to use the "input" values that
         // are in that same coordinate space.
+        // The srcdimension is padded by the amount of extra data we produce
+        // for this pass.
+        // The outputClip is padded by the amount of extra input data we will
+        // need for subsequent passes to do their work.
         Rectangle ret = new Rectangle(srcdimension);
         if (validatedPass == 0) {
             ret.grow(getInputKernelSize(0) / 2, 0);
         } else {
             ret.grow(0, getInputKernelSize(1) / 2);
+        }
+        if (outputClip != null) {
+            if (validatedPass == 0) {
+                outputClip = new Rectangle(outputClip);
+                outputClip.grow(0, getInputKernelSize(1) / 2);
+            }
+            ret.intersectWith(outputClip);
         }
         return ret;
     }

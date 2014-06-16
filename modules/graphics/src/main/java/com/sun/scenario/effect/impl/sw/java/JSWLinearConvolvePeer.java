@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,8 +52,7 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer<LinearConvolveRenderSta
                                       ImageData... inputDatas)
     {
         Rectangle r = inputDatas[0].getTransformedBounds(null);
-        r = lcrstate.getPassResultBounds(r);
-        r.intersectWith(outputClip);
+        r = lcrstate.getPassResultBounds(r, outputClip);
         return r;
     }
 
