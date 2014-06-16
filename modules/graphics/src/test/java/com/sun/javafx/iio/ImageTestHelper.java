@@ -53,8 +53,7 @@ public class ImageTestHelper {
     }
 
     static void writeImage(BufferedImage bImg, Object out, String format, String compression) {
-        try {
-            ImageOutputStream ios = ImageIO.createImageOutputStream(out);
+        try (ImageOutputStream ios = ImageIO.createImageOutputStream(out)) {
             Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName(format);
             ImageWriter writer = iter.next();
             ImageWriteParam iwp = writer.getDefaultWriteParam();
@@ -63,7 +62,12 @@ public class ImageTestHelper {
                 iwp.setCompressionType(compression);
             }
             writer.setOutput(ios);
-            writer.write(null, new IIOImage(bImg, null, null), iwp);
+            try {
+                writer.write(null, new IIOImage(bImg, null, null), iwp);
+            } finally {
+                writer.dispose();
+                ios.flush();
+            }
         } catch (IOException e) {
             fail("unexpected IOException: " + e);
         }
