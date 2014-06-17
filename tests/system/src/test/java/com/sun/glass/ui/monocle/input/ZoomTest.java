@@ -108,9 +108,9 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom started, factor: " + factor0
-                + ", total factor: " + factor0);
+                + ", total factor: " + factor0  + ", inertia value: false");
         TestLog.waitForLogContaining("Zoom, factor: " + factor1
-                + ", total factor: " + factor1);
+                + ", total factor: " + factor1 + ", inertia value: false");
 
         step = step * 2;
         newy1 = y1 - step;
@@ -124,28 +124,27 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom, factor: " + factor2
-                + ", total factor: " + (factor1 * factor2));
+                + ", total factor: " + (factor1 * factor2)
+                + ", inertia value: false");
 
         //release first finger
         TestLog.reset();
         device.removePoint(p1);
         device.sync();
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d",
-                x1, newy1);
-        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
-                x2, newy2);
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, newy1);
+        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom finished, factor: " + factor0
-                + ", total factor: " + (factor1 * factor2));
-
+                + ", total factor: " + (factor1 * factor2)
+                + ", inertia value: false");
         //release second finger
         TestLog.reset();
         device.removePoint(p2);
         device.sync();
         TestLog.waitForLogContaining("Touch released: %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d",
-                x2, newy2);
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
+        TestLog.waitForLogContaining("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
     }
@@ -184,9 +183,9 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom started, factor: " + factor0
-                + ", total factor: " + factor0);
+                + ", total factor: " + factor0 + ", inertia value: false");
         TestLog.waitForLogContaining("Zoom, factor: " + factor1
-                + ", total factor: " + factor1);
+                + ", total factor: " + factor1  + ", inertia value: false");
 
         step = step * 2;
         newy1 = y1 - step;
@@ -200,7 +199,8 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom, factor: " + factor2
-                + ", total factor: " + (factor1 * factor2));
+                + ", total factor: " + (factor1 * factor2)
+                + ", inertia value: false");
 
         //release first finger
         TestLog.reset();
@@ -211,7 +211,8 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
                 x2, newy2);
         TestLog.waitForLogContaining("Zoom finished, factor: " + factor0
-                + ", total factor: " + (factor1 * factor2));
+                + ", total factor: " + (factor1 * factor2)
+                + ", inertia value: false");
 
         //release second finger
         TestLog.reset();
@@ -222,6 +223,7 @@ public class ZoomTest extends ParameterizedTestBase {
                 x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
+        TestLog.waitForLogContaining("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
     }
@@ -260,9 +262,9 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom started, factor: " + factor0
-                + ", total factor: " + factor0);
+                + ", total factor: " + factor0 + ", inertia value: false");
         TestLog.waitForLogContaining("Zoom, factor: " + factor1
-                + ", total factor: " + factor1);
+                + ", total factor: " + factor1 + ", inertia value: false");
 
         TestLog.reset();
         y1 = y1 + step;
@@ -278,7 +280,8 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom, factor: " + factor2
-                + ", total factor: " + (factor1 * factor2));
+                + ", total factor: " + (factor1 * factor2)
+                + ", inertia value: false");
 
         TestLog.reset();
         y1 = y1 + step;
@@ -294,7 +297,8 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom, factor: " + factor3
-                + ", total factor: " + (factor1 * factor2 * factor3));
+                + ", total factor: " + (factor1 * factor2 * factor3)
+                + ", inertia value: false");
 
         //release first finger
         TestLog.reset();
@@ -305,7 +309,8 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
                 x2, newy2);
         TestLog.waitForLogContaining("Zoom finished, factor: " + factor0
-                + ", total factor: " + (factor1 * factor2 * factor3));
+                + ", total factor: " + (factor1 * factor2 * factor3)
+                + ", inertia value: false");
 
         //release second finger
         TestLog.reset();
@@ -316,6 +321,7 @@ public class ZoomTest extends ParameterizedTestBase {
                 x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
+        TestLog.waitForLogContaining("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
     }
@@ -377,10 +383,9 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom started, factor: " + factor0
-                + ", total factor: " + factor0);
+                + ", total factor: " + factor0 + ", inertia value: false");
         TestLog.waitForLogContaining("Zoom, factor: " + factor1
-                + ", total factor: " + factor1);
-
+                + ", total factor: " + factor1 + ", inertia value: false");
         TestLog.reset();
         y1 = y1 + step;
         y2 = y2 - step;
@@ -394,7 +399,8 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom, factor: " + factor2
-                + ", total factor: " + (factor1 * factor2));
+                + ", total factor: " + (factor1 * factor2)
+                + ", inertia value: false");
 
         TestLog.reset();
         y1 = y1 + step;
@@ -409,7 +415,8 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1, newy1);
         TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, newy2);
         TestLog.waitForLogContaining("Zoom, factor: " + factor3
-                + ", total factor: " + (factor1 * factor2 * factor3));
+                + ", total factor: " + (factor1 * factor2 * factor3)
+                + ", inertia value: false");
 
         //release first finger
         TestLog.reset();
@@ -420,7 +427,8 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d",
                 x2, newy2);
         TestLog.waitForLogContaining("Zoom finished, factor: " + factor0
-                + ", total factor: " + (factor1 * factor2 * factor3));
+                + ", total factor: " + (factor1 * factor2 * factor3)
+                + ", inertia value: false");
 
         //release second finger
         TestLog.reset();
@@ -431,8 +439,8 @@ public class ZoomTest extends ParameterizedTestBase {
                 x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
+        TestLog.waitForLogContaining("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
     }
-
 }

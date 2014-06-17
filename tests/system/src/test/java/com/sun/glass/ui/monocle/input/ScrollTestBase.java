@@ -34,7 +34,7 @@ import java.util.Collection;
 /**
  * Base class, intended for extending and creation of different types of scroll tests
  *  */
-public class ScrollTestBase extends ParameterizedTestBase {
+public abstract class ScrollTestBase extends ParameterizedTestBase {
 
     protected int point1X;
     protected int point1Y;
@@ -336,6 +336,9 @@ public class ScrollTestBase extends ParameterizedTestBase {
         totalDeltaX = 0;
         totalDeltaY = 0;
         Assert.assertEquals(expectedValue, TestLog.countLogContaining(expectedLog));
+        if (TestLog.countLogContaining("Scroll finished") > 0) {
+            TestLog.waitForLogContaining("Scroll", "inertia value: true");
+        }
     }
 
     /**
@@ -366,6 +369,9 @@ public class ScrollTestBase extends ParameterizedTestBase {
         totalDeltaX = 0;
         totalDeltaY = 0;
         Assert.assertEquals(expectedValue, TestLog.countLogContaining(expectedLog));
+        if (TestLog.countLogContaining("Scroll finished") > 0 && device.getPressedPoints() == 0) {
+            TestLog.waitForLogContaining("Scroll", "inertia value: true");
+        }
     }
 
     /**
@@ -396,5 +402,8 @@ public class ScrollTestBase extends ParameterizedTestBase {
         totalDeltaX = 0;
         totalDeltaY = 0;
         Assert.assertEquals(expectedValue, TestLog.countLogContaining(expectedLog));
+        if (TestLog.countLogContaining("Scroll finished") > 0) {
+            TestLog.waitForLogContaining("Scroll", "inertia value: true");
+        }
     }
 }

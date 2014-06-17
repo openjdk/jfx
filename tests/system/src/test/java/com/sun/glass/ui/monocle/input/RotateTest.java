@@ -74,7 +74,6 @@ public class RotateTest extends ParameterizedTestBase {
             device.removePoint(p2);
             device.sync();
         }
-        Thread.sleep(2000);
     }
 
     private void updateNewTouchPoint(int angle, int radius, int centerX, int centerY) {
@@ -199,6 +198,13 @@ public class RotateTest extends ParameterizedTestBase {
         if (TestLog.countLogContaining("Rotation finished") > 0) {
             TestLog.waitForLogContaining("Rotation", "inertia value: true");
         }
+        TestLog.reset();
+        p2 = device.addPoint(x2, y2);
+        device.sync();
+        device.removePoint(p2);
+        device.sync();
+        Assert.assertEquals(0, TestLog.countLogContaining("inertia value: true"));
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
     }
 
     private void Rotate(int radius, int x2, int y2, int angleStep,
