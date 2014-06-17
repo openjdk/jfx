@@ -49,7 +49,7 @@ public class TextFieldApp extends Application {
 
     public Parent createContent() {
         TextField text = new TextField("Text");
-        text.setMaxSize(140, 20);
+        text.setMaxSize(140, TextField.USE_COMPUTED_SIZE);
         return text;
     }
 
