@@ -298,7 +298,7 @@ class PlaygroundTabs extends TabPane {
             setController(slider);
 
             TextField preview = new TextField();
-            preview.setPrefWidth(30);
+            preview.setPrefColumnCount(4);
             preview.textProperty().bindBidirectional(prop, new StringConverter<Number>() {
 
                 @Override
