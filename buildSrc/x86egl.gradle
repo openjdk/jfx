@@ -167,7 +167,7 @@ setupTools("x86egl_tools",
         }
 )
 
-X86EGL.javafxPlatformProperties ="""javafx.platform=eglfb
+X86EGL.javafxPlatformProperties ="""javafx.platform=monocle
 directfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 directfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 directfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true

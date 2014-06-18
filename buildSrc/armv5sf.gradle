@@ -184,7 +184,7 @@ setupTools("ARMV5SF_tools",
     }
 )
 
-ARMV5SF.javafxPlatformProperties = """javafx.platform=eglfb
+ARMV5SF.javafxPlatformProperties = """javafx.platform=monocle
 directfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 directfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 directfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -237,7 +237,7 @@ monocle.prism.maxvram=128m
 monocle.prism.targetvram=112m
 monocle.use.egl=true
 monocle.use.gles2=true
-monocle.embedded=eglfb
+monocle.embedded=monocle
 monocle.com.sun.javafx.isEmbedded=true
 monocle.doNativeComposite=true
 monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
