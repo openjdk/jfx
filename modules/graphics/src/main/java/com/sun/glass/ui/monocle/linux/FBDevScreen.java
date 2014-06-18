@@ -26,10 +26,16 @@
 package com.sun.glass.ui.monocle.linux;
 
 import com.sun.glass.ui.Pixels;
+import com.sun.glass.ui.Size;
 import com.sun.glass.ui.monocle.Framebuffer;
+import com.sun.glass.ui.monocle.NativeCursor;
+import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.AcceleratedScreen;
+import com.sun.glass.ui.monocle.SoftwareCursor;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -188,6 +194,14 @@ public class FBDevScreen implements NativeScreen {
         try {
             if (isShutdown || fb == null || !getFramebuffer().hasReceivedData()) {
                 return;
+            }
+            NativeCursor cursor = NativePlatformFactory.getNativePlatform().getCursor();
+            if (cursor instanceof SoftwareCursor && cursor.getVisiblity()) {
+                SoftwareCursor swCursor = (SoftwareCursor) cursor;
+                Buffer b = swCursor.getCursorBuffer();
+                Size size = swCursor.getBestSize();
+                uploadPixels(b, swCursor.getRenderX(), swCursor.getRenderY(),
+                             size.width, size.height, 1.0f);
             }
             writeBuffer();
         } catch (IOException e) {

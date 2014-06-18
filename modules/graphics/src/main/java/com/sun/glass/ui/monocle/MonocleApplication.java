@@ -180,11 +180,8 @@ public final class MonocleApplication extends Application {
 
     @Override
     protected void staticCursor_setVisible(boolean visible) {
-        if ((visible && deviceFlags[DEVICE_POINTER] >= 1) ||
-            (!visible && deviceFlags[DEVICE_POINTER] < 1)) {
-                NativeCursor cursor = NativePlatformFactory.getNativePlatform().getCursor();
-                cursor.setVisibility(visible);
-        }
+        NativeCursor cursor = NativePlatformFactory.getNativePlatform().getCursor();
+        cursor.setVisibility(deviceFlags[DEVICE_POINTER] >= 1 ? visible : false);
     }
 
     @Override
